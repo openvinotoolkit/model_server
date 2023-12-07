@@ -80,7 +80,15 @@ cc_library(
         ] + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework:calculator_framework",
-                "@mediapipe//mediapipe/framework/stream_handler:immediate_input_stream_handler",  # added directly for python yielding (cycle), add more if needed
+                "@mediapipe//mediapipe/framework/stream_handler:barrier_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:default_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:early_close_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:fixed_size_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:immediate_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:in_order_output_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:mux_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",  # added directly for python yielding (cycle), add more if needed
+                "@mediapipe//mediapipe/framework/stream_handler:timestamp_align_input_stream_handler",
                 "@mediapipe//mediapipe/framework/port:logging",
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
                 "@mediapipe//mediapipe/framework/port:status",

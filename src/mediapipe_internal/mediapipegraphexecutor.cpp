@@ -66,6 +66,47 @@ namespace ovms {
 using ::mediapipe::Timestamp;
 const Timestamp DEFAULT_STARTING_STREAM_TIMESTAMP = Timestamp(0);
 
+#define MP_RETURN_ON_FAIL(code, message, errorCode)              \
+    {                                                            \
+        auto absStatus = code;                                   \
+        if (!absStatus.ok()) {                                   \
+            const std::string absMessage = absStatus.ToString(); \
+            SPDLOG_DEBUG("{} {}", message, absMessage);          \
+            return Status(errorCode, std::move(absMessage));     \
+        }                                                        \
+    }
+
+#define OVMS_RETURN_ON_FAIL(code) \
+    {                             \
+        auto status = code;       \
+        if (!status.ok()) {       \
+            return status;        \
+        }                         \
+    }
+
+#define OVMS_RETURN_MP_ERROR_ON_FAIL(code, message)                     \
+    {                                                                   \
+        auto status = code;                                             \
+        if (!status.ok()) {                                             \
+            SPDLOG_DEBUG("{} {}", message, status.string());            \
+            return absl::Status(absl::StatusCode::kCancelled, message); \
+        }                                                               \
+    }
+
+#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)          \
+    {                                                                 \
+        auto status = code;                                           \
+        if (!status.ok()) {                                           \
+            ::inference::ModelStreamInferResponse resp;               \
+            std::stringstream ss;                                     \
+            ss << status.string() << "; " << message;                 \
+            *resp.mutable_error_message() = ss.str();                 \
+            if (!stream.Write(resp)) {                                \
+                SPDLOG_DEBUG("Writing error to disconnected client"); \
+            }                                                         \
+        }                                                             \
+    }
+
 static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<const inference::ModelInferRequest_InferInputTensor>& itr, const std::string& requestedName, const KFSRequest& request) {
     auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });
     if (requestInputItr == request.inputs().end()) {
@@ -169,10 +210,7 @@ static const KFSDataType& MPPrecisionToKFSPrecision(::mediapipe::Tensor::Element
     }
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<mediapipe::Tensor>& outTensor, PythonBackend* pythonBackend) {
     auto requestInputItr = request.inputs().begin();
-    auto status = getRequestInput(requestInputItr, requestedName, request);
-    if (!status.ok()) {
-        return status;
-    }
+    OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, requestedName, request));
     auto inputIndex = requestInputItr - request.inputs().begin();
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
@@ -209,10 +247,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     using tensorflow::Tensor;
     using tensorflow::TensorShape;
     auto requestInputItr = request.inputs().begin();
-    auto status = getRequestInput(requestInputItr, requestedName, request);
-    if (!status.ok()) {
-        return status;
-    }
+    OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, requestedName, request));
     auto inputIndex = requestInputItr - request.inputs().begin();
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
@@ -264,10 +299,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
 
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<ov::Tensor>& outTensor, PythonBackend* pythonBackend) {
     auto requestInputItr = request.inputs().begin();
-    auto status = getRequestInput(requestInputItr, requestedName, request);
-    if (!status.ok()) {
-        return status;
-    }
+    OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, requestedName, request));
     auto inputIndex = requestInputItr - request.inputs().begin();
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
@@ -352,11 +384,7 @@ static mediapipe::ImageFormat::Format KFSDatatypeToImageFormat(const std::string
 
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<mediapipe::ImageFrame>& outTensor, PythonBackend* pythonBackend) {
     auto requestInputItr = request.inputs().begin();
-    auto status = getRequestInput(requestInputItr, requestedName, request);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Getting Input failed");
-        return status;
-    }
+    OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, requestedName, request));
     auto inputIndex = requestInputItr - request.inputs().begin();
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
 
@@ -533,22 +561,13 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
         return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
     }
     std::unique_ptr<T> inputTensor;
-    auto status = deserializeTensor(name, *request, inputTensor, pythonBackend);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Failed to deserialize tensor: {}", name);
-        return status;
-    }
-    auto absStatus = graph.AddPacketToInputStream(
-        name,
-        ::mediapipe::packet_internal::Create(
-            new Holder<T>(inputTensor.release(), request))
-            .At(timestamp));
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
-            name, request->model_name(), absStatus.message(), absStatus.raw_code());
-        return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
-    }
+    OVMS_RETURN_ON_FAIL(deserializeTensor(name, *request, inputTensor, pythonBackend));
+    MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
+                          name,
+                          ::mediapipe::packet_internal::Create(
+                              new Holder<T>(inputTensor.release(), request))
+                              .At(timestamp)),
+        std::string("failed to add packet to stream: ") + name, StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     return StatusCode::OK;
 }
 
@@ -560,27 +579,12 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
     }
     SPDLOG_DEBUG("Request to passthrough:\"{}\"", name);
     const KFSRequest* lvaluePtr = request.get();
-    auto absStatus = graph.AddPacketToInputStream(
-        name, ::mediapipe::packet_internal::Create(
-                  new Holder<const KFSRequest*>(lvaluePtr, request))
-                  .At(timestamp));
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("Failed to add stream: {} packet to mediapipe graph: {} with error: {}",
-            name, request->model_name(), absStatus.message(), absStatus.raw_code());
-        return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, std::move(absMessage));
-    }
-    return StatusCode::OK;
-}
-
-static Status closeInputStream(const std::string& name, std::shared_ptr<const KFSRequest>& request, ::mediapipe::CalculatorGraph& graph) {
-    auto absStatus = graph.CloseInputStream(name);
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("Failed to close stream: {} of mediapipe graph: {} with error: {}",
-            name, request->model_name(), absMessage);
-        return Status(StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, std::move(absMessage));
-    }
+    MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
+                          name,
+                          ::mediapipe::packet_internal::Create(
+                              new Holder<const KFSRequest*>(lvaluePtr, request))
+                              .At(timestamp)),
+        std::string("failed to add packet to stream: ") + name, StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     return StatusCode::OK;
 }
 
@@ -818,17 +822,11 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
     return status;
 }
 
-Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
+Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const {
     Timer<TIMER_END> timer;
-    SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", requestPtr->model_name());
+    SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", request->model_name());
     ::mediapipe::CalculatorGraph graph;
-    auto absStatus = graph.Initialize(this->config);
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("KServe request for mediapipe graph: {} initialization failed with message: {}", requestPtr->model_name(), absMessage);
-        return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
-    }
-
+    MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + request->model_name(), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
     std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
     for (auto& name : this->outputNames) {
         if (name.empty()) {
@@ -838,25 +836,19 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
         auto absStatusOrPoller = graph.AddOutputStreamPoller(name);
         if (!absStatusOrPoller.ok()) {
             const std::string absMessage = absStatusOrPoller.status().ToString();
-            SPDLOG_DEBUG("Failed to add mediapipe graph output stream poller: {} with error: {}", requestPtr->model_name(), absMessage);
+            SPDLOG_DEBUG("Failed to add mediapipe graph output stream poller: {} with error: {}", request->model_name(), absMessage);
             return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, std::move(absMessage));
         }
         outputPollers.emplace(name, std::move(absStatusOrPoller).value());
     }
-
-    std::map<std::string, mediapipe::Packet> inputSidePackets{createInputSidePackets(requestPtr)};
-    inputSidePackets[INPUT_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodesResources>(this->pythonNodeResources).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
-    absStatus = graph.StartRun(inputSidePackets);
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("Failed to start mediapipe graph: {} with error: {}", requestPtr->model_name(), absMessage);
-        return Status(StatusCode::MEDIAPIPE_GRAPH_START_ERROR, std::move(absMessage));
-    }
-    if (static_cast<int>(this->inputNames.size()) != requestPtr->inputs().size()) {
+    std::map<std::string, mediapipe::Packet> sideInputPackets{createInputSidePackets(request)};
+    sideInputPackets[INPUT_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodesResources>(this->pythonNodeResources).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+    MP_RETURN_ON_FAIL(graph.StartRun(sideInputPackets), std::string("start MediaPipe graph: ") + request->model_name(), StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
+    if (static_cast<int>(this->inputNames.size()) != request->inputs().size()) {
         std::stringstream ss;
-        ss << "Expected: " << this->inputNames.size() << "; Actual: " << requestPtr->inputs().size();
+        ss << "Expected: " << this->inputNames.size() << "; Actual: " << request->inputs().size();
         const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of inputs - {}", requestPtr->model_name(), version, details);
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of inputs - {}", request->model_name(), version, details);
         return Status(StatusCode::INVALID_NO_OF_INPUTS, details);
     }
 
@@ -865,16 +857,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
 
     ovms::Status status;
     size_t insertedStreamPackets = 0;
-    std::shared_ptr<const KFSRequest> request(requestPtr, [](const KFSRequest* r) {});  // here we don't actually own nor delete the request
+    std::shared_ptr<const KFSRequest> requestWithNoOwnership(request, [](const KFSRequest* r) {});
     for (auto& inputName : this->inputNames) {
-        status = createPacketAndPushIntoGraph<HolderWithNoRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes, pythonBackend);
-        if (!status.ok()) {
-            return status;
-        }
-        status = closeInputStream(inputName, request, graph);
-        if (!status.ok()) {
-            return status;
-        }
+        OVMS_RETURN_ON_FAIL(createPacketAndPushIntoGraph<HolderWithNoRequestOwnership>(inputName, requestWithNoOwnership, graph, this->currentStreamTimestamp, this->inputTypes, pythonBackend));
         ++insertedStreamPackets;
     }
     if (this->inputNames.size() > insertedStreamPackets) {
@@ -884,27 +869,23 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
             this->name);
         return Status(StatusCode::INTERNAL_ERROR, "Not all input packets created");
     }
-    // receive outputs
+    // we wait idle since some calculators could hold ownership on packet content while nodes further down the graph
+    // can be still processing those. Closing packet sources triggers Calculator::Close() on nodes that do not expect
+    // new packets
+    MP_RETURN_ON_FAIL(graph.WaitUntilIdle(), "grap wait until idle", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
     for (auto& [outputStreamName, poller] : outputPollers) {
         size_t receivedOutputs = 0;
         SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
-        while (poller.Next(&packet)) {
+        if (poller.Next(&packet)) {
             SPDLOG_DEBUG("Received packet from output stream: {}", outputStreamName);
-            Status status = serializePacket(outputStreamName, *response, packet);
-            if (!status.ok()) {
-                return status;
-            }
+            OVMS_RETURN_ON_FAIL(serializePacket(outputStreamName, *response, packet));
             outputPollersWithReceivedPacket.insert(outputStreamName);
             ++receivedOutputs;
         }
         SPDLOG_TRACE("Received all: {} packets for: {}", receivedOutputs, outputStreamName);
     }
-    absStatus = graph.WaitUntilDone();
-    if (!absStatus.ok()) {
-        const std::string absMessage = absStatus.ToString();
-        SPDLOG_DEBUG("Mediapipe failed to execute: {}", absMessage);
-        return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, absMessage);
-    }
+    MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "grap wait until done", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     if (outputPollers.size() != outputPollersWithReceivedPacket.size()) {
         SPDLOG_DEBUG("Mediapipe failed to execute. Failed to receive all output packets");
         return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Unknown error during mediapipe execution");
@@ -915,48 +896,6 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* requestPtr, KFSResponse* 
     response->set_model_version(request->model_version());
     return StatusCode::OK;
 }
-
-#define MP_RETURN_ON_FAIL(code, message, errorCode)              \
-    {                                                            \
-        auto absStatus = code;                                   \
-        if (!absStatus.ok()) {                                   \
-            const std::string absMessage = absStatus.ToString(); \
-            SPDLOG_DEBUG("{} {}", message, absMessage);          \
-            return Status(errorCode, std::move(absMessage));     \
-        }                                                        \
-    }
-
-#define OVMS_RETURN_ON_FAIL(code, message)                   \
-    {                                                        \
-        auto status = code;                                  \
-        if (!status.ok()) {                                  \
-            SPDLOG_DEBUG("{} {}", message, status.string()); \
-            return status;                                   \
-        }                                                    \
-    }
-
-#define OVMS_RETURN_MP_ERROR_ON_FAIL(code, message)                     \
-    {                                                                   \
-        auto status = code;                                             \
-        if (!status.ok()) {                                             \
-            SPDLOG_DEBUG("{} {}", message, status.string());            \
-            return absl::Status(absl::StatusCode::kCancelled, message); \
-        }                                                               \
-    }
-
-#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)          \
-    {                                                                 \
-        auto status = code;                                           \
-        if (!status.ok()) {                                           \
-            ::inference::ModelStreamInferResponse resp;               \
-            std::stringstream ss;                                     \
-            ss << status.string() << "; " << message;                 \
-            *resp.mutable_error_message() = ss.str();                 \
-            if (!stream.Write(resp)) {                                \
-                SPDLOG_DEBUG("Writing error to disconnected client"); \
-            }                                                         \
-        }                                                             \
-    }
 
 Status MediapipeGraphExecutor::deserializeTimestampIfAvailable(const KFSRequest& request, Timestamp& timestamp) {
     auto timestampParamIt = request.parameters().find(TIMESTAMP_PARAMETER_NAME);
@@ -987,27 +926,16 @@ static inline Status checkTimestamp(const KFSRequest& request, const Timestamp& 
 }
 
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSRequest> request, ::mediapipe::CalculatorGraph& graph) {
-    auto status = deserializeTimestampIfAvailable(*request, this->currentStreamTimestamp);
-    if (!status.ok()) {
-        return status;
-    }
-    status = checkTimestamp(*request, this->currentStreamTimestamp);
-    if (!status.ok()) {
-        return status;
-    }
-    // Deserialize each input separately
+    OVMS_RETURN_ON_FAIL(deserializeTimestampIfAvailable(*request, this->currentStreamTimestamp));
+    OVMS_RETURN_ON_FAIL(checkTimestamp(*request, this->currentStreamTimestamp));
     for (const auto& input : request->inputs()) {
         const auto& inputName = input.name();
         if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto streamName) { return streamName == inputName; }) == this->inputNames.end()) {
             SPDLOG_DEBUG("Request for {}, contains not expected input name: {}", request->model_name(), inputName);
             return Status(StatusCode::INVALID_UNEXPECTED_INPUT, std::string(inputName) + " is unexpected");
         }
-        status = createPacketAndPushIntoGraph<HolderWithRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes, pythonBackend);
-        if (!status.ok()) {
-            return status;
-        }
+        OVMS_RETURN_ON_FAIL(createPacketAndPushIntoGraph<HolderWithRequestOwnership>(inputName, request, graph, this->currentStreamTimestamp, this->inputTypes, pythonBackend));
     }
-    // Increment timestamp automatically for next request
     currentStreamTimestamp = currentStreamTimestamp.NextAllowedInStream();
     return StatusCode::OK;
 }

@@ -16,6 +16,7 @@
 #include "deserialization.hpp"
 
 #include "capi_frontend/buffer.hpp"
+#include "logging.hpp"
 
 namespace ovms {
 
@@ -24,6 +25,7 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
     OVMS_PROFILE_FUNCTION();
     Status status;
     try {
+        OV_LOGGER("ov::InferRequest: {}, request.set_tensor({}, tensor)", reinterpret_cast<void*>(&requester), name, reinterpret_cast<void*>(&tensor));
         requester.set_tensor(name, tensor);
         // OV implementation the ov::Exception is not
         // a base class for all other exceptions thrown from OV.
@@ -43,28 +45,36 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
+    OV_LOGGER("ov::Shape()");
     ov::Shape shape;
     for (const auto& dim : requestInput.getShape()) {
+        OV_LOGGER("ov::Shape::push_back({})", dim);
         shape.push_back(dim);
     }
     ov::element::Type_t precision = tensorInfo->getOvPrecision();
     if (!requestInput.getBuffer()->getByteSize()) {
+        OV_LOGGER("ov::Tensor({}, shape)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
         return ov::Tensor(precision, shape);
     }
+    OV_LOGGER("ov::Tensor({}, shape, data)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
     return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
 }
 
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
+    OV_LOGGER("ov::Shape()");
     ov::Shape shape;
     for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+        OV_LOGGER("ov::Shape::push_back(dim)");
         shape.push_back(requestInput.tensor_shape().dim(i).size());
     }
     ov::element::Type_t precision = tensorInfo->getOvPrecision();
     if (!requestInput.tensor_content().size()) {
+        OV_LOGGER("ov::Tensor({}, shape)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
         return ov::Tensor(precision, shape);
     }
+    OV_LOGGER("ov::Tensor({}, shape, data)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
     return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.tensor_content().data())));
 }
 
@@ -72,27 +82,33 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo,
     const std::string& buffer) {
     OVMS_PROFILE_FUNCTION();
+    OV_LOGGER("ov::Shape()");
     ov::Shape shape;
     for (int i = 0; i < requestInput.shape_size(); i++) {
+        OV_LOGGER("ov::Shape::push_back({})", requestInput.shape().at(i));
         shape.push_back(requestInput.shape().at(i));
     }
     ov::element::Type precision = tensorInfo->getOvPrecision();
     if (!buffer.size()) {
+        OV_LOGGER("ov::Tensor({}, shape)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
         return ov::Tensor(precision, shape);
     }
+    OV_LOGGER("ov::Tensor({}, shape, data)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
     return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(buffer.data())));
 }
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
+    OV_LOGGER("ov::Shape()");
     ov::Shape shape;
     for (int i = 0; i < requestInput.shape_size(); i++) {
+        OV_LOGGER("ov::Shape::push_back({})", requestInput.shape().at(i));
         shape.push_back(requestInput.shape().at(i));
     }
 
     ov::element::Type precision = tensorInfo->getOvPrecision();
+    OV_LOGGER("ov::Tensor({}, shape)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
     ov::Tensor tensor(precision, shape);
     return tensor;
 }
-
 }  // namespace ovms

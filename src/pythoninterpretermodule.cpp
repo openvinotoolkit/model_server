@@ -32,7 +32,7 @@ namespace ovms {
 Status PythonInterpreterModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", PYTHON_INTERPRETER_MODULE_NAME);
-    // Initialize Python interpreter
+    this->threadId = std::this_thread::get_id();
     py::initialize_interpreter();
     py::exec(R"(
         import sys
@@ -54,7 +54,7 @@ void PythonInterpreterModule::shutdown() {
 
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", PYTHON_INTERPRETER_MODULE_NAME);
-    py::gil_scoped_acquire acquire;
+    reacquireGILForThisThread();
     if (pythonBackend != nullptr)
         delete pythonBackend;
     state = ModuleState::SHUTDOWN;
@@ -62,9 +62,27 @@ void PythonInterpreterModule::shutdown() {
     py::finalize_interpreter();
 }
 
+void PythonInterpreterModule::releaseGILFromThisThread() const {
+    if (std::this_thread::get_id() != this->threadId) {
+        SPDLOG_ERROR("Cannot use {} from different thread than the one starting module", __FUNCTION__);
+        throw std::logic_error("Cannot use method from different thread than the one starting python module");
+    }
+    this->GILScopedRelease = std::make_unique<py::gil_scoped_release>();
+}
+
+void PythonInterpreterModule::reacquireGILForThisThread() const {
+    if (std::this_thread::get_id() != this->threadId) {
+        SPDLOG_ERROR("Cannot use {} from different thread than the one starting module", __FUNCTION__);
+        throw std::logic_error("Cannot use method from different thread than the one starting python module");
+    }
+    this->GILScopedRelease.reset();
+}
+
 PythonBackend* PythonInterpreterModule::getPythonBackend() const {
     return pythonBackend;
 }
+
+PythonInterpreterModule::PythonInterpreterModule() = default;
 
 PythonInterpreterModule::~PythonInterpreterModule() {
     this->shutdown();

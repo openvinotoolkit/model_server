@@ -54,10 +54,7 @@
 #include "version.hpp"
 
 #if (PYTHON_DISABLE == 0)
-#include <pybind11/embed.h>  // everything needed for embedding
-
 #include "pythoninterpretermodule.hpp"
-namespace py = pybind11;
 #endif
 
 using grpc::ServerBuilder;
@@ -230,7 +227,16 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
 #define START_MODULE(IT_NAME)                \
     status = IT_NAME->second->start(config); \
     if (!status.ok())                        \
-    return status
+        return status;
+
+#define GET_MODULE(MODULE_NAME, IT_NAME)                                                              \
+    {                                                                                                 \
+        std::shared_lock lock(modulesMtx);                                                            \
+        IT_NAME = modules.find(MODULE_NAME);                                                          \
+        if (IT_NAME == modules.end()) {                                                               \
+            return Status(StatusCode::INTERNAL_ERROR, std::string("Could not find: ") + MODULE_NAME); \
+        }                                                                                             \
+    }
 
 Status Server::startModules(ovms::Config& config, bool withPython) {
     // The order of starting modules is slightly different from inserting modules
@@ -239,7 +245,7 @@ Status Server::startModules(ovms::Config& config, bool withPython) {
     // of modules creation than start
     // HTTP depends on GRPC, SERVABLE, METRICS
     // GRPC depends on SERVABLE
-    // SERVABLE depends on metrics
+    // SERVABLE depends on metrics, python
     // while we want to start the server as quickly as possible to respond with liveness probe
     // thats why we delay starting the servable until the very end while we need to create it before
     // GRPC & REST
@@ -262,22 +268,28 @@ Status Server::startModules(ovms::Config& config, bool withPython) {
 
     // we need servable module during GRPC/HTTP requests so create it here
     // but start it later to quickly respond with liveness probe
-    auto itServable = modules.end();
-    INSERT_MODULE(SERVABLE_MANAGER_MODULE_NAME, itServable);
-    auto itGrpc = modules.end();
-    INSERT_MODULE(GRPC_SERVER_MODULE_NAME, itGrpc);
-    START_MODULE(itGrpc);
+    INSERT_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
+    INSERT_MODULE(GRPC_SERVER_MODULE_NAME, it);
+    START_MODULE(it);
     // if we ever decide not to start GRPC module then we need to implement HTTP responses without using grpc implementations
-    auto itHttp = modules.end();
     if (config.restPort() != 0) {
-        INSERT_MODULE(HTTP_SERVER_MODULE_NAME, itHttp);
-        START_MODULE(itHttp);
+        INSERT_MODULE(HTTP_SERVER_MODULE_NAME, it);
+        START_MODULE(it);
     }
-    START_MODULE(itServable);
+    GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
+    START_MODULE(it);
+#if (PYTHON_DISABLE == 0)
+    it = modules.find(PYTHON_INTERPRETER_MODULE_NAME);
+    if (it != modules.end()) {
+        auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
+        pythonModule->releaseGILFromThisThread();
+    }
+#endif
     return status;
 }
 
 void Server::ensureModuleShutdown(const std::string& name) {
+    std::shared_lock lock(modulesMtx);
     auto it = modules.find(name);
     if (it != modules.end())
         it->second->shutdown();
@@ -329,12 +341,8 @@ int Server::start(int argc, char** argv) {
     Status ret = start(&serverSettings, &modelsSettings);
     ModulesShutdownGuard shutdownGuard(*this);
     if (!ret.ok()) {
-        // Handle OVMS main() return code
         return statusToExitCode(ret);
     }
-#if (PYTHON_DISABLE == 0)
-    py::gil_scoped_release release;
-#endif
     while (!shutdown_request) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }

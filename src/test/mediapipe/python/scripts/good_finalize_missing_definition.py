@@ -1,5 +1,4 @@
-#!/bin/bash
-#
+#*****************************************************************************
 # Copyright 2023 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,5 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-optimum-cli export openvino --model local-pt-checkpoint/ model/1 --task causal-lm --framework pt
+#*****************************************************************************
+
+class OvmsPythonModel:
+    def initialize(self, kwargs: dict):
+        return True
+
+    def execute(self, inputs: list, kwargs: dict) -> list:
+        return None

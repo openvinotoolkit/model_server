@@ -273,11 +273,11 @@ void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
-    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "");
+    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
-    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "");
+    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
 
 void checkScalarResponse(const std::string outputName,
     float inputScalar, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");

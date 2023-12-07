@@ -1,12 +1,11 @@
 # Integration with mediapipe {#ovms_docs_mediapipe}
 
-@sphinxdirective
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-@endsphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
+```
 
 ## Introduction
 MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. It comes with a wide range of calculators/nodes which can be applied for unlimited number of scenarios in image and media analytics, generative AI, transformers and many more. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)

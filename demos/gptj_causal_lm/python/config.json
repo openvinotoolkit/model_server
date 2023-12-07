@@ -31,6 +31,10 @@
                         {
                             "data_item": "attention_mask",
                             "alias": "attention"
+                        },
+                        {
+                            "data_item": "position_ids",
+                            "alias": "position"
                         }
                     ],
                     "library_name": "tokenizer",
@@ -54,6 +58,12 @@
                             "attention_mask": {
                                 "node_name": "node_1",
                                 "data_item": "attention"
+                            }
+                        },
+                        {
+                            "position_ids": {
+                                "node_name": "node_1",
+                                "data_item": "position"
                             }
                         }
                     ],

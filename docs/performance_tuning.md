@@ -25,25 +25,22 @@ To enable Performance Hints for your application, use the following command:
 
 CPU
 
-   ```bash
-         docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-               --model_path /opt/model --model_name resnet --port 9001 \
-               --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
-               --target_device CPU
-   ```
+```bash
+docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+      --model_path /opt/model --model_name resnet --port 9001 \
+      --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+      --target_device CPU
+```
 
 GPU
 
-@sphinxdirective
-.. code-block:: sh
-
-         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-               -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
-               --model_path /opt/model --model_name resnet --port 9001 \
-               --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
-               --target_device GPU
-
-@endsphinxdirective
+```bash
+docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+      -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+      --model_path /opt/model --model_name resnet --port 9001 \
+      --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+      --target_device GPU
+```
 
 #### LATENCY
 This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
@@ -53,22 +50,22 @@ To enable Performance Hints for your application, use the following command:
 
 CPU
 
-   ```bash
-         docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-               --model_path /opt/model --model_name resnet --port 9001 \
-               --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
-               --target_device CPU
-   ```
+```bash
+docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+      --model_path /opt/model --model_name resnet --port 9001 \
+      --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+      --target_device CPU
+```
 
 GPU
    
-   ```bash
-         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-               -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
-               --model_path /opt/model --model_name resnet --port 9001 \
-               --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
-               --target_device GPU
-   ```
+```bash
+docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+      -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+      --model_path /opt/model --model_name resnet --port 9001 \
+      --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+      --target_device GPU
+```
 
 > **NOTE**: NUM_STREAMS and PERFORMANCE_HINT should not be used together.
 

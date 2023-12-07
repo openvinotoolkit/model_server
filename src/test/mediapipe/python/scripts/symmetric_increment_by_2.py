@@ -18,7 +18,6 @@ from pyovms import Tensor
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
-        self.model_outputs = kwargs 
         return True
 
     def execute(self, inputs: list, kwargs: dict = {}):
@@ -27,7 +26,7 @@ class OvmsPythonModel:
         for input in inputs:
             input_npy = np.array(input)
             print(input_npy)
-            output_npy = input_npy + 1
+            output_npy = input_npy + 2
             output_name = input.name.replace("in", "OUTPUT")
             outputs.append(Tensor(output_name, output_npy))
         return outputs

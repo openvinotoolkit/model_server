@@ -1,15 +1,15 @@
-# Writing a Client Application {#ovms_docs_server_app}
+# Write a Client Application {#ovms_docs_server_app}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_docs_clients
-   ovms_docs_server_api
-
-@endsphinxdirective
+TensorFlow Serving API <ovms_docs_clients_tfs>
+KServe API <ovms_docs_clients_kfs>
+OpenVINO Model Server C-API <ovms_docs_c_api>
+```
 
 OpenVINO&trade; Model Server exposes two sets of APIs: one compatible with TensorFlow Serving and another one, with KServe API, for inference. Both APIs work on gRPC and REST interfaces. Supporting two sets of APIs makes OpenVINO Model Server easier to plug into existing systems the already leverage one of these APIs for inference. Learn more about supported APIs:
 

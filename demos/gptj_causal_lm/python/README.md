@@ -24,26 +24,17 @@ The script downloads the model using `transformers` pip library, loads into the 
 > NOTE: Loading the model into CPU device takes ~48GB of RAM. Read more in the [model specification](https://huggingface.co/docs/transformers/v4.15.0/model_doc/gptj#overview).
 
 ### Convert the model
-The model needs to be converted to ONNX format in order to load in OVMS:
+The model needs to be converted to IR format in order to load in OVMS:
 ```bash
 chmod +x convert_model.sh && ./convert_model.sh
 ```
-The model will reside in `onnx/1` directory.
+The model will reside in `model/1` directory.
 
-The script should provide result confirming successful model conversion:
-```bash
-Validating ONNX model...
-        -[✓] ONNX model output names match reference model ({'logits'})
-        - Validating ONNX Model output "logits":
-                -[✓] (3, 9, 50400) matches (3, 9, 50400)
-                -[✓] all values close (atol: 0.0001)
-All good, model saved at: onnx/1/model.onnx
-```
 
 ### Start OVMS with prepared GPT-J-6b model
 
 ```bash
-docker run -d --rm -p 9000:9000 -v $(pwd)/onnx:/model:ro openvino/model_server \
+docker run -d --rm -p 9000:9000 -v $(pwd)/model:/model:ro openvino/model_server \
     --port 9000 \
     --model_name gpt-j-6b \
     --model_path /model \
@@ -156,7 +147,7 @@ Start OVMS with prepared workspace:
 
 ```bash
 docker run -d --rm -p 9000:9000 \
-    -v $(pwd)/onnx:/onnx:ro \
+    -v $(pwd)/model:/onnx:ro \
     -v $(pwd)/workspace:/workspace:ro \
     openvino/model_server \
     --port 9000 \

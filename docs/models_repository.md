@@ -1,10 +1,20 @@
-# Preparing a Model Repository {#ovms_docs_models_repository}
+# Prepare a Model Repository {#ovms_docs_models_repository}
+
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
+
+ovms_docs_cloud_storage
+```
 
 The AI models served by OpenVINO&trade; Model Server must be in either of the four formats:
 - [OpenVINO IR](https://docs.openvino.ai/2023.2/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets), where the graph is represented in .bin and .xml files 
 - [ONNX](https://onnx.ai/), using the .onnx file
 - [PaddlePaddle](https://www.paddlepaddle.org.cn/en), using .pdiparams and .pdmodel files
 - [TensorFlow](https://www.tensorflow.org/), using SavedModel, MetaGraph or frozen Protobuf formats.
+- [TensorFlow Lite](https://www.tensorflow.org/lite), using the .tflite file
 
 To use models trained in other formats you need to convert them first. To do so, use 
 OpenVINO’s [Model Optimizer](https://docs.openvino.ai/2023.2/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) for IR, or different
@@ -52,10 +62,8 @@ models/
 the version number in parameters, by default, the latest version is served.
 - Every version folder _must_ include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for Paddlepaddle. The file name can be arbitrary.
 
-
-Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request input map. 
-Prediction results can be read from the response output map. By default, OpenVINO™ Model Server uses model tensor names as input and output names in 
-prediction requests and responses. The client passes the input values to the request and reads the results by referring to the corresponding output names.
+- Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request input map. 
+- Prediction results can be read from the response output map. By default, OpenVINO™ Model Server uses model tensor names as input and output names in prediction requests and responses. The client passes the input values to the request and reads the results by referring to the corresponding output names.
 
 Here is an example of client code:
 
@@ -69,10 +77,8 @@ output_tensorname = 'resnet_v1_50/predictions/Reshape_1'
 predictions = make_ndarray(result.outputs[output_tensorname])
 ```
 
-
 - It is possible to adjust this behavior by adding an optional .json file named `mapping_config.json`. 
-It can map the input and output keys to the appropriate tensors. This extra mapping can be used to enable user-friendly names for models with difficult tensor names.
-Here is an example of mapping_config.json:
+It can map the input and output keys to the appropriate tensors. This extra mapping can be used to enable user-friendly names for models with difficult tensor names. Here is an example of `mapping_config.json`:
 
 ```json
 {
@@ -85,4 +91,6 @@ Here is an example of mapping_config.json:
        }
 }
 ```
+
+For more information on how to use cloud hosted models, refer to the [article](./using_cloud_storage.md).
 
