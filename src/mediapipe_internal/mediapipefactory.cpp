@@ -40,7 +40,7 @@ namespace ovms {
 
 void LogUnorderedSet(std::unordered_set<std::string> set, std::string list_name) {
     for (auto name : set) {
-        SPDLOG_LOGGER_DEBUG(mediapipe_logger, "Registered {}: {}", list_name, name);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Registered {}: {}", list_name, name);
     }
 }
 
