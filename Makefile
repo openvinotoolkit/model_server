@@ -66,8 +66,8 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= cfd42bd2cb033929dd1858df3760bf23d967adac  # 11.2.2023
-OV_CONTRIB_BRANCH ?= de1c843281943584a5f4634fdf665c0c7e6a42e3  # 11.2.2023
+OV_SOURCE_BRANCH ?= a6ea22ad0e6b81dfd9c881146180da28218f309a  # 11.29.2023
+OV_CONTRIB_BRANCH ?= ebc2ea20dd87e9f59e154fe5cc1e5b711a65b9e6  # 11.22.2023
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -138,10 +138,10 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   endif
   ifeq ($(BASE_OS_TAG),20.04)
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.2.0.13089.cfd42bd2cb0_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.3.0.13432.a6ea22ad0e6_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
 	INSTALL_DRIVER_VERSION ?= "23.22.26516"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2023.2.0.13089.cfd42bd2cb0_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2023.3.0.13432.a6ea22ad0e6_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -156,7 +156,7 @@ ifeq ($(BASE_OS),redhat)
   endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.2.0.13089.cfd42bd2cb0_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.3.0.13432.a6ea22ad0e6_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -170,7 +170,7 @@ ifeq ($(NVIDIA),1)
 endif
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2023.2.0"
+PRODUCT_VERSION ?= "2023.3.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
