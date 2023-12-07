@@ -253,10 +253,8 @@ Status Server::startModules(ovms::Config& config) {
     bool inserted = false;
     auto it = modules.end();
 #if (PYTHON_DISABLE == 0)
-    if (serverSettings.runWithPythonInterpreterModule) {
-        INSERT_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
-        START_MODULE(it);
-    }
+    INSERT_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
+    START_MODULE(it);
 #endif
 #if MTR_ENABLED
     INSERT_MODULE(PROFILER_MODULE_NAME, it);
