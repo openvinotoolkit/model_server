@@ -15,13 +15,13 @@
 #
 
 def _python_repository_impl(repository_ctx):
-    result = repository_ctx.execute(["cat","/etc/os-release"],quiet=False)
-    ubuntu20_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 20")
-    ubuntu22_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 22")
+    base_os_image = repository_ctx.os.environ.get("BASE_IMAGE", "")
+    version = None
+    lib_path = None
 
-    if ubuntu20_count == 1 or ubuntu22_count == 1:
+    if "ubuntu" in base_os_image:
         lib_path = "lib/x86_64-linux-gnu"
-        if ubuntu20_count == 1:
+        if base_os_image == "ubuntu:20.04" or base_os_image == "docker.io/nvidia/cuda:11.8.0-runtime-ubuntu20.04":
             version = "3.8"
         else:
             version = "3.10"
