@@ -66,7 +66,7 @@ ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     OV_LOGGER("ov::Shape()");
     ov::Shape shape;
     for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
-        OV_LOGGER("ov::Shape::push_back(dim)");
+        OV_LOGGER("ov::Shape::push_back({})", requestInput.tensor_shape().dim(i).size());
         shape.push_back(requestInput.tensor_shape().dim(i).size());
     }
     ov::element::Type_t precision = tensorInfo->getOvPrecision();
