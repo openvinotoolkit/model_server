@@ -961,7 +961,7 @@ TYPED_TEST(TestPredict, Succesfull0DimInferenceOnBatchAutoModel) {
     // Do the inference
     auto status = this->performInferenceWithRequest(request, response, "dummy");
     ASSERT_EQ(status, StatusCode::OK) << status.string();
-    this->checkOutputShape(response, {0,10}, DUMMY_MODEL_OUTPUT_NAME);
+    this->checkOutputShape(response, {0, 10}, DUMMY_MODEL_OUTPUT_NAME);
 
     // Prepare non 0-dim request, test recovery
     preparer.preparePredictRequest(request,
