@@ -17,10 +17,10 @@
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
-        return
+        return True
 
     def execute(self, inputs: list, additional_argument, another_additional_argument) -> list:
         return None
 
     def finalize(self, kwargs: dict):
-        return
+        return None

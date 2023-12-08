@@ -19,7 +19,7 @@ class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
         self.model_outputs = kwargs 
-        return
+        return True
 
     def execute(self, inputs: list, kwargs: dict = {}):
         # Return input with different name. Reject non FP32 tensors.

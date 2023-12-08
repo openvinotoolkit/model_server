@@ -17,10 +17,10 @@
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
-        return
+        return True
 
     def execute(self, inputs: list) -> list:
         raise Exception("msg")
 
     def finalize(self, kwargs: dict):
-        return
+        return None

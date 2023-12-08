@@ -14,14 +14,14 @@
 # limitations under the License.
 #*****************************************************************************
 class OvmsPythonModel:
-    def initialize(self, kwargs: dict):
+    def initialize(self, kwargs: dict) -> bool:
         self.model_name = "testModel"
         self.execution_time = 300
         self.model_inputs = ["input1", "input2"]
-        return
+        return True
 
     def execute(self, inputs: dict) -> bool:
         return None
     
     def finalize(self, kwargs: dict):
-        return
+        return None

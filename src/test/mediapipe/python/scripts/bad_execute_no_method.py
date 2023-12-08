@@ -17,7 +17,7 @@
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
-        return
+        return True
 
     def finalize(self, kwargs: dict):
-        return
+        return None
