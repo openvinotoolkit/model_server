@@ -5,7 +5,7 @@ In this document we will walkthrough steps required to update existing Mediapipe
 - make changes to existing pbtxt graphs to replace TensorFlow calculators with OpenVINO calculators
 
 ## How to get models used in MediaPipe solutions
-When you build mediapipe applications or solutions, typically the bazel configuration would download the needed models as a dependency. When the graph is to be deployed via the OpenVINO Model Server or when the mediapipe application would use OpenVINO Model Server as the inference executor, the models needs to be stored in the [models repository](https://docs.openvino.ai/2023.2/ovms_docs_models_repository.html).
+When you build MediaPipe applications or solutions from the [https://github.com/google/mediapipe](https://github.com/google/mediapipe) repo, typically the bazel build would download the needed models as a data dependency. When the graph is to be deployed with OpenVINO Inference calulators, the models needs to be stored in the [models repository](https://docs.openvino.ai/2023.2/ovms_docs_models_repository.html). 
 That way you can take advantage of the [models versioning feature](./model_version_policy.md) and store the models on the local or the [cloud storage](./using_cloud_storage.md). The OpenVINO calculator is using as a parameter the path to the [config.json](https://docs.openvino.ai/2023.2/ovms_docs_serving_model.html#serving-multiple-models) file with models configuration with the specific model name.
 To get the model used in MediaPipe demo you can either trigger the original build target that depends upon that model and then search in bazel cache or download directly from locations below.
 * https://storage.googleapis.com/mediapipe-models/

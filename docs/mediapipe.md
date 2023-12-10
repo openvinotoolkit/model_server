@@ -163,7 +163,7 @@ When the MediaPipe graphs artifacts are packaged like presented above, configuri
     ]
 }
 ```
-Nodes in the MediaPipe graphs can reference both to the models configured in model_config_list section and in subconfigs.
+Nodes in the MediaPipe graphs can reference both the models configured in model_config_list section and in subconfigs.
 
 ### MediaPipe configuration options explained
 
@@ -179,7 +179,7 @@ Subconfig file may only contain *model_config_list* section  - in the same forma
 
 ## Deployment testing <a name="testing"></a>
 ### Debug logs
-The simples method to validate the graph execution is to set the Model Server `log_level` to `DEBUG`.
+The simplest method to validate the graph execution is to set the Model Server `log_level` to `DEBUG`.
 `docker run --rm -it -v $(pwd):/config openvino/model_server:latest --config_path /config/config.json --log_level TRACE`
 
 It will report in a verbose way all the operations in the mediapipe framework from the graph initialization and execution.
