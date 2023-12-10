@@ -1,6 +1,6 @@
 pipeline {
     agent {
-      label 'ovmscheck'
+      label 'ovms-coordinator'
     }
     stages {
         stage('Configure') {
@@ -31,7 +31,7 @@ pipeline {
               env
               """
               echo shortCommit
-              build job: "ovmsc/util-common/ovmsc-test-on-commit", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
+              build job: "ovmsc/util-common/ovmsc-test-on-commit", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit],[$class: 'StringParameterValue', name: 'NODE_LABEL', value: 'ovmsoncommit']]
           }    
         }
     }

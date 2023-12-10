@@ -271,7 +271,7 @@ cpplint: venv
 
 clang-format: venv
 	@echo "Formatting files with clang-format.."
-	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format-6.0 -style=file -i {} \;
+	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format -style=file -i {} \;
 
 clang-format-check: clang-format
 	@echo "Checking if clang-format changes were committed ..."
@@ -407,21 +407,25 @@ check_coverage:
 	@echo "Checking if coverage is above threshold..."
 	@docker run $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG) ./check_coverage.bat | grep success
 	
-test_checksec:
+test_checksec: venv
 	@echo "Running checksec on libovms_shared library..."
 	@docker rm -f $(OVMS_CPP_CONTAINER_NAME) || true
 	@docker create -ti --name $(OVMS_CPP_CONTAINER_NAME) $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash
 	@docker cp $(OVMS_CPP_CONTAINER_NAME):/libovms_shared.so /tmp
 	@docker cp $(OVMS_CPP_CONTAINER_NAME):/ovms_release/bin/ovms /tmp
 	@docker rm -f $(OVMS_CPP_CONTAINER_NAME) || true
-	@checksec --file=/tmp/libovms_shared.so --format=csv > checksec.txt
-	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,DSO,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
- 		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms shared library and fix issues." && exit 1;\
+	@. $(ACTIVATE); checksec -j /tmp/libovms_shared.so | jq '.[]| join(",")' > checksec.txt
+	@if ! grep -FRq "Full,true,true,DSO,false,true,true,true" checksec.txt; then\
+ 		echo "ERROR: OVMS shared library security settings changed. Run checksec on ovms shared library and fix issues." ; \
+		. $(ACTIVATE); checksec /tmp/libovms_shared.so ;\
+		exit 1;\
 	fi
 	@echo "Running checksec on ovms binary..."
-	@checksec --file=/tmp/ovms --format=csv > checksec.txt
-	@if ! grep -FRq "Full RELRO,Canary found,NX enabled,PIE enabled,No RPATH,RUNPATH,Symbols,Yes" checksec.txt; then\
- 		echo "ERROR: OVMS binary security settings changed. Run checksec on ovms binary and fix issues." && exit 1;\
+	@. $(ACTIVATE); checksec -j /tmp/ovms | jq '.[]| join(",")' > checksec.txt
+	@if ! grep -FRq "Full,true,true,PIE,false,true,true,true" checksec.txt; then\
+ 		echo "ERROR: OVMS binary security settings changed. Run checksec on ovms binary and fix issues."; \
+		. $(ACTIVATE); checksec /tmp/ovms ; \
+		exit 1;\
 	fi
 	@rm -f checksec.txt
 	@rm -f /tmp/ovms

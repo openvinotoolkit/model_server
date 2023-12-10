@@ -18,7 +18,7 @@ VIRTUALENV_EXE := python3 -m virtualenv -p python3
 VIRTUALENV_DIR := .venv-ovmsclient
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 
-PACKAGE_PATH := dist/ovmsclient-2023.1-py3-none-any.whl
+PACKAGE_PATH := dist/ovmsclient-2023.3-py3-none-any.whl
 TEST_TYPE := BASIC
 
 .PHONY: build-deps build-package build test clean style

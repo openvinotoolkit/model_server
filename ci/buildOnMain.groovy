@@ -1,6 +1,6 @@
 pipeline {
     agent {
-      label 'ovmscheck'
+      label 'ovms-coordinator'
     }
     stages {
         stage('Configure') {
