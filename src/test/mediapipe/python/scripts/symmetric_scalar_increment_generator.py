@@ -35,6 +35,3 @@ class OvmsPythonModel:
                 outputs.append(Tensor(output_name, output_data))
             print(outputs)
             yield outputs
-
-    def finalize(self, kwargs: dict):
-        return

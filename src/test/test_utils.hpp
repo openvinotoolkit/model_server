@@ -41,10 +41,15 @@
 #include "../dags/node_library.hpp"
 #include "../execution_context.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "../mediapipe_internal/pythonnoderesource.hpp"
 #include "../metric_registry.hpp"
 #include "../modelinstance.hpp"
 #include "../modelmanager.hpp"
+#include "../python/python_backend.hpp"
 #include "../shape.hpp"
+#include "../status.hpp"
 #include "../tensorinfo.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
@@ -403,8 +408,8 @@ class ConstructorEnabledModelManager : public ovms::ModelManager {
     ovms::MetricRegistry registry;
 
 public:
-    ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "") :
-        ovms::ModelManager(modelCacheDirectory, &registry) {}
+    ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "", ovms::PythonBackend* pythonBackend = nullptr) :
+        ovms::ModelManager(modelCacheDirectory, &registry, pythonBackend) {}
     ~ConstructorEnabledModelManager() {
         join();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
@@ -704,3 +709,28 @@ public:
 };
 
 std::shared_ptr<const ovms::TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const ovms::TensorInfo> src, ovms::Precision precision);
+
+class DummyMediapipeGraphDefinition : public ovms::MediapipeGraphDefinition {
+public:
+    std::string inputConfig;
+    ovms::PythonNodeResource* getPythonNodeResource(const std::string& nodeName) {
+        auto it = this->pythonNodeResources.find(nodeName);
+        if (it == std::end(pythonNodeResources)) {
+            return nullptr;
+        } else {
+            return it->second.get();
+        }
+    }
+
+    DummyMediapipeGraphDefinition(const std::string name,
+        const ovms::MediapipeGraphConfig& config,
+        std::string inputConfig,
+        ovms::PythonBackend* pythonBackend = nullptr) :
+        ovms::MediapipeGraphDefinition(name, config, nullptr, nullptr, pythonBackend) { this->inputConfig = inputConfig; }
+
+    // Do not read from path - use predefined config contents
+    ovms::Status validateForConfigFileExistence() override {
+        this->chosenConfig = this->inputConfig;
+        return ovms::StatusCode::OK;
+    }
+};

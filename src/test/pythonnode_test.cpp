@@ -129,32 +129,6 @@ TEST_F(PythonFlowTest, FinalizationPass) {
     ASSERT_TRUE(std::filesystem::exists(path));
 }
 
-class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
-public:
-    std::string inputConfig;
-
-    PythonNodeResource* getPythonNodeResource(const std::string& nodeName) {
-        auto it = this->pythonNodeResources.find(nodeName);
-        if (it == std::end(pythonNodeResources)) {
-            return nullptr;
-        } else {
-            return it->second.get();
-        }
-    }
-
-public:
-    DummyMediapipeGraphDefinition(const std::string name,
-        const MediapipeGraphConfig& config,
-        std::string inputConfig) :
-        MediapipeGraphDefinition(name, config, nullptr, nullptr, getPythonBackend()) {}
-
-    // Do not read from path - use predefined config contents
-    Status validateForConfigFileExistence() override {
-        this->chosenConfig = this->inputConfig;
-        return StatusCode::OK;
-    }
-};
-
 TEST_F(PythonFlowTest, PythonNodeFileDoesNotExist) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
