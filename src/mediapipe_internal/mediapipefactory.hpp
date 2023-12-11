@@ -21,6 +21,7 @@
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -31,6 +32,8 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 
 namespace ovms {
+
+void LogRegisteredNames(std::unordered_set<std::string> registrySet, std::string registryName);
 
 class ModelManager;
 class Status;

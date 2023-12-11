@@ -21,6 +21,7 @@
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -32,13 +33,25 @@
 #include "../logging.hpp"
 #include "../modelmanager.hpp"
 #include "../status.hpp"
+#include "mediapipe/framework/deps/registration.h"
 #include "mediapipegraphdefinition.hpp"
 
 namespace ovms {
 
+void LogRegisteredNames(std::unordered_set<std::string> registrySet, std::string registryName) {
+    for (auto name : registrySet) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Registered {}: {}", registryName, name);
+    }
+}
+
 MediapipeFactory::MediapipeFactory(PythonBackend* pythonBackend) {
     this->pythonBackend = pythonBackend;
+    LogRegisteredNames(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), "Calculator");
+    LogRegisteredNames(mediapipe::SubgraphRegistry::GetRegisteredNames(), "Subgraph");
+    LogRegisteredNames(mediapipe::InputStreamHandlerRegistry::GetRegisteredNames(), "InputStreamHandler");
+    LogRegisteredNames(mediapipe::OutputStreamHandlerRegistry::GetRegisteredNames(), "OutputStreamHandler");
 }
+
 Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     const MediapipeGraphConfig& config,
     ModelManager& manager) {
