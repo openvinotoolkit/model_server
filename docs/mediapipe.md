@@ -188,7 +188,7 @@ Note that graph definition loading is not confirming if all the calculators are 
 During the requests processing, the logs will include info about calculators initialization and processing the nodes.
 
 ### Tracing
-Currently the graph tracing on the model server side is not supported. If you would like to take advantage of mediapipe tracing to identify the graph bottleneck, test the graph from the mediapipe application level. Build an example application similarly to [holistic app](https://github.com/openvinotoolkit/mediapipe/tree/main/mediapipe/examples/desktop/holistic_tracking) with the steps documented on [mediapipe tracking](https://github.com/google/mediapipe/blob/master/docs/tools/tracing_and_profiling.md).
+Currently the graph tracing on the model server side is not supported. If you would like to take advantage of mediapipe tracing to identify the graph bottleneck, test the graph from the mediapipe application level. Build an example application similarly to [holistic app](https://github.com/openvinotoolkit/mediapipe/tree/main/mediapipe/examples/desktop/holistic_tracking) with the steps documented on [mediapipe tracking](https://github.com/openvinotoolkit/mediapipe/tree/main/docs/tools/tracing_and_profiling.md).
 
 ### Benchmarking
 While you implemented and deployed the graph you have several options to test the performance.

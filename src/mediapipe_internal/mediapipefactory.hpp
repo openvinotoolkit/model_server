@@ -33,7 +33,7 @@
 
 namespace ovms {
 
-void LogUnorderedSet(std::unordered_set<std::string> set, std::string list_name);
+void LogRegisteredNames(std::unordered_set<std::string> registrySet, std::string registryName);
 
 class ModelManager;
 class Status;

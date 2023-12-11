@@ -38,18 +38,18 @@
 
 namespace ovms {
 
-void LogUnorderedSet(std::unordered_set<std::string> set, std::string list_name) {
-    for (auto name : set) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Registered {}: {}", list_name, name);
+void LogRegisteredNames(std::unordered_set<std::string> registrySet, std::string registryName) {
+    for (auto name : registrySet) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Registered {}: {}", registryName, name);
     }
 }
 
 MediapipeFactory::MediapipeFactory(PythonBackend* pythonBackend) {
     this->pythonBackend = pythonBackend;
-    LogUnorderedSet(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), "Calculator");
-    LogUnorderedSet(mediapipe::SubgraphRegistry::GetRegisteredNames(), "Subgraph");
-    LogUnorderedSet(mediapipe::InputStreamHandlerRegistry::GetRegisteredNames(), "InputStreamHandler");
-    LogUnorderedSet(mediapipe::OutputStreamHandlerRegistry::GetRegisteredNames(), "OutputStreamHandler");
+    LogRegisteredNames(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), "Calculator");
+    LogRegisteredNames(mediapipe::SubgraphRegistry::GetRegisteredNames(), "Subgraph");
+    LogRegisteredNames(mediapipe::InputStreamHandlerRegistry::GetRegisteredNames(), "InputStreamHandler");
+    LogRegisteredNames(mediapipe::OutputStreamHandlerRegistry::GetRegisteredNames(), "OutputStreamHandler");
 }
 
 Status MediapipeFactory::createDefinition(const std::string& pipelineName,
