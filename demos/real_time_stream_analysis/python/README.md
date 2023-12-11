@@ -116,3 +116,8 @@ Replace video.mp4 with your video file.
 ```bash
 python3 rtsp_client.py --grpc_address localhost:9000 --input_stream 'workspace/video.mp4' --output_stream 'workspace/output.mp4'
 ```
+As well as using direct camera input and print inference result directly into the screen.
+
+```bash
+python3 rtsp_client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
+```
