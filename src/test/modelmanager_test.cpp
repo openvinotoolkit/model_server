@@ -2163,7 +2163,8 @@ class ModelInstanceModelLoadedNotify : public ::testing::Test {};
 TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInNotReachingTimeoutShouldSuceed) {
     // Need unit tests for modelInstance load first
     ModelManagerWithModelInstanceLoadedWaitInLoadingState manager;
-    const uint32_t modelLoadingTimeoutMs = 100;
+    // This test checks for proper status in two iterations with 100ms time step and is prone for CPU overheat
+    const uint32_t modelLoadingTimeoutMs = 200;
     manager.setWaitForModelLoadedTimeoutMs(modelLoadingTimeoutMs);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     modelWithModelInstanceLoadedWaitInLoadingState = std::make_shared<ModelWithModelInstanceLoadedWaitInLoadingState>(
@@ -2179,7 +2180,8 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInN
 TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInReachingTimeoutShouldReturnModelNotLoadedYet) {
     // Need unit tests for modelInstance load first
     ModelManagerWithModelInstanceLoadedWaitInLoadingState manager;
-    const uint32_t modelLoadingTimeoutMs = 100;
+    // This test checks for proper status in two iterations with 100ms time step and is prone for CPU overheat
+    const uint32_t modelLoadingTimeoutMs = 200;
     manager.setWaitForModelLoadedTimeoutMs(modelLoadingTimeoutMs);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
 
