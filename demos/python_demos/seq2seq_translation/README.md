@@ -10,12 +10,12 @@ cd model_server
 make python_image MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0
 ```
 
-## Run Model Server
+## Deploy OpenVINO Model Server with the Python calculator
 Prerequisites:
 -  image of OVMS with Python support and Optimum installed
 
 Mount the `./servable` which contains:
-- `model.py` and `config.py` - python scripts which are required for execution and uses optimum-intel framework
+- `model.py` and `config.py` - python scripts which are required for execution and use [Hugging Face](https://huggingface.co/) utilities with [optimum-intel](https://github.com/huggingface/optimum-intel) acceleration.
 - `config.json` - which defines which servables should be loaded
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculator
 

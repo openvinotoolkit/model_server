@@ -12,7 +12,7 @@ make python_image MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0
 
 ## Download model
 
-We are going to use [red-pajama-3b-chat](https://huggingface.co/togethercomputer/RedPajama-INCITE-Chat-3B-v1) model in this scenario.  
+We are going to use [red-pajama-3b-chat](https://huggingface.co/togethercomputer/RedPajama-INCITE-Chat-3B-v1) model in this scenario.
 Download the model using `download_model.py` script:
 
 ```bash
@@ -23,11 +23,11 @@ python3 download_model.py
 
 The model will appear in `./model` directory.
 
-## Run Model Server
+## Deploy OpenVINO Model Server with the Python calculator
 
 Mount the `./model` directory with the model.  
 Mount the `./servable` which contains:
-- `model.py` and `config.py` - python scripts which are required for execution and uses optimum-intel framework
+- `model.py` and `config.py` - python scripts which are required for execution and use [Hugging Face](https://huggingface.co/) utilities with [optimum-intel](https://github.com/huggingface/optimum-intel) acceleration.
 - `config.json` - which defines which servables should be loaded
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculator
 

@@ -24,11 +24,11 @@ python3 download_model.py
 
 The model will appear in `./model` directory.
 
-## Run Model Server
+## Deploy OpenVINO Model Server with the Python calculator
 
 Mount the `./model` directory with the model.  
 Mount the `./servable` which contains:
-- `model.py` and `config.py` - python scripts which are required for execution and uses optimum-intel framework
+- `model.py` and `config.py` - python scripts which are required for execution and use [Hugging Face](https://huggingface.co/) utilities with [optimum-intel](https://github.com/huggingface/optimum-intel) acceleration.
 - `config.json` - which defines which servables should be loaded
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculator
 
