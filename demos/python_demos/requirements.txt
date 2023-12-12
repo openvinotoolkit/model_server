@@ -1,6 +1,6 @@
 --extra-index-url https://download.pytorch.org/whl/cpu 
-git+https://github.com/mzegla/optimum-intel.git@infer_request_pool
-# we use our optimum fork here that enables optimum to work with multiple clients
+git+https://github.com/huggingface/optimum-intel.git
+# git+https://github.com/mzegla/optimum-intel.git@infer_request_pool - use fork if multi concurrency is needed
 onnx
 pillow
 optimum[diffusers]

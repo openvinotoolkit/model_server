@@ -8,7 +8,7 @@ From the root of the repository run:
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0
+make python_image
 ```
 
 ## Download model
