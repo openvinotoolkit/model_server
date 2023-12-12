@@ -43,6 +43,16 @@ class PythonExecutorCalculator : public CalculatorBase {
     // this way we can support timestamp continuity for more than one request in streaming scenario.
     mediapipe::Timestamp outputTimestamp;
 
+    void prepareInputs(CalculatorContext* cc, std::vector<py::object> * pyInputs) {
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            if (tag != "LOOPBACK") {
+                const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getObject();
+                nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
+                pyInputs->push_back(pyInput);
+            }
+        }
+    }
+
     void pushOutputs(CalculatorContext* cc, py::list pyOutputs, mediapipe::Timestamp& timestamp, bool pushLoopback) {
         py::gil_scoped_acquire acquire;
         for (py::handle pyOutputHandle : pyOutputs) {
@@ -70,6 +80,40 @@ class PythonExecutorCalculator : public CalculatorBase {
         }
         return false;
     }
+
+    bool generatorInitialized() {
+        return pyIteratorPtr != nullptr;
+    }
+
+    bool generatorFinished() {
+        return pyIteratorPtr->getObject() == py::iterator::sentinel();
+    }
+
+    void generate(CalculatorContext* cc, mediapipe::Timestamp& timestamp) {
+        py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getObject());
+        pushOutputs(cc, pyOutputs, timestamp, true);
+        ++(pyIteratorPtr->getObject()); // increment iterator
+    }
+
+    void initializeGenerator(py::object generator) {
+        pyIteratorPtr = std::make_unique<PyObjectWrapper<py::iterator>>(generator);
+    }
+
+    void resetGenerator() {
+        pyIteratorPtr.reset();
+    }
+
+    void handleExecutionResult(CalculatorContext* cc, py::object executionResult) {
+        if (py::isinstance<py::list>(executionResult)) {
+            pushOutputs(cc, executionResult, outputTimestamp, false);
+        } else if (py::isinstance<py::iterator>(executionResult)) {
+            initializeGenerator(executionResult);
+            generate(cc, outputTimestamp);
+        } else {
+            throw UnexpectedPythonObjectError(executionResult, "list or generator");
+        }
+    }
+
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -124,53 +168,28 @@ public:
         }
         py::gil_scoped_acquire acquire;
         try {
-            LOG(INFO) << "PYTHON: Acquired GIL";
-            if (pyIteratorPtr) {  // Iterator initialized
+            if (generatorInitialized()) {
                 if (receivedNewData(cc)) {
                     LOG(INFO) << "[Node: " << cc->NodeName() << "] Node is already processing data. Create new stream for another request.";
                     return absl::Status(absl::StatusCode::kResourceExhausted, "Node is already processing data. Create new stream for another request.");
                 }
-
-                LOG(INFO) << "PyIterator initialized block";
-                if (pyIteratorPtr->getObject() != py::iterator::sentinel()) {
-                    py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getObject());
-                    pushOutputs(cc, pyOutputs, outputTimestamp, true);
-                    ++(pyIteratorPtr->getObject());
+                if (!generatorFinished()) {
+                    generate(cc, outputTimestamp);
                 } else {
-                    LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] finished generating. Reseting the iterator.";
-                    pyIteratorPtr.reset();
+                    LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] finished generating. Reseting the generator.";
+                    resetGenerator();
                 }
-            } else {  // Iterator not initialized, either first iteration or execute is not yielding
-                LOG(INFO) << "PyIterator uninitialized block";
-                std::vector<py::object> pyInputs;
-                for (const std::string& tag : cc->Inputs().GetTags()) {
-                    if (tag != "LOOPBACK") {
-                        const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getObject();
-                        nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
-                        pyInputs.push_back(pyInput);
-                    }
-                }
-
-                py::object executeResult = std::move(nodeResources->nodeResourceObject->attr("execute")(pyInputs));
+            } else {  // Generator not initialized, either first iteration or execute is not yielding
 
                 // If execute yields, first request sets initial timestamp to input timestamp, then each cycle increments it.
                 // If execute returns, input timestamp is also output timestamp.
                 outputTimestamp = cc->InputTimestamp();
 
-                if (py::isinstance<py::list>(executeResult)) {
-                    LOG(INFO) << "Regular execution (execute returned)";
-                    pushOutputs(cc, executeResult, outputTimestamp, false);
-                } else if (py::isinstance<py::iterator>(executeResult)) {
-                    LOG(INFO) << "Iterator initialization (execute yielded)";
-                    pyIteratorPtr = std::make_unique<PyObjectWrapper<py::iterator>>(executeResult);
-                    py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getObject());
-                    pushOutputs(cc, pyOutputs, outputTimestamp, true);
-                    ++(pyIteratorPtr->getObject());
-                } else {
-                    throw UnexpectedPythonObjectError(executeResult, "list or generator");
-                }
+                std::vector<py::object> pyInputs;
+                prepareInputs(cc, &pyInputs);
+                py::object executeResult = std::move(nodeResources->nodeResourceObject->attr("execute")(pyInputs));
+                handleExecutionResult(cc, executeResult);
             }
-            LOG(INFO) << "PYTHON: Released GIL";
         } catch (const UnexpectedPythonObjectError& e) {
             // TODO: maybe some more descriptive information where to seek the issue.
             LOG(INFO) << "Wrong object on node " << cc->NodeName() << " execute input or output: " << e.what();

@@ -49,6 +49,8 @@ using grpc::ServerBuilder;
 
 namespace ovms {
 static const int GIGABYTE = 1024 * 1024 * 1024;
+// Default server shutdown deadline set to 5 seconds,
+// so it happens before docker container graceful stop.
 static const int SERVER_SHUTDOWN_DEADLINE_SECONDS = 5;
 
 static bool isPortAvailable(uint64_t port) {

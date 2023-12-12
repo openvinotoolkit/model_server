@@ -960,12 +960,11 @@ static bool streamSynchronizedWrite(::grpc::ServerReaderWriterInterface<::infere
 
 Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, KFSRequest>& stream) {
     SPDLOG_DEBUG("Start streaming KServe request mediapipe graph: {} execution", this->name);
+    std::mutex streamWriterMutex;
     try {
         // Init
         ::mediapipe::CalculatorGraph graph;
         MP_RETURN_ON_FAIL(graph.Initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
-
-        std::mutex streamWriterMutex;
 
         // Installing observers
         for (const auto& outputName : this->outputNames) {
@@ -1015,19 +1014,19 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
                 OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(pstatus, "validate subsequent requests");
             }
             if (graph.HasError()) {
-                SPDLOG_DEBUG("Graph encountered an error, stopping the execution");
+                SPDLOG_DEBUG("Graph {}: encountered an error, stopping the execution", this->name);
                 break;
             }
             req = std::make_shared<::inference::ModelInferRequest>();
         }
 
-        SPDLOG_DEBUG("Closing packet sources...");
+        SPDLOG_DEBUG("Graph {}: Closing packet sources...", this->name);
         // Close input streams
         MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "closing all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
 
-        SPDLOG_DEBUG("Closed all packet sources. Waiting untill done...");
+        SPDLOG_DEBUG("Graph {}: Closed all packet sources. Waiting untill done...", this->name);
         MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "waiting until done", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-        SPDLOG_DEBUG("Graph done");
+        SPDLOG_DEBUG("Graph {}: Done execution", this->name);
         return StatusCode::OK;
     } catch (...) {
         return Status(StatusCode::UNKNOWN_ERROR, "Exception while processing MediaPipe graph");  // To be displayed in method level above

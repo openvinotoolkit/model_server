@@ -53,6 +53,32 @@ protected:
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
 };
 
+class PythonStreamingTest : public StreamingTest {
+protected:
+    // Defaults for executor
+    std::unique_ptr<PythonInterpreterModule> pythonModule;
+    PythonBackend* pythonBackend;
+
+    std::unique_ptr<ConstructorEnabledModelManager> manager;
+
+public:
+    void SetUp() {
+        pythonModule = std::make_unique<PythonInterpreterModule>();
+        pythonModule->start(ovms::Config::instance());
+        pythonBackend = pythonModule->getPythonBackend();
+        manager = std::make_unique<ConstructorEnabledModelManager>("", pythonBackend);
+    }
+
+    void TearDown() {
+        manager.reset();
+        pythonModule->reacquireGILForThisThread();
+        pythonModule->shutdown();
+        pythonModule.reset();
+    }
+};
+
+
+
 static void setRequestTimestamp(KFSRequest& request, const std::string& value) {
     request.clear_parameters();
     auto intOpt = ovms::stoi64(value);
@@ -457,153 +483,66 @@ node {
 namespace py = pybind11;
 #include "../python/python_backend.hpp"
 
-TEST_F(StreamingTest, SingleStreamSend1Receive3Python) {
-    PythonInterpreterModule pythonModule;
-    pythonModule.start(ovms::Config::instance());
-    // Running everything in the scope, so Python objects get destroyed before module shutdown.
-    {
-        PythonBackend* pythonBackend = pythonModule.getPythonBackend();
-        ConstructorEnabledModelManager manager{"", pythonBackend};
-        const std::string testPbtxt{R"(
-    input_stream: "OVMS_PY_TENSOR:input"
-    output_stream: "OVMS_PY_TENSOR:output"
-    node {
-        calculator: "PythonExecutorCalculator"
-        name: "pythonNode"
-        input_side_packet: "PYTHON_NODE_RESOURCES:py"
-        input_stream: "LOOPBACK:loopback"
-        input_stream: "INPUT:input"
-        input_stream_info: {
-            tag_index: 'LOOPBACK:0',
-            back_edge: true
-        }
-        input_stream_handler {
-            input_stream_handler: "SyncSetInputStreamHandler",
-            options {
-                [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
-                    sync_set {
-                        tag_index: "LOOPBACK:0"
-                    }
+TEST_F(PythonStreamingTest, SingleStreamSend1Receive3Python) {
+    const std::string testPbtxt{R"(
+input_stream: "OVMS_PY_TENSOR:input"
+output_stream: "OVMS_PY_TENSOR:output"
+node {
+    calculator: "PythonExecutorCalculator"
+    name: "pythonNode"
+    input_side_packet: "PYTHON_NODE_RESOURCES:py"
+    input_stream: "LOOPBACK:loopback"
+    input_stream: "INPUT:input"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                    tag_index: "LOOPBACK:0"
                 }
             }
         }
-        output_stream: "LOOPBACK:loopback"
-        output_stream: "OUTPUT:output"
-        node_options: {
-            [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
-            }
+    }
+    output_stream: "LOOPBACK:loopback"
+    output_stream: "OUTPUT:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+            handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
         }
     }
-    )"};
+}
+)"};
 
-        ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
-        DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, pythonBackend);
-        ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+    ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
+    ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-        std::shared_ptr<MediapipeGraphExecutor> pipeline;
-        ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
-        ASSERT_NE(pipeline, nullptr);
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
 
-        pythonModule.releaseGILFromThisThread();
-        // Mock only 1 request and disconnect immediately
-        prepareRequest(this->firstRequest, {{"input", 3.5f}});
-        EXPECT_CALL(this->stream, Read(_))
-            .WillOnce(Disconnect());
+    this->pythonModule->releaseGILFromThisThread();
+    // Mock only 1 request and disconnect immediately
+    prepareRequest(this->firstRequest, {{"input", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Disconnect());
 
-        // Expect 3 responses (cycle)
-        // The PythonExecutorCalculator produces increasing timestamps
-        EXPECT_CALL(this->stream, Write(_, _))
-            .WillOnce(SendWithTimestamp({{"OUTPUT", 4.5f}}, 0))
-            .WillOnce(SendWithTimestamp({{"OUTPUT", 5.5f}}, 1))
-            .WillOnce(SendWithTimestamp({{"OUTPUT", 6.5f}}, 2));
+    // Expect 3 responses (cycle)
+    // The PythonExecutorCalculator produces increasing timestamps
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"OUTPUT", 4.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"OUTPUT", 5.5f}}, 1))
+        .WillOnce(SendWithTimestamp({{"OUTPUT", 6.5f}}, 2));
 
-        ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
-    }
-    pythonModule.shutdown();
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
-TEST_F(StreamingTest, MultipleStreamsInSingleRequestSend1Receive3Python) {
-    PythonInterpreterModule pythonModule;
-    pythonModule.start(ovms::Config::instance());
-    // Running everything in the scope, so Python objects get destroyed before module shutdown.
-    {
-        PythonBackend* pythonBackend = pythonModule.getPythonBackend();
-        ConstructorEnabledModelManager manager{"", pythonBackend};
-        const std::string testPbtxt{R"(
-    input_stream: "OVMS_PY_TENSOR1:input1"
-    input_stream: "OVMS_PY_TENSOR2:input2"
-    output_stream: "OVMS_PY_TENSOR1:output1"
-    output_stream: "OVMS_PY_TENSOR2:output2"
-    node {
-        calculator: "PythonExecutorCalculator"
-        name: "pythonNode"
-        input_side_packet: "PYTHON_NODE_RESOURCES:py"
-        input_stream: "LOOPBACK:loopback"
-        input_stream: "INPUT1:input1"
-        input_stream: "INPUT2:input2"
-        input_stream_info: {
-            tag_index: 'LOOPBACK:0',
-            back_edge: true
-        }
-        input_stream_handler {
-            input_stream_handler: "SyncSetInputStreamHandler",
-            options {
-                [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
-                    sync_set {
-                        tag_index: "LOOPBACK:0"
-                    }
-                }
-            }
-        }
-        output_stream: "LOOPBACK:loopback"
-        output_stream: "OUTPUT1:output1"
-        output_stream: "OUTPUT2:output2"
-        node_options: {
-            [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
-            }
-        }
-    }
-    )"};
-
-        ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
-        DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, pythonBackend);
-        ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
-
-        std::shared_ptr<MediapipeGraphExecutor> pipeline;
-        ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
-        ASSERT_NE(pipeline, nullptr);
-
-        pythonModule.releaseGILFromThisThread();
-        // Mock only 1 request and disconnect immediately
-        prepareRequest(this->firstRequest, {{"input1", 3.5f}, {"input2", 13.5f}});
-        EXPECT_CALL(this->stream, Read(_))
-            .WillOnce(Disconnect());
-
-        // Expect 6 responses (cycle)
-        // The PythonExecutorCalculator produces increasing timestamps
-        EXPECT_CALL(this->stream, Write(_, _))
-            .WillOnce(SendWithTimestamp({{"OUTPUT1", 4.5f}}, 0))
-            .WillOnce(SendWithTimestamp({{"OUTPUT2", 14.5f}}, 0))
-            .WillOnce(SendWithTimestamp({{"OUTPUT1", 5.5f}}, 1))
-            .WillOnce(SendWithTimestamp({{"OUTPUT2", 15.5f}}, 1))
-            .WillOnce(SendWithTimestamp({{"OUTPUT1", 6.5f}}, 2))
-            .WillOnce(SendWithTimestamp({{"OUTPUT2", 16.5f}}, 2));
-
-        ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
-    }
-    pythonModule.shutdown();
-}
-
-TEST_F(StreamingTest, MultipleStreamsInMultipleRequestSend1Receive3Python) {
-    PythonInterpreterModule pythonModule;
-    pythonModule.start(ovms::Config::instance());
-    // Running everything in the scope, so Python objects get destroyed before module shutdown.
-    {
-        PythonBackend* pythonBackend = pythonModule.getPythonBackend();
-        ConstructorEnabledModelManager manager{"", pythonBackend};
-        const std::string testPbtxt{R"(
+TEST_F(PythonStreamingTest, MultipleStreamsInSingleRequestSend1Receive3Python) {
+    const std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR1:input1"
 input_stream: "OVMS_PY_TENSOR2:input2"
 output_stream: "OVMS_PY_TENSOR1:output1"
@@ -640,35 +579,98 @@ node {
 }
 )"};
 
-        ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
-        DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, pythonBackend);
-        ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+    ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
+    ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
-        std::shared_ptr<MediapipeGraphExecutor> pipeline;
-        ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
-        ASSERT_NE(pipeline, nullptr);
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
 
-        pythonModule.releaseGILFromThisThread();
+    this->pythonModule->releaseGILFromThisThread();
+    // Mock only 1 request and disconnect immediately
+    prepareRequest(this->firstRequest, {{"input1", 3.5f}, {"input2", 13.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Disconnect());
 
-        std::mutex mtx;
-        const int64_t timestamp = 64;
+    // Expect 6 responses (cycle)
+    // The PythonExecutorCalculator produces increasing timestamps
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"OUTPUT1", 4.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"OUTPUT2", 14.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"OUTPUT1", 5.5f}}, 1))
+        .WillOnce(SendWithTimestamp({{"OUTPUT2", 15.5f}}, 1))
+        .WillOnce(SendWithTimestamp({{"OUTPUT1", 6.5f}}, 2))
+        .WillOnce(SendWithTimestamp({{"OUTPUT2", 16.5f}}, 2));
 
-        prepareRequest(this->firstRequest, {{"input1", 3.5f}}, timestamp);
-        EXPECT_CALL(this->stream, Read(_))
-            .WillOnce(ReceiveWithTimestamp({{"input2", 7.2f}}, timestamp))
-            .WillOnce(DisconnectWhenNotified(mtx));
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
 
-        EXPECT_CALL(this->stream, Write(_, _))
-            .WillOnce(SendWithTimestamp({{"OUTPUT1", 4.5f}}, timestamp))
-            .WillOnce(SendWithTimestamp({{"OUTPUT2", 8.2f}}, timestamp))
-            .WillOnce(SendWithTimestamp({{"OUTPUT1", 5.5f}}, timestamp + 1))
-            .WillOnce(SendWithTimestamp({{"OUTPUT2", 9.2f}}, timestamp + 1))
-            .WillOnce(SendWithTimestamp({{"OUTPUT1", 6.5f}}, timestamp + 2))
-            .WillOnce(SendWithTimestampAndNotifyEnd({{"OUTPUT2", 10.2f}}, timestamp + 2, mtx));
-
-        ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+TEST_F(PythonStreamingTest, MultipleStreamsInMultipleRequestSend1Receive3Python) {
+    const std::string testPbtxt{R"(
+input_stream: "OVMS_PY_TENSOR1:input1"
+input_stream: "OVMS_PY_TENSOR2:input2"
+output_stream: "OVMS_PY_TENSOR1:output1"
+output_stream: "OVMS_PY_TENSOR2:output2"
+node {
+calculator: "PythonExecutorCalculator"
+name: "pythonNode"
+input_side_packet: "PYTHON_NODE_RESOURCES:py"
+input_stream: "LOOPBACK:loopback"
+input_stream: "INPUT1:input1"
+input_stream: "INPUT2:input2"
+input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+}
+input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+        [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+            sync_set {
+                tag_index: "LOOPBACK:0"
+            }
+        }
     }
-    pythonModule.shutdown();
+}
+output_stream: "LOOPBACK:loopback"
+output_stream: "OUTPUT1:output1"
+output_stream: "OUTPUT2:output2"
+node_options: {
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+        handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
+    }
+}
+}
+)"};
+
+    ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
+    ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    this->pythonModule->releaseGILFromThisThread();
+
+    std::mutex mtx;
+    const int64_t timestamp = 64;
+
+    prepareRequest(this->firstRequest, {{"input1", 3.5f}}, timestamp);
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(ReceiveWithTimestamp({{"input2", 7.2f}}, timestamp))
+        .WillOnce(DisconnectWhenNotified(mtx));
+
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"OUTPUT1", 4.5f}}, timestamp))
+        .WillOnce(SendWithTimestamp({{"OUTPUT2", 8.2f}}, timestamp))
+        .WillOnce(SendWithTimestamp({{"OUTPUT1", 5.5f}}, timestamp + 1))
+        .WillOnce(SendWithTimestamp({{"OUTPUT2", 9.2f}}, timestamp + 1))
+        .WillOnce(SendWithTimestamp({{"OUTPUT1", 6.5f}}, timestamp + 2))
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"OUTPUT2", 10.2f}}, timestamp + 2, mtx));
+
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
 // --- End Gen AI Python cases
