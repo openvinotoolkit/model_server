@@ -77,8 +77,6 @@ public:
     }
 };
 
-
-
 static void setRequestTimestamp(KFSRequest& request, const std::string& value) {
     request.clear_parameters();
     auto intOpt = ovms::stoi64(value);

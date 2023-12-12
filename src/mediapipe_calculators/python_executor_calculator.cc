@@ -43,7 +43,7 @@ class PythonExecutorCalculator : public CalculatorBase {
     // this way we can support timestamp continuity for more than one request in streaming scenario.
     mediapipe::Timestamp outputTimestamp;
 
-    void prepareInputs(CalculatorContext* cc, std::vector<py::object> * pyInputs) {
+    void prepareInputs(CalculatorContext* cc, std::vector<py::object>* pyInputs) {
         for (const std::string& tag : cc->Inputs().GetTags()) {
             if (tag != "LOOPBACK") {
                 const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getObject();
@@ -92,7 +92,7 @@ class PythonExecutorCalculator : public CalculatorBase {
     void generate(CalculatorContext* cc, mediapipe::Timestamp& timestamp) {
         py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getObject());
         pushOutputs(cc, pyOutputs, timestamp, true);
-        ++(pyIteratorPtr->getObject()); // increment iterator
+        ++(pyIteratorPtr->getObject());  // increment iterator
     }
 
     void initializeGenerator(py::object generator) {
@@ -113,7 +113,6 @@ class PythonExecutorCalculator : public CalculatorBase {
             throw UnexpectedPythonObjectError(executionResult, "list or generator");
         }
     }
-
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -179,8 +178,7 @@ public:
                     LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] finished generating. Reseting the generator.";
                     resetGenerator();
                 }
-            } else {  // Generator not initialized, either first iteration or execute is not yielding
-
+            } else {
                 // If execute yields, first request sets initial timestamp to input timestamp, then each cycle increments it.
                 // If execute returns, input timestamp is also output timestamp.
                 outputTimestamp = cc->InputTimestamp();
