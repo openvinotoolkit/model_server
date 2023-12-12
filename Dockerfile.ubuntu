@@ -98,6 +98,7 @@ ARG BASE_IMAGE
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
+ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
             libgflags-dev \
@@ -274,8 +275,6 @@ COPY src/BUILD /ovms/src/BUILD
 COPY src/bindings/python/tests/requirements.txt /ovms/src/bindings/python/tests/requirements.txt
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/
-
-ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg 
 
 # FROM BASE BUILD
 COPY --from=base_build /opt/opencv /opt/opencv/
