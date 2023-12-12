@@ -1,4 +1,4 @@
 git+https://github.com/huggingface/optimum-intel.git
 onnx
-tritonclient[grpc]
+tritonclient[grpc]==2.37.0.9383150
 openvino==2023.2

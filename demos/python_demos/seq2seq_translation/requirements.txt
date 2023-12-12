@@ -1,2 +1,2 @@
-tritonclient[grpc]
+tritonclient[grpc]==2.37.0.9383150
 
