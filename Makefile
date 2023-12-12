@@ -169,6 +169,8 @@ ifeq ($(NVIDIA),1)
   IMAGE_TAG_SUFFIX = -cuda
 endif
 
+OVMS_PYTHON_IMAGE_TAG ?= py
+
 PRODUCT_NAME = "OpenVINO Model Server"
 PRODUCT_VERSION ?= "2023.3.0"
 PROJECT_VER_PATCH =
@@ -393,6 +395,10 @@ ifeq ($(BUILD_NGINX), 1)
 	http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)" "$(OS)" && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls
 endif
+
+python_image: release_image
+	@docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg IMAGE_NAME=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) demos/python_demos -t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_PYTHON_IMAGE_TAG)
+
 
 # Ci build expects index.html in genhtml directory
 get_coverage:
