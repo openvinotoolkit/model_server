@@ -98,7 +98,7 @@ and the subconfig.json:
   ]
 }
 ```
-You can find more details about OpenVINO Model Server configuration in [documentation](https://docs.openvino.ai/2023.1/ovms_docs_serving_model.html#serving-multiple-models).
+You can find more details about OpenVINO Model Server configuration in [documentation](https://docs.openvino.ai/2023.2/ovms_docs_serving_model.html#serving-multiple-models).
 
 *Note*: base paths in config.json are relative to the file path of config.json.
 
@@ -208,5 +208,3 @@ node {
   }
 }
 ```
----
-
