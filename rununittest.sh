@@ -23,11 +23,12 @@ ${debug_bazel_flags} \
 --test_summary=detailed \
 --test_output=streamed \
 --test_env PYTHONPATH=${PYTHONPATH}"
-generate_coverage_report() {
-    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
-}
 test_success_procedure() {
     grep -a " ms \| ms)" ${TEST_LOG}
+}
+generate_coverage_report() {
+    test_success_procedure
+    genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
 }
 test_fail_procedure() {
     test_success_procedure
