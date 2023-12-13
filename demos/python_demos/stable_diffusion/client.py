@@ -26,7 +26,11 @@ parser.add_argument('--url', required=False, default='localhost:9000',
                     help='Specify url to grpc service. default:localhost:9000')
 args = vars(parser.parse_args())
 
-client = grpcclient.InferenceServerClient(args['url'])
+channel_args = [
+    # Do not drop the connection for long workloads
+    ("grpc.http2.max_pings_without_data", 0),
+]
+client = grpcclient.InferenceServerClient(args['url'], channel_args=channel_args)
 data = "Zebras in space".encode()
 
 model_name = "python_model"
@@ -36,7 +40,7 @@ start = time.time()
 infer_input = grpcclient.InferInput(input_name, [len(data)], "BYTES")
 infer_input._raw_content = data
 
-results = client.infer(model_name, [infer_input])
+results = client.infer(model_name, [infer_input], client_timeout=10*60)
 img = Image.open(BytesIO(results.as_numpy("OUTPUT")))
 img.save(f"output.png")
 duration = time.time() - start
