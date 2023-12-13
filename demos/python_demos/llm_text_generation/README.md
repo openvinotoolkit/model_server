@@ -1,8 +1,8 @@
 # LLM text generation with python node {#ovms_demo_python_llm_text_generation}
 
 This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models. 
-The server is running here the user provided python code in a MediaPipe Python calculator. We manage the generation with Hugging Faces pipeline and OpenVINO Runtime as the execution engine.
-The generation cycles are configured in the MediaPipe graph. Two use cases are possible:
+The demo explains how to serve MediaPipe Graph with Python Calculator. In Python Calculator, we use Hugging Face Optimum with OpenVINO Runtime as execution engine.
+Two use cases are possible:
 - with unary calls - when the client is sending a single prompt to the graph and receives a complete generated response
 - with gRPC streaming - when the client is sending a single prompt the graph and receives a stream of responses
 
@@ -10,7 +10,7 @@ The unary calls are simpler but the response might be sometimes slow when many c
 
 The gRPC stream is a great feature when more interactive approach is needed allowing the user to read the response as they are getting generated.
 
-This demo is presents the use case with `red-pajama-3b-chat` model but the included python scripts are prepared for several other LLM  models like `Llama-2-7b-chat-hf` and TBD.
+This demo presents the use case with `red-pajama-3b-chat` model but the included python scripts are prepared for several other LLM models like `Llama-2-7b-chat-hf`. Minimal tweaks are required in the servable python code to change the underlying model.
 
 ## Build image
 
@@ -73,7 +73,7 @@ Completion:
 
 
 Start the Model Server with different directory mounted (`./servable_stream`).
-It contains modified `model.py` script which yields the intermediate results instead of returning it at the end of `def execute()` method.
+It contains modified `model.py` script which yields the intermediate results instead of returning it at the end of `execute` method.
 The `graph.pbtxt` is also modified to include cycle in order to make the Python Calculator run in a loop.  
 
 ```bash
