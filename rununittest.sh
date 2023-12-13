@@ -23,10 +23,15 @@ ${debug_bazel_flags} \
 --test_summary=detailed \
 --test_output=streamed \
 --test_env PYTHONPATH=${PYTHONPATH}"
+test_success_procedure() {
+    grep -a " ms \| ms)" ${TEST_LOG}
+}
 generate_coverage_report() {
+    test_success_procedure
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
 }
 test_fail_procedure() {
+    test_success_procedure
     cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1
 }
 echo "Run test: ${RUN_TESTS}"
@@ -43,6 +48,6 @@ if [ "$RUN_TESTS" == "1" ] ; then
         ${SHARED_OPTIONS} "${TEST_FILTER}" \
         //src:ovms_test > ${TEST_LOG} 2>&1 || \
         test_fail_procedure; } && \
-        tail -n 100 ${TEST_LOG} && \
+        test_success_procedure && \
         rm -rf ${TEST_LOG};
 fi
