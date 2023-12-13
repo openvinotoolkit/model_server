@@ -129,32 +129,6 @@ TEST_F(PythonFlowTest, FinalizationPass) {
     ASSERT_TRUE(std::filesystem::exists(path));
 }
 
-class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
-public:
-    std::string inputConfig;
-
-    PythonNodeResource* getPythonNodeResource(const std::string& nodeName) {
-        auto it = this->pythonNodeResources.find(nodeName);
-        if (it == std::end(pythonNodeResources)) {
-            return nullptr;
-        } else {
-            return it->second.get();
-        }
-    }
-
-public:
-    DummyMediapipeGraphDefinition(const std::string name,
-        const MediapipeGraphConfig& config,
-        std::string inputConfig) :
-        MediapipeGraphDefinition(name, config, nullptr, nullptr, getPythonBackend()) {}
-
-    // Do not read from path - use predefined config contents
-    Status validateForConfigFileExistence() override {
-        this->chosenConfig = this->inputConfig;
-        return StatusCode::OK;
-    }
-};
-
 TEST_F(PythonFlowTest, PythonNodeFileDoesNotExist) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
@@ -175,7 +149,7 @@ TEST_F(PythonFlowTest, PythonNodeFileDoesNotExist) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST);
 }
@@ -212,7 +186,7 @@ TEST_F(PythonFlowTest, PythonNodeNameAlreadyExist) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS);
 }
@@ -237,7 +211,7 @@ TEST_F(PythonFlowTest, PythonNodeInitFailed) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
 }
@@ -262,7 +236,7 @@ TEST_F(PythonFlowTest, PythonNodeInitFailedImportOutsideTheClassError) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
 }
@@ -287,7 +261,7 @@ TEST_F(PythonFlowTest, PythonNodeInitException) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
 }
@@ -307,7 +281,7 @@ TEST_F(PythonFlowTest, PythonNodeOptionsMissing) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_MISSING_OPTIONS);
 }
@@ -331,7 +305,7 @@ TEST_F(PythonFlowTest, PythonNodeNameMissing) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_MISSING_NAME);
 }
@@ -356,7 +330,7 @@ TEST_F(PythonFlowTest, PythonNodeNameDoesNotExist) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     ASSERT_EQ(mediapipeDummy.getPythonNodeResource("pythonNode4"), nullptr);
@@ -382,7 +356,7 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     PythonNodeResource* nodeRes = mediapipeDummy.getPythonNodeResource("pythonNode2");
@@ -440,7 +414,7 @@ TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     PythonNodeResource* nodeRes = mediapipeDummy.getPythonNodeResource("pythonNode2");
@@ -501,7 +475,7 @@ TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     PythonNodeResource* nodeRes = mediapipeDummy.getPythonNodeResource("pythonNode2");
@@ -547,21 +521,21 @@ public:
         return tensor;
     }
 
-    static std::vector<T> readVectorFromOutput(const std::string& outputName, int numElements, const mediapipe::CalculatorRunner* runner) {
-        const PyObjectWrapper<py::object>& pyOutput = runner->Outputs().Tag(outputName).packets[0].Get<PyObjectWrapper<py::object>>();
+    static std::vector<T> readVectorFromOutput(const std::string& outputName, int numElements, const mediapipe::CalculatorRunner* runner, int packetIndex = 0) {
+        const PyObjectWrapper<py::object>& pyOutput = runner->Outputs().Tag(outputName).packets[packetIndex].Get<PyObjectWrapper<py::object>>();
         T* outputData = (T*)pyOutput.getProperty<void*>("ptr");
         std::vector<T> output;
         output.assign(outputData, outputData + numElements);
         return output;
     }
 
-    std::vector<T> getIncrementedVector() {
+    std::vector<T> getIncrementedVector(int value = 1) {
         // SimpleTensor is expected to hold data in shape (1, X),
         // therefore we iterate over the second dimension as it holds the actual data
         std::vector<T> output;
         T* fpData = (T*)data;
         for (int i = 0; i < shape[1]; i++) {
-            output.push_back(fpData[i] + 1);
+            output.push_back(fpData[i] + value);
         }
         return output;
     }
@@ -662,7 +636,7 @@ static std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> prep
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
-    ConstructorEnabledModelManager manager;
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(
     input_stream: "OVMS_PY_TENSOR:in"
     output_stream: "OVMS_PY_TENSOR:out"
@@ -680,7 +654,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
         }
     )";
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
@@ -728,7 +702,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
         }
     )";
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
@@ -1008,7 +982,7 @@ TEST_F(PythonFlowTest, ReloadWithDifferentScriptName) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = firstTestPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
@@ -1096,7 +1070,7 @@ TEST_F(PythonFlowTest, FailingToInitializeOneNodeDestructsAllResources) {
     )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = firstTestPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
     ASSERT_EQ(mediapipeDummy.getPythonNodeResource("pythonNode1"), nullptr);

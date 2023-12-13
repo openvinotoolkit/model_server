@@ -1541,23 +1541,6 @@ TEST(Mediapipe, MetadataDummy) {
     EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
 }
 
-class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
-public:
-    std::string inputConfig;
-
-public:
-    DummyMediapipeGraphDefinition(const std::string name,
-        const MediapipeGraphConfig& config,
-        std::string inputConfig) :
-        MediapipeGraphDefinition(name, config, nullptr, nullptr) {}
-
-    // Do not read from path - use predefined config contents
-    Status validateForConfigFileExistence() override {
-        this->chosenConfig = this->inputConfig;
-        return StatusCode::OK;
-    }
-};
-
 TEST(Mediapipe, MetadataDummyInputTypes) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(

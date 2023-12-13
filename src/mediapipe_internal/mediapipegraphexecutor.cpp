@@ -93,18 +93,18 @@ const Timestamp DEFAULT_STARTING_STREAM_TIMESTAMP = Timestamp(0);
         }                                                               \
     }
 
-#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)          \
-    {                                                                 \
-        auto status = code;                                           \
-        if (!status.ok()) {                                           \
-            ::inference::ModelStreamInferResponse resp;               \
-            std::stringstream ss;                                     \
-            ss << status.string() << "; " << message;                 \
-            *resp.mutable_error_message() = ss.str();                 \
-            if (!stream.Write(resp)) {                                \
-                SPDLOG_DEBUG("Writing error to disconnected client"); \
-            }                                                         \
-        }                                                             \
+#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)                 \
+    {                                                                        \
+        auto status = code;                                                  \
+        if (!status.ok()) {                                                  \
+            ::inference::ModelStreamInferResponse resp;                      \
+            std::stringstream ss;                                            \
+            ss << status.string() << "; " << message;                        \
+            *resp.mutable_error_message() = ss.str();                        \
+            if (!streamSynchronizedWrite(stream, streamWriterMutex, resp)) { \
+                SPDLOG_DEBUG("Writing error to disconnected client");        \
+            }                                                                \
+        }                                                                    \
     }
 
 static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<const inference::ModelInferRequest_InferInputTensor>& itr, const std::string& requestedName, const KFSRequest& request) {
@@ -952,8 +952,15 @@ Status MediapipeGraphExecutor::validateSubsequentRequest(const ::inference::Mode
     return StatusCode::OK;
 }
 
+static bool streamSynchronizedWrite(::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, KFSRequest>& stream,
+    std::mutex& mtx, ::inference::ModelStreamInferResponse& resp) {
+    const std::lock_guard<std::mutex> lock(mtx);
+    return stream.Write(resp);
+}
+
 Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, KFSRequest>& stream) {
     SPDLOG_DEBUG("Start streaming KServe request mediapipe graph: {} execution", this->name);
+    std::mutex streamWriterMutex;
     try {
         // Init
         ::mediapipe::CalculatorGraph graph;
@@ -961,14 +968,14 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
 
         // Installing observers
         for (const auto& outputName : this->outputNames) {
-            MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&stream, &outputName, this](const ::mediapipe::Packet& packet) -> absl::Status {
+            MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&stream, &streamWriterMutex, &outputName, this](const ::mediapipe::Packet& packet) -> absl::Status {
                 try {
                     ::inference::ModelStreamInferResponse resp;
                     OVMS_RETURN_MP_ERROR_ON_FAIL(serializePacket(outputName, *resp.mutable_infer_response(), packet), "error in serialization");
                     *resp.mutable_infer_response()->mutable_model_name() = this->name;
                     *resp.mutable_infer_response()->mutable_model_version() = this->version;
                     resp.mutable_infer_response()->mutable_parameters()->operator[](MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).set_int64_param(packet.Timestamp().Value());
-                    if (!stream.Write(resp)) {
+                    if (!streamSynchronizedWrite(stream, streamWriterMutex, resp)) {
                         return absl::Status(absl::StatusCode::kCancelled, "client disconnected");
                     }
                     return absl::OkStatus();
@@ -980,7 +987,9 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
         }
 
         // Launch
-        MP_RETURN_ON_FAIL(graph.StartRun(createInputSidePackets(&firstRequest)), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
+        std::map<std::string, mediapipe::Packet> inputSidePackets{createInputSidePackets(&firstRequest)};
+        inputSidePackets[INPUT_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodesResources>(this->pythonNodeResources).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+        MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         // Deserialize first request
         OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(this->partialDeserialize(
@@ -1005,18 +1014,19 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
                 OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(pstatus, "validate subsequent requests");
             }
             if (graph.HasError()) {
-                SPDLOG_DEBUG("Graph encountered an error, stopping the execution");
+                SPDLOG_DEBUG("Graph {}: encountered an error, stopping the execution", this->name);
                 break;
             }
             req = std::make_shared<::inference::ModelInferRequest>();
         }
 
+        SPDLOG_DEBUG("Graph {}: Closing packet sources...", this->name);
         // Close input streams
         MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "closing all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
 
-        // Wait until done
+        SPDLOG_DEBUG("Graph {}: Closed all packet sources. Waiting untill done...", this->name);
         MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "waiting until done", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-
+        SPDLOG_DEBUG("Graph {}: Done execution", this->name);
         return StatusCode::OK;
     } catch (...) {
         return Status(StatusCode::UNKNOWN_ERROR, "Exception while processing MediaPipe graph");  // To be displayed in method level above
