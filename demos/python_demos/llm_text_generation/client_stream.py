@@ -15,7 +15,7 @@
 #
 import tritonclient.grpc as grpcclient
 import argparse
-from queue import Queue
+from threading import Event
 
 parser = argparse.ArgumentParser(description='Client for llm example')
 
@@ -34,13 +34,14 @@ channel_args = [
 
 client = grpcclient.InferenceServerClient(args['url'], channel_args=channel_args)
 
-q = Queue()
+event = Event()
+
 def callback(result, error):
-    global q
+    global event
     if error:
         raise error
     if result.as_numpy('END_SIGNAL') is not None:
-        q.put({})
+        event.set()
     elif result.as_numpy('OUTPUT') is not None:
         print(result.as_numpy('OUTPUT').tobytes().decode(), flush=True, end='')
     else:
@@ -57,6 +58,6 @@ infer_input._raw_content = data
 
 client.async_stream_infer(model_name="python_model", inputs=[infer_input])
 
-q.get()
+event.wait()
 client.stop_stream()
 print('\nEND')

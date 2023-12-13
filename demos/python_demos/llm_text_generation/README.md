@@ -1,14 +1,27 @@
-# Llama demo with python node {#ovms_demo_python_llama}
+# LLM text generation with python node {#ovms_demo_python_llm_text_generation}
+
+This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models. 
+The server is running here the user provided python code in a MediaPipe Python calculator. We manage the generation with Hugging Faces pipeline and OpenVINO Runtime as the execution engine.
+The generation cycles are configured in the MediaPipe graph. Two use cases are possible:
+- with unary calls - when the client is sending a single prompt to the graph and receives a complete generated response
+- with gRPC streaming - when the client is sending a single prompt the graph and receives a stream of responses
+
+The unary calls are simpler but the response might be sometimes slow when many cycles are needed on the server side
+
+The gRPC stream is a great feature when more interactive approach is needed allowing the user to read the response as they are getting generated.
+
+This demo is presents the use case with `red-pajama-3b-chat` model but the included python scripts are prepared for several other LLM  models like `Llama-2-7b-chat-hf` and TBD.
 
 ## Build image
 
-From the root of the repository run:
+Building the image with all required python dependencies is required. Follow the commands:
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 make python_image
 ```
+It will create an image called `openvino/model_server:py`
 
 ## Download model
 
@@ -32,7 +45,7 @@ Mount the `./servable_unary_version` or `./servable_stream_version` which contai
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculator
 
 Depending on the use case, `./servable_unary_version` and `./servable_stream_version` showcase different approach:
-- *unary* - single request - single response, useful for low latency calls with no intermediate results
+- *unary* - single request - single response, useful when the request does not take too long and there are no intermediate results
 - *stream* - single request - multiple responses which are delivered as soon as new intermediate result is available
 
 To test unary example:
@@ -56,9 +69,12 @@ Completion:
  Many jobs in the health care industry are experiencing long-term shortages due to a lack of workers, while other areas face overwhelming stress and strain.  Due to COVID-19 many more people look for quality medical services closer to home so hospitals have seen record levels of admissions over the last year.
 ```
 
-## Deploying the streaming version
+## Requesting the LLM with gRPC streaming
 
-Restart the Model Server with different directory mounted (`./servable_stream_version`):
+
+Start the Model Server with different directory mounted (`./servable_stream_version`).
+It contains modified `model.py` script which yields the intermediate results instead of returning it at the end of `def execute()` method.
+The `graph.pbtxt` is also modified to include cycle in order to make the Python Calculator run in a loop.  
 
 ```bash
 docker run -it --rm -p 9000:9000 -v ${PWD}/servable_stream_version:/workspace -v ${PWD}/model:/model openvino/model_server:py --config_path /workspace/config.json --port 9000
