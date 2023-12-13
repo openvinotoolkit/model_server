@@ -60,7 +60,7 @@ NVIDIA ?=0
 GPU ?= 0
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
-PYTHON_DISABLE ?= 1
+PYTHON_DISABLE ?= 0
 FUZZER_BUILD ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:

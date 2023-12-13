@@ -1,6 +1,5 @@
 --extra-index-url https://download.pytorch.org/whl/cpu 
-git+https://github.com/huggingface/optimum-intel.git
-# git+https://github.com/mzegla/optimum-intel.git@infer_request_pool - use fork if concurrency is needed
+git+https://github.com/mzegla/optimum-intel.git@infer_request_pool
 onnx
 pillow
 optimum[diffusers]
