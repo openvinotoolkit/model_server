@@ -39,18 +39,18 @@ The model will appear in `./model` directory.
 ## Deploy OpenVINO Model Server with the Python Calculator
 
 Mount the `./model` directory with the model.  
-Mount the `./servable_unary_version` or `./servable_stream_version` which contains:
+Mount the `./servable_unary` or `./servable_stream` which contains:
 - `model.py` and `config.py` - python scripts which are required for execution and use [Hugging Face](https://huggingface.co/) utilities with [optimum-intel](https://github.com/huggingface/optimum-intel) acceleration.
 - `config.json` - which defines which servables should be loaded
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculator
 
-Depending on the use case, `./servable_unary_version` and `./servable_stream_version` showcase different approach:
+Depending on the use case, `./servable_unary` and `./servable_stream` showcase different approach:
 - *unary* - single request - single response, useful when the request does not take too long and there are no intermediate results
 - *stream* - single request - multiple responses which are delivered as soon as new intermediate result is available
 
 To test unary example:
 ```bash
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable_unary_version:/workspace -v ${PWD}/model:/model openvino/model_server:py --config_path /workspace/config.json --port 9000
+docker run -it --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/model:/model openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
 ## Requesting the LLM
@@ -72,12 +72,12 @@ Completion:
 ## Requesting the LLM with gRPC streaming
 
 
-Start the Model Server with different directory mounted (`./servable_stream_version`).
+Start the Model Server with different directory mounted (`./servable_stream`).
 It contains modified `model.py` script which yields the intermediate results instead of returning it at the end of `def execute()` method.
 The `graph.pbtxt` is also modified to include cycle in order to make the Python Calculator run in a loop.  
 
 ```bash
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable_stream_version:/workspace -v ${PWD}/model:/model openvino/model_server:py --config_path /workspace/config.json --port 9000
+docker run -it --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/model:/model openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
 Run time streaming client `client_stream.py`:
