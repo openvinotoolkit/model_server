@@ -22,21 +22,13 @@ from huggingface_hub import login, whoami
 
 import threading
 
-HF_TOKEN = os.getenv("HF_ACCESS_TOKEN", "")
-
-if HF_TOKEN:
-    try:
-        whoami()
-        print('Authorization token already provided')
-    except OSError:
-        login(HF_TOKEN)
-
-from config import SUPPORTED_MODELS
+from config import SUPPORTED_LLM_MODELS
 
 
 SELECTED_MODEL = 'red-pajama-3b-chat'
-#SELECTED_MODEL = 'llama-2-chat-7b'
-model_configuration = SUPPORTED_MODELS[SELECTED_MODEL]
+#change to one of the values from SUPPORTED_LLM_MODELS values from config.py
+
+model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
 
 MODEL_PATH = "/model"  # relative to container
 OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
@@ -50,7 +42,7 @@ stop_tokens = model_configuration.get("stop_tokens")
 tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
 text_processor = model_configuration.get("partial_text_processor")
 
-tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
 
 # HF class that is capable of stopping the generation
 # when given tokens appear in specific order

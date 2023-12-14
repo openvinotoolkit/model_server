@@ -33,8 +33,24 @@ cd demos/python_demos/llm_text_generation
 pip install -r requirements.txt
 python3 download_model.py
 ```
+The model will appear in `./red-pajama-3b-chat` directory.
 
-The model will appear in `./model` directory.
+> **Note** Edit the variable SELECTED_MODEL to choose different one.
+
+## Quantization - optional
+
+Quantization can be applied on the original model. It can reduce the model size and memory requirements. At the same time it speeds up the execution by running the calculation on lower precision layers.
+
+```bash
+python3 quantize_model.py
+```
+It creates new folders with quantized versions of the model using precision FP16, INT8 and INT4.
+Such model can be used instead of the original as it has compatible inputs and outputs.
+
+> **Note** Quantization might reduce the model accuracy. Test if the results are of acceptable quality.
+
+> **Note** On the target device supporting natively FP16 precision, OpenVINO is changing automatically the precision from FP32 to FP16. It improves the performance and usually has minimal impact on the accuracy. Original precision can be enforced with `ov_config` key:
+`{"INFERENCE_PRECISION_HINT": "f32"}`.
 
 ## Deploy OpenVINO Model Server with the Python Calculator
 
@@ -50,10 +66,15 @@ Depending on the use case, `./servable_unary` and `./servable_stream` showcase d
 
 To test unary example:
 ```bash
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/model:/model openvino/model_server:py --config_path /workspace/config.json --port 9000
+docker run -it --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/red-pajama-3b-chat:/model openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
 ## Requesting the LLM
+
+Install client dependencies:
+```bash
+pip install -r requirements-client.txt
+```
 
 Run time unary client `client_unary.py`:
 ```bash
@@ -77,7 +98,7 @@ It contains modified `model.py` script which yields the intermediate results ins
 The `graph.pbtxt` is also modified to include cycle in order to make the Python Calculator run in a loop.  
 
 ```bash
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/model:/model openvino/model_server:py --config_path /workspace/config.json --port 9000
+docker run -it --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/red-pajama-3b-chat:/model openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
 Run time streaming client `client_stream.py`:
