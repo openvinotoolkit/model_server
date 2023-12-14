@@ -85,7 +85,9 @@ public:
             (char*)"--config_path",
             (char*)configPath.c_str(),
             (char*)"--port",
-            (char*)port.c_str()};
+            (char*)port.c_str(),
+            (char*)"--file_system_poll_wait_seconds",
+            (char*)"0"};
         int argc = 5;
         serverThread.reset(new std::thread([&argc, &argv]() {
             EXPECT_EQ(EXIT_SUCCESS, ovms::Server::instance().start(argc, argv));
@@ -927,6 +929,46 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
     checkDummyResponse("output1", data1, req, res, 1 /* expect +1 */, 1, "mediaDummy", 3);
     checkDummyResponse("output2", data2, req, res, 1 /* expect +1 */, 1, "mediaDummy", 3);
     checkDummyResponse("output3", data3, req, res, 1 /* expect +1 */, 1, "mediaDummy", 3);
+}
+
+TEST_F(PythonFlowTest, PythonCalculatorNoData) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "OVMS_PY_TENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT:in"
+            output_stream: "OUTPUT:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                }
+            }
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<float> data{};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, 0}, ovms::fromString("FP32")}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    checkDummyResponse("OUTPUT", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
