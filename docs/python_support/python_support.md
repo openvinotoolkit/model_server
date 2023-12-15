@@ -322,12 +322,196 @@ If it fails, the `datatype` is set to `format`, so that if such tensor is the ou
   
 ## Configuration and deployment
 
- Python is enabled via [Mediapipe](../mediapipe.md) by built-in `PythonExecutorCalculator`, therefore, in order to execute Python code in OVMS you need to create a graph with a node that uses this calculator. 
+Python is enabled via [Mediapipe](../mediapipe.md) by built-in `PythonExecutorCalculator`, therefore, in order to execute Python code in OVMS you need to create a graph with a node that uses this calculator. 
 
- The way the graph is configured has a huge impact on the whole deployment. It defines things like:
- - inputs and outputs of the graph
- - inputs and outputs of each node in the graph
- - connections between the nodes
- - graph and nodes options
+The way the graph is configured has a huge impact on the whole deployment. It defines things like:
+- inputs and outputs of the graph
+- inputs and outputs of each node in the graph
+- connections between the nodes
+- graph and nodes options
 
- 
+### PythonExecutorCalculator
+
+Main part of the configuration is the node setting. Python nodes should use `PythonExecutorCalculator` and **must** be named. See a basic example:
+
+```pbtxt
+node {
+  name: "python_node"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:input"
+  output_stream: "OUTPUT:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/workspace/model.py"
+    }
+  }
+}
+```
+
+Let's break it down:
+
+- `name`: the name by which the node will be identified in the model server. Every Python node in a graph must have a unique name.
+
+- `calculator`: indicates the calculator to be used in the node. Must be `PythonExecutorCalculator`.
+
+- `input_side_packet`: a shared data passed from the model server to the Python nodes. It allows to share `OvmsPythonModel` state between multiple graph instances. Must be `PYTHON_NODE_RESOURCES:py`.
+
+- `input_stream`: defines input in form `[TAG]:[NAME]`. Mediapipe allows configurations with indexes i.e. `[TAG]:[INDEX]:[NAME]`, but `PythonExecutorCalculator` ignores it.
+
+- `output_stream`: defines output in form `[TAG]:[NAME]`. Mediapipe allows configurations with indexes i.e. `[TAG]:[INDEX]:[NAME]`, but `PythonExecutorCalculator` ignores it.
+
+- `handler_path`: the only one options so far in `PythonExecutorCalculator`. It's a path to the Python file with `OvmsPythonModel` implementation.
+
+### Input and output streams in Python code
+
+How node input and output streams are configured has direct impact on the names of `pyovms.Tensor` objects in `execute` method of `OvmsPythonModel`. In previous simple configuration there are:
+```pbtxt
+input_stream: "INPUT:input"
+output_stream: "OUTPUT:output"
+```
+
+Both input and output streams are constructed as `[TAG]:[NAME]`.
+So in this example there's:
+- input with tag `INPUT` and name `input`
+- output with tag `OUTPUT` and name `output`
+
+In the Python code you should always refer to the `[NAME]` part.
+So inside `execute` there would be:
+
+```python
+from pyovms import Tensor
+
+class OvmsPythonModel:
+    def execute(self, inputs):
+        my_input = inputs[0]
+        my_input.name == "input" # true             
+        my_output = Tensor("output", "some text".encode())
+        return [my_output]
+```
+
+### Input and output streams for entire graph
+
+So far only node input and output streams have been mentioned, but the configuration also requires defining graph's input and output streams.
+The rules are very similar to how it works on the node level, so the streams are described in form: `[TAG]:[NAME]`, but there's more to it.
+
+On graph level the `[TAG]` helps model server in deserialization and serialization by providing information about the object type expected in the stream. Model server reads the tag and expects it to start with one of predefined prefixes. If graph input stream is connected to Python node the tag should begin with `OVMS_PY_TENSOR`, which tells the server that it should deserialize input from the request to `pyovms.Tensor` object.
+
+There can't be two or more the same tags among the input streams as well as there can't be two or more the same tags among the output streams. In such cases, prefix must be followed by some unique string.
+
+```
+input_stream: "OVMS_PY_TENSOR_IMAGE:image"
+input_stream: "OVMS_PY_TENSOR_TEXT:text"
+output_stream: "OVMS_PY_TENSOR:output"
+```
+
+When it comes to the `[NAME]` part, it is used to connect graph inputs and output with the nodes. They are also the input and output names in server requests and responses.
+
+### Multiple nodes
+Here is what you should know if you want to have multiple Python nodes in the same graph:
+
+- Every Python node must have a unique name in graph scope
+- Every Python node has it's own instance of `OvmsPythonModel` that is not shared even if two nodes have identical `handler_path`
+- Nodes based on `PythonExecutorCalculator` can be connected directly without need for converters
+- Nodes may reuse the same Python file, but every Python file used by the server must have a unique name, otherwise some nodes might not work as expected. 
+For example: `/ovms/workspace1/model.py` and `/ovms/workspace2/model.py` will result in only one `model.py` effectively loaded (this is supposed to be changed in the future versions).
+
+### Basic example
+Let's see a complete example of the configuration with three Python nodes set in sequence:
+
+```pbtxt
+input_stream: "OVMS_PY_TENSOR:first_number"
+output_stream: "OVMS_PY_TENSOR:last_number"
+
+node {
+  name: "first_python_node"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:first_number"
+  output_stream: "OUTPUT:second_number"
+  node_options: {
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/workspace/incrementer.py"
+    }
+  }
+}
+
+node {
+  name: "second_python_node"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:second_number"
+  output_stream: "OUTPUT:third_number"
+  node_options: {
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/workspace/incrementer.py"
+    }
+  }
+}
+
+node {
+  name: "third_python_node"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:third_number"
+  output_stream: "OUTPUT:last_number"
+  node_options: {
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/workspace/incrementer.py"
+    }
+  }
+}
+```
+
+In that example client will send an input called `first_number` and receive output called `last_number`. Since user has access to input and output names in the Python code, the code for incrementation can be generic.
+
+`incrementer.py`
+```python
+from pyovms import Tensor
+
+def increment(input):
+    # Some code for input incrementation
+    ...
+
+class OvmsPythonModel:
+    # Assuming this code is used with nodes
+    # that have single input and single output
+    
+    def initialize(self, kwargs):
+        self.output_name = kwargs["output_names"][0]
+
+    def execute(self, inputs):
+        my_input = inputs[0]           
+        my_output = Tensor(self.output_name, increment(my_input))
+        return [my_output]
+```
+
+### Model Server configuration file
+
+Once Python code and the `pbtxt` file with graph configuration is ready the model server configuration is very simple and could look like this:
+
+```json
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+        {
+            "name":"python_graph",
+            "graph_path":"/ovms/workspace/graph.pbtxt"
+        }
+    ]
+}
+```
+Where `name` defines the name of the whole servable and `graph_path` contains the path to graph configuration file.
+
+## Advanced Configuration
+
+### Execution modes
+
+Python nodes can be configured to run in two execution modes - regular and generative. 
+
+In regular execution mode the node produces one set of outputs per one set of inputs. It works via both gRPC unary and streaming endpoints and is a common mode for use cases like computer vision.
+
+In generative execution mode the node produces multiple sets of outputs over time per single set of inputs. It works only via gRPC streaming endpoints and is useful for use cases where total processing time is big and you want to return some intermediate results before the exection is completed. That mode is well suited to Large Language Models to serve them in more interactive manner.
+
+Depending on which mode is used, both the Python code and graph configuration must be in line.
+
