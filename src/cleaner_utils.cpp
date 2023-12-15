@@ -16,8 +16,11 @@
 
 #include "cleaner_utils.hpp"
 
+#include <malloc.h>
+
 #include "global_sequences_viewer.hpp"
 #include "modelmanager.hpp"
+#include "logging.hpp"
 
 namespace ovms {
 FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
@@ -25,6 +28,8 @@ FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequ
 
 void FunctorSequenceCleaner::cleanup() {
     globalSequencesViewer.removeIdleSequences();
+    SPDLOG_TRACE("malloc_trim(0)");
+    malloc_trim(0);
 }
 
 FunctorSequenceCleaner::~FunctorSequenceCleaner() = default;
