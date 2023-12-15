@@ -90,7 +90,9 @@ tiny-llama-1b-chat_INT8_compressed_weights
 > **Note** On the target device supporting natively FP16 precision, OpenVINO is changing automatically the precision from FP32 to FP16. It improves the performance and usually has minimal impact on the accuracy. Original precision can be enforced with `ov_config` key:
 `{"INFERENCE_PRECISION_HINT": "f32"}`.
 
-## Deploy OpenVINO Model Server with the Python Calculator
+## Use LLM model with unary calls
+
+### Deploy OpenVINO Model Server with the Python Calculator
 
 Mount the `./model` directory with the model.  
 Mount the `./servable_unary` or `./servable_stream` which contains:
@@ -104,25 +106,16 @@ Depending on the use case, `./servable_unary` and `./servable_stream` showcase d
 
 To test unary example:
 ```bash
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
-```
-
-To test the streaming example just mount different workspace location from `./servable_stream`.
-It contains modified `model.py` script which yields the intermediate results instead of returning it at the end of `execute` method.
-The `graph.pbtxt` is also modified to include cycle in order to make the Python Calculator run in a loop.  
-
-```bash
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
 ```
 
 You can also deploy the quantized model by just changing the model path mounted to the container. For example:
 
 ```bash
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
 ```
 
-
-## Requesting the LLM model with an unary gRPC call
+### Running the client with LLM model and unary gRPC call
 
 Install python client dependencies. This is a common step also for the streaming client.
 ```bash
@@ -145,7 +138,25 @@ It is difficult to say how many helicopters human can eat in one sitting without
 Total time 11662 ms
 ```
 
-## Requesting the LLM with gRPC streaming
+## Use LLM model with gRPC streaming
+
+### Deploy OpenVINO Model Server with the Python Calculator
+
+The model server can be deployed with our streaming example by just mounting different workspace location from `./servable_stream`.
+It contains modified `model.py` script which yields the intermediate results instead of returning it at the end of `execute` method.
+The `graph.pbtxt` is also modified to include a cycle in order to make the Python Calculator run in a loop.  
+
+```bash
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
+```
+
+Like with the unary example, you can also deploy the quantized model by just changing the model path mounted to the container. For example:
+```bash
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
+```
+
+
+## Running the client with the LLM model and gRPC streaming
 
 Run time streaming client `client_stream.py`:
 ```bash
