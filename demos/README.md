@@ -25,6 +25,7 @@ ovms_demo_tf_classification
 ovms_demo_person_vehicle_bike_detection
 ovms_demo_vehicle_analysis_pipeline
 ovms_demo_real_time_stream_analysis
+ovms_demo_using_paddlepaddle_model
 ovms_demo_bert
 ovms_demo_gptj_causal_lm
 ovms_demo_llama_2_chat
@@ -55,6 +56,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 |[Person, Vehicle, Bike Detection](person_vehicle_bike_detection/python/README.md)|Run prediction on a video file or camera stream using person, vehicle, bike detection model via gRPC API.|
 |[Vehicle Analysis Pipeline](vehicle_analysis_pipeline/python/README.md)|Detect vehicles and recognize their attributes using a pipeline of vehicle detection and vehicle attributes recognition models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection). |
 |[Real Time Stream Analysis](real_time_stream_analysis/python/README.md)| Analyze RTSP video stream in real time with generic application template for custom pre and post processing routines as well as simple results visualizer for displaying predictions in the browser. |
+|[Segmentation with PaddlePaddle](segmentation_using_paddlepaddle_model/python/README.md)| Perform segmentation on an image with a PaddlePaddle model. |
 |[Natural Language Processing with BERT](bert_question_answering/python/README.md)|Provide a knowledge source and a query and use BERT model for question answering use case via gRPC API. This demo uses dynamic shape feature. |
 |[GPT-J Causal Language Modeling](gptj_causal_lm/python/README.md)|Write start of the sentence and let GPT-J continue via gRPC API. This demo uses dynamic shape feature. |
 |[Llama 2 Chat](llama_chat/python/README.md)| Ask llama a question and get an answer via gRPC API using lightweight python script |
