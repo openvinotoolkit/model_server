@@ -6,3 +6,4 @@ openvino>=2023.2
 nncf==2.7.0
 einops==0.7.0
 transformers_stream_generator==0.0.4
+tiktoken==0.5.2
