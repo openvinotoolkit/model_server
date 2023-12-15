@@ -25,6 +25,7 @@
    ovms_demo_person_vehicle_bike_detection
    ovms_demo_vehicle_analysis_pipeline
    ovms_demo_real_time_stream_analysis
+   ovms_demo_using_paddlepaddle_model
    ovms_demo_bert
    ovms_demo_gptj_causal_lm
    ovms_demo_llama_2_chat
