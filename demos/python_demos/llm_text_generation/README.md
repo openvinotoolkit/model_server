@@ -49,7 +49,7 @@ options:
   --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistal-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
                         Select the LLM model out of supported list
 
-python download_model.py --model $(SELECTED_MODEL)
+python download_model.py --model ${SELECTED_MODEL}
 
 ```
 The model will appear in `./tiny-llama-1b-chat` directory.
@@ -70,7 +70,7 @@ options:
   --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistal-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
                         Select the LLM model out of supported list
 
-python quantize_model.py --model $(SELECTED_MODEL)
+python quantize_model.py --model ${SELECTED_MODEL}
 
 
 ```
