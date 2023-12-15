@@ -46,7 +46,7 @@ private:
     ModelsSettingsImpl modelsSettings;
 
 public:
-     ServerSettingsImpl serverSettings;
+    ServerSettingsImpl serverSettings;
     /**
          * @brief Gets the instance of the config
          */
