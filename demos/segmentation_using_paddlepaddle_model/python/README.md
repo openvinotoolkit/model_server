@@ -1,3 +1,5 @@
+# Segmentation Example with a PaddlePaddle Model {#ovms_demo_using_paddlepaddle_model}
+
 ## Overview
 
 This guide demonstrates how to run inference requests for PaddlePaddle model with OpenVINO Model Server.
