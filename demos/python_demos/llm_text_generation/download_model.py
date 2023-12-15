@@ -47,6 +47,7 @@ ov_model = OVModelForCausalLM.from_pretrained(
     export=True,
     device='CPU',
     compile=False,
+    trust_remote_code=True,
     ov_config=OV_CONFIG)
 
 print(f'Saving model to {MODEL_PATH} ...')
