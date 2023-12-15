@@ -2,4 +2,5 @@
 git+https://github.com/huggingface/optimum-intel.git
 # Optimum here is needed to download the model
 onnx
-openvino==2023.2
+openvino>=2023.2
+nncf==2.7.0

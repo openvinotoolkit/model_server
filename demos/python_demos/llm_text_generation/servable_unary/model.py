@@ -18,17 +18,37 @@ import os
 from pyovms import Tensor
 from optimum.intel import OVModelForCausalLM
 from transformers import AutoTokenizer, AutoConfig, TextIteratorStreamer, StoppingCriteria, StoppingCriteriaList
-from huggingface_hub import login, whoami
 
 import threading
 
 from config import SUPPORTED_LLM_MODELS
 
+SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
 
-SELECTED_MODEL = 'red-pajama-3b-chat'
-#change to one of the values from SUPPORTED_LLM_MODELS values from config.py
-
+print("SELECTED MODEL", SELECTED_MODEL)
 model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
+
+MODEL_PATH = "/model"  # relative to container
+OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
+
+
+def default_partial_text_processor(partial_text: str, new_text: str):
+    """
+    helper for updating partially generated answer, used by de
+
+    Params:
+      partial_text: text buffer for storing previosly generated text
+      new_text: text update for the current step
+    Returns:
+      updated text string
+
+    """
+    partial_text += new_text
+    return partial_text
+
+text_processor = model_configuration.get(
+    "partial_text_processor", default_partial_text_processor
+)
 
 MODEL_PATH = "/model"  # relative to container
 OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
@@ -40,8 +60,6 @@ current_message_template = model_configuration["current_message_template"]
 start_message = model_configuration["start_message"]
 stop_tokens = model_configuration.get("stop_tokens")
 tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
-text_processor = model_configuration.get("partial_text_processor")
-
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
 
 # HF class that is capable of stopping the generation

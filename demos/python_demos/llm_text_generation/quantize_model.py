@@ -14,11 +14,10 @@
 # limitations under the License.
 #*****************************************************************************
 
-# Based on: https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
-
 from optimum.intel import OVQuantizer
 from optimum.intel.openvino import OVModelForCausalLM
 import openvino as ov
+from transformers import AutoConfig, AutoTokenizer
 from pathlib import Path
 import shutil
 import torch
@@ -27,11 +26,22 @@ import nncf
 import gc
 from converter import converters
 from servable_stream.config import SUPPORTED_LLM_MODELS
-
+import argparse
 nncf.set_log_level(logging.ERROR)
 
-SELECTED_MODEL = 'red-pajama-3b-chat'
-#change to one of the values from SUPPORTED_LLM_MODELS values from config.py
+parser = argparse.ArgumentParser(description='Script to quantize LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot')
+
+supported_models_list = []
+for key, _ in SUPPORTED_LLM_MODELS.items() :
+    supported_models_list.append(key)
+
+parser.add_argument('--model',
+                    required=True,
+                    choices=supported_models_list,
+                    help='Select the LLM model out of supported list')
+args = vars(parser.parse_args())
+
+SELECTED_MODEL = args['model']
 
 model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
 MODEL_PATH = "./" + SELECTED_MODEL
@@ -40,17 +50,22 @@ print(model_configuration)
 pt_model_id = model_configuration["model_id"]
 pt_model_name = SELECTED_MODEL.split("-")[0]
 model_type = AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True).model_type
-fp16_model_dir = Path(SELECTED_MODEL) + "_FP16"
-int8_model_dir = Path(SELECTED_MODEL) + "_INT8_compressed_weights"
-int4_model_dir = Path(SELECTED_MODEL) + "INT4_compressed_weights"
+fp16_model_dir = Path(SELECTED_MODEL + "_FP16")
+int8_model_dir = Path(SELECTED_MODEL + "_INT8_compressed_weights")
+int4_model_dir = Path(SELECTED_MODEL + "INT4_compressed_weights")
 
+def save_tokenizer(model_id, PATH):
+    print(f'Downloading tokenizer to {PATH} ...')
+    tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    print(f'Saving tokenizer to {PATH} ...')
+    tok.save_pretrained(PATH)
 
 def convert_to_fp16():
     if (fp16_model_dir / "openvino_model.xml").exists():
         return
     if not model_configuration["remote"]:
         ov_model = OVModelForCausalLM.from_pretrained(
-            MODEL_PATH, export=True, compile=False
+            pt_model_id, export=True, compile=False
         )
         ov_model.half()
         ov_model.save_pretrained(fp16_model_dir)
@@ -68,6 +83,7 @@ def convert_to_fp16():
         converters[pt_model_name](model, fp16_model_dir)
         del model
     gc.collect()
+    save_tokenizer(pt_model_id, fp16_model_dir)
 
 
 def convert_to_int8():
@@ -100,6 +116,7 @@ def convert_to_int8():
         del ov_model
         del compressed_model
     gc.collect()
+    save_tokenizer(pt_model_id, int8_model_dir)
 
 
 def convert_to_int4():
@@ -185,6 +202,7 @@ def convert_to_int4():
     del ov_model
     del compressed_model
     gc.collect()
+    save_tokenizer(pt_model_id, int4_model_dir)
 
 
 convert_to_fp16()

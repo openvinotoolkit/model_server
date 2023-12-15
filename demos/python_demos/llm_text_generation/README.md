@@ -10,7 +10,14 @@ The unary calls are simpler but the response might be sometimes slow when many c
 
 The gRPC stream is a great feature when more interactive approach is needed allowing the user to read the response as they are getting generated.
 
-This demo presents the use case with `red-pajama-3b-chat` model but the included python scripts are prepared for several other LLM models like `Llama-2-7b-chat-hf`. Minimal tweaks are required in the servable python code to change the underlying model.
+This demo presents the use case with [tiny-llama-1b-chat]((https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1)) model but the included python scripts are prepared for several other LLM models. In this demo the model can be set by:
+```bash
+export SELECTED_MODEL=tiny-llama-1b-chat
+```
+
+## Requirements
+Linux host with a docker engine installed and adequate available RAM to load the model or equipped with Intel GPU card. This demo was tested on a host with Intel(R) Xeon(R) Gold 6430 and Flex170 GPU card.
+Smaller models like quantized `tiny-llama-1b-chat` should work with 4GB of available RAM.
 
 ## Build image
 
@@ -25,24 +32,45 @@ It will create an image called `openvino/model_server:py`
 
 ## Download model
 
-We are going to use [red-pajama-3b-chat](https://huggingface.co/togethercomputer/RedPajama-INCITE-Chat-3B-v1) model in this scenario.
 Download the model using `download_model.py` script:
 
 ```bash
 cd demos/python_demos/llm_text_generation
 pip install -r requirements.txt
-python3 download_model.py
-```
-The model will appear in `./red-pajama-3b-chat` directory.
 
-> **Note** Edit the variable SELECTED_MODEL to choose different one.
+python download_model.py --help
+INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
+usage: download_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistal-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+
+Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
+
+options:
+  -h, --help            show this help message and exit
+  --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistal-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+                        Select the LLM model out of supported list
+
+python download_model.py --model $(SELECTED_MODEL)
+
+```
+The model will appear in `./tiny-llama-1b-chat` directory.
 
 ## Quantization - optional
 
 Quantization can be applied on the original model. It can reduce the model size and memory requirements. At the same time it speeds up the execution by running the calculation on lower precision layers.
 
 ```bash
-python3 quantize_model.py
+python quantize_model.py --help
+INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
+usage: quantize_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistal-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+
+Script to quantize LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
+
+options:
+  -h, --help            show this help message and exit
+  --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistal-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+                        Select the LLM model out of supported list
+
+python quantize_model.py --model $(SELECTED_MODEL)
 ```
 It creates new folders with quantized versions of the model using precision FP16, INT8 and INT4.
 Such model can be used instead of the original as it has compatible inputs and outputs.
@@ -66,28 +94,30 @@ Depending on the use case, `./servable_unary` and `./servable_stream` showcase d
 
 To test unary example:
 ```bash
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/red-pajama-3b-chat:/model openvino/model_server:py --config_path /workspace/config.json --port 9000
+docker run -it --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/$(SELECTED_MODEL):/model openvino/model_server:py  -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
 ```
 
-## Requesting the LLM
+## Requesting the LLM model with an unary gRPC call
 
-Install client dependencies:
+Install client dependencies. This is a common step also for the streaming client.
 ```bash
 pip install -r requirements-client.txt
 ```
 
 Run time unary client `client_unary.py`:
 ```bash
-python3 client_unary.py --url localhost:9000 --prompt "Describe the state of the healthcare industry in the United States in max 2 sentences"
+python3 client_unary.py --url localhost:9000 --prompt "How many helicopters can a human eat in one sitting?"
 ```
 
 Example output:
 ```bash
 Question:
-Describe the state of the healthcare industry in the United States in max 2 sentences
+How many helicopters can a human eat in one sitting?
 
 Completion:
- Many jobs in the health care industry are experiencing long-term shortages due to a lack of workers, while other areas face overwhelming stress and strain.  Due to COVID-19 many more people look for quality medical services closer to home so hospitals have seen record levels of admissions over the last year.
+It is difficult to say how many helicopters human can eat in one sitting without knowing what type of person you are referring to. You may want to ask someone who knows about this topic for an accurate response to this question. However, typically speaking, it would be impossible for a human to consume an entire aerial vehicle, consisting of multiple compartments and rotors, every day if they lived to be 100 years old. However, humans can ingest larger quantities of food, like energy bars or canned goods, which have a smaller volume and can be consumed over a period of time, making it easier for them to consume large amounts of food at once. It is also possible that some people are able to consume helicopter parts due to their exceptional strength, stamina, endurance, or aversion to dehydration, among other reasons.
+
+Total time 11662 ms
 ```
 
 ## Requesting the LLM with gRPC streaming
@@ -103,14 +133,19 @@ docker run -it --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/
 
 Run time streaming client `client_stream.py`:
 ```bash
-python3 client_stream.py --url localhost:9000 --prompt "Describe the state of the healthcare industry in the United States"
+python3 client_stream.py --url localhost:9000 --prompt "How many helicopters can a human eat in one sitting?"
 ```
 
 Example output (the generated text will be flushed to the console in chunks, as soon as it is available on the server):
 ```bash
 Question:
-Describe the state of the healthcare industry in the United States
+How many helicopters can a human eat in one sitting?
 
-Completion:
- Many jobs in the health care industry are experiencing long-term shortages due to a lack of workers, while other areas face overwhelming stress and strain.  Due to COVID-19 many more people look for quality medical services closer to home so hospitals have seen record levels of admissions over the last year.
+I don't have access to this information. However, we don't generally ask numbers from our clients. You may want to search for information on the topic yourself or with your doctor before giving an estimate.
+END
+Total time 2916 ms
+Number of responses 35
+First response time 646 ms
+Average response time: 83.31 ms
+
 ```
