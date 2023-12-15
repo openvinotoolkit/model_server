@@ -711,7 +711,7 @@ node_options: {
     EXPECT_CALL(this->stream, Read(_));
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
-
+// TODO: Add more negative tests for wrong configurations
 // --- End Gen AI Python cases
 
 // Sending inputs separately for synchronized graph

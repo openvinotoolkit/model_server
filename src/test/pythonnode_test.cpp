@@ -516,7 +516,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopbackDefinedOnlyOnOutput) {
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
-
+// TODO: Add test with only input LOOPBACK
 // Wrapper on the OvmsPyTensor of datatype FP32 and shape (1, num_elements)
 // where num_elements is the size of C++ float array. See createTensor static method.
 template <typename T>
