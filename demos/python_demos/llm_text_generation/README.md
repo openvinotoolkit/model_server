@@ -116,6 +116,7 @@ You can also deploy the quantized model by just changing the model path mounted 
 docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model \
 -e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py  --config_path /workspace/config.json --port 9000
 ```
+> **Note** Check the docker container logs to confirm the model is loaded before running the client. Depending on the model and hardware it might take up to several minutes.
 
 ### Running the client with LLM model and unary gRPC call
 
@@ -158,7 +159,7 @@ Like with the unary example, you can also deploy the quantized model by just cha
 docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model \
 -e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
-
+> **Note** Check the docker container logs to confirm the model is loaded before running the client. Depending on the model and hardware it might take up to several minutes.
 
 ## Running the client with the LLM model and gRPC streaming
 
