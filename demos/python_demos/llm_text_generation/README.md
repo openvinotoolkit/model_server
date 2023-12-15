@@ -106,13 +106,15 @@ Depending on the use case, `./servable_unary` and `./servable_stream` showcase d
 
 To test unary example:
 ```bash
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}:/model \
+-e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
 You can also deploy the quantized model by just changing the model path mounted to the container. For example:
 
 ```bash
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model \
+-e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py  --config_path /workspace/config.json --port 9000
 ```
 
 ### Running the client with LLM model and unary gRPC call
@@ -147,12 +149,14 @@ It contains modified `model.py` script which yields the intermediate results ins
 The `graph.pbtxt` is also modified to include a cycle in order to make the Python Calculator run in a loop.  
 
 ```bash
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/model \
+-e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
 Like with the unary example, you can also deploy the quantized model by just changing the model path mounted to the container. For example:
 ```bash
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model \
+-e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
 
