@@ -71,9 +71,19 @@ options:
                         Select the LLM model out of supported list
 
 python quantize_model.py --model $(SELECTED_MODEL)
+
+
 ```
 It creates new folders with quantized versions of the model using precision FP16, INT8 and INT4.
 Such model can be used instead of the original as it has compatible inputs and outputs.
+
+```bash
+ls  -1 | grep tiny-llama-1b-chat
+tiny-llama-1b-chat
+tiny-llama-1b-chat_FP16
+tiny-llama-1b-chatINT4_compressed_weights
+tiny-llama-1b-chat_INT8_compressed_weights
+```
 
 > **Note** Quantization might reduce the model accuracy. Test if the results are of acceptable quality.
 
@@ -94,12 +104,27 @@ Depending on the use case, `./servable_unary` and `./servable_stream` showcase d
 
 To test unary example:
 ```bash
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/$(SELECTED_MODEL):/model openvino/model_server:py  -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
+docker run -it --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
 ```
+
+To test the streaming example just mount different workspace location from `./servable_stream`.
+It contains modified `model.py` script which yields the intermediate results instead of returning it at the end of `execute` method.
+The `graph.pbtxt` is also modified to include cycle in order to make the Python Calculator run in a loop.  
+
+```bash
+docker run -it --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
+```
+
+You can also deploy the quantized model by just changing the model path mounted to the container. For example:
+
+```bash
+docker run -it --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model openvino/model_server:py -e SELECTED_MODEL=${SELECTED_MODEL} --config_path /workspace/config.json --port 9000
+```
+
 
 ## Requesting the LLM model with an unary gRPC call
 
-Install client dependencies. This is a common step also for the streaming client.
+Install python client dependencies. This is a common step also for the streaming client.
 ```bash
 pip install -r requirements-client.txt
 ```
@@ -121,15 +146,6 @@ Total time 11662 ms
 ```
 
 ## Requesting the LLM with gRPC streaming
-
-
-Start the Model Server with different directory mounted (`./servable_stream`).
-It contains modified `model.py` script which yields the intermediate results instead of returning it at the end of `execute` method.
-The `graph.pbtxt` is also modified to include cycle in order to make the Python Calculator run in a loop.  
-
-```bash
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/red-pajama-3b-chat:/model openvino/model_server:py --config_path /workspace/config.json --port 9000
-```
 
 Run time streaming client `client_stream.py`:
 ```bash
