@@ -19,8 +19,8 @@
 #include <malloc.h>
 
 #include "global_sequences_viewer.hpp"
-#include "modelmanager.hpp"
 #include "logging.hpp"
+#include "modelmanager.hpp"
 
 namespace ovms {
 FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
