@@ -238,7 +238,7 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         }                                                                                             \
     }
 
-Status Server::startModules(ovms::Config& config, bool withPython) {
+Status Server::startModules(ovms::Config& config) {
     // The order of starting modules is slightly different from inserting modules
     // due to dependency of modules on each other during runtime
     // To avoid unnecessary runtime calls in eg. prediction we have different order
@@ -253,7 +253,7 @@ Status Server::startModules(ovms::Config& config, bool withPython) {
     bool inserted = false;
     auto it = modules.end();
 #if (PYTHON_DISABLE == 0)
-    if (withPython) {
+    if (config.serverSettings.withPython) {
         INSERT_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
         START_MODULE(it);
     }
@@ -354,7 +354,7 @@ int Server::start(int argc, char** argv) {
 }
 
 // C-API Start
-Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings, bool withPython) {
+Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     try {
         std::unique_lock lock{this->startMtx, std::defer_lock};
         auto locked = lock.try_lock();
@@ -371,7 +371,7 @@ Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* mod
             return StatusCode::OPTIONS_USAGE_ERROR;
         configure_logger(config.logLevel(), config.logPath());
         logConfig(config);
-        return this->startModules(config, withPython);
+        return this->startModules(config);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
         return Status(StatusCode::INTERNAL_ERROR, e.what());

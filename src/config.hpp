@@ -43,10 +43,10 @@ private:
          */
     const std::string empty;
 
-    ServerSettingsImpl serverSettings;
     ModelsSettingsImpl modelsSettings;
 
 public:
+     ServerSettingsImpl serverSettings;
     /**
          * @brief Gets the instance of the config
          */
