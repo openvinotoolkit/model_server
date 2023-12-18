@@ -496,6 +496,27 @@ TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
     }
 }
 
+TEST_F(PythonFlowTest, PythonNodeLoopbackDefinedOnlyOnOutput) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "in"
+            output_stream: "out2"
+            output_stream: "LOOPBACK:loopback"
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+// TODO: Add test with only input LOOPBACK
 // Wrapper on the OvmsPyTensor of datatype FP32 and shape (1, num_elements)
 // where num_elements is the size of C++ float array. See createTensor static method.
 template <typename T>

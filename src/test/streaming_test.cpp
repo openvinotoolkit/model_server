@@ -671,6 +671,47 @@ node_options: {
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
+// Negative - execute yields, but no loopback
+TEST_F(PythonStreamingTest, ExecuteYieldsButNoLoopback) {
+    const std::string testPbtxt{R"(
+input_stream: "OVMS_PY_TENSOR1:input1"
+input_stream: "OVMS_PY_TENSOR2:input2"
+output_stream: "OVMS_PY_TENSOR1:output1"
+output_stream: "OVMS_PY_TENSOR2:output2"
+node {
+calculator: "PythonExecutorCalculator"
+name: "pythonNode"
+input_side_packet: "PYTHON_NODE_RESOURCES:py"
+input_stream: "INPUT1:input1"
+input_stream: "INPUT2:input2"
+output_stream: "OUTPUT1:output1"
+output_stream: "OUTPUT2:output2"
+node_options: {
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+        handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
+    }
+}
+}
+)"};
+
+    ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
+    ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    this->pythonModule->releaseGILFromThisThread();
+
+    std::mutex mtx;
+    const int64_t timestamp = 64;
+
+    prepareRequest(this->firstRequest, {{"input1", 3.5f}, {"input2", 3.5f}}, timestamp);
+    EXPECT_CALL(this->stream, Read(_));
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+// TODO: Add more negative tests for wrong configurations
 // --- End Gen AI Python cases
 
 // Sending inputs separately for synchronized graph

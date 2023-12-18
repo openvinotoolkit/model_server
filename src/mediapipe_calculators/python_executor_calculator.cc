@@ -39,9 +39,28 @@ const std::string INPUT_SIDE_PACKET_TAG = "PYTHON_NODE_RESOURCES";
 class PythonExecutorCalculator : public CalculatorBase {
     std::shared_ptr<PythonNodeResource> nodeResources;
     std::unique_ptr<PyObjectWrapper<py::iterator>> pyIteratorPtr;
+    bool hasLoopback{false};
     // The calculator manages timestamp for outputs to work independently of inputs
     // this way we can support timestamp continuity for more than one request in streaming scenario.
     mediapipe::Timestamp outputTimestamp;
+
+    static void setInputsAndOutputsPacketTypes(CalculatorContract* cc) {
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            if (tag == "LOOPBACK") {
+                cc->Inputs().Tag(tag).Set<bool>();
+            } else {
+                cc->Inputs().Tag(tag).Set<PyObjectWrapper<py::object>>();
+            }
+        }
+
+        for (const std::string& tag : cc->Outputs().GetTags()) {
+            if (tag == "LOOPBACK") {
+                cc->Outputs().Tag(tag).Set<bool>();
+            } else {
+                cc->Outputs().Tag(tag).Set<PyObjectWrapper<py::object>>();
+            }
+        }
+    }
 
     void prepareInputs(CalculatorContext* cc, std::vector<py::object>* pyInputs) {
         for (const std::string& tag : cc->Inputs().GetTags()) {
@@ -107,6 +126,8 @@ class PythonExecutorCalculator : public CalculatorBase {
         if (py::isinstance<py::list>(executionResult)) {
             pushOutputs(cc, executionResult, outputTimestamp, false);
         } else if (py::isinstance<py::iterator>(executionResult)) {
+            if (!hasLoopback)
+                throw BadPythonNodeConfigurationError("Execute yielded, but LOOPBACK is not defined in the node");
             initializeGenerator(executionResult);
             generate(cc, outputTimestamp);
         } else {
@@ -120,21 +141,10 @@ public:
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
 
-        for (const std::string& tag : cc->Inputs().GetTags()) {
-            if (tag == "LOOPBACK") {
-                cc->Inputs().Tag(tag).Set<bool>();
-            } else {
-                cc->Inputs().Tag(tag).Set<PyObjectWrapper<py::object>>();
-            }
-        }
+        if (cc->Inputs().HasTag("LOOPBACK") != cc->Outputs().HasTag("LOOPBACK"))
+            return absl::Status(absl::StatusCode::kInvalidArgument, "If LOOPBACK is used, it must be defined on both input and output of the node");
 
-        for (const std::string& tag : cc->Outputs().GetTags()) {
-            if (tag == "LOOPBACK") {
-                cc->Outputs().Tag(tag).Set<bool>();
-            } else {
-                cc->Outputs().Tag(tag).Set<PyObjectWrapper<py::object>>();
-            }
-        }
+        setInputsAndOutputsPacketTypes(cc);
         cc->InputSidePackets().Tag(INPUT_SIDE_PACKET_TAG).Set<PythonNodesResources>();
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->GetNodeName() << "] GetContract end";
         return absl::OkStatus();
@@ -147,12 +157,16 @@ public:
 
     absl::Status Open(CalculatorContext* cc) final {
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Open start";
+        if (cc->Inputs().HasTag("LOOPBACK"))
+            hasLoopback = true;
+
         PythonNodesResources nodesResourcesPtr = cc->InputSidePackets().Tag(INPUT_SIDE_PACKET_TAG).Get<PythonNodesResources>();
         auto it = nodesResourcesPtr.find(cc->NodeName());
         if (it == nodesResourcesPtr.end()) {
             LOG(INFO) << "Could not find initialized Python node named: " << cc->NodeName();
             RET_CHECK(false);
         }
+
         nodeResources = it->second;
         outputTimestamp = mediapipe::Timestamp(mediapipe::Timestamp::Unset());
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Open end";
@@ -161,10 +175,6 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Process start";
-        LOG(INFO) << "Input timestamp : " << cc->InputTimestamp();
-        for (const auto& input : cc->Inputs()) {
-            LOG(INFO) << input.Name() << " : " << !input.IsEmpty();
-        }
         py::gil_scoped_acquire acquire;
         try {
             if (generatorInitialized()) {
@@ -192,8 +202,11 @@ public:
             // TODO: maybe some more descriptive information where to seek the issue.
             LOG(INFO) << "Wrong object on node " << cc->NodeName() << " execute input or output: " << e.what();
             return absl::Status(absl::StatusCode::kInternal, "Python execute function received or returned bad value");
+        } catch (const BadPythonNodeConfigurationError& e) {
+            LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
+            return absl::Status(absl::StatusCode::kInternal, "Error occurred due to bad Python node configuration");
         } catch (const pybind11::error_already_set& e) {
-            LOG(INFO) << "Python error occurred during node " << cc->NodeName() << " execution: " << e.what();
+            LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
             return absl::Status(absl::StatusCode::kInternal, "Error occurred during Python code execution");
         } catch (std::exception& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();

@@ -92,4 +92,18 @@ public:
     }
 };
 
+class BadPythonNodeConfigurationError : public std::exception {
+    std::string message;
+
+public:
+    BadPythonNodeConfigurationError() = delete;
+    BadPythonNodeConfigurationError(const std::string& message) {
+        this->message = "Bad python node configuration. " + message;
+    }
+
+    const char* what() const throw() override {
+        return message.c_str();
+    }
+};
+
 }  // namespace ovms
