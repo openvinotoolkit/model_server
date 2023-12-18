@@ -509,7 +509,7 @@ node {
     output_stream: "OUTPUT:output"
     node_options: {
         [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-            handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
+            entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
         }
     }
 }
@@ -571,7 +571,7 @@ node {
     output_stream: "OUTPUT2:output2"
     node_options: {
         [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-            handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
+            entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
         }
     }
 }
@@ -636,7 +636,7 @@ output_stream: "OUTPUT1:output1"
 output_stream: "OUTPUT2:output2"
 node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-        handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
+        entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
     }
 }
 }
@@ -688,7 +688,7 @@ output_stream: "OUTPUT1:output1"
 output_stream: "OUTPUT2:output2"
 node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-        handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
+        entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py"
     }
 }
 }

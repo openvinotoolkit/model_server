@@ -121,13 +121,13 @@ node {
   output_stream: "OUTPUT:uppercase"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-      handler_path: "/models/python_model/model.py"
+      entrypoint: "/models/python_model/model.py"
     }
   }
 }' >> models/python_model/graph.pbtxt
 ```
 
-Above configuration file creates a graph with a single Python node that uses `PythonExecutorCalculator`, sets inputs and outputs and provides your Python code location in `handler_path`. 
+Above configuration file creates a graph with a single Python node that uses `PythonExecutorCalculator`, sets inputs and outputs and provides your Python code location in `entrypoint`. 
 The `input_side_packet` value is an internal field used by the model server to share resources between graph instances - do not change it. 
 
 ### Step 4: Prepare Server Configuration File

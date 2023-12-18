@@ -24,7 +24,7 @@ node {
   output_stream: "OUTPUT:completion"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-      handler_path: "/workspace/model.py"
+      entrypoint: "/workspace/model.py"
     }
   }
 }
