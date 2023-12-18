@@ -10,8 +10,6 @@
 
  Checkout [quickstart guide](quickstart.md) for simple usage example.
 
-*Note:* This feature is currently in preview.
-
  ## Building Docker Image
 
 Publically distributed Docker images support Python, but they do not come with any external modules. If bare Python is all you need then you can use public image directly. Otherwise you need to extend public image with additional layers that will install all the stuff you need for your Python code to work. For example, let's say you need numpy.
@@ -53,7 +51,8 @@ class OvmsPythonModel:
         It allows to initialize and maintain state between subsequent execute() calls and even graph instances. 
         For gRPC unary, graphs are recreated per request. 
         For gRPC streaming, there can be multiple graph instances existing at the same time. 
-        OvmsPythonModel object is initialized with this method and then shared between all graph instances. Implementing this function is required (should it be?).
+        OvmsPythonModel object is initialized with this method and then shared between all graph instances. 
+        Implementing this function is required (should it be?).
 
         Parameters:
         -----------
@@ -75,7 +74,6 @@ class OvmsPythonModel:
         How Mediapipe calls `Process` method for the node depends on the configuration and the two configurations supported by PythonExecutorCalculator are:
         
         * Regular: `execute` runs every time the node receives inputs. Produces one set of outputs per one set of inputs. For unary endpoints it's the only possible configuration.
-
         * Generative: `execute` runs multiple times for single inputs set. Produces multiple sets of outputs over time per single set of inputs. Works only with streaming endpoints. 
 
         Implemeting this function is required.
