@@ -133,7 +133,6 @@ class OvmsPythonModel:
         temporal_history = [[text, ""]]
 
         messages = convert_history_to_text(temporal_history)
-        print('------------------- ', messages)
         input_ids = tokenizer(messages, return_tensors="pt", **tokenizer_kwargs).input_ids
         streamer = TextIteratorStreamer(tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
         generate_kwargs = dict(
