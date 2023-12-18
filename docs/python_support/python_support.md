@@ -1,18 +1,12 @@
-# Python support in OpenVINO Model Server - preview {#ovms_docs_python_support_python_support}
-
-
-5. PythonExecutorCalculator And Mediapipe Graphs
-6. Usage With gRPC Streaming
-> timestamping and output gathering
-> single request multiple response (cycles)
+# Python servables in OpenVINO Model Server {#ovms_docs_python_support_python_support}
 
 ## Introduction
 
 **This feature is in preview, meaning some behviors of the feature as well as user interface are subjects to change in the future versions**
 
- Starting with version 2023.3, model server introduced support for execution of custom Python code. Users can now create their own servables in Python. Those servables can run simple pre or post processing tasks as well as complex ones like image or text generation. 
+ Starting with version 2023.3, model server supports execution of custom Python code. Users can now create their own servables in Python. Those servables can run simple pre or post processing tasks as well as complex ones like image or text generation. 
  
- Python is enabled via [Mediapipe](../mediapipe.md) by built-in `PythonExecutorCalculator` that allows creating graph nodes that execute Python code. That way Python servables can be used as standalone endpoints (single node graphs) or be part of larger Mediapipe solutions.
+ Python execution is enabled via [Mediapipe](../mediapipe.md) by built-in `PythonExecutorCalculator` that allows creating graph nodes that execute Python code. That way Python servables can be used as standalone endpoints (single node graphs) or be part of larger Mediapipe solutions.
 
  Checkout [quickstart guide](quickstart.md) for simple usage example.
 
@@ -301,7 +295,7 @@ In some cases, users may work with more complex types that are not listed above 
 
 #### Custom types
 
-The `datatype` field in the tensor is a `string` and model server will not reject datatype that is not among above KServe types. If some custom type is defined in the request and server cannot map it to a format character it will translate it to `B` treating it as a 1-D raw binary buffer. For consistency the shape of the underlaying buffer in that case will also differ from the shape defined in the request. Let's see it on the example:
+The `datatype` field in the tensor is a `string` and model server will not reject datatype that is not among above KServe types. If some custom type is defined in the request and server cannot map it to a format character it will translate it to `B` treating it as a 1-D raw binary buffer. For consistency the shape of the underlaying buffer in that case will also differ from the shape defined in the request. Let's see it on an example:
 
 1. Model Server receives request with the follwing input:
     * datatype: "my_string"
@@ -463,7 +457,7 @@ node {
 }
 ```
 
-In that example client will send an input called `first_number` and receive output called `last_number`. Since user has access to input and output names in the Python code, the code for incrementation can be generic.
+In that example client will send an input called `first_number` and receive output called `last_number`. Since user has access to input and output names in the Python code, the code for incrementation can be generic and reused in all nodes.
 
 `incrementer.py`
 ```python
@@ -503,6 +497,28 @@ Once Python code and the `pbtxt` file with graph configuration is ready the mode
 ```
 Where `name` defines the name of the whole servable and `graph_path` contains the path to graph configuration file.
 
+## Client side considerations
+
+### Inference API and available endpoints
+
+Since Python execution is supported via Mediapipe serving flow, it inherits it's enhancements and limitations. First thing to note is that Mediapipe graphs are available **only via KServe API**. 
+
+From the client perspective model server serves a graph and user interacts with a graph. Single node in the graph cannot be accessed from the outside. 
+
+For a graph client can:
+
+- request status (gRPC and REST)
+- request metadata (gRPC and REST)
+- request inference (gRPC)
+
+Learn more about how [Mediapipe flow works in OpenVINO Model Server]()
+
+For inference, if the format of graph input stream is [`OvmsPyTensor`](), then the data in the KServe request must be encapsulated in `raw_input_contents` field based on KServe API. If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field. 
+
+The data passed in `raw_input_contents` is accessible in `execute` method of the node connected to graph input in `data` attribute of [`pyovms.Tensor`]() object. 
+
+Inputs and outputs also define `shape` and `datatype`. Those values are also accessible in `pyovms.Tensor`. For outputs, you don't provide those values directly to the response. See [datatype considerations](). 
+
 ## Advanced Configuration
 
 ### Execution modes
@@ -511,7 +527,138 @@ Python nodes can be configured to run in two execution modes - regular and gener
 
 In regular execution mode the node produces one set of outputs per one set of inputs. It works via both gRPC unary and streaming endpoints and is a common mode for use cases like computer vision.
 
-In generative execution mode the node produces multiple sets of outputs over time per single set of inputs. It works only via gRPC streaming endpoints and is useful for use cases where total processing time is big and you want to return some intermediate results before the exection is completed. That mode is well suited to Large Language Models to serve them in more interactive manner.
+In generative execution mode the node produces multiple sets of outputs over time per single set of inputs. It works only via gRPC streaming endpoints and is useful for use cases where total processing time is big and you want to return some intermediate results before the exection is completed. That mode is well suited to Large Language Models to serve them in a more interactive manner.
 
 Depending on which mode is used, both the Python code and graph configuration must be in line.
+
+#### Regular mode
+
+When using regular mode, the `execute` method in `OvmsPythonModel` class must `return` value. 
+
+```python
+from pyovms import Tensor
+...
+  def execute(self, inputs):
+        ...           
+        my_output = Tensor("output", data)
+        return [my_output]
+```
+
+When `execute` returns, the `PythonExecutorCalculator` grabs the outputs and pushes them down the graph. The calculator `Process` method is called only once. Such implementation can be paired with basic graph setting, like:
+
+```pbtxt
+node {
+  name: "python_node"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:input"
+  output_stream: "OUTPUT:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/workspace/model.py"
+    }
+  }
+}
+```
+
+This configuration supports `DefaultInputStreamHandler` (it's default therefore it's not specified).
+
+
+#### Generative mode
+
+When using generative mode, the `execute` method in `OvmsPythonModel` class must `yield` value. 
+
+```python
+from pyovms import Tensor
+...
+  def execute(self, inputs):
+        ...
+        for data in data_stream:         
+          my_output = Tensor("output", data)
+          yield [my_output]
+```
+
+When `execute` yields, the `PythonExecutorCalculator` saves the generator. Then it repeatedly calls it until it reaches the end of generated sequence. The `Process` method of the calculator is called multiple times. To trigger such behavior a specific graph configuration is needed. See below: 
+
+```pbtxt
+node {
+  name: "python_node"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:input"
+  input_stream: "LOOPBACK:loopback"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
+  input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+        sync_set {
+          tag_index: "LOOPBACK:0"
+        }
+      }
+    }
+  }
+  output_stream: "OUTPUT:output"
+  output_stream: "LOOPBACK:loopback"
+  node_options: {
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/workspace/model.py"
+    }
+  }
+}
+```
+
+Apart from basic configuration present also in regular mode, this graph contains some additional content. Let's review it.
+
+1. `LOOPBACK`` input and output stream
+
+    ```
+    input_stream: "LOOPBACK:loopback"
+    ...
+    output_stream: "LOOPBACK:loopback"
+    ```
+
+    This set of additional input and output stream enables internal cycle inside the node. It is used to trigger `Process` calls without any incoming packets and therefore call the generator without new data. The value in both input and output stream must be exactly the same and the `PythonExecutorCalculator` always expects the tag to be `LOOPBACK`.
+
+    `LOOPBACK` input is not passed to `execute` method.
+
+2. Back Edge Annotation
+    ```
+    input_stream_info: {
+      tag_index: 'LOOPBACK:0',
+      back_edge: true
+    }
+    ```
+
+    This part says that the input stream with tag `LOOPBACK` and index `0` is used to create a cycle. If there are more than one index for `LOOPBACK` tag, the `PythonExecutorCalculator` will ignore it.
+
+3. SyncSetInputStreamHandler
+
+    ```
+    input_stream_handler {
+      input_stream_handler: "SyncSetInputStreamHandler",
+      options {
+        [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+          sync_set {
+            tag_index: "LOOPBACK:0"
+          }
+        }
+      }
+    }
+    ```
+    
+    In regular configuration `DefaultInputStreamHandler` is used, but for generative mode it's not sufficient. When default handler is defined, node waits for all input streams before calling `Process`. In generative mode `Process` should be called once for data coming from the graph and then multiple times only by receiving signal on `LOOPBACK`, but inputs from a graph and `LOOPBACK` will never be present at the same time. 
+
+    For generative mode to work, inputs from the graph and `LOOPBACK` must be decoupled, meaning `Process` can be called with complete set of inputs from the graph, but also with just `LOOPBACK`. It can be acheived via `SyncSetInputStreamHandler`. Above configuration sample creates a set with `LOOPBACK`, which also, implicitly creates another set with all remaining  inputs.
+    Effectively there are two sets that do not depend on each other:
+    - `LOOPBACK`
+    - ... every other input specified by the user.
+
+For working configurations and code samples:
+  - [LLM Text Generation Demo](../../demos/python_demos/llm_text_generation#requesting-the-llm-with-grpc-streaming)
+
+
 
