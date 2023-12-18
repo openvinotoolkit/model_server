@@ -14,14 +14,11 @@
 # limitations under the License.
 #*****************************************************************************
 import numpy as np
-import sys
 from pyovms import Tensor
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
-        for path in sys.path:
-            print(path)
-        self.model_outputs = dict() 
+        self.model_outputs = dict()
         return
 
     def execute(self, inputs: list, kwargs: dict = {}):
