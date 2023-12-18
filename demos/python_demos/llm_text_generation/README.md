@@ -46,7 +46,7 @@ Script to download LLM model based on https://github.com/openvinotoolkit/openvin
 
 options:
   -h, --help            show this help message and exit
-  --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+  --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
                         Select the LLM model out of supported list
 
 python download_model.py --model ${SELECTED_MODEL}
@@ -67,7 +67,7 @@ Script to compress LLM model based on https://github.com/openvinotoolkit/openvin
 
 options:
   -h, --help            show this help message and exit
-  --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+  --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
                         Select the LLM model out of supported list
 
 python compress_model.py --model ${SELECTED_MODEL}
@@ -122,7 +122,7 @@ docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${
 
 Install python client dependencies. This is a common step also for the streaming client.
 ```bash
-pip install -r requirements-client.txt
+pip install -r client_requirements.txt
 ```
 
 Run time unary client `client_unary.py`:
