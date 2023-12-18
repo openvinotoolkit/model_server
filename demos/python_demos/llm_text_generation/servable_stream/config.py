@@ -112,54 +112,6 @@ SUPPORTED_LLM_MODELS = {
         Context: {context} 
         Answer: [/INST]""",
     },
-    "mpt-7b-chat": {
-        "model_id": "mosaicml/mpt-7b-chat",
-        "remote": True,
-        "start_message": f"<|im_start|>system\n {DEFAULT_SYSTEM_PROMPT }<|im_end|>",
-        "history_template": "<|im_start|>user\n{user}<im_end><|im_start|>assistant\n{assistant}<|im_end|>",
-        "current_message_template": '"<|im_start|>user\n{user}<im_end><|im_start|>assistant\n{assistant}',
-        "stop_tokens": ["<|im_end|>", "<|endoftext|>"],
-        "prompt_template": f"""<|im_start|>system 
-        {DEFAULT_RAG_PROMPT }<|im_end|>"""
-        + """
-        <|im_start|>user
-        Question: {question} 
-        Context: {context} 
-        Answer: <im_end><|im_start|>assistant""",
-    },
-    "qwen-7b-chat": {
-        "model_id": "Qwen/Qwen-7B-Chat",
-        "remote": True,
-        "start_message": f"<|im_start|>system\n {DEFAULT_SYSTEM_PROMPT }<|im_end|>",
-        "history_template": "<|im_start|>user\n{user}<im_end><|im_start|>assistant\n{assistant}<|im_end|>",
-        "current_message_template": '"<|im_start|>user\n{user}<im_end><|im_start|>assistant\n{assistant}',
-        "stop_tokens": ["<|im_end|>", "<|endoftext|>"],
-        "revision": "2abd8e5777bb4ce9c8ab4be7dbbd0fe4526db78d",
-        "prompt_template": f"""<|im_start|>system
-        {DEFAULT_RAG_PROMPT_CHINESE }<|im_end|>"""
-        + """
-        <|im_start|>user
-        问题: {question} 
-        已知内容: {context} 
-        回答: <|im_end|><|im_start|>assistant""",
-    },
-    "chatglm3-6b": {
-        "model_id": "THUDM/chatglm3-6b",
-        "remote": True,
-        "start_message": f"<|system|>\n{DEFAULT_SYSTEM_PROMPT }\n",
-        "history_template": "<|user|>\n{user}\n<|assistant|>\n{assistant}\n",
-        "partial_text_processor": chatglm_partial_text_processor,
-        "current_message_template": "<|user|>\n{user}\n<|assistant|>\n",
-        "stop_tokens": ["</s>"],
-        "prompt_template": f"""<|system|>
-        {DEFAULT_RAG_PROMPT_CHINESE }"""
-        + """
-        <|user|>
-        问题: {question} 
-        已知内容: {context} 
-        回答: 
-        <|assistant|>""",
-    },
     "mistral-7b": {
         "model_id": "mistralai/Mistral-7B-v0.1",
         "remote": False,

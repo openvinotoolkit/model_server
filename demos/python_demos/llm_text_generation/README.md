@@ -17,7 +17,7 @@ export SELECTED_MODEL=tiny-llama-1b-chat
 
 ## Requirements
 Linux host with a docker engine installed and adequate available RAM to load the model or equipped with Intel GPU card. This demo was tested on a host with Intel(R) Xeon(R) Gold 6430 and Flex170 GPU card.
-Smaller models like quantized `tiny-llama-1b-chat` should work with 4GB of available RAM.
+Smaller models like compressed `tiny-llama-1b-chat` should work with 4GB of available RAM.
 
 ## Build image
 
@@ -56,25 +56,25 @@ The model will appear in `./tiny-llama-1b-chat` directory.
 
 ## Weight Compression - optional
 
-Quantization can be applied on the original model. It can reduce the model size and memory requirements. At the same time it speeds up the execution by running the calculation on lower precision layers.
+Compression can be applied on the original model. It can reduce the model size and memory requirements. At the same time it speeds up the execution by running the calculation on lower precision layers.
 
 ```bash
-python quantize_model.py --help
+python compress_model.py --help
 INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
-usage: quantize_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistal-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+usage: compress_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistal-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
 
-Script to quantize LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
+Script to compress LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
 
 options:
   -h, --help            show this help message and exit
   --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
                         Select the LLM model out of supported list
 
-python quantize_model.py --model ${SELECTED_MODEL}
+python compress_model.py --model ${SELECTED_MODEL}
 
 
 ```
-It creates new folders with quantized versions of the model using precision FP16, INT8 and INT4.
+It creates new folders with compressed versions of the model using precision FP16, INT8 and INT4.
 Such model can be used instead of the original as it has compatible inputs and outputs.
 
 ```bash
@@ -110,7 +110,7 @@ docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${
 -e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
-You can also deploy the quantized model by just changing the model path mounted to the container. For example:
+You can also deploy the compressed model by just changing the model path mounted to the container. For example:
 
 ```bash
 docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model \
@@ -154,7 +154,7 @@ docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/$
 -e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
-Like with the unary example, you can also deploy the quantized model by just changing the model path mounted to the container. For example:
+Like with the unary example, you can also deploy the compressed model by just changing the model path mounted to the container. For example:
 ```bash
 docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model \
 -e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --port 9000
