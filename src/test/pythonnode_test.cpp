@@ -950,7 +950,7 @@ TEST_F(PythonFlowTest, PythonCalculatorNoData) {
         }
     )";
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
@@ -961,14 +961,25 @@ TEST_F(PythonFlowTest, PythonCalculatorNoData) {
     KFSRequest req;
     KFSResponse res;
 
-    const std::vector<float> data{};
+    float inputScalar = 6.0;
+    const std::vector<float> data{inputScalar};
     req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, 0}, ovms::fromString("FP32")}, data, false);
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{1, 1}, ovms::fromString("FP32")}, data, false);
 
     ServableMetricReporter* smr{nullptr};
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
 
-    checkDummyResponse("OUTPUT", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+    ASSERT_EQ(res.model_name(), "mediaDummy");
+    ASSERT_EQ(res.outputs_size(), 1);
+    ASSERT_EQ(res.raw_output_contents_size(), 1);
+    ASSERT_EQ(res.outputs().begin()->name(), "OUTPUT") << "Did not find:" << "OUTPUT";
+    const auto& output_proto = *res.outputs().begin();
+    std::string* content = res.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(output_proto.shape_size(), 2);
+    ASSERT_EQ(content->size(), sizeof(float));
+
+    ASSERT_EQ(*((float*)content->data()), inputScalar);
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
