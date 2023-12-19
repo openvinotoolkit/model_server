@@ -95,7 +95,7 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
     mediapipe::PythonExecutorCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     if (!std::filesystem::exists(nodeOptions.entrypoint())) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", nodeOptions.entrypoint());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node entrypoint: {} does not exist. ", nodeOptions.entrypoint());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
     }
     auto fsHandlerPath = std::filesystem::path(nodeOptions.entrypoint());
