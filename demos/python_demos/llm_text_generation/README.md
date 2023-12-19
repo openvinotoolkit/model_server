@@ -17,8 +17,8 @@ export SELECTED_MODEL=tiny-llama-1b-chat
 ```
 
 ## Requirements
-Linux host with a docker engine installed and adequate available RAM to load the model or equipped with Intel GPU card. This demo was tested on a host with Intel(R) Xeon(R) Gold 6430 and Flex170 GPU card.
-Smaller models like compressed `tiny-llama-1b-chat` should work with 4GB of available RAM.
+A Linux host with Docker engine installed and sufficient available RAM to load the model and optionally equipped with an Intel GPU card. This demo was tested on a host with Intel® Xeon® Gold 6430 and an Intel® Data Center GPU Flex 170. 
+Running the demo with smaller models like `tiny-llama-1b-chat` requires approximately 4GB of available RAM.
 
 ## Build image
 
@@ -43,7 +43,7 @@ python download_model.py --help
 INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
 usage: download_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
 
-Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
+The script to download and convert LLM models is based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -57,14 +57,14 @@ The model will appear in `./tiny-llama-1b-chat` directory.
 
 ## Weight Compression - optional
 
-Compression can be applied on the original model. It can reduce the model size and memory requirements. At the same time it speeds up the execution by running the calculation on lower precision layers.
+[Weight Compression](https://docs.openvino.ai/canonical/weight_compression.html) may be applied on the original model. Applying 8-bit or 4-bit weight compression reduces the model size and memory requirements while speeding up execution by running calculations on lower precision layers.
 
 ```bash
 python compress_model.py --help
 INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
 usage: compress_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
 
-Script to compress LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
+The script to compress LLM models is based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -75,8 +75,8 @@ python compress_model.py --model ${SELECTED_MODEL}
 
 
 ```
-It creates new folders with compressed versions of the model using precision FP16, INT8 and INT4.
-Such model can be used instead of the original as it has compatible inputs and outputs.
+Running this script will create new directories with compressed versions of the model with FP16, INT8 and INT4 precisions.
+The compressed models can be used in place of the original as they have compatible inputs and outputs.
 
 ```bash
 ls  -1 | grep tiny-llama-1b-chat
@@ -86,14 +86,14 @@ tiny-llama-1b-chat_INT4_compressed_weights
 tiny-llama-1b-chat_INT8_compressed_weights
 ```
 
-> **Note** Quantization might reduce the model accuracy. Test if the results are of acceptable quality.
+> **NOTE** Applying quantization to model weights may impact the model accuracy. Please test and verify that the results are of acceptable quality for your use case.
 
-> **Note** On the target device supporting natively FP16 precision, OpenVINO is changing automatically the precision from FP32 to FP16. It improves the performance and usually has minimal impact on the accuracy. Original precision can be enforced with `ov_config` key:
+> **NOTE** On target devices that natively support FP16 precision (i.e. GPU), OpenVINO automatically adjusts the precision from FP32 to FP16. This improves the performance and typically does not impact accuracy. Original precision can be enforced with `ov_config` key:
 `{"INFERENCE_PRECISION_HINT": "f32"}`.
 
-## Use LLM model with unary calls
+## Use LLM with unary calls
 
-### Deploy OpenVINO Model Server with the Python Calculator
+### Deploy OpenVINO Model Server with Python Calculator
 
 Mount the `./model` directory with the model.  
 Mount the `./servable_unary` or `./servable_stream` which contains:
@@ -111,15 +111,15 @@ docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${
 -e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
-You can also deploy the compressed model by just changing the model path mounted to the container. For example:
+You can also deploy the compressed model by just changing the model path mounted to the container. For example, to deploy the 8-bit weight compressed model:
 
 ```bash
 docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model \
 -e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py  --config_path /workspace/config.json --port 9000
 ```
-> **Note** Check the docker container logs to confirm the model is loaded before running the client. Depending on the model and hardware it might take up to several minutes.
+> **NOTE** Check the Docker container logs to confirm that the model is loaded before sending requests from a client. Depending on the model and hardware it might take a few seconds or several minutes.
 
-### Running the client with LLM model and unary gRPC call
+### Run a client with unary gRPC call
 
 Install python client dependencies. This is a common step also for the streaming client.
 ```bash
@@ -142,12 +142,12 @@ It is difficult to say how many helicopters human can eat in one sitting without
 Total time 11662 ms
 ```
 
-## Use LLM model with gRPC streaming
+## Run a client with gRPC streaming
 
 ### Deploy OpenVINO Model Server with the Python Calculator
 
-The model server can be deployed with our streaming example by just mounting different workspace location from `./servable_stream`.
-It contains modified `model.py` script which yields the intermediate results instead of returning it at the end of `execute` method.
+The model server can be deployed with the streaming example by mounting a different workspace location from `./servable_stream`.
+It contains a modified `model.py` script which provides intermediate results instead of returning the full result at the end of the `execute` method.
 The `graph.pbtxt` is also modified to include a cycle in order to make the Python Calculator run in a loop.  
 
 ```bash
@@ -155,14 +155,14 @@ docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/$
 -e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
-Like with the unary example, you can also deploy the compressed model by just changing the model path mounted to the container. For example:
+Just like the unary example, you may deploy the compressed model(s) by simply changing the model path mounted to the container. For example, to deploy the 8-bit weight compressed model:
 ```bash
 docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}_INT8_compressed_weights:/model \
 -e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
-> **Note** Check the docker container logs to confirm the model is loaded before running the client. Depending on the model and hardware it might take up to several minutes.
+> **NOTE** Check the Docker container logs to confirm that the model is loaded before sending requests from a client. Depending on the model and hardware it might take a few seconds or several minutes.
 
-## Running the client with the LLM model and gRPC streaming
+## Run a client with the LLM and gRPC streaming
 
 Run time streaming client `client_stream.py`:
 ```bash
