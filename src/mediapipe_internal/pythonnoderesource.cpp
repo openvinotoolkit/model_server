@@ -116,7 +116,7 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
             py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig);
             pythonModel.attr("initialize")(kwargsParam);
         } else {
-            SPDLOG_DEBUG("Python node resource does not have an initialize method. Python node path {} ", nodeOptions.entrypoint());
+            SPDLOG_DEBUG("OvmsPythonModel class does not have an initialize method. Python node path {} ", nodeOptions.entrypoint());
         }
 
         nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);
