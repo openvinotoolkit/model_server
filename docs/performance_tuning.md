@@ -91,6 +91,12 @@ For example, with ~50 clients sending the requests to the server with 48 cores, 
 
 `--plugin_config '{"NUM_STREAMS": "24"}'`
 
+## Disabling CPU pinning
+
+By default, OpenVINO Model Server will enable CPU threads pinning for better performance. User also can use plugin config to switch it off. Disable threads pinning might be beneficial in complex applications with several workloads executed in parallel.
+
+`--plugin_config '{"ENABLE_CPU_PINNING": false}'`
+
 ## Input data in REST API calls
 
 While using REST API, you can adjust the data format to optimize the communication and deserialization from json format. Here are some tips to effectively use REST interface when working with OpenVINO Model Server:
@@ -115,7 +121,8 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 | :---        |    :----   |
 | INFERENCE_NUM_THREADS       | Specifies the number of threads that CPU plugin should use for inference.     |
 | AFFINITY   |   Binds inference threads to CPU cores.      |
-| NUM_STREAMS | Specifies number of execution streams for the throughput mode |
+| NUM_STREAMS | Specifies number of execution streams for the throughput mode. |
+| ENABLE_CPU_PINNING | This property allows CPU threads pinning during inference. |
 
 
 > **NOTE:** For additional information about all parameters read about [OpenVINO device properties](https://docs.openvino.ai/2023.2/groupov_runtime_cpp_prop_api.html?#detailed-documentation).
@@ -165,12 +172,12 @@ Depending on the device employed to run the inference operation, you can tune th
 
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter. 
 
-Following docker command sets a parameter `NUM_STREAMS` to a value `32` and `AFFINITY` to `NUMA`.
+Following docker command sets a parameter `NUM_STREAMS` to a value `32`, `AFFINITY` to `NUMA` and disables CPU pinning.
 
 ```bash
 docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 --grpc_workers 8  --nireq 32 \
---plugin_config '{"NUM_STREAMS": "32", "AFFINITY": "NUMA"}'
+--plugin_config '{"NUM_STREAMS": 32, "AFFINITY": "NUMA", "ENABLE_CPU_PINNING", false}'
 ```
 
 ## Analyzing performance issues
