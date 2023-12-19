@@ -760,22 +760,9 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         const auto& value = pair.second;
         SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
     }
-
-    auto supportedPropertiesKey = ov::supported_properties;
-    std::vector<ov::PropertyName> supportedConfigKeys;
-    try {
-        supportedConfigKeys = compiledModel->get_property(supportedPropertiesKey);
-    } catch (std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}; Error: {}", targetDevice, supportedPropertiesKey.name(), e.what());
-        return StatusCode::OK;
-    } catch (...) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}", targetDevice, supportedPropertiesKey.name());
-        return StatusCode::OK;
-    }
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version: {};target device: {}; CompiledModel configuration", getName(), getVersion(), targetDevice);
     logOVPluginConfig([this](const std::string& key) { return this->compiledModel->get_property(key); },
         std::string("Compiled model: ") + getName(),
-        std::string("version: ") + std::to_string(getVersion()) + std::string("; target device:") + targetDevice + "; ", supportedConfigKeys);
+        std::string("version: ") + std::to_string(getVersion()) + std::string("; target device: ") + targetDevice + "; ");
     return StatusCode::OK;
 }
 

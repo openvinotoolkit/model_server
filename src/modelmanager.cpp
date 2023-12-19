@@ -128,20 +128,9 @@ void ModelManager::logPluginConfiguration() {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
     auto availablePlugins = availableDevices;
     for (const auto& plugin : availablePlugins) {
-        std::vector<ov::PropertyName> supportedConfigKeys;
-        auto supportedPropertiesKey = ov::supported_properties;
-        try {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
-            OV_LOGGER("ov::Core: {}, ieCore->get_property({}, ov::supported_properties)", reinterpret_cast<const void*>(this->ieCore.get()), plugin);
-            supportedConfigKeys = ieCore->get_property(plugin, supportedPropertiesKey);
-        } catch (std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedPropertiesKey.name(), e.what());
-        } catch (...) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, supportedPropertiesKey.name());
-        }
         logOVPluginConfig([this, &plugin](const std::string& key) { return this->ieCore->get_property(plugin, key); },
             std::string("OpenVINO Core plugin: ") + plugin,
-            "", supportedConfigKeys);
+            "");
     }
 }
 

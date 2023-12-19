@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
@@ -49,8 +50,20 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
 // #3 target_devide/_
 // {} {}
 template <typename PropertyExtractor>
-static void logOVPluginConfig(PropertyExtractor&& propertyExtractor, const std::string& loggingAuthor, const std::string& loggingDetails, const std::vector<ov::PropertyName>& supportedConfigKeys) {
+static void logOVPluginConfig(PropertyExtractor&& propertyExtractor, const std::string& loggingAuthor, const std::string& loggingDetails) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging {}; {}plugin configuration", loggingAuthor, loggingDetails);
+    auto key = std::string("SUPPORTED_PROPERTIES");  // ov::supported_properties;
+    std::vector<ov::PropertyName> supportedConfigKeys;
+    try {
+        ov::Any value = propertyExtractor(key);
+        supportedConfigKeys = value.as<std::vector<ov::PropertyName>>();
+    } catch (std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from OpenVINO when requesting {};{} config key: {}; Error: {}", loggingAuthor, loggingDetails, key, e.what());
+        return;
+    } catch (...) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from OpenVINO when requesting {};{} config key: {};", loggingAuthor, loggingDetails, key);
+        return;
+    }
     std::vector<std::string> pluginConfigNameValues;
     for (auto& key : supportedConfigKeys) {
         if (key == "SUPPORTED_PROPERTIES")
@@ -70,6 +83,6 @@ static void logOVPluginConfig(PropertyExtractor&& propertyExtractor, const std::
     }
     std::sort(pluginConfigNameValues.begin(), pluginConfigNameValues.end());
     std::string pluginConfigNameValuesString = joins(pluginConfigNameValues, ", ");
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "{}; {}plugin configuration: {}", loggingAuthor, loggingDetails, pluginConfigNameValuesString);
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "{}; {}plugin configuration: {{ {} }}", loggingAuthor, loggingDetails, pluginConfigNameValuesString);
 }
 }  // namespace ovms
