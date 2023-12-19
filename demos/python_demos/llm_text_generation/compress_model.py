@@ -52,7 +52,7 @@ pt_model_name = SELECTED_MODEL.split("-")[0]
 model_type = AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True).model_type
 fp16_model_dir = Path(SELECTED_MODEL + "_FP16")
 int8_model_dir = Path(SELECTED_MODEL + "_INT8_compressed_weights")
-int4_model_dir = Path(SELECTED_MODEL + "INT4_compressed_weights")
+int4_model_dir = Path(SELECTED_MODEL + "_INT4_compressed_weights")
 
 def save_tokenizer(model_id, PATH):
     print(f'Downloading tokenizer to {PATH} ...')

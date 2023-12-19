@@ -10,7 +10,8 @@ The unary calls are simpler but the response might be sometimes slow when many c
 
 The gRPC stream is a great feature when more interactive approach is needed allowing the user to read the response as they are getting generated.
 
-This demo presents the use case with [tiny-llama-1b-chat]((https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1)) model but the included python scripts are prepared for several other LLM models. In this demo the model can be set by:
+This demo presents the use case with [tiny-llama-1b-chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1) model but the included python scripts are prepared for several other LLM models. Those are tiny-llama-1b-chat,red-pajama-3b-chat, llama-2-chat-7b, mistral-7b, zephyr-7b-beta, neural-chat-7b-v3-1, notus-7b-v1 and youri-7b-chat.
+In this demo the model can be set by:
 ```bash
 export SELECTED_MODEL=tiny-llama-1b-chat
 ```
@@ -81,7 +82,7 @@ Such model can be used instead of the original as it has compatible inputs and o
 ls  -1 | grep tiny-llama-1b-chat
 tiny-llama-1b-chat
 tiny-llama-1b-chat_FP16
-tiny-llama-1b-chatINT4_compressed_weights
+tiny-llama-1b-chat_INT4_compressed_weights
 tiny-llama-1b-chat_INT8_compressed_weights
 ```
 
