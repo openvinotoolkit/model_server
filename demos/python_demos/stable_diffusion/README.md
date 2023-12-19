@@ -96,5 +96,5 @@ Number of responses 26
 Average response time: 936.58 ms
 ```
 
-[video](image.gif)
+![video](image.gif)
 
