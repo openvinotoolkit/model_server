@@ -31,8 +31,6 @@ parser.add_argument('--prompt',
                     required=False,
                     default='Zebras in space',
                     help='Prompt for image generation')
-parser.add_argument('--show', action='store_true',
-                    help='Display results on the screen')
 
 args = vars(parser.parse_args())
 
@@ -78,9 +76,8 @@ while True:
     image = image_queue.get()
     if image is None:
         break
-    if args['show']:
-        cv2.imshow("image",image)
-        cv2.waitKey(25)
+    cv2.imshow("image",image)
+    cv2.waitKey(25)
     cv2.imwrite("image"+str(i)+".png", image)
     video.write(image)
     i += 1
