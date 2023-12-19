@@ -15,7 +15,7 @@
 #
 
 # This script should be used inside build image to run unit tests
-TEST_FILTER="--test_filter=*:-PythonFlowTest.InitializationPass:PythonFlowTest.FinalizationPass:PythonFlowTest.PythonNodePassArgumentsToConstructor:PythonFlowTest.PythonCalculatorTestSingleInSingleOut:PythonFlowTest.PythonCalculatorTestMultiInMultiOut:PythonFlowTest.PythonCalculatorTestSingleInSingleOutMultiRunWithErrors:PythonFlowTest.ReloadWithDifferentScriptName"
+TEST_FILTER="--test_filter=*"
 SHARED_OPTIONS=" \
 --jobs=$JOBS \
 ${debug_bazel_flags} \
