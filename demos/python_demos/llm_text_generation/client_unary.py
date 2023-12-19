@@ -15,6 +15,7 @@
 #
 import tritonclient.grpc as grpcclient
 import argparse
+import datetime
 
 parser = argparse.ArgumentParser(description='Client for llm example')
 
@@ -36,5 +37,10 @@ print(f"Question:\n{text}\n")
 data = text.encode()
 infer_input = grpcclient.InferInput("pre_prompt", [len(data)], "BYTES")
 infer_input._raw_content = data
+start_time = datetime.datetime.now()
 results = client.infer("python_model", [infer_input], client_timeout=10*60)  # 10 minutes
+endtime = datetime.datetime.now()
 print(f"Completion:\n{results.as_numpy('OUTPUT').tobytes().decode()}\n")
+
+print("Total time", int((endtime - start_time).total_seconds() * 1000), "ms")
+
