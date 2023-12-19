@@ -26,6 +26,7 @@
 
 #include <dirent.h>
 #include <malloc.h>
+#include <openvino/runtime/compiled_model.hpp>
 #include <spdlog/spdlog.h>
 #include <sys/types.h>
 
@@ -763,8 +764,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     auto supportedPropertiesKey = ov::supported_properties;
     std::vector<ov::PropertyName> supportedConfigKeys;
     try {
-        auto supportedConfigKeys2 = compiledModel->get_property(supportedPropertiesKey);
-        supportedConfigKeys = std::move(supportedConfigKeys2);
+        supportedConfigKeys = compiledModel->get_property(supportedPropertiesKey);
     } catch (std::exception& e) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel metric key: {}; Error: {}", targetDevice, supportedPropertiesKey.name(), e.what());
         return StatusCode::OK;
@@ -773,20 +773,9 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         return StatusCode::OK;
     }
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging model:{}; version: {};target device: {}; CompiledModel configuration", getName(), getVersion(), targetDevice);
-    for (auto& key : supportedConfigKeys) {
-        std::string value;
-        try {
-            auto paramValue = compiledModel->get_property(key);
-            value = paramValue.as<std::string>();
-        } catch (std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel config key: {}; Error: {}", targetDevice, key, e.what());
-            continue;
-        } catch (...) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting target device: {}, CompiledModel config key: {}", targetDevice, key);
-            continue;
-        }
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}; version: {}; target device: {}, CompiledModel config key: {}, value: {}", getName(), getVersion(), targetDevice, key, value);
-    }
+    logOVPluginConfig([this](const std::string& key) { return this->compiledModel->get_property(key); },
+        std::string("Compiled model: ") + getName(),
+        std::string("version: ") + std::to_string(getVersion()) + std::string("; target device:") + targetDevice + "; ", supportedConfigKeys);
     return StatusCode::OK;
 }
 

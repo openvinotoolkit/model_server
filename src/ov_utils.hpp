@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
@@ -23,7 +24,9 @@
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
+#include "logging.hpp"
 #include "modelconfig.hpp"
+#include "stringutils.hpp"
 
 namespace ovms {
 class Status;
@@ -40,4 +43,33 @@ std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap);
 
 Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const std::string& targetDevice, const ov::Core& ieCore);
 
+// Logging
+// #1 model/global plugin  CompiledMode:DUMMY / Global OpenVINO plugin:CPU
+// #2 version/_
+// #3 target_devide/_
+// {} {}
+template <typename PropertyExtractor>
+static void logOVPluginConfig(PropertyExtractor&& propertyExtractor, const std::string& loggingAuthor, const std::string& loggingDetails, const std::vector<ov::PropertyName>& supportedConfigKeys) {
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging {}; {}plugin configuration", loggingAuthor, loggingDetails);
+    std::vector<std::string> pluginConfigNameValues;
+    for (auto& key : supportedConfigKeys) {
+        if (key == "SUPPORTED_PROPERTIES")
+            continue;
+        std::string value;
+        try {
+            ov::Any paramValue = propertyExtractor(key);
+            value = paramValue.as<std::string>();
+        } catch (std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from OpenVINO when requesting {};{} config key: {}; Error: {}", loggingAuthor, loggingDetails, key, e.what());
+            continue;
+        } catch (...) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from OpenVINO when requesting {};{} config key: {};", loggingAuthor, loggingDetails, key);
+            continue;
+        }
+        pluginConfigNameValues.emplace_back(joins({key, value}, ": "));
+    }
+    std::sort(pluginConfigNameValues.begin(), pluginConfigNameValues.end());
+    std::string pluginConfigNameValuesString = joins(pluginConfigNameValues, ", ");
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "{}; {}plugin configuration: {}", loggingAuthor, loggingDetails, pluginConfigNameValuesString);
+}
 }  // namespace ovms

@@ -33,8 +33,6 @@
 
 namespace ovms {
 
-void LogRegisteredNames(std::unordered_set<std::string> registrySet, std::string registryName);
-
 class ModelManager;
 class Status;
 class MediapipeGraphConfig;

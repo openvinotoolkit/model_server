@@ -133,28 +133,15 @@ void ModelManager::logPluginConfiguration() {
         try {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
             OV_LOGGER("ov::Core: {}, ieCore->get_property({}, ov::supported_properties)", reinterpret_cast<const void*>(this->ieCore.get()), plugin);
-            auto supportedConfigKeys2 = ieCore->get_property(plugin, supportedPropertiesKey);
-            supportedConfigKeys = std::move(supportedConfigKeys2);
+            supportedConfigKeys = ieCore->get_property(plugin, supportedPropertiesKey);
         } catch (std::exception& e) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedPropertiesKey.name(), e.what());
         } catch (...) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, supportedPropertiesKey.name());
         }
-        for (auto& key : supportedConfigKeys) {
-            std::string value;
-            try {
-                OV_LOGGER("ov::Core: {}, ieCore->get_property({}, {})", reinterpret_cast<const void*>(this->ieCore.get()), plugin, key);
-                auto paramValue = ieCore->get_property(plugin, key);
-                value = paramValue.as<std::string>();
-            } catch (std::exception& e) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; config key: {}; Error: {}", plugin, key, e.what());
-                continue;
-            } catch (...) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; config key: {}", plugin, key);
-                continue;
-            }
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Global plugin: {}; key: {}; value: {}", plugin, key, value);
-        }
+        logOVPluginConfig([this, &plugin](const std::string& key) { return this->ieCore->get_property(plugin, key); },
+            std::string("OpenVINO Core plugin: ") + plugin,
+            "", supportedConfigKeys);
     }
 }
 
