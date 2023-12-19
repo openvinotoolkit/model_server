@@ -19,37 +19,33 @@
 #include <string>
 #include <unordered_map>
 
-#if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
 
 #include "src/mediapipe_calculators/python_executor_calculator_options.pb.h"
 
 namespace py = pybind11;
-#endif
 
 namespace ovms {
 class Status;
 class PythonBackend;
 
-struct PythonNodeResource {
+struct PythonNodeResources {
 public:
-    PythonNodeResource(const PythonNodeResource&) = delete;
-    PythonNodeResource& operator=(PythonNodeResource&) = delete;
-#if (PYTHON_DISABLE == 0)
-    std::unique_ptr<py::object> nodeResourceObject;
+    PythonNodeResources(const PythonNodeResources&) = delete;
+    PythonNodeResources& operator=(PythonNodeResources&) = delete;
+
+    std::unique_ptr<py::object> ovmsPythonModel;
     PythonBackend* pythonBackend;
     std::string pythonNodeFilePath;
+    std::unordered_map<std::string, std::string> outputsNameTagMapping;
 
-    PythonNodeResource(PythonBackend* pythonBackend);
-    ~PythonNodeResource();
-    static Status createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, PythonBackend* pythonBackend);
+    PythonNodeResources(PythonBackend* pythonBackend);
+    ~PythonNodeResources();
+    static Status createPythonNodeResources(std::shared_ptr<PythonNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, PythonBackend* pythonBackend);
     void finalize();
 
 private:
     static py::dict preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig);
-#endif
 };
-
-typedef std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> PythonNodesResources;
 
 }  // namespace ovms

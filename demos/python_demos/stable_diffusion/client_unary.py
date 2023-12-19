@@ -44,7 +44,7 @@ infer_input = grpcclient.InferInput(input_name, [len(data)], "BYTES")
 infer_input._raw_content = data
 
 results = client.infer(model_name, [infer_input], client_timeout=10*60)
-img = Image.open(BytesIO(results.as_numpy("OUTPUT")))
+img = Image.open(BytesIO(results.as_numpy("image")))
 img.save(f"output.png")
 duration = time.time() - start
 print("Generated image output.png")

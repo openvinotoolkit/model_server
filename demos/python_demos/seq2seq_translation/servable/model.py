@@ -32,5 +32,5 @@ class OvmsPythonModel:
         text = bytes(inputs[0]).decode()
         results = self.pipe(text)
         translation = results[0]["translation_text"]
-        return [Tensor("OUTPUT", translation.encode())]
+        return [Tensor("translation", translation.encode())]
 

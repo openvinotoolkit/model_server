@@ -29,4 +29,4 @@ data = text.encode()
 infer_input = grpcclient.InferInput("text", [len(data)], "BYTES")
 infer_input._raw_content = data
 results = client.infer("python_model", [infer_input])
-print(f"Translation:\n{results.as_numpy('OUTPUT').tobytes().decode()}\n")
+print(f"Translation:\n{results.as_numpy('translation').tobytes().decode()}\n")

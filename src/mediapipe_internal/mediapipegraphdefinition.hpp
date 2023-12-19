@@ -47,9 +47,11 @@ class MetricConfig;
 class MetricRegistry;
 class ModelManager;
 class MediapipeGraphExecutor;
-class PythonNodeResource;
+class PythonNodeResources;
 class Status;
 class PythonBackend;
+
+typedef std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>> PythonNodeResourcesMap;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -93,7 +95,7 @@ public:
     static constexpr model_version_t VERSION = 1;
 
 protected:
-    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
+    PythonNodeResourcesMap pythonNodeResourcesMap;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :

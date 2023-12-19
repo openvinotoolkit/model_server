@@ -13,25 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
-import struct
+import numpy as np
 from pyovms import Tensor
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
-        self.model_outputs = kwargs 
-        return
+        self.output_name = kwargs["output_streams"][0]
 
-    def execute(self, inputs: list):
+    def execute(self, inputs: list, kwargs: dict = {}):
         # Increment every element of every input and return them with changed tensor name.
-        inputs_data = {}
-        for _ in range(3):
-            outputs = []
-            for input in inputs:
-                output_name = input.name.replace("input", "output")
-                input_fp32 = struct.unpack('f', bytes(input))[0] if input.name not in inputs_data else inputs_data[input.name]
-                input_fp32 = input_fp32 + 1.0
-                inputs_data[input.name] = input_fp32
-                output_data = struct.pack('f', input_fp32)
-                outputs.append(Tensor(output_name, output_data))
-            print(outputs)
-            yield outputs
+        input = inputs[0]
+        input_npy = np.array(input)
+        print(input_npy)
+        output_npy = input_npy + 1
+        return [Tensor(self.output_name, output_npy)]
