@@ -76,16 +76,27 @@ class PersonVehicleBikeDetection(UseCase):
 
             if img_id != -1 and conf >= PersonVehicleBikeDetection.CONFIDENCE_THRESHOLD:
                 if str(PersonVehicleBikeDetection.CLASSES[int(label)]) == "Person":
-                    filtered_log(f"Person detected with confidence at {conf}")
-
                     # write the detected image to a file
                     formatted_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S.%f")
                     filename = f"detected-person_{formatted_datetime}.png"
-                    write_file = os.path.join(os.environ.get('HOME'), 'Pictures', filename)
-                    cv2.imwrite(write_file, PersonVehicleBikeDetection.frame)
+                    local_file = os.path.join(os.environ.get('HOME'), 'Pictures', filename)
+                    cv2.imwrite(local_file, PersonVehicleBikeDetection.frame)
 
                     # upload the file to Google Cloud Storage
-                    upload_blob('test-vpc-341000_ephemeral', write_file, f"tmp/{filename}")
+                    if 'PERSON_DETECTION_GCS_BUCKET' in os.environ and 'PERSON_DETECTION_GCS_FOLDER':
+                        blob_name = f"{os.environ.get('PERSON_DETECTION_GCS_FOLDER')}/{filename}"
+                        gs_path = upload_blob(os.environ.get('PERSON_DETECTION_GCS_BUCKET'), local_file, blob_name)
+                    else:
+                        gs_path = None
+
+                    # sampled_log(f"Person detected with confidence at {conf} uploaded to {gs_path}")
+                    sampled_log(
+                        {
+                            'confidence': float(conf),
+                            'picture': local_file,
+                            'uploaded_destination': gs_path
+                        }
+                    )
 
 
 last_logged_datetime = datetime(MINYEAR, 1, 1, 0, 0)
@@ -94,7 +105,8 @@ logging_client = logging.Client()
 logger = logging_client.logger('person-detection-debug')
 
 
-def filtered_log(log_message: str):
+def sampled_log(log_dict: dict):
+    # def sampled_log(log_message: str):
     global last_logged_datetime
     min_log_interval_seconds = int(os.environ.get('PERSON_DETECTION_MIN_LOG_INTERVAL_SECONDS', 2))
 
@@ -103,12 +115,10 @@ def filtered_log(log_message: str):
     time_difference = current_datetime - last_logged_datetime
 
     if time_difference.total_seconds() > min_log_interval_seconds:
+        log_dict['sample-interval-seconds'] = min_log_interval_seconds
         if 'PERSON_DETECTION_DEBUG' in os.environ:
-            debug_msg = log_message + f"; sample rate: every {min_log_interval_seconds} seconds"
-            print(debug_msg)
-        logger.log_struct(
-            {'confidence': log_message},
-            severity="INFO")
+            print(str(log_dict))
+        logger.log_struct(log_dict, severity="INFO")
         last_logged_datetime = current_datetime
 
 
@@ -133,6 +143,9 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
     generation_match_precondition = 0
 
     blob.upload_from_filename(source_file_name, if_generation_match=generation_match_precondition)
+    gs_path = f"gs://{bucket_name}/{destination_blob_name}"
 
     if 'PERSON_DETECTION_DEBUG' in os.environ:
-        print(f"File {source_file_name} uploaded to {destination_blob_name}.")
+        print(f"File {source_file_name} uploaded to {gs_path} ;")
+
+    return gs_path
