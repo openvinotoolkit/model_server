@@ -96,5 +96,5 @@ Number of responses 26
 Average response time: 936.58 ms
 ```
 
-https://github.com/openvinotoolkit/model_server/assets/20400806/cff60f9c-6a13-4b8c-bff6-49512a916caa
+[video](image.gif)
 
