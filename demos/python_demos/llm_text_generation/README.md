@@ -40,11 +40,11 @@ pip install -r requirements.txt
 
 python download_model.py --help
 INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
-usage: download_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+usage: download_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
 
 Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
   --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
                         Select the LLM model out of supported list
@@ -61,11 +61,11 @@ Compression can be applied on the original model. It can reduce the model size a
 ```bash
 python compress_model.py --help
 INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
-usage: compress_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistal-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+usage: compress_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
 
 Script to compress LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
   --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
                         Select the LLM model out of supported list
