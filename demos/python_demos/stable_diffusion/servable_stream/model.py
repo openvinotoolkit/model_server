@@ -20,7 +20,6 @@ from pyovms import Tensor
 from optimum.intel.openvino import OVStableDiffusionPipeline
 from diffusers import DDIMScheduler
 import time
-from transformers import AutoConfig
 import torch
 import numpy as np
 import threading
@@ -44,42 +43,37 @@ class OvmsPythonModel:
         def generate():
             def callback_on_step_end_impl(step, timestep,
                     latents):
-                print('callback executed ----', step, timestep, latents.shape)
-
+                print('callback executed ----', step, timestep, latents.shape, type(latents), np.max(latents),np.min(latents) )
                 latents = 1 / 0.18215 * latents
-                with torch.no_grad():
-                    image = self.pipe.vae_decoder(latents)
-
-                image = torch.from_numpy(image[0])
-                image = (image / 2 + 0.5).clamp(0, 1)
-                image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
-                image = (image * 255).round().astype("uint8")
-                images = (image * 255).round().astype("uint8")
-                pil_images = [Image.fromarray(image) for image in images]
+                image = np.concatenate(
+                    [self.pipe.vae_decoder(latent_sample=latents[i : i + 1])[0] for i in range(latents.shape[0])]
+                )
+                pil_images = self.pipe.image_processor.postprocess(image, output_type='pil', do_denormalize=[True])
                 pil_image = pil_images[0]
-
                 output = io.BytesIO()
                 pil_image.save(output, format='PNG')
-                q.put(output.getvalue())
+                q.put((output.getvalue(),False))
                 print('end callback')
-            
-            print('inferencing:', text)
+
+            print('generating for prompt:', text)
             image = self.pipe(
                 text,
                 num_inference_steps=50,
-                callback=callback_on_step_end_impl
+                callback=callback_on_step_end_impl,
+                callback_steps=2
             ).images[0]
             output = io.BytesIO()
             image.save(output, format='PNG')
-            q.put(output.getvalue())
+            q.put((output.getvalue(),True))
 
 
         t1 = threading.Thread(target=generate)
         t1.start()
-
-        for i in range(51):
-            print('waiting for data...', i)
-            my_data = q.get()
+        pipeline_finished = False
+        while not pipeline_finished:
+            print('waiting for data...')
+            my_data, pipeline_finished = q.get()
             print('got it! will serialize...')
             yield [Tensor("OUTPUT", my_data)]
         yield [Tensor("END_SIGNAL", "".encode())]
+

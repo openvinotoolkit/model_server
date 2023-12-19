@@ -1,6 +1,5 @@
 git+https://github.com/huggingface/optimum-intel.git
 # Optimum here is needed to download the model
 onnx
-tritonclient[grpc]==2.37.0.9383150
-openvino==2023.2
+openvino>=2023.2
 optimum[diffusers,openvino]

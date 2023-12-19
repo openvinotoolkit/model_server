@@ -14,19 +14,26 @@
 # limitations under the License.
 #
 import tritonclient.grpc as grpcclient
-import threading
-import time
+from threading import Event
+import datetime
 from io import BytesIO
 import argparse
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 import cv2
-
+import queue
 
 parser = argparse.ArgumentParser(description='Client for stable diffusion example')
 
 parser.add_argument('--url', required=False, default='localhost:9000',
                     help='Specify url to grpc service. default:localhost:9000')
+parser.add_argument('--prompt',
+                    required=False,
+                    default='Zebras in space',
+                    help='Prompt for image generation')
+parser.add_argument('--show', action='store_true',
+                    help='Display results on the screen')
+
 args = vars(parser.parse_args())
 
 channel_args = [
@@ -34,46 +41,55 @@ channel_args = [
     ("grpc.http2.max_pings_without_data", 0),
 ]
 client = grpcclient.InferenceServerClient(args['url'], channel_args=channel_args)
-data = "Zebras in space".encode()
+data = args['prompt'].encode()
 
-
+image_queue = queue.Queue()
+event = Event()
 videodims = (512,512)
-#fourcc = cv2.VideoWriter_fourcc(*'avc1')    
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')    
-video = cv2.VideoWriter("test.mp4",fourcc, 4,videodims)
-#img = Image.new('RGB', videodims, color = 'darkred')
-#draw stuff that goes on every frame here
-#for i in range(0,60*60):
-#    imtemp = img.copy()
-#    # draw frame specific stuff here.
-#    video.write(cv2.cvtColor(np.array(imtemp), cv2.COLOR_RGB2BGR))
-#video.release()
-
-i = 0
+video = cv2.VideoWriter("image.mp4",fourcc, 4,videodims)
 
 def callback(result, error):
-    global i
-    i += 1
+    global image_queue, event
     if error:
         raise error
+    if result.as_numpy('END_SIGNAL') is not None:
+        image_queue.put(None)
     elif result.as_numpy('OUTPUT') is not None:
         img = Image.open(BytesIO(result.as_numpy("OUTPUT")))
-        img.save(f"output_{i}.png")
-        imtemp = img.copy()
-        video.write(cv2.cvtColor(np.array(imtemp), cv2.COLOR_RGB2BGR))
-        print('got iteration', i)
-    else:
-        video.release()
-        client.stop_stream()
-
+        opencvImage = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        image_queue.put(opencvImage)
 
 client.start_stream(callback=callback)
 
 model_name = "python_model"
 input_name = "text"
 
-start = time.time()
+start = datetime.time()
 infer_input = grpcclient.InferInput(input_name, [len(data)], "BYTES")
 infer_input._raw_content = data
 
+start_time = datetime.datetime.now()
 client.async_stream_infer(model_name, [infer_input])
+
+print("Executing pipeline")
+i = 0
+while True:
+    image = image_queue.get()
+    if image is None:
+        break
+    if args['show']:
+        cv2.imshow("image",image)
+        cv2.waitKey(25)
+    cv2.imwrite("image"+str(i)+".png", image)
+    video.write(image)
+    i += 1
+endtime = datetime.datetime.now()
+client.stop_stream()
+video.release()
+print("Generated final image", "image" + str(i) + ".png")
+print("Transition saved to image.mp4")
+print("Total time", int((endtime - start_time).total_seconds() * 1000), "ms")
+print("Number of responses", i)
+print('Average response time: {:.2f} ms'.format(int((endtime - start_time).total_seconds() * 1000)/i))
+cv2.destroyAllWindows() 
