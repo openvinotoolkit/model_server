@@ -18,7 +18,6 @@ import os
 import cv2
 import numpy as np
 
-from google.cloud import logging
 from google.cloud import storage
 from use_cases.use_case import UseCase
 from datetime import datetime, MINYEAR
@@ -27,7 +26,7 @@ from datetime import datetime, MINYEAR
 class PersonVehicleBikeDetection(UseCase):
     CLASSES = ["Vehicle", "Person", "Bike"]
     COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
-    CONFIDENCE_THRESHOLD = 0.75
+    CONFIDENCE_THRESHOLD = float(os.environ.get('PERSON_DETECTION_CONFIDENCE_THRESHOLD', 0.75))
     frame: np.ndarray = None
 
     def supports_visualization() -> bool:
@@ -79,8 +78,12 @@ class PersonVehicleBikeDetection(UseCase):
                     # write the detected image to a file
                     formatted_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S.%f")
                     filename = f"detected-person_{formatted_datetime}.png"
-                    local_file = os.path.join(os.environ.get('HOME'), 'Pictures', filename)
-                    cv2.imwrite(local_file, PersonVehicleBikeDetection.frame)
+                    local_folder = os.path.join(os.environ.get('HOME'), 'Pictures')
+                    if os.path.isdir(local_folder):
+                        local_file = os.path.join(local_folder, filename)
+                        cv2.imwrite(local_file, PersonVehicleBikeDetection.frame)
+                    else:
+                        local_file = None
 
                     # upload the file to Google Cloud Storage
                     if 'PERSON_DETECTION_GCS_BUCKET' in os.environ and 'PERSON_DETECTION_GCS_FOLDER':
@@ -89,7 +92,6 @@ class PersonVehicleBikeDetection(UseCase):
                     else:
                         gs_path = None
 
-                    # sampled_log(f"Person detected with confidence at {conf} uploaded to {gs_path}")
                     sampled_log(
                         {
                             'confidence': float(conf),
@@ -100,15 +102,20 @@ class PersonVehicleBikeDetection(UseCase):
 
 
 last_logged_datetime = datetime(MINYEAR, 1, 1, 0, 0)
-logging_client = logging.Client()
-# This log can be found in the Cloud Logging console under 'Custom Logs'.
-logger = logging_client.logger('person-detection-debug')
+if 'GOOGLE_APPLICATION_CREDENTIALS' in os.environ:
+    from google.cloud import logging
+
+    logging_client = logging.Client()
+    # This log can be found in the Cloud Logging console under 'Custom Logs'.
+    gcp_logger = logging_client.logger('person-detection-debug')
+else:
+    gcp_logger = None
 
 
 def sampled_log(log_dict: dict):
     # def sampled_log(log_message: str):
     global last_logged_datetime
-    min_log_interval_seconds = int(os.environ.get('PERSON_DETECTION_MIN_LOG_INTERVAL_SECONDS', 2))
+    min_log_interval_seconds = int(os.environ.get('PERSON_DETECTION_MIN_LOG_INTERVAL_SECONDS', 3))
 
     current_datetime = datetime.now()  # Calculate the current datetime
     # Calculate the time difference
@@ -118,7 +125,8 @@ def sampled_log(log_dict: dict):
         log_dict['sample-interval-seconds'] = min_log_interval_seconds
         if 'PERSON_DETECTION_DEBUG' in os.environ:
             print(str(log_dict))
-        logger.log_struct(log_dict, severity="INFO")
+        if gcp_logger:
+            gcp_logger.log_struct(log_dict, severity="INFO")
         last_logged_datetime = current_datetime
 
 

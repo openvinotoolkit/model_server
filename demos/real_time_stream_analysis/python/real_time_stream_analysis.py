@@ -94,14 +94,5 @@ def main():
     stream_analyzer.run()
 
 
-def check_required_env_var():
-    if 'GOOGLE_APPLICATION_CREDENTIALS' in os.environ and 'PERSON_DETECTION_MIN_LOG_INTERVAL_SECONDS' in os.environ:
-        pass
-    else:
-        logger.error(f"Missing environment variables: GOOGLE_APPLICATION_CREDENTIALS, PERSON_DETECTION_MIN_LOG_INTERVAL_SECONDS")
-        exit(1)
-
-
 if __name__ == "__main__":
-    check_required_env_var()
     main()

@@ -1,6 +1,12 @@
+#!/bin/bash
+set -e # exit the script when execution hits any error
+set -x # print the executing lines
+
+# Execute the script line by line
 git clone https://github.com/hilliao/model_server.git
 
-# follow the steps at https://github.com/hilliao/model_server/tree/main/demos/real_time_stream_analysis/python/use_cases/person_vehicle_bike_detection
+# follow the steps at
+# https://github.com/openvinotoolkit/model_server/tree/main/demos/real_time_stream_analysis/python/use_cases/person_vehicle_bike_detection
 # to download the prebuilt models
 mkdir -p workspace/person-vehicle-bike-detection-2002/1
 wget -P workspace/person-vehicle-bike-detection-2002/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-2002/FP32/person-vehicle-bike-detection-2002.bin
@@ -18,6 +24,7 @@ pip3 install -r model_server/demos/real_time_stream_analysis/python/requirements
 # execute the person detection use case
 export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/person-detection-logger@test-vpc-341000.iam.gserviceaccount.com
 export PERSON_DETECTION_MIN_LOG_INTERVAL_SECONDS=5
+export PERSON_DETECTION_CONFIDENCE_THRESHOLD=0.8
 export PERSON_DETECTION_DEBUG=1
 export PERSON_DETECTION_GCS_BUCKET=
 export PERSON_DETECTION_GCS_FOLDER=
