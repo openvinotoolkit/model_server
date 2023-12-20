@@ -22,7 +22,9 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#if (PYTHON_DISABLE == 0)
 #include "../pythoninterpretermodule.hpp"
+#endif
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "test_utils.hpp"
@@ -52,7 +54,7 @@ protected:
     ::inference::ModelInferRequest firstRequest;
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
 };
-
+#if (PYTHON_DISABLE == 0)
 class PythonStreamingTest : public StreamingTest {
 protected:
     // Defaults for executor
@@ -76,6 +78,7 @@ public:
         pythonModule.reset();
     }
 };
+#endif
 
 static void setRequestTimestamp(KFSRequest& request, const std::string& value) {
     request.clear_parameters();
@@ -476,7 +479,7 @@ node {
 }
 
 // Generative AI case + automatic timestamping server-side - Python
-
+#if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
 namespace py = pybind11;
 #include "../python/python_backend.hpp"
@@ -713,6 +716,7 @@ node_options: {
 }
 // TODO: Add more negative tests for wrong configurations
 // --- End Gen AI Python cases
+#endif
 
 // Sending inputs separately for synchronized graph
 TEST_F(StreamingTest, MultipleStreamsDeliveredViaMultipleRequests) {
