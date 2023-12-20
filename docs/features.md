@@ -9,7 +9,7 @@ hidden:
 ovms_docs_dag
 ovms_docs_mediapipe
 ovms_docs_streaming_endpoints
-ovms_docs_python_support_quickstart
+ovms_docs_python_support_reference
 ovms_docs_stateful_models
 ovms_docs_binary_input
 ovms_docs_text
@@ -27,6 +27,12 @@ Connect multiple models in a pipeline and reduce data transfer overhead with Dir
 Implement model inference and data transformations using a custom node C/C++ dynamic library.
 
 [Learn more](dag_scheduler.md)
+
+## Custom Python Servables
+Write Python code that will do your custom processing and serve it in the Model Server. 
+Take advantage of a rich environment of Python modules in domains like data processing and data science to create flexible solutions without the need to write C++ code.
+
+[Learn more](python_support/reference.md)
 
 ## Processing Raw Data
 Send data in JPEG or PNG formats to reduce traffic and offload data pre-processing to the server.

@@ -1,12 +1,12 @@
-# Python Servables in OpenVINO Model Server {#ovms_docs_python_support_python_support}
+# Python Nodes in OpenVINO Model Server {#ovms_docs_python_support_python_support}
 
 ## Introduction
 
 **This feature is currently in preview, meaning some behaviors of the feature and user interface may change in future versions**
 
- Starting with version 2023.3, OpenVINO Model Server supports execution of custom Python code. This means users can now create their own servables in Python. These servables can execute simple pre- or post-processing as well as complex tasks like image or text generation. 
+ Starting with version 2023.3, OpenVINO Model Server supports execution of custom Python code. Such code can execute simple pre- or post-processing as well as complex tasks like image or text generation. 
  
- Python execution is enabled via [MediaPipe](../mediapipe.md) by the built-in `PythonExecutorCalculator` that allows creating graph nodes to execute Python code. Python servables can be used as standalone endpoints (single node graphs) or be part of larger MediaPipe solutions.
+ Python execution is enabled via [MediaPipe](../mediapipe.md) by the built-in `PythonExecutorCalculator` that allows creating graph nodes to execute Python code. Python nodes can be used as standalone servables (single node graphs) or be part of larger MediaPipe graphs.
 
  Check out the [quickstart guide](quickstart.md) for a simple example that shows how to use this feature.
 
@@ -25,22 +25,13 @@ RUN pip3 install numpy
 ENTRYPOINT [ `/ovms/bin/ovms` ]
 ```
 
-TODO: Here we could provide make target with requirements location as a parameter.
-
 ### Building OpenVINO Model Server from Source
-In the section above, we use the `openvino/model_server:latest` image from Docker Hub. In case you want to build the image from source, follow the steps below:
-
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make docker_build MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 OV_USE_BINARY=1 RUN_TESTS=0
-cd ..
-```
+In the section above, we use the `openvino/model_server:latest` image from Docker Hub. In case you want to use model server with the latest changes you can [build it from source](../build_from_source.md).
 The resulting Docker image can be extended with additional layers, just as we show above with the pre-built image.
 
-## Python Servable
+## Python Node Implementation
 
-When deploying a Python servable, the Model Server expects a Python file with an `OvmsPythonModel` class implemented:
+When deploying a Python node, the Model Server expects a Python file with an `OvmsPythonModel` class implemented:
 
 ```python
 class OvmsPythonModel:
@@ -52,7 +43,7 @@ class OvmsPythonModel:
         For gRPC unary, graphs are recreated per request. 
         For gRPC streaming, there can be multiple graph instances existing at the same time. 
         OvmsPythonModel object is initialized with this method and then shared between all graph instances. 
-        Implementing this function is required (should it be?).
+        Implementing this function is optional.
 
         Parameters:
         -----------
@@ -61,20 +52,29 @@ class OvmsPythonModel:
             * node_name: string
                 Name of the node in the graph
             * input_streams: list of strings
-                List of input stream names defined for the node in graph configuration
+                List of input stream names defined for the node in graph
+                configuration
             * output_streams: list of strings
-                List of output stream names defined for the node in graph configuration
+                List of output stream names defined for the node in graph
+                configuration
         -----------
         """
         print("Running initialize...")
 
     def execute(self, inputs):
         """
-        `execute` is called in `Process` method of PythonExecutorCalculator which in turn is called by the MediaPipe framework. 
-        How MediaPipe calls the `Process` method for the node depends on the configuration and the two configurations supported by PythonExecutorCalculator are:
+        `execute` is called in `Process` method of PythonExecutorCalculator
+        which in turn is called by the MediaPipe framework. How MediaPipe
+        calls the `Process` method for the node depends on the configuration
+        and the two configurations supported by PythonExecutorCalculator are:
         
-        * Regular: `execute` runs every time the node receives inputs. Produces one set of outputs per one set of inputs. For unary endpoints it's the only possible configuration.
-        * Generative: `execute` runs multiple times for single inputs set. Produces multiple sets of outputs over time per single set of inputs. Works only with streaming endpoints. 
+        * Regular: `execute` runs every time the node receives inputs.
+        Produces one set of outputs per one set of inputs. For unary endpoints
+        it's the only possible configuration.
+        * Generative: `execute` is called once with input data and returns a
+        generator. The generator is then called multiple times with no
+        additional input data and produces multiple sets of outputs over time.
+        Works only with streaming endpoints. 
 
         Implemeting this function is required.
 
@@ -90,12 +90,14 @@ class OvmsPythonModel:
 
     def finalize(self):
         """
-        `finalize` is called when model server unloads graph definition. It allows to perform any cleanup actions before the graph definition is removed. Implementing this function is optional.
+        `finalize` is called when model server unloads graph definition.
+        It allows to perform any cleanup actions before the graph definition
+        is removed. Implementing this function is optional.
         """
         print("Running finalize...")
 ```
 
-### initialize
+### `initialize`
 
 `initialize` is called when model server loads graph definition. It allows to initialize and maintain state between subsequent `execute` calls and even graph instances.
 
@@ -107,13 +109,28 @@ For gRPC streaming, there can be multiple graph instances existing at the same t
 
 #### Parameters and return value
 
-`initialize` is called with `kwargs` parameter which is a dictionary. All keys are strings. Available keys and values:
+`initialize` is called with `kwargs` parameter which is a dictionary. 
+`kwargs` contain information from node configuration:
+```pbtxt
+node {
+  name: <NODE_NAME>
+  ...
+  input_stream: "<INPUT_TAG>:<INPUT_NAME>"
+  input_stream: "<INPUT_TAG>:<INPUT_NAME>"
+  ...
+  output_stream: "<OUTPUT_TAG>:<OUTPUT_NAME>"
+  output_stream: "<OUTPUT_TAG>:<OUTPUT_NAME>"
+  ...
+}
+```
+
+All keys are strings. Available keys and values:
 
 | Key           | Value type | Description |
 | ------------- |:-----------| :-----------| 
-| node_name     | string | Name of the node in the graph |
-| input_names   | list of strings | List of input stream names defined for the node in graph configuration | 
-| outputs_names | list of strings | List of output stream names defined for the node in graph configuration |
+| node_name     | string | Name of the node in the graph. `<NODE_NAME>` in the sample above |
+| input_names   | list of strings | List of `<INPUT_NAME>` from all input streams in the sample above | 
+| outputs_names | list of strings | List of `<OUTPUT_NAME>` from all output streams in the sample above |
 
 `initialize` is not expected to return any value.
 
@@ -122,9 +139,11 @@ For gRPC streaming, there can be multiple graph instances existing at the same t
 Signaling that something went wrong should be done by throwing an exception.
 When model server catches exception from `initialize` it cleans up all Python resources in the graph (including those belonging to the correctly loaded nodes) and sets the whole graph in invalid state.
 
-**Implementing this function is required (should it be?).**
+**Note**: Run Model Server with `--log_level DEBUG` parameter to get information about errors in the server logs.
 
-### execute
+*Implementing this function is optional*
+
+### `execute`
 
 `execute` is called in `Process` method of `PythonExecutorCalculator` which in turn is called by MediaPipe framework. How MediaPipe calls `Process` for the node depends on the configuration and the two configurations supported by `PythonExecutorCalculator` are:
 
@@ -142,7 +161,8 @@ More information along with the configuration aspect described can be found in [
 
 #### Generative 
 
-`execute` runs multiple times for single set of inputs with the same timestamp. It produces multiple sets of outputs over time per single set of inputs. Works only with streaming endpoints. On the implementation side, to use that mode, `execute` should `yield` outputs.
+`execute` is called once when all inputs are available and returns a [generator](https://wiki.python.org/moin/Generators). The generator is then called multiple times with no
+additional input data and produces multiple sets of outputs over time. Works only with streaming endpoints. On the implementation side, to use that mode, `execute` should `yield` outputs.
 
 ```python
 def execute(self, inputs):
@@ -173,25 +193,27 @@ Signaling that something went wrong should be done by throwing an exception.
 The exception is caught by the `PythonExecutorCalculator` which logs it and returns non-OK status.
 Model Server then reads that status and sets graph in an error state. Then it closes all graph's input streams and waits until in-progress actions are finished. Once it's done the graph gets removed.
 
-This behavior has different effect on the client depending on the kind of gRPC endpoint used - unary or streaming.
+This behavior has different effect on the client depending on the kind of gRPC endpoint used - unary or streaming:
 
-**Unary** 
+- **Unary**
 
-With unary endpoint a graph is created, executed and destroyed for every request. If `execute` encounters an error, model server logs it and sends error message in response immediately. 
+  With unary endpoint a graph is created, executed and destroyed for every request. If `execute` encounters an error, model server logs it and sends error message in response immediately. 
 
-**Streaming**
+- **Streaming**
 
-With streaming endpoint a graph is created for the first request in the stream and then reused by all subsequent requests. 
+  With streaming endpoint a graph is created for the first request in the stream and then reused by all subsequent requests. 
 
-If `execute` encounters an error on the first request (for example the Python code doesn't work as expected), model server logs it  and sends error message in response immediately. The graph gets destroyed.
+  If `execute` encounters an error on the first request (for example the Python code doesn't work as expected), model server logs it  and sends error message in response immediately. The graph gets destroyed.
 
-If `execute` encounters an error on one of the subsequent requests (for example wrong data has been received), model server logs it and MediaPipe sets error in the graph, but the client won't receive error message until it sends another request. When the next request is read from the stream, model server checks if graph has an error, destroys it and sends response to the client.
+  If `execute` encounters an error on one of the subsequent requests (for example wrong data has been received), model server logs it and MediaPipe sets error in the graph, but the client won't receive error message until it sends another request. When the next request is read from the stream, model server checks if graph has an error, destroys it and sends response to the client.
 
-As of now, the graphs are not recoverable so if an error occurs, you need to create a new stream.
+  As of now, graphs are not recoverable, so if `execute`  encounters an error the stream gets closed and you need to create a new one.
+
+**Note**: Run Model Server with `--log_level DEBUG` parameter to get information about errors in the server logs.
 
 **Implementing this function is required.**
 
-### finalize
+### `finalize`
 
 `finalize` is called when model server unloads graph definition. It allows to perform any cleanup actions before the graph is removed. 
 
@@ -204,9 +226,9 @@ As of now, the graphs are not recoverable so if an error occurs, you need to cre
 Signaling that something went wrong should be done by throwing an exception.
 When model server catches exception from `finalize` it logs it and proceeds with the unload.
 
-*Implementing this function is optional.*
-
 **Note**: Run Model Server with `--log_level DEBUG` parameter to get information about errors in the server logs.
+
+*Implementing this function is optional.*
 
 ## Python Tensor
 
@@ -496,7 +518,7 @@ Once Python code and the `pbtxt` file with graph configuration is ready the mode
     ]
 }
 ```
-Where `name` defines the name of the whole servable and `graph_path` contains the path to graph configuration file.
+Where `name` defines the name of the graph and `graph_path` contains the path to graph configuration file.
 
 ## Client side considerations
 
@@ -617,7 +639,7 @@ Depending on which mode is used, both the Python code and graph configuration mu
 
 #### Regular mode
 
-When using regular mode, the `execute` method in [`OvmsPythonModel`](#python-servable) class must `return` value. 
+When using regular mode, the `execute` method in [`OvmsPythonModel`](#python-node-implementation) class must `return` value. 
 
 ```python
 from pyovms import Tensor
@@ -650,7 +672,7 @@ This configuration supports `DefaultInputStreamHandler` (it's default therefore 
 
 #### Generative mode
 
-When using generative mode, the `execute` method in [`OvmsPythonModel`](#python-servable) class must `yield` value. 
+When using generative mode, the `execute` method in [`OvmsPythonModel`](#python-node-implementation) class must `yield` value. 
 
 ```python
 from pyovms import Tensor
