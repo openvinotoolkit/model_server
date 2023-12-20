@@ -95,7 +95,7 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
     mediapipe::PythonExecutorCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     if (!std::filesystem::exists(nodeOptions.handler_path())) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", nodeOptions.handler_path());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node handler_path: {} does not exist. ", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
     }
     auto fsHandlerPath = std::filesystem::path(nodeOptions.handler_path());
@@ -116,7 +116,7 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
             py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig);
             pythonModel.attr("initialize")(kwargsParam);
         } else {
-            SPDLOG_DEBUG("Python node resource does not have an initialize method. Python node path {} ", nodeOptions.handler_path());
+            SPDLOG_DEBUG("OvmsPythonModel class does not have an initialize method. Python node path {} ", nodeOptions.handler_path());
         }
 
         nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);
