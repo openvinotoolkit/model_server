@@ -1,4 +1,4 @@
-# Python Nodes in OpenVINO Model Server {#ovms_docs_python_support_python_support}
+# Python Nodes in OpenVINO Model Server {#ovms_docs_python_support_reference}
 
 ## Introduction
 
@@ -205,7 +205,7 @@ This behavior has different effect on the client depending on the kind of gRPC e
 
   If `execute` encounters an error on the first request (for example the Python code doesn't work as expected), model server logs it  and sends error message in response immediately. The graph gets destroyed.
 
-  If `execute` encounters an error on one of the subsequent requests (for example wrong data has been received), model server logs it and MediaPipe sets error in the graph, but the client won't receive error message until it sends another request. When the next request is read from the stream, model server checks if graph has an error, destroys it and sends response to the client.
+  If `execute` encounters an error on one of the subsequent requests (for example wrong data has been received), model server logs it and MediaPipe sets error in the graph, but the client won't receive error message until it sends another request. When the next request is read from the stream, model server checks if graph has an error, destroys it and sends response to the client. Rework of that behavior, so that error is being sent immediately is planned.
 
   As of now, graphs are not recoverable, so if `execute`  encounters an error the stream gets closed and you need to create a new one.
 
