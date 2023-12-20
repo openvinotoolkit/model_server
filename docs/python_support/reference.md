@@ -68,13 +68,14 @@ class OvmsPythonModel:
         calls the `Process` method for the node depends on the configuration
         and the two configurations supported by PythonExecutorCalculator are:
         
-        * Regular: `execute` runs every time the node receives inputs.
-        Produces one set of outputs per one set of inputs. For unary endpoints
-        it's the only possible configuration.
-        * Generative: `execute` is called once with input data and returns a
-        generator. The generator is then called multiple times with no
-        additional input data and produces multiple sets of outputs over time.
-        Works only with streaming endpoints. 
+        * Regular: `execute` runs every time the node receives all inputs with
+        the same timestamp. Produces one set of outputs per one set of inputs.
+        For unary endpoints it's the only possible configuration.
+        
+        * Generative: `execute` is called once, when all inputs with the same
+        timestamp are available and returns a generator. The generator is then
+        called multiple times with no additional input data and produces
+        multiple sets of outputs over time. Works only with streaming endpoints. 
 
         Implemeting this function is required.
 
@@ -110,7 +111,8 @@ For gRPC streaming, there can be multiple graph instances existing at the same t
 #### Parameters and return value
 
 `initialize` is called with `kwargs` parameter which is a dictionary. 
-`kwargs` contain information from node configuration:
+`kwargs` contain information from [node configuration](#pythonexecutorcalculator). Considering a sample:
+
 ```pbtxt
 node {
   name: <NODE_NAME>
@@ -161,8 +163,7 @@ More information along with the configuration aspect described can be found in [
 
 #### Generative 
 
-`execute` is called once when all inputs are available and returns a [generator](https://wiki.python.org/moin/Generators). The generator is then called multiple times with no
-additional input data and produces multiple sets of outputs over time. Works only with streaming endpoints. On the implementation side, to use that mode, `execute` should `yield` outputs.
+`execute` is called once when all inputs with the same timestamp are available and returns a [generator](https://wiki.python.org/moin/Generators). The generator is then called multiple times with no additional input data and produces multiple sets of outputs over time. Works only with streaming endpoints. On the implementation side, to use that mode, `execute` should `yield` outputs.
 
 ```python
 def execute(self, inputs):
@@ -266,9 +267,9 @@ def execute(self, inputs):
 
 Inputs will be provided to the `execute` function, but outputs must be prepared by the user. Output objects can be created using `pyovms.Tensor` class constructor:
 
-`Tensor(tensor_name, data)`
+`Tensor(name, data)`
 
-- `tensor_name`: a string that assosiates Tensor data with specific name. This name is also used by `PythonExecutorCalculator` to push data to the correct output stream in the node. More about it in [node configuration section](#input-and-output-streams-in-python-code).
+- `name`: a string that assosiates Tensor data with specific name. This name is also used by `PythonExecutorCalculator` to push data to the correct output stream in the node. More about it in [node configuration section](#input-and-output-streams-in-python-code).
 - `data`: an object that implements Python [Buffer Protocol](https://docs.python.org/3/c-api/buffer.html#buffer-protocol). This could be an instance of some built-in type like `bytes` or types from external modules like `numpy.ndarray`. 
 
 ```python
