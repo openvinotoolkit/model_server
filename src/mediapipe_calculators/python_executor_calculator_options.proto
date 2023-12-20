@@ -25,5 +25,5 @@ message PythonExecutorCalculatorOptions {
     // no rule to obtain this
     optional PythonExecutorCalculatorOptions ext = 113473748;
     }
-    required string entrypoint = 1;
+    required string handler_path = 1;
 }
