@@ -128,18 +128,18 @@ pip install -r client_requirements.txt
 
 Run time unary client `client_unary.py`:
 ```bash
-python3 client_unary.py --url localhost:9000 --prompt "How many helicopters can a human eat in one sitting?"
+python3 client_unary.py --url localhost:9000 --prompt "What is the theory of relativity?"
 ```
 
 Example output:
 ```bash
 Question:
-How many helicopters can a human eat in one sitting?
+What is the theory of relativity?
 
 Completion:
-It is difficult to say how many helicopters human can eat in one sitting without knowing what type of person you are referring to. You may want to ask someone who knows about this topic for an accurate response to this question. However, typically speaking, it would be impossible for a human to consume an entire aerial vehicle, consisting of multiple compartments and rotors, every day if they lived to be 100 years old. However, humans can ingest larger quantities of food, like energy bars or canned goods, which have a smaller volume and can be consumed over a period of time, making it easier for them to consume large amounts of food at once. It is also possible that some people are able to consume helicopter parts due to their exceptional strength, stamina, endurance, or aversion to dehydration, among other reasons.
+The theory of relativity is a branch of physics that describes how objects move relative to the observer, regardless of whether they are moving towards or away from each other. It developed in response to the inability of Newtonian mechanics to account for motion that we observed regularly in nature. The theory states that light is able to oscillate at different frequencies depending on its distance from an object compared to objects further away under the same conditions, but at a slower speed perpendicular to the direction of motion. This effect is most commonly seen when two objects of equal masses are moving in opposite directions, due to their respective attractive or repulsive forces. In addition to explaining motion that is observable in the current universe, the relativity theory has significant implications for other areas of science and technology as it challenges the assumptions of the scientific community. It also serves as a foundation for modern physics experiments that rely on these principles.
 
-Total time 11662 ms
+Total time 11058 ms
 ```
 
 ## Use LLM model with gRPC streaming
@@ -166,19 +166,18 @@ docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/$
 
 Run time streaming client `client_stream.py`:
 ```bash
-python3 client_stream.py --url localhost:9000 --prompt "How many helicopters can a human eat in one sitting?"
+python3 client_stream.py --url localhost:9000 --prompt "What is the theory of relativity?"
 ```
 
 Example output (the generated text will be flushed to the console in chunks, as soon as it is available on the server):
 ```bash
 Question:
-How many helicopters can a human eat in one sitting?
+What is the theory of relativity?
 
-I don't have access to this information. However, we don't generally ask numbers from our clients. You may want to search for information on the topic yourself or with your doctor before giving an estimate.
+The Theory of Relativity is an idea that has long shaped our understanding of physics and astronomy, explaining why objects appear to move at different rates depending on their distance from Earth. Essentially, it proposes that space and time are not constant and can vary based on factors such as velocity, acceleration, and gravity. The theory also proposes that events occurring in one location cannot be known beyond that location until they have passed through another observer. This means they can be perceived by someone watching something happening at their current location due to relativity laws of motion (such as "time dilation"), or from a position farther away. The relationship between this concept and space and time is crucial for understanding a wide range of phenomena in physics and astronomy, such as lightspeed, Lorentz transformations, and gravitational radiation.
 END
-Total time 2916 ms
-Number of responses 35
-First response time 646 ms
-Average response time: 83.31 ms
-
+Total time 10186 ms
+Number of responses 172
+First response time 296 ms
+Average response time: 59.22 ms
 ```
