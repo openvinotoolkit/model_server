@@ -17,7 +17,7 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 make python_image
 ```
-It will create an image names `openvino/model_server:py`.
+It will create an image called `openvino/model_server:py`.
 
 ## Download models
 
@@ -71,10 +71,10 @@ Total response time: 18.39 s
 
 ### Deploy OpenVINO Model Server with the Python calculator
 
-The use case with gRPC steaming sending intermediate responses is based on the same models and 
+The use case with gRPC streaming and sending intermediate responses is based on the same models and 
 similar implementation of the pipeline.
 The key difference is that the execute method in `model.py` has `yield` operator instead of `return`.
-It also implements the `callback` function from the `optimum` pipeline to send the results from the generation cycles. A parameter `callback_steps` can deduce the number of response.
+It also implements the `callback` function from the `optimum` pipeline to send the results from the generation cycles. A parameter `callback_steps` can deduce the number of responses.
 
 Run the following command to start OpenVINO Model Server:
 

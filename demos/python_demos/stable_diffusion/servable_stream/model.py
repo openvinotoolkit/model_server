@@ -72,8 +72,8 @@ class OvmsPythonModel:
         pipeline_finished = False
         while not pipeline_finished:
             print('waiting for data...')
-            my_data, pipeline_finished = q.get()
+            image_data, pipeline_finished = q.get()
             print('got it! will serialize...')
-            yield [Tensor("OUTPUT", my_data)]
+            yield [Tensor("OUTPUT", image_data)]
         yield [Tensor("END_SIGNAL", "".encode())]
 
