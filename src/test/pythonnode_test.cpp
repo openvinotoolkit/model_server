@@ -142,7 +142,7 @@ TEST_F(PythonFlowTest, PythonNodeFileDoesNotExist) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/22symmetric_increment.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/22symmetric_increment.py"
                 }
             }
         }
@@ -167,7 +167,7 @@ TEST_F(PythonFlowTest, PythonNodeNameAlreadyExist) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/bad_execute_wrong_return_value.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_execute_wrong_return_value.py"
                 }
             }
         }
@@ -179,7 +179,7 @@ TEST_F(PythonFlowTest, PythonNodeNameAlreadyExist) {
             output_stream: "out3"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
                 }
             }
         }
@@ -204,7 +204,7 @@ TEST_F(PythonFlowTest, PythonNodeInitFailed) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_no_method.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_no_method.py"
                 }
             }
         }
@@ -229,7 +229,7 @@ TEST_F(PythonFlowTest, PythonNodeInitFailedImportOutsideTheClassError) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_import_outside_class_error.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_import_outside_class_error.py"
                 }
             }
         }
@@ -254,7 +254,7 @@ TEST_F(PythonFlowTest, PythonNodeInitException) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_throw_exception.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_throw_exception.py"
                 }
             }
         }
@@ -298,7 +298,7 @@ TEST_F(PythonFlowTest, PythonNodeNameMissing) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_no_method.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_no_method.py"
                 }
             }
         }
@@ -323,7 +323,7 @@ TEST_F(PythonFlowTest, PythonNodeNameDoesNotExist) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/bad_execute_wrong_return_value.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_execute_wrong_return_value.py"
                 }
             }
         }
@@ -349,7 +349,7 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/good_initialize_with_class_members.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_initialize_with_class_members.py"
                 }
             }
         }
@@ -407,7 +407,7 @@ TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
             output_stream: "OUT2:out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/good_initialize_with_arguments.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_initialize_with_arguments.py"
                 }
             }
         }
@@ -468,7 +468,7 @@ TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
                 }
             }
         }
@@ -669,7 +669,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
             output_stream: "OUTPUT:out"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
                 }
             }
         }
@@ -717,7 +717,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
             output_stream: "OUTPUT3:out3"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
                 }
             }
         }
@@ -766,7 +766,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
             output_stream: "OUTPUT:out"
             options: {
                 [mediapipe.PythonExecutorCalculatorOptions.ext]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/<FILENAME>.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/<FILENAME>.py"
                 }
             }
         )";
@@ -812,7 +812,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
         output_stream: "OUTPUT:out"
         options: {
             [mediapipe.PythonExecutorCalculatorOptions.ext]: {
-                entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_identity_fp32_only.py"
+                handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_identity_fp32_only.py"
             }
         }
     )";
@@ -888,7 +888,7 @@ TEST_F(PythonFlowTest, FinalizePassTest) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py"
                 }
             }
         }
@@ -913,7 +913,7 @@ TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py"
                 }
             }
         }
@@ -938,7 +938,7 @@ TEST_F(PythonFlowTest, FinalizeDestructorRemoveFileTest) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/good_finalize_remove_file.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_remove_file.py"
                 }
             }
         }
@@ -970,7 +970,7 @@ TEST_F(PythonFlowTest, FinalizeException) {
             output_stream: "out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/bad_finalize_exception.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_finalize_exception.py"
                 }
             }
         }
@@ -996,7 +996,7 @@ TEST_F(PythonFlowTest, ReloadWithDifferentScriptName) {
             output_stream: "OUTPUT:out"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
                 }
             }
         }
@@ -1036,7 +1036,7 @@ TEST_F(PythonFlowTest, ReloadWithDifferentScriptName) {
             output_stream: "OUTPUT:out"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment_by_2.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment_by_2.py"
                 }
             }
         }
@@ -1072,7 +1072,7 @@ TEST_F(PythonFlowTest, FailingToInitializeOneNodeDestructsAllResources) {
             output_stream: "OUTPUT:inter"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/good_finalize_remove_file.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_remove_file.py"
                 }
             }
         }
@@ -1084,7 +1084,7 @@ TEST_F(PythonFlowTest, FailingToInitializeOneNodeDestructsAllResources) {
             output_stream: "OUTPUT:out"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    entrypoint: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_throw_exception.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_initialize_throw_exception.py"
                 }
             }
         }

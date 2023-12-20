@@ -94,11 +94,11 @@ py::dict PythonNodeResource::preparePythonNodeInitializeArguments(const ::mediap
 Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeResource>& nodeResource, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, PythonBackend* pythonBackend) {
     mediapipe::PythonExecutorCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
-    if (!std::filesystem::exists(nodeOptions.entrypoint())) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", nodeOptions.entrypoint());
+    if (!std::filesystem::exists(nodeOptions.handler_path())) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
     }
-    auto fsHandlerPath = std::filesystem::path(nodeOptions.entrypoint());
+    auto fsHandlerPath = std::filesystem::path(nodeOptions.handler_path());
     fsHandlerPath.replace_extension();
 
     std::string parentPath = fsHandlerPath.parent_path();
@@ -116,17 +116,17 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
             py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig);
             pythonModel.attr("initialize")(kwargsParam);
         } else {
-            SPDLOG_DEBUG("Python node resource does not have an initialize method. Python node path {} ", nodeOptions.entrypoint());
+            SPDLOG_DEBUG("Python node resource does not have an initialize method. Python node path {} ", nodeOptions.handler_path());
         }
 
         nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);
-        nodeResource->pythonNodeFilePath = nodeOptions.entrypoint();
+        nodeResource->pythonNodeFilePath = nodeOptions.handler_path();
         nodeResource->nodeResourceObject = std::make_unique<py::object>(pythonModel);
     } catch (const pybind11::error_already_set& e) {
-        SPDLOG_ERROR("Failed to process python node file {} : {}", nodeOptions.entrypoint(), e.what());
+        SPDLOG_ERROR("Failed to process python node file {} : {}", nodeOptions.handler_path(), e.what());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
-        SPDLOG_ERROR("Failed to process python node file {}", nodeOptions.entrypoint());
+        SPDLOG_ERROR("Failed to process python node file {}", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     }
     return StatusCode::OK;

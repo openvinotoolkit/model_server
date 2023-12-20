@@ -25,7 +25,7 @@ node {
   output_stream: "OUTPUT:out"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-      entrypoint: "/ovms/src/test/mediapipe/python/scripts/bad_execute_wrong_return_value.py"
+      handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_execute_wrong_return_value.py"
     }
   }
 }
@@ -37,7 +37,7 @@ node {
   output_stream: "OUTPUT:out2"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-      entrypoint: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+      handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
     }
   }
 }
@@ -49,7 +49,7 @@ node {
   output_stream: "OUTPUT:out3"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-      entrypoint: "/ovms/src/test/mediapipe/python/scripts/good_finalize_remove_file.py"
+      handler_path: "/ovms/src/test/mediapipe/python/scripts/good_finalize_remove_file.py"
     }
   }
 }
