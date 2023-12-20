@@ -1,19 +1,19 @@
-# Python servables in OpenVINO Model Server {#ovms_docs_python_support_python_support}
+# Python Servables in OpenVINO Model Server {#ovms_docs_python_support_python_support}
 
 ## Introduction
 
-**This feature is in preview, meaning some behviors of the feature as well as user interface are subjects to change in the future versions**
+**This feature is currently in preview, meaning some behaviors of the feature and user interface may change in future versions**
 
- Starting with version 2023.3, model server supports execution of custom Python code. Users can now create their own servables in Python. Those servables can run simple pre or post processing tasks as well as complex ones like image or text generation. 
+ Starting with version 2023.3, OpenVINO Model Server supports execution of custom Python code. This means users can now create their own servables in Python. These servables can execute simple pre- or post-processing as well as complex tasks like image or text generation. 
  
- Python execution is enabled via [Mediapipe](../mediapipe.md) by built-in `PythonExecutorCalculator` that allows creating graph nodes that execute Python code. That way Python servables can be used as standalone endpoints (single node graphs) or be part of larger Mediapipe solutions.
+ Python execution is enabled via [MediaPipe](../mediapipe.md) by the built-in `PythonExecutorCalculator` that allows creating graph nodes to execute Python code. Python servables can be used as standalone endpoints (single node graphs) or be part of larger MediaPipe solutions.
 
- Checkout [quickstart guide](quickstart.md) for simple usage example.
+ Check out the [quickstart guide](quickstart.md) for a simple example that shows how to use this feature.
 
  ## Building Docker Image
 
-Publically distributed Docker images support Python, but they do not come with any external modules. If bare Python is all you need then you can use public image directly. Otherwise you need to extend public image with additional layers that will install all the stuff you need for your Python code to work. For example, let's say you need numpy.
-In that case your Dockerfile may look like:
+The publicly available `openvino/model_server` image on Docker Hub supports Python, but does not come with external modules installed. If Python is all you need then you can use the public image without modification. Otherwise, you will need to extend the public image with additional layers that install any modules required for your Python code to run. For example, let's say your code requires numpy.
+In that case, your Dockerfile may look like this:
 
 ```dockerfile
 FROM openvino/model_server:latest
@@ -27,8 +27,8 @@ ENTRYPOINT [ `/ovms/bin/ovms` ]
 
 TODO: Here we could provide make target with requirements location as a parameter.
 
-### Building Model Server From Source
-In above section you use public Docker image. In case you want to build it from source do the following:
+### Building OpenVINO Model Server from Source
+In the section above, we use the `openvino/model_server:latest` image from Docker Hub. In case you want to build the image from source, follow the steps below:
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
@@ -36,11 +36,11 @@ cd model_server
 make docker_build MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 OV_USE_BINARY=1 RUN_TESTS=0
 cd ..
 ```
-Resulting Docker image can be extended with additional layers just as the public one.
+The resulting Docker image can be extended with additional layers, just as we show above with the pre-built image.
 
 ## Python Servable
 
-When deploying Python servable, Model Server expects Python file with an `OvmsPythonModel` class implemented:
+When deploying a Python servable, the Model Server expects a Python file with an `OvmsPythonModel` class implemented:
 
 ```python
 class OvmsPythonModel:
@@ -70,8 +70,8 @@ class OvmsPythonModel:
 
     def execute(self, inputs):
         """
-        `execute` is called in `Process` method of PythonExecutorCalculator which in turn is called by Mediapipe framework. 
-        How Mediapipe calls `Process` method for the node depends on the configuration and the two configurations supported by PythonExecutorCalculator are:
+        `execute` is called in `Process` method of PythonExecutorCalculator which in turn is called by the MediaPipe framework. 
+        How MediaPipe calls the `Process` method for the node depends on the configuration and the two configurations supported by PythonExecutorCalculator are:
         
         * Regular: `execute` runs every time the node receives inputs. Produces one set of outputs per one set of inputs. For unary endpoints it's the only possible configuration.
         * Generative: `execute` runs multiple times for single inputs set. Produces multiple sets of outputs over time per single set of inputs. Works only with streaming endpoints. 
@@ -90,7 +90,7 @@ class OvmsPythonModel:
 
     def finalize(self):
         """
-        `finalize` is called when model server unloads graph definition. It allows to perform any cleanup actions before the graph is removed. Implementing this function is optional.
+        `finalize` is called when model server unloads graph definition. It allows to perform any cleanup actions before the graph definition is removed. Implementing this function is optional.
         """
         print("Running finalize...")
 ```
@@ -126,7 +126,7 @@ When model server catches exception from `initialize` it cleans up all Python re
 
 ### execute
 
-`execute` is called in `Process` method of `PythonExecutorCalculator` which in turn is called by Mediapipe framework. How Mediapipe calls `Process` for the node depends on the configuration and the two configurations supported by `PythonExecutorCalculator` are:
+`execute` is called in `Process` method of `PythonExecutorCalculator` which in turn is called by MediaPipe framework. How MediaPipe calls `Process` for the node depends on the configuration and the two configurations supported by `PythonExecutorCalculator` are:
 
 #### Regular 
 
@@ -165,7 +165,7 @@ Depending on the mode it should return:
 
 So depending on the mode `execute` must always either `return` or `yield` a `list of pyovms.Tensor`
 
-*Note*: This method returns outputs as a full set, but since each output is a separate packet in Mediapipe flow, they do not arrive together to their destination. Be aware that if you have more than one output and outputs of your Python node are also outputs of the whole graph you will receive each output in a separate response. You can then [gather them using timestamp](#outputs-synchronization-in-grpc-streaming) that can be found in the response.
+*Note*: This method returns outputs as a full set, but since each output is a separate packet in MediaPipe flow, they do not arrive together to their destination. Be aware that if you have more than one output and outputs of your Python node are also outputs of the whole graph you will receive each output in a separate response. You can then [gather them using timestamp](#outputs-synchronization-in-grpc-streaming) that can be found in the response.
 
 #### Error handling
 
@@ -185,7 +185,7 @@ With streaming endpoint a graph is created for the first request in the stream a
 
 If `execute` encounters an error on the first request (for example the Python code doesn't work as expected), model server logs it  and sends error message in response immediately. The graph gets destroyed.
 
-If `execute` encounters an error on one of the subsequent requests (for example wrong data has been received), model server logs it and Mediapipe sets error in the graph, but the client won't receive error message until it sends another request. When the next request is read from the stream, model server checks if graph has an error, destroys it and sends response to the client.
+If `execute` encounters an error on one of the subsequent requests (for example wrong data has been received), model server logs it and MediaPipe sets error in the graph, but the client won't receive error message until it sends another request. When the next request is read from the stream, model server checks if graph has an error, destroys it and sends response to the client.
 
 As of now, the graphs are not recoverable so if an error occurs, you need to create a new stream.
 
@@ -317,7 +317,7 @@ If it fails, the `datatype` is set to `format`, so that if such tensor is the ou
   
 ## Configuration and deployment
 
-Python is enabled via [Mediapipe](../mediapipe.md) by built-in `PythonExecutorCalculator`, therefore, in order to execute Python code in OVMS you need to create a graph with a node that uses this calculator. 
+Python is enabled via [MediaPipe](../mediapipe.md) by built-in `PythonExecutorCalculator`, therefore, in order to execute Python code in OVMS you need to create a graph with a node that uses this calculator. 
 
 The way the graph is configured has a huge impact on the whole deployment. It defines things like:
 - inputs and outputs of the graph
@@ -352,9 +352,9 @@ Let's break it down:
 
 - `input_side_packet`: a shared data passed from the model server to the Python nodes. It allows to share `OvmsPythonModel` state between multiple graph instances. Must be `PYTHON_NODE_RESOURCES:py`.
 
-- `input_stream`: defines input in form `[TAG]:[NAME]`. Mediapipe allows configurations with indexes i.e. `[TAG]:[INDEX]:[NAME]`, but `PythonExecutorCalculator` ignores it.
+- `input_stream`: defines input in form `[TAG]:[NAME]`. MediaPipe allows configurations with indexes i.e. `[TAG]:[INDEX]:[NAME]`, but `PythonExecutorCalculator` ignores it.
 
-- `output_stream`: defines output in form `[TAG]:[NAME]`. Mediapipe allows configurations with indexes i.e. `[TAG]:[INDEX]:[NAME]`, but `PythonExecutorCalculator` ignores it.
+- `output_stream`: defines output in form `[TAG]:[NAME]`. MediaPipe allows configurations with indexes i.e. `[TAG]:[INDEX]:[NAME]`, but `PythonExecutorCalculator` ignores it.
 
 - `handler_path`: the only one options so far in `PythonExecutorCalculator`. It's a path to the Python file with `OvmsPythonModel` implementation.
 
@@ -502,7 +502,7 @@ Where `name` defines the name of the whole servable and `graph_path` contains th
 
 ### Inference API and available endpoints
 
-Since Python execution is supported via Mediapipe serving flow, it inherits it's enhancements and limitations. First thing to note is that Mediapipe graphs are available **only via KServe API**. 
+Since Python execution is supported via MediaPipe serving flow, it inherits it's enhancements and limitations. First thing to note is that MediaPipe graphs are available **only via KServe API**. 
 
 From the client perspective model server serves a graph and user interacts with a graph. Single node in the graph cannot be accessed from the outside. 
 
@@ -512,7 +512,7 @@ For a graph client can:
 - request metadata (gRPC and REST)
 - request inference (gRPC)
 
-Learn more about how [Mediapipe flow works in OpenVINO Model Server](../mediapipe.md)
+Learn more about how [MediaPipe flow works in OpenVINO Model Server](../mediapipe.md)
 
 For inference, if the format of graph input stream is [`OvmsPyTensor`](#graph-input-and-output-streams), then the data in the KServe request must be encapsulated in `raw_input_contents` field based on [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field. 
 
@@ -586,13 +586,13 @@ Mediapipe graph works with packets and every packet has its timestamp. The times
 
 When requesting inference, user can decide to use automatic timestamping, or send timestamps themself along with the request as `OVMS_MP_TIMESTAMP` parameter. Learn more about [timestamping](../streaming_endpoints.md#timestamping)
 
-When it comes to Python nods, `PythonExecutorCalculator`:
+When it comes to Python node `PythonExecutorCalculator`:
 - for [regular execution mode](#regular-mode) simply propagates timestamp i.e. uses input timestamp as output timestamp. 
 - for [generative execution mode](#generative-mode) it saves timestamp of the input and sends first set of outputs downstream with this timestamp. Then timestamp gets incremented with each generation, so next sets of output packages have ascending timestamp.
 
 #### Outputs synchronization in gRPC streaming
 
-Timestamping has a crucial role when synchronizing packets from different streams both on the inputs and outputs as well as inside the graph. Mediapipe provides outputs of the graph to the model server and what happens next depends on what endpoint is used:
+Timestamping has a crucial role when synchronizing packets from different streams both on the inputs and outputs as well as inside the graph. MediaPipe provides outputs of the graph to the model server and what happens next depends on what endpoint is used:
 
 - on gRPC unary endpoints server waits for the packets from all required outputs and sends them in a single response. 
 - on gRPC streaming endpoints server serializes output packets as soon as they arrive and sends them back in separatele responses.
