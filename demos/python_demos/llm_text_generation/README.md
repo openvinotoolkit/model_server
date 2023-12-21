@@ -27,7 +27,7 @@ Building the image with all required python dependencies is required. Follow the
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image
+make python_image GPU=1 RUN_TESTS=0
 ```
 It will create an image called `openvino/model_server:py`
 
@@ -119,6 +119,9 @@ docker run -d --rm -p 9000:9000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${
 ```
 > **NOTE** Check the Docker container logs to confirm that the model is loaded before sending requests from a client. Depending on the model and hardware it might take a few seconds or several minutes.
 
+> **Note** If order to run the inference load on Intel GPU instead of CPU, just pass the extra parameters to the docker run `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*)`.
+It will pass the GPU device to the container and set the correct group security context.
+
 ### Run a client with unary gRPC call
 
 Install python client dependencies. This is a common step also for the streaming client.
@@ -161,6 +164,9 @@ docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/$
 -e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 > **NOTE** Check the Docker container logs to confirm that the model is loaded before sending requests from a client. Depending on the model and hardware it might take a few seconds or several minutes.
+
+> **Note** If order to run the inference load on Intel GPU instead of CPU, just pass the extra parameters to the docker run `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*)`.
+It will pass the GPU device to the container and set the correct group security context.
 
 ## Run a client with the LLM and gRPC streaming
 
