@@ -25,5 +25,5 @@ message PyobjectOvtensorConverterCalculatorOptions {
     // no rule to obtain this
     optional PyobjectOvtensorConverterCalculatorOptions ext = 113473749;
     }
-    required string handler_path = 1;
+    map<string, string> tag_to_output_tensor_names = 1;
 }

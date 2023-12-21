@@ -24,6 +24,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #pragma GCC diagnostic pop
+#include "src/mediapipe_calculators/pyobject_ovtensor_converter.pb.h"
 
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
@@ -85,8 +86,11 @@ public:
             for (const auto& dim : input_tensor.get_shape()) {
                 shape.push_back(dim);
             }
+            const auto& options = cc->Options<PyobjectOvtensorConverterCalculatorOptions>();
+            const auto tagOutputNameMap = options.tag_to_output_tensor_names();
+            auto outputName = tagOutputNameMap.at("OVMS_PY_TENSOR").c_str();
             pythonBackend.createOvmsPyTensor(
-                "out",
+                outputName,
                 const_cast<void*>((const void*)input_tensor.data()),
                 shape,
                 toString(ovElementTypeToOvmsPrecision(input_tensor.get_element_type())),
