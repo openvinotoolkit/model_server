@@ -25,10 +25,7 @@ RUN pip3 install numpy
 ENTRYPOINT [ `/ovms/bin/ovms` ]
 ```
 
-### Building OpenVINO Model Server from Source
-In the section above, we use the `openvino/model_server:latest` image from Docker Hub. In case you want to use model server with the latest changes you can [build it from source](../build_from_source.md).
-The resulting Docker image can be extended with additional layers, just as we show above with the pre-built image.
-
+You can also modify `requirements.txt` from our [python demos](../../demos/python_demos) and from repository top level directory run `make python_image` 
 ## Python Node Implementation
 
 When deploying a Python node, the Model Server expects a Python file with an `OvmsPythonModel` class implemented:
