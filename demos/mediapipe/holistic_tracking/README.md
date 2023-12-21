@@ -8,7 +8,7 @@ The demo is based on the [upstream Mediapipe holistic demo](https://github.com/g
 
 ## Prepare the server deployment
 
-Clone the repository and enter mediapipe object_detection directory
+Clone the repository and enter mediapipe holistic_tracking directory
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/holistic_tracking
@@ -52,7 +52,7 @@ ovms
 ```
 
 ### Pull the Latest Model Server Image
-Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
+Pull the latest version of OpenVINO&trade; Model Server from Docker Hub:
 ```Bash
 docker pull openvino/model_server:latest
 
@@ -81,4 +81,7 @@ Results saved to :image_0.jpg
 ## Output image
 ![output](output_image.jpg)
 
+## Real time stream analysis
+
+For demo featuring real time stream application see [real_time_stream_analysis](https://github.com/openvinotoolkit/model_server/tree/main/demos/real_time_stream_analysis/python)
 

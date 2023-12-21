@@ -42,3 +42,7 @@ zebra.jpeg
 Iteration 3; Processing time: 26.61 ms; speed 37.59 fps
 ```
 Received images with bounding boxes will be located in ./results directory.
+
+## Real time stream analysis
+
+For demo featuring real time stream application see [real_time_stream_analysis](https://github.com/openvinotoolkit/model_server/tree/main/demos/real_time_stream_analysis/python)
