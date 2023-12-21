@@ -342,7 +342,7 @@ static mediapipe::ImageFormat::Format KFSDatatypeToImageFormat(const std::string
         if (numberOfChannels == 2) {
             return mediapipe::ImageFormat::VEC32F2;
         }
-        if(numberOfChannels == 4){
+        if (numberOfChannels == 4) {
             return mediapipe::ImageFormat::VEC32F4;
         }
     }

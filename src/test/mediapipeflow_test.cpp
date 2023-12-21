@@ -583,7 +583,7 @@ TEST_F(MediapipeFlowImageInput, Float32_4Channels) {
     cv::Mat imageFP32;
     imageRaw.convertTo(imageFP32, CV_32F);
     cv::Mat image;
-    cv::cvtColor(imageFP32,image,cv::COLOR_BGR2BGRA);
+    cv::cvtColor(imageFP32, image, cv::COLOR_BGR2BGRA);
 
     KFSTensorInputProto* input = request.add_inputs();
     input->set_name("in");
@@ -609,7 +609,6 @@ TEST_F(MediapipeFlowImageInput, Float32_4Channels) {
     ASSERT_EQ(response.raw_output_contents()[0].size(), image.cols * image.rows * image.channels() * elementSize);
     ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), image.data, image.cols * image.rows * image.channels() * elementSize));
 }
-
 
 class MediapipeFlowImageInputThreeChannels : public MediapipeFlowImageInput {};
 
