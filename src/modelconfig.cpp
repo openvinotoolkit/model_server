@@ -335,6 +335,8 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
             } else {
                 pluginConfig[it->name.GetString()] = std::to_string(it->value.GetDouble());
             }
+        } else if (it->value.IsBool()) {
+            pluginConfig[it->name.GetString()] = bool(it->value.GetBool());
         } else {
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
