@@ -32,6 +32,8 @@ Firstly, prepare OpenVINO Model Server following one of the sample mediapipe dem
 - [holistic_tracking](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/holistic_tracking)
 - [object_detection](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/object_detection)
 
+Alternatively, see [horizontal_text_detection](https://github.com/openvinotoolkit/model_server/tree/main/demos/horizontal_text_detection/python#rtsp-client) for demo featuring legacy DAG method.
+
 The rtsp client app needs to have access to RTSP stream to read from and write to.
 
 Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
