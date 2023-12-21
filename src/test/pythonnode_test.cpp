@@ -88,7 +88,7 @@ public:
             (char*)port.c_str(),
             (char*)"--file_system_poll_wait_seconds",
             (char*)"0"};
-        int argc = 5;
+        int argc = 7;
         serverThread.reset(new std::thread([&argc, &argv]() {
             EXPECT_EQ(EXIT_SUCCESS, ovms::Server::instance().start(argc, argv));
         }));
@@ -931,7 +931,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
     checkDummyResponse("output3", data3, req, res, 1 /* expect +1 */, 1, "mediaDummy", 3);
 }
 
-TEST_F(PythonFlowTest, PythonCalculatorNoData) {
+TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "OVMS_PY_TENSOR:in"
@@ -964,7 +964,7 @@ TEST_F(PythonFlowTest, PythonCalculatorNoData) {
     float inputScalar = 6.0;
     const std::vector<float> data{inputScalar};
     req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{1, 1}, ovms::fromString("FP32")}, data, false);
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{}, ovms::fromString("FP32")}, data, false);
 
     ServableMetricReporter* smr{nullptr};
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
@@ -972,14 +972,15 @@ TEST_F(PythonFlowTest, PythonCalculatorNoData) {
     ASSERT_EQ(res.model_name(), "mediaDummy");
     ASSERT_EQ(res.outputs_size(), 1);
     ASSERT_EQ(res.raw_output_contents_size(), 1);
-    ASSERT_EQ(res.outputs().begin()->name(), "OUTPUT") << "Did not find:" << "OUTPUT";
+    ASSERT_EQ(res.outputs().begin()->name(), "OUTPUT") << "Did not find:"
+                                                       << "OUTPUT";
     const auto& output_proto = *res.outputs().begin();
     std::string* content = res.mutable_raw_output_contents(0);
 
-    ASSERT_EQ(output_proto.shape_size(), 2);
+    ASSERT_EQ(output_proto.shape_size(), 0);
     ASSERT_EQ(content->size(), sizeof(float));
 
-    ASSERT_EQ(*((float*)content->data()), inputScalar);
+    ASSERT_EQ(*((float*)content->data()), inputScalar + 1);
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {

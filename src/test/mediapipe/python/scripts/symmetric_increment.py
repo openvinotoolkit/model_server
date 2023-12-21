@@ -29,6 +29,7 @@ class OvmsPythonModel:
             print(input_npy)
             output_npy = input_npy + 1
             output_name = input.name.replace("input", "output")
+            output_npy = output_npy.astype(np.float32)
             outputs.append(Tensor(output_name, output_npy))
         return outputs
 
