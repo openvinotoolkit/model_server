@@ -27,7 +27,7 @@ class OvmsPythonModel:
             input_npy = np.array(input)
             print(input_npy)
             output_npy = input_npy + 2
-            output_name = input.name.replace("in", "OUTPUT")
+            output_name = input.name.replace("input", "output")
             outputs.append(Tensor(output_name, output_npy))
         return outputs
 

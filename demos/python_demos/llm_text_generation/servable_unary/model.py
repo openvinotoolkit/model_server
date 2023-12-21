@@ -162,5 +162,5 @@ class OvmsPythonModel:
             print('iteration', iteration)
         print('end')
 
-        return [Tensor("OUTPUT", partial_text.encode())]
+        return [Tensor("completion", partial_text.encode())]
 

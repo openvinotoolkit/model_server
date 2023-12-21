@@ -37,7 +37,6 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
-#include "pythonnoderesource.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -49,7 +48,6 @@
 #include "mediapipe/framework/formats/tensor.h"
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
-#include "mediapipegraphdefinition.hpp"  // for version in response
 #include "opencv2/opencv.hpp"
 
 #if (PYTHON_DISABLE == 0)
@@ -59,6 +57,7 @@
 
 #include "../python/ovms_py_tensor.hpp"
 #include "../python/python_backend.hpp"
+#include "../python/pythonnoderesources.hpp"
 namespace py = pybind11;
 #endif
 
@@ -490,7 +489,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     stream_types_mapping_t inputTypes,
     stream_types_mapping_t outputTypes,
     std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-    const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources,
+    const PythonNodeResourcesMap& pythonNodeResourcesMap,
     PythonBackend* pythonBackend) :
     name(name),
     version(version),
@@ -499,7 +498,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(const std::string& name, const st
     outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)),
-    pythonNodeResources(pythonNodeResources),
+    pythonNodeResourcesMap(pythonNodeResourcesMap),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(DEFAULT_STARTING_STREAM_TIMESTAMP) {}
 
@@ -842,7 +841,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
         outputPollers.emplace(name, std::move(absStatusOrPoller).value());
     }
     std::map<std::string, mediapipe::Packet> sideInputPackets{createInputSidePackets(request)};
-    sideInputPackets[INPUT_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodesResources>(this->pythonNodeResources).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+#if (PYTHON_DISABLE == 0)
+    sideInputPackets[INPUT_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+#endif
     MP_RETURN_ON_FAIL(graph.StartRun(sideInputPackets), std::string("start MediaPipe graph: ") + request->model_name(), StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
     if (static_cast<int>(this->inputNames.size()) != request->inputs().size()) {
         std::stringstream ss;
@@ -988,7 +989,9 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
 
         // Launch
         std::map<std::string, mediapipe::Packet> inputSidePackets{createInputSidePackets(&firstRequest)};
-        inputSidePackets[INPUT_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodesResources>(this->pythonNodeResources).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+#if (PYTHON_DISABLE == 0)
+        inputSidePackets[INPUT_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+#endif
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         // Deserialize first request
