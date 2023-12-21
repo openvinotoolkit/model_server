@@ -219,7 +219,6 @@ ENV OPENVINO_CONTRIB=/openvino_contrib
 # Add Nvidia dev tool if needed
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    wget -nv https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin -O /etc/apt/preferences.d/cuda-repository-pin-600 ; \
     set -exuo pipefail ; \
     rm -f /etc/apt/apt.conf.d/docker-clean ; \
     if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
