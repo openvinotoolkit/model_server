@@ -983,6 +983,55 @@ TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
     ASSERT_EQ(*((float*)content->data()), inputScalar + 1);
 }
 
+TEST_F(PythonFlowTest, PythonCalculatorZeroDimension) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "OVMS_PY_TENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT:in"
+            output_stream: "OUTPUT:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                }
+            }
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<float> data{};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{1, 32, 32, 0, 1}, ovms::fromString("FP32")}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    ASSERT_EQ(res.model_name(), "mediaDummy");
+    ASSERT_EQ(res.outputs_size(), 1);
+    ASSERT_EQ(res.raw_output_contents_size(), 1);
+    ASSERT_EQ(res.outputs().begin()->name(), "OUTPUT") << "Did not find:"
+                                                       << "OUTPUT";
+    const auto& output_proto = *res.outputs().begin();
+    std::string* content = res.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(output_proto.shape_size(), 5);
+    ASSERT_EQ(content->size(), 0);
+}
+
 TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
     const std::vector<std::pair<std::string, std::string>> BAD_EXECUTE_SCRIPTS_CASES{
         {"bad_execute_wrong_signature", "Error occurred during Python code execution"},
