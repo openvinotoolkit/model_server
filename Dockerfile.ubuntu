@@ -228,8 +228,8 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
       libzstd-dev \
       libcudnn8=8.8.0.121-1+cuda11.8 \
       libcudnn8-dev=8.8.0.121-1+cuda11.8 \
-      libcutensor1=$libcutensor_version \
-      libcutensor-dev=$libcutensor_version && \
+      libcutensor1="$libcutensor_version" \
+      libcutensor-dev="$libcutensor_version" && \
     apt-get install --no-install-recommends -y cuda-11-8 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
@@ -523,11 +523,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends libxml2 && rm -
 
 # for NVIDIA
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda apt package"; \
-#    apt-get update -y && \
     apt-get install -y --no-install-recommends curl && \
-#    curl -o /etc/apt/preferences.d/cuda-repository-pin-600 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin ; \
     if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then libcutensor_version=1.7.0.1-1; else libcutensor_version=1.6.1.5-1; fi; \
-    apt-get update && apt-get install -y --no-install-recommends libcudnn8=8.8.0.121-1+cuda11.8 libcutensor1=$libcutensor_version libpng16-16 && \
+    apt-get update && apt-get install -y --no-install-recommends libcudnn8=8.8.0.121-1+cuda11.8 libcutensor1="$libcutensor_version" libpng16-16 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 COPY --from=pkg /ovms_release /ovms
