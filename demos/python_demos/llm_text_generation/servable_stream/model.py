@@ -18,28 +18,37 @@ import os
 from pyovms import Tensor
 from optimum.intel import OVModelForCausalLM
 from transformers import AutoTokenizer, AutoConfig, TextIteratorStreamer, StoppingCriteria, StoppingCriteriaList
-from huggingface_hub import login, whoami
 
 import threading
 
-HF_TOKEN = os.getenv("HF_ACCESS_TOKEN", "")
+from config import SUPPORTED_LLM_MODELS
 
-if HF_TOKEN:
-    try:
-        whoami()
-        print('Authorization token already provided')
-    except OSError:
-        login(HF_TOKEN)
+SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
 
-from config import SUPPORTED_MODELS
-
-
-SELECTED_MODEL = 'red-pajama-3b-chat'
-#SELECTED_MODEL = 'llama-2-chat-7b'
-model_configuration = SUPPORTED_MODELS[SELECTED_MODEL]
+print("SELECTED MODEL", SELECTED_MODEL)
+model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
 
 MODEL_PATH = "/model"  # relative to container
 OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
+
+
+def default_partial_text_processor(partial_text: str, new_text: str):
+    """
+    helper for updating partially generated answer, used by de
+
+    Params:
+      partial_text: text buffer for storing previosly generated text
+      new_text: text update for the current step
+    Returns:
+      updated text string
+
+    """
+    partial_text += new_text
+    return partial_text
+
+text_processor = model_configuration.get(
+    "partial_text_processor", default_partial_text_processor
+)
 
 # Model specific configuration
 model_name = model_configuration["model_id"]
@@ -48,9 +57,7 @@ current_message_template = model_configuration["current_message_template"]
 start_message = model_configuration["start_message"]
 stop_tokens = model_configuration.get("stop_tokens")
 tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
-text_processor = model_configuration.get("partial_text_processor")
-
-tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
 
 # HF class that is capable of stopping the generation
 # when given tokens appear in specific order
@@ -66,14 +73,14 @@ class StopOnTokens(StoppingCriteria):
 
 if stop_tokens is not None:
     if isinstance(stop_tokens[0], str):
-        stop_tokens = tok.convert_tokens_to_ids(stop_tokens)
+        stop_tokens = tokenizer.convert_tokens_to_ids(stop_tokens)
 
     stop_tokens = [StopOnTokens(stop_tokens)]
 
 
 # For multi Q&A use cases
 # Taken from notebook:
-# https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot/254-llm-chatbot.ipynb
+# https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot/
 def convert_history_to_text(history):
     """
     function for conversion history stored as list pairs of user and assistant messages to string according to model expected conversation template
@@ -123,7 +130,6 @@ class OvmsPythonModel:
         temporal_history = [[text, ""]]
 
         messages = convert_history_to_text(temporal_history)
-        print('------------------- ', messages)
         input_ids = tokenizer(messages, return_tensors="pt", **tokenizer_kwargs).input_ids
         streamer = TextIteratorStreamer(tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
         generate_kwargs = dict(
@@ -138,7 +144,7 @@ class OvmsPythonModel:
         )
         if stop_tokens is not None:
             generate_kwargs["stopping_criteria"] = StoppingCriteriaList(stop_tokens)
-        
+
         def generate():
             self.ov_model.generate(**generate_kwargs)
 

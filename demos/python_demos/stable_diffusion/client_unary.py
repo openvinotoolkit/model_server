@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 import tritonclient.grpc as grpcclient
-import threading
 import time
 from PIL import Image
 from io import BytesIO
@@ -24,6 +23,10 @@ parser = argparse.ArgumentParser(description='Client for stable diffusion exampl
 
 parser.add_argument('--url', required=False, default='localhost:9000',
                     help='Specify url to grpc service. default:localhost:9000')
+parser.add_argument('--prompt',
+                    required=False,
+                    default='Zebras in space',
+                    help='Prompt for image generation')
 args = vars(parser.parse_args())
 
 channel_args = [
@@ -31,7 +34,7 @@ channel_args = [
     ("grpc.http2.max_pings_without_data", 0),
 ]
 client = grpcclient.InferenceServerClient(args['url'], channel_args=channel_args)
-data = "Zebras in space".encode()
+data = args['prompt'].encode()
 
 model_name = "python_model"
 input_name = "text"
@@ -44,4 +47,5 @@ results = client.infer(model_name, [infer_input], client_timeout=10*60)
 img = Image.open(BytesIO(results.as_numpy("OUTPUT")))
 img.save(f"output.png")
 duration = time.time() - start
-print(f"Total workers time: {duration} s")
+print("Generated image output.png")
+print("Total response time: {} s".format(round(duration,2)))

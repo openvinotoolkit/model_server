@@ -16,6 +16,8 @@
 import tritonclient.grpc as grpcclient
 import argparse
 from threading import Event
+import datetime
+import numpy as np
 
 parser = argparse.ArgumentParser(description='Client for llm example')
 
@@ -35,29 +37,40 @@ channel_args = [
 client = grpcclient.InferenceServerClient(args['url'], channel_args=channel_args)
 
 event = Event()
+processing_times = np.zeros((0),int) # tracks response latency in ms
 
 def callback(result, error):
+    endtime = datetime.datetime.now()
     global event
+    global start_time
+    global processing_times
     if error:
         raise error
     if result.as_numpy('END_SIGNAL') is not None:
         event.set()
     elif result.as_numpy('OUTPUT') is not None:
         print(result.as_numpy('OUTPUT').tobytes().decode(), flush=True, end='')
+        duration = int((endtime - start_time).total_seconds() * 1000)
+        processing_times = np.append(processing_times, duration)
+        start_time = datetime.datetime.now()
     else:
         assert False, "unexpected output"
-
-
-client.start_stream(callback=callback)
 
 text = args['prompt']
 print(f"Question:\n{text}\n")
 data = text.encode()
+
+client.start_stream(callback=callback)
 infer_input = grpcclient.InferInput("pre_prompt", [len(data)], "BYTES")
 infer_input._raw_content = data
-
+start_time = datetime.datetime.now()
 client.async_stream_infer(model_name="python_model", inputs=[infer_input])
 
 event.wait()
 client.stop_stream()
 print('\nEND')
+
+print("Total time", np.sum(processing_times), "ms")
+print("Number of responses", processing_times.size)
+print("First response time", processing_times[0], "ms")
+print('Average response time: {:.2f} ms'.format(np.average(processing_times)))

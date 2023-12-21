@@ -381,6 +381,30 @@ ifeq ($(BUILD_NGINX), 1)
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
 endif
 
+get_gpl_mpl_packages:
+ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+	@docker run -u 0 --entrypoint bash $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -c 'dpkg --get-selections | sed "s/\t//g" | sed "s/install//g" | cut -d":" -f1 | tr -d "\r"' > ubuntu.txt
+	@-docker run -u 0 --entrypoint bash -v ${PWD}:/ovms $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -c 'cd /ovms ; cat ubuntu.txt | tr -d "\r" | xargs -I % bash -c "grep -l -e GPL -e MPL /usr/share/doc/%/copyright" 2> /dev/null' > sources.txt
+	@docker run -u 0 --entrypoint bash -v ${PWD}:/ovms $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -c 'sed -Ei "s/# deb-src /deb-src /" /etc/apt/sources.list ; apt update ; cd /ovms ; d="ovms_ubuntu_$(OVMS_CPP_IMAGE_TAG)" ;mkdir "$$d" ; cd "$$d" ; for I in `cat /ovms/sources.txt | cut -d"/" -f5`; do apt-get source -q --download-only $$I; done'
+	@rm ubuntu.txt sources.txt
+endif
+ifeq ($(BASE_OS),redhat)
+	touch base_packages.txt
+	docker run registry.access.redhat.com/ubi8-minimal:8.8 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
+	docker run --entrypoint rpm $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -qa  --qf "%{NAME}\n" | sort > all_packages.txt
+	rm -rf ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
+	mkdir ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
+	docker run -u 0 -v ${PWD}:/pkgs -v ${PWD}/ovms_rhel_$(OVMS_CPP_IMAGE_TAG):/srcs --entrypoint bash -it $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -c ' \
+	grep -v -f /pkgs/base_packages.txt /pkgs/all_packages.txt | while read line ;	do package=`echo $$line` ; \
+	rpm -qa --qf "%{name}: %{license}\n" | grep -e GPL -e MPL ;\
+	exit_status=$$? ; \
+	if [ $$exit_status -eq 0 ]; then \
+			cd /srcs ; \
+			microdnf download -y $$package ; \
+	fi ; done'
+	@rm base_packages.txt all_packages.txt
+endif
+
 release_image:
 ifeq ($(USE_BUILDX),true)
 	$(eval BUILDX:=buildx)
