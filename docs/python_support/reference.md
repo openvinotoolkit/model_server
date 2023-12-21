@@ -26,7 +26,8 @@ ENTRYPOINT [ `/ovms/bin/ovms` ]
 ```
 
 You can also modify `requirements.txt` from our [python demos](../../demos/python_demos) and from repository top level directory run `make python_image` 
-## Python Node Implementation
+
+## `OvmsPythonModel` class
 
 When deploying a Python node, the Model Server expects a Python file with an `OvmsPythonModel` class implemented:
 
@@ -637,7 +638,7 @@ Depending on which mode is used, both the Python code and graph configuration mu
 
 #### Regular mode
 
-When using regular mode, the `execute` method in [`OvmsPythonModel`](#python-node-implementation) class must `return` value. 
+When using regular mode, the `execute` method in [`OvmsPythonModel`](#ovmspythonmodel-class) class must `return` value. 
 
 ```python
 from pyovms import Tensor
@@ -670,7 +671,7 @@ This configuration supports `DefaultInputStreamHandler` (it's default therefore 
 
 #### Generative mode
 
-When using generative mode, the `execute` method in [`OvmsPythonModel`](#python-node-implementation) class must `yield` value. 
+When using generative mode, the `execute` method in [`OvmsPythonModel`](#ovmspythonmodel-class) class must `yield` value. 
 
 ```python
 from pyovms import Tensor

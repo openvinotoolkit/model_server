@@ -43,7 +43,8 @@ We are introducing a set of calculators which can bring to the graphs execution 
 Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms)
 
 ## Python calculator
-TBD TODO
+
+`PythonExecutorCalculator` enables Python code execution in a graph node. Learn more about [Python nodes](python_support/reference.md).
 
 ## How to create the graph for deployment in OpenVINO Model Server <a name="create-graph"></a>
 
