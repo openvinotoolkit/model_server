@@ -1,0 +1,4 @@
+tritonclient[grpc]
+numpy==1.24.3
+ffmpeg-python
+opencv-python

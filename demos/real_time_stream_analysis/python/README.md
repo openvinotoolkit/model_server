@@ -3,13 +3,11 @@
 
 For object classification, detection and segmentation we use CV (Computer Vision) models that take visual data on the input and return predictions like classification results, bounding boxes parameters etc. By visual data we often mean video stream generated in real time by different kinds of cameras. 
 
-In this demo you'll see how to analyze RTSP (Real Time Streaming Protocol) stream using OpenVINO Model Server for inference.
+![rtsp](rtsp.png)
 
-![concept](assets/concept.jpg)
+In this demo you'll see how to analyze real time stream using OpenVINO Model Server for inference.
 
-The stream analysis app is started with `rtsp_client.py` script. It reads frames from the provided stream URL, runs pre and post processing and requests inference on specified model served by OVMS.
-
-Specific use case actions are defined in use case implementation - some notifications could be sent to another service if object of interest has been detected etc.
+The stream analysis app is started with `client.py` script. It reads frames from the provided stream URL and requests inference on specified model served by OVMS.
 
 As part of postprocessing, inference results can be visualized. The demo emits RTSP stream that will host inference preview as defined for the use case. 
 
@@ -23,14 +21,16 @@ In order to make this demo work you need to:
 - have access to OpenVINO Model Server with your model of choice deployed
 - have a use case implementation
 
-The stream analysis app needs to have access to RTSP stream to read from and OVMS to run inference on. Apart from that you need use case implementation that defines pre and postprocessing. Some exemplary use cases are available in [use cases catalog](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe).
+The stream analysis app needs to have access to RTSP stream to read from and OVMS to run inference on. Apart from that you need use case implementation. Some exemplary use cases are available in [use cases catalog](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe).
 
 ## Start the real time stream analysis
 
 Mediapipe graph can be used for remote analysis of individual images but the client can use it for a complete video stream processing.
 Below is an example how to run a client reading encoded rtsp video stream.
 
-![rtsp](rtsp.png)
+Firstly, prepare OpenVINO Model Server following one of the sample mediapipe demos:
+- [holistic_tracking](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/holistic_tracking)
+- [object_detection](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/object_detection)
 
 The rtsp client app needs to have access to RTSP stream to read from and write to.
 
@@ -65,8 +65,8 @@ pip3 install -r ../../common/stream_client/requrements.txt
 - Command
 
 ```bash
-python3 rtsp_client.py --help
-usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
+python3 client.py --help
+usage: client.py [-h] [--grpc_address GRPC_ADDRESS]
                       [--input_stream INPUT_STREAM]
                       [--output_stream OUTPUT_STREAM]
                       [--model_name MODEL_NAME] [--input_name INPUT_NAME]
@@ -99,7 +99,7 @@ options:
 ### Inference using RTSP stream
 
 ```bash
-python3 rtsp_client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
+python3 client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
 ```
 
 Then read rtsp stream using ffplay
@@ -114,10 +114,10 @@ One might as well use prerecorded video and schedule it for inference.
 Replace video.mp4 with your video file.
 
 ```bash
-python3 rtsp_client.py --grpc_address localhost:9000 --input_stream 'workspace/video.mp4' --output_stream 'workspace/output.mp4'
+python3 client.py --grpc_address localhost:9000 --input_stream 'workspace/video.mp4' --output_stream 'workspace/output.mp4'
 ```
 As well as using direct camera input and print inference result directly into the screen.
 
 ```bash
-python3 rtsp_client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
+python3 client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
 ```
