@@ -23,8 +23,8 @@
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../pythoninterpretermodule.hpp"
-#include "../server.hpp"
 #include "../servablemanagermodule.hpp"
+#include "../server.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "test_utils.hpp"
@@ -398,14 +398,14 @@ node {
 }
 
 class StreamingWithOVMSCalculatorsTest : public StreamingTest {
-        protected:
+protected:
     ovms::Server& server = ovms::Server::instance();
 
     const Precision precision = Precision::FP32;
     std::unique_ptr<std::thread> t;
     std::string port = "9178";
 
-        public:
+public:
     void SetUpServer(const char* configPath) {
         ::SetUpServer(this->t, this->server, this->port, configPath);
     }
@@ -414,7 +414,7 @@ class StreamingWithOVMSCalculatorsTest : public StreamingTest {
         server.setShutdownRequest(1);
         t->join();
         server.setShutdownRequest(0);
-}
+    }
 };
 
 TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSeparately) {
