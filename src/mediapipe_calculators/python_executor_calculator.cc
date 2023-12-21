@@ -15,8 +15,8 @@
 //*****************************************************************************
 #include <unordered_map>
 
-#include "../mediapipe_internal/pythonnoderesource.hpp"
 #include "../python/ovms_py_tensor.hpp"
+#include "../python/pythonnoderesources.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -26,6 +26,7 @@
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
 
+#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../python/python_backend.hpp"
 
 namespace py = pybind11;
@@ -37,7 +38,7 @@ namespace mediapipe {
 const std::string INPUT_SIDE_PACKET_TAG = "PYTHON_NODE_RESOURCES";
 
 class PythonExecutorCalculator : public CalculatorBase {
-    std::shared_ptr<PythonNodeResource> nodeResources;
+    std::shared_ptr<PythonNodeResources> nodeResources;
     std::unique_ptr<PyObjectWrapper<py::iterator>> pyIteratorPtr;
     bool hasLoopback{false};
     // The calculator manages timestamp for outputs to work independently of inputs
@@ -78,9 +79,10 @@ class PythonExecutorCalculator : public CalculatorBase {
             py::object pyOutput = pyOutputHandle.cast<py::object>();
             nodeResources->pythonBackend->validateOvmsPyTensor(pyOutput);
             std::string outputName = pyOutput.attr("name").cast<std::string>();
-            if (cc->Outputs().HasTag(outputName)) {
+            std::string outputTag = nodeResources->outputsNameTagMapping[outputName];
+            if (cc->Outputs().HasTag(outputTag)) {
                 std::unique_ptr<PyObjectWrapper<py::object>> outputPtr = std::make_unique<PyObjectWrapper<py::object>>(pyOutput);
-                cc->Outputs().Tag(outputName).Add(outputPtr.release(), timestamp);
+                cc->Outputs().Tag(outputTag).Add(outputPtr.release(), timestamp);
             }
         }
         if (pushLoopback) {
@@ -145,7 +147,7 @@ public:
             return absl::Status(absl::StatusCode::kInvalidArgument, "If LOOPBACK is used, it must be defined on both input and output of the node");
 
         setInputsAndOutputsPacketTypes(cc);
-        cc->InputSidePackets().Tag(INPUT_SIDE_PACKET_TAG).Set<PythonNodesResources>();
+        cc->InputSidePackets().Tag(INPUT_SIDE_PACKET_TAG).Set<PythonNodeResourcesMap>();
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->GetNodeName() << "] GetContract end";
         return absl::OkStatus();
     }
@@ -160,9 +162,9 @@ public:
         if (cc->Inputs().HasTag("LOOPBACK"))
             hasLoopback = true;
 
-        PythonNodesResources nodesResourcesPtr = cc->InputSidePackets().Tag(INPUT_SIDE_PACKET_TAG).Get<PythonNodesResources>();
-        auto it = nodesResourcesPtr.find(cc->NodeName());
-        if (it == nodesResourcesPtr.end()) {
+        PythonNodeResourcesMap nodeResourcesMap = cc->InputSidePackets().Tag(INPUT_SIDE_PACKET_TAG).Get<PythonNodeResourcesMap>();
+        auto it = nodeResourcesMap.find(cc->NodeName());
+        if (it == nodeResourcesMap.end()) {
             LOG(INFO) << "Could not find initialized Python node named: " << cc->NodeName();
             RET_CHECK(false);
         }
@@ -195,7 +197,7 @@ public:
 
                 std::vector<py::object> pyInputs;
                 prepareInputs(cc, &pyInputs);
-                py::object executeResult = std::move(nodeResources->nodeResourceObject->attr("execute")(pyInputs));
+                py::object executeResult = std::move(nodeResources->ovmsPythonModel->attr("execute")(pyInputs));
                 handleExecutionResult(cc, executeResult);
             }
         } catch (const UnexpectedPythonObjectError& e) {

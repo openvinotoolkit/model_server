@@ -40,7 +40,10 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipegraphexecutor.hpp"
-#include "pythonnoderesource.hpp"
+
+#if (PYTHON_DISABLE == 0)
+#include "../python/pythonnoderesources.hpp"
+#endif
 
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
@@ -111,7 +114,7 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
 }
 Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
-    this->pythonNodeResources.clear();
+    this->pythonNodeResourcesMap.clear();
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
     if (manager.modelExists(this->getName()) || manager.pipelineDefinitionExists(this->getName())) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph name: {} is already occupied by model or pipeline.", this->getName());
@@ -245,7 +248,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResources, this->pythonBackend);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResourcesMap, this->pythonBackend);
     return status;
 }
 
@@ -393,11 +396,9 @@ const std::string EMPTY_STREAM_NAME{""};
 
 std::string MediapipeGraphDefinition::getStreamName(const std::string& streamFullName) {
     std::vector<std::string> tokens = tokenize(streamFullName, ':');
-    if (tokens.size() == 2) {
-        return tokens[1];
-    } else if (tokens.size() == 1) {
-        return tokens[0];
-    }
+    // Stream name is the last part of the full name
+    if (tokens.size() > 0 || tokens.size() <= 3)
+        return tokens[tokens.size() - 1];
     return EMPTY_STREAM_NAME;
 }
 
@@ -440,8 +441,8 @@ std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::get
 
 struct PythonResourcesCleaningGuard {
     bool shouldCleanup{true};
-    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& resource;
-    PythonResourcesCleaningGuard(std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& resource) :
+    std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>& resource;
+    PythonResourcesCleaningGuard(std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>& resource) :
         resource(resource) {}
     ~PythonResourcesCleaningGuard() {
         if (shouldCleanup) {
@@ -455,7 +456,7 @@ struct PythonResourcesCleaningGuard {
 
 Status MediapipeGraphDefinition::initializeNodes() {
 #if (PYTHON_DISABLE == 0)
-    PythonResourcesCleaningGuard pythonResourcesCleaningGuard(this->pythonNodeResources);
+    PythonResourcesCleaningGuard pythonResourcesCleaningGuard(this->pythonNodeResourcesMap);
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {
         if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
@@ -468,19 +469,19 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return StatusCode::PYTHON_NODE_MISSING_NAME;
             }
             std::string nodeName = config.node(i).name();
-            if (this->pythonNodeResources.find(nodeName) != this->pythonNodeResources.end()) {
+            if (this->pythonNodeResourcesMap.find(nodeName) != this->pythonNodeResourcesMap.end()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
             }
 
-            std::shared_ptr<PythonNodeResource> nodeResource = nullptr;
-            Status status = PythonNodeResource::createPythonNodeResource(nodeResource, config.node(i), pythonBackend);
-            if (nodeResource == nullptr || !status.ok()) {
+            std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
+            Status status = PythonNodeResources::createPythonNodeResources(nodeResources, config.node(i), pythonBackend);
+            if (nodeResources == nullptr || !status.ok()) {
                 SPDLOG_ERROR("Failed to process python node graph {}", this->name);
                 return status;
             }
 
-            this->pythonNodeResources.insert(std::pair<std::string, std::shared_ptr<PythonNodeResource>>(nodeName, std::move(nodeResource)));
+            this->pythonNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<PythonNodeResources>>(nodeName, std::move(nodeResources)));
         }
     }
     pythonResourcesCleaningGuard.disableCleaning();

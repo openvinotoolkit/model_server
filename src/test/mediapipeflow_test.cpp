@@ -42,7 +42,6 @@
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
-#include "../mediapipe_internal/pythonnoderesource.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
@@ -61,6 +60,8 @@
 
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>
+
+#include "../python/pythonnoderesources.hpp"
 namespace py = pybind11;
 using namespace py::literals;
 #endif
@@ -1699,7 +1700,7 @@ TEST(Mediapipe, MetadataNegativeWrongInputTypes) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME);
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
 TEST(Mediapipe, MetadataNegativeWrongOutputTypes) {
@@ -1723,7 +1724,7 @@ TEST(Mediapipe, MetadataNegativeWrongOutputTypes) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME);
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
 TEST(Mediapipe, MetadataEmptyConfig) {
@@ -2248,9 +2249,9 @@ class MediapipeSerialization : public ::testing::Test {
             stream_types_mapping_t inputTypes,
             stream_types_mapping_t outputTypes,
             std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-            const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources,
+            const PythonNodeResourcesMap& pythonNodeResourcesMap,
             PythonBackend* pythonBackend) :
-            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResources, pythonBackend) {}
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, pythonBackend) {}
     };
 
 protected:
@@ -2266,8 +2267,8 @@ protected:
         const std::vector<std::string> inputNames;
         const std::vector<std::string> outputNames;
         const ::mediapipe::CalculatorGraphConfig config;
-        std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
-        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResources, nullptr);
+        PythonNodeResourcesMap pythonNodeResourcesMap;
+        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, nullptr);
     }
 };
 

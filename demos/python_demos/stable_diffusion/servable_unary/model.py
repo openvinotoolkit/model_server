@@ -38,5 +38,5 @@ class OvmsPythonModel:
         image = self.pipe(text).images[0]
         output = io.BytesIO()
         image.save(output, format='PNG')
-        return [Tensor("OUTPUT", output.getvalue())]
+        return [Tensor("image", output.getvalue())]
 

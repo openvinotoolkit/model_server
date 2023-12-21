@@ -29,7 +29,7 @@ class OvmsPythonModel:
                 raise Exception("Not supported datatype")
             input_npy = np.array(input)
             output_npy = input_npy
-            output_name = input.name.replace("INPUT", "OUTPUT")
+            output_name = input.name.replace("input", "output")
             outputs.append(Tensor(output_name, output_npy))
         return outputs
 
