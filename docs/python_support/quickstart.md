@@ -4,6 +4,8 @@ OpenVINO Model Server allows users to write custom processing nodes in Python, s
 
 In this quickstart you will create a servable with a single custom Python code that will expect a string and return the same string, but all in uppercase. 
 
+Check out the [documentation](reference.md) to learn more about this feature.
+
 To achieve that let's follow the steps:
 1. Prepare Docker Image And Workspace
 2. Write Python Code For The Server 
