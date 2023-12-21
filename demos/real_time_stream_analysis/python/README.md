@@ -32,25 +32,8 @@ Firstly, prepare OpenVINO Model Server following one of the sample mediapipe dem
 - [holistic_tracking](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/holistic_tracking)
 - [object_detection](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/object_detection)
 
-Alternatively, see [horizontal_text_detection](https://github.com/openvinotoolkit/model_server/tree/main/demos/horizontal_text_detection/python#rtsp-client) for demo featuring legacy DAG method.
+Alternatively, see [horizontal_text_detection](https://github.com/openvinotoolkit/model_server/tree/main/demos/horizontal_text_detection/python#rtsp-client) for demo featuring legacy DAG implementation.
 
-The rtsp client app needs to have access to RTSP stream to read from and write to.
-
-Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
-
-```bash
-docker run --rm -d -p 8080:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
-```
-
-Then write to the server using ffmpeg, example using video or camera
-
-```bash
-ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
-```
-
-```
-ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
-```
 
 (Optionally) Build the docker image with the python client for video stream reading an remote analysis:
 ```
@@ -100,6 +83,24 @@ options:
 
 ### Inference using RTSP stream
 
+The rtsp client app needs to have access to RTSP stream to read from and write to.
+
+Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
+
+```bash
+docker run --rm -d -p 8080:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
+```
+
+Then write to the server using ffmpeg, example using video or camera
+
+```bash
+ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```
+
+```
+ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```
+
 ```bash
 python3 client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
 ```
@@ -118,7 +119,10 @@ Replace video.mp4 with your video file.
 ```bash
 python3 client.py --grpc_address localhost:9000 --input_stream 'workspace/video.mp4' --output_stream 'workspace/output.mp4'
 ```
-As well as using direct camera input and print inference result directly into the screen.
+
+### Inference using webcam
+
+Using direct camera input and printing inference result directly into the screen.
 
 ```bash
 python3 client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
