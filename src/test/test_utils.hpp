@@ -47,7 +47,9 @@
 #include "../metric_registry.hpp"
 #include "../modelinstance.hpp"
 #include "../modelmanager.hpp"
+#if (PYTHON_DISABLE == 0)
 #include "../python/python_backend.hpp"
+#endif
 #include "../shape.hpp"
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
