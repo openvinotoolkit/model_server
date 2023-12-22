@@ -932,16 +932,16 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
-    ConstructorEnabledModelManager manager;
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(
-    input_stream: "OVMS_PY_TENSOR:in"
-    output_stream: "OVMS_PY_TENSOR:out"
+    input_stream: "OVMS_PY_TENSOR:input"
+    output_stream: "OVMS_PY_TENSOR:output"
         node {
             name: "pythonNode"
             calculator: "PythonExecutorCalculator"
             input_side_packet: "PYTHON_NODE_RESOURCES:py"
-            input_stream: "INPUT:in"
-            output_stream: "OUTPUT:out"
+            input_stream: "INPUT:input"
+            output_stream: "OUTPUT:output"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
                     handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
@@ -964,7 +964,7 @@ TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
     float inputScalar = 6.0;
     const std::vector<float> data{inputScalar};
     req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{}, ovms::fromString("FP32")}, data, false);
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{}, ovms::fromString("FP32")}, data, false);
 
     ServableMetricReporter* smr{nullptr};
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
@@ -972,8 +972,8 @@ TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
     ASSERT_EQ(res.model_name(), "mediaDummy");
     ASSERT_EQ(res.outputs_size(), 1);
     ASSERT_EQ(res.raw_output_contents_size(), 1);
-    ASSERT_EQ(res.outputs().begin()->name(), "OUTPUT") << "Did not find:"
-                                                       << "OUTPUT";
+    ASSERT_EQ(res.outputs().begin()->name(), "output") << "Did not find:"
+                                                       << "output";
     const auto& output_proto = *res.outputs().begin();
     std::string* content = res.mutable_raw_output_contents(0);
 
@@ -984,16 +984,16 @@ TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorZeroDimension) {
-    ConstructorEnabledModelManager manager;
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(
-    input_stream: "OVMS_PY_TENSOR:in"
-    output_stream: "OVMS_PY_TENSOR:out"
+    input_stream: "OVMS_PY_TENSOR:input"
+    output_stream: "OVMS_PY_TENSOR:output"
         node {
             name: "pythonNode"
             calculator: "PythonExecutorCalculator"
             input_side_packet: "PYTHON_NODE_RESOURCES:py"
-            input_stream: "INPUT:in"
-            output_stream: "OUTPUT:out"
+            input_stream: "INPUT:input"
+            output_stream: "OUTPUT:output"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
                     handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
@@ -1015,7 +1015,7 @@ TEST_F(PythonFlowTest, PythonCalculatorZeroDimension) {
 
     const std::vector<float> data{};
     req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{1, 32, 32, 0, 1}, ovms::fromString("FP32")}, data, false);
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{1, 32, 32, 0, 1}, ovms::fromString("FP32")}, data, false);
 
     ServableMetricReporter* smr{nullptr};
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
@@ -1023,8 +1023,8 @@ TEST_F(PythonFlowTest, PythonCalculatorZeroDimension) {
     ASSERT_EQ(res.model_name(), "mediaDummy");
     ASSERT_EQ(res.outputs_size(), 1);
     ASSERT_EQ(res.raw_output_contents_size(), 1);
-    ASSERT_EQ(res.outputs().begin()->name(), "OUTPUT") << "Did not find:"
-                                                       << "OUTPUT";
+    ASSERT_EQ(res.outputs().begin()->name(), "output") << "Did not find:"
+                                                       << "output";
     const auto& output_proto = *res.outputs().begin();
     std::string* content = res.mutable_raw_output_contents(0);
 
