@@ -30,7 +30,7 @@ In the demo will be used two gRPC communication patterns which might be advantag
 ## gRPC streaming with MediaPipe graphs
 
 gRPC stream connection is allowed for served [MediaPipe graphs](). It allows sending asynchronous calls to the endpoint all linked in a single session context. Responses are sent back via a stream and processed in the callback function.
-The helper class [StreamClient](../../common/stream_client/stream_client.py) provides a mechanism for flow control and tracking the sequence of the requests and responses. In the streamclient initialization the streaming mode is set via the parameter `streaming_api=True`.
+The helper class [StreamClient](../../common/stream_client/stream_client.py) provides a mechanism for flow control and tracking the sequence of the requests and responses. In the StreamClient initialization the streaming mode is set via the parameter `streaming_api=True`.
 
 Using the streaming API has the following advantages:
 - good performance thanks to asynchronous calls and sharing the graph execution for multiple calls
@@ -150,9 +150,9 @@ ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://loca
 
 ## Using gRPC unary calls
 
-The helper class `StreamClient` supports only the calls using unary gRPC calls. In that case it should be initialized with a parameter `streaming_api=False`.
+The helper class `StreamClient` supports using unary gRPC calls. In that case it should be initialized with a parameter `streaming_api=False`.
 It sends the frames to the model server asynchronously but each of them is stateless and each request can be processed independently.
-The key advantage of that mode is easier load balancing and scalability because each request could be routed to a different instance of the model server or a different compute node.
+The key advantage of that mode is easier load balancing and scalability, because each request could be routed to a different instance of the model server or a different compute node.
 
 Such use case with the unary calls with a horizontal text analysis can be followed based on [this document](../../horizontal_text_detection/python/).
 
