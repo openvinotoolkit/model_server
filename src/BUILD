@@ -939,7 +939,6 @@ cc_test(
         "test/mediapipe/config_standard_add.json",
         "test/mediapipe/config_standard_dummy.json",
         "test/mediapipe/graph_two_inputs_model.pbtxt",
-        "test/mediapipe/config_mediapipe_pyobject_ovtensor_converter.json",
         "test/mediapipe/config_mediapipe_pytensor_ovtensor_converter.json",
         "test/mediapipe/graphadd.pbtxt",
         "test/mediapipe/graphaddadapterfull.pbtxt",
