@@ -394,8 +394,7 @@ public:
         ASSERT_TRUE(!imageRaw.empty());
         cv::Mat image;
         size_t matFormat = convertKFSDataTypeToMatFormat(datatype);
-        size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 3);
-        imageRaw.convertTo(image, matFormatWithChannels);
+        imageRaw.convertTo(image, matFormat);
 
         KFSTensorInputProto* input = request.add_inputs();
         input->set_name("in");
@@ -434,8 +433,7 @@ public:
         ASSERT_TRUE(!imageRaw.empty());
         cv::Mat grayscaled;
         size_t matFormat = convertKFSDataTypeToMatFormat(datatype);
-        size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 1);
-        imageRaw.convertTo(grayscaled, matFormatWithChannels);
+        imageRaw.convertTo(grayscaled, matFormat);
 
         KFSTensorInputProto* input = request.add_inputs();
         input->set_name("in");
@@ -502,8 +500,7 @@ TEST_F(MediapipeFlowImageInput, InvalidShape) {
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat image;
     size_t matFormat = convertKFSDataTypeToMatFormat("UINT8");
-    size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 3);
-    imageRaw.convertTo(image, matFormatWithChannels);
+    imageRaw.convertTo(image, matFormat);
     std::string* content = request.add_raw_input_contents();
     size_t elementSize = image.elemSize1();
     content->resize(image.cols * image.rows * image.channels() * elementSize);
@@ -556,8 +553,7 @@ TEST_F(MediapipeFlowImageInput, InvalidDatatype) {
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat image;
     size_t matFormat = convertKFSDataTypeToMatFormat("INT64");
-    size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 3);
-    imageRaw.convertTo(image, matFormatWithChannels);
+    imageRaw.convertTo(image, matFormat);
     std::string* content = request.add_raw_input_contents();
     size_t elementSize = image.elemSize1();
     content->resize(image.cols * image.rows * image.channels() * elementSize);
@@ -573,6 +569,46 @@ TEST_F(MediapipeFlowImageInput, InvalidDatatype) {
 
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
+}
+
+TEST_F(MediapipeFlowImageInput, Float32_4Channels) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediapipeImageInput";
+    request.Clear();
+    response.Clear();
+    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+    ASSERT_TRUE(!imageRaw.empty());
+    cv::Mat imageFP32;
+    imageRaw.convertTo(imageFP32, CV_32F);
+    cv::Mat image;
+    cv::cvtColor(imageFP32, image, cv::COLOR_BGR2BGRA);
+
+    KFSTensorInputProto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->mutable_shape()->Clear();
+    input->add_shape(image.rows);
+    input->add_shape(image.cols);
+    input->add_shape(image.channels());
+
+    std::string* content = request.add_raw_input_contents();
+    size_t elementSize = image.elemSize1();
+    content->resize(image.cols * image.rows * image.channels() * elementSize);
+    std::memcpy(content->data(), image.data, image.cols * image.rows * image.channels() * elementSize);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    ASSERT_EQ(response.model_name(), modelName);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.outputs()[0].shape().size(), 3);
+    ASSERT_EQ(response.outputs()[0].shape()[0], image.cols);
+    ASSERT_EQ(response.outputs()[0].shape()[1], image.rows);
+    ASSERT_EQ(response.outputs()[0].shape()[2], image.channels());
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.raw_output_contents()[0].size(), image.cols * image.rows * image.channels() * elementSize);
+    ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), image.data, image.cols * image.rows * image.channels() * elementSize));
 }
 
 class MediapipeFlowImageInputThreeChannels : public MediapipeFlowImageInput {};
