@@ -185,7 +185,8 @@ TEST_F(MediapipePytensorOvTensorConverterTest, Infer) {
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     ASSERT_EQ(response.model_name(), "mediapipePytensorOvtensorConverter");
     ASSERT_EQ(response.raw_output_contents_size(), 1);
-    ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:" << "out";
+    ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:"
+                                                         << "out";
     const auto& output_proto = *response.outputs().begin();
     const std::string& content = response.raw_output_contents(0);
 
@@ -220,7 +221,8 @@ TEST_F(MediapipeOvTensorPytensorConverterTest, Infer) {
     ASSERT_EQ(response.model_name(), "mediapipeOvtensorPytensorConverter");
     ASSERT_EQ(response.outputs_size(), 1);
     ASSERT_EQ(response.raw_output_contents_size(), 1);
-    ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:" << "out";
+    ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:"
+                                                         << "out";
     const auto& output_proto = *response.outputs().begin();
     const std::string& content = response.raw_output_contents(0);
 
