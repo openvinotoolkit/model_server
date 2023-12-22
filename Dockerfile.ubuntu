@@ -219,16 +219,16 @@ ENV OPENVINO_CONTRIB=/openvino_contrib
 # Add Nvidia dev tool if needed
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    wget -nv https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin -O /etc/apt/preferences.d/cuda-repository-pin-600 ; \
     set -exuo pipefail ; \
     rm -f /etc/apt/apt.conf.d/docker-clean ; \
     if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
+    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then libcutensor_version=1.7.0.1-1; else libcutensor_version=1.6.1.5-1; fi;\
     apt-get update && apt-get install --no-install-recommends -y \
       libzstd-dev \
       libcudnn8=8.8.0.121-1+cuda11.8 \
       libcudnn8-dev=8.8.0.121-1+cuda11.8 \
-      libcutensor1=1.6.1.5-1 \
-      libcutensor-dev=1.6.1.5-1 && \
+      libcutensor1="$libcutensor_version" \
+      libcutensor-dev="$libcutensor_version" && \
     apt-get install --no-install-recommends -y cuda-11-8 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
@@ -296,14 +296,14 @@ ARG RUN_TESTS=1
 RUN if [ "$RUN_TESTS" == "1" ] ; then bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:test_python_binding; fi ;
 
 # Python <3.10 needed to build TFS in current version
-RUN if [ "$BASE_IMAGE" == "ubuntu:22.04" ] ; then \ 
+RUN if [ "$BASE_IMAGE" == "ubuntu:22.04" ] ; then \
         apt-get update && apt-get install -y software-properties-common gpg gpg-agent --no-install-recommends && \
         add-apt-repository ppa:deadsnakes/ppa && \
         apt-get install -y python3.8 python3.8-dev python3.8-distutils --no-install-recommends && \
         apt-get clean && rm -rf /var/lib/apt/lists/* && \
         update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 ; \
     fi ;
-    
+
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
 # Copy example clients into build image for static analysis
@@ -318,7 +318,7 @@ RUN cp /ovms/src/custom_node_interface.h /ovms/src/custom_nodes/tokenizer/ && \
     cmake -DWITH_TESTS=1 .. && \
     make -j${JOBS} && \
     ./test/detokenization_test && \
-    ./test/tokenization_test 
+    ./test/tokenization_test
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
@@ -388,7 +388,7 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM $BUILD_IMAGE as pkg
 
-RUN mkdir /patchelf 
+RUN mkdir /patchelf
 WORKDIR /patchelf
 # hadolint ignore=DL3003
 RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
@@ -399,7 +399,7 @@ WORKDIR /
 ARG BASE_OS=ubuntu
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
-ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg 
+ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg
 COPY create_package.sh /
 RUN ./create_package.sh
 
@@ -430,11 +430,11 @@ WORKDIR /
 COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,SC2164
-RUN	apt-get update -y ; \
+RUN     apt-get update -y ; \
     apt-get install -y curl ca-certificates libpugixml1v5 libtbb2 --no-install-recommends && \
-	if [ "$GPU" == "1" ] ; then \
+        if [ "$GPU" == "1" ] ; then \
             apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
-	        case $INSTALL_DRIVER_VERSION in \
+                case $INSTALL_DRIVER_VERSION in \
                 "21.48.21782") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-gmmlib_21.3.3_amd64.deb ; \
@@ -478,7 +478,7 @@ RUN	apt-get update -y ; \
                         apt-get purge gpg gpg-agent --yes && apt-get --yes autoremove && \
                         apt-get clean ; \
                         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
-                ;; \                        
+                ;; \
                 "23.13.26032") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.05.25593.11/libigdgmm12_22.3.0_amd64.deb ; \
@@ -512,8 +512,8 @@ RUN	apt-get update -y ; \
                             intel-media-va-driver-non-free libmfx1 && \
                             rm -rf /var/lib/apt/lists/* ; \
                 esac ; \
-	fi ; \
-	apt-get clean ; \
+        fi ; \
+        apt-get clean ; \
         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
         groupadd --gid 5000 ovms ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
@@ -522,10 +522,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends libxml2 && rm -
 
 # for NVIDIA
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda apt package"; \
-    apt-get update -y && \
     apt-get install -y --no-install-recommends curl && \
-    curl -o /etc/apt/preferences.d/cuda-repository-pin-600 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin ; \
-    apt-get update && apt-get install -y --no-install-recommends libcudnn8=8.8.0.121-1+cuda11.8 libcutensor1=1.6.1.5-1 libpng16-16 && \
+    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then libcutensor_version=1.7.0.1-1; else libcutensor_version=1.6.1.5-1; fi; \
+    apt-get update && apt-get install -y --no-install-recommends libcudnn8=8.8.0.121-1+cuda11.8 libcutensor1="$libcutensor_version" libpng16-16 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 COPY --from=pkg /ovms_release /ovms
@@ -533,14 +532,8 @@ COPY --from=pkg /ovms_release /ovms
 # For image with Python enabled install Python library
 RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
     apt-get update -y ; \
-    case $BASE_IMAGE in \   
-        "ubuntu:22.04") \
-            apt-get install libpython3.10 --no-install-recommends -y \
-        ;; \     
-        *) \
-            apt-get install libpython3.8 --no-install-recommends -y \
-        ;; \                          
-    esac ; \
+    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then python_version=3.10; else python_version=3.8; fi; \
+    apt-get install libpython$python_version --no-install-recommends -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 ENV LD_LIBRARY_PATH=/ovms/lib

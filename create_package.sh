@@ -26,7 +26,7 @@ cp /ovms/src/custom_nodes/tokenizer/build/src/lib*tokenizer.so /ovms_release/lib
 if [ -f /openvino_contrib/modules/custom_operations/user_ie_extensions/user_ie_extensions/libuser_ov_extensions.so ]; then cp -v /openvino_contrib/modules/custom_operations/user_ie_extensions/user_ie_extensions/libuser_ov_extensions.so /ovms_release/lib/ ; fi
 if [ -f /openvino_contrib/modules/custom_operations/user_ie_extensions/_deps/fast_tokenizer-src/lib/libcore_tokenizers.so ]; then cp -v /openvino_contrib/modules/custom_operations/user_ie_extensions/_deps/fast_tokenizer-src/lib/libcore_tokenizers.so /ovms_release/lib/ ; fi
 
-find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "*params" ! -name "lib_node_*" ! -path "*test_python_binding*" -exec cp -v {} /ovms_release/lib/ \;
+find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "*params" ! -name "lib_node_*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -v {} /ovms_release/lib/ \;
 mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/
 cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
@@ -49,7 +49,6 @@ if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then \
 	/ovms_release/lib/libovms_shared.so-2.params ; \
 fi
 
-find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then cp -r /opt/intel/openvino/python /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
@@ -67,6 +66,8 @@ if [ "$FUZZER_BUILD" == "0" ]; then patchelf --remove-rpath ./ovms && patchelf -
 find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --remove-rpath  {}  \;
 find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
 
+find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
+
 cd /ovms
 cp -v /ovms/release_files/LICENSE /ovms_release/
 cp -v /ovms/release_files/metadata.json /ovms_release/
@@ -74,8 +75,6 @@ cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
 mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
 ls -lahR /ovms_release/
 
-find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --remove-rpath  {}  \;
-find /ovms_release/lib/ -iname '*.so*' -type f -exec patchelf --set-rpath '$ORIGIN/../lib' {} \;
 
 mkdir -p /ovms_pkg/${BASE_OS}
 cd /ovms_pkg/${BASE_OS}

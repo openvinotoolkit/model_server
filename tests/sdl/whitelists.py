@@ -82,7 +82,7 @@ libraries = {
         'libopenvino_hetero_plugin.so', 'libopenvino_intel_cpu_plugin.so', 'libopenvino_intel_gna_plugin.so',
         'libopenvino_intel_gpu_plugin.so', 'libopenvino_ir_frontend.so', 'libopenvino_onnx_frontend.so',
         'libopenvino_paddle_frontend.so', 'libopenvino_pytorch_frontend.so', 'libopenvino_tensorflow_frontend.so',
-        'libopenvino_tensorflow_lite_frontend.so', 'libuser_ov_extensions.so'
+        'libopenvino_tensorflow_lite_frontend.so', 'libuser_ov_extensions.so', 'libcore_tokenizers.so'
     },
     OvmsBaseImageType.UBUNTU: {'libtbb.so',},
     OvmsBaseImageType.UBUNTU20_PYTHON: {'libpython3.8.so',},
@@ -113,7 +113,7 @@ packages = {
         'libpugixml1v5',
         'libtbb2',
         'libxml2',
-        'openssl',
+        'openssl'
     },
     OvmsBaseImageType.UBUNTU_PYTHON: {
         'libexpat1',
