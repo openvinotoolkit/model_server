@@ -45,10 +45,12 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, void* ptr, const std::vector
 
     ndim = bufferShape.size();
     itemsize = bufferFormatToItemsize.at(format);
-    strides.insert(strides.begin(), itemsize);
-    for (int i = 1; i < ndim; i++) {
-        py::ssize_t stride = bufferShape[ndim - i] * strides[0];
-        strides.insert(strides.begin(), stride);
+    if (ndim > 0) {
+        strides.insert(strides.begin(), itemsize);
+        for (int i = 1; i < ndim; i++) {
+            py::ssize_t stride = bufferShape[ndim - i] * strides[0];
+            strides.insert(strides.begin(), stride);
+        }
     }
 }
 

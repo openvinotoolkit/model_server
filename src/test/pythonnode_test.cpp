@@ -85,8 +85,10 @@ public:
             (char*)"--config_path",
             (char*)configPath.c_str(),
             (char*)"--port",
-            (char*)port.c_str()};
-        int argc = 5;
+            (char*)port.c_str(),
+            (char*)"--file_system_poll_wait_seconds",
+            (char*)"0"};
+        int argc = 7;
         serverThread.reset(new std::thread([&argc, &argv]() {
             EXPECT_EQ(EXIT_SUCCESS, ovms::Server::instance().start(argc, argv));
         }));
@@ -927,6 +929,86 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
     checkDummyResponse("output1", data1, req, res, 1 /* expect +1 */, 1, "mediaDummy", 3);
     checkDummyResponse("output2", data2, req, res, 1 /* expect +1 */, 1, "mediaDummy", 3);
     checkDummyResponse("output3", data3, req, res, 1 /* expect +1 */, 1, "mediaDummy", 3);
+}
+
+static void setupTestPipeline(std::shared_ptr<MediapipeGraphExecutor>& pipeline) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVMS_PY_TENSOR:input"
+    output_stream: "OVMS_PY_TENSOR:output"
+        node {
+            name: "pythonNode"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT:input"
+            output_stream: "OUTPUT:output"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                }
+            }
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+}
+
+TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
+    KFSRequest req;
+    KFSResponse res;
+
+    float inputScalar = 6.0;
+    const std::vector<float> data{inputScalar};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{}, ovms::fromString("FP32")}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setupTestPipeline(pipeline);
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    ASSERT_EQ(res.model_name(), "mediaDummy");
+    ASSERT_EQ(res.outputs_size(), 1);
+    ASSERT_EQ(res.raw_output_contents_size(), 1);
+    ASSERT_EQ(res.outputs().begin()->name(), "output") << "Did not find:"
+                                                       << "output";
+    const auto& output = *res.outputs().begin();
+    std::string* content = res.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(output.shape_size(), 0);
+    ASSERT_EQ(content->size(), sizeof(float));
+
+    ASSERT_EQ(*((float*)content->data()), inputScalar + 1);
+}
+
+TEST_F(PythonFlowTest, PythonCalculatorZeroDimension) {
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<float> data{};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{1, 32, 32, 0, 1}, ovms::fromString("FP32")}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setupTestPipeline(pipeline);
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    ASSERT_EQ(res.model_name(), "mediaDummy");
+    ASSERT_EQ(res.outputs_size(), 1);
+    ASSERT_EQ(res.raw_output_contents_size(), 1);
+    ASSERT_EQ(res.outputs().begin()->name(), "output") << "Did not find:"
+                                                       << "output";
+    const auto& output = *res.outputs().begin();
+    std::string* content = res.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(output.shape_size(), 5);
+    ASSERT_EQ(content->size(), 0);
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
