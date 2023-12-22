@@ -27,6 +27,8 @@ class OvmsPythonModel:
         for input in inputs:
             input_npy = np.array(input)
             print(input_npy)
+            if input_npy.dtype != np.float32:
+                raise Exception("input type should be np.float32") 
             output_npy = input_npy + 1
             output_name = input.name.replace("input", "output")
             output_npy = output_npy.astype(np.float32)

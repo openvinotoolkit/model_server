@@ -931,7 +931,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
     checkDummyResponse("output3", data3, req, res, 1 /* expect +1 */, 1, "mediaDummy", 3);
 }
 
-TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
+static void setupTestPipeline(std::shared_ptr<MediapipeGraphExecutor>& pipeline) {
     ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(
     input_stream: "OVMS_PY_TENSOR:input"
@@ -953,11 +953,11 @@ TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
-
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
     ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
+}
 
+TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
     KFSRequest req;
     KFSResponse res;
 
@@ -967,6 +967,9 @@ TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
     prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{}, ovms::fromString("FP32")}, data, false);
 
     ServableMetricReporter* smr{nullptr};
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setupTestPipeline(pipeline);
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
 
     ASSERT_EQ(res.model_name(), "mediaDummy");
@@ -984,32 +987,6 @@ TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorZeroDimension) {
-    ConstructorEnabledModelManager manager{"", getPythonBackend()};
-    std::string testPbtxt = R"(
-    input_stream: "OVMS_PY_TENSOR:input"
-    output_stream: "OVMS_PY_TENSOR:output"
-        node {
-            name: "pythonNode"
-            calculator: "PythonExecutorCalculator"
-            input_side_packet: "PYTHON_NODE_RESOURCES:py"
-            input_stream: "INPUT:input"
-            output_stream: "OUTPUT:output"
-            node_options: {
-                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
-                }
-            }
-        }
-    )";
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
-
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
-    ASSERT_NE(pipeline, nullptr);
-
     KFSRequest req;
     KFSResponse res;
 
@@ -1018,6 +995,8 @@ TEST_F(PythonFlowTest, PythonCalculatorZeroDimension) {
     prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{ovms::signed_shape_t{1, 32, 32, 0, 1}, ovms::fromString("FP32")}, data, false);
 
     ServableMetricReporter* smr{nullptr};
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setupTestPipeline(pipeline);
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
 
     ASSERT_EQ(res.model_name(), "mediaDummy");
