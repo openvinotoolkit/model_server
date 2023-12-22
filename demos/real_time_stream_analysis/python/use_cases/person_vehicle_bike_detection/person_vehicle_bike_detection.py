@@ -63,22 +63,23 @@ class PersonVehicleBikeDetection(UseCase):
         return frame
 
     def postprocess(inference_result: np.ndarray):
+        """
+        storage and log images of person detected
+        :return:
+        """
         inference_result = inference_result[0][0]
         for single_prediction in inference_result:
             img_id = single_prediction[0]
             label = single_prediction[1]
             conf = single_prediction[2]
-            x_min = single_prediction[3]
-            y_min = single_prediction[4]
-            x_max = single_prediction[5]
-            y_max = single_prediction[6]
 
             if img_id != -1 and conf >= PersonVehicleBikeDetection.CONFIDENCE_THRESHOLD:
                 if str(PersonVehicleBikeDetection.CLASSES[int(label)]) == "Person":
                     # write the detected image to a file
                     formatted_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S.%f")
                     filename = f"detected-person_{formatted_datetime}.png"
-                    local_folder = os.path.join(os.environ.get('HOME'), 'Pictures')
+                    local_folder = os.environ.get('PERSON_DETECTION_LOCAL_FOLDER',
+                                                  os.path.join(os.environ.get('HOME'), 'Pictures'))
                     if os.path.isdir(local_folder):
                         local_file = os.path.join(local_folder, filename)
                         cv2.imwrite(local_file, PersonVehicleBikeDetection.frame)
@@ -101,19 +102,25 @@ class PersonVehicleBikeDetection(UseCase):
                     )
 
 
+# Throttle logging to avoid the same logging rate as FPS
 last_logged_datetime = datetime(MINYEAR, 1, 1, 0, 0)
 if 'GOOGLE_APPLICATION_CREDENTIALS' in os.environ:
     from google.cloud import logging
 
     logging_client = logging.Client()
-    # This log can be found in the Cloud Logging console under 'Custom Logs'.
+    # This log can be found in the Cloud Logging console under resource type `Global`
+    # logName: projects/$PROJECT_ID/logs/person-detection-debug
     gcp_logger = logging_client.logger('person-detection-debug')
 else:
     gcp_logger = None
 
 
 def sampled_log(log_dict: dict):
-    # def sampled_log(log_message: str):
+    """Write logs to cloud logging and optionally the terminal
+
+    :param log_dict: the dict must be serializable
+    :return:
+    """
     global last_logged_datetime
     min_log_interval_seconds = int(os.environ.get('PERSON_DETECTION_MIN_LOG_INTERVAL_SECONDS', 3))
 
@@ -131,12 +138,13 @@ def sampled_log(log_dict: dict):
 
 
 def upload_blob(bucket_name, source_file_name, destination_blob_name):
-    """Uploads a file to the bucket."""
-    # bucket_name = "Google-cloud-storage-bucket-name"
-    # The path to your file to upload
-    # source_file_name = "/local/path/to/file"
-    # The ID of your GCS object
-    # destination_blob_name = "storage-object-name"
+    """
+    Uploads a file to the bucket.
+    :param bucket_name: Google cloud storage bucket name
+    :param source_file_name: /local/path/to/file.png
+    :param destination_blob_name: folder-path/storage-object-name.png
+    :return: gs://bucket_name/destination_blob_name
+    """
 
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)

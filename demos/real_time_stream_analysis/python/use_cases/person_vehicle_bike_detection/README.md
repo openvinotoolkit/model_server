@@ -64,6 +64,7 @@ Refer to run.sh for the lines that set the following environment variables:
 - export GOOGLE_APPLICATION_CREDENTIALS=/file/path/to/service-account.json
 - export PERSON_DETECTION_GCS_BUCKET=create-a-bucket-and-grant-SA-storage-object-creator-role
 - export PERSON_DETECTION_GCS_FOLDER=a-string-of-the-folder-name
+- export PERSON_DETECTION_LOCAL_FOLDER=$HOME/Pictures
 
 When the variables are set, log messages are written to Google Cloud logging. Pictures of Person detected are uploaded
 to the cloud storage bucket. Make sure the service account has `storage object creator` IAM role for write to succeed.
