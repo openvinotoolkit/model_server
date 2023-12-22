@@ -1,54 +1,73 @@
 # Real Time Stream Analysis Demo {#ovms_demo_real_time_stream_analysis}
 ## Overview
 
-For object classification, detection and segmentation we use CV (Computer Vision) models that take visual data on the input and return predictions like classification results, bounding boxes parameters etc. By visual data we often mean video stream generated in real time by different kinds of cameras. 
+This demo demonstrates how to write an application running AI analysis using OpenVINO Model Server.
+In the video analysis we can deal with various form of the source content. Here, you will see how to 
+take the source of the video from a local USB camera, saved encoded video file and an encoded video stream.
 
+The client application is expected to read the video source and send for the analysis every frame to the OpenVINO Model Server via gRPC connection. The analysis can be fully delegated to the model server endpoint with the 
+complete processing pipeline arranged via a [MediaPipe graph](../../../docs/mediapipe.md) or [DAG](../../../docs/dag_scheduler.md). The remote analysis can be also reduced just to inference execution but in such case the video frame preprocessing and the postprocessing of the results must be implemented on the client side.
+
+In this demo, reading the video content from a local USB camera and encoded video file is straightforward using OpenCV library. The use case with encoded network stream might require more explanation.
+We will present using RTSP stream transferred by the server component and encoded using FFMPEG utility.
+
+Below is depicted such a configuration:
 ![rtsp](rtsp.png)
 
-In this demo you'll see how to analyze real time stream using OpenVINO Model Server for inference.
+All the client scenarios mentioned below can read the input content from mentioned 3 sources and also send the results to 3 destinations: local screen, encoded video file or RTSP output stream.
 
-The stream analysis app is started with `client.py` script. It reads frames from the provided stream URL and requests inference on specified model served by OVMS.
+In the demo will be used two gRPC communication patterns which might be advantageous depending on the scenario.
 
-As part of postprocessing, inference results can be visualized. The demo emits RTSP stream that will host inference preview as defined for the use case. 
-
-
-## Prerequisites
-
-In order to make this demo work you need to:
-- use Python 3.7+
-- have a ffmpeg program installed
-- have access to live RTSP stream
-- have access to OpenVINO Model Server with your model of choice deployed
-- have a use case implementation
-
-The stream analysis app needs to have access to RTSP stream to read from and OVMS to run inference on. Apart from that you need use case implementation. Some exemplary use cases are available in [use cases catalog](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe).
-
-## Start the real time stream analysis
-
-Mediapipe graph can be used for remote analysis of individual images but the client can use it for a complete video stream processing.
-Below is an example how to run a client reading encoded rtsp video stream.
-
-Firstly, prepare OpenVINO Model Server following one of the sample mediapipe demos:
-- [holistic_tracking](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/holistic_tracking)
-- [object_detection](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/object_detection)
-
-Alternatively, see [horizontal_text_detection](https://github.com/openvinotoolkit/model_server/tree/main/demos/horizontal_text_detection/python#rtsp-client) for demo featuring legacy DAG implementation.
+- gRPC streaming - recommended for MediaPipe graphs especially for stateful analysis
+- gRPC unary calls - recommended for inference only on DAG graphs
 
 
-(Optionally) Build the docker image with the python client for video stream reading an remote analysis:
-```
-docker build ../../common/stream_client/ -t rtsp_client
-```
+## Requirements
+- on the client side it could be Windows, Mac or Linux. FFMPEG should be preinstalled in order to follow the scenario with RTSP client. Python3.7+ is needed.
+- the server can be deployed on Linux, MacOS (only with CPU execution on x86_64 arch) or inside WSL on Windows operating system.
+- images sent over gRPC are not encoded, so there should be good network connectivity between the client and the server. At least 100Mb/s for realtime video analysis at high rate.
 
-Or install python dependencies directly
+## gRPC streaming with MediaPipe graphs
+
+gRPC stream connection is allowed for served [MediaPipe graphs](). It allows sending asynchronous calls to the endpoint all linked in a single session context. Responses are sent back via a stream and processed in the callback function.
+The helper class [StreamClient](../../common/stream_client/stream_client.py) provides a mechanism for flow control and tracking the sequence of the requests and responses. In the streamclient initialization the streaming mode is set via the parameter `streaming_api=True`.
+
+Using the streaming API has the following advantages:
+- good performance thanks to asynchronous calls and sharing the graph execution for multiple calls
+- support for stateful pipelines like object tracking when the response is dependent on the sequence of requests 
+
+
+### Preparing the model server for gRPC streaming with a Holistic graph
+
+The [holistic graph](../../mediapipe/holistic_tracking/holistic_tracking.pbtxt) is expecting and IMAGE object on the input and returns an IMAGE on the output.
+As such it doesn't require any preprocessing and postprocessing. In this demo the returned stream will be just visualized or sent to the target sink.
+
+The model server with the holistic use case can be deployed with the following steps:
 ```bash
-pip3 install -r ../../common/stream_client/requrements.txt
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/mediapipe/holistic_tracking
+./prepare_server.sh
+docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
 ```
+[Check more info about this use case](../../mediapipe/holistic_tracking/)
 
-### Start the client
+> **Note** All the graphs with an image on input and output can be applied here without any changes on the client application.
 
-- Command
 
+### Start the client with real time stream analysis
+
+Prepare the python environment by installing required dependencies:
+```bash
+pip install -r ../../common/stream_client/requirements.txt
+```
+For the use case with RTSP client, install also FFMPEG component on the host.
+
+Alternatively build a docker image with the client with the following command:
+```bash
+docker build ../../common/stream_client/ -t rtsp_client
+``` 
+
+Client parameters:
 ```bash
 python3 client.py --help
 usage: client.py [-h] [--grpc_address GRPC_ADDRESS]
@@ -79,11 +98,26 @@ options:
                         Limit how many frames should be processed
 ```
 
-- Usage example
 
-### Inference using RTSP stream
+#### Reading from the local camera and visualization on the screen
 
-The rtsp client app needs to have access to RTSP stream to read from and write to.
+```bash
+python3 client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
+```
+
+The parameter `--input_stream 0 ` indicates the camera ID `0`.
+
+
+#### Reading from the encoded video file and saving results to a file
+
+```bash
+wget -O video.mp4 "https://www.pexels.com/download/video/3044127/?fps=24.0&h=1080&w=1920"
+python3 client.py --grpc_address localhost:9000 --input_stream 'video.mp4' --output_stream 'output.mp4'
+```
+
+#### Inference using RTSP stream
+
+The rtsp client app needs to have access to RTSP stream to read from and write to. Below are the steps to simulate such stream with the video.mp4 and the content source.
 
 Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
 
@@ -101,29 +135,26 @@ ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localho
 ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
 ```
 
+While the RTSP stream is active, run the client to read it and send the output stream 
 ```bash
 python3 client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
 ```
 
-Then read rtsp stream using ffplay
+The results can be examined with ffplay utility which reads and display the altered content.
 
 ```bash
 ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
 ```
 
-### Inference using prerecorded video
 
-One might as well use prerecorded video and schedule it for inference.
-Replace video.mp4 with your video file.
 
-```bash
-python3 client.py --grpc_address localhost:9000 --input_stream 'workspace/video.mp4' --output_stream 'workspace/output.mp4'
-```
+## Using gRPC unary calls
 
-### Inference using webcam
+The helper class `StreamClient` supports only the calls using unary gRPC calls. In that case it should be initialized with a parameter `streaming_api=False`.
+It sends the frames to the model server asynchronously but each of them is stateless and each request can be processed independently.
+The key advantage of that mode is easier load balancing and scalability because each request could be routed to a different instance of the model server or a different compute node.
 
-Using direct camera input and printing inference result directly into the screen.
+Such use case with the unary calls with a horizontal text analysis can be followed based on [this document](../../horizontal_text_detection/python/).
 
-```bash
-python3 client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
-```
+
+> **Note** Depending on the output format, there might be needed a custom postprocessing function implementation.
