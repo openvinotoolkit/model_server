@@ -28,8 +28,6 @@ ovms_demo_real_time_stream_analysis
 ovms_demo_using_paddlepaddle_model
 ovms_demo_bert
 ovms_demo_gptj_causal_lm
-ovms_demo_llama_2_chat
-ovms_demo_stable_diffusion
 ovms_demo_universal-sentence-encoder
 ovms_demo_speech_recognition
 ovms_demo_benchmark_client
@@ -59,10 +57,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 |[Segmentation with PaddlePaddle](segmentation_using_paddlepaddle_model/python/README.md)| Perform segmentation on an image with a PaddlePaddle model. |
 |[Natural Language Processing with BERT](bert_question_answering/python/README.md)|Provide a knowledge source and a query and use BERT model for question answering use case via gRPC API. This demo uses dynamic shape feature. |
 |[GPT-J Causal Language Modeling](gptj_causal_lm/python/README.md)|Write start of the sentence and let GPT-J continue via gRPC API. This demo uses dynamic shape feature. |
-|[Llama 2 Chat](llama_chat/python/README.md)| Ask llama a question and get an answer via gRPC API using lightweight python script |
-|[Stable diffusion](stable-diffusion/python/README.md)| Generate images using remote or local models execution in OpenVINO. |
 |[Using inputs data in string format with universal-sentence-encoder model](universal-sentence-encoder/README.md)| Handling AI model with text as the model input. | 
-|[Speech Recognition on Kaldi Model](speech_recognition_with_kaldi_model/python/README.md)|Run inference on a speech sample and use Kaldi model to perform speech recognition via gRPC API. This demo uses [stateful model](../docs/stateful_models.md). |
 |[Benchmark App](benchmark/python/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
 |[Face Blur Pipeline](face_blur/python/README.md)|Detect faces and blur image using a pipeline of object detection models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [face_blur custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/face_blur). |
 

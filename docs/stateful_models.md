@@ -202,8 +202,6 @@ sequence_id = response.outputs['sequence_id'].uint64_val[0]
 
 ```
 
-See [grpc_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/speech_recognition_with_kaldi_model/python/grpc_stateful_client.py) example client for reference.
-
 ### Inference via HTTP <a name="stateful_http"></a>
 
 Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api_tfs.md) for reference_). The difference is that requests to stateful models must contain additional inputs with information necessary for proper sequence handling.
@@ -272,8 +270,6 @@ response_body = json.loads(response.text)
 sequence_id = response_body["outputs"]["sequence_id"]
 
 ```
-See [rest_stateful_client.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/speech_recognition_with_kaldi_model/python/rest_stateful_client.py) example client for reference.
-
 ### Error Codes <a name="stateful_errors"></a>
 
 When a request is invalid or could not be processed, you can expect following errors specific to inference on stateful models:
