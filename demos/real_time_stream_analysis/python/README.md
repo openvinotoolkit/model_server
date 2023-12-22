@@ -1,14 +1,14 @@
 # Real Time Stream Analysis Demo {#ovms_demo_real_time_stream_analysis}
 ## Overview
 
-This demo demonstrate how to write an application running AI analysis using OpenVINO Model Server.
-In the video analysis we can deal with various form of the source content. Here it will be demonstrated how to 
+This demo demonstrates how to write an application running AI analysis using OpenVINO Model Server.
+In the video analysis we can deal with various form of the source content. Here, you will see how to 
 take the source of the video from a local USB camera, saved encoded video file and an encoded video stream.
 
-The client application is expected to read the video source and send for the analysis every frame to the OpenVINO Model Server via gRPC connection. The analysis can be fully deleted to the model server endpoint with the 
-complete processing pipeline arranged via a [MediaPipe graph](../../../docs/mediapipe.md) or [DAG](../../../docs/dag_scheduler.md). The remote analysis can be also reduced just to inference execution but in such case the video frame preprocessing and the postprocessing of the results but be implemented on the client side.
+The client application is expected to read the video source and send for the analysis every frame to the OpenVINO Model Server via gRPC connection. The analysis can be fully delegated to the model server endpoint with the 
+complete processing pipeline arranged via a [MediaPipe graph](../../../docs/mediapipe.md) or [DAG](../../../docs/dag_scheduler.md). The remote analysis can be also reduced just to inference execution but in such case the video frame preprocessing and the postprocessing of the results must be implemented on the client side.
 
-In this demo, reading the video content from a local USB camera and encoded video file is straightforward using OpenCV library. The use case with encoded network stream might require more explanation below here.
+In this demo, reading the video content from a local USB camera and encoded video file is straightforward using OpenCV library. The use case with encoded network stream might require more explanation.
 We will present using RTSP stream transferred by the server component and encoded using FFMPEG utility.
 
 Below is depicted such a configuration:
@@ -19,27 +19,27 @@ All the client scenarios mentioned below can read the input content from mention
 In the demo will be used two gRPC communication patterns which might be advantageous depending on the scenario.
 
 - gRPC streaming - recommended for MediaPipe graphs especially for stateful analysis
-- gRPC unary calls - recommended for inference only or DAG graphs
+- gRPC unary calls - recommended for inference only on DAG graphs
 
 
 ## Requirements
 - on the client side it could be Windows, Mac or Linux. FFMPEG should be preinstalled in order to follow the scenario with RTSP client. Python3.7+ is needed.
 - the server can be deployed on Linux, MacOS (only with CPU execution on x86_64 arch) or inside WSL on Windows operating system.
-- when the images sent over gRPC are not encoded, there should be good network connectivity between the client and the server. At least 100Mb/s for realtime video analysis at high rate.
+- images sent over gRPC are not encoded, so there should be good network connectivity between the client and the server. At least 100Mb/s for realtime video analysis at high rate.
 
 ## gRPC streaming with MediaPipe graphs
 
-gRPC stream connection is allowed for served [MediaPipe graphs](). It allows sending asynchronous calls to the endpoint all linked in a single session context. Responses are captured as an independent stream and processed in the callback function.
+gRPC stream connection is allowed for served [MediaPipe graphs](). It allows sending asynchronous calls to the endpoint all linked in a single session context. Responses are sent back via a stream and processed in the callback function.
 The helper class [StreamClient](../../common/stream_client/stream_client.py) provides a mechanism for flow control and tracking the sequence of the requests and responses. In the streamclient initialization the streaming mode is set via the parameter `streaming_api=True`.
 
 Using the streaming API has the following advantages:
 - good performance thanks to asynchronous calls and sharing the graph execution for multiple calls
-- support for stateful pipelines like object tracking when the response is depended on the sequence of requests 
+- support for stateful pipelines like object tracking when the response is dependent on the sequence of requests 
 
 
 ### Preparing the model server for gRPC streaming with a Holistic graph
 
-The [holistic graph](../../mediapipe/holistic_tracking/holistic_tracking.pbtxt) is expecting and IMAGE object on the input and returns and IMAGE on the output.
+The [holistic graph](../../mediapipe/holistic_tracking/holistic_tracking.pbtxt) is expecting and IMAGE object on the input and returns an IMAGE on the output.
 As such it doesn't require any preprocessing and postprocessing. In this demo the returned stream will be just visualized or sent to the target sink.
 
 The model server with the holistic use case can be deployed with the following steps:
@@ -152,7 +152,7 @@ ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://loca
 
 The helper class `StreamClient` supports only the calls using unary gRPC calls. In that case it should be initialized with a parameter `streaming_api=True`.
 It sends the frames to the model server asynchronously but each of them is stateless and each request can be processed independently.
-The key advantage of that mode is easier loadbalancing on the scalability because each request could be routed to a different instance of the model server or a different compute node.
+The key advantage of that mode is easier load balancing and scalability because each request could be routed to a different instance of the model server or a different compute node.
 
 Such use case with the unary calls with a horizontal text analysis can be followed based on [this document](../../horizontal_text_detection/python/).
 
