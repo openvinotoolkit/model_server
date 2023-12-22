@@ -51,10 +51,10 @@ def callback(result, error):
     global image_queue, event
     if error:
         raise error
-    if result.as_numpy('END_SIGNAL') is not None:
+    if result.as_numpy('end_signal') is not None:
         image_queue.put(None)
-    elif result.as_numpy('OUTPUT') is not None:
-        img = Image.open(BytesIO(result.as_numpy("OUTPUT")))
+    elif result.as_numpy('image') is not None:
+        img = Image.open(BytesIO(result.as_numpy("image")))
         opencvImage = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
         image_queue.put(opencvImage)
 
