@@ -120,17 +120,17 @@ public:
     }
 };
 
-class MediapipePyobjectOvTensorConverterTest : public MediapipeFlowTest {
+class MediapipePytensorOvTensorConverterTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_pyobject_ovtensor_converter.json");
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_pytensor_ovtensor_converter.json");
     }
 };
 
-class MediapipeOvTensorPyobjectConverterTest : public MediapipeFlowTest {
+class MediapipeOvTensorPytensorConverterTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_ovtensor_pyobject_converter.json");
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_ovtensor_pytensor_converter.json");
     }
 };
 
@@ -169,12 +169,12 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
-TEST_F(MediapipePyobjectOvTensorConverterTest, Infer) {
+TEST_F(MediapipePytensorOvTensorConverterTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
-    const std::string modelName = "mediapipePyobjectOvtensorConverter";
+    const std::string modelName = "mediapipePytensorOvtensorConverter";
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{
@@ -183,7 +183,7 @@ TEST_F(MediapipePyobjectOvTensorConverterTest, Infer) {
     preparePredictRequest(request, inputsMeta, requestData1);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    ASSERT_EQ(response.model_name(), "mediapipePyobjectOvtensorConverter");
+    ASSERT_EQ(response.model_name(), "mediapipePytensorOvtensorConverter");
     ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:" << "out";
     const auto& output_proto = *response.outputs().begin();
@@ -203,12 +203,12 @@ TEST_F(MediapipePyobjectOvTensorConverterTest, Infer) {
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
-TEST_F(MediapipeOvTensorPyobjectConverterTest, Infer) {
+TEST_F(MediapipeOvTensorPytensorConverterTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
-    const std::string modelName = "mediapipeOvtensorPyobjectConverter";
+    const std::string modelName = "mediapipeOvtensorPytensorConverter";
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{
@@ -217,7 +217,7 @@ TEST_F(MediapipeOvTensorPyobjectConverterTest, Infer) {
     preparePredictRequest(request, inputsMeta, requestData1);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    ASSERT_EQ(response.model_name(), "mediapipeOvtensorPyobjectConverter");
+    ASSERT_EQ(response.model_name(), "mediapipeOvtensorPytensorConverter");
     ASSERT_EQ(response.outputs_size(), 1);
     ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:" << "out";

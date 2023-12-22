@@ -1,9 +1,0 @@
-{
-    "model_config_list": [],
-    "mediapipe_config_list": [
-    {
-        "name":"mediapipeOvtensorPyobjectConverter",
-        "graph_path":"/ovms/src/test/mediapipe/graphovtensorpyobjectconverter.pbtxt"
-    }
-    ]
-}
