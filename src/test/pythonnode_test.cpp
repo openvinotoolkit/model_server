@@ -882,7 +882,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConverters) {
     ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(
     input_stream: "OVTENSOR:in"
-    output_stream: "OVTENSOR:out"
+    output_stream: "OVTENSOR:out3"
         node {
             name: "pythonNode1"
             calculator: "PyobjectOvtensorConverterCalculator"
@@ -902,7 +902,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConverters) {
             calculator: "PythonExecutorCalculator"
             input_side_packet: "PYTHON_NODE_RESOURCES:py"
             input_stream: "OVMS_PY_TENSOR:out1"
-            output_stream: "OVMS_PY_TENSOR:out2"
+            output_stream: "OUTPUT:out2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
                     handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
@@ -913,7 +913,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConverters) {
             name: "pythonNode3"
             calculator: "PyobjectOvtensorConverterCalculator"
             input_stream: "OVMS_PY_TENSOR:out2"
-            output_stream: "OVTENSOR:out"
+            output_stream: "OVTENSOR:out3"
         }
     )";
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
@@ -935,7 +935,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConverters) {
     ServableMetricReporter* smr{nullptr};
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
 
-    checkDummyResponse("OUTPUT", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+    checkDummyResponse("out3", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {

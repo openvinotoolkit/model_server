@@ -97,7 +97,8 @@ public:
                 input_tensor.get_byte_size(),
                 outputPtr);
             
-            cc->Outputs().Tag("OVMS_PY_TENSOR").Add(outputPtr.release(), Timestamp(0));
+            cc->Outputs().Tag("OVMS_PY_TENSOR").Add(outputPtr.release(), cc->InputTimestamp());
+            LOG(INFO) << "PyobjectOvtensorConverterCalculator CONVERSION END1";
         }
         else{
             auto& input_tensor = cc->Inputs().Tag("OVMS_PY_TENSOR").Get<PyObjectWrapper<py::object>>();
@@ -107,8 +108,9 @@ public:
                 shape.push_back(dim);
             }
             auto data = reinterpret_cast<const void*>(input_tensor.getProperty<void*>("ptr"));
-            ov::Tensor output(precision, shape, const_cast<void*>(data));
-            cc->Outputs().Tag("OVTENSOR").AddPacket(::mediapipe::MakePacket<ov::Tensor>(output).At(Timestamp(0)));
+            ov::Tensor* output = new ov::Tensor(precision, shape, const_cast<void*>(data));
+            cc->Outputs().Tag("OVTENSOR").Add(output, cc->InputTimestamp());
+            LOG(INFO) << "PyobjectOvtensorConverterCalculator CONVERSION END2";
         }
         LOG(INFO) << "PyobjectOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Process end";
         return absl::OkStatus();
