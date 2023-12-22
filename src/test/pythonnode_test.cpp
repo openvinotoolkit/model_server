@@ -887,7 +887,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOu
             name: "pythonNode1"
             calculator: "PytensorOvtensorConverterCalculator"
             input_stream: "OVTENSOR:in"
-            output_stream: "OVMS_PY_TENSOR:input"
+            output_stream: "OVMS_PY_TENSOR:output1"
             node_options: {
                 [type.googleapis.com / mediapipe.PytensorOvtensorConverterCalculatorOptions]: {
                     tag_to_output_tensor_names {
@@ -901,18 +901,18 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOu
             name: "pythonNode2"
             calculator: "PythonExecutorCalculator"
             input_side_packet: "PYTHON_NODE_RESOURCES:py"
-            input_stream: "INPUT:input"
-            output_stream: "OUTPUT:output"
+            input_stream: "INPUT:output1"
+            output_stream: "OUTPUT:output2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/single_io_increment.py"
                 }
             }
         }
         node {
             name: "pythonNode3"
             calculator: "PytensorOvtensorConverterCalculator"
-            input_stream: "OVMS_PY_TENSOR:output"
+            input_stream: "OVMS_PY_TENSOR:output2"
             output_stream: "OVTENSOR:out"
         }
     )";
@@ -941,17 +941,17 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOu
 TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersInTheMiddle) {
     ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(
-    input_stream: "OVMS_PY_TENSOR:input1"
-    output_stream: "OVMS_PY_TENSOR:output2"
+    input_stream: "OVMS_PY_TENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
         node {
             name: "pythonNode1"
             calculator: "PythonExecutorCalculator"
             input_side_packet: "PYTHON_NODE_RESOURCES:py"
-            input_stream: "INPUT:input1"
+            input_stream: "INPUT:in"
             output_stream: "OUTPUT:output1"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/single_io_increment.py"
                 }
             }
         }
@@ -959,13 +959,13 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersInTheMi
             name: "pythonNode2"
             calculator: "PytensorOvtensorConverterCalculator"
             input_stream: "OVMS_PY_TENSOR:output1"
-            output_stream: "OVTENSOR:output1converted"
+            output_stream: "OVTENSOR:output2"
         }
         node {
             name: "pythonNode3"
             calculator: "PytensorOvtensorConverterCalculator"
-            input_stream: "OVTENSOR:output1converted"
-            output_stream: "OVMS_PY_TENSOR:input2"
+            input_stream: "OVTENSOR:output2"
+            output_stream: "OVMS_PY_TENSOR:output3"
             node_options: {
                 [type.googleapis.com / mediapipe.PytensorOvtensorConverterCalculatorOptions]: {
                     tag_to_output_tensor_names {
@@ -979,11 +979,11 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersInTheMi
             name: "pythonNode4"
             calculator: "PythonExecutorCalculator"
             input_side_packet: "PYTHON_NODE_RESOURCES:py"
-            input_stream: "INPUT:input2"
-            output_stream: "OUTPUT:output2"
+            input_stream: "INPUT:output3"
+            output_stream: "OUTPUT:out"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment2.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/single_io_increment.py"
                 }
             }
         }
@@ -1002,12 +1002,12 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersInTheMi
 
     const std::vector<float> data{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, -5.0f};
     req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "input1", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::fromString("FP32")}, data, false);
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::fromString("FP32")}, data, false);
 
     ServableMetricReporter* smr{nullptr};
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
 
-    checkDummyResponse("output2", data, req, res, 2 /* expect +1 */, 1, "mediaDummy");
+    checkDummyResponse("out", data, req, res, 2 /* expect +1 */, 1, "mediaDummy");
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
