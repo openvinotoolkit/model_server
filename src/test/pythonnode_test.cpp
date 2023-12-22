@@ -213,7 +213,7 @@ TEST_F(PythonFlowTest, PythonNodeInitFailed) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 }
 
 TEST_F(PythonFlowTest, PythonNodeInitFailedImportOutsideTheClassError) {
@@ -431,8 +431,8 @@ TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
 
         py::list inputStream = nodeRes->nodeResourceObject.get()->attr("input_streams");
         py::list expectedInputs = py::list();
-        expectedInputs.attr("append")(py::str("IN1:in1"));
-        expectedInputs.attr("append")(py::str("IN2:in2"));
+        expectedInputs.attr("append")(py::str("in1"));
+        expectedInputs.attr("append")(py::str("in2"));
 
         for (pybind11::size_t i = 0; i < inputStream.size(); i++) {
             py::str inputName = py::cast<py::str>(inputStream[i]);
@@ -441,8 +441,8 @@ TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
 
         py::list outputStream = nodeRes->nodeResourceObject.get()->attr("output_streams");
         py::list expectedOutputs = py::list();
-        expectedOutputs.attr("append")(py::str("OUT1:out1"));
-        expectedOutputs.attr("append")(py::str("OUT2:out2"));
+        expectedOutputs.attr("append")(py::str("out1"));
+        expectedOutputs.attr("append")(py::str("out2"));
 
         for (pybind11::size_t i = 0; i < outputStream.size(); i++) {
             py::str outputName = py::cast<py::str>(outputStream[i]);

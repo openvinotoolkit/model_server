@@ -34,6 +34,7 @@
 
 #include "src/mediapipe_calculators/python_executor_calculator_options.pb.h"
 #endif
+#include "mediapipegraphdefinition.hpp"
 
 namespace ovms {
 
@@ -76,11 +77,11 @@ py::dict PythonNodeResource::preparePythonNodeInitializeArguments(const ::mediap
     py::list inputStreams = py::list();
     py::list outputStreams = py::list();
     for (auto& name : graphNodeConfig.input_stream()) {
-        inputStreams.append(name);
+        inputStreams.append(MediapipeGraphDefinition::getStreamName(name));
     }
 
     for (auto& name : graphNodeConfig.output_stream()) {
-        outputStreams.append(name);
+        outputStreams.append(MediapipeGraphDefinition::getStreamName(name));
     }
 
     kwargsParam["input_streams"] = inputStreams;
@@ -94,7 +95,7 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
     mediapipe::PythonExecutorCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     if (!std::filesystem::exists(nodeOptions.handler_path())) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node file: {} does not exist. ", nodeOptions.handler_path());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Python node handler_path: {} does not exist. ", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
     }
     auto fsHandlerPath = std::filesystem::path(nodeOptions.handler_path());
@@ -110,12 +111,17 @@ Status PythonNodeResource::createPythonNodeResource(std::shared_ptr<PythonNodeRe
         py::module_ script = py::module_::import(filename.c_str());
         py::object OvmsPythonModel = script.attr("OvmsPythonModel");
         py::object pythonModel = OvmsPythonModel();
-        py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig);
-        pythonModel.attr("initialize")(kwargsParam);
+
+        if (py::hasattr(pythonModel, "initialize")) {
+            py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig);
+            pythonModel.attr("initialize")(kwargsParam);
+        } else {
+            SPDLOG_DEBUG("OvmsPythonModel class does not have an initialize method. Python node path {} ", nodeOptions.handler_path());
+        }
 
         nodeResource = std::make_shared<PythonNodeResource>(pythonBackend);
-        nodeResource->nodeResourceObject = std::make_unique<py::object>(pythonModel);
         nodeResource->pythonNodeFilePath = nodeOptions.handler_path();
+        nodeResource->nodeResourceObject = std::make_unique<py::object>(pythonModel);
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_ERROR("Failed to process python node file {} : {}", nodeOptions.handler_path(), e.what());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;

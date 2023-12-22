@@ -18,25 +18,37 @@ import os
 from pyovms import Tensor
 from optimum.intel import OVModelForCausalLM
 from transformers import AutoTokenizer, AutoConfig, TextIteratorStreamer, StoppingCriteria, StoppingCriteriaList
-from huggingface_hub import login, whoami
 
 import threading
 
-HF_TOKEN = os.getenv("HF_ACCESS_TOKEN", "")
+from config import SUPPORTED_LLM_MODELS
 
-if HF_TOKEN:
-    try:
-        whoami()
-        print('Authorization token already provided')
-    except OSError:
-        login(HF_TOKEN)
+SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
 
-from config import SUPPORTED_MODELS
+print("SELECTED MODEL", SELECTED_MODEL)
+model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
+
+MODEL_PATH = "/model"  # relative to container
+OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
 
 
-SELECTED_MODEL = 'red-pajama-3b-chat'
-#SELECTED_MODEL = 'llama-2-chat-7b'
-model_configuration = SUPPORTED_MODELS[SELECTED_MODEL]
+def default_partial_text_processor(partial_text: str, new_text: str):
+    """
+    helper for updating partially generated answer, used by de
+
+    Params:
+      partial_text: text buffer for storing previosly generated text
+      new_text: text update for the current step
+    Returns:
+      updated text string
+
+    """
+    partial_text += new_text
+    return partial_text
+
+text_processor = model_configuration.get(
+    "partial_text_processor", default_partial_text_processor
+)
 
 MODEL_PATH = "/model"  # relative to container
 OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
@@ -48,9 +60,7 @@ current_message_template = model_configuration["current_message_template"]
 start_message = model_configuration["start_message"]
 stop_tokens = model_configuration.get("stop_tokens")
 tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
-text_processor = model_configuration.get("partial_text_processor")
-
-tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
 
 # HF class that is capable of stopping the generation
 # when given tokens appear in specific order
@@ -123,7 +133,6 @@ class OvmsPythonModel:
         temporal_history = [[text, ""]]
 
         messages = convert_history_to_text(temporal_history)
-        print('------------------- ', messages)
         input_ids = tokenizer(messages, return_tensors="pt", **tokenizer_kwargs).input_ids
         streamer = TextIteratorStreamer(tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
         generate_kwargs = dict(
