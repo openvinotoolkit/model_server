@@ -113,8 +113,7 @@ packages = {
         'libpugixml1v5',
         'libtbb2',
         'libxml2',
-        'openssl',
-        'libbrotli1'
+        'openssl'
     },
     OvmsBaseImageType.UBUNTU_PYTHON: {
         'libexpat1',
