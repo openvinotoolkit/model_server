@@ -977,10 +977,10 @@ TEST_F(PythonFlowTest, PythonCalculatorScalarNoShape) {
     ASSERT_EQ(res.raw_output_contents_size(), 1);
     ASSERT_EQ(res.outputs().begin()->name(), "output") << "Did not find:"
                                                        << "output";
-    const auto& output_proto = *res.outputs().begin();
+    const auto& output = *res.outputs().begin();
     std::string* content = res.mutable_raw_output_contents(0);
 
-    ASSERT_EQ(output_proto.shape_size(), 0);
+    ASSERT_EQ(output.shape_size(), 0);
     ASSERT_EQ(content->size(), sizeof(float));
 
     ASSERT_EQ(*((float*)content->data()), inputScalar + 1);
@@ -1004,10 +1004,10 @@ TEST_F(PythonFlowTest, PythonCalculatorZeroDimension) {
     ASSERT_EQ(res.raw_output_contents_size(), 1);
     ASSERT_EQ(res.outputs().begin()->name(), "output") << "Did not find:"
                                                        << "output";
-    const auto& output_proto = *res.outputs().begin();
+    const auto& output = *res.outputs().begin();
     std::string* content = res.mutable_raw_output_contents(0);
 
-    ASSERT_EQ(output_proto.shape_size(), 5);
+    ASSERT_EQ(output.shape_size(), 5);
     ASSERT_EQ(content->size(), 0);
 }
 
