@@ -14,7 +14,7 @@ We will present using RTSP stream transferred by the server component and encode
 Below is depicted such a configuration:
 ![rtsp](rtsp.png)
 
-All the client scenarios mentioned below can read the input content from mentioned 3 sources and also send the results to 3 destinations: local screen or Xserver display, encoded video file or send an RTSP output stream.
+All the client scenarios mentioned below can read the input content from mentioned 3 sources and also send the results to 3 destinations: local screen, encoded video file or RTSP output stream.
 
 In the demo will be used two gRPC communication patterns which might be advantageous depending on the scenario.
 
@@ -148,9 +148,9 @@ ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://loca
 
 
 
-## gRPC calls with unary calls
+## Using gRPC unary calls
 
-The helper class `StreamClient` supports only the calls using unary gRPC calls. In that case it should be initialized with a parameter `streaming_api=True`.
+The helper class `StreamClient` supports only the calls using unary gRPC calls. In that case it should be initialized with a parameter `streaming_api=False`.
 It sends the frames to the model server asynchronously but each of them is stateless and each request can be processed independently.
 The key advantage of that mode is easier load balancing and scalability because each request could be routed to a different instance of the model server or a different compute node.
 
