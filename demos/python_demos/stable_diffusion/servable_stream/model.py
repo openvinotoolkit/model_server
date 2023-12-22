@@ -74,6 +74,6 @@ class OvmsPythonModel:
             print('waiting for data...')
             image_data, pipeline_finished = q.get()
             print('got it! will serialize...')
-            yield [Tensor("OUTPUT", image_data)]
-        yield [Tensor("END_SIGNAL", "".encode())]
+            yield [Tensor("image", image_data)]
+        yield [Tensor("end_signal", "".encode())]
 
