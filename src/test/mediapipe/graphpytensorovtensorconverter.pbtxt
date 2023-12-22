@@ -15,7 +15,7 @@
 input_stream: "OVMS_PY_TENSOR:in"
 output_stream: "OVTENSOR:out"
 node {
-  calculator: "PyobjectOvtensorConverterCalculator"
+  calculator: "PytensorOvtensorConverterCalculator"
   input_stream: "OVMS_PY_TENSOR:in"
   output_stream: "OVTENSOR:out"
 }

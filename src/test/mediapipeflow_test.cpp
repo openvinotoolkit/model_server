@@ -187,21 +187,21 @@ TEST_F(MediapipePytensorOvTensorConverterTest, Infer) {
     ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:"
                                                          << "out";
-    const auto& output_proto = *response.outputs().begin();
+    const auto& output = *response.outputs().begin();
     const std::string& content = response.raw_output_contents(0);
 
     ASSERT_EQ(content.size(), 10 * sizeof(float));
-    ASSERT_EQ(output_proto.shape_size(), 2);
-    ASSERT_EQ(output_proto.shape(0), 1);
-    ASSERT_EQ(output_proto.shape(1), 10);
-    ASSERT_EQ(output_proto.datatype(), "FP32");
+    ASSERT_EQ(output.shape_size(), 2);
+    ASSERT_EQ(output.shape(0), 1);
+    ASSERT_EQ(output.shape(1), 10);
+    ASSERT_EQ(output.datatype(), "FP32");
 
-    const float* actual_output = (const float*)content.data();
-    float* expected_output = requestData1.data();
+    const float* actualOutput = (const float*)content.data();
+    float* expectedOutput = requestData1.data();
     const int dataLengthToCheck = 10 * sizeof(float);
-    EXPECT_EQ(actual_output[0], expected_output[0]);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
+    EXPECT_EQ(actualOutput[0], expectedOutput[0]);
+    EXPECT_EQ(0, std::memcmp(actualOutput, expectedOutput, dataLengthToCheck))
+        << readableError(expectedOutput, actualOutput, dataLengthToCheck / sizeof(float));
 }
 
 TEST_F(MediapipeOvTensorPytensorConverterTest, Infer) {
@@ -223,20 +223,20 @@ TEST_F(MediapipeOvTensorPytensorConverterTest, Infer) {
     ASSERT_EQ(response.raw_output_contents_size(), 1);
     ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:"
                                                          << "out";
-    const auto& output_proto = *response.outputs().begin();
+    const auto& output = *response.outputs().begin();
     const std::string& content = response.raw_output_contents(0);
 
     ASSERT_EQ(content.size(), 10 * sizeof(float));
-    ASSERT_EQ(output_proto.shape_size(), 2);
-    ASSERT_EQ(output_proto.shape(0), 1);
-    ASSERT_EQ(output_proto.shape(1), 10);
+    ASSERT_EQ(output.shape_size(), 2);
+    ASSERT_EQ(output.shape(0), 1);
+    ASSERT_EQ(output.shape(1), 10);
 
-    const float* actual_output = (const float*)content.data();
-    float* expected_output = requestData1.data();
+    const float* actualOutput = (const float*)content.data();
+    float* expectedOutput = requestData1.data();
     const int dataLengthToCheck = 10 * sizeof(float);
-    EXPECT_EQ(actual_output[0], expected_output[0]);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
+    EXPECT_EQ(actualOutput[0], expectedOutput[0]);
+    EXPECT_EQ(0, std::memcmp(actualOutput, expectedOutput, dataLengthToCheck))
+        << readableError(expectedOutput, actualOutput, dataLengthToCheck / sizeof(float));
 }
 
 TEST_F(MediapipeTFTest, Passthrough) {

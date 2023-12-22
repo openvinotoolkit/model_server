@@ -17,7 +17,6 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../mediapipe_internal/pythonnoderesource.hpp"
 #include "../precision.hpp"
 #include "../python/ovms_py_tensor.hpp"
 
@@ -37,12 +36,12 @@ using namespace ovms;
 
 namespace mediapipe {
 
-class PyobjectOvtensorConverterCalculator : public CalculatorBase {
+class PytensorOvtensorConverterCalculator : public CalculatorBase {
     mediapipe::Timestamp outputTimestamp;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
-        LOG(INFO) << "PyobjectOvtensorConverterCalculator [Node: " << cc->GetNodeName() << "] GetContract start";
+        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->GetNodeName() << "] GetContract start";
         RET_CHECK(cc->Inputs().GetTags().size() == 1);
         RET_CHECK(cc->Outputs().GetTags().size() == 1);
         RET_CHECK((*(cc->Inputs().GetTags().begin()) == "OVTENSOR" && *(cc->Outputs().GetTags().begin()) == "OVMS_PY_TENSOR") || (*(cc->Inputs().GetTags().begin()) == "OVMS_PY_TENSOR" && *(cc->Outputs().GetTags().begin()) == "OVTENSOR"));
@@ -54,63 +53,61 @@ public:
             cc->Outputs().Tag("OVTENSOR").Set<ov::Tensor>();
         }
 
-        LOG(INFO) << "PyobjectOvtensorConverterCalculator [Node: " << cc->GetNodeName() << "] GetContract end";
+        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->GetNodeName() << "] GetContract end";
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        LOG(INFO) << "PyobjectOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Close";
+        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Close";
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
-        LOG(INFO) << "PyobjectOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Open start";
+        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Open start";
         outputTimestamp = mediapipe::Timestamp(mediapipe::Timestamp::Unset());
-        LOG(INFO) << "PyobjectOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Open end";
+        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Open end";
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        LOG(INFO) << "PyobjectOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Process start";
+        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Process start";
         py::gil_scoped_acquire acquire;
         if (*(cc->Inputs().GetTags().begin()) == "OVTENSOR") {
-            auto& input_tensor = cc->Inputs().Tag("OVTENSOR").Get<ov::Tensor>();
+            auto& inputTensor = cc->Inputs().Tag("OVTENSOR").Get<ov::Tensor>();
             py::object outTensor;
-            std::unique_ptr<PyObjectWrapper<py::object>> outputPtr = std::make_unique<PyObjectWrapper<py::object>>(outTensor);
+            std::unique_ptr<PyObjectWrapper<py::object>> outputPyTensor = std::make_unique<PyObjectWrapper<py::object>>(outTensor);
             PythonBackend pythonBackend;
-            std::vector<int64> shape;
-            for (const auto& dim : input_tensor.get_shape()) {
+            std::vector<py::ssize_t> shape;
+            for (const auto& dim : inputTensor.get_shape()) {
                 shape.push_back(dim);
             }
-            const auto& options = cc->Options<PyobjectOvtensorConverterCalculatorOptions>();
+            const auto& options = cc->Options<PytensorOvtensorConverterCalculatorOptions>();
             const auto tagOutputNameMap = options.tag_to_output_tensor_names();
             auto outputName = tagOutputNameMap.at("OVMS_PY_TENSOR").c_str();
             pythonBackend.createOvmsPyTensor(
                 outputName,
-                const_cast<void*>((const void*)input_tensor.data()),
+                const_cast<void*>((const void*)inputTensor.data()),
                 shape,
-                toString(ovElementTypeToOvmsPrecision(input_tensor.get_element_type())),
-                input_tensor.get_byte_size(),
-                outputPtr);
+                toString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type())),
+                inputTensor.get_byte_size(),
+                outputPyTensor);
 
-            cc->Outputs().Tag("OVMS_PY_TENSOR").Add(outputPtr.release(), cc->InputTimestamp());
-            LOG(INFO) << "PyobjectOvtensorConverterCalculator CONVERSION END1";
+            cc->Outputs().Tag("OVMS_PY_TENSOR").Add(outputPyTensor.release(), cc->InputTimestamp());
         } else {
-            auto& input_tensor = cc->Inputs().Tag("OVMS_PY_TENSOR").Get<PyObjectWrapper<py::object>>();
-            auto precision = ovmsPrecisionToIE2Precision(fromString(input_tensor.getProperty<std::string>("datatype")));
+            auto& inputTensor = cc->Inputs().Tag("OVMS_PY_TENSOR").Get<PyObjectWrapper<py::object>>();
+            auto precision = ovmsPrecisionToIE2Precision(fromString(inputTensor.getProperty<std::string>("datatype")));
             ov::Shape shape;
-            for (const auto& dim : input_tensor.getProperty<std::vector<py::ssize_t>>("shape")) {
+            for (const auto& dim : inputTensor.getProperty<std::vector<py::ssize_t>>("shape")) {
                 shape.push_back(dim);
             }
-            auto data = reinterpret_cast<const void*>(input_tensor.getProperty<void*>("ptr"));
+            auto data = reinterpret_cast<const void*>(inputTensor.getProperty<void*>("ptr"));
             ov::Tensor* output = new ov::Tensor(precision, shape, const_cast<void*>(data));
             cc->Outputs().Tag("OVTENSOR").Add(output, cc->InputTimestamp());
-            LOG(INFO) << "PyobjectOvtensorConverterCalculator CONVERSION END2";
         }
-        LOG(INFO) << "PyobjectOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Process end";
+        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Process end";
         return absl::OkStatus();
     }
 };
 
-REGISTER_CALCULATOR(PyobjectOvtensorConverterCalculator);
+REGISTER_CALCULATOR(PytensorOvtensorConverterCalculator);
 }  // namespace mediapipe
