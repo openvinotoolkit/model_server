@@ -105,6 +105,8 @@ ifeq ($(BAZEL_BUILD_TYPE),dbg)
 	STRIP = "never"
 endif
 
+CAPI_FLAGS = "--strip=always --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1"
+
 ifeq ($(MINITRACE),ON)
   MINITRACE_FLAGS=" --copt=-DMTR_ENABLED"
 else
@@ -214,6 +216,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg GPU=$(GPU)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
 	--build-arg JOBS=$(JOBS)
+	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)
 
 
 .PHONY: default docker_build \
