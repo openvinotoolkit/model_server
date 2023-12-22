@@ -25,7 +25,7 @@ node {
         }
         tag_to_input_tensor_names {
           key: "ADD_INPUT2"
-          value: "input22"
+          value: "input2"
         }
         tag_to_output_tensor_names {
           key: "SUM"
