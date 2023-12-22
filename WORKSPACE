@@ -102,7 +102,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "6ad4aa036968e981263b1b5e6f22b7f89307dd6e", # Model API full build
+    commit = "00612f2e0d537a230e89489ad14eaa99764c7ce6", # Make OVInferenceCalculator return error on empty packets (#60)
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
