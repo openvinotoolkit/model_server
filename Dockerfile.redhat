@@ -299,13 +299,13 @@ WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
 RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2023.2.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2023.2' > /opt/intel/openvino/python/openvino-2023.2.dist-info/METADATA
+    mkdir -p /opt/intel/openvino/python/openvino-2023.3.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2023.3' > /opt/intel/openvino/python/openvino-2023.3.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2023.2"
+ARG PROJECT_VERSION="2023.3"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 ARG minitrace_flags
@@ -325,14 +325,15 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
 # C api shared library
-RUN bazel build --jobs $JOBS ${debug_bazel_flags} //src:ovms_shared
+ARG CAPI_FLAGS=--strip=always --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1
+RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
 
 # C api app with bazel
 # hadolint ignore=DL3059
-RUN bazel build --jobs $JOBS ${debug_bazel_flags} //src:capi_cpp_example
+RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
 
 # C-API benchmark app
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
+RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
 
 # Custom Nodes
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
@@ -346,8 +347,8 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
 
 # C-api C/C++ app with gcc
 COPY MakefileCapi /ovms/
-RUN make -f MakefileCapi cpp debug_bazel_flags="${debug_bazel_flags}" && \
-    make -f MakefileCapi c debug_bazel_flags="${debug_bazel_flags}"
+RUN make -f MakefileCapi cpp CAPI_FLAGS="${CAPI_FLAGS}" && \
+    make -f MakefileCapi c CAPI_FLAGSs="${CAPI_FLAGS}"
 
 ARG ovms_metadata_file
 
@@ -389,7 +390,7 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 FROM $RELEASE_BASE_IMAGE as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2023.2"
+LABEL "version"="2023.3"
 LABEL "release"="2023"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
@@ -486,8 +487,8 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
         # For image with Python enabled install Python library
         if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
             $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0; \
-            mkdir -p /ovms/lib/openvino-2023.2.dist-info && \
-            echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2023.2' > /ovms/lib/openvino-2023.2.dist-info/METADATA ; \
+            mkdir -p /ovms/lib/openvino-2023.3.dist-info && \
+            echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2023.3' > /ovms/lib/openvino-2023.3.dist-info/METADATA ; \
         fi ; \
         $DNF_TOOL install -y shadow-utils; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
