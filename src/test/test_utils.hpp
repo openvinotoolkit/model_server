@@ -43,14 +43,16 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
-#include "../mediapipe_internal/pythonnoderesource.hpp"
 #include "../metric_registry.hpp"
 #include "../modelinstance.hpp"
 #include "../modelmanager.hpp"
-#include "../python/python_backend.hpp"
 #include "../shape.hpp"
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
+
+#if (PYTHON_DISABLE == 0)
+#include "../python/pythonnoderesources.hpp"
+#endif
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
@@ -713,14 +715,16 @@ std::shared_ptr<const ovms::TensorInfo> createTensorInfoCopyWithPrecision(std::s
 class DummyMediapipeGraphDefinition : public ovms::MediapipeGraphDefinition {
 public:
     std::string inputConfig;
-    ovms::PythonNodeResource* getPythonNodeResource(const std::string& nodeName) {
-        auto it = this->pythonNodeResources.find(nodeName);
-        if (it == std::end(pythonNodeResources)) {
+#if (PYTHON_DISABLE == 0)
+    ovms::PythonNodeResources* getPythonNodeResources(const std::string& nodeName) {
+        auto it = this->pythonNodeResourcesMap.find(nodeName);
+        if (it == std::end(pythonNodeResourcesMap)) {
             return nullptr;
         } else {
             return it->second.get();
         }
     }
+#endif
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,

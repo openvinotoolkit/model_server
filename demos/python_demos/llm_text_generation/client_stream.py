@@ -46,10 +46,10 @@ def callback(result, error):
     global processing_times
     if error:
         raise error
-    if result.as_numpy('END_SIGNAL') is not None:
+    if result.as_numpy('end_signal') is not None:
         event.set()
-    elif result.as_numpy('OUTPUT') is not None:
-        print(result.as_numpy('OUTPUT').tobytes().decode(), flush=True, end='')
+    elif result.as_numpy('completion') is not None:
+        print(result.as_numpy('completion').tobytes().decode(), flush=True, end='')
         duration = int((endtime - start_time).total_seconds() * 1000)
         processing_times = np.append(processing_times, duration)
         start_time = datetime.datetime.now()

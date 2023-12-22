@@ -29,6 +29,10 @@
 #include "../stringutils.hpp"
 #include "test_utils.hpp"
 
+#if (PYTHON_DISABLE == 0)
+#include "../pythoninterpretermodule.hpp"
+#endif
+
 using namespace ovms;
 using namespace ::testing;
 using namespace std::chrono_literals;
@@ -55,6 +59,7 @@ protected:
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
 };
 
+#if (PYTHON_DISABLE == 0)
 class PythonStreamingTest : public StreamingTest {
 protected:
     // Defaults for executor
@@ -78,6 +83,7 @@ public:
         pythonModule.reset();
     }
 };
+#endif
 
 static void setRequestTimestamp(KFSRequest& request, const std::string& value) {
     request.clear_parameters();
@@ -527,7 +533,7 @@ node {
 }
 
 // Generative AI case + automatic timestamping server-side - Python
-
+#if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
 namespace py = pybind11;
 #include "../python/python_backend.hpp"
@@ -583,9 +589,9 @@ node {
     // Expect 3 responses (cycle)
     // The PythonExecutorCalculator produces increasing timestamps
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"OUTPUT", 4.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"OUTPUT", 5.5f}}, 1))
-        .WillOnce(SendWithTimestamp({{"OUTPUT", 6.5f}}, 2));
+        .WillOnce(SendWithTimestamp({{"output", 4.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"output", 5.5f}}, 1))
+        .WillOnce(SendWithTimestamp({{"output", 6.5f}}, 2));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
@@ -645,12 +651,12 @@ node {
     // Expect 6 responses (cycle)
     // The PythonExecutorCalculator produces increasing timestamps
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"OUTPUT1", 4.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"OUTPUT2", 14.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"OUTPUT1", 5.5f}}, 1))
-        .WillOnce(SendWithTimestamp({{"OUTPUT2", 15.5f}}, 1))
-        .WillOnce(SendWithTimestamp({{"OUTPUT1", 6.5f}}, 2))
-        .WillOnce(SendWithTimestamp({{"OUTPUT2", 16.5f}}, 2));
+        .WillOnce(SendWithTimestamp({{"output1", 4.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"output2", 14.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"output1", 5.5f}}, 1))
+        .WillOnce(SendWithTimestamp({{"output2", 15.5f}}, 1))
+        .WillOnce(SendWithTimestamp({{"output1", 6.5f}}, 2))
+        .WillOnce(SendWithTimestamp({{"output2", 16.5f}}, 2));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
@@ -712,12 +718,12 @@ node_options: {
         .WillOnce(DisconnectWhenNotified(mtx));
 
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"OUTPUT1", 4.5f}}, timestamp))
-        .WillOnce(SendWithTimestamp({{"OUTPUT2", 8.2f}}, timestamp))
-        .WillOnce(SendWithTimestamp({{"OUTPUT1", 5.5f}}, timestamp + 1))
-        .WillOnce(SendWithTimestamp({{"OUTPUT2", 9.2f}}, timestamp + 1))
-        .WillOnce(SendWithTimestamp({{"OUTPUT1", 6.5f}}, timestamp + 2))
-        .WillOnce(SendWithTimestampAndNotifyEnd({{"OUTPUT2", 10.2f}}, timestamp + 2, mtx));
+        .WillOnce(SendWithTimestamp({{"output1", 4.5f}}, timestamp))
+        .WillOnce(SendWithTimestamp({{"output2", 8.2f}}, timestamp))
+        .WillOnce(SendWithTimestamp({{"output1", 5.5f}}, timestamp + 1))
+        .WillOnce(SendWithTimestamp({{"output2", 9.2f}}, timestamp + 1))
+        .WillOnce(SendWithTimestamp({{"output1", 6.5f}}, timestamp + 2))
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"output2", 10.2f}}, timestamp + 2, mtx));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
@@ -763,7 +769,9 @@ node_options: {
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 // TODO: Add more negative tests for wrong configurations
+
 // --- End Gen AI Python cases
+#endif
 
 // Sending inputs separately for synchronized graph
 TEST_F(StreamingTest, MultipleStreamsDeliveredViaMultipleRequests) {

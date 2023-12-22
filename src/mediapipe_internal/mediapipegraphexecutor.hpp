@@ -29,11 +29,12 @@
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
+#include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
 #include "packettypes.hpp"
 
 namespace ovms {
 class Status;
-class PythonNodeResource;
+class PythonNodeResources;
 class PythonBackend;
 
 class MediapipeGraphExecutor {
@@ -45,7 +46,7 @@ class MediapipeGraphExecutor {
     const std::vector<std::string> inputNames;
     const std::vector<std::string> outputNames;
 
-    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
+    PythonNodeResourcesMap pythonNodeResourcesMap;
     PythonBackend* pythonBackend;
 
     ::mediapipe::Timestamp currentStreamTimestamp;
@@ -63,7 +64,7 @@ public:
         stream_types_mapping_t inputTypes,
         stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-        const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources,
+        const PythonNodeResourcesMap& pythonNodeResourcesMap,
         PythonBackend* pythonBackend);
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
 
