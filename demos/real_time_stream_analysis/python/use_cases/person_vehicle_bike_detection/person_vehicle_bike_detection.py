@@ -87,8 +87,10 @@ class PersonVehicleBikeDetection(UseCase):
                         local_file = None
 
                     # upload the file to Google Cloud Storage
-                    if 'PERSON_DETECTION_GCS_BUCKET' in os.environ and 'PERSON_DETECTION_GCS_FOLDER':
-                        blob_name = f"{os.environ.get('PERSON_DETECTION_GCS_FOLDER')}/{filename}"
+                    if 'PERSON_DETECTION_GCS_BUCKET' in os.environ and 'PERSON_DETECTION_GCS_FOLDER' in os.environ:
+                        gcs_folder_date_hour = (f"{formatted_datetime.split('_')[0]}/"
+                                                f"{formatted_datetime.split('_')[1].split('-')[0]}")
+                        blob_name = f"{os.environ.get('PERSON_DETECTION_GCS_FOLDER')}/{gcs_folder_date_hour}/{filename}"
                         gs_path = upload_blob(os.environ.get('PERSON_DETECTION_GCS_BUCKET'), local_file, blob_name)
                     else:
                         gs_path = None
@@ -110,7 +112,9 @@ if 'GOOGLE_APPLICATION_CREDENTIALS' in os.environ:
     logging_client = logging.Client()
     # This log can be found in the Cloud Logging console under resource type `Global`
     # logName: projects/$PROJECT_ID/logs/person-detection-debug
-    gcp_logger = logging_client.logger('person-detection-debug')
+    gcp_logger = logging_client.logger(
+        os.environ.get('PERSON_DETECTION_GCP_LOG_NAME', 'person-detection-debug')
+    )
 else:
     gcp_logger = None
 
