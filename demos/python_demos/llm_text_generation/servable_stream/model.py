@@ -118,7 +118,7 @@ class OvmsPythonModel:
         print("-------- Running initialize")
         self.ov_model = OVModelForCausalLM.from_pretrained(
             MODEL_PATH,
-            device="CPU",
+            device="AUTO",
             ov_config=OV_CONFIG,
             config=AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True))
         print("-------- Model loaded")

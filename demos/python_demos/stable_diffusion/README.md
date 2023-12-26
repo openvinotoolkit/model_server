@@ -15,7 +15,7 @@ From the root of the repository run:
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image
+make python_image GPU=1 RUN_TESTS=0 
 ```
 It will create an image called `openvino/model_server:py`.
 
@@ -50,6 +50,9 @@ Mount the `./servable_unary` which contains:
 
 > **Note** Check the container logs to make sure the container started successfully.
 
+> **Note** If order to run the inference load on Intel GPU instead of CPU, just pass the extra parameters to the docker run `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*)`.
+It will pass the GPU device to the container and set the correct group security context.
+
 ### Running the client with unary calls
 
 Install client requirements. This step is common for unary and streaming clients:
@@ -82,6 +85,9 @@ Run the following command to start OpenVINO Model Server:
 docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/model:/model/ openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 > **Note** Check the container logs to make sure the container started successfully.
+
+> **Note** If order to run the inference load on Intel GPU instead of CPU, just pass the extra parameters to the docker run `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*)`.
+It will pass the GPU device to the container and set the correct group security context.
 
 ### Running the client with gRPC stream
 

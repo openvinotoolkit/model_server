@@ -23,11 +23,12 @@ import time
 from transformers import AutoConfig
 
 MODEL_PATH = "/model"  # relative to container
+OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
         print("-------- Running initialize")
-        self.pipe = OVStableDiffusionPipeline.from_pretrained(MODEL_PATH)
+        self.pipe = OVStableDiffusionPipeline.from_pretrained(MODEL_PATH, device="AUTO", ov_config=OV_CONFIG)
         self.pipe.scheduler = DDIMScheduler.from_config(self.pipe.scheduler.config)
         print("-------- Model loaded")
         return True
