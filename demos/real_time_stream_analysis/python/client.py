@@ -44,11 +44,11 @@ def postprocess(frame, result):
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     return frame
 
-if args.output_stream == "screen":
-    backend = StreamClient.OutputBackends.imshow
-
 if args.output_stream[:4] == "rtsp":
     backend = StreamClient.OutputBackends.ffmpeg
+    exact = False
+elif args.output_stream == "screen":
+    backend = StreamClient.OutputBackends.imshow
     exact = False
 else:
     backend = StreamClient.OutputBackends.cv2
