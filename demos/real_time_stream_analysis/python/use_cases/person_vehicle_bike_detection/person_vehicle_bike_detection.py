@@ -99,7 +99,8 @@ class PersonVehicleBikeDetection(UseCase):
                         {
                             'confidence': float(conf),
                             'picture': local_file,
-                            'uploaded_destination': gs_path
+                            'uploaded_destination': gs_path,
+                            'camera_id': os.environ.get('PERSON_DETECTION_CAMERA_ID', 'debug'),
                         }
                     )
 
