@@ -167,7 +167,7 @@ class StreamClient:
                 if frame is not None:
                     self.output_backend.write(frame)
                     if self.benchmark:
-                        self.inference_time.insert(i, time.time() - entry[2])
+                        self.inference_time.insert(i, self.get_timestamp() - entry[2])
                         self.frames += 1
                 if self.exact:
                     i += 1
@@ -206,6 +206,7 @@ class StreamClient:
         self.cap = cv2.VideoCapture(int(self.source) if len(self.source) == 1 and self.source[0].isdigit() else self.source, cv2.CAP_ANY)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 0)
         fps = self.cap.get(cv2.CAP_PROP_FPS)
+        print(f"Starting grpc client {ovms_address}")
         triton_client = grpcclient.InferenceServerClient(url=ovms_address, verbose=False)
         self.streaming_api = streaming_api
 
@@ -260,4 +261,5 @@ class StreamClient:
         self.output_backend.release()
         total_time = time.time() - total_time_start
         if self.benchmark:
-            print(f"{{\"inference_time\": {sum(self.inference_time)/frame_number}, \"dropped_frames\": {self.dropped_frames}, \"frames\": {self.frames}, \"fps\": {self.frames/total_time}, \"total_time\": {total_time}, \"sent_all_frames\": {sent_all_frames}}}")
+            print(f"{frame_number} {len(self.inference_time)}")
+            print(f"{{\"average_inference_latency\": {sum(self.inference_time)/len(self.inference_time)/1e6}, \"dropped_frames\": {self.dropped_frames}, \"frames\": {self.frames}, \"fps\": {self.frames/total_time}, \"total_time\": {total_time}, \"sent_all_frames\": {sent_all_frames}}}")
