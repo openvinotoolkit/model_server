@@ -1,4 +1,4 @@
-tritonclient[grpc]
+tritonclient[grpc]==2.41.0
 numpy==1.24.3
-ffmpeg-python
-opencv-python
+ffmpeg-python==0.2.0
+opencv-python==4.9.0.80
