@@ -47,7 +47,7 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
 // Logging
 // #1 model/global plugin  CompiledMode:DUMMY / Global OpenVINO plugin:CPU
 // #2 version/_
-// #3 target_devide/_
+// #3 target_device/_
 // {} {}
 template <typename PropertyExtractor>
 static void logOVPluginConfig(PropertyExtractor&& propertyExtractor, const std::string& loggingAuthor, const std::string& loggingDetails) {
@@ -55,7 +55,9 @@ static void logOVPluginConfig(PropertyExtractor&& propertyExtractor, const std::
     auto key = std::string("SUPPORTED_PROPERTIES");  // ov::supported_properties;
     std::vector<ov::PropertyName> supportedConfigKeys;
     try {
+        OV_LOGGER("ov::Any::operator=()");
         ov::Any value = propertyExtractor(key);
+        OV_LOGGER("ov::Any::as<std::vector<ov::PropertyName>>()");
         supportedConfigKeys = value.as<std::vector<ov::PropertyName>>();
     } catch (std::exception& e) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from OpenVINO when requesting {};{} config key: {}; Error: {}", loggingAuthor, loggingDetails, key, e.what());
@@ -71,6 +73,7 @@ static void logOVPluginConfig(PropertyExtractor&& propertyExtractor, const std::
         std::string value;
         try {
             ov::Any paramValue = propertyExtractor(key);
+            OV_LOGGER("key: {}; ov::Any::as<std::string>()", key);
             value = paramValue.as<std::string>();
         } catch (std::exception& e) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from OpenVINO when requesting {};{} config key: {}; Error: {}", loggingAuthor, loggingDetails, key, e.what());

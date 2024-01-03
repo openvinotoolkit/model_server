@@ -128,7 +128,9 @@ void ModelManager::logPluginConfiguration() {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
     auto availablePlugins = availableDevices;
     for (const auto& plugin : availablePlugins) {
-        logOVPluginConfig([this, &plugin](const std::string& key) { return this->ieCore->get_property(plugin, key); },
+        logOVPluginConfig([this, &plugin](const std::string& key) {
+                OV_LOGGER("ov ::Core:{} get_property({}, {})", reinterpret_cast<void*>(this->ieCore.get()), plugin, key);
+                return this->ieCore->get_property(plugin, key); },
             std::string("OpenVINO Core plugin: ") + plugin,
             "");
     }

@@ -760,9 +760,11 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
         const auto& value = pair.second;
         SPDLOG_LOGGER_INFO(modelmanager_logger, "OVMS set plugin settings key: {}; value: {};", key, value.as<std::string>());
     }
-    logOVPluginConfig([this](const std::string& key) { return this->compiledModel->get_property(key); },
-        std::string("Compiled model: ") + getName(),
-        std::string("version: ") + std::to_string(getVersion()) + std::string("; target device: ") + targetDevice + "; ");
+    logOVPluginConfig([this](const std::string& key) {
+            OV_LOGGER("ov::CompiledModel:{} get_property({})", reinterpret_cast<void*>(this->model.get()), key);
+            return this->compiledModel->get_property(key); },
+        std::string("compiled model: ") + getName(),
+        std::string(" version: ") + std::to_string(getVersion()) + std::string("; target device: ") + targetDevice + ";");
     return StatusCode::OK;
 }
 
