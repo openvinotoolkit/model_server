@@ -83,7 +83,7 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "NIREQ")
             ("threads_per_ireq",
-                "workload threads per ireq",
+                "maximum workload threads per ireq",
                 cxxopts::value<uint32_t>()->default_value("2"),
                 "THREADS_PER_IREQ")
             // inference data
