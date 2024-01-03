@@ -22,6 +22,7 @@ import threading
 import tritonclient.grpc as grpcclient
 import numpy as np
 import ffmpeg
+import sys
 
 class Datatype:
     def dtype(self):
@@ -59,7 +60,7 @@ class FfmpegOutputBackend(OutputBackend):
 
 class CvOutputBackend(OutputBackend):
     def init(self, sink, fps, width, height):
-        self.cv_sink = cv2.VideoWriter(sink, cv2.VideoWriter_fourcc(*'avc1'), fps, (width,height))
+        self.cv_sink = cv2.VideoWriter(sink, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width,height))
     def write(self, frame):
         self.cv_sink.write(frame)
     def release(self):
@@ -157,7 +158,7 @@ class StreamClient:
             sent_frame_id, received_frame, timestamp = self.pq.get()
             if received_frame is None:
                 continue
-            if (sent_frame_id == displayed_frame_id) or (sent_frame_id > displayed_frame_id and self.exact is not True):
+            if (sent_frame_id == displayed_frame_id) or (self.exact is not True):
                 if isinstance(received_frame, str) and received_frame == "EOS":
                     break
                 self.output_backend.write(received_frame)

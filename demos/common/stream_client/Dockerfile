@@ -84,7 +84,7 @@ RUN git clone https://github.com/FFmpeg/FFmpeg.git /ffmpeg && \
     ./configure --enable-libvpl --toolchain=gcc-tsan --enable-gpl --enable-libvpx --enable-zlib  --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/lib64/pkgconfig --enable-libx264 --enable-libx265 --incdir=/usr/include && \
     make -j $JOBS && \
     make install
-RUN git clone https://github.com/opencv/opencv.git /opencv && \
+RUN git clone https://github.com/opencv/opencv.git /opencv --branch 4.8.1 && \
     cd /opencv && \
     mkdir build && \
     cd build && \
