@@ -19,7 +19,6 @@
 
 #include "../precision.hpp"
 #include "../python/ovms_py_tensor.hpp"
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
@@ -84,14 +83,13 @@ public:
             const auto& options = cc->Options<PytensorOvtensorConverterCalculatorOptions>();
             const auto tagOutputNameMap = options.tag_to_output_tensor_names();
             auto outputName = tagOutputNameMap.at("OVMS_PY_TENSOR").c_str();
-            pythonBackend.createOvmsPyTensor(
+            pythonBackend.createOvmsPyTensorWithCopy(
                 outputName,
                 const_cast<void*>((const void*)inputTensor.data()),
                 shape,
                 toString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type())),
                 inputTensor.get_byte_size(),
                 outputPyTensor);
-
             cc->Outputs().Tag("OVMS_PY_TENSOR").Add(outputPyTensor.release(), cc->InputTimestamp());
         } else {
             auto& inputTensor = cc->Inputs().Tag("OVMS_PY_TENSOR").Get<PyObjectWrapper<py::object>>();
@@ -101,8 +99,9 @@ public:
                 shape.push_back(dim);
             }
             auto data = reinterpret_cast<const void*>(inputTensor.getProperty<void*>("ptr"));
-            ov::Tensor* output = new ov::Tensor(precision, shape, const_cast<void*>(data));
-            cc->Outputs().Tag("OVTENSOR").Add(output, cc->InputTimestamp());
+            std::unique_ptr<ov::Tensor> output = std::make_unique<ov::Tensor>(precision, shape);
+            memcpy((*output).data(), const_cast<void*>(data), output->get_byte_size());
+            cc->Outputs().Tag("OVTENSOR").Add(output.release(), cc->InputTimestamp());
         }
         LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Process end";
         return absl::OkStatus();

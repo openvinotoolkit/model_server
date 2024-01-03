@@ -98,6 +98,7 @@ struct OvmsPyTensor {
 
     // Buffer protocol fields
     void* ptr;
+    std::unique_ptr<char[]> memoryOwnedPtr;
     std::vector<py::ssize_t> bufferShape;
     py::ssize_t ndim;
     std::string format;  // Struct-syntax buffer format
@@ -114,6 +115,9 @@ struct OvmsPyTensor {
 
     // Construct object from request contents
     OvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size);
+
+    // Construct object from request contents wit copying data
+    OvmsPyTensor(void* dataToCopy, const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size);
 
     // Construct object from buffer info
     OvmsPyTensor(const std::string& name, const py::buffer& buffer);

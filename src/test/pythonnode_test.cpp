@@ -540,7 +540,7 @@ public:
         tensor.numElements = numElements;
         tensor.size = numElements * sizeof(T);
         tensor.shape = std::vector<py::ssize_t>{1, numElements};
-        getPythonBackend()->createOvmsPyTensor(tensor.name, (void*)tensor.data, tensor.shape, tensor.datatype, tensor.size, tensor.pyTensor);
+        getPythonBackend()->createOvmsPyTensorWithCopy(tensor.name, (void*)tensor.data, tensor.shape, tensor.datatype, tensor.size, tensor.pyTensor);
         return tensor;
     }
 
