@@ -98,7 +98,7 @@ struct OvmsPyTensor {
 
     // Buffer protocol fields
     void* ptr;
-    std::unique_ptr<char[]> memoryOwnedPtr;
+    std::unique_ptr<char[]> allocatedPtr;
     std::vector<py::ssize_t> bufferShape;
     py::ssize_t ndim;
     std::string format;  // Struct-syntax buffer format

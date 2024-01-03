@@ -50,9 +50,9 @@ OvmsPyTensor::OvmsPyTensor(void* dataToCopy, const std::string& name, const std:
     datatype(datatype),
     userShape(shape),
     size(size),
-    memoryOwnedPtr(new char[size]) {
+    allocatedPtr(new char[size]) {
     INITIALIZE()
-    ptr = this->memoryOwnedPtr.get();
+    ptr = this->allocatedPtr.get();
     memcpy(ptr, dataToCopy, size);
 }
 
