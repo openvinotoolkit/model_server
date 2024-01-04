@@ -128,10 +128,6 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     if (!validationResult.ok()) {
         return validationResult;
     }
-    // TODO
-    // 3 validate 1<= outputs
-    // 4 validate 1<= inputs
-    // 5 validate no side_packets? push into executor check params vs expected side packets
     std::unique_lock lock(metadataMtx);
     auto status = createInputsInfo();
     if (!status.ok()) {

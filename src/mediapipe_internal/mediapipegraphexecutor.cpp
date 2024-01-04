@@ -917,9 +917,6 @@ Status MediapipeGraphExecutor::deserializeTimestampIfAvailable(const KFSRequest&
 
 static inline Status checkTimestamp(const KFSRequest& request, const Timestamp& timestamp) {
     if (!timestamp.IsRangeValue()) {
-        // TODO we could check it after automatic incrementing and disconnect from server side?
-        // to avoid unnecessary processing of next request. We would have to return information
-        // that it's last response
         SPDLOG_DEBUG("Timestamp not in range: {}; for request to: {};", timestamp.DebugString(), request.model_name());
         return Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, timestamp.DebugString());
     }

@@ -362,7 +362,7 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory) {
     if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
-        return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
+        return StatusCode::OK;
     }
 
     MediapipeGraphDefinition* mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
