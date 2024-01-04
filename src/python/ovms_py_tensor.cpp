@@ -55,7 +55,7 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, void* data, const std::vecto
         ownedDataPtr = std::make_unique<char[]>(size);
         memcpy(this->ownedDataPtr.get(), data, size);
         ptr = this->ownedDataPtr.get();
-    } else{
+    } else {
         ptr = data;
     }
 }
