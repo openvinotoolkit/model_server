@@ -88,9 +88,10 @@ const std::unordered_map<std::string, py::ssize_t> bufferFormatToItemsize{
 const std::string RAW_BINARY_FORMAT = "B";
 
 struct OvmsPyTensor {
-    private:
-        std::unique_ptr<char[]> ownedDataPtr;
-    public:
+private:
+    std::unique_ptr<char[]> ownedDataPtr;
+
+public:
     std::string name;
     // Can be one of Kserve datatypes (like UINT8, FP32 etc.) or totally custom like numpy (for example "<U83")
     std::string datatype;

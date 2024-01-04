@@ -51,12 +51,12 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, void* data, const std::vecto
             strides.insert(strides.begin(), stride);
         }
     }
-    if(copyData){
+    if (copyData) {
         ownedDataPtr = std::make_unique<char[]>(size);
         memcpy(this->ownedDataPtr.get(), data, size);
         ptr = this->ownedDataPtr.get();
-    }
-    else ptr = data;
+    } else
+        ptr = data;
 }
 
 OvmsPyTensor::OvmsPyTensor(const std::string& name, const py::buffer& buffer) :
