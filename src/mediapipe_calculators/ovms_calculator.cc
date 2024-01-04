@@ -20,7 +20,7 @@
 #include <openvino/openvino.hpp>
 
 #include "../ovms.h"           // NOLINT
-#include "../stringutils.hpp"  // TODO dispose
+#include "../stringutils.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
