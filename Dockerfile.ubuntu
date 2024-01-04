@@ -105,7 +105,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             libnuma-dev \
             libtbb-dev \
             libssl-dev \
-            nlohmann-json3-dev \
             python2 \
             python2-dev \
             python3-dev \
