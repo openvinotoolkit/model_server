@@ -353,14 +353,18 @@ Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* cont
 Status KFSInferenceServiceImpl::buildResponse(
     std::shared_ptr<ModelInstance> instance,
     KFSGetModelStatusResponse* response) {
-    response->set_ready(instance->getStatus().getState() == ModelVersionState::AVAILABLE);
+    bool isReady = instance->getStatus().getState() == ModelVersionState::AVAILABLE;
+    SPDLOG_DEBUG("Creating ModelReady response for model: {}; version: {}; ready: {}", instance->getName(), instance->getVersion(), isReady);
+    response->set_ready(isReady);
     return StatusCode::OK;
 }
 
 Status KFSInferenceServiceImpl::buildResponse(
     PipelineDefinition& pipelineDefinition,
     KFSGetModelStatusResponse* response) {
-    response->set_ready(pipelineDefinition.getStatus().isAvailable());
+    bool isReady = pipelineDefinition.getStatus().isAvailable();
+    SPDLOG_DEBUG("Creating ModelReady response for pipeline: {}; ready: {}", pipelineDefinition.getName(), isReady);
+    response->set_ready(isReady);
     return StatusCode::OK;
 }
 
@@ -368,7 +372,9 @@ Status KFSInferenceServiceImpl::buildResponse(
 Status KFSInferenceServiceImpl::buildResponse(
     MediapipeGraphDefinition& definition,
     KFSGetModelStatusResponse* response) {
-    response->set_ready(definition.getStatus().isAvailable());
+    bool isReady = definition.getStatus().isAvailable();
+    SPDLOG_DEBUG("Creating ModelReady response for mediapipe: {}; ready: {}", definition.getName(), isReady);
+    response->set_ready(isReady);
     return StatusCode::OK;
 }
 #endif
