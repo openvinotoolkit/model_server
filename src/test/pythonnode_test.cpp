@@ -1677,7 +1677,7 @@ public:
 };
 
 // Disabled until fixed in separate task
-TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooSmall_FP32) {
+TEST_F(PythonFlowTest, Negative_BufferTooSmall_FP32) {
     PythonFlowSymmetricIncrementFixture fixture;
     KFSRequest req;
     KFSResponse res;
@@ -1693,11 +1693,11 @@ TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooSmall_FP32) {
     inputMeta.add_shape(20);
 
     ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::UNKNOWN_ERROR);
+    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
 }
 
 // Disabled until fixed in separate task
-TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooLarge_FP32) {
+TEST_F(PythonFlowTest, Negative_BufferTooLarge_FP32) {
     PythonFlowSymmetricIncrementFixture fixture;
     KFSRequest req;
     KFSResponse res;
@@ -1712,11 +1712,11 @@ TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooLarge_FP32) {
     inputMeta.add_shape(1);
 
     ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::UNKNOWN_ERROR);
+    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
 }
 
 // Disabled until fixed in separate task
-TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooSmall_INT64) {
+TEST_F(PythonFlowTest, Negative_BufferTooSmall_INT64) {
     PythonFlowSymmetricIncrementFixture fixture;
     KFSRequest req;
     KFSResponse res;
@@ -1732,11 +1732,11 @@ TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooSmall_INT64) {
     inputMeta.add_shape(20);
 
     ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::UNKNOWN_ERROR);
+    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
 }
 
 // Disabled until fixed in separate task
-TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooLarge_INT64) {
+TEST_F(PythonFlowTest, Negative_BufferTooLarge_INT64) {
     PythonFlowSymmetricIncrementFixture fixture;
     KFSRequest req;
     KFSResponse res;
@@ -1751,11 +1751,11 @@ TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooLarge_INT64) {
     inputMeta.add_shape(1);
 
     ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::UNKNOWN_ERROR);
+    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
 }
 
 // Disabled until fixed in separate task
-TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooSmall_FP16) {
+TEST_F(PythonFlowTest, Negative_BufferTooSmall_FP16) {
     PythonFlowSymmetricIncrementFixture fixture;
     KFSRequest req;
     KFSResponse res;
@@ -1771,11 +1771,11 @@ TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooSmall_FP16) {
     inputMeta.add_shape(20);
 
     ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::UNKNOWN_ERROR);
+    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
 }
 
 // Disabled until fixed in separate task
-TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooLarge_FP16) {
+TEST_F(PythonFlowTest, Negative_BufferTooLarge_FP16) {
     PythonFlowSymmetricIncrementFixture fixture;
     KFSRequest req;
     KFSResponse res;
@@ -1790,7 +1790,7 @@ TEST_F(PythonFlowTest, DISABLED_Negative_BufferTooLarge_FP16) {
     inputMeta.add_shape(1);
 
     ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::UNKNOWN_ERROR);
+    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
 }
 
 // Metadata shape is ignored for custom types.
