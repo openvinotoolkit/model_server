@@ -36,7 +36,7 @@ echo "Number of warnings in tests about not direct includes:" ${NO_WARNINGS_TEST
 echo "Number of warnings in tests about not used: " ${NO_WARNINGS_TEST_NOTUSED}
 
 errors=""
-if [ ${NO_WARNINGS_FORWARD} -gt 7 ]; then
+if [ ${NO_WARNINGS_FORWARD} -gt 6 ]; then
     errors+="Failed due to not using forward declarations where possible: ${NO_WARNINGS_FORWARD}"$'\n'
 fi
 if [ ${NO_WARNINGS_DIRECT} -gt 19 ]; then
@@ -54,7 +54,7 @@ fi
 if [ ${NO_WARNINGS_TEST_NOTUSED} -gt 0 ]; then
     errors+="Failed probably due to unnecessary forward includes: ${NO_WARNINGS_TEST_NOTUSED}"$'\n'
 fi
-if [ ${NO_WARNINGS} -gt  160 ]; then
+if [ ${NO_WARNINGS} -gt  155 ]; then
     errors+="Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST} -gt  52 ]; then

@@ -34,7 +34,7 @@ extern std::shared_ptr<spdlog::logger> capi_logger;
 #if (MEDIAPIPE_DISABLE != 0)
 extern std::shared_ptr<spdlog::logger> mediapipe_logger;
 #endif
-#if COMPILATION_MODE == dbg
+#if (OV_TRACING == 1)
 extern std::shared_ptr<spdlog::logger> ov_logger;
 #define OV_LOGGER(...) SPDLOG_LOGGER_TRACE(ov_logger, __VA_ARGS__)
 #else

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "mediapipefactory.hpp"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <set>
@@ -33,23 +34,25 @@
 #include "../logging.hpp"
 #include "../modelmanager.hpp"
 #include "../status.hpp"
+#include "../stringutils.hpp"
 #include "mediapipe/framework/deps/registration.h"
 #include "mediapipegraphdefinition.hpp"
 
 namespace ovms {
 
-void LogRegisteredNames(std::unordered_set<std::string> registrySet, std::string registryName) {
-    for (auto name : registrySet) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Registered {}: {}", registryName, name);
-    }
+static void logRegisteredNames(std::unordered_set<std::string> registrySet, std::string registryName) {
+    std::vector<std::string> names(registrySet.begin(), registrySet.end());
+    std::sort(names.begin(), names.end());
+    auto result = joins(names, ", ");
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Registered {}: {}\n", registryName, result);
 }
 
 MediapipeFactory::MediapipeFactory(PythonBackend* pythonBackend) {
     this->pythonBackend = pythonBackend;
-    LogRegisteredNames(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), "Calculator");
-    LogRegisteredNames(mediapipe::SubgraphRegistry::GetRegisteredNames(), "Subgraph");
-    LogRegisteredNames(mediapipe::InputStreamHandlerRegistry::GetRegisteredNames(), "InputStreamHandler");
-    LogRegisteredNames(mediapipe::OutputStreamHandlerRegistry::GetRegisteredNames(), "OutputStreamHandler");
+    logRegisteredNames(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), "Calculators");
+    logRegisteredNames(mediapipe::SubgraphRegistry::GetRegisteredNames(), "Subgraphs");
+    logRegisteredNames(mediapipe::InputStreamHandlerRegistry::GetRegisteredNames(), "InputStreamHandlers");
+    logRegisteredNames(mediapipe::OutputStreamHandlerRegistry::GetRegisteredNames(), "OutputStreamHandlers");
 }
 
 Status MediapipeFactory::createDefinition(const std::string& pipelineName,
