@@ -205,6 +205,7 @@ std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(st
     Mode batchingMode = FIXED;
     std::optional<Dimension> effectiveBatchSize = std::nullopt;
     if (configBatchSize == "auto") {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Batch size auto is deprecated. Use model dynamic shapes instead. Check (https://docs.openvino.ai/2023.2/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model)");
         batchingMode = AUTO;
     } else if (configBatchSize == "") {
         // do nothing
@@ -452,6 +453,7 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
 
 Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
     if (str == "auto") {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Shape auto is deprecated. Use model dynamic shapes instead. Check (https://docs.openvino.ai/2023.2/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model)");
         shapeInfo.shapeMode = AUTO;
         return StatusCode::OK;
     }
