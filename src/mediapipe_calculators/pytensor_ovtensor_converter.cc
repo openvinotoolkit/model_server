@@ -35,12 +35,12 @@ using namespace ovms;
 
 namespace mediapipe {
 
-class PytensorOvtensorConverterCalculator : public CalculatorBase {
+class PyTensorOvTensorConverterCalculator : public CalculatorBase {
     mediapipe::Timestamp outputTimestamp;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
-        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->GetNodeName() << "] GetContract start";
+        LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->GetNodeName() << "] GetContract start";
         RET_CHECK(cc->Inputs().GetTags().size() == 1);
         RET_CHECK(cc->Outputs().GetTags().size() == 1);
         RET_CHECK((*(cc->Inputs().GetTags().begin()) == "OVTENSOR" && *(cc->Outputs().GetTags().begin()) == "OVMS_PY_TENSOR") || (*(cc->Inputs().GetTags().begin()) == "OVMS_PY_TENSOR" && *(cc->Outputs().GetTags().begin()) == "OVTENSOR"));
@@ -52,24 +52,24 @@ public:
             cc->Outputs().Tag("OVTENSOR").Set<ov::Tensor>();
         }
 
-        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->GetNodeName() << "] GetContract end";
+        LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->GetNodeName() << "] GetContract end";
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Close";
+        LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Close";
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
-        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Open start";
+        LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Open start";
         outputTimestamp = mediapipe::Timestamp(mediapipe::Timestamp::Unset());
-        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Open end";
+        LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Open end";
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Process start";
+        LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Process start";
         py::gil_scoped_acquire acquire;
         if (*(cc->Inputs().GetTags().begin()) == "OVTENSOR") {
             auto& inputTensor = cc->Inputs().Tag("OVTENSOR").Get<ov::Tensor>();
@@ -80,16 +80,17 @@ public:
             for (const auto& dim : inputTensor.get_shape()) {
                 shape.push_back(dim);
             }
-            const auto& options = cc->Options<PytensorOvtensorConverterCalculatorOptions>();
+            const auto& options = cc->Options<PyTensorOvTensorConverterCalculatorOptions>();
             const auto tagOutputNameMap = options.tag_to_output_tensor_names();
             auto outputName = tagOutputNameMap.at("OVMS_PY_TENSOR").c_str();
-            pythonBackend.createOvmsPyTensorWithCopy(
+            pythonBackend.createOvmsPyTensor(
                 outputName,
                 const_cast<void*>((const void*)inputTensor.data()),
                 shape,
                 toString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type())),
                 inputTensor.get_byte_size(),
-                outputPyTensor);
+                outputPyTensor,
+                true);
             cc->Outputs().Tag("OVMS_PY_TENSOR").Add(outputPyTensor.release(), cc->InputTimestamp());
         } else {
             auto& inputTensor = cc->Inputs().Tag("OVMS_PY_TENSOR").Get<PyObjectWrapper<py::object>>();
@@ -103,10 +104,10 @@ public:
             memcpy((*output).data(), const_cast<void*>(data), output->get_byte_size());
             cc->Outputs().Tag("OVTENSOR").Add(output.release(), cc->InputTimestamp());
         }
-        LOG(INFO) << "PytensorOvtensorConverterCalculator [Node: " << cc->NodeName() << "] Process end";
+        LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Process end";
         return absl::OkStatus();
     }
 };
 
-REGISTER_CALCULATOR(PytensorOvtensorConverterCalculator);
+REGISTER_CALCULATOR(PyTensorOvTensorConverterCalculator);
 }  // namespace mediapipe

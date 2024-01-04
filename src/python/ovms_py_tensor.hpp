@@ -88,6 +88,9 @@ const std::unordered_map<std::string, py::ssize_t> bufferFormatToItemsize{
 const std::string RAW_BINARY_FORMAT = "B";
 
 struct OvmsPyTensor {
+    private:
+        std::unique_ptr<char[]> ownedDataPtr;
+    public:
     std::string name;
     // Can be one of Kserve datatypes (like UINT8, FP32 etc.) or totally custom like numpy (for example "<U83")
     std::string datatype;
@@ -99,7 +102,6 @@ struct OvmsPyTensor {
 
     // Buffer protocol fields
     void* ptr;
-    std::unique_ptr<char[]> allocatedPtr;
     std::vector<py::ssize_t> bufferShape;
     py::ssize_t ndim;
     std::string format;  // Struct-syntax buffer format
@@ -115,10 +117,7 @@ struct OvmsPyTensor {
     OvmsPyTensor() = delete;
 
     // Construct object from request contents
-    OvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size);
-
-    // Construct object from request contents wit copying data
-    OvmsPyTensor(void* dataToCopy, const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size);
+    OvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copyData);
 
     // Construct object from buffer info
     OvmsPyTensor(const std::string& name, const py::buffer& buffer);

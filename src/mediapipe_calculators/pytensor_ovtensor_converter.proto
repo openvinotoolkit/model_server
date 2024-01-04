@@ -19,11 +19,11 @@ package mediapipe;
 
 import "mediapipe/framework/calculator.proto";
 
-message PytensorOvtensorConverterCalculatorOptions {
+message PyTensorOvTensorConverterCalculatorOptions {
   extend mediapipe.CalculatorOptions {
     // https://github.com/google/mediapipe/issues/634 have to be unique in app
     // no rule to obtain this
-    optional PytensorOvtensorConverterCalculatorOptions ext = 113473749;
+    optional PyTensorOvTensorConverterCalculatorOptions ext = 113473749;
     }
     map<string, string> tag_to_output_tensor_names = 1;
 }

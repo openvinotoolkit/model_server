@@ -26,19 +26,11 @@
 namespace py = pybind11;
 using namespace ovms;
 
-OvmsPyTensor::OvmsPyTensor(void* dataToCopy, const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size) :
-    OvmsPyTensor(name, nullptr, shape, datatype, size) {
-    allocatedPtr = std::make_unique<char[]>(size);
-    ptr = this->allocatedPtr.get();
-    memcpy(ptr, dataToCopy, size);
-}
-
-OvmsPyTensor::OvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size) :
+OvmsPyTensor::OvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copyData) :
     name(name),
     datatype(datatype),
     userShape(shape),
-    size(size),
-    ptr(ptr) {
+    size(size) {
     // Map datatype to struct syntax format if it's known. Otherwise assume raw binary (UINT8 type)
     std::cout << "Calling OvmsPyTensor constructor from data" << std::endl;
     auto it = datatypeToBufferFormat.find(datatype);
@@ -59,6 +51,12 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, void* ptr, const std::vector
             strides.insert(strides.begin(), stride);
         }
     }
+    if(copyData){
+        ownedDataPtr = std::make_unique<char[]>(size);
+        memcpy(this->ownedDataPtr.get(), data, size);
+        ptr = this->ownedDataPtr.get();
+    }
+    else ptr = data;
 }
 
 OvmsPyTensor::OvmsPyTensor(const std::string& name, const py::buffer& buffer) :

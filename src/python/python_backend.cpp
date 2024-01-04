@@ -54,10 +54,10 @@ PythonBackend::~PythonBackend() {
 }
 
 bool PythonBackend::createOvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape,
-    const std::string& datatype, py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor) {
+    const std::string& datatype, py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor, bool copyData) {
     py::gil_scoped_acquire acquire;
     try {
-        py::object ovmsPyTensor = tensorClass->attr("create_from_data")(name, ptr, shape, datatype, size);
+        py::object ovmsPyTensor = tensorClass->attr("create_from_data")(name, ptr, shape, datatype, size, copyData);
         outTensor = std::make_unique<PyObjectWrapper<py::object>>(ovmsPyTensor);
         return true;
     } catch (const pybind11::error_already_set& e) {
@@ -65,22 +65,6 @@ bool PythonBackend::createOvmsPyTensor(const std::string& name, void* ptr, const
         return false;
     } catch (std::exception& e) {
         SPDLOG_DEBUG("PythonBackend::createOvmsPyTensor - Error: {}", e.what());
-        return false;
-    }
-}
-
-bool PythonBackend::createOvmsPyTensorWithCopy(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape,
-    const std::string& datatype, py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor) {
-    py::gil_scoped_acquire acquire;
-    try {
-        py::object ovmsPyTensor = tensorClass->attr("create_from_data_with_copy")(name, ptr, shape, datatype, size);
-        outTensor = std::make_unique<PyObjectWrapper<py::object>>(ovmsPyTensor);
-        return true;
-    } catch (const pybind11::error_already_set& e) {
-        SPDLOG_DEBUG("PythonBackend::createOvmsPyTensorWithCopy - Py Error: {}", e.what());
-        return false;
-    } catch (std::exception& e) {
-        SPDLOG_DEBUG("PythonBackend::createOvmsPyTensorWithCopy - Error: {}", e.what());
         return false;
     }
 }
