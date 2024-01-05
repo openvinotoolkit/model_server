@@ -646,6 +646,187 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_WrongIndex) {
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
+
+TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_BackEdgeFalse) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "OVMS_PY_TENSOR:input"
+    output_stream: "OVMS_PY_TENSOR:output"
+        node {
+            name: "pythonNode"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT:input"
+            input_stream: "LOOPBACK:loopback"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: false  # should be true
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                    [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                        sync_set {
+                            tag_index: "LOOPBACK:0"
+                        }
+                    }
+                }
+            }
+            output_stream: "OUTPUT:output"
+            output_stream: "LOOPBACK:loopback"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_Missing) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "OVMS_PY_TENSOR:input"
+    output_stream: "OVMS_PY_TENSOR:output"
+        node {
+            name: "pythonNode"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT:input"
+            input_stream: "LOOPBACK:loopback"
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                    [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                        sync_set {
+                            tag_index: "LOOPBACK:0"
+                        }
+                    }
+                }
+            }
+            output_stream: "OUTPUT:output"
+            output_stream: "LOOPBACK:loopback"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+// TODO: Normal cycle, LOOPBACK is never fed
+TEST_F(PythonFlowTest, DISABLED_PythonNodeLoopback_SyncSet_Missing) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "OVMS_PY_TENSOR:input"
+    output_stream: "OVMS_PY_TENSOR:output"
+        node {
+            name: "pythonNode"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT:input"
+            input_stream: "LOOPBACK:loopback"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            output_stream: "OUTPUT:output"
+            output_stream: "LOOPBACK:loopback"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);  // should not be ok, but MP does not validate it
+    ASSERT_NE(pipeline, nullptr);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    req.set_model_name("mediaDummy");
+
+    const std::vector<float> data{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, -5.0f};
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden below*/}, data, false);
+
+    ServableMetricReporter* defaultReporter{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::OK);  // hangs
+}
+TEST_F(PythonFlowTest, PythonNodeLoopback_Correct) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "OVMS_PY_TENSOR:input"
+    output_stream: "OVMS_PY_TENSOR:output"
+        node {
+            name: "pythonNode"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT:input"
+            input_stream: "LOOPBACK:loopback"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                    [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                        sync_set {
+                            tag_index: "LOOPBACK:0"
+                        }
+                    }
+                }
+            }
+            output_stream: "OUTPUT:output"
+            output_stream: "LOOPBACK:loopback"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);  // should not be ok, but MP does not validate it
+    ASSERT_NE(pipeline, nullptr);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    req.set_model_name("mediaDummy");
+
+    const std::vector<float> data{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, -5.0f};
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden below*/}, data, false);
+
+    ServableMetricReporter* defaultReporter{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::OK);
+
+    checkDummyResponse("output", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+}
 // Wrapper on the OvmsPyTensor of datatype FP32 and shape (1, num_elements)
 // where num_elements is the size of C++ float array. See createTensor static method.
 template <typename T>
