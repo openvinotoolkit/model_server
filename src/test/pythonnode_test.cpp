@@ -1676,121 +1676,49 @@ public:
     }
 };
 
-// Disabled until fixed in separate task
-TEST_F(PythonFlowTest, Negative_BufferTooSmall_FP32) {
+const std::vector<std::string> knownDatatypes{
+    "BOOL", "UINT8", "UINT16", "UINT32", "UINT64", "INT8",
+    "INT16", "INT32", "INT64", "FP16", "FP32", "FP64"};
+
+TEST_F(PythonFlowTest, Negative_BufferTooSmall) {
     PythonFlowSymmetricIncrementFixture fixture;
-    KFSRequest req;
-    KFSResponse res;
+    for (const std::string& datatype : knownDatatypes) {
+        KFSRequest req;
+        KFSResponse res;
 
-    req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, 1}, ovms::Precision::FP32}, {}, false);
+        req.set_model_name("mediaDummy");
+        prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const std::string>{{1, 1}, datatype}, {}, false);
 
-    // Make the metdata larger than actual buffer
-    auto& inputMeta = *req.mutable_inputs()->begin();
-    inputMeta.clear_shape();
-    inputMeta.add_shape(1);
-    inputMeta.add_shape(1000000);
-    inputMeta.add_shape(20);
+        // Make the metdata larger than actual buffer
+        auto& inputMeta = *req.mutable_inputs()->begin();
+        inputMeta.clear_shape();
+        inputMeta.add_shape(1);
+        inputMeta.add_shape(1000000);
+        inputMeta.add_shape(20);
 
-    ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
+        ServableMetricReporter* defaultReporter{nullptr};
+        ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
+    }
 }
 
-// Disabled until fixed in separate task
-TEST_F(PythonFlowTest, Negative_BufferTooLarge_FP32) {
+TEST_F(PythonFlowTest, Negative_BufferTooLarge) {
     PythonFlowSymmetricIncrementFixture fixture;
-    KFSRequest req;
-    KFSResponse res;
+    for (const std::string& datatype : knownDatatypes) {
+        KFSRequest req;
+        KFSResponse res;
 
-    req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, 4}, ovms::Precision::FP32}, {}, false);
+        req.set_model_name("mediaDummy");
+        prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const std::string>{{1, 4}, datatype}, {}, false);
 
-    // Make the metdata smaller than actual buffer
-    auto& inputMeta = *req.mutable_inputs()->begin();
-    inputMeta.clear_shape();
-    inputMeta.add_shape(1);
-    inputMeta.add_shape(1);
+        // Make the metdata smaller than actual buffer
+        auto& inputMeta = *req.mutable_inputs()->begin();
+        inputMeta.clear_shape();
+        inputMeta.add_shape(1);
+        inputMeta.add_shape(1);
 
-    ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
-}
-
-// Disabled until fixed in separate task
-TEST_F(PythonFlowTest, Negative_BufferTooSmall_INT64) {
-    PythonFlowSymmetricIncrementFixture fixture;
-    KFSRequest req;
-    KFSResponse res;
-
-    req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, 1}, ovms::Precision::I64}, {}, false);
-
-    // Make the metdata larger than actual buffer
-    auto& inputMeta = *req.mutable_inputs()->begin();
-    inputMeta.clear_shape();
-    inputMeta.add_shape(1);
-    inputMeta.add_shape(1000000);
-    inputMeta.add_shape(20);
-
-    ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
-}
-
-// Disabled until fixed in separate task
-TEST_F(PythonFlowTest, Negative_BufferTooLarge_INT64) {
-    PythonFlowSymmetricIncrementFixture fixture;
-    KFSRequest req;
-    KFSResponse res;
-
-    req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, 100}, ovms::Precision::I64}, {}, false);
-
-    // Make the metdata smaller than actual buffer
-    auto& inputMeta = *req.mutable_inputs()->begin();
-    inputMeta.clear_shape();
-    inputMeta.add_shape(1);
-    inputMeta.add_shape(1);
-
-    ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
-}
-
-// Disabled until fixed in separate task
-TEST_F(PythonFlowTest, Negative_BufferTooSmall_FP16) {
-    PythonFlowSymmetricIncrementFixture fixture;
-    KFSRequest req;
-    KFSResponse res;
-
-    req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, 1}, ovms::Precision::FP16}, {}, false);
-
-    // Make the metdata larger than actual buffer
-    auto& inputMeta = *req.mutable_inputs()->begin();
-    inputMeta.clear_shape();
-    inputMeta.add_shape(1);
-    inputMeta.add_shape(1000000);
-    inputMeta.add_shape(20);
-
-    ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
-}
-
-// Disabled until fixed in separate task
-TEST_F(PythonFlowTest, Negative_BufferTooLarge_FP16) {
-    PythonFlowSymmetricIncrementFixture fixture;
-    KFSRequest req;
-    KFSResponse res;
-
-    req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, 100}, ovms::Precision::FP16}, {}, false);
-
-    // Make the metdata smaller than actual buffer
-    auto& inputMeta = *req.mutable_inputs()->begin();
-    inputMeta.clear_shape();
-    inputMeta.add_shape(1);
-    inputMeta.add_shape(1);
-
-    ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
+        ServableMetricReporter* defaultReporter{nullptr};
+        ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
+    }
 }
 
 // Metadata shape is ignored for custom types.
