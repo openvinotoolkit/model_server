@@ -168,10 +168,19 @@ cc_shared_library(
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 
 mediapipe_proto_library(
-    name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-    srcs = ["mediapipe_calculators/ovmscalculator.proto",
-            "mediapipe_calculators/python_executor_calculator_options.proto",
+    name = "pythonexecutorcalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["mediapipe_calculators/python_executor_calculator_options.proto",
             "mediapipe_calculators/pytensor_ovtensor_converter.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
+)
+
+mediapipe_proto_library(
+    name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["mediapipe_calculators/ovmscalculator.proto",],
     visibility = ["//visibility:public"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
@@ -445,7 +454,7 @@ cc_library(
         "//src/kfserving_api:kfserving_api_cpp",
         ] + select({
             "//conditions:default": [
-                "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+                "//src:pythonexecutorcalculatoroptions_cc_proto", # pythonexecutorcalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
                 "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
                 "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
                 "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
@@ -883,10 +892,7 @@ cc_test(
                 "test/mediapipeflow_test.cpp",
                 "test/mediapipe_framework_test.cpp",
                 "test/mediapipe_validation_test.cpp",
-                "test/mediapipe/ovms_kfs_calculator.cc",
-                "test/mediapipe/ovms_image_input_calculator.cc",
                 "test/streaming_test.cpp",
-                "mediapipe_calculators/ovms_calculator.cc",
             ],
             "//src:disable_mediapipe" : [],
         }) + select({
