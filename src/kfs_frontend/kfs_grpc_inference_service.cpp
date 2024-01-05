@@ -116,6 +116,7 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
         auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName(name);
         if (!pipelineDefinition) {
 #if (MEDIAPIPE_DISABLE == 0)
+            SPDLOG_DEBUG("ModelReady requested pipeline {} is missing, trying to find mediapipe with such name", name);
             auto mediapipeGraphDefinition = manager.getMediapipeFactory().findDefinitionByName(name);
             if (!mediapipeGraphDefinition) {
                 return StatusCode::MODEL_NAME_MISSING;
@@ -191,11 +192,13 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     const auto& versionString = request->version();
 
     auto model = this->modelManager.findModelByName(name);
+    SPDLOG_DEBUG("ModelMetadata requested name: {}, version: {}", name, versionString);
     if (model == nullptr) {
         SPDLOG_DEBUG("GetModelMetadata: Model {} is missing, trying to find pipeline with such name", name);
         auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(name);
         if (!pipelineDefinition) {
 #if (MEDIAPIPE_DISABLE == 0)
+            SPDLOG_DEBUG("GetModelMetadata: Pipeline {} is missing, trying to find mediapipe with such name", name);
             auto mediapipeGraphDefinition = this->modelManager.getMediapipeFactory().findDefinitionByName(name);
             if (!mediapipeGraphDefinition) {
                 return StatusCode::MODEL_NAME_MISSING;
@@ -284,6 +287,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
     std::unique_ptr<ovms::Pipeline> pipelinePtr;
 
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    SPDLOG_DEBUG("ModelInfer requested name: {}, version: {}", request->model_name(), request->model_version());
     auto status = getModelInstance(request, modelInstance, modelInstanceUnloadGuard);
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_name());
@@ -349,14 +353,18 @@ Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* cont
 Status KFSInferenceServiceImpl::buildResponse(
     std::shared_ptr<ModelInstance> instance,
     KFSGetModelStatusResponse* response) {
-    response->set_ready(instance->getStatus().getState() == ModelVersionState::AVAILABLE);
+    bool isReady = instance->getStatus().getState() == ModelVersionState::AVAILABLE;
+    SPDLOG_DEBUG("Creating ModelReady response for model: {}; version: {}; ready: {}", instance->getName(), instance->getVersion(), isReady);
+    response->set_ready(isReady);
     return StatusCode::OK;
 }
 
 Status KFSInferenceServiceImpl::buildResponse(
     PipelineDefinition& pipelineDefinition,
     KFSGetModelStatusResponse* response) {
-    response->set_ready(pipelineDefinition.getStatus().isAvailable());
+    bool isReady = pipelineDefinition.getStatus().isAvailable();
+    SPDLOG_DEBUG("Creating ModelReady response for pipeline: {}; ready: {}", pipelineDefinition.getName(), isReady);
+    response->set_ready(isReady);
     return StatusCode::OK;
 }
 
@@ -364,7 +372,9 @@ Status KFSInferenceServiceImpl::buildResponse(
 Status KFSInferenceServiceImpl::buildResponse(
     MediapipeGraphDefinition& definition,
     KFSGetModelStatusResponse* response) {
-    response->set_ready(definition.getStatus().isAvailable());
+    bool isReady = definition.getStatus().isAvailable();
+    SPDLOG_DEBUG("Creating ModelReady response for mediapipe: {}; ready: {}", definition.getName(), isReady);
+    response->set_ready(isReady);
     return StatusCode::OK;
 }
 #endif
