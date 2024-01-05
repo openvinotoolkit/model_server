@@ -83,7 +83,7 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "NIREQ")
             ("threads_per_ireq",
-                "workload threads per ireq",
+                "maximum workload threads per ireq",
                 cxxopts::value<uint32_t>()->default_value("2"),
                 "THREADS_PER_IREQ")
             // inference data
@@ -443,7 +443,7 @@ int main(int argc, char** argv) {
     size_t nireq = cliparser.result->operator[]("nireq").as<uint32_t>();
     size_t niter = cliparser.result->operator[]("niter").as<uint32_t>();
     size_t threadsPerIreq = cliparser.result->operator[]("threads_per_ireq").as<uint32_t>();
-    size_t threadCount = nireq * threadsPerIreq;
+    size_t threadCount = std::min(nireq * threadsPerIreq, niter);
     size_t niterPerThread = niter / threadCount;
 
     auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
