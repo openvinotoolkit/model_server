@@ -120,6 +120,20 @@ public:
     }
 };
 
+class MediapipePyTensorOvTensorConverterTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_pytensor_ovtensor_converter.json");
+    }
+};
+
+class MediapipeOvTensorPyTensorConverterTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_ovtensor_pytensor_converter.json");
+    }
+};
+
 class MediapipeTfLiteTensorTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -153,6 +167,76 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipePyTensorOvTensorConverterTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediapipePyTensorOvTensorConverter";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{
+        {"in", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    ASSERT_EQ(response.model_name(), "mediapipePyTensorOvTensorConverter");
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:"
+                                                         << "out";
+    const auto& output = *response.outputs().begin();
+    const std::string& content = response.raw_output_contents(0);
+
+    ASSERT_EQ(content.size(), 10 * sizeof(float));
+    ASSERT_EQ(output.shape_size(), 2);
+    ASSERT_EQ(output.shape(0), 1);
+    ASSERT_EQ(output.shape(1), 10);
+    ASSERT_EQ(output.datatype(), "FP32");
+
+    const float* actualOutput = (const float*)content.data();
+    float* expectedOutput = requestData1.data();
+    const int dataLengthToCheck = 10 * sizeof(float);
+    EXPECT_EQ(actualOutput[0], expectedOutput[0]);
+    EXPECT_EQ(0, std::memcmp(actualOutput, expectedOutput, dataLengthToCheck))
+        << readableError(expectedOutput, actualOutput, dataLengthToCheck / sizeof(float));
+}
+
+TEST_F(MediapipeOvTensorPyTensorConverterTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediapipeOvTensorPyTensorConverter";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{
+        {"in", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    ASSERT_EQ(response.model_name(), "mediapipeOvTensorPyTensorConverter");
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:"
+                                                         << "out";
+    const auto& output = *response.outputs().begin();
+    const std::string& content = response.raw_output_contents(0);
+
+    ASSERT_EQ(content.size(), 10 * sizeof(float));
+    ASSERT_EQ(output.shape_size(), 2);
+    ASSERT_EQ(output.shape(0), 1);
+    ASSERT_EQ(output.shape(1), 10);
+
+    const float* actualOutput = (const float*)content.data();
+    float* expectedOutput = requestData1.data();
+    const int dataLengthToCheck = 10 * sizeof(float);
+    EXPECT_EQ(actualOutput[0], expectedOutput[0]);
+    EXPECT_EQ(0, std::memcmp(actualOutput, expectedOutput, dataLengthToCheck))
+        << readableError(expectedOutput, actualOutput, dataLengthToCheck / sizeof(float));
 }
 
 TEST_F(MediapipeTFTest, Passthrough) {

@@ -35,8 +35,8 @@ PYBIND11_MODULE(pyovms, m) {
                 true);  // Underlying buffer is readonly
         })
         .def(py::init<std::string, const py::buffer&>())
-        .def_static("create_from_data", [](const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size) {
-            return std::make_unique<OvmsPyTensor>(name, ptr, shape, datatype, size);
+        .def_static("create_from_data", [](const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copy) {
+            return std::make_unique<OvmsPyTensor>(name, ptr, shape, datatype, size, copy);
         })
         .def_readonly("name", &OvmsPyTensor::name)
         .def_readonly("ptr", &OvmsPyTensor::ptr)

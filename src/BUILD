@@ -170,7 +170,8 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["mediapipe_calculators/ovmscalculator.proto",
-            "mediapipe_calculators/python_executor_calculator_options.proto"],
+            "mediapipe_calculators/python_executor_calculator_options.proto",
+            "mediapipe_calculators/pytensor_ovtensor_converter.proto"],
     visibility = ["//visibility:public"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
@@ -435,6 +436,7 @@ cc_library(
                     "pythoninterpretermodule.hpp",
                     "pythoninterpretermodule.cpp",
                     "mediapipe_calculators/python_executor_calculator.cc",
+                    "mediapipe_calculators/pytensor_ovtensor_converter.cc",
                 ],
             "//src:disable_python": []
         }),
@@ -937,6 +939,7 @@ cc_test(
         "test/mediapipe/config_standard_add.json",
         "test/mediapipe/config_standard_dummy.json",
         "test/mediapipe/graph_two_inputs_model.pbtxt",
+        "test/mediapipe/config_mediapipe_pytensor_ovtensor_converter.json",
         "test/mediapipe/graphadd.pbtxt",
         "test/mediapipe/graphaddadapterfull.pbtxt",
         "test/mediapipe/graphdummy_tf.pbtxt",
