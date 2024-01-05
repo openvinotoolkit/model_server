@@ -1564,12 +1564,12 @@ TEST_F(PythonFlowTest, Positive_BufferTooSmall_Custom) {
 
     // The input data is treated as uint8 and each byte gets +2 addition.
     uint8_t expectedData[kDataLengthToCheck];
-    std::memcpy(expectedData, data.data(), dataLengthToCheck);
+    std::memcpy(expectedData, data.data(), kDataLengthToCheck);
     for (size_t i = 0; i < kDataLengthToCheck; i++) {
         expectedData[i] += 2;
     }
 
-    EXPECT_EQ(0, std::memcmp(content->data(), expectedData, dataLengthToCheck))
+    EXPECT_EQ(0, std::memcmp(content->data(), expectedData, kDataLengthToCheck))
         << readableError<uint8_t>(expectedData, (unsigned char*)content->data(), kDataLengthToCheck);
 }
 
