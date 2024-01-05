@@ -19,7 +19,7 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../ovms.h"           // NOLINT
+#include "../ovms.h"  // NOLINT
 #include "../stringutils.hpp"
 
 #pragma GCC diagnostic push
