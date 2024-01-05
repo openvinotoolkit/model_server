@@ -1550,7 +1550,7 @@ TEST_F(PythonFlowTest, Positive_BufferTooSmall_Custom) {
     ServableMetricReporter* defaultReporter{nullptr};
     ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::OK);
 
-    constexpr const int kDataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * sizeof(float);
+    constexpr const size_t dataLength = DUMMY_MODEL_OUTPUT_SIZE * sizeof(float);
 
     ASSERT_EQ(res.model_name(), "mediaDummy");
     ASSERT_EQ(res.outputs_size(), 1);
@@ -1558,19 +1558,19 @@ TEST_F(PythonFlowTest, Positive_BufferTooSmall_Custom) {
     // Finding the output with given name
     const auto& output_proto = *res.outputs().begin();
     ASSERT_EQ(output_proto.shape_size(), 1);
-    ASSERT_EQ(output_proto.shape(0), kDataLengthToCheck);
+    ASSERT_EQ(output_proto.shape(0), dataLength);
     const auto* content = res.mutable_raw_output_contents(0);
-    ASSERT_EQ(content->size(), kDataLengthToCheck);
+    ASSERT_EQ(content->size(), dataLength);
 
     // The input data is treated as uint8 and each byte gets +2 addition.
-    uint8_t expectedData[kDataLengthToCheck];
-    std::memcpy(expectedData, data.data(), kDataLengthToCheck);
-    for (size_t i = 0; i < kDataLengthToCheck; i++) {
+    std::vector<uint8_t> expectedData(dataLength);
+    std::memcpy(expectedData.data(), data.data(), dataLength);
+    for (size_t i = 0; i < dataLength; i++) {
         expectedData[i] += 2;
     }
 
-    EXPECT_EQ(0, std::memcmp(content->data(), expectedData, kDataLengthToCheck))
-        << readableError<uint8_t>(expectedData, (unsigned char*)content->data(), kDataLengthToCheck);
+    EXPECT_EQ(0, std::memcmp(content->data(), expectedData.data(), dataLength))
+        << readableError<uint8_t>(expectedData.data(), (unsigned char*)content->data(), dataLength);
 }
 
 // Metadata shape is ignored for custom types.
@@ -1595,7 +1595,7 @@ TEST_F(PythonFlowTest, Positive_BufferTooLarge_Custom) {
     ServableMetricReporter* defaultReporter{nullptr};
     ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::OK);
 
-    constexpr const int kDataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * sizeof(float);
+    constexpr const size_t dataLength = DUMMY_MODEL_OUTPUT_SIZE * sizeof(float);
 
     ASSERT_EQ(res.model_name(), "mediaDummy");
     ASSERT_EQ(res.outputs_size(), 1);
@@ -1603,17 +1603,17 @@ TEST_F(PythonFlowTest, Positive_BufferTooLarge_Custom) {
     // Finding the output with given name
     const auto& output_proto = *res.outputs().begin();
     ASSERT_EQ(output_proto.shape_size(), 1);
-    ASSERT_EQ(output_proto.shape(0), kDataLengthToCheck);
+    ASSERT_EQ(output_proto.shape(0), dataLength);
     const auto* content = res.mutable_raw_output_contents(0);
-    ASSERT_EQ(content->size(), kDataLengthToCheck);
+    ASSERT_EQ(content->size(), dataLength);
 
     // The input data is treated as uint8 and each byte gets +2 addition.
-    uint8_t expectedData[kDataLengthToCheck];
-    std::memcpy(expectedData, data.data(), kDataLengthToCheck);
-    for (size_t i = 0; i < kDataLengthToCheck; i++) {
+    std::vector<uint8_t> expectedData(dataLength);
+    std::memcpy(expectedData.data(), data.data(), dataLength);
+    for (size_t i = 0; i < dataLength; i++) {
         expectedData[i] += 2;
     }
 
-    EXPECT_EQ(0, std::memcmp(content->data(), expectedData, kDataLengthToCheck))
-        << readableError<uint8_t>(expectedData, (unsigned char*)content->data(), kDataLengthToCheck);
+    EXPECT_EQ(0, std::memcmp(content->data(), expectedData.data(), dataLength))
+        << readableError<uint8_t>(expectedData.data(), (unsigned char*)content->data(), dataLength);
 }
