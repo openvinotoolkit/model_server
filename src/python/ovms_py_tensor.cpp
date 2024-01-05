@@ -26,7 +26,7 @@
 namespace py = pybind11;
 using namespace ovms;
 
-OvmsPyTensor::OvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copyData) :
+OvmsPyTensor::OvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copy) :
     name(name),
     datatype(datatype),
     userShape(shape),
@@ -51,7 +51,7 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, void* data, const std::vecto
             strides.insert(strides.begin(), stride);
         }
     }
-    if (copyData) {
+    if (copy) {
         ownedDataPtr = std::make_unique<char[]>(size);
         memcpy(this->ownedDataPtr.get(), data, size);
         ptr = this->ownedDataPtr.get();

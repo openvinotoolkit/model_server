@@ -118,7 +118,7 @@ public:
     OvmsPyTensor() = delete;
 
     // Construct object from request contents
-    OvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copyData);
+    OvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copy);
 
     // Construct object from buffer info
     OvmsPyTensor(const std::string& name, const py::buffer& buffer);
