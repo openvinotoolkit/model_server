@@ -111,7 +111,7 @@ COPY --from=BASE /cvlib /lib/x86_64-linux-gnu/
 COPY --from=BASE /fflib /lib/x86_64-linux-gnu/
 RUN apt-get update -qq && apt-get --no-install-recommends -y install python3 python3-pip libavcodec58 libavformat58 libswscale5 libgstreamer-opencv1.0-0 gstreamer1.0* && rm -rf /var/lib/apt/lists/*
 COPY ./requirements.txt ./requirements.txt 
-RUN pip3 install -r requirements.txt
+RUN sed -i '/opencv-python/d' requirements.txt && pip3 install -r requirements.txt
 RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "
 COPY ./stream_client.py ./stream_client.py 
 ENTRYPOINT ["python3", "/workspace/rtsp_client.py"]
