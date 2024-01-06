@@ -1,3 +1,5 @@
 ovmsclient
 opencv-python
 flask
+google-cloud-logging
+google-cloud-storage

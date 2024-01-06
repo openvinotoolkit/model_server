@@ -15,8 +15,10 @@ wget -P workspace/person-vehicle-bike-detection-2002/1 https://storage.openvinot
 Once you have the model, launch OpenVINO Model Sever and mount model catalog to the container:
 
 ```bash
- docker run --rm -v $PWD/workspace/person-vehicle-bike-detection-2002:/model -p 9000:9000 openvino/model_server:latest --model_path /model --model_name person-vehicle-bike-detection --layout NHWC:NCHW --shape auto --port 9000 
+docker run --rm -v $PWD/workspace/person-vehicle-bike-detection-2002:/model -p 9000:9000 openvino/model_server:latest --model_path /model --model_name person-vehicle-bike-detection --layout NHWC:NCHW --shape auto --port 9000 
 ```
+
+to run the Docker container in detached mode, replace `--rm` with `--name person-vehicle-bike-detection -d`
 
 ## Switch Use Case used for pre and post processing
 
@@ -31,6 +33,7 @@ io_processor = IOProcessor(PersonVehicleBikeDetection, visualizer_frames_queue)
 ```
 
 ## Run Stream Analysis
+Refer to `run.sh` for configuring a Python virtual environment to install the required dependencies.
 
 As this use case implements only visualization in post processing, run with visualizer:
 
@@ -41,3 +44,30 @@ python3 real_time_stream_analysis.py --stream_url <rtsp_stream_url> --ovms_url l
 ## Example Browser Preview
 
 <img src="https://github.com/openvinotoolkit/model_server/blob/main/demos/real_time_stream_analysis/python/assets/visualizer_example_browser.gif">
+
+## Person detection
+A use case is writing detected person to local files at $HOME/Pictures ; if the path does not exist, files are not written.
+Examine the `def postprocess(inference_result: np.ndarray):` method in `person_vehicle_bike_detection.py`
+
+## Debug options
+To enable printing debugging info to the terminal, set
+- export PERSON_DETECTION_DEBUG=1
+
+To set the log sample rate by interval of 5 seconds, set
+- export PERSON_DETECTION_MIN_LOG_INTERVAL_SECONDS=5
+
+Default is 3 seconds. 
+
+## Optional Google Cloud logging and storage integration
+
+Refer to run.sh for the lines that set the following environment variables:
+- export GOOGLE_APPLICATION_CREDENTIALS=/file/path/to/service-account.json
+- export PERSON_DETECTION_GCS_BUCKET=create-a-bucket-and-grant-SA-storage-object-creator-role
+- export PERSON_DETECTION_GCS_FOLDER=a-string-of-the-folder-name
+- export PERSON_DETECTION_LOCAL_FOLDER=$HOME/Pictures
+
+When the variables are set, log messages are written to Google Cloud logging. Pictures of Person detected are uploaded
+to the cloud storage bucket. Make sure the service account has `storage object creator` IAM role for write to succeed.
+The local file is
+**gs://create-a-bucket-and-grant-SA-storage-object-creator-role/a-string-of-the-folder-name/detected-person_{formatted_datetime}.png**
+where formatted_datetime is `"%Y-%m-%d_%H-%M-%S.%f"` ;
