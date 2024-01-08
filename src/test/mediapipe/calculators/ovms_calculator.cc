@@ -253,7 +253,6 @@ public:
         RET_CHECK(outputCount == cc->Outputs().GetTags().size());
         uint32_t parameterCount = 42;
         ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseParameterCount(response, &parameterCount));
-        // that we are not interested in all outputs from OVMS Inference
         const void* voutputData;
         size_t bytesize = 42;
         OVMS_DataType datatype = (OVMS_DataType)199;
