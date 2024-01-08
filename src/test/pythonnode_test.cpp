@@ -549,7 +549,10 @@ TEST_F(PythonFlowTest, PythonNodeLoopbackDefinedOnlyOnOutput) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
-// TODO
+// InputStreamHandler is validated only on CalculatorNode::PrepareForRun/
+// This is called in Graph::Run/StartRun.
+// This is called only when input side packets are ready, meaning only when first request arrives.
+// With current MediaPipe implementation it is impossible to validate indexes during graph loading.
 TEST_F(PythonFlowTest, DISABLED_PythonNodeLoopback_SyncSet_WrongIndex) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
@@ -687,6 +690,8 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_BackEdgeFalse) {
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
+
+// MediaPipe understands that loopback is not a cycle and there is no data source that will ever feed it
 TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_Missing) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
@@ -724,11 +729,13 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_Missing) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
-// TODO: Normal cycle, LOOPBACK is never fed
+// MediaPipe does allow such connection and treats loopback as connected (due to the back edge)
+// However, such graph will hang since nothing feeds loopback with initial data
+// During the hang, the graph node will wait for secondary input (besides "input")
 TEST_F(PythonFlowTest, DISABLED_PythonNodeLoopback_SyncSet_Missing) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
-    input_stream: "OVMS_PY_TENSOR:input"
+    input_stream: "OVMS_PY_TENSOR1:input"
     output_stream: "OVMS_PY_TENSOR:output"
         node {
             name: "pythonNode"
