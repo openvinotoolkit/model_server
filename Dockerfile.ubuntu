@@ -52,7 +52,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 # hadolint ignore=DL3003
-RUN wget -nv https://boostorg.jfrog.io/artifactory/main/release/1.69.0/source/boost_1_69_0.tar.gz && \
+RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.69.0/boost_1_69_0.tar.gz && \
 tar xf boost_1_69_0.tar.gz && cd boost_1_69_0 && ./bootstrap.sh && \
 sed -i -e 's|#if PTHREAD_STACK_MIN > 0|#ifdef PTHREAD_STACK_MIN|g' boost/thread/pthread/thread_data.hpp && \
 # fix for compiler >=9.5 https://github.com/boostorg/thread/pull/297/files

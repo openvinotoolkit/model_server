@@ -58,7 +58,7 @@ RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 # hadolint ignore=DL3003
-RUN wget -nv https://boostorg.jfrog.io/artifactory/main/release/1.68.0/source/boost_1_68_0.tar.gz && \
+RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
 	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
 	./b2 -j ${JOBS} cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
 		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
