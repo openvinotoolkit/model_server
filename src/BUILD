@@ -13,17 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#config_setting(
-#    name = "linux_distribution_family",
-#    constraint_values = [
-#        ":debian", # like Ubuntu
-#        ":fedora", # like RHEL/CentOS
-#    ],
-#)
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
+load("//src:common_settings.bzl", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS")
 
+# TODO move to common_settings.bzl
 #To build without mediapipe use flags - bazel build --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 //src:ovms
 config_setting(
     name = "disable_mediapipe",
@@ -414,8 +409,6 @@ cc_library(
         "threadsafequeue.hpp",
         "timer.hpp",
         "version.hpp",
-        "logging.hpp",
-        "logging.cpp",
         "tensor_conversion.hpp",
         "tensor_conversion.cpp",
          ] + select({
@@ -449,6 +442,7 @@ cc_library(
             "//src:disable_python": []
         }),
     deps = [
+        "libovmslogging",
         "//:ovms_dependencies",
         "//src/kfserving_api:kfserving_api_cpp",
         ] + select({
@@ -465,39 +459,45 @@ cc_library(
     local_defines = [
         "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
     ],
-    copts = [
-        "-Wall",
-        "-Wno-unknown-pragmas",
-        "-fvisibility=hidden",# Needed for pybind targets
-        "-Werror",
-        ] + select({
-            "//conditions:default": [
-            ],
-            "//src:fuzzer_build" : [
-                "-fsanitize=address",
-                "-fprofile-generate",
-                "-ftest-coverage",
-            ],
+    copts = COMMON_STATIC_LIBS_COPTS + select({
+            "//conditions:default": [],
+            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
+    }),
+    visibility = [
+        "//visibility:public",
+    ],
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
+        "//conditions:default": [],
+        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
+    }),
+    data = [":pyovms.so"],
+    alwayslink = 1,
+)
+
+
+cc_library(
+    name = "libovmslogging",
+    hdrs = ["logging.hpp"],
+    srcs = ["logging.cpp",],
+    deps = [
+        "@com_github_gabime_spdlog//:spdlog",
+#        "@com_github_glog_glog//:__subpackages__",
+        "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
+    ],
+    local_defines = [
+        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
+    ],
+    copts = COMMON_STATIC_LIBS_COPTS + select({
+            "//conditions:default": [],
+            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
         }),
     visibility = [
         "//visibility:public",
     ],
-    linkopts = [
-        "-lxml2",
-        "-luuid",
-        "-lstdc++fs",
-        "-lcrypto",
-    ] + select({
-        "//conditions:default": [
-        ],
-        "//src:fuzzer_build" : [
-            "-fprofile-generate",
-            "-fsanitize=address",
-            "-fsanitize-coverage=trace-pc",
-            "-static-libasan",
-        ],
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
+        "//conditions:default": [],
+        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
     }),
-    data = [":pyovms.so"],
     alwayslink = 1,
 )
 
