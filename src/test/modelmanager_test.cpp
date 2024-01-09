@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "absl/synchronization/notification.h"
 
 #include "../cleaner_utils.hpp"
 #include "../config.hpp"
@@ -26,6 +25,7 @@
 #include "../model.hpp"
 #include "../modelmanager.hpp"
 #include "../prediction_service_utils.hpp"
+#include "absl/synchronization/notification.h"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 
@@ -1119,7 +1119,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenRe
     uint32_t resourcesIntervalMiliseconds = 200;
     uint32_t sequenceIntervalMiliseconds = 252;
 
-    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([this](){this->done.Notify();}));
+    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([this]() { this->done.Notify(); }));
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
@@ -1137,7 +1137,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesWhenResourcesInte
     uint32_t sequenceIntervalMiliseconds = 367;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(0);
-    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([this](){this->done.Notify();}));
+    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([this]() { this->done.Notify(); }));
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
     uint waitTime = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
@@ -1154,7 +1154,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenSe
     uint32_t sequenceIntervalMiliseconds = 229;
 
     EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1);
-    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([this](){this->done.Notify();}));
+    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([this]() { this->done.Notify(); }));
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
     uint waitTime = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * WAIT_MULTIPLIER_FACTOR;
@@ -1170,7 +1170,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupSequenceWhenSequenceInterv
     uint32_t resourcesIntervalMiliseconds = 337;
     uint32_t sequenceIntervalMiliseconds = 229;
 
-    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([this](){this->done.Notify();}));
+    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([this]() { this->done.Notify(); }));
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(0);
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
@@ -1187,7 +1187,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenIn
     uint32_t resourcesIntervalMiliseconds = 290;
     uint32_t sequenceIntervalMiliseconds = 290;
 
-    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([this](){this->done.Notify();}));
+    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([this]() { this->done.Notify(); }));
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1);
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
