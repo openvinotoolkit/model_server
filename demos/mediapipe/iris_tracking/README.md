@@ -1,4 +1,4 @@
-# MediaPipe Iris Demo
+# MediaPipe Iris Demo {#ovms_docs_demo_mediapipe_iris}
 
 This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph using OVMS.
 
@@ -39,8 +39,8 @@ python mediapipe_iris_tracking.py --grpc_port 9000 --images_list input_images.tx
 Running demo application.
 Start processing:
         Graph name: irisTracking
-(640, 960, 3)
-Iteration 0; Processing time: 77.03 ms; speed 12.98 fps
+(800, 1200, 3)
+Iteration 0; Processing time: 44.73 ms; speed 22.36 fps
 Results saved to :image_0.jpg
 ```
 ## Output image
