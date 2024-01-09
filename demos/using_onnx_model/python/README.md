@@ -2,9 +2,9 @@
 
 Steps are similar to when you work with IR model format. Model Server accepts ONNX models as well with no differences in versioning. Locate ONNX model file in separate model version directory.
 Below is a complete functional use case using Python 3.7 or higher. 
-For this example let's use a public [ONNX ResNet](https://github.com/onnx/models/tree/main/vision/classification/resnet) model - resnet50-caffe2-v1-9.onnx model.
+For this example let's use a public [ONNX ResNet](https://github.com/onnx/models/tree/main/validated/vision/classification/resnet) model - resnet50-caffe2-v1-9.onnx model.
 
-This model requires additional [preprocessing function](https://github.com/onnx/models/tree/master/vision/classification/resnet#preprocessing). Preprocessing can be performed in the client by manipulating data before sending the request. Preprocessing can be also delegated to the server by creating a [DAG](../../../docs/dag_scheduler.md) and using a custom processing node. Both methods will be explained below.
+This model requires additional [preprocessing function](https://github.com/onnx/models/tree/main/validated/vision/classification/resnet#preprocessing). Preprocessing can be performed in the client by manipulating data before sending the request. Preprocessing can be also delegated to the server by creating a [DAG](../../../docs/dag_scheduler.md) and using a custom processing node. Both methods will be explained below.
 
 <a href="#client-side">Option 1: Adding preprocessing to the client side</a>  
 <a href="#server-side">Option 2: Adding preprocessing to the server side (building DAG)</a>
