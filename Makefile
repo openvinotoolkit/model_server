@@ -66,7 +66,7 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 8384279b2e55b9e6164317e78d3ec839d5b00bbe  # 2023.3
+OV_SOURCE_BRANCH ?= ceeafaf64f346c6f14a67c612e131da5c27ef620  # 2023.3
 OV_CONTRIB_BRANCH ?= 297d6263bbeb7a573bda6f2e072cf4d095159724  # 2023.3
 
 OV_SOURCE_ORG ?= openvinotoolkit
@@ -146,10 +146,10 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   endif
   ifeq ($(BASE_OS_TAG),20.04)
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.3.0.13756.8384279b2e5_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2023.3.0.13775.ceeafaf64f3_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
 	INSTALL_DRIVER_VERSION ?= "23.22.26516"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2023.3.0.13756.8384279b2e5_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -164,7 +164,7 @@ ifeq ($(BASE_OS),redhat)
   endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.3.0.13756.8384279b2e5_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.3.0.13775.ceeafaf64f3_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
