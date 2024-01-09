@@ -19,15 +19,15 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../ovms.h"           // NOLINT
-#include "../stringutils.hpp"  // TODO dispose
+#include "../../../ovms.h"  // NOLINT
+#include "../../../stringutils.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
-#include "src/mediapipe_calculators/ovmscalculator.pb.h"
+#include "src/test/mediapipe/calculators/ovmscalculator.pb.h"
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
 namespace mediapipe {
@@ -156,11 +156,8 @@ public:
         }
         const auto& options = cc->Options<OVMSCalculatorOptions>();
         RET_CHECK(!options.servable_name().empty());
-        // TODO validate version from string
-        // TODO validate service url format
         RET_CHECK(options.config_path().empty() ||
                   options.service_url().empty());
-        // TODO validate tag_to_tensor maps so that key fulfill regex
         return absl::OkStatus();
     }
 
@@ -171,7 +168,7 @@ public:
             OVMS_ServerSettingsDelete(_serverSettings);
             // Close is called on input node and output node in initial pipeline
             // Commented out since for now this happens twice in 2 nodes graph. Server will close
-            // OVMS_ServerDelete(cserver); TODO this should happen onlif graph is used once
+            // OVMS_ServerDelete(cserver);
             // moreover we may need several ovms calculators use in graph each providing its own model? how to handle then different model inputs, as wel as config?
         }
         return absl::OkStatus();
@@ -220,7 +217,6 @@ public:
         const auto inputTagInputMap = options.tag_to_input_tensor_names();
         const auto inputTagOutputMap = options.tag_to_output_tensor_names();
         for (const std::string& tag : cc->Inputs().GetTags()) {
-            // TODO validate existence of tag key in map
             const char* realInputName = inputTagInputMap.at(tag).c_str();
 
             auto& packet = cc->Inputs().Tag(tag).Get<ov::Tensor>();
@@ -234,11 +230,10 @@ public:
             ss << " ] timestamp: " << cc->InputTimestamp().DebugString();
             LOG(INFO) << ss.str();
             const auto& ovInputShape = input_tensor.get_shape();
-            std::vector<int64_t> inputShape(ovInputShape.begin(), ovInputShape.end());  // TODO ensure ov tensors shapes conversions return error in all calcs
+            std::vector<int64_t> inputShape(ovInputShape.begin(), ovInputShape.end());
             OVMS_DataType inputDataType = OVPrecision2CAPI(input_tensor.get_element_type());
             ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, realInputName, inputDataType, inputShape.data(), inputShape.size()));
             const uint32_t notUsedNum = 0;
-            // TODO handle hardcoded buffertype, notUsedNum additional options? side packets?
             ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request,
                 realInputName,
                 reinterpret_cast<void*>(input_tensor.data()),
@@ -258,8 +253,6 @@ public:
         RET_CHECK(outputCount == cc->Outputs().GetTags().size());
         uint32_t parameterCount = 42;
         ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseParameterCount(response, &parameterCount));
-        // TODO handle output filtering. Graph definition could suggest
-        // that we are not interested in all outputs from OVMS Inference
         const void* voutputData;
         size_t bytesize = 42;
         OVMS_DataType datatype = (OVMS_DataType)199;

@@ -20,6 +20,17 @@
 #        ":fedora", # like RHEL/CentOS
 #    ],
 #)
+load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
+
+mediapipe_proto_library(
+    name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["ovmscalculator.proto",],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
+)
 
 cc_library(
     name = "mediapipe_test_calculators",
@@ -31,6 +42,9 @@ cc_library(
         "exceptionduringopencalculator.cpp",
         "exceptionduringclosecalculator.cpp",
         "exceptionduringgetcontractcalculator.cpp",
+        "ovms_calculator.cc",
+        "ovms_image_input_calculator.cc",
+        "ovms_kfs_calculator.cc",
         "streaming_test_calculator.cpp",
     ],
     copts = [
@@ -51,9 +65,11 @@ cc_library(
         "//visibility:public",
     ],
     deps = [
-        "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+        "//src:ovms_lib", # stringutils.hpp
+        "ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
         "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
         "@linux_openvino//:openvino",
+        "//src:ovms_header",
     ],
     linkopts = select({
         "//conditions:default": [

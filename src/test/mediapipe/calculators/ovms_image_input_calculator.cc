@@ -19,7 +19,7 @@
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "src/mediapipe_calculators/ovmscalculator.pb.h"
+#include "src/test/mediapipe/calculators/ovmscalculator.pb.h"
 #pragma GCC diagnostic pop
 
 namespace mediapipe {
