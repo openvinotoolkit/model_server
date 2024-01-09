@@ -20,11 +20,13 @@
 
 #include <pybind11/embed.h>  // everything needed for embedding
 
-#include "config.hpp"
-#include "logging.hpp"
-#include "python/python_backend.hpp"
-#include "server.hpp"
-#include "status.hpp"
+#include "../config.hpp"
+#include "../logging.hpp"
+#include "python_backend.hpp"
+//#include "../server.hpp"
+#include "../module.hpp"
+#include "../module_names.hpp"
+#include "../status.hpp"
 
 namespace py = pybind11;
 
@@ -43,6 +45,7 @@ Status PythonInterpreterModule::start(const ovms::Config& config) {
         return StatusCode::INTERNAL_ERROR;
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", PYTHON_INTERPRETER_MODULE_NAME);
+    SPDLOG_ERROR("ER: {}", (void*) this);
     return StatusCode::OK;
 }
 

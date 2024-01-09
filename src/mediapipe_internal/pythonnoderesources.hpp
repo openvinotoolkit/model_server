@@ -28,9 +28,6 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "../python/pythonnoderesources.hpp"
-#endif
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
@@ -50,8 +47,11 @@ class MetricConfig;
 class MetricRegistry;
 class ModelManager;
 class MediapipeGraphExecutor;
+class PythonNodeResources;
 class Status;
 class PythonBackend;
+
+typedef std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>> PythonNodeResourcesMap;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;

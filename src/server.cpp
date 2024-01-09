@@ -54,19 +54,12 @@
 #include "version.hpp"
 
 #if (PYTHON_DISABLE == 0)
-#include "pythoninterpretermodule.hpp"
+#include "python/pythoninterpretermodule.hpp"
 #endif
 
 using grpc::ServerBuilder;
 
 namespace ovms {
-const std::string PROFILER_MODULE_NAME = "ProfilerModule";
-const std::string GRPC_SERVER_MODULE_NAME = "GRPCServerModule";
-const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
-const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
-const std::string METRICS_MODULE_NAME = "MetricsModule";
-const std::string PYTHON_INTERPRETER_MODULE_NAME = "PythonInterpreterModule";
-
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
 }

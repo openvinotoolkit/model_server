@@ -55,10 +55,13 @@ PythonBackend::~PythonBackend() {
 
 bool PythonBackend::createOvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape,
     const std::string& datatype, py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor, bool copy) {
+    SPDLOG_DEBUG("ER");
     py::gil_scoped_acquire acquire;
+    SPDLOG_DEBUG("ER");
     try {
         py::object ovmsPyTensor = tensorClass->attr("create_from_data")(name, ptr, shape, datatype, size, copy);
         outTensor = std::make_unique<PyObjectWrapper<py::object>>(ovmsPyTensor);
+        SPDLOG_DEBUG("ER");
         return true;
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_DEBUG("PythonBackend::createOvmsPyTensor - Py Error: {}", e.what());
@@ -66,10 +69,15 @@ bool PythonBackend::createOvmsPyTensor(const std::string& name, void* ptr, const
     } catch (std::exception& e) {
         SPDLOG_DEBUG("PythonBackend::createOvmsPyTensor - Error: {}", e.what());
         return false;
+    } catch (...) {
+        SPDLOG_DEBUG("PythonBackend::createOvmsPyTensor - Unknown Error");
+        return false;
     }
+    return false;
 }
 
 void PythonBackend::validateOvmsPyTensor(const py::object& object) const {
+    SPDLOG_DEBUG("ER");
     py::gil_scoped_acquire acquire;
     if (!py::isinstance(object, *tensorClass)) {
         throw UnexpectedPythonObjectError(object, tensorClass->attr("__name__").cast<std::string>());

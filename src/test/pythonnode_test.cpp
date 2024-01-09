@@ -37,8 +37,8 @@
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
 #include "../precision.hpp"
+#include "../python/pythoninterpretermodule.hpp"
 #include "../python/pythonnoderesources.hpp"
-#include "../pythoninterpretermodule.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
@@ -54,7 +54,6 @@
 
 #include "opencv2/opencv.hpp"
 #include "python/python_backend.hpp"
-#include "pythoninterpretermodule.hpp"
 #include "test_utils.hpp"
 
 namespace py = pybind11;
@@ -108,6 +107,7 @@ public:
 };
 
 static PythonBackend* getPythonBackend() {
+    SPDLOG_ERROR("ER:{} {} {}", (void*)ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME), (void*)dynamic_cast<const ovms::PythonInterpreterModule*>(ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME)), (void*)dynamic_cast<const ovms::PythonInterpreterModule*>(ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME))->getPythonBackend());
     return dynamic_cast<const ovms::PythonInterpreterModule*>(ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME))->getPythonBackend();
 }
 
@@ -871,7 +871,9 @@ public:
         tensor.numElements = numElements;
         tensor.size = numElements * sizeof(T);
         tensor.shape = std::vector<py::ssize_t>{1, numElements};
-        getPythonBackend()->createOvmsPyTensor(tensor.name, (void*)tensor.data, tensor.shape, tensor.datatype, tensor.size, tensor.pyTensor);
+        SPDLOG_ERROR("ER");
+        EXPECT_TRUE(getPythonBackend()->createOvmsPyTensor(tensor.name, (void*)tensor.data, tensor.shape, tensor.datatype, tensor.size, tensor.pyTensor));
+        SPDLOG_ERROR("ER");
         return tensor;
     }
 
@@ -933,8 +935,11 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
 
     ::inference::ModelInferResponse response;
 
+        SPDLOG_ERROR("ER");
     ::mediapipe::Packet packet = ::mediapipe::Adopt<PyObjectWrapper<py::object>>(tensor.pyTensor.release());
+        SPDLOG_ERROR("ER");
     ASSERT_EQ(executor.serializePacket(name, response, packet), StatusCode::OK);
+        SPDLOG_ERROR("ER");
     ASSERT_EQ(response.outputs_size(), 1);
     auto output = response.outputs(0);
     ASSERT_EQ(output.datatype(), "FP32");

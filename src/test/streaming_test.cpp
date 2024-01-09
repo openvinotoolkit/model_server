@@ -29,7 +29,7 @@
 #include "test_utils.hpp"
 
 #if (PYTHON_DISABLE == 0)
-#include "../pythoninterpretermodule.hpp"
+#include "../python/pythoninterpretermodule.hpp"
 #endif
 
 using namespace ovms;

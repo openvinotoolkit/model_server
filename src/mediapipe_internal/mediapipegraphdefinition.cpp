@@ -39,6 +39,7 @@
 #include "../version.hpp"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
+#include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 
 #if (PYTHON_DISABLE == 0)
@@ -186,7 +187,7 @@ Status MediapipeGraphDefinition::createInputsInfo() {
     inputNames.clear();
     inputNames.reserve(this->config.input_stream().size());
     for (auto& name : config.input_stream()) {
-        std::string streamName = MediapipeGraphDefinition::getStreamName(name);
+        std::string streamName = getStreamName(name);
         if (streamName.empty()) {
             SPDLOG_ERROR("Creating Mediapipe graph inputs name failed for: {}", name);
             return StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME;
@@ -204,7 +205,7 @@ Status MediapipeGraphDefinition::createInputsInfo() {
 Status MediapipeGraphDefinition::createInputSidePacketsInfo() {
     inputSidePacketNames.clear();
     for (auto& name : config.input_side_packet()) {
-        std::string streamName = MediapipeGraphDefinition::getStreamName(name);
+        std::string streamName = getStreamName(name);
         if (streamName.empty()) {
             SPDLOG_ERROR("Creating Mediapipe graph input side packet name failed for: {}", name);
             return StatusCode::MEDIAPIPE_WRONG_INPUT_SIDE_PACKET_STREAM_PACKET_NAME;
@@ -219,7 +220,7 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
     outputNames.clear();
     outputNames.reserve(this->config.output_stream().size());
     for (auto& name : this->config.output_stream()) {
-        std::string streamName = MediapipeGraphDefinition::getStreamName(name);
+        std::string streamName = getStreamName(name);
         if (streamName.empty()) {
             SPDLOG_ERROR("Creating Mediapipe graph outputs name failed for: {}", name);
             return StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME;
@@ -247,15 +248,6 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
         this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResourcesMap, this->pythonBackend);
     return status;
 }
-
-const std::string KFS_REQUEST_PREFIX{"REQUEST"};
-const std::string KFS_RESPONSE_PREFIX{"RESPONSE"};
-const std::string MP_TENSOR_PREFIX{"TENSOR"};
-const std::string TF_TENSOR_PREFIX{"TFTENSOR"};
-const std::string TFLITE_TENSOR_PREFIX{"TFLITE_TENSOR"};
-const std::string OV_TENSOR_PREFIX{"OVTENSOR"};
-const std::string OVMS_PY_TENSOR_PREFIX{"OVMS_PY_TENSOR"};
-const std::string MP_IMAGE_PREFIX{"IMAGE"};
 
 Status MediapipeGraphDefinition::setStreamTypes() {
     this->inputTypes.clear();
@@ -388,53 +380,6 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
     return StatusCode::OK;
 }
 
-const std::string EMPTY_STREAM_NAME{""};
-
-std::string MediapipeGraphDefinition::getStreamName(const std::string& streamFullName) {
-    std::vector<std::string> tokens = tokenize(streamFullName, ':');
-    // Stream name is the last part of the full name
-    if (tokens.size() > 0 || tokens.size() <= 3)
-        return tokens[tokens.size() - 1];
-    return EMPTY_STREAM_NAME;
-}
-
-std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::getStreamNamePair(const std::string& streamFullName) {
-    static std::unordered_map<std::string, mediapipe_packet_type_enum> prefix2enum{
-        {KFS_REQUEST_PREFIX, mediapipe_packet_type_enum::KFS_REQUEST},
-        {KFS_RESPONSE_PREFIX, mediapipe_packet_type_enum::KFS_RESPONSE},
-        {TF_TENSOR_PREFIX, mediapipe_packet_type_enum::TFTENSOR},
-        {TFLITE_TENSOR_PREFIX, mediapipe_packet_type_enum::TFLITETENSOR},
-        {OV_TENSOR_PREFIX, mediapipe_packet_type_enum::OVTENSOR},
-        {OVMS_PY_TENSOR_PREFIX, mediapipe_packet_type_enum::OVMS_PY_TENSOR},
-        {MP_TENSOR_PREFIX, mediapipe_packet_type_enum::MPTENSOR},
-        {MP_IMAGE_PREFIX, mediapipe_packet_type_enum::MEDIAPIPE_IMAGE}};
-    std::vector<std::string> tokens = tokenize(streamFullName, ':');
-    // MP convention
-    // input_stream: "lowercase_input_stream_name"
-    // input_stream: "PACKET_TAG:lowercase_input_stream_name"
-    // input_stream: "PACKET_TAG:[0-9]:lowercase_input_stream_name"
-    if (tokens.size() == 2 || tokens.size() == 3) {
-        auto it = std::find_if(prefix2enum.begin(), prefix2enum.end(), [tokens](const auto& p) {
-            const auto& [k, v] = p;
-            bool b = startsWith(tokens[0], k);
-            return b;
-        });
-        size_t inputStreamIndex = tokens.size() - 1;
-        if (it != prefix2enum.end()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[inputStreamIndex], it->first, streamFullName);
-            return {tokens[inputStreamIndex], it->second};
-        } else {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[inputStreamIndex], "UNKNOWN", streamFullName);
-            return {tokens[inputStreamIndex], mediapipe_packet_type_enum::UNKNOWN};
-        }
-    } else if (tokens.size() == 1) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[0], "UNKNOWN", streamFullName);
-        return {tokens[0], mediapipe_packet_type_enum::UNKNOWN};
-    }
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", "", "UNKNOWN", streamFullName);
-    return {"", mediapipe_packet_type_enum::UNKNOWN};
-}
-
 struct PythonResourcesCleaningGuard {
     bool shouldCleanup{true};
     std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>& resource;
@@ -451,7 +396,7 @@ struct PythonResourcesCleaningGuard {
 };
 
 Status MediapipeGraphDefinition::initializeNodes() {
-#if (PYTHON_DISABLE == 0)
+#if (PYTHON_DISABLE == 0)  // TODO use python module for that
     PythonResourcesCleaningGuard pythonResourcesCleaningGuard(this->pythonNodeResourcesMap);
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {
@@ -482,7 +427,6 @@ Status MediapipeGraphDefinition::initializeNodes() {
     }
     pythonResourcesCleaningGuard.disableCleaning();
 #endif
-
     return StatusCode::OK;
 }
 

@@ -25,16 +25,16 @@
 #include "../logging.hpp"
 #include "../status.hpp"
 
-#if (PYTHON_DISABLE == 0)
+#if (PYTHON_DISABLE == 0)  // TODO why ifdef in python ...
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
 #include <pybind11/embed.h>  // everything needed for embedding
 
-#include "src/mediapipe_calculators/python_executor_calculator_options.pb.h"
+#include "src/python/python_executor_calculator.pb.h"
 #endif
-#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../mediapipe_internal/mediapipe_utils.hpp"
 
 namespace ovms {
 
@@ -74,11 +74,11 @@ py::dict PythonNodeResources::preparePythonNodeInitializeArguments(const ::media
     py::list inputStreams = py::list();
     py::list outputStreams = py::list();
     for (auto& name : graphNodeConfig.input_stream()) {
-        inputStreams.append(MediapipeGraphDefinition::getStreamName(name));
+        inputStreams.append(getStreamName(name));
     }
 
     for (auto& name : graphNodeConfig.output_stream()) {
-        outputStreams.append(MediapipeGraphDefinition::getStreamName(name));
+        outputStreams.append(getStreamName(name));
     }
 
     kwargsParam["input_names"] = inputStreams;

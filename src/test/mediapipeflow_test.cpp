@@ -39,6 +39,7 @@
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
@@ -2673,22 +2674,22 @@ TEST(MediapipeStreamTypes, Recognition) {
     using ovms::MediapipeGraphDefinition;
     using streamNameTypePair_t = std::pair<std::string, mediapipe_packet_type_enum>;
     // basic tag name matching
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::TFTENSOR), MediapipeGraphDefinition::getStreamNamePair("TFTENSOR:out"));
-    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::OVTENSOR), MediapipeGraphDefinition::getStreamNamePair("OVTENSOR:input"));
-    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::KFS_REQUEST), MediapipeGraphDefinition::getStreamNamePair("REQUEST:input"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), MediapipeGraphDefinition::getStreamNamePair("RESPONSE:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MEDIAPIPE_IMAGE), MediapipeGraphDefinition::getStreamNamePair("IMAGE:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::TFTENSOR), ovms::getStreamNamePair("TFTENSOR:out"));
+    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::OVTENSOR), ovms::getStreamNamePair("OVTENSOR:input"));
+    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::KFS_REQUEST), ovms::getStreamNamePair("REQUEST:input"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), ovms::getStreamNamePair("RESPONSE:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MEDIAPIPE_IMAGE), ovms::getStreamNamePair("IMAGE:out"));
     // string after suffix doesn't matter
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR1:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR_1:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), MediapipeGraphDefinition::getStreamNamePair("RESPONSE_COSTAM:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR1:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR_1:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), ovms::getStreamNamePair("RESPONSE_COSTAM:out"));
     // number as additional part doesn't affect recognized type
-    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR:1:in"));
+    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR:1:in"));
     // negative
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), MediapipeGraphDefinition::getStreamNamePair("TENSO:out"));             // negative - non-matching tag
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), MediapipeGraphDefinition::getStreamNamePair("SOME_STRANGE_TAG:out"));  // negative - non-matching tag
-    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::UNKNOWN), MediapipeGraphDefinition::getStreamNamePair("in"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), ovms::getStreamNamePair("TENSO:out"));             // negative - non-matching tag
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), ovms::getStreamNamePair("SOME_STRANGE_TAG:out"));  // negative - non-matching tag
+    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::UNKNOWN), ovms::getStreamNamePair("in"));
 }
 
 // TEST_F(MediapipeConfig, MediapipeFullRelativePathsSubconfigNegative) {
