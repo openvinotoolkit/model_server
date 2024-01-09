@@ -16,7 +16,7 @@
 import tritonclient.grpc as grpcclient
 import argparse
 
-parser = argparse.ArgumentParser(description='Client for seq2seq example')
+parser = argparse.ArgumentParser(description='Client for clip example')
 
 parser.add_argument('--url', required=False, default='localhost:9000',
                     help='Specify url to grpc service. default:localhost:9000')
@@ -26,7 +26,7 @@ client = grpcclient.InferenceServerClient(args['url'])
 text = "He never went out without a book under his arm, and he often came back with two."
 print(f"Text:\n{text}\n")
 data = text.encode()
-infer_input = grpcclient.InferInput("text", [len(data)], "BYTES")
+infer_input = grpcclient.InferInput("image", [len(data)], "BYTES")
 infer_input._raw_content = data
 results = client.infer("python_model", [infer_input])
-print(f"Translation:\n{results.as_numpy('translation').tobytes().decode()}\n")
+print(f"Translation:\n{results.as_numpy('logits_per_image').tobytes().decode()}\n")

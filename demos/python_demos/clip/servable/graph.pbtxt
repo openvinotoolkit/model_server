@@ -13,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-input_stream: "OVMS_PY_TENSOR:text"
-output_stream: "OVMS_PY_TENSOR:translation"
+input_stream: "OVMS_PY_TENSOR:image"
+output_stream: "OVMS_PY_TENSOR:logits_per_image"
 
 node {
   name: "pythonNode"
   calculator: "PythonExecutorCalculator"
   input_side_packet: "PYTHON_NODE_RESOURCES:py"
-  input_stream: "INPUT:text"
-  output_stream: "OUTPUT:translation"
+  input_stream: "INPUT:image"
+  output_stream: "OUTPUT:logits_per_image"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
       handler_path: "/workspace/model.py"
