@@ -114,4 +114,4 @@ COPY ./requirements.txt ./requirements.txt
 RUN sed -i '/opencv-python/d' requirements.txt && pip3 install -r requirements.txt
 RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "
 COPY ./stream_client.py ./stream_client.py 
-ENTRYPOINT ["python3", "/workspace/rtsp_client.py"]
+ENTRYPOINT ["python3", "/workspace/client.py"]
