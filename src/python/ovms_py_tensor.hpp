@@ -122,7 +122,5 @@ public:
 
     // Construct object from buffer info
     OvmsPyTensor(const std::string& name, const py::buffer& buffer);
-
-    ~OvmsPyTensor();
 };
 }  // namespace ovms

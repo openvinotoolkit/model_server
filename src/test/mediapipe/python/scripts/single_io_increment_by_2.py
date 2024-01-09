@@ -18,7 +18,7 @@ from pyovms import Tensor
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
-        self.output_name = kwargs["output_streams"][0]
+        self.output_name = kwargs["output_names"][0]
 
     def execute(self, inputs: list, kwargs: dict = {}):
         # Increment every element of every input and return them with changed tensor name.

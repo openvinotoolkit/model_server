@@ -983,6 +983,7 @@ cc_test(
         "test/mediapipe/python/scripts/symmetric_increment_by_2.py",
         "test/mediapipe/python/scripts/single_io_increment.py",
         "test/mediapipe/python/scripts/good_finalize_remove_file.py",
+        "test/mediapipe/python/scripts/return_custom_datatype.py",
         "test/passthrough/1/passthrough.xml",
         "test/passthrough/1/passthrough.bin",
         "test/summator/1/summator.xml",

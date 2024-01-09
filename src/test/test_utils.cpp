@@ -195,6 +195,7 @@ void checkDummyResponse(const std::string outputName,
     std::string* content = response.mutable_raw_output_contents(outputIndex);
 
     ASSERT_EQ(content->size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
+    ASSERT_EQ(output_proto.datatype(), "FP32");
     ASSERT_EQ(output_proto.shape_size(), 2);
     ASSERT_EQ(output_proto.shape(0), batchSize);
     ASSERT_EQ(output_proto.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
