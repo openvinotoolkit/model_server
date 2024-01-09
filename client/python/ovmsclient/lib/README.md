@@ -44,7 +44,7 @@ Assuming you have TFS API built, you can use `make build-package` target to buil
 
 **To install the package run:**
 ```bash
-pip3 install --force-reinstall --no-deps dist/ovmsclient-2023.1-py3-none-any.whl
+pip3 install --force-reinstall --no-deps dist/ovmsclient-2023.3-py3-none-any.whl
 ```
 
 *Note*: For development purposes you may want to repeatedly reinstall the package.
