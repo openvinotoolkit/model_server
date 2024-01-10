@@ -28,24 +28,7 @@ class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
         model_id = "openai/clip-vit-base-patch16"
-        model = CLIPModel.from_pretrained(model_id)
         self.processor = CLIPProcessor.from_pretrained(model_id)
-
-        # create OpenVINO core object instance
-        core = ov.Core()
-        device = "CPU"
-        model.config.torchscript = True
-        input_labels = ['cat', 'dog', 'wolf', 'tiger', 'man', 'horse', 'frog', 'tree', 'house', 'computer']
-        text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
-        image =  Image.new('RGB', (800, 600))
-        model_inputs = self.processor(text=text_descriptions, images=[image], return_tensors="pt", padding=True)
-
-        ov_model = ov.convert_model(model, example_input=dict(model_inputs))
-
-        # compile model for loading on device
-        self.compiled_model = core.compile_model(ov_model, device)
-        # obtain output tensor for getting predictions
-        self.logits_per_image_out = self.compiled_model.output(0)
 
     def execute(self, inputs: list):
         input_url = bytes(inputs[0]).decode()
@@ -61,8 +44,12 @@ class OvmsPythonModel:
         input_labels = np.frombuffer(inputs[1].data, dtype=inputs[1].datatype)
         self.text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
         model_inputs = self.processor(text=self.text_descriptions, images=[image], return_tensors="pt", padding=True)
-        logits_per_image = self.compiled_model(dict(model_inputs))[self.logits_per_image_out]
 
-        probs = softmax(logits_per_image, axis=1)
-        return [Tensor("logits_per_image", probs)]
+        input_ids_py = Tensor("input_ids_py", model_inputs["input_ids"].numpy().astype(np.int64))
+        attention_mask_py = Tensor("attention_mask_py", model_inputs["attention_mask"].numpy().astype(np.int64))
+        pixel_values_py = Tensor("pixel_values_py", model_inputs["pixel_values"].numpy())
+        print("input_ids_py " + input_ids_py.datatype)
+        print("attention_mask_py " + attention_mask_py.datatype)
+        print("pixel_values_py " + pixel_values_py.datatype)
+        return [input_ids_py, attention_mask_py, pixel_values_py]
 

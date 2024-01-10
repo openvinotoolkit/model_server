@@ -1,5 +1,11 @@
 {
-    "model_config_list": [],
+    "model_config_list": [
+        {
+            "config": {
+            "name": "clip",
+            "base_path": "/model/"
+        }
+    }],
     "mediapipe_config_list": [
     {
         "name":"python_model",

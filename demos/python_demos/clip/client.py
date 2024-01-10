@@ -40,4 +40,4 @@ infer_input1 = grpcclient.InferInput("input_labels", [len(labels_npy)], labels_n
 infer_input1._raw_content = labels_npy.tobytes()
 
 results = client.infer("python_model", [infer_input, infer_input1])
-print(f"logits_per_image:\n{results.as_numpy('logits_per_image')}\n")
+print(f"detection:\n{results.as_numpy('detection')}\n")

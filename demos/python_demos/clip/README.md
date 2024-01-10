@@ -21,7 +21,7 @@ Mount the `./servable` which contains:
 
 ```bash
 cd demos/python_demos/clip
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable:/workspace openvino/model_server:py --config_path /workspace/config.json --port 9000
+docker run -it --rm -p 9000:9000 -v ${PWD}/servable:/workspace -v ${PWD}/model:/model/ openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
 ## Requesting translation
