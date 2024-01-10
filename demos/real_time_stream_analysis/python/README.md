@@ -58,6 +58,7 @@ docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 ope
 
 Prepare the python environment by installing required dependencies:
 ```bash
+cd ../../real_time_stream_analysis/python/
 pip install -r ../../common/stream_client/requirements.txt
 ```
 For the use case with RTSP client, install also FFMPEG component on the host.
