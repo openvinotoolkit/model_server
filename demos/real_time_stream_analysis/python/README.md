@@ -102,7 +102,7 @@ options:
 
 #### Reading from the local camera and visualization on the screen
 
-```bash
+```
 python3 client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
 ```
 
