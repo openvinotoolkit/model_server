@@ -31,6 +31,9 @@
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "../python/pythonnoderesources.hpp"
+#endif
 #include "../serialization.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
@@ -380,6 +383,7 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
     return StatusCode::OK;
 }
 
+#if (PYTHON_DISABLE == 0)
 struct PythonResourcesCleaningGuard {
     bool shouldCleanup{true};
     std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>& resource;
@@ -394,9 +398,10 @@ struct PythonResourcesCleaningGuard {
         shouldCleanup = false;
     }
 };
+#endif
 
 Status MediapipeGraphDefinition::initializeNodes() {
-#if (PYTHON_DISABLE == 0)  // TODO use python module for that
+#if (PYTHON_DISABLE == 0)
     PythonResourcesCleaningGuard pythonResourcesCleaningGuard(this->pythonNodeResourcesMap);
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {

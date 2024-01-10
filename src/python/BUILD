@@ -17,6 +17,24 @@
 load("//src:common_settings.bzl", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS")
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
+load("//src:common_settings.bzl",
+     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS")
+
+COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
+        "//conditions:default": [],
+        "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
+}) + select({
+        "//conditions:default": ["-DPYTHON_DISABLE=1"],
+        "//src:not_disable_python" : ["-DPYTHON_DISABLE=0"],
+}) + select({
+        "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
+        "//src:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+})
+
+LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
+    "//conditions:default": [],
+    "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
+})
 
 pybind_extension(
     name = "pyovms",
@@ -29,7 +47,7 @@ pybind_extension(
 mediapipe_proto_library(
     name = "pythonexecutorcalculator_proto", # pythonexecutorcalculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["python_executor_calculator.proto"],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
         "@mediapipe//mediapipe/framework:calculator_proto",
@@ -39,7 +57,7 @@ mediapipe_proto_library(
 mediapipe_proto_library(
     name = "pytensorovtensorconvertercalculator_proto", # pytensorovtensorconvertercalculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["pytensor_ovtensor_converter_calculator.proto"],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
         "@mediapipe//mediapipe/framework:calculator_proto",
@@ -50,19 +68,13 @@ cc_library(
     name = "ovmspytensor",
     hdrs = ["ovms_py_tensor.hpp",],
     srcs = ["ovms_py_tensor.cpp",], # FIXME
-    visibility = ["//visibility:public"],
     deps = [
         "@python3_linux//:python3-lib",
         "@pybind11//:pybind11_embed",
     ],
-    copts = COMMON_STATIC_LIBS_COPTS + select({
-            "//conditions:default": [],
-            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
-        }),
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
-        "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-    }),
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
     data = [":pyovms.so"],
 )
@@ -76,15 +88,9 @@ cc_library(
         "@pybind11//:pybind11_embed",
         "//src:libovmslogging",
     ],
-    copts = COMMON_STATIC_LIBS_COPTS + select({
-            "//conditions:default": [],
-            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
-        }),
-    visibility = ["//visibility:public"],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
-        "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-    }),
+    visibility = ["//visibility:private"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
     data = [":pyovms.so"],
 )
@@ -99,15 +105,9 @@ cc_library(
         "//src:libovmslogging",
         "utils",
     ],
-    copts = COMMON_STATIC_LIBS_COPTS + select({
-            "//conditions:default": [],
-            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
-        }),
-    visibility = ["//visibility:public"],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
-        "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-    }),
+    visibility = ["//visibility:private"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
     data = [":pyovms.so"],
 )
@@ -126,15 +126,9 @@ cc_library(
         "pythonexecutorcalculator_cc_proto",
         "utils",
     ],
-    copts = COMMON_STATIC_LIBS_COPTS + select({
-            "//conditions:default": [],
-            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
-        }),
     visibility = ["//visibility:public"],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
-        "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-    }),
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
     data = [":pyovms.so"],
 )
@@ -143,7 +137,6 @@ cc_library(
     name = "pytensorovtensorconvertercalculator",
     srcs = ["pytensor_ovtensor_converter_calculator.cc",],
     deps = [
-        "@com_google_protobuf//:protobuf",
         "@linux_openvino//:openvino",
         "@pybind11//:pybind11_embed",
         "@python3_linux//:python3-lib",
@@ -153,15 +146,9 @@ cc_library(
         "pytensorovtensorconvertercalculator_cc_proto",
         "pythonbackend",
     ],
-    copts = COMMON_STATIC_LIBS_COPTS + select({
-            "//conditions:default": [],
-            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
-        }),
-    visibility = ["//visibility:public"],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
-        "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-    }),
+    visibility = ["//visibility:private"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
     data = [":pyovms.so"],
 )
@@ -170,8 +157,7 @@ cc_library(
     name = "pythonexecutorcalculator",
     srcs = ["python_executor_calculator.cc",],
     deps = [
-        #"@linux_openvino//:openvino",
-        #"@com_github_grpc_grpc//:grpc++", # TODO find <google/protobuf/port_def.inc>
+        "@linux_openvino//:openvino",
         "@python3_linux//:python3-lib",
         "@pybind11//:pybind11_embed",
         "@mediapipe//mediapipe/framework:calculator_framework", # TODO only for calculator
@@ -180,29 +166,18 @@ cc_library(
         "pythonnoderesources",
         "ovmspytensor",
     ],
-    copts = COMMON_STATIC_LIBS_COPTS + select({
-            "//conditions:default": [],
-            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
-        }),
-    visibility = ["//visibility:public"],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
-        "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-    }),
+    visibility = ["//visibility:private"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
     data = [":pyovms.so"],
 )
 
 cc_library(
     name = "libovmspythonmodule",
-    hdrs = [
-            "pythoninterpretermodule.hpp",
-            ],
-    srcs = [
-            "pythoninterpretermodule.cpp",
-            ],
+    hdrs = ["pythoninterpretermodule.hpp",],
+    srcs = ["pythoninterpretermodule.cpp",],
     deps = [
-        "@com_github_grpc_grpc//:grpc++", # TODO find <google/protobuf/port_def.inc>
         "@python3_linux//:python3-lib",
         "@pybind11//:pybind11_embed",
         "@mediapipe//mediapipe/framework:calculator_framework", # TODO only for calculator
@@ -215,15 +190,9 @@ cc_library(
         "pythonexecutorcalculator",
         "utils",
     ],
-    copts = COMMON_STATIC_LIBS_COPTS + select({
-            "//conditions:default": [],
-            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
-        }),
     visibility = ["//visibility:public"],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
-        "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-    }),
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
     data = [":pyovms.so"],
 )

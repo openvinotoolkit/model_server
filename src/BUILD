@@ -13,56 +13,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
-load("//src:common_settings.bzl", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS")
-
-# TODO move to common_settings.bzl
-#To build without mediapipe use flags - bazel build --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 //src:ovms
-config_setting(
-    name = "disable_mediapipe",
-    define_values = {
-        "MEDIAPIPE_DISABLE": "1",
-    },
-    visibility = ["//visibility:public"],
-)
-
-more_selects.config_setting_negation(
-    name = "not_disable_mediapipe",
-    negate = ":disable_mediapipe",
-)
-
-#To build without python use flags - bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
-config_setting(
-    name = "disable_python",
-    define_values = {
-        "PYTHON_DISABLE": "1",
-    },
-    visibility = ["//visibility:public"],
-)
-
-more_selects.config_setting_negation(
-    name = "not_disable_python",
-    negate = ":disable_python",
-)
-
-config_setting(
-    name = "fuzzer_build",
-    define_values = {
-        "FUZZER_BUILD": "1",
-    },
-    visibility = ["//visibility:public"],
-)
-
-more_selects.config_setting_negation(
-    name = "not_fuzzer_build",
-    negate = ":fuzzer_build",
-)
+load("//src:common_settings.bzl",
+     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS",
+     "create_config_settings")
 
 constraint_setting(name = "linux_distribution_family")
 constraint_value(constraint_setting = "linux_distribution_family", name = "fedora") # like RHEL/CentOS
 constraint_value(constraint_setting = "linux_distribution_family", name = "debian") # like Ubuntu
+
+create_config_settings()
+COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
+        "//conditions:default": [],
+        "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
+}) + select({
+        "//conditions:default": ["-DPYTHON_DISABLE=1"],
+        "//src:not_disable_python" : ["-DPYTHON_DISABLE=0"],
+}) + select({
+        "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
+        "//src:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+})
+
+LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
+    "//conditions:default": [],
+    "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
+})
+
+COPTS_TESTS = [
+    "-Wall",
+    "-Wno-unknown-pragmas",
+    "-Werror",
+    "-Isrc",
+    "-fconcepts", # for gmock related utils
+    "-fvisibility=hidden",# Needed for pybind targets
+] + select({
+        "//conditions:default": ["-DPYTHON_DISABLE=1"],
+        "//src:not_disable_python" : ["-DPYTHON_DISABLE=0"],
+}) + select({
+        "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
+        "//src:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+})
 
 cc_library(
     name = "custom_nodes_common_lib",
@@ -80,9 +71,6 @@ cc_library(
         "-Wno-sign-compare",
     ],
 )
-
-load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
-load("@tensorflow_serving//tensorflow_serving:serving.bzl", "serving_tensorflow_proto_dep")
 
 cc_shared_library(
     name = "ovms_shared",
@@ -173,18 +161,9 @@ mediapipe_proto_library(
 cc_library(
     name = "ovms_header",
     hdrs = ["ovms.h"],
-    srcs = [ "ovms.h" ],
-    deps = [      
-        ],
-    local_defines = [
-    ],
-    copts = [
-        ],
-    visibility = [
-        "//visibility:public",
-    ],
-    linkopts = [
-    ],
+    copts = [],
+    visibility = ["//visibility:public",],
+    linkopts = [],
     alwayslink = 1,
 )
 
@@ -398,6 +377,7 @@ cc_library(
             ],
             "//src:disable_python": []
         }) + [
+            "cpp_headers",
             "libovmsfilesystem",
             "libovmsfilesystemfactory",
             "libovmslocalfilesystem", # indirectly & directly through factory
@@ -416,23 +396,14 @@ cc_library(
                 "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
                 "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
                 "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
+                "libovmsmediapipe_utils",
             ],
             "//src:disable_mediapipe" : [],
         }),
-    local_defines = [
-        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
-    ],
-    copts = COMMON_STATIC_LIBS_COPTS + select({
-            "//conditions:default": [],
-            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
-    }),
-    visibility = [
-        "//visibility:public",
-    ],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
-        "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-    }),
+    visibility = ["//visibility:public",],
+    local_defines = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",], # TODO propagate
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     data = ["//src/python:pyovms.so"],
     alwayslink = 1,
 )
@@ -445,20 +416,10 @@ cc_library(
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
     ],
-    local_defines = [
-        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
-    ],
-    copts = COMMON_STATIC_LIBS_COPTS + select({
-            "//conditions:default": [],
-            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
-        }),
-    visibility = [
-        "//visibility:public",
-    ],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
-        "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-    }),
+    local_defines = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",],
+    visibility = ["//visibility:public",],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
 
@@ -467,20 +428,9 @@ cc_library(
     hdrs = ["precision.hpp"],
     srcs = ["precision.cpp",],
     deps = ["@linux_openvino//:openvino",], # TODO dispose
-    local_defines = [
-        "SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",
-    ],
-    copts = COMMON_STATIC_LIBS_COPTS + select({
-            "//conditions:default": [],
-            "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
-        }),
-    visibility = [
-        "//visibility:public",
-    ],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
-        "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-    }),
+    visibility = ["//visibility:public",],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
 
@@ -725,8 +675,8 @@ cc_library(
     srcs = ["status.cpp",],
     deps = [],
     visibility = ["//visibility:public"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -737,9 +687,9 @@ cc_library(
     deps = ["libovmsstring_utils",
             "libovmsstatus",
             "libovmslogging",],
-    visibility = ["//visibility:public"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    visibility = ["//visibility:public",],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library( # make ovms_lib dependent, use share doptions
@@ -748,8 +698,8 @@ cc_library( # make ovms_lib dependent, use share doptions
     srcs = ["stringutils.cpp",],
     deps = [],
     visibility = ["//visibility:public"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -759,8 +709,8 @@ cc_library(
     srcs = ["model_version_policy.cpp",],
     deps = [],
     visibility = ["//visibility:public"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library( # make ovms_lib dependent, use share doptions
@@ -781,8 +731,8 @@ cc_library( # make ovms_lib dependent, use share doptions
         "libovmsstatus",
     ],
     visibility = ["//visibility:public"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library( # make ovms_lib dependent, use share doptions
@@ -800,8 +750,8 @@ cc_library( # make ovms_lib dependent, use share doptions
         "libovmsstatus",
     ],
     visibility = ["//visibility:public"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library( # make ovms_lib dependent, use share doptions
@@ -811,9 +761,9 @@ cc_library( # make ovms_lib dependent, use share doptions
             "s3filesystem.cpp",
     ],
     deps = [
-        "@awssdk//:s3", #TODO
-        "@awssdk//:core", #TODO
-        "@awssdk//:deps", #TODO
+        "@awssdk//:s3",
+        "@awssdk//:core",
+        "@awssdk//:deps",
         "libovmsfilesystem",
         "libovmslogging",
         "libovmsstring_utils",
@@ -821,8 +771,8 @@ cc_library( # make ovms_lib dependent, use share doptions
         "libovmsstatus",
     ],
     visibility = ["//visibility:public"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -835,8 +785,8 @@ cc_library(
             "libovmsmodelversioning",
             "libovmsstatus",],
     visibility = ["//visibility:public"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -847,8 +797,8 @@ cc_library(
             "libovmsstatus",
             "libovmslogging"],
     visibility = ["//visibility:public"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -863,8 +813,8 @@ cc_library(
             "libovmslocalfilesystem",
             "libovmslogging"],
     visibility = ["//visibility:public"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -880,6 +830,8 @@ cc_library(
         "module.hpp",],
     deps = [],
     visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_binary(
@@ -1156,14 +1108,7 @@ cc_test(
             ],
             "//src:disable_mediapipe" : [],
         }),
-    copts = [
-        "-Wall",
-        "-Wno-unknown-pragmas",
-        "-Werror",
-        "-Isrc",
-        "-fconcepts", # for gmock related utils
-        "-fvisibility=hidden",# Needed for pybind targets
-    ],
+    copts = COPTS_TESTS,
 )
 
 filegroup(
