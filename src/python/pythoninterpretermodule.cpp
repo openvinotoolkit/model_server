@@ -45,7 +45,6 @@ Status PythonInterpreterModule::start(const ovms::Config& config) {
         return StatusCode::INTERNAL_ERROR;
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", PYTHON_INTERPRETER_MODULE_NAME);
-    SPDLOG_ERROR("ER: {}", (void*) this);
     return StatusCode::OK;
 }
 

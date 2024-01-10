@@ -120,6 +120,7 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/relative_paths/config_mp_passthrough.json");
     }
 };
+
 #if (PYTHON_DISABLE == 0)
 class MediapipePyTensorOvTensorConverterTest : public MediapipeFlowTest {
 public:
@@ -127,7 +128,6 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_pytensor_ovtensor_converter.json");
     }
 };
-
 class MediapipeOvTensorPyTensorConverterTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -135,6 +135,7 @@ public:
     }
 };
 #endif
+
 class MediapipeTfLiteTensorTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -169,6 +170,7 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
     // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
+
 #if (PYTHON_DISABLE == 0)
 TEST_F(MediapipePyTensorOvTensorConverterTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -240,6 +242,7 @@ TEST_F(MediapipeOvTensorPyTensorConverterTest, Infer) {
         << readableError(expectedOutput, actualOutput, dataLengthToCheck / sizeof(float));
 }
 #endif
+
 TEST_F(MediapipeTFTest, Passthrough) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
