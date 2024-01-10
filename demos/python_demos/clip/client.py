@@ -20,13 +20,15 @@ parser = argparse.ArgumentParser(description='Client for clip example')
 
 parser.add_argument('--url', required=False, default='localhost:9000',
                     help='Specify url to grpc service. default:localhost:9000')
+parser.add_argument('--image_url', required=False, default='https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg',
+                    help='Specify image_url to send to the CLIP model. default:https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg')
 args = vars(parser.parse_args())
 
 client = grpcclient.InferenceServerClient(args['url'])
-text = "He never went out without a book under his arm, and he often came back with two."
-print(f"Text:\n{text}\n")
-data = text.encode()
-infer_input = grpcclient.InferInput("image", [len(data)], "BYTES")
+image_url = args['image_url']
+print(f"Using image_url:\n{image_url}\n")
+data = image_url.encode()
+infer_input = grpcclient.InferInput("image_url", [len(data)], "BYTES")
 infer_input._raw_content = data
 results = client.infer("python_model", [infer_input])
-print(f"Translation:\n{results.as_numpy('logits_per_image').tobytes().decode()}\n")
+print(f"logits_per_image:\n{results.as_numpy('logits_per_image')}\n")

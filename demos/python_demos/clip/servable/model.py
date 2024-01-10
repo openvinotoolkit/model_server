@@ -19,6 +19,7 @@ from transformers import CLIPProcessor, CLIPModel
 from urllib.request import urlretrieve
 from pathlib import Path
 from PIL import Image
+import os
 
 class OvmsPythonModel:
 
@@ -27,21 +28,23 @@ class OvmsPythonModel:
         self.model = CLIPModel.from_pretrained(model_id)
         self.processor = CLIPProcessor.from_pretrained(model_id)
 
-        sample_path = Path("data/coco.jpg")
-        if not sample_path.exists():
-            sample_path.parent.mkdir(parents=True, exist_ok=True)
-            urlretrieve(
-                "https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg",
-                sample_path,
-            )
-        self.image = Image.open(sample_path)
-
         input_labels = ['cat', 'dog', 'wolf', 'tiger', 'man', 'horse', 'frog', 'tree', 'house', 'computer']
         self.text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
 
     def execute(self, inputs: list):
-        inputs = self.processor(text=self.text_descriptions, images=[self.image], return_tensors="pt", padding=True)
-        results = self.model(**inputs)
+        input_url = bytes(inputs[0]).decode()
+        input_name = input_url.split("/")[-1]
+        sample_path = Path(os.path.join("data",input_name))
+        sample_path.parent.mkdir(parents=True, exist_ok=True)
+        urlretrieve(
+            input_url,
+            sample_path,
+        )
+        image = Image.open(sample_path)
+
+        model_inputs = self.processor(text=self.text_descriptions, images=[image], return_tensors="pt", padding=True)
+        results = self.model(**model_inputs)
         logits_per_image = results['logits_per_image']
-        return [Tensor("logits_per_image", logits_per_image.encode())]
+        probs = logits_per_image.softmax(dim=1).detach().numpy()
+        return [Tensor("logits_per_image", probs)]
 
