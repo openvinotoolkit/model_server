@@ -346,7 +346,7 @@ RUN ./rununittest.sh
 
 # C api shared library
 # hadolint ignore=DL3059
-ARG CAPI_FLAGS=--strip=always --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1
+ARG CAPI_FLAGS=--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1
 RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
 
 ARG FUZZER_BUILD=0
