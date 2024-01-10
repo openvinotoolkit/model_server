@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-#include "logging.hpp"  // TODO modelmanager logger
+#include "logging.hpp"
 
 #if defined(__APPLE__) || defined(__NetBSD__)
 #define st_mtim st_mtimespec

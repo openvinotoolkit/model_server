@@ -22,10 +22,10 @@
 
 #include "../config.hpp"
 #include "../logging.hpp"
-#include "python_backend.hpp"
 #include "../module.hpp"
 #include "../module_names.hpp"
 #include "../status.hpp"
+#include "python_backend.hpp"
 
 namespace py = pybind11;
 

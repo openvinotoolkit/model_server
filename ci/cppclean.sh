@@ -54,7 +54,7 @@ fi
 if [ ${NO_WARNINGS_TEST_NOTUSED} -gt 0 ]; then
     errors+="Failed probably due to unnecessary forward includes: ${NO_WARNINGS_TEST_NOTUSED}"$'\n'
 fi
-if [ ${NO_WARNINGS} -gt  166 ]; then
+if [ ${NO_WARNINGS} -gt  164 ]; then
     errors+="Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST} -gt  52 ]; then

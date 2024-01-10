@@ -25,20 +25,17 @@
 #include "../logging.hpp"
 #include "../status.hpp"
 
-#if (PYTHON_DISABLE == 0)  // TODO why ifdef in python ...
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
 #include <pybind11/embed.h>  // everything needed for embedding
 
-#include "src/python/python_executor_calculator.pb.h"
-#endif
 #include "../mediapipe_internal/mediapipe_utils.hpp"
+#include "src/python/python_executor_calculator.pb.h"
 
 namespace ovms {
 
-#if (PYTHON_DISABLE == 0)
 PythonNodeResources::PythonNodeResources(PythonBackend* pythonBackend) {
     this->ovmsPythonModel = nullptr;
     this->pythonBackend = pythonBackend;
@@ -164,6 +161,5 @@ PythonNodeResources::~PythonNodeResources() {
     py::gil_scoped_acquire acquire;
     this->ovmsPythonModel.reset();
 }
-#endif
 
 }  // namespace ovms
