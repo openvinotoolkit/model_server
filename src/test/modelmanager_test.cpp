@@ -1125,7 +1125,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenRe
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    uint timeout = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
+    const uint timeout = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
     sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     cleanerExitTrigger.set_value();
@@ -1145,7 +1145,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesWhenResourcesInte
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    uint timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
+    const uint timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
     resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     cleanerExitTrigger.set_value();
 
@@ -1165,8 +1165,9 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenSe
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    uint timeout = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
-    done.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
+    const uint timeout = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
+    sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
+    resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     cleanerExitTrigger.set_value();
 
     if (t.joinable()) {
@@ -1183,7 +1184,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupSequenceWhenSequenceInterv
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(0);
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    uint timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
+    const uint timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
     sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     cleanerExitTrigger.set_value();
 
@@ -1203,7 +1204,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenIn
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    uint timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
+    const uint timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
     sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     cleanerExitTrigger.set_value();
