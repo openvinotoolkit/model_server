@@ -21,13 +21,31 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 import os
+import openvino as ov
+from scipy.special import softmax
 
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
         model_id = "openai/clip-vit-base-patch16"
-        self.model = CLIPModel.from_pretrained(model_id)
+        model = CLIPModel.from_pretrained(model_id)
         self.processor = CLIPProcessor.from_pretrained(model_id)
+
+        # create OpenVINO core object instance
+        core = ov.Core()
+        device = "CPU"
+        model.config.torchscript = True
+        input_labels = ['cat', 'dog', 'wolf', 'tiger', 'man', 'horse', 'frog', 'tree', 'house', 'computer']
+        text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
+        image =  Image.new('RGB', (800, 600))
+        model_inputs = self.processor(text=text_descriptions, images=[image], return_tensors="pt", padding=True)
+
+        ov_model = ov.convert_model(model, example_input=dict(model_inputs))
+
+        # compile model for loading on device
+        self.compiled_model = core.compile_model(ov_model, device)
+        # obtain output tensor for getting predictions
+        self.logits_per_image_out = self.compiled_model.output(0)
 
     def execute(self, inputs: list):
         input_url = bytes(inputs[0]).decode()
@@ -43,8 +61,8 @@ class OvmsPythonModel:
         input_labels = np.frombuffer(inputs[1].data, dtype=inputs[1].datatype)
         self.text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
         model_inputs = self.processor(text=self.text_descriptions, images=[image], return_tensors="pt", padding=True)
-        results = self.model(**model_inputs)
-        logits_per_image = results['logits_per_image']
-        probs = logits_per_image.softmax(dim=1).detach().numpy()
+        logits_per_image = self.compiled_model(dict(model_inputs))[self.logits_per_image_out]
+
+        probs = softmax(logits_per_image, axis=1)
         return [Tensor("logits_per_image", probs)]
 
