@@ -35,11 +35,6 @@
                 "base_path":"/models/pose_landmark_full",
                 "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
             }
-        },
-        { "config": {
-            "name":"iris_landmark",
-            "base_path":"/models/iris_landmark",
-            "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
         }
     }
     ],
@@ -47,10 +42,6 @@
         {
             "name":"holisticTracking",
             "graph_path":"/models/holistic_tracking.pbtxt"
-        },
-        {
-            "name":"irisTracking",
-            "graph_path":"/models/iris_tracking.pbtxt"
         }
     ]
 }

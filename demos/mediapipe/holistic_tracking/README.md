@@ -34,10 +34,6 @@ ovms
 │   └── 1
 │       └── hand_recrop.tflite
 ├── holistic_tracking.pbtxt
-├── iris_landmark
-│   └── 1
-│       └── iris_landmark.tflite
-├── iris_tracking.pbtxt
 ├── palm_detection_full
 │   └── 1
 │       └── palm_detection_full.tflite

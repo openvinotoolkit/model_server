@@ -46,7 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('--batchsize', default=1,
                         help='Number of images in a single request. default: 1',
                         dest='batchsize')
-    parser.add_argument('--graph_name', default='holisticTracking', help='Define graph name, must be same as is in service. default: holisticTracking, also available: holisticTracking, irisTracking',
+    parser.add_argument('--graph_name', default='holisticTracking', help='Define graph name, must be same as is in service. default: holisticTracking',
                         dest='graph_name')
     parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with GRPC endpoint')
 
