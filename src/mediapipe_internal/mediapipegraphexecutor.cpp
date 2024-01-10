@@ -17,6 +17,7 @@
 
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <set>
@@ -447,6 +448,19 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
 }
 
 #if (PYTHON_DISABLE == 0)
+
+static bool computeExpectedBufferSizeReturnFalseIfOverflow(const std::vector<py::ssize_t>& shape, const size_t& itemsize, size_t& expectedBufferSize) {
+    for (const py::ssize_t& dim : shape) {
+        if (expectedBufferSize > std::numeric_limits<size_t>::max() / dim)
+            return false;
+        expectedBufferSize *= dim;
+    }
+    if (expectedBufferSize > std::numeric_limits<size_t>::max() / itemsize)
+        return false;
+    expectedBufferSize *= itemsize;
+    return true;
+}
+
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor, PythonBackend* pythonBackend) {
     auto requestInputItr = request.inputs().begin();
     auto status = getRequestInput(requestInputItr, requestedName, request);
@@ -472,12 +486,18 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         if (formatIt != datatypeToBufferFormat.end()) {
             // If datatype is known, we check if a valid buffer can be created with provided data
             size_t itemsize = bufferFormatToItemsize.at(formatIt->second);
-            size_t numElements = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<py::ssize_t>());
-            size_t expectedSize = numElements * itemsize;
+            size_t expectedBufferSize = 1;
 
-            if (bufferLocation.size() != expectedSize) {
+            bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(shape, itemsize, expectedBufferSize);
+            if (!expectedBufferSizeValid) {
+                const std::string details = "Provided shape and datatype declare too large buffer.";
+                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+            }
+
+            if (bufferLocation.size() != expectedBufferSize) {
                 std::stringstream ss;
-                ss << "Invalid Python tensor buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedSize;
+                ss << "Invalid Python tensor buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedBufferSize;
                 const std::string details = ss.str();
                 SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
                 return Status(StatusCode::INVALID_CONTENT_SIZE, details);

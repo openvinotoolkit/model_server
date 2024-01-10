@@ -1775,12 +1775,12 @@ TEST_F(PythonFlowTest, Positive_BufferTooSmall_Custom) {
     const std::vector<float> data{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, -5.0f};
     prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden below*/}, data, false);
 
-    // Make the metdata smaller than actual buffer
+    // Make the metdata larger than actual buffer
     auto& inputMeta = *req.mutable_inputs()->begin();
     inputMeta.clear_shape();
     inputMeta.add_shape(1);
     inputMeta.add_shape(1000000);
-    inputMeta.add_shape(20);  // 20mb
+    inputMeta.add_shape(20);
     inputMeta.set_datatype("my custom type");
 
     ServableMetricReporter* defaultReporter{nullptr};
@@ -1858,17 +1858,26 @@ TEST_F(PythonFlowTest, Negative_ExpectedBytesAmountOverflow) {
     PythonFlowSymmetricIncrementFixture fixture;
     KFSRequest req;
     KFSResponse res;
-    size_t max_size = (size_t)-1;
-    std::cout << max_size;
     req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const std::string>{{1, 1}, "UINT8"}, {}, false);
-
-    // Make the metdata smaller than actual buffer
-    auto& inputMeta = *req.mutable_inputs()->begin();
-    inputMeta.clear_shape();
-    inputMeta.add_shape(1);
-    inputMeta.add_shape(1);
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const std::string>{{1, 4}, "FP32"}, {}, false);
 
     ServableMetricReporter* defaultReporter{nullptr};
+    auto& inputMeta = *req.mutable_inputs()->begin();
+    // Shape way over acceptable values
+    inputMeta.clear_shape();
+    inputMeta.add_shape(10000000);
+    inputMeta.add_shape(10000000);
+    inputMeta.add_shape(10000000);
+    inputMeta.add_shape(10000000);
+    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
+    // Shape just above the size_t limit
+    inputMeta.clear_shape();
+    inputMeta.add_shape(std::numeric_limits<size_t>::max() / 5 + 1);
+    inputMeta.add_shape(5);
+    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
+    // Shape below size_t limit, but when multiplied by itemsize it overflows
+    inputMeta.clear_shape();
+    inputMeta.add_shape(std::numeric_limits<size_t>::max() / 4 + 1);
+    inputMeta.add_shape(1);
     ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
 }
