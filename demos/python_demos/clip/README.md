@@ -1,4 +1,4 @@
-# Seq2seq demo with python node {#ovms_demo_python_seq2seq}
+# CLIP demo with python node {#ovms_demo_clip}
 
 ## Build image
 
@@ -20,7 +20,7 @@ Mount the `./servable` which contains:
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculator
 
 ```bash
-cd demos/python_demos/seq2seq_translation
+cd demos/python_demos/clip
 docker run -it --rm -p 9000:9000 -v ${PWD}/servable:/workspace openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
@@ -37,10 +37,12 @@ python3 client.py --url localhost:9000
 
 Expected output:
 ```bash
-Text:
-He never went out without a book under his arm, and he often came back with two.
+Using image_url:
+https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg
 
-Translation:
-Il n'est jamais sorti sans un livre sous son bras, et il est souvent revenu avec deux.
+logits_per_image:
+[[6.90015091e-04 9.88587201e-01 3.07648821e-04 1.21366116e-04
+  7.02354964e-03 6.70988229e-04 2.55530904e-04 1.68749102e-04
+  1.81249098e-03 3.62430437e-04]]
 
 ```
