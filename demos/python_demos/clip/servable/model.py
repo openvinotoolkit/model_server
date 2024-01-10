@@ -19,6 +19,7 @@ from transformers import CLIPProcessor, CLIPModel
 from urllib.request import urlretrieve
 from pathlib import Path
 from PIL import Image
+import numpy as np
 import os
 
 class OvmsPythonModel:
@@ -28,13 +29,10 @@ class OvmsPythonModel:
         self.model = CLIPModel.from_pretrained(model_id)
         self.processor = CLIPProcessor.from_pretrained(model_id)
 
-        input_labels = ['cat', 'dog', 'wolf', 'tiger', 'man', 'horse', 'frog', 'tree', 'house', 'computer']
-        self.text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
-
     def execute(self, inputs: list):
         input_url = bytes(inputs[0]).decode()
         input_name = input_url.split("/")[-1]
-        sample_path = Path(os.path.join("data",input_name))
+        sample_path = Path(os.path.join("data", input_name))
         sample_path.parent.mkdir(parents=True, exist_ok=True)
         urlretrieve(
             input_url,
@@ -42,6 +40,8 @@ class OvmsPythonModel:
         )
         image = Image.open(sample_path)
 
+        input_labels = np.frombuffer(inputs[1].data, dtype=inputs[1].datatype)
+        self.text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
         model_inputs = self.processor(text=self.text_descriptions, images=[image], return_tensors="pt", padding=True)
         results = self.model(**model_inputs)
         logits_per_image = results['logits_per_image']

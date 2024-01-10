@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 input_stream: "OVMS_PY_TENSOR:image_url"
+input_stream: "OVMS_PY_TENSOR1:input_labels"
 output_stream: "OVMS_PY_TENSOR:logits_per_image"
 
 node {
@@ -21,6 +22,7 @@ node {
   calculator: "PythonExecutorCalculator"
   input_side_packet: "PYTHON_NODE_RESOURCES:py"
   input_stream: "INPUT:image_url"
+  input_stream: "INPUT1:input_labels"
   output_stream: "OUTPUT:logits_per_image"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
