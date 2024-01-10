@@ -81,8 +81,8 @@ py::dict PythonNodeResources::preparePythonNodeInitializeArguments(const ::media
         outputStreams.append(MediapipeGraphDefinition::getStreamName(name));
     }
 
-    kwargsParam["input_streams"] = inputStreams;
-    kwargsParam["output_streams"] = outputStreams;
+    kwargsParam["input_names"] = inputStreams;
+    kwargsParam["output_names"] = outputStreams;
     kwargsParam["node_name"] = nodeName;
 
     return kwargsParam;

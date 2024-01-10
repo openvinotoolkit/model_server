@@ -13,15 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
+import numpy as np
+from pyovms import Tensor
 class OvmsPythonModel:
-    def initialize(self, kwargs: dict):
-        self.node_name = kwargs["node_name"]
-        self.input_names = kwargs["input_names"]
-        self.output_names = kwargs["output_names"]
-        return
 
-    def execute(self, inputs: dict) -> bool:
-        return None
-    
-    def finalize(self, kwargs: dict):
-        return
+    def initialize(self, kwargs):
+        self.output_name = kwargs["output_names"][0]
+
+    def execute(self, inputs: list):
+        # Numpy string is a custom type that cannot be mapped to Kserve datatype
+        return [Tensor(self.output_name, np.array("my string"))]

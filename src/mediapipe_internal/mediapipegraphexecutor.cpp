@@ -15,7 +15,9 @@
 //*****************************************************************************
 #include "mediapipegraphexecutor.hpp"
 
+#include <functional>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <set>
@@ -30,6 +32,7 @@
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
+#include "../predict_request_validation_utils.hpp"
 #include "../serialization.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
@@ -62,6 +65,7 @@ namespace py = pybind11;
 #endif
 
 namespace ovms {
+using namespace request_validation_utils;
 using ::mediapipe::Timestamp;
 const Timestamp DEFAULT_STARTING_STREAM_TIMESTAMP = Timestamp(0);
 
@@ -422,7 +426,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     size_t expectedSize = numberOfChannels * numberOfCols * numberOfRows * elementSize;
     if (bufferLocation.size() != expectedSize) {
         std::stringstream ss;
-        ss << "Invalid Mediapipe Image input buffer size. Actual: " << bufferLocation.size() << "Expected: " << expectedSize;
+        ss << "Invalid Mediapipe Image input buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedSize;
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
@@ -467,6 +471,28 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             shape.push_back(requestInputItr->shape()[i]);
         }
 
+        auto formatIt = datatypeToBufferFormat.find(requestInputItr->datatype());
+        if (formatIt != datatypeToBufferFormat.end()) {
+            // If datatype is known, we check if a valid buffer can be created with provided data
+            size_t itemsize = bufferFormatToItemsize.at(formatIt->second);
+            size_t expectedBufferSize = 1;
+
+            bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, itemsize, expectedBufferSize);
+            if (!expectedBufferSizeValid) {
+                const std::string details = "Provided shape and datatype declare too large buffer.";
+                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+            }
+
+            if (bufferLocation.size() != expectedBufferSize) {
+                std::stringstream ss;
+                ss << "Invalid Python tensor buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedBufferSize;
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+            }
+        }
+
         auto ok = pythonBackend->createOvmsPyTensor(
             requestedName,
             const_cast<void*>((const void*)bufferLocation.data()),
@@ -476,7 +502,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             outTensor);
 
         if (!ok) {
-            SPDLOG_DEBUG("Error creating py tensor from data");
+            SPDLOG_DEBUG("Error creating Python tensor from data");
             return StatusCode::UNKNOWN_ERROR;
         }
     }
