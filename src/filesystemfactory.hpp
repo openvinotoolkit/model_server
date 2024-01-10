@@ -17,8 +17,7 @@
 #include <memory>
 #include <string>
 
-#include "filesystem.hpp"
-
 namespace ovms {
+class FileSystem;
 std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath);
 }  // namespace ovms

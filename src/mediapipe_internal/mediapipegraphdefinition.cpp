@@ -45,10 +45,6 @@
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 
-#if (PYTHON_DISABLE == 0)
-#include "../python/pythonnoderesources.hpp"
-#endif
-
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 

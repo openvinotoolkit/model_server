@@ -27,11 +27,6 @@
 #include "../logging.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
-//#include "../tensorinfo.hpp"
-//#include "../timer.hpp"
-//#include "../version.hpp"
-//#include "mediapipe/framework/port/parse_text_proto.h"
-//#include "mediapipe/framework/port/status.h"
 
 namespace ovms {
 const std::string KFS_REQUEST_PREFIX{"REQUEST"};
