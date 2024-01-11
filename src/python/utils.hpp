@@ -106,4 +106,18 @@ public:
     }
 };
 
+class UnexpectedOutputTensorError : public std::exception {
+    std::string message;
+
+public:
+    UnexpectedOutputTensorError() = delete;
+    UnexpectedOutputTensorError(const std::string& outputName) {
+        this->message = "Unexpected Tensor found in the outputs. Tensor name: " + outputName + " is not a valid node output";
+    }
+
+    const char* what() const throw() override {
+        return message.c_str();
+    }
+};
+
 }  // namespace ovms
