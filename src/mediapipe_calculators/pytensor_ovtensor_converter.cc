@@ -101,7 +101,7 @@ public:
             cc->Outputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Add(outputPyTensor.release(), cc->InputTimestamp());
         } else {
             auto& inputTensor = cc->Inputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Get<PyObjectWrapper<py::object>>();
-            auto precision = ovmsPrecisionToIE2Precision(fromString(inputTensor.getProperty<std::string>("datatype")));
+            auto precision = ovmsPrecisionToIE2Precision(fromKfsString(inputTensor.getProperty<std::string>("datatype")));
             ov::Shape shape;
             for (const auto& dim : inputTensor.getProperty<std::vector<py::ssize_t>>("shape")) {
                 if (dim < 0) {
