@@ -18,7 +18,7 @@ load("//src:common_settings.bzl", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIB
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 load("//src:common_settings.bzl",
-     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS")
+     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES")
 
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
@@ -73,6 +73,7 @@ cc_library(
         "@pybind11//:pybind11_embed",
     ],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
@@ -127,6 +128,7 @@ cc_library(
         "utils",
     ],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
@@ -191,6 +193,7 @@ cc_library(
         "utils",
     ],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,

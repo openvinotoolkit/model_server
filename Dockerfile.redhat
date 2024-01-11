@@ -301,7 +301,7 @@ RUN make
 RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino/python/openvino-2023.3.dist-info && \
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2023.3' > /opt/intel/openvino/python/openvino-2023.3.dist-info/METADATA
-ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src
+ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python
 
 WORKDIR /ovms
 

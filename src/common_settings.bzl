@@ -81,3 +81,4 @@ COMMON_FUZZER_LINKOPTS = [
     "-fsanitize-coverage=trace-pc",
     "-static-libasan",
 ]
+COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",]
