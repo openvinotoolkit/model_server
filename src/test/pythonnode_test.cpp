@@ -565,7 +565,7 @@ TEST_F(PythonFlowTest, DISABLED_PythonNodeLoopback_SyncSet_WrongIndex) {
             input_stream: "INPUT:input"
             input_stream: "LOOPBACK:loopback"
             input_stream_info: {
-                tag_index: 'LOOPBACK:0',
+                tag_index: 'LOOPBACK:0',  # correct index
                 back_edge: true
             }
             input_stream_handler {
@@ -591,22 +591,11 @@ TEST_F(PythonFlowTest, DISABLED_PythonNodeLoopback_SyncSet_WrongIndex) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);  // should not be ok, but MP does not validate it
-    ASSERT_NE(pipeline, nullptr);
+    // Should not be OK, but MediaPipe does not validate it at initialization phase
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 
-    KFSRequest req;
-    KFSResponse res;
-
-    req.set_model_name("mediaDummy");
-
-    const std::vector<float> data{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, -5.0f};
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden below*/}, data, false);
-
-    ServableMetricReporter* defaultReporter{nullptr};
-    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::OK);
+    // Current state allows graph to validate and perform inference which leads to RET_CHECK in PrepareForRun
 }
 
 TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_WrongIndex) {
@@ -629,7 +618,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_WrongIndex) {
                 options {
                     [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
                         sync_set {
-                            tag_index: "LOOPBACK:0"
+                            tag_index: "LOOPBACK:0"  # correct index
                         }
                     }
                 }
@@ -691,7 +680,8 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_BackEdgeFalse) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
-// MediaPipe understands that loopback is not a cycle and there is no data source that will ever feed it
+// MediaPipe understands that loopback is not a cycle and there is no data source that will ever feed it.
+// Loopback input in the node is not connected to graph input or output from another node.
 TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_Missing) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
@@ -732,7 +722,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_Missing) {
 // MediaPipe does allow such connection and treats loopback as connected (due to the back edge)
 // However, such graph will hang since nothing feeds loopback with initial data
 // During the hang, the graph node will wait for secondary input (besides "input")
-TEST_F(PythonFlowTest, DISABLED_PythonNodeLoopback_SyncSet_Missing) {
+TEST_F(PythonFlowTest, PythonNodeLoopback_SyncSet_Missing) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "OVMS_PY_TENSOR1:input"
@@ -763,8 +753,10 @@ TEST_F(PythonFlowTest, DISABLED_PythonNodeLoopback_SyncSet_Missing) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);  // should not be ok, but MP does not validate it
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
+
+    GTEST_SKIP() << "Cycle found, the graph will wait for data forever as expected";
 
     KFSRequest req;
     KFSResponse res;
@@ -772,7 +764,7 @@ TEST_F(PythonFlowTest, DISABLED_PythonNodeLoopback_SyncSet_Missing) {
     req.set_model_name("mediaDummy");
 
     const std::vector<float> data{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, -5.0f};
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden below*/}, data, false);
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32}, data, false);
 
     ServableMetricReporter* defaultReporter{nullptr};
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::OK);  // hangs
@@ -827,7 +819,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_Correct) {
     req.set_model_name("mediaDummy");
 
     const std::vector<float> data{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, -5.0f};
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden below*/}, data, false);
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32}, data, false);
 
     ServableMetricReporter* defaultReporter{nullptr};
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::OK);
@@ -2111,7 +2103,7 @@ TEST_F(PythonFlowTest, Positive_BufferTooSmall_Custom) {
     req.set_model_name("mediaDummy");
 
     const std::vector<float> data{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, -5.0f};
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden below*/}, data, false);
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden to "my custom type" below*/}, data, false);
 
     // Make the metdata larger than actual buffer
     auto& inputMeta = *req.mutable_inputs()->begin();
@@ -2157,7 +2149,7 @@ TEST_F(PythonFlowTest, Positive_BufferTooLarge_Custom) {
     req.set_model_name("mediaDummy");
 
     const std::vector<float> data{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, -5.0f};
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden below*/}, data, false);
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden to "my custom type" below*/}, data, false);
 
     // Make the metdata smaller than actual buffer
     auto& inputMeta = *req.mutable_inputs()->begin();

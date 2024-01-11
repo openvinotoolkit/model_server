@@ -188,7 +188,7 @@ The model server logs could confirm the graph correct format and loading all the
 Note that graph definition loading is not confirming if all the calculators are compiled into the model server. That can be tested after sending the request to the KServe endpoint.
 During the requests processing, the logs will include info about calculators initialization and processing the nodes.
 
-Please note that MediaPipe does not validate Input Handler settings during graph initialization, but graph creation phase (upon request processing). Therefore it is good practice to always test the actual deployment by sending example requests to the KServe endpoints.
+Please note that MediaPipe does not validate Input Handler settings during graph initialization, but graph creation phase (upon request processing). Therefore it is good practice to always test the configuration by sending example requests to the KServe endpoints before deployment.
 
 ### Tracing
 Currently the graph tracing on the model server side is not supported. If you would like to take advantage of mediapipe tracing to identify the graph bottleneck, test the graph from the mediapipe application level. Build an example application similarly to [holistic app](https://github.com/openvinotoolkit/mediapipe/tree/main/mediapipe/examples/desktop/holistic_tracking) with the steps documented on [mediapipe tracking](https://github.com/openvinotoolkit/mediapipe/tree/main/docs/tools/tracing_and_profiling.md).
@@ -268,6 +268,8 @@ in the conditions:default section of the deps property:
 ## Known issues <a name="known-issues"></a>
 - MediaPipe `SyncSetInputStreamHandler` options are not validated during graph validation, but graph creation:
 ```
+input_stream: "INPUT:input"
+input_stream: "LOOPBACK:loopback"
 input_stream_handler {
     input_stream_handler: "SyncSetInputStreamHandler",
     options {
@@ -279,4 +281,4 @@ input_stream_handler {
     }
 }
 ```
-MediaPipe closes entire application when the index does not match. Therefore test the deployment for correct setting before deploying on production.
+MediaPipe closes entire application because there's no input stream with tag `LOOPBACK` and index `1` (correct index is `0`). Therefore, test the deployment for correct setting before deploying to production.
