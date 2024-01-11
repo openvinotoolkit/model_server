@@ -543,7 +543,7 @@ enum : unsigned int {
 constexpr size_t STARTING_TIMESTAMP = 0;
 const std::string MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME = "OVMS_MP_TIMESTAMP";
 
-const std::string INPUT_SIDE_PACKET_TAG = "py";
+const std::string PYTHON_SESSION_SIDE_PACKET_TAG = "py";
 
 static std::map<std::string, mediapipe::Packet> createInputSidePackets(const KFSRequest* request) {
     std::map<std::string, mediapipe::Packet> inputSidePackets;
@@ -868,7 +868,12 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     }
     std::map<std::string, mediapipe::Packet> sideInputPackets{createInputSidePackets(request)};
 #if (PYTHON_DISABLE == 0)
-    sideInputPackets[INPUT_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+    if (sideInputPackets.count(PYTHON_SESSION_SIDE_PACKET_TAG)) {
+        const std::string absMessage = "Incoming input side packet: " + PYTHON_SESSION_SIDE_PACKET_TAG + " is special reserved name and cannot be used";
+        SPDLOG_DEBUG("Failed to insert predefined input side packet: {} with error: {}", PYTHON_SESSION_SIDE_PACKET_TAG, absMessage);
+        return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+    }
+    sideInputPackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
 #endif
     MP_RETURN_ON_FAIL(graph.StartRun(sideInputPackets), std::string("start MediaPipe graph: ") + request->model_name(), StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
     if (static_cast<int>(this->inputNames.size()) != request->inputs().size()) {
@@ -1013,7 +1018,12 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
         // Launch
         std::map<std::string, mediapipe::Packet> inputSidePackets{createInputSidePackets(&firstRequest)};
 #if (PYTHON_DISABLE == 0)
-        inputSidePackets[INPUT_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+        if (inputSidePackets.count(PYTHON_SESSION_SIDE_PACKET_TAG)) {
+            const std::string absMessage = "Incoming input side packet: " + PYTHON_SESSION_SIDE_PACKET_TAG + " is special reserved name and cannot be used";
+            SPDLOG_DEBUG("Failed to insert predefined input side packet: {} with error: {}", PYTHON_SESSION_SIDE_PACKET_TAG, absMessage);
+            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+        }
+        inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
 #endif
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
