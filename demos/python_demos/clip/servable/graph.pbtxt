@@ -18,7 +18,7 @@ input_stream: "OVMS_PY_TENSOR1:input_labels"
 output_stream: "OVMS_PY_TENSOR:detection"
 
 node {
-  name: "preprocessNode"
+  name: "PythonPreprocessNode"
   calculator: "PythonExecutorCalculator"
   input_side_packet: "PYTHON_NODE_RESOURCES:py"
   input_stream: "INPUT:image_url"
@@ -34,21 +34,21 @@ node {
 }
 
 node {
-  name: "converterNode1"
+  name: "ConverterNode1"
   calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVMS_PY_TENSOR:input_ids_py"
     output_stream: "OVTENSOR:input_ids"
 }
 
 node {
-  name: "converterNode2"
+  name: "ConverterNode2"
   calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVMS_PY_TENSOR:attention_mask_py"
     output_stream: "OVTENSOR:attention_mask"
 }
 
 node {
-  name: "converterNode3"
+  name: "ConverterNode3"
   calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVMS_PY_TENSOR:pixel_values_py"
     output_stream: "OVTENSOR:pixel_values"
@@ -84,18 +84,18 @@ node {
           }
           tag_to_input_tensor_names {
             key: "OVTENSOR2"
-            value: "66"
+            value: "434"
           }
           tag_to_output_tensor_names {
             key: "OVTENSOR"
-            value: "35"
+            value: "1671"
           }
         }
   }
 }
 
 node {
-  name: "converterBackNode"
+  name: "ConvertBackNode"
   calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVTENSOR:logits_per_image"
     output_stream: "OVMS_PY_TENSOR:logits_per_image_py"
@@ -110,7 +110,7 @@ node {
 }
 
 node {
-  name: "postprocessNode"
+  name: "PythonPostprocessNode"
   calculator: "PythonExecutorCalculator"
   input_side_packet: "PYTHON_NODE_RESOURCES:py"
   input_stream: "INPUT:logits_per_image_py"

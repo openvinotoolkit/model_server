@@ -1,5 +1,12 @@
 # CLIP demo with python node {#ovms_demo_clip}
 
+Python node execution with Openvino Model Server inference example.
+The client sends request with image_url and input_labels into the CLIP model to get the detection name based on the highest probability from CLIP model.
+
+The graph below depictures the data flow in the node execution.
+
+![Mediapipe graph image](graph.png)
+
 ## Build image
 
 From the root of the repository run:
