@@ -35,7 +35,7 @@ using namespace ovms;
 
 namespace mediapipe {
 
-const std::string INPUT_SIDE_PACKET_TAG = "PYTHON_NODE_RESOURCES";
+const std::string PYTHON_SESSION_SIDE_PACKET_TAG = "PYTHON_NODE_RESOURCES";
 
 class PythonExecutorCalculator : public CalculatorBase {
     std::shared_ptr<PythonNodeResources> nodeResources;
@@ -147,7 +147,7 @@ public:
             return absl::Status(absl::StatusCode::kInvalidArgument, "If LOOPBACK is used, it must be defined on both input and output of the node");
 
         setInputsAndOutputsPacketTypes(cc);
-        cc->InputSidePackets().Tag(INPUT_SIDE_PACKET_TAG).Set<PythonNodeResourcesMap>();
+        cc->InputSidePackets().Tag(PYTHON_SESSION_SIDE_PACKET_TAG).Set<PythonNodeResourcesMap>();
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->GetNodeName() << "] GetContract end";
         return absl::OkStatus();
     }
@@ -162,7 +162,7 @@ public:
         if (cc->Inputs().HasTag("LOOPBACK"))
             hasLoopback = true;
 
-        PythonNodeResourcesMap nodeResourcesMap = cc->InputSidePackets().Tag(INPUT_SIDE_PACKET_TAG).Get<PythonNodeResourcesMap>();
+        PythonNodeResourcesMap nodeResourcesMap = cc->InputSidePackets().Tag(PYTHON_SESSION_SIDE_PACKET_TAG).Get<PythonNodeResourcesMap>();
         auto it = nodeResourcesMap.find(cc->NodeName());
         if (it == nodeResourcesMap.end()) {
             LOG(INFO) << "Could not find initialized Python node named: " << cc->NodeName();
