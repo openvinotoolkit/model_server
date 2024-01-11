@@ -82,3 +82,7 @@ COMMON_FUZZER_LINKOPTS = [
     "-static-libasan",
 ]
 COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",]
+PYBIND_DEPS = [
+    "@python3_linux//:python3-lib",
+    "@pybind11//:pybind11_embed",
+]

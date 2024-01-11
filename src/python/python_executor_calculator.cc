@@ -15,7 +15,7 @@
 //*****************************************************************************
 #include <unordered_map>
 
-#include "ovms_py_tensor.hpp"
+#include "bindings/python/ovms_py_tensor.hpp"
 #include "pythonnoderesources.hpp"
 
 #pragma GCC diagnostic push

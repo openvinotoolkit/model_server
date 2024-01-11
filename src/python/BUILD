@@ -14,11 +14,10 @@
 # limitations under the License.
 #
 
-load("//src:common_settings.bzl", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS")
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 load("//src:common_settings.bzl",
-     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES")
+     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "PYBIND_DEPS")
 
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
@@ -36,14 +35,6 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
     "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
 })
 
-pybind_extension(
-    name = "pyovms",
-    srcs = ["ovms_py_tensor_py.cpp", # TODO consider naming convention if exist
-            "ovms_py_tensor.hpp",
-            "ovms_py_tensor.cpp"],
-    visibility = ["//visibility:public"],
-)
-
 mediapipe_proto_library(
     name = "pythonexecutorcalculator_proto", # pythonexecutorcalculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["python_executor_calculator.proto"],
@@ -59,50 +50,30 @@ mediapipe_proto_library(
     srcs = ["pytensor_ovtensor_converter_calculator.proto"],
     visibility = ["//visibility:private"],
     deps = [
-        "@mediapipe//mediapipe/framework:calculator_options_proto",
-        "@mediapipe//mediapipe/framework:calculator_proto",
-    ],
-)
-
-cc_library(
-    name = "ovmspytensor",
-    hdrs = ["ovms_py_tensor.hpp",],
-    srcs = ["ovms_py_tensor.cpp",], # FIXME
-    deps = [
-        "@python3_linux//:python3-lib",
-        "@pybind11//:pybind11_embed",
-    ],
-    visibility = ["//visibility:public"],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
-    data = [":pyovms.so"],
+            "@mediapipe//mediapipe/framework:calculator_options_proto",
+            "@mediapipe//mediapipe/framework:calculator_proto",
+    ]
 )
 
 cc_library(
     name = "utils",
     hdrs = ["utils.hpp",],
     srcs = [],
-    deps = [
-        "@python3_linux//:python3-lib",
-        "@pybind11//:pybind11_embed",
+    deps = PYBIND_DEPS + [
         "//src:libovmslogging",
     ],
     visibility = ["//visibility:private"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = [":pyovms.so"],
+    data = ["//src/bindings/python:pyovms.so"],
 )
 
 cc_library(
     name = "pythonbackend",
     hdrs = ["python_backend.hpp",],
     srcs = ["python_backend.cpp",],
-    deps = [
-        "@python3_linux//:python3-lib",
-        "@pybind11//:pybind11_embed",
+    deps = PYBIND_DEPS + [
         "//src:libovmslogging",
         "utils",
     ],
@@ -110,17 +81,15 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = [":pyovms.so"],
+    data = ["//src/bindings/python:pyovms.so"],
 )
 
 cc_library(
     name = "pythonnoderesources",
     hdrs = ["pythonnoderesources.hpp",],
     srcs = ["pythonnoderesources.cpp",],
-    deps = [
+    deps = PYBIND_DEPS + [
         "@mediapipe//mediapipe/framework:calculator_framework",
-        "@pybind11//:pybind11_embed",
-        "@python3_linux//:python3-lib",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovmsmediapipe_utils",
@@ -132,19 +101,17 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = [":pyovms.so"],
+    data = ["//src/bindings/python:pyovms.so"],
 )
 
 cc_library(
     name = "pytensorovtensorconvertercalculator",
     srcs = ["pytensor_ovtensor_converter_calculator.cc",],
-    deps = [
+    deps = PYBIND_DEPS + [
         "@linux_openvino//:openvino",
-        "@pybind11//:pybind11_embed",
-        "@python3_linux//:python3-lib",
-        "@mediapipe//mediapipe/framework:calculator_framework", # TODO only for calculator
+        "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmsprecision",
-        "ovmspytensor",
+        "//src/bindings/python:ovmspytensor",
         "pytensorovtensorconvertercalculator_cc_proto",
         "pythonbackend",
     ],
@@ -152,41 +119,36 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = [":pyovms.so"],
+    data = ["//src/bindings/python:pyovms.so"],
 )
 
 cc_library(
     name = "pythonexecutorcalculator",
     srcs = ["python_executor_calculator.cc",],
-    deps = [
+    deps = PYBIND_DEPS + [
         "@linux_openvino//:openvino",
-        "@python3_linux//:python3-lib",
-        "@pybind11//:pybind11_embed",
-        "@mediapipe//mediapipe/framework:calculator_framework", # TODO only for calculator
+        "@mediapipe//mediapipe/framework:calculator_framework",
         "pythonexecutorcalculator_cc_proto",
         "pythonbackend",
         "pythonnoderesources",
-        "ovmspytensor",
+        "//src/bindings/python:ovmspytensor",
     ],
     visibility = ["//visibility:private"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = [":pyovms.so"],
+    data = ["//src/bindings/python:pyovms.so"],
 )
 
 cc_library(
     name = "libovmspythonmodule",
     hdrs = ["pythoninterpretermodule.hpp",],
     srcs = ["pythoninterpretermodule.cpp",],
-    deps = [
-        "@python3_linux//:python3-lib",
-        "@pybind11//:pybind11_embed",
-        "@mediapipe//mediapipe/framework:calculator_framework", # TODO only for calculator
+    deps = PYBIND_DEPS + [
         "//src:cpp_headers", # TODO make ovmslib depend on that
         "//src:libovmslogging",
         "//src:libovmsmediapipe_utils",
-        "ovmspytensor",
+        "//src/bindings/python:ovmspytensor",
         "pytensorovtensorconvertercalculator",
         "pythonbackend",
         "pythonexecutorcalculator",
@@ -197,5 +159,5 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = [":pyovms.so"],
+    data = ["//src/bindings/python:pyovms.so"],
 )

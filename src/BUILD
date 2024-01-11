@@ -404,7 +404,7 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    data = ["//src/python:pyovms.so"],
+    data = ["//src/bindings/python:pyovms.so"],
     alwayslink = 1,
 )
 
@@ -436,15 +436,6 @@ cc_library(
 )
 
 load("@pip_deps//:requirements.bzl", "all_requirements")
-
-py_test(
-    name = "test_python_binding",
-    srcs = glob(["bindings/python/tests/*.py"]),
-    main = "bindings/python/tests/run.py",
-    imports=["python"],
-    data = ["//src/python:pyovms.so"],
-    deps = all_requirements
-)
 
 cc_binary(
     name = "libsampleloader.so",
@@ -896,7 +887,7 @@ cc_binary(
             ],
             "//src:disable_mediapipe" : [],
         }),
-    data = ["//src/python:pyovms.so"],
+    data = ["//src/bindings/python:pyovms.so"],
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
