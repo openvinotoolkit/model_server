@@ -96,7 +96,7 @@ cc_library(
         "pythonexecutorcalculator_cc_proto",
         "utils",
     ],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
