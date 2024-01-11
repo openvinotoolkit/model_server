@@ -888,7 +888,7 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
     if (tensor.getDataType() != getPrecisionAsOVMSDataType(inputInfo.getPrecision())) {
         std::stringstream ss;
         ss << "Expected: " << inputInfo.getPrecisionAsString()
-           << "; Actual: " << tensor.getDataType()
+           << "; Actual: " << toString(getOVMSDataTypeAsPrecision(tensor.getDataType()))
            << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid precision - {}", servableName, servableVersion, details);

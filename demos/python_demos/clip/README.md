@@ -40,9 +40,10 @@ Expected output:
 Using image_url:
 https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg
 
-logits_per_image:
-[[6.90015091e-04 9.88587201e-01 3.07648821e-04 1.21366116e-04
-  7.02354964e-03 6.70988229e-04 2.55530904e-04 1.68749102e-04
-  1.81249098e-03 3.62430437e-04]]
+Using input_labels:
+['cat', 'dog', 'wolf', 'tiger', 'man', 'horse', 'frog', 'tree', 'house', 'computer']
+
+Detection:
+dog
 
 ```

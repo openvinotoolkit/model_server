@@ -34,10 +34,11 @@ data = image_url.encode()
 infer_input = grpcclient.InferInput("image_url", [len(data)], "BYTES")
 infer_input._raw_content = data
 input_labels = args['input_labels'].split(",")
+print(f"Using input_labels:\n{input_labels}\n")
 
 labels_npy = np.array(input_labels)
 infer_input1 = grpcclient.InferInput("input_labels", [len(labels_npy)], labels_npy.dtype.str)
 infer_input1._raw_content = labels_npy.tobytes()
 
 results = client.infer("python_model", [infer_input, infer_input1])
-print(f"detection:\n{results.as_numpy('detection')}\n")
+print(f"Detection:\n{results.as_numpy('detection').tobytes().decode()}\n")

@@ -27,7 +27,7 @@ node {
   output_stream: "OUTPUT1:attention_mask_py"
   output_stream: "OUTPUT2:pixel_values_py"
   node_options: {
-    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
       handler_path: "/workspace/preprocess.py"
     }
   }
@@ -58,7 +58,7 @@ node {
   calculator: "OpenVINOModelServerSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+    [type.googleapis.com/mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
       servable_name: "clip"  # servable name inside OVMS
       servable_version: "1"
     }
@@ -73,22 +73,22 @@ node {
   input_stream: "OVTENSOR2:pixel_values"
   output_stream: "OVTENSOR:logits_per_image"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
+    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions]: {
           tag_to_input_tensor_names {
             key: "OVTENSOR"
             value: "input_ids"
           }
           tag_to_input_tensor_names {
-            key: "OVTENSORS1"
+            key: "OVTENSOR1"
             value: "attention_mask"
           }
           tag_to_input_tensor_names {
-            key: "OVTENSORS2"
+            key: "OVTENSOR2"
             value: "66"
           }
           tag_to_output_tensor_names {
             key: "OVTENSOR"
-            value: "logits_per_image"
+            value: "35"
           }
         }
   }
@@ -99,6 +99,14 @@ node {
   calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVTENSOR:logits_per_image"
     output_stream: "OVMS_PY_TENSOR:logits_per_image_py"
+    node_options: {
+        [type.googleapis.com/mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+            tag_to_output_tensor_names {
+            key: "OVMS_PY_TENSOR"
+            value: "logits_per_image_py"
+            }
+        }
+    }
 }
 
 node {
@@ -109,7 +117,7 @@ node {
   input_stream: "INPUT1:input_labels"
   output_stream: "OUTPUT:detection"
   node_options: {
-    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
       handler_path: "/workspace/postprocess.py"
     }
   }

@@ -45,10 +45,19 @@ class OvmsPythonModel:
         self.text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
         model_inputs = self.processor(text=self.text_descriptions, images=[image], return_tensors="pt", padding=True)
 
-        input_ids_py = Tensor("input_ids_py", model_inputs["input_ids"].numpy().astype(np.int64))
-        attention_mask_py = Tensor("attention_mask_py", model_inputs["attention_mask"].numpy().astype(np.int64))
+        input_ids = np.array(model_inputs["input_ids"], dtype=np.dtype("q"))
+        attention_mask = np.array(model_inputs["attention_mask"], dtype=np.dtype("q"))
+        print("input_ids " + str(input_ids.dtype))
+        print("attention_mask " + str(attention_mask.dtype))
+
+        input_ids_py = Tensor("input_ids_py", input_ids)
+        #input_ids_py.datatype = "INT64"
+        attention_mask_py = Tensor("attention_mask_py", attention_mask)
+        #attention_mask_py.datatype = "INT64"
         pixel_values_py = Tensor("pixel_values_py", model_inputs["pixel_values"].numpy())
         print("input_ids_py " + input_ids_py.datatype)
+        print("input_ids_py size " + str(input_ids_py.size))
+        print("input_ids_py shape " + str(input_ids_py.shape))
         print("attention_mask_py " + attention_mask_py.datatype)
         print("pixel_values_py " + pixel_values_py.datatype)
         return [input_ids_py, attention_mask_py, pixel_values_py]
