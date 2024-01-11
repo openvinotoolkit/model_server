@@ -81,11 +81,15 @@ public:
             PythonBackend pythonBackend;
             std::vector<py::ssize_t> shape;
             for (const auto& dim : inputTensor.get_shape()) {
+                if (dim > std::numeric_limits<py::ssize_t>::max()) {
+                    return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
+                           << "dimension exceeded during conversion: " << dim;
+                }
                 shape.push_back(dim);
             }
             const auto& options = cc->Options<PyTensorOvTensorConverterCalculatorOptions>();
             const auto tagOutputNameMap = options.tag_to_output_tensor_names();
-            auto outputName = tagOutputNameMap.at(OVMS_PY_TENSOR_TAG_NAME).c_str();
+            auto outputName = tagOutputNameMap.at(OVMS_PY_TENSOR_TAG_NAME).c_str();  // Existence of the key validated in GetContract
             pythonBackend.createOvmsPyTensor(
                 outputName,
                 const_cast<void*>((const void*)inputTensor.data()),
@@ -100,10 +104,19 @@ public:
             auto precision = ovmsPrecisionToIE2Precision(fromString(inputTensor.getProperty<std::string>("datatype")));
             ov::Shape shape;
             for (const auto& dim : inputTensor.getProperty<std::vector<py::ssize_t>>("shape")) {
+                if (dim < 0) {
+                    return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
+                           << "dimension negative during conversion: " << dim;
+                }
                 shape.push_back(dim);
             }
-            auto data = reinterpret_cast<const void*>(inputTensor.getProperty<void*>("ptr"));
+            const void* data = reinterpret_cast<const void*>(inputTensor.getProperty<void*>("ptr"));
+            size_t bufferSize = inputTensor.getProperty<size_t>("size");
             std::unique_ptr<ov::Tensor> output = std::make_unique<ov::Tensor>(precision, shape);
+            if (bufferSize != output->get_byte_size()) {
+                return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
+                       << "python buffer size: " << bufferSize << "; OV tensor size: " << output->get_byte_size() << "; mismatch";
+            }
             memcpy((*output).data(), const_cast<void*>(data), output->get_byte_size());
             cc->Outputs().Tag(OV_TENSOR_TAG_NAME).Add(output.release(), cc->InputTimestamp());
         }
