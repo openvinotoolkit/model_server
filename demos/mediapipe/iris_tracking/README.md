@@ -4,7 +4,7 @@ This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph 
 
 Example usage of graph that accepts Mediapipe::ImageFrame as a input:
 
-The demo is based on the [Mediapipe Iris demo](https://github.com/google/mediapipe/blob/master/docs/solutions/iris.md.)
+The demo is based on the [Mediapipe Iris demo](https://github.com/google/mediapipe/blob/master/docs/solutions/iris.md)
 
 ## Prepare the server deployment
 
