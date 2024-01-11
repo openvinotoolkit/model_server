@@ -971,7 +971,7 @@ TEST(SchemaTest, ModelConfigPluginConfigPositive) {
             "config": {
                 "name": "dummy_model",
                 "base_path": "dummy_path",
-                "plugin_config": {"A":"B", "C":2, "D":2.5}
+                "plugin_config": {"A":"B", "C":2, "D":2.5, "E":true, "F":false}
             }
         }
     ]
