@@ -67,6 +67,7 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 					"type": "object",
 		"additionalProperties": {"anyOf": [
 						{"type": "string"},
+						{"type": "boolean"},
 						{"type": "number"}
 					]}
 				},
