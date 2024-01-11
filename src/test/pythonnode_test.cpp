@@ -1186,6 +1186,29 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInTwoOutTwoParallelExecutorsWit
     checkDummyResponse("out2", data, req, res, 2 /* expect +2 */, 1, "mediaDummy", 2);
 }
 
+TEST_F(PythonFlowTest, ConverterWithMissingTagMap) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVTENSOR:in"
+            output_stream: "OVMS_PY_TENSOR:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+                    tag_to_output_tensor_names {}
+                }
+            }
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
 TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(

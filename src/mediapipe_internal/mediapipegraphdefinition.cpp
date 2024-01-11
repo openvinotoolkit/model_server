@@ -100,7 +100,7 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
         auto absStatus = graph.Initialize(this->config);
         if (!absStatus.ok()) {
             const std::string absMessage = absStatus.ToString();
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} initialization failed with message: {}. Check if all required calculators are registered in OVMS", this->getName(), absMessage);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} initialization failed with message: {}", this->getName(), absMessage);
             return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
         }
     } catch (std::exception& e) {
