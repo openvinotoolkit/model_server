@@ -51,9 +51,7 @@ class OvmsPythonModel:
         print("attention_mask " + str(attention_mask.dtype))
 
         input_ids_py = Tensor("input_ids_py", input_ids)
-        #input_ids_py.datatype = "INT64"
         attention_mask_py = Tensor("attention_mask_py", attention_mask)
-        #attention_mask_py.datatype = "INT64"
         pixel_values_py = Tensor("pixel_values_py", model_inputs["pixel_values"].numpy())
         print("input_ids_py " + input_ids_py.datatype)
         print("input_ids_py size " + str(input_ids_py.size))

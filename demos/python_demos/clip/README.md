@@ -10,26 +10,32 @@ cd model_server
 make python_image
 ```
 
+## Install client requirements
+
+```bash
+pip3 install -r requirements.txt 
+```
+
+```bash
+python3 download_model.py
+```
+
 ## Deploy OpenVINO Model Server with the Python calculator
 Prerequisites:
 -  image of OVMS with Python support and Optimum installed
 
 Mount the `./servable` which contains:
-- `model.py` and `config.py` - python scripts which are required for execution and use [Hugging Face](https://huggingface.co/) utilities with [optimum-intel](https://github.com/huggingface/optimum-intel) acceleration.
+- `postprocess.py` and `preprocess.py` - python scripts which are required for execution and use [CLIP](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-convert.ipynb)
 - `config.json` - which defines which servables should be loaded
-- `graph.pbtxt` - which defines MediaPipe graph containing python calculator
+- `graph.pbtxt` - which defines MediaPipe graph containing python calculators
 
 ```bash
 cd demos/python_demos/clip
 docker run -it --rm -p 9000:9000 -v ${PWD}/servable:/workspace -v ${PWD}/model:/model/ openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
-## Requesting translation
-Install client requirements
+## Requesting detection name
 
-```bash
-pip3 install -r requirements.txt 
-```
 Run the client script
 ```bash
 python3 client.py --url localhost:9000
