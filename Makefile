@@ -43,14 +43,15 @@ JOBS ?= $(CORES_TOTAL)
 
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
-# Currently supported BASE_OS values are: ubuntu redhat
-BASE_OS ?= ubuntu
+# Currently supported BASE_OS values are: ubuntu redhat debian
+BASE_OS ?= debian
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 20.04
 BASE_OS_TAG_REDHAT ?= 8.7
+BASE_OS_TAG_DEBIAN ?= 11
 
 INSTALL_RPMS_FROM_URL ?=
 
@@ -147,6 +148,20 @@ ifeq ($(BASE_OS),redhat)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2023.2.0.12778.b3ead626310_x86_64.tgz
+endif
+ifeq ($(BASE_OS),debian)
+  BASE_OS_TAG=$(BASE_OS_TAG_DEBIAN)
+  OS=debian
+  ifeq ($(NVIDIA),1)
+    BASE_IMAGE=uknown_image
+    BASE_IMAGE_RELEASE=$(BASE_IMAGE)
+  else
+    BASE_IMAGE ?= debian:$(BASE_OS_TAG)
+    BASE_IMAGE_RELEASE=$(BASE_IMAGE)
+  endif
+  DIST_OS=debian
+  INSTALL_DRIVER_VERSION ?= "23.22.26516"
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2023.3.0.13775.ceeafaf64f3_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server

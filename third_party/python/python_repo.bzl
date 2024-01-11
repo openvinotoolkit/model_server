@@ -25,6 +25,9 @@ def _python_repository_impl(repository_ctx):
             version = "3.8"
         else:
             version = "3.10"
+    elif "debian" in base_os_iamge:
+        lib_path = "lib/x86_64-linux-gnu"
+        version = "3.9"
     else: # for redhat
         lib_path = "lib64"
         version = "3.9"
