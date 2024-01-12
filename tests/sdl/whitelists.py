@@ -85,10 +85,10 @@ libraries = {
         'libopenvino_tensorflow_lite_frontend.so', 'libuser_ov_extensions.so', 'libcore_tokenizers.so'
     },
     OvmsBaseImageType.UBUNTU: {'libtbb.so',},
-    OvmsBaseImageType.UBUNTU20_PYTHON: {'libpython3.8.so',},
-    OvmsBaseImageType.UBUNTU22_PYTHON: {'libpython3.10.so',},
+    OvmsBaseImageType.UBUNTU20_PYTHON: set(),
+    OvmsBaseImageType.UBUNTU22_PYTHON: set(),
     OvmsBaseImageType.REDHAT: {'libpugixml.so',},
-    OvmsBaseImageType.REDHAT_PYTHON: {'libpython3.9.so',},
+    OvmsBaseImageType.REDHAT_PYTHON: set(),
 }
 
 whitelisted_libraries = {
