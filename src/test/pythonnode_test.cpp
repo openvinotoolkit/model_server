@@ -1617,6 +1617,24 @@ TEST_F(PythonFlowTest, ConverterWithMissingTagMap) {
             calculator: "PyTensorOvTensorConverterCalculator"
             input_stream: "OVTENSOR:in"
             output_stream: "OVMS_PY_TENSOR:out"
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST_F(PythonFlowTest, ConverterWithEmptyTagMap) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVTENSOR:in"
+            output_stream: "OVMS_PY_TENSOR:out"
             node_options: {
                 [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
                     tag_to_output_tensor_names {}
@@ -1816,6 +1834,90 @@ TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
         }
     }
 }
+
+TEST_F(PythonFlowTest, PythonConverterCalculatorTestAbnormalOvTensor) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVTENSOR:input"
+        output_stream: "OVMS_PY_TENSOR:output"
+        node_options: {
+                [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+                    tag_to_output_tensor_names {
+                        key: "OVMS_PY_TENSOR"
+                        value: "input"
+                    }
+                }
+            }
+    )";
+
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    void* ptr = (void*)1;  // TODO forces OpenVINO not to allocate memory (would be std::bad_alloc)
+    int64_t maxInt64 = 9223372036854775807;
+    uint64_t largerByOne = static_cast<uint64_t>(maxInt64) + 1;
+
+    std::unique_ptr<ov::Tensor> tensor = std::make_unique<ov::Tensor>(ov::element::u8, ov::Shape{1, largerByOne}, ptr);
+    runner.MutableInputs()->Tag("OVTENSOR").packets.push_back(
+        mediapipe::Adopt<ov::Tensor>(tensor.release()).At(mediapipe::Timestamp(0)));
+    
+    py::gil_scoped_acquire acquire;
+    try {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.code() << " " << status.message();
+    } catch (const pybind11::error_already_set& e) {
+        ASSERT_EQ(1, 0) << e.what();
+    }
+}
+
+// class MyPyObjectWrapper : public PyObjectWrapper<py::object> {
+// public:
+//     MyPyObjectWrapper(int x) {}
+
+//     ~MyPyObjectWrapper() {
+
+//     }
+
+//     py::object& getObject() const {
+//         throw std::exception();
+//     }
+
+//     template <typename U>
+//     inline U getProperty(const std::string& name) const {
+//         throw;
+//     }
+// };
+// TODO
+// TEST_F(PythonFlowTest, PythonConverterCalculatorTestAbnormalPyTensor) {
+//     std::string testPbtxt = R"(
+//         calculator: "PyTensorOvTensorConverterCalculator"
+//         name: "conversionNode"
+//         input_stream: "OVMS_PY_TENSOR:input"
+//         output_stream: "OVTENSOR:output"
+//         node_options: {
+//                 [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+//                     tag_to_output_tensor_names {}
+//                 }
+//             }
+//     )";
+
+//     mediapipe::CalculatorRunner runner(testPbtxt);
+    
+//     py::gil_scoped_acquire acquire;
+//     try {
+//         std::unique_ptr<MyPyObjectWrapper> mpow = std::make_unique<MyPyObjectWrapper>(10);
+
+//         runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(
+//         mediapipe::Adopt<MyPyObjectWrapper>(mpow.release()).At(mediapipe::Timestamp(0)));
+
+//         py::gil_scoped_release release;
+//         auto status = runner.Run();
+//         ASSERT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.code() << " " << status.message();
+//     } catch (const pybind11::error_already_set& e) {
+//         ASSERT_EQ(1, 0) << e.what();
+//     }
+// }
 
 TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) {
     ConstructorEnabledModelManager manager;
