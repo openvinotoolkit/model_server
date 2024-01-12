@@ -44,15 +44,15 @@ class OvmsBaseImageType(Enum):
 
 dynamic_libraries = {
     OvmsBaseImageType.COMMON: {
-        'libgcc_s.so', 'liblzma.so', 'libstdc++.so', 'libuuid.so', 'libxml2.so'
+        'libgcc_s.so', 'liblzma.so', 'libstdc++.so', 'libuuid.so', 'libxml2.so', 'libtbb.so'
     },
     OvmsBaseImageType.UBUNTU: {'libicuuc.so', 'libicudata.so',},
     OvmsBaseImageType.UBUNTU_PYTHON: {'libexpat.so',},
-    OvmsBaseImageType.UBUNTU20: {'librt.so', 'libtbb.so',},
+    OvmsBaseImageType.UBUNTU20: {'librt.so',},
     OvmsBaseImageType.UBUNTU20_PYTHON: {'libpython3.8.so', 'libutil.so',},
     OvmsBaseImageType.UBUNTU22: {'libm.so', 'libdl.so', 'libpthread.so',},
     OvmsBaseImageType.UBUNTU22_PYTHON: {'libpython3.10.so',},
-    OvmsBaseImageType.REDHAT: {'libtbb.so',},
+    OvmsBaseImageType.REDHAT: set(),
     OvmsBaseImageType.REDHAT_PYTHON:{'libpython3.9.so', 'libutil.so',},
 }
 
