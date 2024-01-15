@@ -1942,7 +1942,7 @@ TEST_F(PythonFlowTest, Negative_NodeFiresProcessWithoutAllInputs) {
             output_stream: "OUTPUT:output"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_execute_read_more_than_one_input.py"
                 }
             }
         }
@@ -1964,7 +1964,59 @@ TEST_F(PythonFlowTest, Negative_NodeFiresProcessWithoutAllInputs) {
     prepareKFSInferInputTensor(req, "input1", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32}, data, false);
 
     ServableMetricReporter* smr{nullptr};
-    // Mediapipe failed to execute. Failed to receive all output packets.
-    // Fist node did not produce input for second node which in turn couldn't produce output.
+    // pythonNode2 will run with incomple inputs, but the handler script expects full set of inputs
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(PythonFlowTest, Positive_NodeFiresProcessWithoutAllInputs) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVMS_PY_TENSOR:input1"
+    output_stream: "OVMS_PY_TENSOR:output"
+        node {
+            name: "pythonNode1"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT:input1"
+            output_stream: "OUTPUT1:output1"
+            output_stream: "OUTPUT2:output2"  # symmetric_increment.py will not produce output2 tensor
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_increment.py"
+                }
+            }
+        }
+        node {
+            name: "pythonNode2"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT1:output1"
+            input_stream: "INPUT2:output2" # this input will never arrive as pythonNode1 does not produce it
+            output_stream: "OUTPUT:output"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/single_io_increment.py"
+                }
+            }
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<float> data{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "input1", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+    checkDummyResponse("output", data, req, res, 2 /* expect +2 */, 1, "mediaDummy");
 }

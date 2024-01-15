@@ -65,7 +65,7 @@ class PythonExecutorCalculator : public CalculatorBase {
 
     void prepareInputs(CalculatorContext* cc, std::vector<py::object>* pyInputs) {
         for (const std::string& tag : cc->Inputs().GetTags()) {
-            if (tag != "LOOPBACK") {
+            if (tag != "LOOPBACK" && !cc->Inputs().Tag(tag).IsEmpty()) {
                 const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getObject();
                 nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
                 pyInputs->push_back(pyInput);
@@ -105,16 +105,6 @@ class PythonExecutorCalculator : public CalculatorBase {
             }
         }
         return false;
-    }
-
-    bool receivedCompleteInputs(CalculatorContext* cc) {
-        for (const std::string& tag : cc->Inputs().GetTags()) {
-            if (tag != "LOOPBACK") {
-                if (cc->Inputs().Tag(tag).IsEmpty())
-                    return false;
-            }
-        }
-        return true;
     }
 
     bool generatorInitialized() {
@@ -208,10 +198,6 @@ public:
             } else {
                 // If execute yields, first request sets initial timestamp to input timestamp, then each cycle increments it.
                 // If execute returns, input timestamp is also output timestamp.
-                if (!receivedCompleteInputs(cc)) {
-                    LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Did not receive complete set of inputs. Process end.";
-                    return absl::OkStatus();
-                }
 
                 outputTimestamp = cc->InputTimestamp();
 
