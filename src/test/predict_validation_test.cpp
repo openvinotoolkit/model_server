@@ -33,8 +33,8 @@ using ::testing::ReturnRef;
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
 void preparePredictRequest(KFSRequest& request, inputs_info_t requestInputs, bool putBufferInInputTensorContent = false) {
-        ::preparePredictRequest(request, requestInputs, std::vector<float>{}, putBufferInInputTensorContent);
-    }
+    ::preparePredictRequest(request, requestInputs, std::vector<float>{}, putBufferInInputTensorContent);
+}
 
 class TfsPredictValidation : public ::testing::Test {
 protected:
@@ -1385,8 +1385,8 @@ TEST_F(KFSPredictValidationInputTensorContent, RequestInputTensorContentAndRawIn
     preparePredictRequest(request,
         {{inputName,
             std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 2}, testedPrecision}}},
-        std::vector<float>{},      // data,
-        false);  // put buffer in InputTensorContent
+        std::vector<float>{},  // data,
+        false);                // put buffer in InputTensorContent
     auto buf = findKFSInferInputTensor(request, inputName)->mutable_contents()->mutable_fp32_contents();
     buf->Clear();
     buf->Add(1);
@@ -1408,8 +1408,8 @@ TEST_P(KFSPredictValidationInputTensorContent, RequestCorrectContentSizeInputTen
     preparePredictRequest(request,
         {{inputName,
             std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 224, 224, 3}, testedPrecision}}},
-        std::vector<float>{},     // data,
-        true);  // put buffer in InputTensorContent
+        std::vector<float>{},  // data,
+        true);                 // put buffer in InputTensorContent
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
@@ -1450,8 +1450,8 @@ protected:
                     std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
                 {"Input_U16_1_2_8_4_NCHW",
                     std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-            std::vector<float>{},     // data,
-            true);  // put buffer in InputTensorContent
+            std::vector<float>{},  // data,
+            true);                 // put buffer in InputTensorContent
     }
 };
 

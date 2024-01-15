@@ -94,7 +94,7 @@ public:
                 outputName,
                 const_cast<void*>((const void*)inputTensor.data()),
                 shape,
-                toString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type())),
+                toKfsString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type())),
                 inputTensor.get_byte_size(),
                 outputPyTensor,
                 true);

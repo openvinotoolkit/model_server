@@ -361,7 +361,7 @@ void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, 
 }
 template <typename T>
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
-    const std::vector<T>& data, bool putBufferInInputTensorContent = false){
+    const std::vector<T>& data, bool putBufferInInputTensorContent = false) {
     auto [shape, type] = inputInfo;
     prepareKFSInferInputTensor(request, name,
         {shape, ovmsPrecisionToKFSPrecision(type)},
@@ -373,7 +373,7 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
 
-template<typename T>
+template <typename T>
 void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<T>& data, bool putBufferInInputTensorContent = false) {
     request.mutable_inputs()->Clear();
     request.mutable_raw_input_contents()->Clear();
@@ -418,7 +418,7 @@ void checkDummyResponse(const std::string outputName,
     ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
 
 void checkDummyResponse(const std::string outputName,
-    const std::vector<int64_t>& requestData,
+    const std::vector<int32_t>& requestData,
     ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
 
 void checkScalarResponse(const std::string outputName,

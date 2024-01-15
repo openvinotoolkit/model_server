@@ -205,7 +205,7 @@ void checkDummyResponse(const std::string outputName,
 }
 
 void checkDummyResponse(const std::string outputName,
-    const std::vector<int64_t>& requestData,
+    const std::vector<int32_t>& requestData,
     ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize, const std::string& servableName, size_t expectedOutputsCount) {
     ASSERT_EQ(response.model_name(), servableName);
     ASSERT_EQ(response.outputs_size(), expectedOutputsCount);
@@ -219,22 +219,22 @@ void checkDummyResponse(const std::string outputName,
     const auto& output_proto = *it;
     std::string* content = response.mutable_raw_output_contents(outputIndex);
 
-    ASSERT_EQ(content->size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(int64_t));
-    ASSERT_EQ(output_proto.datatype(), "UINT8");
+    ASSERT_EQ(content->size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(int32_t));
+    ASSERT_EQ(output_proto.datatype(), "INT32");
     ASSERT_EQ(output_proto.shape_size(), 2);
     ASSERT_EQ(output_proto.shape(0), batchSize);
     ASSERT_EQ(output_proto.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
 
-    std::vector<int64_t> responseData = requestData;
-    std::for_each(responseData.begin(), responseData.end(), [seriesLength](int64_t& v) {
+    std::vector<int32_t> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [seriesLength](int32_t& v) {
         v += 1 * seriesLength;
     });
 
-    int64_t* actual_output = (int64_t*)content->data();
-    int64_t* expected_output = responseData.data();
-    const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(int64_t);
+    int32_t* actual_output = (int32_t*)content->data();
+    int32_t* expected_output = responseData.data();
+    const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(int32_t);
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(int64_t));
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(int32_t));
 }
 
 void checkScalarResponse(const std::string outputName,

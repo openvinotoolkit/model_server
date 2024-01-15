@@ -1283,7 +1283,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOu
     checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
 }
 
-TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOutsideInt64) {
+TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOutsideInt32) {
     ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(
     input_stream: "OVTENSOR:in"
@@ -1333,9 +1333,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOu
     KFSRequest req;
     KFSResponse res;
 
-    const std::vector<int64_t> data{1, 20, 3, -1, 20, 3, 1, 20, 3, -5};
+    const std::vector<int32_t> data{1, 20, 3, -1, 20, 3, 1, 20, 3, -5};
     req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::I64}, data, false);
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::I32}, data, false);
 
     ServableMetricReporter* smr{nullptr};
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
