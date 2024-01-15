@@ -147,7 +147,7 @@ TEST_F(MetricFlowTest, GrpcPredict) {
         response.Clear();
         request.mutable_model_spec()->mutable_name()->assign(modelName);
         inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {DUMMY_MODEL_SHAPE, correctPrecision}}};
-        preparePredictRequest(request, inputsMeta);
+        preparePredictRequest(request, inputsMeta, std::vector<float>{});
         ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
     // Failed single model calls
@@ -156,7 +156,7 @@ TEST_F(MetricFlowTest, GrpcPredict) {
         response.Clear();
         request.mutable_model_spec()->mutable_name()->assign(modelName);
         inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {DUMMY_MODEL_SHAPE, wrongPrecision}}};
-        preparePredictRequest(request, inputsMeta);
+        preparePredictRequest(request, inputsMeta, std::vector<float>{});
         ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
     }
 
@@ -166,7 +166,7 @@ TEST_F(MetricFlowTest, GrpcPredict) {
         response.Clear();
         request.mutable_model_spec()->mutable_name()->assign(dagName);
         inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {ovms::signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, correctPrecision}}};
-        preparePredictRequest(request, inputsMeta);
+        preparePredictRequest(request, inputsMeta, std::vector<float>{});
         ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
 
@@ -176,7 +176,7 @@ TEST_F(MetricFlowTest, GrpcPredict) {
         response.Clear();
         request.mutable_model_spec()->mutable_name()->assign(dagName);
         inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {ovms::signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, wrongPrecision}}};
-        preparePredictRequest(request, inputsMeta);
+        preparePredictRequest(request, inputsMeta, std::vector<float>{});
         ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
     }
 
@@ -262,7 +262,7 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
         request.Clear();
         response.Clear();
         inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {DUMMY_MODEL_SHAPE, correctPrecision}}};
-        preparePredictRequest(request, inputsMeta);
+        preparePredictRequest(request, inputsMeta, std::vector<float>{});
         request.mutable_model_name()->assign(modelName);
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
@@ -271,7 +271,7 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
         request.Clear();
         response.Clear();
         inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {DUMMY_MODEL_SHAPE, wrongPrecision}}};
-        preparePredictRequest(request, inputsMeta);
+        preparePredictRequest(request, inputsMeta, std::vector<float>{});
         request.mutable_model_name()->assign(modelName);
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
     }
@@ -280,7 +280,7 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
         request.Clear();
         response.Clear();
         inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {ovms::signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, correctPrecision}}};
-        preparePredictRequest(request, inputsMeta);
+        preparePredictRequest(request, inputsMeta, std::vector<float>{});
         request.mutable_model_name()->assign(dagName);
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
@@ -289,7 +289,7 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
         request.Clear();
         response.Clear();
         inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {ovms::signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, wrongPrecision}}};
-        preparePredictRequest(request, inputsMeta);
+        preparePredictRequest(request, inputsMeta, std::vector<float>{});
         request.mutable_model_name()->assign(dagName);
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
     }

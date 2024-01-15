@@ -32,6 +32,10 @@ using ::testing::ReturnRef;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
+void preparePredictRequest(KFSRequest& request, inputs_info_t requestInputs, bool putBufferInInputTensorContent = false) {
+        ::preparePredictRequest(request, requestInputs, std::vector<float>{}, putBufferInInputTensorContent);
+    }
+
 class TfsPredictValidation : public ::testing::Test {
 protected:
     std::unique_ptr<ov::Core> ieCore;
@@ -1270,30 +1274,30 @@ TEST_F(KFSPredictValidation, RequestWrongShapeValuesTwoInputsOneWrong) {  // one
 
 TEST_F(KFSPredictValidation, RequestWrongShapeValuesAuto) {
     modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"auto\"}");
-    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{1, 4, 64, 64}, "UINT8"});
+    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{1, 4, 64, 64}, "UINT8"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED) << status.string();
 }
 
 TEST_F(KFSPredictValidation, RequestWrongShapeValuesAutoTwoInputs) {
     modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"auto\", \"Input_U16_1_2_8_4_NCHW\": \"auto\"}");
-    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{1, 4, 63, 63}, "UINT8"});
-    prepareKFSInferInputTensor(request, "Input_U16_1_2_8_4_NCHW", {{1, 2, 16, 8}, "UINT16"});
+    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{1, 4, 63, 63}, "UINT8"}, std::vector<float>{});
+    prepareKFSInferInputTensor(request, "Input_U16_1_2_8_4_NCHW", {{1, 2, 16, 8}, "UINT16"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
 }
 
 TEST_F(KFSPredictValidation, RequestWrongShapeValuesAutoNoNamedInput) {
     modelConfig.parseShapeParameter("auto");
-    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{1, 4, 63, 63}, "UINT8"});
-    prepareKFSInferInputTensor(request, "Input_U16_1_2_8_4_NCHW", {{1, 2, 16, 8}, "UINT16"});
+    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{1, 4, 63, 63}, "UINT8"}, std::vector<float>{});
+    prepareKFSInferInputTensor(request, "Input_U16_1_2_8_4_NCHW", {{1, 2, 16, 8}, "UINT16"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED);
 }
 
 TEST_F(KFSPredictValidation, RequestWrongShapeValuesAutoFirstDim) {
     modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"auto\"}");
-    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{2, 3, 62, 62}, "UINT8"});
+    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{2, 3, 62, 62}, "UINT8"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED) << status.string();
 }
@@ -1306,13 +1310,13 @@ TEST_F(KFSPredictValidation, RequestValidShapeValuesTwoInputsFixed) {
 
 TEST_F(KFSPredictValidation, RequestWrongShapeValuesFixed) {
     modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"(1,3,62,62)\"}");
-    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{1, 4, 63, 63}, "UINT8"});
+    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{1, 4, 63, 63}, "UINT8"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
 }
 TEST_F(KFSPredictValidation, RequestWrongShapeValuesFixedFirstDim) {
     modelConfig.parseShapeParameter("{\"Input_U8_1_3_62_62_NCHW\": \"(1,3,62,62)\"}");
-    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{2, 3, 62, 62}, "UINT8"});
+    prepareKFSInferInputTensor(request, "Input_U8_1_3_62_62_NCHW", {{2, 3, 62, 62}, "UINT8"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
 }
@@ -1338,7 +1342,7 @@ TEST_F(KFSPredictValidation, RequestIncorrectContentSizeForScalarEndpoint) {
 
 TEST_F(KFSPredictValidation, RequestIncorrectContentSizeBatchAuto) {
     modelConfig.setBatchingParams("auto");
-    prepareKFSInferInputTensor(request, "Input_I64_1_6_128_128_16_NCDHW", {{1, 6, 128, 128, 16}, "INT64"});
+    prepareKFSInferInputTensor(request, "Input_I64_1_6_128_128_16_NCDHW", {{1, 6, 128, 128, 16}, "INT64"}, std::vector<float>{});
     auto input = findKFSInferInputTensor(request, "Input_I64_1_6_128_128_16_NCDHW");
     (*input->mutable_shape()->Mutable(0)) = 2;
     auto status = instance->mockValidate(&request);
@@ -1347,7 +1351,7 @@ TEST_F(KFSPredictValidation, RequestIncorrectContentSizeBatchAuto) {
 
 TEST_F(KFSPredictValidation, RequestIncorrectContentSizeShapeAuto) {
     modelConfig.parseShapeParameter("auto");
-    prepareKFSInferInputTensor(request, "Input_I64_1_6_128_128_16_NCDHW", {{1, 6, 128, 128, 16}, "INT64"});
+    prepareKFSInferInputTensor(request, "Input_I64_1_6_128_128_16_NCDHW", {{1, 6, 128, 128, 16}, "INT64"}, std::vector<float>{});
     auto input = findKFSInferInputTensor(request, "Input_I64_1_6_128_128_16_NCDHW");
     (*input->mutable_shape()->Mutable(1)) = 2;
     auto status = instance->mockValidate(&request);
@@ -1381,7 +1385,7 @@ TEST_F(KFSPredictValidationInputTensorContent, RequestInputTensorContentAndRawIn
     preparePredictRequest(request,
         {{inputName,
             std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 2}, testedPrecision}}},
-        {},      // data,
+        std::vector<float>{},      // data,
         false);  // put buffer in InputTensorContent
     auto buf = findKFSInferInputTensor(request, inputName)->mutable_contents()->mutable_fp32_contents();
     buf->Clear();
@@ -1404,7 +1408,7 @@ TEST_P(KFSPredictValidationInputTensorContent, RequestCorrectContentSizeInputTen
     preparePredictRequest(request,
         {{inputName,
             std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 224, 224, 3}, testedPrecision}}},
-        {},     // data,
+        std::vector<float>{},     // data,
         true);  // put buffer in InputTensorContent
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
@@ -1446,7 +1450,7 @@ protected:
                     std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 6, 128, 128, 16}, ovms::Precision::I64}},
                 {"Input_U16_1_2_8_4_NCHW",
                     std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 2, 8, 4}, ovms::Precision::U16}}},
-            {},     // data,
+            std::vector<float>{},     // data,
             true);  // put buffer in InputTensorContent
     }
 };
@@ -1475,7 +1479,7 @@ TEST_F(KFSPredictValidationInputTensorContentNegative, RequestIncorrectContentSi
 }
 
 TEST_F(KFSPredictValidation, RequestWrongPrecision) {
-    prepareKFSInferInputTensor(request, "Input_FP32_1_224_224_3_NHWC", {{1, 224, 224, 3}, "UINT8"});
+    prepareKFSInferInputTensor(request, "Input_FP32_1_224_224_3_NHWC", {{1, 224, 224, 3}, "UINT8"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_PRECISION) << status.string();
 }
@@ -1695,7 +1699,7 @@ TEST_F(KFSPredictValidationArbitraryBatchPosition, Valid) {
 
 TEST_F(KFSPredictValidationArbitraryBatchPosition, RequestWrongBatchSize) {
     // Edit fourth dimension (N), expect validator to report wrong batch size instead of wrong shape.
-    prepareKFSInferInputTensor(request, "Input_FP32_224_224_3_1_HWCN", {{224, 224, 3, 10}, "FP32"});
+    prepareKFSInferInputTensor(request, "Input_FP32_224_224_3_1_HWCN", {{224, 224, 3, 10}, "FP32"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
 }
@@ -1703,7 +1707,7 @@ TEST_F(KFSPredictValidationArbitraryBatchPosition, RequestWrongBatchSize) {
 TEST_F(KFSPredictValidationArbitraryBatchPosition, RequestWrongBatchSizeAuto) {
     modelConfig.setBatchingParams("auto");
     // Edit fourth dimension (N), expect validator to report batch size change request instead of reshape request.
-    prepareKFSInferInputTensor(request, "Input_FP32_224_224_3_1_HWCN", {{224, 224, 3, 10}, "FP32"});
+    prepareKFSInferInputTensor(request, "Input_FP32_224_224_3_1_HWCN", {{224, 224, 3, 10}, "FP32"}, std::vector<float>{});
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::BATCHSIZE_CHANGE_REQUIRED) << status.string();
@@ -1711,7 +1715,7 @@ TEST_F(KFSPredictValidationArbitraryBatchPosition, RequestWrongBatchSizeAuto) {
 
 TEST_F(KFSPredictValidationArbitraryBatchPosition, RequestWrongShapeValues) {
     // Edit first dimension (H), expect validator to report wrong shape instead of wrong batch size.
-    prepareKFSInferInputTensor(request, "Input_FP32_224_224_3_1_HWCN", {{10, 224, 3, 1}, "FP32"});
+    prepareKFSInferInputTensor(request, "Input_FP32_224_224_3_1_HWCN", {{10, 224, 3, 1}, "FP32"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
 }
@@ -1719,7 +1723,7 @@ TEST_F(KFSPredictValidationArbitraryBatchPosition, RequestWrongShapeValues) {
 TEST_F(KFSPredictValidationArbitraryBatchPosition, RequestWrongShapeValuesAuto) {
     modelConfig.parseShapeParameter("auto");
     // Edit first dimension (H), expect validator to report reshape request instead of requesting batch size change.
-    prepareKFSInferInputTensor(request, "Input_FP32_224_224_3_1_HWCN", {{10, 224, 3, 1}, "FP32"});
+    prepareKFSInferInputTensor(request, "Input_FP32_224_224_3_1_HWCN", {{10, 224, 3, 1}, "FP32"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::RESHAPE_REQUIRED) << status.string();
 }
@@ -1753,7 +1757,7 @@ TEST_F(KFSPredictValidationDynamicModel, ValidRequest) {
 }
 
 TEST_F(KFSPredictValidationDynamicModel, RequestBatchNotInRangeFirstPosition) {
-    prepareKFSInferInputTensor(request, "Input_FP32_any_224:512_224:512_3_NHWC", {{16, 300, 320, 3}, "FP32"});
+    prepareKFSInferInputTensor(request, "Input_FP32_any_224:512_224:512_3_NHWC", {{16, 300, 320, 3}, "FP32"}, std::vector<float>{});
 
     servableInputs["Input_FP32_any_224:512_224:512_3_NHWC"] = std::make_shared<ovms::TensorInfo>("Input_FP32_any_224:512_224:512_3_NHWC", ovms::Precision::FP32, ovms::Shape{{1, 5}, {224, 512}, {224, 512}, 3}, ovms::Layout{"NHWC"});
     auto status = instance->mockValidate(&request);
@@ -1761,20 +1765,20 @@ TEST_F(KFSPredictValidationDynamicModel, RequestBatchNotInRangeFirstPosition) {
 }
 
 TEST_F(KFSPredictValidationDynamicModel, RequestDimensionNotInRangeFirstPosition) {
-    prepareKFSInferInputTensor(request, "Input_U8_100:200_any_CN", {{98, 1}, "UINT8"});
+    prepareKFSInferInputTensor(request, "Input_U8_100:200_any_CN", {{98, 1}, "UINT8"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
 }
 
 TEST_F(KFSPredictValidationDynamicModel, RequestBatchNotInRangeSecondPosition) {
-    prepareKFSInferInputTensor(request, "Input_U8_100:200_any_CN", {{100, 98}, "UINT8"});
+    prepareKFSInferInputTensor(request, "Input_U8_100:200_any_CN", {{100, 98}, "UINT8"}, std::vector<float>{});
     servableInputs["Input_U8_100:200_any_CN"] = std::make_shared<ovms::TensorInfo>("Input_U8_100:200_any_CN", ovms::Precision::U8, ovms::Shape{{100, 200}, {1, 5}}, ovms::Layout{"CN"});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
 }
 
 TEST_F(KFSPredictValidationDynamicModel, RequestDimensionNotInRangeSecondPosition) {
-    prepareKFSInferInputTensor(request, "Input_FP32_any_224:512_224:512_3_NHWC", {{1, 223, 224, 3}, "FP32"});
+    prepareKFSInferInputTensor(request, "Input_FP32_any_224:512_224:512_3_NHWC", {{1, 223, 224, 3}, "FP32"}, std::vector<float>{});
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE) << status.string();
 }

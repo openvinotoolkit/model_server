@@ -63,7 +63,7 @@ public:
         request.Clear();
         response.Clear();
         inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
-        preparePredictRequest(request, inputsMeta);
+        preparePredictRequest(request, inputsMeta, std::vector<float>{});
         request.mutable_model_name()->assign("mediapipeDummyADAPTFULL");
     }
     void prepareDoubleInput() {
