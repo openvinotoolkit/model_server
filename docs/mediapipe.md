@@ -32,6 +32,7 @@ This guide gives information about:
 * <a href="#adding-calculator">Adding your own MediaPipe calculator to OpenVINO Model Server </a>
 * <a href="#graph-examples">Demos and examples</a>
 * <a href="#current-limitations">Current Limitations</a>
+* <a href="#known-issues">Known Issues</a>
 
 
 
@@ -187,6 +188,8 @@ The model server logs could confirm the graph correct format and loading all the
 Note that graph definition loading is not confirming if all the calculators are compiled into the model server. That can be tested after sending the request to the KServe endpoint.
 During the requests processing, the logs will include info about calculators initialization and processing the nodes.
 
+Please note that MediaPipe does not validate Input Handler settings during graph initialization, but graph creation phase (upon request processing). Therefore it is good practice to always test the configuration by sending example requests to the KServe endpoints before deployment.
+
 ### Tracing
 Currently the graph tracing on the model server side is not supported. If you would like to take advantage of mediapipe tracing to identify the graph bottleneck, test the graph from the mediapipe application level. Build an example application similarly to [holistic app](https://github.com/openvinotoolkit/mediapipe/tree/main/mediapipe/examples/desktop/holistic_tracking) with the steps documented on [mediapipe tracking](https://github.com/openvinotoolkit/mediapipe/tree/main/docs/tools/tracing_and_profiling.md).
 
@@ -194,7 +197,7 @@ Currently the graph tracing on the model server side is not supported. If you wo
 While you implemented and deployed the graph you have several options to test the performance.
 To validate the throughput for unary requests you can use the [benchmark client](../demos/benchmark/python#mediapipe-benchmarking).
 
-For streaming gRPC connections, there is available [rtps_client](https://github.com/openvinotoolkit/model_server/tree/llama-ovms/demos/mediapipe/holistic_tracking#rtsp-client).
+For streaming gRPC connections, there is available [rtps_client](../demos/mediapipe/holistic_tracking#rtsp-client).
 It can generate the load to gRPC stream and the mediapipe graph based on the content from RTSP video stream, MPG4 file or from the local camera.
 
 ## Using MediaPipe graphs from the remote client <a name="client"></a>
@@ -262,3 +265,20 @@ in the conditions:default section of the deps property:
 - Updates in subconfig files and mediapipe graph files do not trigger model server config reloads. The reload of the full config, including subconfig and graphs, can be initiated by an updated in the main config json file or using the REST API `config/reload` endpoint. 
 
 
+## Known issues <a name="known-issues"></a>
+- MediaPipe `SyncSetInputStreamHandler` options are not validated during graph validation, but graph creation:
+```
+input_stream: "INPUT:input"
+input_stream: "LOOPBACK:loopback"
+input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+        [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+            sync_set {
+                tag_index: "LOOPBACK:1"  # wrong index example
+            }
+        }
+    }
+}
+```
+MediaPipe closes entire application because there's no input stream with tag `LOOPBACK` and index `1` (correct index is `0`). Therefore, test the deployment for correct setting before deploying to production.

@@ -29,3 +29,8 @@ OpenVINO Model Server has a set of mechanisms preventing denial of service attac
 - maximum size of REST and GRPC message which is 1GB - bigger messages will be rejected
 - setting max_concurrent_streams which defines how many concurrent threads can be initiated from a single client - the remaining will be queued. The default is equal to the number of CPU cores. It can be changed with the `--grpc_channel_arguments grpc.max_concurrent_streams=8`.
 - setting the gRPC memory quota for the requests buffer - the default is 2GB. It can be changed with `--grpc_memory_quota=2147483648`. Value `0` invalidates the quota.
+
+---
+
+- MediaPipe does not validate all the settings during graph initialization. Some settings are checked during graph creation phase (upon request processing). Therefore it is a good practice to always test the configuration by sending example requests to the KServe endpoints before deployment.
+
