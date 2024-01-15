@@ -262,12 +262,6 @@ cc_library(
         "get_model_metadata_impl.hpp",
         "global_sequences_viewer.hpp",
         "global_sequences_viewer.cpp",
-        "http_rest_api_handler.cpp",
-        "http_rest_api_handler.hpp",
-        "http_server.cpp",
-        "http_server.hpp",
-        "httpservermodule.cpp",
-        "httpservermodule.hpp",
         "layout.cpp",
         "layout.hpp",
         "layout_configuration.cpp",
@@ -276,20 +270,16 @@ cc_library(
         "grpc_utils.hpp",
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
+        "http_rest_api_handler.cpp",
+        "http_server.cpp",
+        "httpservermodule.cpp",
+        "http_rest_api_handler.hpp",
+        "http_server.hpp",
+        "httpservermodule.hpp",
         "kfs_frontend/kfs_grpc_inference_service.cpp",
         "kfs_frontend/kfs_grpc_inference_service.hpp",
         "kfs_frontend/kfs_utils.cpp",
         "kfs_frontend/kfs_utils.hpp",
-        "metric.cpp",
-        "metric.hpp",
-        "metric_config.cpp",
-        "metric_config.hpp",
-        "metric_family.cpp",
-        "metric_family.hpp",
-        "metric_registry.cpp",
-        "metric_registry.hpp",
-        "metric_module.cpp",
-        "metric_module.hpp",
         "model.cpp",
         "model.hpp",
         "modelchangesubscription.cpp",
@@ -319,10 +309,6 @@ cc_library(
         "prediction_service_utils.cpp",
         "predict_request_validation_utils.hpp",
         "predict_request_validation_utils.cpp",
-        "profiler.cpp",
-        "profiler.hpp",
-        "profilermodule.cpp",
-        "profilermodule.hpp",
         "rest_parser.cpp",
         "rest_parser.hpp",
         "rest_utils.cpp",
@@ -349,8 +335,6 @@ cc_library(
         "queue.hpp",
         "tensorinfo.cpp",
         "tensorinfo.hpp",
-        "tfs_frontend/tfs_utils.cpp",
-        "tfs_frontend/tfs_utils.hpp",
         "tensor_utils.hpp",
         "threadsafequeue.hpp",
         "timer.hpp",
@@ -382,7 +366,10 @@ cc_library(
             "libovmsfilesystemfactory",
             "libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
+            "libovmsmetrics",
             "libovmsprecision",
+            "libovmstfs_grpc",
+            "//src:libovmsprofiler",
             "libovmsstatus",
             "libovmsstring_utils",
             "libovmsazurefilesystem",
@@ -405,6 +392,28 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     data = ["//src/bindings/python:pyovms.so"],
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "libovmsprofiler",
+    hdrs = ["profilermodule.hpp",
+            "profiler.hpp"],
+    srcs = [
+        "profiler.cpp",
+        "profilermodule.cpp",],
+    deps = [
+        "@minitrace//:trace",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovmsprecision",
+        "//src:libovmsmodelversioning",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
 
@@ -662,6 +671,98 @@ cc_import(
 )
 
 cc_library(
+    name = "libovmstfs_grpc",
+    hdrs = ["tfs_frontend/tfs_utils.hpp",],
+    srcs = [
+        "tfs_frontend/tfs_utils.cpp",],
+    deps = [
+        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
+        "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
+        "@org_tensorflow//tensorflow/core:framework", # Eigen Tensor
+        "libovmslogging",
+        "libovmsprofiler",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library( # TODO split dependencies
+    name = "libovmshttpservermodule",
+    hdrs = [
+        "http_rest_api_handler.hpp",
+        "http_server.hpp",
+        "httpservermodule.hpp",
+    ],
+    srcs = [
+        "http_rest_api_handler.cpp",
+        "http_server.cpp",
+        "httpservermodule.cpp",
+    ],
+    deps = [
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
+        "@tensorflow_serving//tensorflow_serving/util:json_tensor",
+        "libovmslogging",
+        "libovmsprofiler",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "libovmsschema",
+    hdrs = ["schema.hpp",],
+    srcs = ["schema.cpp",],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "libovmsstatus",
+        "libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "libovmsmetrics",
+    hdrs = [
+        "metric.hpp",
+        "metric_config.hpp",
+        "metric_family.hpp",
+        "metric_module.hpp",
+        "metric_registry.hpp",
+    ],
+    srcs = [
+        "metric.cpp",
+        "metric_config.cpp",
+        "metric_family.cpp",
+        "metric_registry.cpp",
+        "metric_module.cpp",
+    ],
+    deps = [
+        "@com_github_jupp0r_prometheus_cpp//core",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "cpp_headers",
+        "libovmslogging",
+        "libovmsschema",
+        "libovmsstatus",
+        "libovmsstring_utils",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
     name = "libovmsstatus",
     hdrs = ["status.hpp",],
     srcs = ["status.cpp",],
@@ -819,7 +920,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
-cc_library(
+cc_library( # TODO split further
     name = "cpp_headers",
     hdrs = [
         "capi_frontend/server_settings.hpp",
