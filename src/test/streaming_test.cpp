@@ -659,17 +659,18 @@ node {
     ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
+    std::mutex mtx;
     this->pythonModule->releaseGILFromThisThread();
     // Mock receiving 2 requests and disconnection
     prepareRequest(this->firstRequest, {{"input1", 3.5f}});  // no timestamp specified, server will assign one
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(Receive({{"input2", 7.2f}}))  // no timestamp specified, server will assign one
-        .WillOnce(Disconnect());
+        .WillOnce(DisconnectWhenNotified(mtx));
 
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestamp({{"output1", 4.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"output2", 8.2f}}, 1));
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"output2", 8.2f}}, 1, mtx));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }

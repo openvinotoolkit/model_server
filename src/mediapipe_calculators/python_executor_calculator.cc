@@ -65,7 +65,12 @@ class PythonExecutorCalculator : public CalculatorBase {
 
     void prepareInputs(CalculatorContext* cc, std::vector<py::object>* pyInputs) {
         for (const std::string& tag : cc->Inputs().GetTags()) {
-            if (tag != "LOOPBACK" && !cc->Inputs().Tag(tag).IsEmpty()) {
+            if (tag != "LOOPBACK") {
+                if (cc->Inputs().Tag(tag).IsEmpty()) {
+                    LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Received empty packet on input: " << tag
+                              << ". Execution will continue without that input.";
+                    continue;
+                }
                 const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getObject();
                 nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
                 pyInputs->push_back(pyInput);
