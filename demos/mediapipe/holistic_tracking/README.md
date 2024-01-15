@@ -8,7 +8,7 @@ The demo is based on the [upstream Mediapipe holistic demo](https://github.com/g
 
 ## Prepare the server deployment
 
-Clone the repository and enter mediapipe object_detection directory
+Clone the repository and enter mediapipe holistic_tracking directory
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/holistic_tracking
@@ -48,7 +48,7 @@ ovms
 ```
 
 ### Pull the Latest Model Server Image
-Pull the latest version of OpenVINO&trade; Model Server from Docker Hub :
+Pull the latest version of OpenVINO&trade; Model Server from Docker Hub:
 ```Bash
 docker pull openvino/model_server:latest
 
@@ -77,90 +77,7 @@ Results saved to :image_0.jpg
 ## Output image
 ![output](output_image.jpg)
 
+## Real time stream analysis
 
-## RTSP Client
-Mediapipe graph can be used for remote analysis of individual images but the client can use it for a complete video stream processing.
-Below is an example how to run a client reading encoded rtsp video stream.
+For demo featuring real time stream application see [real_time_stream_analysis](https://github.com/openvinotoolkit/model_server/tree/main/demos/real_time_stream_analysis/python)
 
-![rtsp](rtsp.png)
-
-Build docker image containing rtsp client along with its dependencies
-The rtsp client app needs to have access to RTSP stream to read from and write to.
-
-Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
-
-```bash
-docker run --rm -d -p 8080:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
-```
-
-Then write to the server using ffmpeg, example using video or camera
-
-```bash
-ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
-```
-
-```
-ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
-```
-
-Build the docker image with the python client for video stream reading an remote analysis:
-```bash
-docker build ../../common/stream_client/ -t rtsp_client
-```
-
-### Start the client
-
-- Command
-
-```bash
-docker run -v $(pwd):/workspace rtsp_client --help
-usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
-                      [--input_stream INPUT_STREAM]
-                      [--output_stream OUTPUT_STREAM]
-                      [--model_name MODEL_NAME] [--input_name INPUT_NAME]
-                      [--verbose] [--benchmark]
-                      [--limit_stream_duration LIMIT_STREAM_DURATION]
-                      [--limit_frames LIMIT_FRAMES]
-
-options:
-  -h, --help            show this help message and exit
-  --grpc_address GRPC_ADDRESS
-                        Specify url to grpc service
-  --input_stream INPUT_STREAM
-                        Url of input rtsp stream
-  --output_stream OUTPUT_STREAM
-                        Url of output rtsp stream
-  --model_name MODEL_NAME
-                        Name of the model
-  --input_name INPUT_NAME
-                        Name of the model's input
-  --verbose             Should client dump debug information
-  --benchmark           Should client collect processing times
-  --limit_stream_duration LIMIT_STREAM_DURATION
-                        Limit how long client should run
-  --limit_frames LIMIT_FRAMES
-                        Limit how many frames should be processed
-```
-
-- Usage example
-
-### Inference using RTSP stream
-
-```bash
-docker run --network="host" -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
-```
-
-Then read rtsp stream using ffplay
-
-```bash
-ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
-```
-
-### Inference using prerecorded video
-
-One might as well use prerecorded video and schedule it for inference.
-Replace horizontal_text.mp4 with your video file.
-
-```bash
-docker run --network="host" -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/video.mp4' --output_stream 'workspace/output.mp4'
-```

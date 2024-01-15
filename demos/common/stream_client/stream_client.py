@@ -20,8 +20,9 @@ from functools import partial
 import queue
 import threading
 import tritonclient.grpc as grpcclient
-import subprocess #nosec
 import numpy as np
+import ffmpeg
+import sys
 
 class Datatype:
     def dtype(self):
@@ -51,12 +52,7 @@ class OutputBackend:
 
 class FfmpegOutputBackend(OutputBackend):
     def init(self, sink, fps, width, height, bitrate : int = 1000):
-        args = (
-            "ffmpeg -re -stream_loop -1 -f rawvideo -err_detect aggressive -fflags discardcorrupt -pix_fmt "
-                f"bgr24 -r {fps} -s {width}x{height} -i pipe:0 -cpu-used 6 -avioflags direct -deadline realtime -pix_fmt yuv420p -c:v libvpx -muxdelay 0.1 "
-            f"-b:v {bitrate}k -f rtsp {sink}"
-        ).split()
-        self.process = subprocess.Popen(args, stdin=subprocess.PIPE) #nosec
+        self.process = ffmpeg.input('pipe:0', format='rawvideo', pix_fmt='bgr24', r=fps, s='{}x{}'.format(width, height)).output(sink, pix_fmt='yuv420p', f="rtsp", muxdelay=0.1, video_bitrate=f"{bitrate}k").overwrite_output().run_async(pipe_stdin=True)
     def write(self, frame):
         self.process.stdin.write(frame.astype(np.uint8).tobytes())
     def release(self):
@@ -64,7 +60,7 @@ class FfmpegOutputBackend(OutputBackend):
 
 class CvOutputBackend(OutputBackend):
     def init(self, sink, fps, width, height):
-        self.cv_sink = cv2.VideoWriter(sink, cv2.VideoWriter_fourcc(*'avc1'), fps, (width,height))
+        self.cv_sink = cv2.VideoWriter(sink, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width,height))
     def write(self, frame):
         self.cv_sink.write(frame)
     def release(self):
@@ -72,7 +68,7 @@ class CvOutputBackend(OutputBackend):
 
 class ImshowOutputBackend(OutputBackend):
     def init(self, sink, fps, width, height):
-        ...
+        pass
     def write(self, frame):
         cv2.imshow("OVMS StreamClient", frame)
         cv2.waitKey(1)
@@ -123,7 +119,6 @@ class StreamClient:
         self.exact = exact
         self.benchmark = benchmark
 
-        self.pq = queue.PriorityQueue()
         self.req_q = queue.Queue(max_inflight_packets)
 
     def grab_frame(self):
@@ -148,6 +143,7 @@ class StreamClient:
                 self.dropped_frames += 1
             if self.verbose:
                 print(error)
+            return
         if i == None:
             i = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
         if timestamp == None:
@@ -157,26 +153,26 @@ class StreamClient:
         self.req_q.get()
 
     def display(self):
-        i = 0 
+        displayed_frame_id = 0 
         while True:
-            entry = self.pq.get()
-            if (entry[0] == i and self.exact and self.streaming_api is not True) or (entry[0] > i and (self.exact is not True or self.streaming_api is True)):
-                if isinstance(entry[1], str) and entry[1] == "EOS":
+            sent_frame_id, received_frame, timestamp = self.pq.get()
+            if received_frame is None:
+                continue
+            if (sent_frame_id == displayed_frame_id) or (self.exact is not True):
+                if isinstance(received_frame, str) and received_frame == "EOS":
                     break
-                frame = entry[1]
-                if frame is not None:
-                    self.output_backend.write(frame)
-                    if self.benchmark:
-                        self.inference_time.insert(i, time.time() - entry[2])
-                        self.frames += 1
+                self.output_backend.write(received_frame)
+                if self.benchmark:
+                    self.inference_time.insert(displayed_frame_id, (self.get_timestamp() if self.streaming_api else time.time()) - timestamp)
+                    self.frames += 1
                 if self.exact:
-                    i += 1
+                    displayed_frame_id += 1
                 else:
                     if self.benchmark:
-                        self.dropped_frames += entry[0] - i
-                    i = entry[0]
+                        self.dropped_frames += sent_frame_id - displayed_frame_id
+                    displayed_frame_id = sent_frame_id
             elif self.exact:
-                self.pq.put(entry)
+                self.pq.put((sent_frame_id, received_frame, timestamp))
 
     def get_timestamp(self) -> int:
         return int(cv2.getTickCount() / cv2.getTickFrequency() * 1e6)
@@ -208,7 +204,9 @@ class StreamClient:
         fps = self.cap.get(cv2.CAP_PROP_FPS)
         triton_client = grpcclient.InferenceServerClient(url=ovms_address, verbose=False)
         self.streaming_api = streaming_api
+        self.exact = False if streaming_api else self.exact
 
+        self.pq = queue.Queue() if streaming_api else queue.PriorityQueue()
         display_th = threading.Thread(target=self.display)
         display_th.start()
         test_frame = self.grab_frame()
@@ -237,7 +235,7 @@ class StreamClient:
                     inputs=[grpcclient.InferInput(input_name, np_frame.shape, datatype.string())]
                     inputs[0].set_data_from_numpy(np_frame)
                     if streaming_api:
-                        triton_client.async_stream_infer(model_name=model_name, inputs=inputs, parameters={"OVMS_MP_TIMESTAMP":self.get_timestamp()}, request_id=str(frame_number))
+                        triton_client.async_stream_infer(model_name=model_name, inputs=inputs, parameters={"OVMS_MP_TIMESTAMP":self.get_timestamp()})
                     else:
                         triton_client.async_infer(
                             model_name=model_name,
@@ -249,7 +247,7 @@ class StreamClient:
                 if limit_frames > 0 and frame_number > limit_frames:
                     break
         finally:
-            self.pq.put((frame_number, "EOS"))
+            self.pq.put((frame_number, "EOS", 0))
             if streaming_api:
                 triton_client.stop_stream()
         sent_all_frames = time.time() - total_time_start

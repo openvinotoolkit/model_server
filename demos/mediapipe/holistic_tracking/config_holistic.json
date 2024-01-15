@@ -36,7 +36,6 @@
                 "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
             }
         }
-    }
     ],
     "mediapipe_config_list": [
         {

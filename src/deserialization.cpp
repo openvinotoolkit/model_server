@@ -25,7 +25,7 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
     OVMS_PROFILE_FUNCTION();
     Status status;
     try {
-        OV_LOGGER("ov::InferRequest: {}, request.set_tensor({}, tensor)", reinterpret_cast<void*>(&requester), name, reinterpret_cast<void*>(&tensor));
+        OV_LOGGER("ov::InferRequest: {}, request.set_tensor({}, tensor: {})", reinterpret_cast<void*>(&requester), name, reinterpret_cast<void*>(&tensor));
         requester.set_tensor(name, tensor);
         // OV implementation the ov::Exception is not
         // a base class for all other exceptions thrown from OV.

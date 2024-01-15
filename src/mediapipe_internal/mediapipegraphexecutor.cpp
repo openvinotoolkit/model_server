@@ -15,7 +15,9 @@
 //*****************************************************************************
 #include "mediapipegraphexecutor.hpp"
 
+#include <functional>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <set>
@@ -30,6 +32,7 @@
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
+#include "../predict_request_validation_utils.hpp"
 #include "../serialization.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
@@ -62,6 +65,7 @@ namespace py = pybind11;
 #endif
 
 namespace ovms {
+using namespace request_validation_utils;
 using ::mediapipe::Timestamp;
 const Timestamp DEFAULT_STARTING_STREAM_TIMESTAMP = Timestamp(0);
 
@@ -422,7 +426,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     size_t expectedSize = numberOfChannels * numberOfCols * numberOfRows * elementSize;
     if (bufferLocation.size() != expectedSize) {
         std::stringstream ss;
-        ss << "Invalid Mediapipe Image input buffer size. Actual: " << bufferLocation.size() << "Expected: " << expectedSize;
+        ss << "Invalid Mediapipe Image input buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedSize;
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
@@ -467,6 +471,28 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             shape.push_back(requestInputItr->shape()[i]);
         }
 
+        auto formatIt = datatypeToBufferFormat.find(requestInputItr->datatype());
+        if (formatIt != datatypeToBufferFormat.end()) {
+            // If datatype is known, we check if a valid buffer can be created with provided data
+            size_t itemsize = bufferFormatToItemsize.at(formatIt->second);
+            size_t expectedBufferSize = 1;
+
+            bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, itemsize, expectedBufferSize);
+            if (!expectedBufferSizeValid) {
+                const std::string details = "Provided shape and datatype declare too large buffer.";
+                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+            }
+
+            if (bufferLocation.size() != expectedBufferSize) {
+                std::stringstream ss;
+                ss << "Invalid Python tensor buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedBufferSize;
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+            }
+        }
+
         auto ok = pythonBackend->createOvmsPyTensor(
             requestedName,
             const_cast<void*>((const void*)bufferLocation.data()),
@@ -476,7 +502,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             outTensor);
 
         if (!ok) {
-            SPDLOG_DEBUG("Error creating py tensor from data");
+            SPDLOG_DEBUG("Error creating Python tensor from data");
             return StatusCode::UNKNOWN_ERROR;
         }
     }
@@ -517,7 +543,7 @@ enum : unsigned int {
 constexpr size_t STARTING_TIMESTAMP = 0;
 const std::string MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME = "OVMS_MP_TIMESTAMP";
 
-const std::string INPUT_SIDE_PACKET_TAG = "py";
+const std::string PYTHON_SESSION_SIDE_PACKET_TAG = "py";
 
 static std::map<std::string, mediapipe::Packet> createInputSidePackets(const KFSRequest* request) {
     std::map<std::string, mediapipe::Packet> inputSidePackets;
@@ -842,7 +868,12 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
     }
     std::map<std::string, mediapipe::Packet> sideInputPackets{createInputSidePackets(request)};
 #if (PYTHON_DISABLE == 0)
-    sideInputPackets[INPUT_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+    if (sideInputPackets.count(PYTHON_SESSION_SIDE_PACKET_TAG)) {
+        const std::string absMessage = "Incoming input side packet: " + PYTHON_SESSION_SIDE_PACKET_TAG + " is special reserved name and cannot be used";
+        SPDLOG_DEBUG("Failed to insert predefined input side packet: {} with error: {}", PYTHON_SESSION_SIDE_PACKET_TAG, absMessage);
+        return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+    }
+    sideInputPackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
 #endif
     MP_RETURN_ON_FAIL(graph.StartRun(sideInputPackets), std::string("start MediaPipe graph: ") + request->model_name(), StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
     if (static_cast<int>(this->inputNames.size()) != request->inputs().size()) {
@@ -987,7 +1018,12 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
         // Launch
         std::map<std::string, mediapipe::Packet> inputSidePackets{createInputSidePackets(&firstRequest)};
 #if (PYTHON_DISABLE == 0)
-        inputSidePackets[INPUT_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
+        if (inputSidePackets.count(PYTHON_SESSION_SIDE_PACKET_TAG)) {
+            const std::string absMessage = "Incoming input side packet: " + PYTHON_SESSION_SIDE_PACKET_TAG + " is special reserved name and cannot be used";
+            SPDLOG_DEBUG("Failed to insert predefined input side packet: {} with error: {}", PYTHON_SESSION_SIDE_PACKET_TAG, absMessage);
+            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+        }
+        inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(mediapipe::Timestamp(STARTING_TIMESTAMP));
 #endif
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 

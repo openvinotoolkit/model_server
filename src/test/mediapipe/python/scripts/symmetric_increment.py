@@ -17,9 +17,8 @@ import numpy as np
 from pyovms import Tensor
 class OvmsPythonModel:
 
-    def initialize(self, kwargs: dict):
-        self.model_outputs = dict()
-        return
+    def initialize(self, kwargs):
+        self.model_outputs = {}
 
     def execute(self, inputs: list, kwargs: dict = {}):
         # Increment every element of every input and return them with changed tensor name.
@@ -34,6 +33,3 @@ class OvmsPythonModel:
             output_npy = output_npy.astype(np.float32)
             outputs.append(Tensor(output_name, output_npy))
         return outputs
-
-    def finalize(self):
-        pass

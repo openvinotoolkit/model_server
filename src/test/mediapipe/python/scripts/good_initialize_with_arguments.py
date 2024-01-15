@@ -16,8 +16,8 @@
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
         self.node_name = kwargs["node_name"]
-        self.input_streams = kwargs["input_streams"]
-        self.output_streams = kwargs["output_streams"]
+        self.input_names = kwargs["input_names"]
+        self.output_names = kwargs["output_names"]
         return
 
     def execute(self, inputs: dict) -> bool:

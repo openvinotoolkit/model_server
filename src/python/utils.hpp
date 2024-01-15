@@ -39,16 +39,16 @@ public:
 
     PyObjectWrapper(const T& other) {
         py::gil_scoped_acquire acquire;
-        SPDLOG_DEBUG("PyObjectWrapper constructor start");
+        SPDLOG_TRACE("PyObjectWrapper constructor start");
         obj = std::make_unique<T>(other);
-        SPDLOG_DEBUG("PyObjectWrapper constructor end");
+        SPDLOG_TRACE("PyObjectWrapper constructor end");
     }
 
     ~PyObjectWrapper() {
         py::gil_scoped_acquire acquire;
-        SPDLOG_DEBUG("PyObjectWrapper destructor start ");
+        SPDLOG_TRACE("PyObjectWrapper destructor start ");
         obj.reset();
-        SPDLOG_DEBUG("PyObjectWrapper destructor end ");
+        SPDLOG_TRACE("PyObjectWrapper destructor end ");
     }
 
     T& getObject() const {
