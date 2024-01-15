@@ -32,4 +32,5 @@ OpenVINO Model Server has a set of mechanisms preventing denial of service attac
 
 ---
 
-- MediaPipe does not validate all the settings during graph initialization, but often times during graph creation phase (upon request processing). Therefore it is good practice to always test the configuration by sending example requests to the KServe endpoints before deployment.
+- MediaPipe does not validate all the settings during graph initialization. Some settings are checked during graph creation phase (upon request processing). Therefore it is a good practice to always test the configuration by sending example requests to the KServe endpoints before deployment.
+

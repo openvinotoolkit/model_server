@@ -810,7 +810,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_Correct) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);  // should not be ok, but MP does not validate it
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
