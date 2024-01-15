@@ -21,8 +21,8 @@ node {
   name: "PythonPreprocessNode"
   calculator: "PythonExecutorCalculator"
   input_side_packet: "PYTHON_NODE_RESOURCES:py"
-  input_stream: "INPUT:image_url"
-  input_stream: "INPUT1:input_labels"
+  input_stream: "IMAGE_URL:image_url"
+  input_stream: "LABELS:input_labels"
   output_stream: "OUTPUT:input_ids_py"
   output_stream: "OUTPUT1:attention_mask_py"
   output_stream: "OUTPUT2:pixel_values_py"
@@ -99,14 +99,6 @@ node {
   calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVTENSOR:logits_per_image"
     output_stream: "OVMS_PY_TENSOR:logits_per_image_py"
-    node_options: {
-        [type.googleapis.com/mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
-            tag_to_output_tensor_names {
-            key: "OVMS_PY_TENSOR"
-            value: "logits_per_image_py"
-            }
-        }
-    }
 }
 
 node {
