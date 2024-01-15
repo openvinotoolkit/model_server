@@ -37,6 +37,7 @@ docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 -p 8000:8000 op
 
 ### Build client library and samples
 ```Bash
+apt-get update && apt-get install cmake build-essential libssl-dev zlib1g-dev git rapidjson-dev python3
 cd client/cpp/kserve-api
 cmake . && make
 cd samples
