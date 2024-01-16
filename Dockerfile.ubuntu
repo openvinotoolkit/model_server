@@ -143,6 +143,20 @@ ARG NVIDIA=0
 # hadolint ignore=DL3003
 RUN if [[ "$sentencepiece" == "1" || "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
 
+# OneTBB, installation to make OpenVINO find it at compile time
+WORKDIR /
+RUN if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then true ; else exit 0 ; fi ; \
+    wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.9.0/oneapi-tbb-2021.9.0-lin.tgz && \
+    tar -xzf oneapi-tbb-2021.9.0-lin.tgz
+ENV TBBROOT=/oneapi-tbb-2021.9.0
+ENV TBB_LIB_NAME=libtbb.so.12
+ENV TBB_LIB_DIR=intel64/gcc4.8
+ENV LIBRARY_PATH=${LIBRARY_PATH}:${TBBROOT}/lib/${TBB_LIB_DIR}
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${TBBROOT}/lib/${TBB_LIB_DIR}
+ENV CPATH=${CPATH}:${TBBROOT}/include
+ENV CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:${TBBROOT}
+ENV PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:${TBBROOT}/lib/pkgconfig
+
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
 # hadolint ignore=DL3003
@@ -197,9 +211,8 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; 
     rm -rf /var/lib/apt/lists/* && \
     ln -s /opt/intel/openvino_2023 /opt/intel/openvino
 
-RUN wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.9.0/oneapi-tbb-2021.9.0-lin.tgz && \
-    tar -xzf oneapi-tbb-2021.9.0-lin.tgz && \
-    cp -P oneapi-tbb-2021.9.0/lib/intel64/gcc4.8/libtbb.so* /opt/intel/openvino/runtime/lib/intel64/
+RUN if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then true ; else exit 0 ; fi ; \
+    cp -P /oneapi-tbb-2021.9.0/lib/intel64/gcc4.8/libtbb.so* /opt/intel/openvino/runtime/lib/intel64/
 
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
@@ -432,7 +445,8 @@ COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,SC2164
 RUN     apt-get update -y ; \
-    apt-get install -y curl ca-certificates libpugixml1v5 libtbb2 --no-install-recommends && \
+    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then tbb_apt_name=; else tbb_apt_name=libtbb2; fi; \
+    apt-get install -y curl ca-certificates libpugixml1v5 $tbb_apt_name --no-install-recommends && \
         if [ "$GPU" == "1" ] ; then \
             apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
                 case $INSTALL_DRIVER_VERSION in \
