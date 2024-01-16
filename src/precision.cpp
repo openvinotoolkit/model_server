@@ -20,6 +20,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include <typeinfo>
 #include <unordered_map>
 
 namespace ovms {

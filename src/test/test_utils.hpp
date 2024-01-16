@@ -409,24 +409,6 @@ void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::
 template <typename TensorType>
 void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
-void checkDummyResponse(const std::string outputName,
-    const std::vector<float>& requestData,
-    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
-
-void checkDummyResponse(const std::string outputName,
-    const std::vector<float>& requestData,
-    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
-
-void checkDummyResponse(const std::string outputName,
-    const std::vector<int32_t>& requestData,
-    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
-
-void checkScalarResponse(const std::string outputName,
-    float inputScalar, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");
-
-void checkScalarResponse(const std::string outputName,
-    float inputScalar, ::KFSResponse& response, const std::string& servableName = "");
-
 template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
     std::stringstream ss;
@@ -438,6 +420,91 @@ std::string readableError(const T* expected_output, const T* actual_output, cons
     }
     return ss.str();
 }
+
+void checkDummyResponse(const std::string outputName,
+    const std::vector<float>& requestData,
+    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
+
+static std::string vectorTypeToKfsString(const std::type_info& vectorType) {
+    // {Precision::BF16, "BF16"},
+    // {Precision::FP16, "FP16"},
+    // {Precision::FP62, "FP62"},
+    if (vectorType == typeid(float))
+        return std::string("FP32");
+    // {Precision::I32, "INT32"},
+    if (vectorType == typeid(int32_t))
+        return std::string("INT32");
+    // {Precision::FP64, "FP64"},
+    if (vectorType == typeid(double))
+        return std::string("FP64");
+    // {Precision::I64, "INT64"},
+    if (vectorType == typeid(int64_t))
+        return std::string("INT64");
+    // {Precision::I16, "INT16"},
+    if (vectorType == typeid(int16_t))
+        return std::string("INT16");
+    // {Precision::I8, "INT8"},
+    if (vectorType == typeid(int8_t))
+        return std::string("INT8");
+    // {Precision::U64, "UINT64"},
+    if (vectorType == typeid(uint64_t))
+        return std::string("UINT64");
+    // {Precision::U32, "UINT32"},
+    if (vectorType == typeid(uint32_t))
+        return std::string("UINT32");
+    // {Precision::U16, "UINT16"},
+    if (vectorType == typeid(uint16_t))
+        return std::string("UINT16");
+    // {Precision::U8, "UINT8"},
+    if (vectorType == typeid(uint8_t))
+        return std::string("UINT8");
+    // {Precision::BOOL, "BOOL"},
+    if (vectorType == typeid(bool))
+        return std::string("BOOL");
+
+    // {Precision::UNDEFINED, "UNDEFINED"}};
+    return std::string("UNDEFINED");
+}
+
+template <typename T = float>
+void checkDummyResponse(const std::string outputName,
+    const std::vector<T>& requestData,
+    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1) {
+    ASSERT_EQ(response.model_name(), servableName);
+    ASSERT_EQ(response.outputs_size(), expectedOutputsCount);
+    ASSERT_EQ(response.raw_output_contents_size(), expectedOutputsCount);
+    // Finding the output with given name
+    auto it = std::find_if(response.outputs().begin(), response.outputs().end(), [&outputName](const ::KFSResponse::InferOutputTensor& tensor) {
+        return tensor.name() == outputName;
+    });
+    ASSERT_NE(it, response.outputs().end());
+    auto outputIndex = it - response.outputs().begin();
+    const auto& output_proto = *it;
+    std::string* content = response.mutable_raw_output_contents(outputIndex);
+
+    ASSERT_EQ(content->size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(T));
+    ASSERT_EQ(output_proto.datatype(), vectorTypeToKfsString(typeid(T)));
+    ASSERT_EQ(output_proto.shape_size(), 2);
+    ASSERT_EQ(output_proto.shape(0), batchSize);
+    ASSERT_EQ(output_proto.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
+
+    std::vector<T> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [seriesLength](T& v) {
+        v += 1.0 * seriesLength;
+    });
+
+    T* actual_output = (T*)content->data();
+    T* expected_output = responseData.data();
+    const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(T);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
+}
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, ::KFSResponse& response, const std::string& servableName = "");
 
 void assertStringOutputProto(const tensorflow::TensorProto& proto, const std::vector<std::string>& expectedStrings);
 void assertStringOutputProto(const KFSTensorOutputProto& proto, const std::vector<std::string>& expectedStrings);

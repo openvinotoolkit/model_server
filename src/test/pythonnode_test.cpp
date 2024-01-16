@@ -1370,7 +1370,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestConvertersUnsupportedTypeInPythonTens
             output_stream: "OUTPUT:output2"
             node_options: {
                 [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_type.py"
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/return_custom_datatype.py"
                 }
             }
         }
