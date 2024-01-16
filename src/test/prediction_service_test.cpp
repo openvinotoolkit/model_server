@@ -105,7 +105,7 @@ class Preparer {
 
 public:
     void preparePredictRequest(RequestType& request, inputs_info_t requestInputs) {
-        ::preparePredictRequest(request, requestInputs, std::vector<float>{});
+        ::preparePredictRequest(request, requestInputs);
     }
 };
 template <>

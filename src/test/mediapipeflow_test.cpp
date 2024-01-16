@@ -752,7 +752,7 @@ static void performMediapipeInfer(const ovms::Server& server, ::KFSRequest& requ
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
-    preparePredictRequest(request, inputsMeta, std::vector<float>{});
+    preparePredictRequest(request, inputsMeta);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
 }
@@ -950,7 +950,7 @@ TEST_F(MediapipeFlowDummyDummyInSubconfigAndConfigTest, Infer) {
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"in", {{1, 12}, precision}}};
-    preparePredictRequest(request, inputsMeta, std::vector<float>{});
+    preparePredictRequest(request, inputsMeta);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     auto outputs = response.outputs();
@@ -971,7 +971,7 @@ TEST_F(MediapipeFlowDummyNoGraphPathTest, Infer) {
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
-    preparePredictRequest(request, inputsMeta, std::vector<float>{});
+    preparePredictRequest(request, inputsMeta);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
@@ -988,7 +988,7 @@ TEST_P(MediapipeFlowDummyTest, Infer) {
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
-    preparePredictRequest(request, inputsMeta, std::vector<float>{});
+    preparePredictRequest(request, inputsMeta);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
@@ -1005,7 +1005,7 @@ TEST_F(MediapipeFlowDummyNegativeTest, NegativeShouldNotReachInferDueToNonexiste
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
-    preparePredictRequest(request, inputsMeta, std::vector<float>{});
+    preparePredictRequest(request, inputsMeta);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::UNAVAILABLE);
 }
@@ -1020,7 +1020,7 @@ TEST_F(MediapipeFlowDummyNegativeTest, NegativeShouldNotReachInferStreamDueToNon
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
-    preparePredictRequest(request, inputsMeta, std::vector<float>{});
+    preparePredictRequest(request, inputsMeta);
     request.mutable_model_name()->assign(modelName);
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
     EXPECT_CALL(stream, Read(::testing::_))
@@ -1044,7 +1044,7 @@ TEST_F(MediapipeFlowScalarTest, Infer) {
     // Empty shape is used in the test framework to generate default shape (usually dummy 2d (1,10))
     // Here we generate (1,1) tensor which has the same data size as scalar and just reshape to scalar () below.
     inputs_info_t inputsMeta{{"in", {{1, 1}, precision}}};
-    preparePredictRequest(request, inputsMeta, std::vector<float>{});
+    preparePredictRequest(request, inputsMeta);
     auto* content = request.mutable_raw_input_contents()->Mutable(0);
     ASSERT_EQ(content->size(), sizeof(float));
     *((float*)content->data()) = 3.8f;
@@ -1078,7 +1078,7 @@ TEST_F(MediapipeFlowDynamicZeroDimTest, Infer) {
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"in", {{2, 0}, precision}}};
-    preparePredictRequest(request, inputsMeta, std::vector<float>{});
+    preparePredictRequest(request, inputsMeta);
     auto* content = request.mutable_raw_input_contents()->Mutable(0);
     ASSERT_EQ(content->size(), 0);
     ASSERT_EQ(request.inputs_size(), 1);
@@ -1952,7 +1952,7 @@ node {
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
-    preparePredictRequest(request, inputsMeta, std::vector<float>{});
+    preparePredictRequest(request, inputsMeta);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};

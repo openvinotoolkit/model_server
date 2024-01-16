@@ -241,9 +241,9 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
 KFSTensorInputProto* findKFSInferInputTensor(::KFSRequest& request, const std::string& name);
 std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, const std::string& name);
 
-template <typename T>
+template <typename T = float>
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
-    const std::vector<T>& data, bool putBufferInInputTensorContent = false) {
+    const std::vector<T>& data = std::vector<float>{}, bool putBufferInInputTensorContent = false) {
     auto it = request.mutable_inputs()->begin();
     size_t bufferId = 0;
     while (it != request.mutable_inputs()->end()) {
@@ -359,9 +359,9 @@ void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, 
         }
     }
 }
-template <typename T>
+template <typename T = float>
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
-    const std::vector<T>& data, bool putBufferInInputTensorContent = false) {
+    const std::vector<T>& data = std::vector<float>{}, bool putBufferInInputTensorContent = false) {
     auto [shape, type] = inputInfo;
     prepareKFSInferInputTensor(request, name,
         {shape, ovmsPrecisionToKFSPrecision(type)},
@@ -373,8 +373,8 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
 
-template <typename T>
-void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<T>& data, bool putBufferInInputTensorContent = false) {
+template <typename T = float>
+void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<T>& data = std::vector<float>{}, bool putBufferInInputTensorContent = false) {
     request.mutable_inputs()->Clear();
     request.mutable_raw_input_contents()->Clear();
     for (auto const& it : requestInputs) {
