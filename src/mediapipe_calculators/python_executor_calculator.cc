@@ -66,6 +66,11 @@ class PythonExecutorCalculator : public CalculatorBase {
     void prepareInputs(CalculatorContext* cc, std::vector<py::object>* pyInputs) {
         for (const std::string& tag : cc->Inputs().GetTags()) {
             if (tag != "LOOPBACK") {
+                if (cc->Inputs().Tag(tag).IsEmpty()) {
+                    LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Received empty packet on input: " << tag
+                              << ". Execution will continue without that input.";
+                    continue;
+                }
                 const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getObject();
                 nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
                 pyInputs->push_back(pyInput);
@@ -79,7 +84,13 @@ class PythonExecutorCalculator : public CalculatorBase {
             py::object pyOutput = pyOutputHandle.cast<py::object>();
             nodeResources->pythonBackend->validateOvmsPyTensor(pyOutput);
             std::string outputName = pyOutput.attr("name").cast<std::string>();
-            std::string outputTag = nodeResources->outputsNameTagMapping[outputName];
+
+            auto it = nodeResources->outputsNameTagMapping.find(outputName);
+            if (it == nodeResources->outputsNameTagMapping.end()) {
+                throw UnexpectedOutputTensorError(outputName);
+            }
+
+            std::string outputTag = it->second;
             if (cc->Outputs().HasTag(outputTag)) {
                 std::unique_ptr<PyObjectWrapper<py::object>> outputPtr = std::make_unique<PyObjectWrapper<py::object>>(pyOutput);
                 cc->Outputs().Tag(outputTag).Add(outputPtr.release(), timestamp);
@@ -94,9 +105,8 @@ class PythonExecutorCalculator : public CalculatorBase {
     bool receivedNewData(CalculatorContext* cc) {
         for (const std::string& tag : cc->Inputs().GetTags()) {
             if (tag != "LOOPBACK") {
-                if (!cc->Inputs().Tag(tag).IsEmpty()) {
+                if (!cc->Inputs().Tag(tag).IsEmpty())
                     return true;
-                }
             }
         }
         return false;
@@ -181,7 +191,7 @@ public:
         try {
             if (generatorInitialized()) {
                 if (receivedNewData(cc)) {
-                    LOG(INFO) << "[Node: " << cc->NodeName() << "] Node is already processing data. Create new stream for another request.";
+                    LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Node is already processing data. Create new stream for another request.";
                     return absl::Status(absl::StatusCode::kResourceExhausted, "Node is already processing data. Create new stream for another request.");
                 }
                 if (!generatorFinished()) {
@@ -193,6 +203,7 @@ public:
             } else {
                 // If execute yields, first request sets initial timestamp to input timestamp, then each cycle increments it.
                 // If execute returns, input timestamp is also output timestamp.
+
                 outputTimestamp = cc->InputTimestamp();
 
                 std::vector<py::object> pyInputs;
@@ -200,9 +211,12 @@ public:
                 py::object executeResult = std::move(nodeResources->ovmsPythonModel->attr("execute")(pyInputs));
                 handleExecutionResult(cc, executeResult);
             }
+        } catch (const UnexpectedOutputTensorError& e) {
+            LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
+            return absl::Status(absl::StatusCode::kInternal, "Python execute function returned unexpected output");
         } catch (const UnexpectedPythonObjectError& e) {
             // TODO: maybe some more descriptive information where to seek the issue.
-            LOG(INFO) << "Wrong object on node " << cc->NodeName() << " execute input or output: " << e.what();
+            LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution. Wrong object on execute input or output: " << e.what();
             return absl::Status(absl::StatusCode::kInternal, "Python execute function received or returned bad value");
         } catch (const BadPythonNodeConfigurationError& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();

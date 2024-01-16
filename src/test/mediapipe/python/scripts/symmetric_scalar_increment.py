@@ -13,14 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
-
+import struct
+from pyovms import Tensor
 class OvmsPythonModel:
 
-    def initialize(self, kwargs: dict):
-        return
-
-    def execute(self, inputs: list) -> list:
-        raise Exception("msg")
-
-    def finalize(self, kwargs: dict):
-        return
+    def execute(self, inputs: list):
+        # Increment every element of every input and return them with changed tensor name.
+        outputs = []
+        for input in inputs:
+            output_name = input.name.replace("input", "output")
+            input_fp32 = struct.unpack('f', bytes(input))[0]
+            input_fp32 = input_fp32 + 1.0
+            output_data = struct.pack('f', input_fp32)
+            outputs.append(Tensor(output_name, output_data))
+        return outputs

@@ -531,11 +531,151 @@ node {
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
-// Generative AI case + automatic timestamping server-side - Python
+// PYTHON CALCULATOR CASES
+
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>  // everything needed for embedding
 namespace py = pybind11;
 #include "../python/python_backend.hpp"
+// ------------------------- Regular mode
+
+TEST_F(PythonStreamingTest, Positive_SingleStreamSend1Receive1Python) {
+    const std::string testPbtxt{R"(
+input_stream: "OVMS_PY_TENSOR:input"
+output_stream: "OVMS_PY_TENSOR:output"
+node {
+    calculator: "PythonExecutorCalculator"
+    name: "pythonNode"
+    input_side_packet: "PYTHON_NODE_RESOURCES:py"
+    input_stream: "INPUT:input"
+    output_stream: "OUTPUT:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+            handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment.py"
+        }
+    }
+}
+)"};
+
+    ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
+    ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    this->pythonModule->releaseGILFromThisThread();
+    // Mock only 1 request and disconnect immediately
+    prepareRequest(this->firstRequest, {{"input", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Disconnect());
+
+    // Expect 1 response
+    // The PythonExecutorCalculator produces increasing timestamps
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"output", 4.5f}}, 0));
+
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+TEST_F(PythonStreamingTest, Positive_SingleStreamSend3Receive3Python) {
+    const std::string testPbtxt{R"(
+input_stream: "OVMS_PY_TENSOR:input"
+output_stream: "OVMS_PY_TENSOR:output"
+node {
+    calculator: "PythonExecutorCalculator"
+    name: "pythonNode"
+    input_side_packet: "PYTHON_NODE_RESOURCES:py"
+    input_stream: "INPUT:input"
+    output_stream: "OUTPUT:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+            handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment.py"
+        }
+    }
+}
+)"};
+
+    ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
+    ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    this->pythonModule->releaseGILFromThisThread();
+    // Mock receiving 3 requests and disconnection
+    prepareRequest(this->firstRequest, {{"input", 3.5f}});  // no timestamp specified, server will assign one
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Receive({{"input", 7.2f}}))    // no timestamp specified, server will assign one
+        .WillOnce(Receive({{"input", 102.4f}}))  // no timestamp specified, server will assign one
+        .WillOnce(Disconnect());
+
+    // Expect 3 responses
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"output", 4.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"output", 8.2f}}, 1))
+        .WillOnce(SendWithTimestamp({{"output", 103.4f}}, 2));
+
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+// Allow Process() to execute for every input separately with ImmediateInputStreamHandler
+// symmetric_scalar_increment.py returns outputs symmetrically,
+// so if Process() is run with one input, there will be one output
+TEST_F(PythonStreamingTest, Positive_SingleStreamSendIncompleteInputs) {
+    const std::string testPbtxt{R"(
+input_stream: "OVMS_PY_TENSOR1:input1"
+input_stream: "OVMS_PY_TENSOR2:input2"
+output_stream: "OVMS_PY_TENSOR1:output1"
+output_stream: "OVMS_PY_TENSOR2:output2"
+node {
+    calculator: "PythonExecutorCalculator"
+    name: "pythonNode"
+    input_side_packet: "PYTHON_NODE_RESOURCES:py"
+    input_stream: "INPUT1:input1"
+    input_stream: "INPUT2:input2"
+    input_stream_handler {
+        input_stream_handler: 'ImmediateInputStreamHandler'
+    }
+
+    output_stream: "OUTPUT1:output1"
+    output_stream: "OUTPUT2:output2"
+    node_options: {
+        [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+            handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment.py"
+        }
+    }
+}
+)"};
+
+    ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
+    ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    std::mutex mtx;
+    this->pythonModule->releaseGILFromThisThread();
+    // Mock receiving 2 requests and disconnection
+    prepareRequest(this->firstRequest, {{"input1", 3.5f}});  // no timestamp specified, server will assign one
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Receive({{"input2", 7.2f}}))  // no timestamp specified, server will assign one
+        .WillOnce(DisconnectWhenNotified(mtx));
+
+    // Expect 3 responses
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"output1", 4.5f}}, 0))
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"output2", 8.2f}}, 1, mtx));
+
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+// --------------------------- Generative mode
 
 TEST_F(PythonStreamingTest, SingleStreamSend1Receive3Python) {
     const std::string testPbtxt{R"(
@@ -769,7 +909,7 @@ node_options: {
 }
 // TODO: Add more negative tests for wrong configurations
 
-// --- End Gen AI Python cases
+// --- End Python cases
 #endif
 
 // Sending inputs separately for synchronized graph
