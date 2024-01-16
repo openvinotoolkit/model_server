@@ -90,11 +90,17 @@ public:
             const auto& options = cc->Options<PyTensorOvTensorConverterCalculatorOptions>();
             const auto tagOutputNameMap = options.tag_to_output_tensor_names();
             auto outputName = tagOutputNameMap.at(OVMS_PY_TENSOR_TAG_NAME).c_str();  // Existence of the key validated in GetContract
+            std::string precision = toKfsString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type()));
+            if (precision == "UNDEFINED") {
+                return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
+                       << "Undefined precision in input tensor: " << inputTensor.get_element_type();
+            }
+
             pythonBackend.createOvmsPyTensor(
                 outputName,
                 const_cast<void*>((const void*)inputTensor.data()),
                 shape,
-                toKfsString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type())),
+                precision,
                 inputTensor.get_byte_size(),
                 outputPyTensor,
                 true);
@@ -102,6 +108,10 @@ public:
         } else {
             auto& inputTensor = cc->Inputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Get<PyObjectWrapper<py::object>>();
             auto precision = ovmsPrecisionToIE2Precision(fromKfsString(inputTensor.getProperty<std::string>("datatype")));
+            if (precision == ov::element::Type_t::undefined) {
+                return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
+                       << "Undefined precision in input python tensor: " << inputTensor.getProperty<std::string>("datatype");
+            }
             ov::Shape shape;
             for (const auto& dim : inputTensor.getProperty<std::vector<py::ssize_t>>("shape")) {
                 if (dim < 0) {
