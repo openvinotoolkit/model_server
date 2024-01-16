@@ -43,7 +43,7 @@ python download_model.py --help
 INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
 usage: download_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
 
-The script to download and convert LLM models is based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
+Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
 
 optional arguments:
   -h, --help            show this help message and exit
