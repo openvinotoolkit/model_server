@@ -44,15 +44,15 @@ class OvmsBaseImageType(Enum):
 
 dynamic_libraries = {
     OvmsBaseImageType.COMMON: {
-        'libgcc_s.so', 'liblzma.so', 'libstdc++.so', 'libuuid.so', 'libxml2.so'
+        'libgcc_s.so', 'liblzma.so', 'libstdc++.so', 'libuuid.so', 'libxml2.so', 'libtbb.so'
     },
     OvmsBaseImageType.UBUNTU: {'libicuuc.so', 'libicudata.so',},
     OvmsBaseImageType.UBUNTU_PYTHON: {'libexpat.so',},
-    OvmsBaseImageType.UBUNTU20: {'librt.so', 'libtbb.so',},
+    OvmsBaseImageType.UBUNTU20: {'librt.so',},
     OvmsBaseImageType.UBUNTU20_PYTHON: {'libpython3.8.so', 'libutil.so',},
     OvmsBaseImageType.UBUNTU22: {'libm.so', 'libdl.so', 'libpthread.so',},
     OvmsBaseImageType.UBUNTU22_PYTHON: {'libpython3.10.so',},
-    OvmsBaseImageType.REDHAT: {'libtbb.so',},
+    OvmsBaseImageType.REDHAT: set(),
     OvmsBaseImageType.REDHAT_PYTHON:{'libpython3.9.so', 'libutil.so',},
 }
 
@@ -85,25 +85,19 @@ libraries = {
         'libopenvino_tensorflow_lite_frontend.so', 'libuser_ov_extensions.so', 'libcore_tokenizers.so'
     },
     OvmsBaseImageType.UBUNTU: {'libtbb.so',},
-    OvmsBaseImageType.UBUNTU20_PYTHON: {'libpython3.8.so',},
-    OvmsBaseImageType.UBUNTU22_PYTHON: {'libpython3.10.so',},
+    OvmsBaseImageType.UBUNTU20_PYTHON: set(),
+    OvmsBaseImageType.UBUNTU22_PYTHON: set(),
     OvmsBaseImageType.REDHAT: {'libpugixml.so',},
-    OvmsBaseImageType.REDHAT_PYTHON: {'libpython3.9.so',},
+    OvmsBaseImageType.REDHAT_PYTHON: set(),
 }
 
 whitelisted_libraries = {
-    OvmsImageType.UBUNTU20: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU],
-                             "python": libraries[OvmsBaseImageType.UBUNTU20_PYTHON]},
-    OvmsImageType.UBUNTU22: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU],
-                             "python": libraries[OvmsBaseImageType.UBUNTU22_PYTHON]},
-    OvmsImageType.UBUNTU22_GPU: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU],
-                                  "python": libraries[OvmsBaseImageType.UBUNTU22_PYTHON]},
-    OvmsImageType.UBUNTU22_NGINX: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU],
-                                   "python": libraries[OvmsBaseImageType.UBUNTU22_PYTHON]},
-    OvmsImageType.REDHAT: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.REDHAT],
-                           "python": libraries[OvmsBaseImageType.REDHAT_PYTHON]},
-    OvmsImageType.REDHAT_GPU: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.REDHAT],
-                               "python": libraries[OvmsBaseImageType.REDHAT_PYTHON]},
+    OvmsImageType.UBUNTU20: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU]},
+    OvmsImageType.UBUNTU22: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU]},
+    OvmsImageType.UBUNTU22_GPU: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU]},
+    OvmsImageType.UBUNTU22_NGINX: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU]},
+    OvmsImageType.REDHAT: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.REDHAT]},
+    OvmsImageType.REDHAT_GPU: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.REDHAT]},
 }
 
 packages = {
