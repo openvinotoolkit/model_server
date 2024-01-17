@@ -109,7 +109,7 @@ public:
                     outputName,
                     const_cast<void*>((const void*)inputTensor.data()),
                     shape,
-                    precision,
+                    datatype,
                     inputTensor.get_byte_size(),
                     outputPyTensor,
                     true);
