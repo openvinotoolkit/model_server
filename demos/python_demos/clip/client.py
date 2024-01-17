@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import sys
+sys.path.append("../../common/python")
 import tritonclient.grpc as grpcclient
 import argparse
 import datetime
@@ -51,11 +53,12 @@ infer_input1._raw_content = labels_npy.tobytes()
 processing_times = np.zeros((0),int)
 while iteration < iterations:
     iteration += 1
+    print(f"Iteration {iteration}")
     start_time = datetime.datetime.now()
     results = client.infer("python_model", [infer_input, infer_input1])
     end_time = datetime.datetime.now()
     duration = (end_time - start_time).total_seconds() * 1000
-                processing_times = np.append(processing_times,np.array([int(duration)]))
+    processing_times = np.append(processing_times,np.array([int(duration)]))
     print(f"Detection:\n{results.as_numpy('detection').tobytes().decode()}\n")
 
 batch_size = 1

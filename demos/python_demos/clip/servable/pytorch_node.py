@@ -19,21 +19,20 @@ from transformers import CLIPProcessor, CLIPModel
 from urllib.request import urlretrieve
 from pathlib import Path
 from PIL import Image
-import numpy as np
 import os
-import openvino as ov
-from scipy.special import softmax
+import numpy as np
 
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
         model_id = "openai/clip-vit-base-patch16"
+        self.model = CLIPModel.from_pretrained(model_id)
         self.processor = CLIPProcessor.from_pretrained(model_id)
 
     def execute(self, inputs: list):
         input_url = bytes(inputs[0]).decode()
         input_name = input_url.split("/")[-1]
-        sample_path = Path(os.path.join("data", input_name))
+        sample_path = Path(os.path.join("data",input_name))
         if not os.path.exists(sample_path):
             sample_path.parent.mkdir(parents=True, exist_ok=True)
             urlretrieve(
@@ -44,14 +43,13 @@ class OvmsPythonModel:
 
         input_labels = np.frombuffer(inputs[1].data, dtype=inputs[1].datatype)
         text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
+
         model_inputs = self.processor(text=text_descriptions, images=[image], return_tensors="pt", padding=True)
+        results = self.model(**model_inputs)
+        logits_per_image = results['logits_per_image']
+        probs = logits_per_image.softmax(dim=1).detach().numpy()
 
-        input_ids = np.array(model_inputs["input_ids"], dtype=np.dtype("q"))
-        attention_mask = np.array(model_inputs["attention_mask"], dtype=np.dtype("q"))
-
-        input_ids_py = Tensor("input_ids_py", input_ids)
-        attention_mask_py = Tensor("attention_mask_py", attention_mask)
-        pixel_values_py = Tensor("pixel_values_py", model_inputs["pixel_values"].numpy())
-
-        return [input_ids_py, attention_mask_py, pixel_values_py]
-
+        max_prob = probs[0].argmax(axis=0)
+        max_label = input_labels[max_prob]
+        max_label = str(max_label)
+        return [Tensor("detection", max_label.encode())]

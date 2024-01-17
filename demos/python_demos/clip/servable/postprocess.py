@@ -25,18 +25,11 @@ class OvmsPythonModel:
     
     def execute(self, inputs: list):
         ov_logits_per_image = np.asarray(inputs[0].data)
-        print("input shape " + str(inputs[0].shape) )
-        print("ov_logits_per_image shape" + str(ov_logits_per_image.shape))
-        print("ov_logits_per_image " + str(ov_logits_per_image))
         probs = softmax(ov_logits_per_image, axis=1)[0]
-        print("probs " + str(probs))
         input_labels = np.frombuffer(inputs[1].data, inputs[1].datatype)
 
         max_prob = probs.argmax(axis=0)
         max_label = input_labels[max_prob]
-        print("max label " + str(max_label))
-        print("max label type " + str(type(max_label)))
-        print(max_label.data.format)
         max_label = str(max_label)
 
         return [Tensor("detection", max_label.encode())]
