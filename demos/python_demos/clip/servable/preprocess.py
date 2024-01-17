@@ -15,14 +15,10 @@
 #*****************************************************************************
 
 from pyovms import Tensor
-from transformers import CLIPProcessor, CLIPModel
-from urllib.request import urlretrieve
-from pathlib import Path
+from transformers import CLIPProcessor
 from PIL import Image
 import numpy as np
-import os
-import openvino as ov
-from scipy.special import softmax
+from io import BytesIO
 
 class OvmsPythonModel:
 
@@ -31,21 +27,14 @@ class OvmsPythonModel:
         self.processor = CLIPProcessor.from_pretrained(model_id)
 
     def execute(self, inputs: list):
-        input_url = bytes(inputs[0]).decode()
-        input_name = input_url.split("/")[-1]
-        sample_path = Path(os.path.join("data", input_name))
-        if not os.path.exists(sample_path):
-            sample_path.parent.mkdir(parents=True, exist_ok=True)
-            urlretrieve(
-                input_url,
-                sample_path,
-            )
-        image = Image.open(sample_path)
-
+        image = Image.open(BytesIO(inputs[0]))
+        
         input_labels = np.frombuffer(inputs[1].data, dtype=inputs[1].datatype)
         text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
         model_inputs = self.processor(text=text_descriptions, images=[image], return_tensors="pt", padding=True)
 
+        # dtype=np.dtype("q") must be used because in case of expected INT64 type, numpy will set wrong type - l
+        # then Tensor type conversion will use this to create INT32 datatype instead of required INT64
         input_ids = np.array(model_inputs["input_ids"], dtype=np.dtype("q"))
         attention_mask = np.array(model_inputs["attention_mask"], dtype=np.dtype("q"))
 

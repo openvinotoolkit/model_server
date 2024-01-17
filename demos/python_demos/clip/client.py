@@ -20,6 +20,10 @@ import argparse
 import datetime
 import numpy as np
 from client_utils import print_statistics
+from urllib.request import urlretrieve
+from pathlib import Path
+import os
+from PIL import Image
 
 parser = argparse.ArgumentParser(description='Client for clip example')
 
@@ -38,14 +42,28 @@ iterations = args.get('iterations')
 iteration = 0
 
 client = grpcclient.InferenceServerClient(args['url'])
+
+
 image_url = args['image_url']
 print(f"Using image_url:\n{image_url}\n")
-data = image_url.encode()
-infer_input = grpcclient.InferInput("image_url", [len(data)], "BYTES")
+
+input_name = image_url.split("/")[-1]
+sample_path = Path(os.path.join("data", input_name))
+if not os.path.exists(sample_path):
+    sample_path.parent.mkdir(parents=True, exist_ok=True)
+    urlretrieve(
+        image_url,
+        sample_path,
+    )
+#image = Image.open(sample_path)
+with open(sample_path, "rb") as f:
+    data = f.read()
+
+infer_input = grpcclient.InferInput("image_url", [len(data)], "UINT8")
 infer_input._raw_content = data
+
 input_labels = args['input_labels'].split(",")
 print(f"Using input_labels:\n{input_labels}\n")
-
 labels_npy = np.array(input_labels)
 infer_input1 = grpcclient.InferInput("input_labels", [len(labels_npy)], labels_npy.dtype.str)
 infer_input1._raw_content = labels_npy.tobytes()
