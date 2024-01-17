@@ -40,14 +40,6 @@ void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::
 void prepareInferStringRequest(ovms::InferenceRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent) { throw 42; }                     // CAPI binary not supported
 void prepareInferStringTensor(ovms::InferenceTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) { throw 42; }  // CAPI binary not supported
 
-void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, bool putBufferInInputTensorContent) {
-    request.mutable_inputs()->Clear();
-    request.mutable_raw_input_contents()->Clear();
-    for (auto const& it : requestInputs) {
-        prepareKFSInferInputTensor(request, it.first, it.second, data, putBufferInInputTensorContent);
-    }
-}
-
 void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
     request.removeAllInputs();
     for (auto const& it : requestInputs) {
@@ -173,39 +165,6 @@ void checkDummyResponse(const std::string outputName,
     std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) { v += 1.0 * seriesLength; });
 
     float* actual_output = (float*)output_proto.tensor_content().data();
-    float* expected_output = responseData.data();
-    const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
-}
-
-void checkDummyResponse(const std::string outputName,
-    const std::vector<float>& requestData,
-    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize, const std::string& servableName, size_t expectedOutputsCount) {
-    ASSERT_EQ(response.model_name(), servableName);
-    ASSERT_EQ(response.outputs_size(), expectedOutputsCount);
-    ASSERT_EQ(response.raw_output_contents_size(), expectedOutputsCount);
-    // Finding the output with given name
-    auto it = std::find_if(response.outputs().begin(), response.outputs().end(), [&outputName](const ::KFSResponse::InferOutputTensor& tensor) {
-        return tensor.name() == outputName;
-    });
-    ASSERT_NE(it, response.outputs().end());
-    auto outputIndex = it - response.outputs().begin();
-    const auto& output_proto = *it;
-    std::string* content = response.mutable_raw_output_contents(outputIndex);
-
-    ASSERT_EQ(content->size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
-    ASSERT_EQ(output_proto.datatype(), "FP32");
-    ASSERT_EQ(output_proto.shape_size(), 2);
-    ASSERT_EQ(output_proto.shape(0), batchSize);
-    ASSERT_EQ(output_proto.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
-
-    std::vector<float> responseData = requestData;
-    std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) {
-        v += 1.0 * seriesLength;
-    });
-
-    float* actual_output = (float*)content->data();
     float* expected_output = responseData.data();
     const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
     EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
@@ -596,13 +555,6 @@ std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, co
     }
     return content;
 }
-void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
-    const std::vector<float>& data, bool putBufferInInputTensorContent) {
-    auto [shape, type] = inputInfo;
-    prepareKFSInferInputTensor(request, name,
-        {shape, ovmsPrecisionToKFSPrecision(type)},
-        data, putBufferInInputTensorContent);
-}
 
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
@@ -639,124 +591,6 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
         dataSize -= decrementBufferSize;
 
     request.setInputBuffer(name.c_str(), data.data(), dataSize, bufferType, deviceId);
-}
-
-void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
-    const std::vector<float>& data, bool putBufferInInputTensorContent) {
-    auto it = request.mutable_inputs()->begin();
-    size_t bufferId = 0;
-    while (it != request.mutable_inputs()->end()) {
-        if (it->name() == name)
-            break;
-        ++it;
-        ++bufferId;
-    }
-    KFSTensorInputProto* tensor;
-    std::string* content = nullptr;
-    if (it != request.mutable_inputs()->end()) {
-        tensor = &*it;
-        if (!putBufferInInputTensorContent) {
-            content = request.mutable_raw_input_contents()->Mutable(bufferId);
-        }
-    } else {
-        tensor = request.add_inputs();
-        if (!putBufferInInputTensorContent) {
-            content = request.add_raw_input_contents();
-        }
-    }
-    auto [shape, datatype] = inputInfo;
-    tensor->set_name(name);
-    tensor->set_datatype(datatype);
-    size_t elementsCount = 1;
-    tensor->mutable_shape()->Clear();
-    bool isNegativeShape = false;
-    for (auto const& dim : shape) {
-        tensor->add_shape(dim);
-        if (dim < 0) {
-            isNegativeShape = true;
-        }
-        elementsCount *= dim;
-    }
-    size_t dataSize = isNegativeShape ? data.size() : elementsCount;
-    if (!putBufferInInputTensorContent) {
-        if (data.size() == 0) {
-            content->assign(dataSize * ovms::KFSDataTypeSize(datatype), '1');
-        } else {
-            content->resize(dataSize * ovms::KFSDataTypeSize(datatype));
-            std::memcpy(content->data(), data.data(), content->size());
-        }
-    } else {
-        switch (ovms::KFSPrecisionToOvmsPrecision(datatype)) {
-        case ovms::Precision::FP64: {
-            for (size_t i = 0; i < dataSize; ++i) {
-                auto ptr = tensor->mutable_contents()->mutable_fp64_contents()->Add();
-                *ptr = (data.size() ? data[i] : 1);
-            }
-            break;
-        }
-        case ovms::Precision::FP32: {
-            for (size_t i = 0; i < dataSize; ++i) {
-                auto ptr = tensor->mutable_contents()->mutable_fp32_contents()->Add();
-                *ptr = (data.size() ? data[i] : 1);
-            }
-            break;
-        }
-        // uint64_contents
-        case ovms::Precision::U64: {
-            for (size_t i = 0; i < dataSize; ++i) {
-                auto ptr = tensor->mutable_contents()->mutable_uint64_contents()->Add();
-                *ptr = (data.size() ? data[i] : 1);
-            }
-            break;
-        }
-        // uint_contents
-        case ovms::Precision::U8:
-        case ovms::Precision::U16:
-        case ovms::Precision::U32: {
-            for (size_t i = 0; i < dataSize; ++i) {
-                auto ptr = tensor->mutable_contents()->mutable_uint_contents()->Add();
-                *ptr = (data.size() ? data[i] : 1);
-            }
-            break;
-        }
-        // int64_contents
-        case ovms::Precision::I64: {
-            for (size_t i = 0; i < dataSize; ++i) {
-                auto ptr = tensor->mutable_contents()->mutable_int64_contents()->Add();
-                *ptr = (data.size() ? data[i] : 1);
-            }
-            break;
-        }
-        // bool_contents
-        case ovms::Precision::BOOL: {
-            for (size_t i = 0; i < dataSize; ++i) {
-                auto ptr = tensor->mutable_contents()->mutable_bool_contents()->Add();
-                *ptr = (data.size() ? data[i] : 1);
-            }
-            break;
-        }
-        // int_contents
-        case ovms::Precision::I8:
-        case ovms::Precision::I16:
-        case ovms::Precision::I32: {
-            for (size_t i = 0; i < dataSize; ++i) {
-                auto ptr = tensor->mutable_contents()->mutable_int_contents()->Add();
-                *ptr = (data.size() ? data[i] : 1);
-            }
-            break;
-        }
-        case ovms::Precision::FP16:
-        case ovms::Precision::U1:
-        case ovms::Precision::CUSTOM:
-        case ovms::Precision::UNDEFINED:
-        case ovms::Precision::DYNAMIC:
-        case ovms::Precision::MIXED:
-        case ovms::Precision::Q78:
-        case ovms::Precision::BIN:
-        default: {
-        }
-        }
-    }
 }
 
 void randomizePort(std::string& port) {

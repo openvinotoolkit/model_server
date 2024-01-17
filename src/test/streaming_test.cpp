@@ -111,7 +111,7 @@ static void prepareRequest(::inference::ModelInferRequest& request, const std::v
         *request.mutable_model_version() = DEFAULT_GRAPH_VERSION;
     }
     for (auto const& [name, val] : content) {
-        prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {val}, false);
+        prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, std::vector<float>{val}, false);
     }
     if (timestamp.has_value()) {
         setRequestTimestamp(request, std::to_string(timestamp.value()));
@@ -122,7 +122,7 @@ static void prepareRequestWithParam(::inference::ModelInferRequest& request, con
     request.Clear();
     auto& [paramName, paramVal] = param;
     for (auto const& [name, val] : content) {
-        prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {val}, false);
+        prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, std::vector<float>{val}, false);
     }
     if (timestamp.has_value()) {
         request.set_id(std::to_string(timestamp.value()));
@@ -145,7 +145,7 @@ static void prepareInvalidRequest(::inference::ModelInferRequest& request, const
     }
     int i = 0;
     for (auto const& name : inputs) {
-        prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, {1.0f /*data*/}, false);
+        prepareKFSInferInputTensor(request, name, std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1}, Precision::FP32}, std::vector<float>{1.0f /*data*/}, false);
         request.mutable_raw_input_contents()->Mutable(i++)->clear();
     }
     if (timestamp.has_value()) {

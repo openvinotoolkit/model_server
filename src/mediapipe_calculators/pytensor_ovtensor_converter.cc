@@ -74,52 +74,89 @@ public:
     absl::Status Process(CalculatorContext* cc) final {
         LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Process start";
         py::gil_scoped_acquire acquire;
-        if (*(cc->Inputs().GetTags().begin()) == OV_TENSOR_TAG_NAME) {
-            auto& inputTensor = cc->Inputs().Tag(OV_TENSOR_TAG_NAME).Get<ov::Tensor>();
-            py::object outTensor;
-            std::unique_ptr<PyObjectWrapper<py::object>> outputPyTensor = std::make_unique<PyObjectWrapper<py::object>>(outTensor);
+        try {
             PythonBackend pythonBackend;
-            std::vector<py::ssize_t> shape;
-            for (const auto& dim : inputTensor.get_shape()) {
-                if (dim > std::numeric_limits<py::ssize_t>::max()) {
-                    return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
-                           << "dimension exceeded during conversion: " << dim;
+
+            for (const std::string& tag : cc->Inputs().GetTags()) {
+                if (cc->Inputs().Tag(tag).IsEmpty()) {
+                    LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Error occurred during reading inputs. Unexpected empty packet received on input: " << tag;
+                    RET_CHECK(false);
                 }
-                shape.push_back(dim);
             }
-            const auto& options = cc->Options<PyTensorOvTensorConverterCalculatorOptions>();
-            const auto tagOutputNameMap = options.tag_to_output_tensor_names();
-            auto outputName = tagOutputNameMap.at(OVMS_PY_TENSOR_TAG_NAME).c_str();  // Existence of the key validated in GetContract
-            pythonBackend.createOvmsPyTensor(
-                outputName,
-                const_cast<void*>((const void*)inputTensor.data()),
-                shape,
-                toString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type())),
-                inputTensor.get_byte_size(),
-                outputPyTensor,
-                true);
-            cc->Outputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Add(outputPyTensor.release(), cc->InputTimestamp());
-        } else {
-            auto& inputTensor = cc->Inputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Get<PyObjectWrapper<py::object>>();
-            auto precision = ovmsPrecisionToIE2Precision(fromString(inputTensor.getProperty<std::string>("datatype")));
-            ov::Shape shape;
-            for (const auto& dim : inputTensor.getProperty<std::vector<py::ssize_t>>("shape")) {
-                if (dim < 0) {
-                    return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
-                           << "dimension negative during conversion: " << dim;
+
+            if (*(cc->Inputs().GetTags().begin()) == OV_TENSOR_TAG_NAME) {
+                auto& inputTensor = cc->Inputs().Tag(OV_TENSOR_TAG_NAME).Get<ov::Tensor>();
+
+                std::unique_ptr<PyObjectWrapper<py::object>> outputPyTensor;
+                std::vector<py::ssize_t> shape;
+                for (const auto& dim : inputTensor.get_shape()) {
+                    if (dim > std::numeric_limits<py::ssize_t>::max()) {
+                        return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
+                               << "dimension exceeded during conversion: " << dim;
+                    }
+                    shape.push_back(dim);
                 }
-                shape.push_back(dim);
+                const auto& options = cc->Options<PyTensorOvTensorConverterCalculatorOptions>();
+                const auto tagOutputNameMap = options.tag_to_output_tensor_names();
+                auto outputName = tagOutputNameMap.at(OVMS_PY_TENSOR_TAG_NAME).c_str();  // Existence of the key validated in GetContract
+                const std::string datatype = toKfsString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type()));
+                if (datatype == "UNDEFINED") {
+                    return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
+                           << "Undefined precision in input tensor: " << inputTensor.get_element_type();
+                }
+
+                pythonBackend.createOvmsPyTensor(
+                    outputName,
+                    const_cast<void*>((const void*)inputTensor.data()),
+                    shape,
+                    datatype,
+                    inputTensor.get_byte_size(),
+                    outputPyTensor,
+                    true);
+                cc->Outputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Add(outputPyTensor.release(), cc->InputTimestamp());
+            } else {
+                if (*(cc->Inputs().GetTags().begin()) == OVMS_PY_TENSOR_TAG_NAME) {
+                    auto& inputTensor = cc->Inputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Get<PyObjectWrapper<py::object>>();
+                    pythonBackend.validateOvmsPyTensor(inputTensor.getObject());
+                    const auto precision = ovmsPrecisionToIE2Precision(fromKfsString(inputTensor.getProperty<std::string>("datatype")));
+                    if (precision == ov::element::Type_t::undefined) {
+                        return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
+                               << "Undefined precision in input python tensor: " << inputTensor.getProperty<std::string>("datatype");
+                    }
+                    ov::Shape shape;
+                    for (const auto& dim : inputTensor.getProperty<std::vector<py::ssize_t>>("shape")) {
+                        if (dim < 0) {
+                            return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
+                                   << "dimension negative during conversion: " << dim;
+                        }
+                        shape.push_back(dim);
+                    }
+                    const void* data = reinterpret_cast<const void*>(inputTensor.getProperty<void*>("ptr"));
+                    size_t bufferSize = inputTensor.getProperty<size_t>("size");
+                    std::unique_ptr<ov::Tensor> output = std::make_unique<ov::Tensor>(precision, shape);
+                    if (bufferSize != output->get_byte_size()) {
+                        return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
+                               << "python buffer size: " << bufferSize << "; OV tensor size: " << output->get_byte_size() << "; mismatch";
+                    }
+                    memcpy((*output).data(), const_cast<void*>(data), output->get_byte_size());
+                    cc->Outputs().Tag(OV_TENSOR_TAG_NAME).Add(output.release(), cc->InputTimestamp());
+                }
             }
-            const void* data = reinterpret_cast<const void*>(inputTensor.getProperty<void*>("ptr"));
-            size_t bufferSize = inputTensor.getProperty<size_t>("size");
-            std::unique_ptr<ov::Tensor> output = std::make_unique<ov::Tensor>(precision, shape);
-            if (bufferSize != output->get_byte_size()) {
-                return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
-                       << "python buffer size: " << bufferSize << "; OV tensor size: " << output->get_byte_size() << "; mismatch";
-            }
-            memcpy((*output).data(), const_cast<void*>(data), output->get_byte_size());
-            cc->Outputs().Tag(OV_TENSOR_TAG_NAME).Add(output.release(), cc->InputTimestamp());
+        } catch (const UnexpectedPythonObjectError& e) {
+            // TODO: maybe some more descriptive information where to seek the issue.
+            LOG(INFO) << "Wrong object on node " << cc->NodeName() << " provided to converter: " << e.what();
+            return absl::Status(absl::StatusCode::kInternal, "Python converter received unexpected object");
+        } catch (const pybind11::error_already_set& e) {
+            LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
+            return absl::Status(absl::StatusCode::kInternal, "Error occurred during convertion");
+        } catch (std::exception& e) {
+            LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
+            return absl::Status(absl::StatusCode::kUnknown, "Unexpected error occurred");
+        } catch (...) {
+            LOG(INFO) << "Unexpected error occurred during node " << cc->NodeName() << " execution";
+            return absl::Status(absl::StatusCode::kUnknown, "Unexpected error occurred");
         }
+
         LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Process end";
         return absl::OkStatus();
     }

@@ -24,6 +24,7 @@ class OvmsPythonModel:
         # Increment every element of every input and return them with changed tensor name.
         input = inputs[0]
         input_npy = np.array(input)
-        print(input_npy)
+        print("input_npy:" + str(input_npy))
+        print("input_npy.dtype:" + str(input_npy.dtype))
         output_npy = input_npy + 1
         return [Tensor(self.output_name, output_npy)]

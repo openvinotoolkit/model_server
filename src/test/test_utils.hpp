@@ -236,22 +236,151 @@ ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::Shape>&& tensors,
     ovms::Precision precision = ovms::Precision::FP32);
 
-void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {});
+void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = std::vector<float>{});
 
 KFSTensorInputProto* findKFSInferInputTensor(::KFSRequest& request, const std::string& name);
 std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, const std::string& name);
 
+template <typename T = float>
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
-    const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
+    const std::vector<T>& data = std::vector<float>{}, bool putBufferInInputTensorContent = false) {
+    auto it = request.mutable_inputs()->begin();
+    size_t bufferId = 0;
+    while (it != request.mutable_inputs()->end()) {
+        if (it->name() == name)
+            break;
+        ++it;
+        ++bufferId;
+    }
+    KFSTensorInputProto* tensor;
+    std::string* content = nullptr;
+    if (it != request.mutable_inputs()->end()) {
+        tensor = &*it;
+        if (!putBufferInInputTensorContent) {
+            content = request.mutable_raw_input_contents()->Mutable(bufferId);
+        }
+    } else {
+        tensor = request.add_inputs();
+        if (!putBufferInInputTensorContent) {
+            content = request.add_raw_input_contents();
+        }
+    }
+    auto [shape, datatype] = inputInfo;
+    tensor->set_name(name);
+    tensor->set_datatype(datatype);
+    size_t elementsCount = 1;
+    tensor->mutable_shape()->Clear();
+    bool isNegativeShape = false;
+    for (auto const& dim : shape) {
+        tensor->add_shape(dim);
+        if (dim < 0) {
+            isNegativeShape = true;
+        }
+        elementsCount *= dim;
+    }
+    size_t dataSize = isNegativeShape ? data.size() : elementsCount;
+    if (!putBufferInInputTensorContent) {
+        if (data.size() == 0) {
+            content->assign(dataSize * ovms::KFSDataTypeSize(datatype), '1');
+        } else {
+            content->resize(dataSize * ovms::KFSDataTypeSize(datatype));
+            std::memcpy(content->data(), data.data(), content->size());
+        }
+    } else {
+        switch (ovms::KFSPrecisionToOvmsPrecision(datatype)) {
+        case ovms::Precision::FP64: {
+            for (size_t i = 0; i < dataSize; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_fp64_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        case ovms::Precision::FP32: {
+            for (size_t i = 0; i < dataSize; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_fp32_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        // uint64_contents
+        case ovms::Precision::U64: {
+            for (size_t i = 0; i < dataSize; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_uint64_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        // uint_contents
+        case ovms::Precision::U8:
+        case ovms::Precision::U16:
+        case ovms::Precision::U32: {
+            for (size_t i = 0; i < dataSize; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_uint_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        // int64_contents
+        case ovms::Precision::I64: {
+            for (size_t i = 0; i < dataSize; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_int64_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        // bool_contents
+        case ovms::Precision::BOOL: {
+            for (size_t i = 0; i < dataSize; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_bool_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        // int_contents
+        case ovms::Precision::I8:
+        case ovms::Precision::I16:
+        case ovms::Precision::I32: {
+            for (size_t i = 0; i < dataSize; ++i) {
+                auto ptr = tensor->mutable_contents()->mutable_int_contents()->Add();
+                *ptr = (data.size() ? data[i] : 1);
+            }
+            break;
+        }
+        case ovms::Precision::FP16:
+        case ovms::Precision::U1:
+        case ovms::Precision::CUSTOM:
+        case ovms::Precision::UNDEFINED:
+        case ovms::Precision::DYNAMIC:
+        case ovms::Precision::MIXED:
+        case ovms::Precision::Q78:
+        case ovms::Precision::BIN:
+        default: {
+        }
+        }
+    }
+}
+template <typename T = float>
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
-    const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
+    const std::vector<T>& data = std::vector<float>{}, bool putBufferInInputTensorContent = false) {
+    auto [shape, type] = inputInfo;
+    prepareKFSInferInputTensor(request, name,
+        {shape, ovmsPrecisionToKFSPrecision(type)},
+        data, putBufferInInputTensorContent);
+}
 
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, OVMS_DataType>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
 
-void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = {}, bool putBufferInInputTensorContent = false);
+template <typename T = float>
+void preparePredictRequest(::KFSRequest& request, inputs_info_t requestInputs, const std::vector<T>& data = std::vector<float>{}, bool putBufferInInputTensorContent = false) {
+    request.mutable_inputs()->Clear();
+    request.mutable_raw_input_contents()->Clear();
+    for (auto const& it : requestInputs) {
+        prepareKFSInferInputTensor(request, it.first, it.second, data, putBufferInInputTensorContent);
+    }
+}
 
 void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t requestInputs, const std::vector<float>& data,
     uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
@@ -280,20 +409,6 @@ void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::
 template <typename TensorType>
 void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
-void checkDummyResponse(const std::string outputName,
-    const std::vector<float>& requestData,
-    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
-
-void checkDummyResponse(const std::string outputName,
-    const std::vector<float>& requestData,
-    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
-
-void checkScalarResponse(const std::string outputName,
-    float inputScalar, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");
-
-void checkScalarResponse(const std::string outputName,
-    float inputScalar, ::KFSResponse& response, const std::string& servableName = "");
-
 template <typename T>
 std::string readableError(const T* expected_output, const T* actual_output, const size_t size) {
     std::stringstream ss;
@@ -305,6 +420,91 @@ std::string readableError(const T* expected_output, const T* actual_output, cons
     }
     return ss.str();
 }
+
+void checkDummyResponse(const std::string outputName,
+    const std::vector<float>& requestData,
+    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
+
+static std::string vectorTypeToKfsString(const std::type_info& vectorType) {
+    // {Precision::BF16, "BF16"},
+    // {Precision::FP16, "FP16"},
+    // {Precision::FP62, "FP62"},
+    if (vectorType == typeid(float))
+        return std::string("FP32");
+    // {Precision::I32, "INT32"},
+    if (vectorType == typeid(int32_t))
+        return std::string("INT32");
+    // {Precision::FP64, "FP64"},
+    if (vectorType == typeid(double))
+        return std::string("FP64");
+    // {Precision::I64, "INT64"},
+    if (vectorType == typeid(int64_t))
+        return std::string("INT64");
+    // {Precision::I16, "INT16"},
+    if (vectorType == typeid(int16_t))
+        return std::string("INT16");
+    // {Precision::I8, "INT8"},
+    if (vectorType == typeid(int8_t))
+        return std::string("INT8");
+    // {Precision::U64, "UINT64"},
+    if (vectorType == typeid(uint64_t))
+        return std::string("UINT64");
+    // {Precision::U32, "UINT32"},
+    if (vectorType == typeid(uint32_t))
+        return std::string("UINT32");
+    // {Precision::U16, "UINT16"},
+    if (vectorType == typeid(uint16_t))
+        return std::string("UINT16");
+    // {Precision::U8, "UINT8"},
+    if (vectorType == typeid(uint8_t))
+        return std::string("UINT8");
+    // {Precision::BOOL, "BOOL"},
+    if (vectorType == typeid(bool))
+        return std::string("BOOL");
+
+    // {Precision::UNDEFINED, "UNDEFINED"}};
+    return std::string("UNDEFINED");
+}
+
+template <typename T = float>
+void checkDummyResponse(const std::string outputName,
+    const std::vector<T>& requestData,
+    ::KFSRequest& request, ::KFSResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1) {
+    ASSERT_EQ(response.model_name(), servableName);
+    ASSERT_EQ(response.outputs_size(), expectedOutputsCount);
+    ASSERT_EQ(response.raw_output_contents_size(), expectedOutputsCount);
+    // Finding the output with given name
+    auto it = std::find_if(response.outputs().begin(), response.outputs().end(), [&outputName](const ::KFSResponse::InferOutputTensor& tensor) {
+        return tensor.name() == outputName;
+    });
+    ASSERT_NE(it, response.outputs().end());
+    auto outputIndex = it - response.outputs().begin();
+    const auto& output_proto = *it;
+    std::string* content = response.mutable_raw_output_contents(outputIndex);
+
+    ASSERT_EQ(content->size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(T));
+    ASSERT_EQ(output_proto.datatype(), vectorTypeToKfsString(typeid(T)));
+    ASSERT_EQ(output_proto.shape_size(), 2);
+    ASSERT_EQ(output_proto.shape(0), batchSize);
+    ASSERT_EQ(output_proto.shape(1), DUMMY_MODEL_OUTPUT_SIZE);
+
+    std::vector<T> responseData = requestData;
+    std::for_each(responseData.begin(), responseData.end(), [seriesLength](T& v) {
+        v += 1.0 * seriesLength;
+    });
+
+    T* actual_output = (T*)content->data();
+    T* expected_output = responseData.data();
+    const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(T);
+    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
+        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
+}
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");
+
+void checkScalarResponse(const std::string outputName,
+    float inputScalar, ::KFSResponse& response, const std::string& servableName = "");
 
 void assertStringOutputProto(const tensorflow::TensorProto& proto, const std::vector<std::string>& expectedStrings);
 void assertStringOutputProto(const KFSTensorOutputProto& proto, const std::vector<std::string>& expectedStrings);
