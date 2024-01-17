@@ -1,7 +1,11 @@
 # CLIP demo with python node {#ovms_demo_clip}
 
 Python node execution with Openvino Model Server inference example.
-The client sends request with image_url and input_labels into the CLIP model to get the detection name based on the highest probability from CLIP model.
+The client sends request with image_url and input_labels into the CLIP model to get the detection name based on the highest probability from CLIP model. The preprocess python script node is executed first in graph and prepares inputs vector based on user inputs sent from client. Then inputs are used to get similarity matrix from inference. After that postprocess python script node is executed and calcualtes the most probable name from the input labels and sends it back to the user.
+
+Demo is based on this [CLIP notebook](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-convert.ipynb)
+
+CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on various (image, text) pairs. It can be instructed in natural language to predict the most relevant text snippet, given an image, without directly optimizing for the task. CLIP uses a ViT like transformer to get visual features and a causal language model to get the text features. The text and visual features are then projected into a latent space with identical dimensions. The dot product between the projected image and text features is then used as a similarity score.
 
 The graph below depictures the data flow in the node execution.
 
@@ -21,6 +25,12 @@ make python_image
 
 ```bash
 pip3 install -r requirements.txt 
+```
+
+## Download and convert model
+
+```bash
+pip3 install -r download_model_requirements.txt 
 ```
 
 ```bash
