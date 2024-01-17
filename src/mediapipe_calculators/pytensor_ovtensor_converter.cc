@@ -79,7 +79,7 @@ public:
 
             for (const std::string& tag : cc->Inputs().GetTags()) {
                 if (cc->Inputs().Tag(tag).IsEmpty()) {
-                    LOG(INFO) << "Error: Empty packet. PyTensorOvTensorConverterCalculator expects non empty input packets for each call to Process().";
+                    LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Error occurred during reading inputs. Unexpected empty packet received on input: " << tag;
                     RET_CHECK(false);
                 }
             }
