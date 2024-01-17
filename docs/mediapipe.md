@@ -112,7 +112,7 @@ Full pipeline execution on the GPU is expected to be added in future releases.
 ### How to package the graph and models
 In order to simplify distribution of the graph artifacts and the deployment process in various environments,
 it is recommended to create a specific folders structure:
-```bash
+```
 mediapipe_graph_name/
 ├── graph.pbtxt
 ├── model1
