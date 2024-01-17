@@ -54,9 +54,9 @@
 #include "localfilesystem.hpp"
 #include "logging.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
+#include "inference/classification_calculator.h"
 #include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "inference/classification_calculator.h"
 #include "serialization/serialization_calculators.h"
 #include "utils/loop_calculators.h"
 #endif
@@ -76,9 +76,9 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 // Just a simple check if geti calculators are build
 #if (MEDIAPIPE_DISABLE == 0)
 mediapipe::ClassificationCalculator classCalcInit;
-mediapipe::DetectionSerializationCalculator detserialize;
-mediapipe::BeginLoopModelApiDetectionCalculator loopbegin;
-mediapipe::EndLoopModelApiDetectionClassificationCalculator endloop;
+mediapipe::SerializationCalculator detserialize;
+mediapipe::BeginLoopRectanglePredictionCalculator loopbegin;
+mediapipe::EndLoopRectanglePredictionsCalculator endloop;
 #endif
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry) :
