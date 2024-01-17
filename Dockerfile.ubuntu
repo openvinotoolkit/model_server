@@ -197,8 +197,8 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; 
     rm -rf /var/lib/apt/lists/* && \
     ln -s /opt/intel/openvino_2023 /opt/intel/openvino
 
-# Copy TBB built by OV (Ubuntu22)
-RUN cp -P /openvino/temp/tbb/lib/libtbb.so* /opt/intel/openvino/runtime/lib/intel64/
+# Copy TBB built by OV if exists (Ubuntu22 from sources)
+RUN [[ -e /openvino/temp/tbb/lib/libtbb.so* ]] && cp -P /openvino/temp/tbb/lib/libtbb.so* /opt/intel/openvino/runtime/lib/intel64/
 
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
