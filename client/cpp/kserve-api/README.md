@@ -24,6 +24,11 @@ This guide shows how to interact with KServe API endpoints on both gRPC and HTTP
 
 ## Before you run the samples
 
+## Install necessary packages
+```
+apt-get update && apt-get install cmake build-essential libssl-dev zlib1g-dev git rapidjson-dev python3
+```
+
 ### Clone OpenVINO&trade; Model Server GitHub repository and go to the top directory.
 ```Bash
 git clone https://github.com/openvinotoolkit/model_server.git
@@ -37,7 +42,6 @@ docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 -p 8000:8000 op
 
 ### Build client library and samples
 ```Bash
-apt-get update && apt-get install cmake build-essential libssl-dev zlib1g-dev git rapidjson-dev python3
 cd client/cpp/kserve-api
 cmake . && make
 cd samples
