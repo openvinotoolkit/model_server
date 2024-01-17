@@ -1,7 +1,7 @@
 # CLIP demo with python node {#ovms_demo_clip}
 
 Python node execution with Openvino Model Server inference example.
-The client sends request with image_url and input_labels into the CLIP model to get the detection name based on the highest probability from CLIP model. The preprocess python script node is executed first in graph and prepares inputs vector based on user inputs sent from client. Then inputs are used to get similarity matrix from inference. After that postprocess python script node is executed and calcualtes the most probable name from the input labels and sends it back to the user.
+The client sends request with image and input_labels into the CLIP model to get the detection name based on the highest probability from CLIP model. The preprocess python script node is executed first in graph and prepares inputs vector based on user inputs sent from client. Then inputs are used to get similarity matrix from inference. After that postprocess python script node is executed and calcualtes the most probable name from the input labels and sends it back to the user.
 
 Demo is based on this [CLIP notebook](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-convert.ipynb)
 
@@ -66,7 +66,18 @@ https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/im
 Using input_labels:
 ['cat', 'dog', 'wolf', 'tiger', 'man', 'horse', 'frog', 'tree', 'house', 'computer']
 
+Iteration 1
 Detection:
 dog
 
+
+processing time for all iterations
+average time: 90.00 ms; average speed: 11.11 fps
+median time: 90.00 ms; median speed: 11.11 fps
+max time: 90.00 ms; min speed: 11.11 fps
+min time: 90.00 ms; max speed: 11.11 fps
+time percentile 90: 90.00 ms; speed percentile 90: 11.11 fps
+time percentile 50: 90.00 ms; speed percentile 50: 11.11 fps
+time standard deviation: 0.00
+time variance: 0.00
 ```

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-input_stream: "OVMS_PY_TENSOR:image_url"
+input_stream: "OVMS_PY_TENSOR:image"
 input_stream: "OVMS_PY_TENSOR1:input_labels"
 output_stream: "OVMS_PY_TENSOR:detection"
 
@@ -21,11 +21,11 @@ node {
   name: "PythonPreprocessNode"
   calculator: "PythonExecutorCalculator"
   input_side_packet: "PYTHON_NODE_RESOURCES:py"
-  input_stream: "IMAGE_URL:image_url"
+  input_stream: "IMAGE:image"
   input_stream: "LABELS:input_labels"
-  output_stream: "OUTPUT:input_ids_py"
-  output_stream: "OUTPUT1:attention_mask_py"
-  output_stream: "OUTPUT2:pixel_values_py"
+  output_stream: "INPUT_IDS_PY:input_ids_py"
+  output_stream: "ATTENCTION_MASK_PY:attention_mask_py"
+  output_stream: "PIXEL_VALUES_PY:pixel_values_py"
   node_options: {
     [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
       handler_path: "/workspace/preprocess.py"
@@ -113,8 +113,8 @@ node {
   name: "PythonPostprocessNode"
   calculator: "PythonExecutorCalculator"
   input_side_packet: "PYTHON_NODE_RESOURCES:py"
-  input_stream: "INPUT:logits_per_image_py"
-  input_stream: "INPUT1:input_labels"
+  input_stream: "INPUT1:logits_per_image_py"
+  input_stream: "INPUT2:input_labels"
   output_stream: "OUTPUT:detection"
   node_options: {
     [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {

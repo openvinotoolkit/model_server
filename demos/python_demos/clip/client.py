@@ -59,7 +59,7 @@ if not os.path.exists(sample_path):
 with open(sample_path, "rb") as f:
     data = f.read()
 
-infer_input = grpcclient.InferInput("image_url", [len(data)], "UINT8")
+infer_input = grpcclient.InferInput("image", [len(data)], "UINT8")
 infer_input._raw_content = data
 
 input_labels = args['input_labels'].split(",")
