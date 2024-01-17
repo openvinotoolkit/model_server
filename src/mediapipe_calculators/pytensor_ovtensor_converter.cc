@@ -86,8 +86,8 @@ public:
 
             if (*(cc->Inputs().GetTags().begin()) == OV_TENSOR_TAG_NAME) {
                 auto& inputTensor = cc->Inputs().Tag(OV_TENSOR_TAG_NAME).Get<ov::Tensor>();
-                py::object outTensor;
-                std::unique_ptr<PyObjectWrapper<py::object>> outputPyTensor = std::make_unique<PyObjectWrapper<py::object>>(outTensor);
+                
+                std::unique_ptr<PyObjectWrapper<py::object>> outputPyTensor;
                 std::vector<py::ssize_t> shape;
                 for (const auto& dim : inputTensor.get_shape()) {
                     if (dim > std::numeric_limits<py::ssize_t>::max()) {
@@ -100,7 +100,7 @@ public:
                 const auto tagOutputNameMap = options.tag_to_output_tensor_names();
                 auto outputName = tagOutputNameMap.at(OVMS_PY_TENSOR_TAG_NAME).c_str();  // Existence of the key validated in GetContract
                 const std::string datatype = toKfsString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type()));
-                if (datatype== "UNDEFINED") {
+                if (datatype == "UNDEFINED") {
                     return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
                            << "Undefined precision in input tensor: " << inputTensor.get_element_type();
                 }
