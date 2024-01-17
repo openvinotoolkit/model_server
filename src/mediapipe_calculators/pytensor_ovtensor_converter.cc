@@ -86,7 +86,7 @@ public:
 
             if (*(cc->Inputs().GetTags().begin()) == OV_TENSOR_TAG_NAME) {
                 auto& inputTensor = cc->Inputs().Tag(OV_TENSOR_TAG_NAME).Get<ov::Tensor>();
-                
+
                 std::unique_ptr<PyObjectWrapper<py::object>> outputPyTensor;
                 std::vector<py::ssize_t> shape;
                 for (const auto& dim : inputTensor.get_shape()) {
