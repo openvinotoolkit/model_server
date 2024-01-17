@@ -99,7 +99,7 @@ public:
                 const auto& options = cc->Options<PyTensorOvTensorConverterCalculatorOptions>();
                 const auto tagOutputNameMap = options.tag_to_output_tensor_names();
                 auto outputName = tagOutputNameMap.at(OVMS_PY_TENSOR_TAG_NAME).c_str();  // Existence of the key validated in GetContract
-                const std::string precision = toKfsString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type()));
+                const std::string datatype = toKfsString(ovElementTypeToOvmsPrecision(inputTensor.get_element_type()));
                 if (precision == "UNDEFINED") {
                     return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
                            << "Undefined precision in input tensor: " << inputTensor.get_element_type();
