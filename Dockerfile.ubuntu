@@ -197,9 +197,6 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; 
     rm -rf /var/lib/apt/lists/* && \
     ln -s /opt/intel/openvino_2023 /opt/intel/openvino
 
-# Copy TBB built by OV if exists (Ubuntu22 from sources)
-RUN [[ -e /openvino/temp/tbb/lib/libtbb.so* ]] && cp -P /openvino/temp/tbb/lib/libtbb.so* /opt/intel/openvino/runtime/lib/intel64/
-
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
@@ -431,7 +428,7 @@ COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,SC2164
 RUN     apt-get update -y ; \
-    if [[ "$BASE_IMAGE" == *"20.04"* ]] ; then os_specific_packages=libtbb2; else os_specific_packages=; fi; \
+    if [[ "$BASE_IMAGE" == *"20.04"* ]] ; then os_specific_packages=libtbb2; else os_specific_packages=libtbb12; fi; \
     apt-get install -y curl ca-certificates libpugixml1v5 $os_specific_packages --no-install-recommends && \
         if [ "$GPU" == "1" ] ; then \
             apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
