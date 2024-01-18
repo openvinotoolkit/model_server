@@ -1,7 +1,7 @@
 # CLIP demo with python node {#ovms_demo_clip}
 
 Python node execution with Openvino Model Server inference example.
-The client sends request with image and input_labels into the CLIP model to get the detection name based on the highest probability from CLIP model. The preprocess python script node is executed first in graph and prepares inputs vector based on user inputs sent from client. Then inputs are used to get similarity matrix from inference. After that postprocess python script node is executed and calcualtes the most probable name from the input labels and sends it back to the user.
+The client sends request with an image and input labels to the graph and receives the label with the highest probability. The preprocessing python node is executed first and prepares inputs vector based on user inputs from the request. Then inputs are used to get similarity matrix from inference on the CLIP model. After that postprocessing python node is executed and extracts the label with highest score among the input labels and sends it back to the user.
 
 Demo is based on this [CLIP notebook](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-convert.ipynb)
 
