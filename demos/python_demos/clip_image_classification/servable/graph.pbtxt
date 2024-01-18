@@ -1,0 +1,124 @@
+#
+# Copyright 2023 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+input_stream: "OVMS_PY_TENSOR:image"
+input_stream: "OVMS_PY_TENSOR1:input_labels"
+output_stream: "OVMS_PY_TENSOR:output_label"
+
+node {
+  name: "PythonPreprocessor"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "IMAGE:image"
+  input_stream: "LABELS:input_labels"
+  output_stream: "INPUT_IDS_PY:input_ids_py"
+  output_stream: "ATTENCTION_MASK_PY:attention_mask_py"
+  output_stream: "PIXEL_VALUES_PY:pixel_values_py"
+  node_options: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/workspace/preprocess.py"
+    }
+  }
+}
+
+node {
+  name: "InputIdsConverter"
+  calculator: "PyTensorOvTensorConverterCalculator"
+    input_stream: "OVMS_PY_TENSOR:input_ids_py"
+    output_stream: "OVTENSOR:input_ids"
+}
+
+node {
+  name: "AttentionMaskConverter"
+  calculator: "PyTensorOvTensorConverterCalculator"
+    input_stream: "OVMS_PY_TENSOR:attention_mask_py"
+    output_stream: "OVTENSOR:attention_mask"
+}
+
+node {
+  name: "PixelValuesConverter"
+  calculator: "PyTensorOvTensorConverterCalculator"
+    input_stream: "OVMS_PY_TENSOR:pixel_values_py"
+    output_stream: "OVTENSOR:pixel_values"
+}
+
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:session"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "clip"  # servable name inside OVMS
+      servable_version: "1"
+    }
+  }
+}
+
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "OVTENSOR:input_ids"
+  input_stream: "OVTENSOR1:attention_mask"
+  input_stream: "OVTENSOR2:pixel_values"
+  output_stream: "OVTENSOR:logits_per_image"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions]: {
+          tag_to_input_tensor_names {
+            key: "OVTENSOR"
+            value: "input_ids"
+          }
+          tag_to_input_tensor_names {
+            key: "OVTENSOR1"
+            value: "attention_mask"
+          }
+          tag_to_input_tensor_names {
+            key: "OVTENSOR2"
+            value: "434"
+          }
+          tag_to_output_tensor_names {
+            key: "OVTENSOR"
+            value: "1671"
+          }
+        }
+  }
+}
+
+node {
+  name: "LogitsConverter"
+  calculator: "PyTensorOvTensorConverterCalculator"
+    input_stream: "OVTENSOR:logits_per_image"
+    output_stream: "OVMS_PY_TENSOR:logits_per_image_py"
+      node_options: {
+        [type.googleapis.com/mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+            tag_to_output_tensor_names {
+            key: "OVMS_PY_TENSOR"
+            value: "logits_per_image_py"
+            }
+        }
+    }
+}
+
+node {
+  name: "PythonPostprocessor"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "LOGITS:logits_per_image_py"
+  input_stream: "LABELS:input_labels"
+  output_stream: "LABEL:output_label"
+  node_options: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/workspace/postprocess.py"
+    }
+  }
+}
