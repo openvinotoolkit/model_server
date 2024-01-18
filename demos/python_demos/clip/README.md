@@ -41,7 +41,7 @@ Prerequisites:
 -  image of OVMS with Python support and Optimum installed
 
 Mount the `./servable` which contains:
-- `postprocess.py` and `preprocess.py` - python scripts which are required for execution and use [CLIP](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-convert.ipynb)
+- `postprocess.py` and `preprocess.py` - python scripts which are required for execution and use of [CLIP](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-convert.ipynb) model
 - `config.json` - which defines which servables should be loaded
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculators
 
