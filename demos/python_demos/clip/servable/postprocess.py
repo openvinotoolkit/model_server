@@ -24,7 +24,7 @@ class OvmsPythonModel:
         pass
     
     def execute(self, inputs: list):
-        ov_logits_per_image = np.array(inputs[0])
+        ov_logits_per_image = np.array(inputs[0], copy=False)
         probs = softmax(ov_logits_per_image, axis=1)[0]
         input_labels = np.frombuffer(inputs[1].data, inputs[1].datatype)
 
