@@ -113,9 +113,9 @@ node {
   name: "PythonPostprocessor"
   calculator: "PythonExecutorCalculator"
   input_side_packet: "PYTHON_NODE_RESOURCES:py"
-  input_stream: "INPUT1:logits_per_image_py"
-  input_stream: "INPUT2:input_labels"
-  output_stream: "OUTPUT:output_label"
+  input_stream: "LOGITS:logits_per_image_py"
+  input_stream: "LABELS:input_labels"
+  output_stream: "LABEL:output_label"
   node_options: {
     [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
       handler_path: "/workspace/postprocess.py"
