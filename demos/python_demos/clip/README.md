@@ -17,7 +17,7 @@ From the root of the repository run:
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image
+make python_image RUN_TESTS=0
 ```
 
 ## Install client requirements
