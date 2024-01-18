@@ -136,13 +136,15 @@ packages = {
         'media-types',
     },
     OvmsBaseImageType.UBUNTU_GPU: {
-        'intel-igc-core',
-        'intel-igc-opencl',
         'intel-level-zero-gpu',
         'intel-opencl-icd',
         'libigdgmm12',
         'libnuma1',
         'ocl-icd-libopencl1',
+        'level-zero',
+        'libz3-4',
+        'libigdfcl1',
+        'libigc1',
     },
     OvmsBaseImageType.UBUNTU_NGINX: {'dumb-init', 'nginx',},
     OvmsBaseImageType.REDHAT: {
