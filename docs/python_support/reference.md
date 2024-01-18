@@ -1,4 +1,4 @@
-# Python Nodes in OpenVINO Model Server {#ovms_docs_python_support_reference}
+# Python Execution in OpenVINO Model Server {#ovms_docs_python_support_reference}
 
 ## Introduction
 
@@ -902,56 +902,56 @@ input_stream: "OVMS_PY_TENSOR:input"
 output_stream: "OVMS_PY_TENSOR:output"
 
 node {
-	name: "PythonPreprocess"
-	calculator: "PythonExecutorCalculator"
-	input_side_packet: "PYTHON_NODE_RESOURCES:py"
-	input_stream: "INPUT:input"
-	output_stream: "OUTPUT:preprocessed_py"
-	node_options: {
-		[type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
-				handler_path: "/ovms/workspace/preprocess.py"
-			}
-		}
+  name: "PythonPreprocess"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:input"
+  output_stream: "OUTPUT:preprocessed_py"
+  node_options: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/workspace/preprocess.py"
+    }
+  }
 }
 
 node {
-	calculator: "PyTensorOvTensorConverterCalculator"
-	input_stream: "OVMS_PY_TENSOR:preprocessed_py"
-	output_stream: "OVTENSOR:preprocessed_ov"
+  calculator: "PyTensorOvTensorConverterCalculator"
+  input_stream: "OVMS_PY_TENSOR:preprocessed_py"
+  output_stream: "OVTENSOR:preprocessed_ov"
 }
 
 node {
-	calculator: "OpenVINOInferenceCalculator"
-	input_side_packet: "SESSION:session" # inference session
-	input_stream: "OVTENSOR:preprocessed_ov"
-	output_stream: "OVTENSOR:result_ov"
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:session" # inference session
+  input_stream: "OVTENSOR:preprocessed_ov"
+  output_stream: "OVTENSOR:result_ov"
 }
 
 node {
-	calculator: "PyTensorOvTensorConverterCalculator"
-	input_stream: "OVTENSOR:result_ov"
-	output_stream: "OVMS_PY_TENSOR:result_py"
-	node_options: {
-		[type.googleapis.com/mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
-			tag_to_output_tensor_names {
-				key: "OVMS_PY_TENSOR"
-				value: "result_py"
-			}
-		}
-	}
+  calculator: "PyTensorOvTensorConverterCalculator"
+  input_stream: "OVTENSOR:result_ov"
+  output_stream: "OVMS_PY_TENSOR:result_py"
+  node_options: {
+    [type.googleapis.com/mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+      tag_to_output_tensor_names {
+        key: "OVMS_PY_TENSOR"
+        value: "result_py"
+      }
+    }
+  }
 }
 
 node {
-	name: "PythonPostprocess"
-	calculator: "PythonExecutorCalculator"
-	input_side_packet: "PYTHON_NODE_RESOURCES:py"
-	input_stream: "INPUT:result_py"
-	output_stream: "OUTPUT:output"
-	node_options: {
-		[type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
-			handler_path: "/ovms/workspace/postprocess.py"
-		}
-	}
+  name: "PythonPostprocess"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:result_py"
+  output_stream: "OUTPUT:output"
+  node_options: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/workspace/postprocess.py"
+    }
+  }
 }
 ```
 
