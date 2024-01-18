@@ -33,8 +33,8 @@ class OvmsPythonModel:
         text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
         model_inputs = self.processor(text=text_descriptions, images=[image], return_tensors="pt", padding=True)
 
-        # dtype=np.dtype("q") must be used because in case of expected INT64 type, numpy will set wrong type - l
-        # then Tensor type conversion will use this to create INT32 datatype instead of required INT64
+        # dtype=np.dtype("q") must be used for correct mapping of struct format character to datatype
+        # using np.int64 sets format character to "l" which translates to INT32 in Tensor.datatype
         input_ids = np.array(model_inputs["input_ids"], dtype=np.dtype("q"))
         attention_mask = np.array(model_inputs["attention_mask"], dtype=np.dtype("q"))
 
