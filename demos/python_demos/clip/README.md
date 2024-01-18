@@ -36,7 +36,7 @@ pip3 install -r download_model_requirements.txt
 python3 download_model.py
 ```
 
-## Deploy OpenVINO Model Server with the Python calculator
+## Deploy OpenVINO Model Server with the CLIP graph
 Prerequisites:
 -  image of OVMS with Python support and Optimum installed
 
