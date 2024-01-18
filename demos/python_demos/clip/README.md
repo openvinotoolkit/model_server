@@ -6,7 +6,7 @@ The client sends request with an image and input labels to the graph and receive
 Demo is based on this [CLIP notebook](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-convert.ipynb)
 
 
-The graph below depictures the data flow in the node execution.
+The picture below shows the execution flow in the graph.
 
 ![Mediapipe graph image](graph.png)
 
