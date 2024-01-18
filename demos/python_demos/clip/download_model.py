@@ -27,7 +27,6 @@ processor = CLIPProcessor.from_pretrained(model_id)
 
 # create OpenVINO core object instance
 core = ov.Core()
-device = "CPU"
 model.config.torchscript = True
 input_labels = ['cat', 'dog', 'wolf', 'tiger', 'man', 'horse', 'frog', 'tree', 'house', 'computer']
 text_descriptions = [f"This is a photo of a {label}" for label in input_labels]

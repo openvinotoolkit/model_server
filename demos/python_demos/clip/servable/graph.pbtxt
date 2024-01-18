@@ -15,10 +15,10 @@
 #
 input_stream: "OVMS_PY_TENSOR:image"
 input_stream: "OVMS_PY_TENSOR1:input_labels"
-output_stream: "OVMS_PY_TENSOR:detection"
+output_stream: "OVMS_PY_TENSOR:output_label"
 
 node {
-  name: "PythonPreprocessNode"
+  name: "PythonPreprocessor"
   calculator: "PythonExecutorCalculator"
   input_side_packet: "PYTHON_NODE_RESOURCES:py"
   input_stream: "IMAGE:image"
@@ -34,21 +34,21 @@ node {
 }
 
 node {
-  name: "ConverterNode1"
+  name: "InputIdsConverter"
   calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVMS_PY_TENSOR:input_ids_py"
     output_stream: "OVTENSOR:input_ids"
 }
 
 node {
-  name: "ConverterNode2"
+  name: "AttentionMaskConverter"
   calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVMS_PY_TENSOR:attention_mask_py"
     output_stream: "OVTENSOR:attention_mask"
 }
 
 node {
-  name: "ConverterNode3"
+  name: "PixelValuesConverter"
   calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVMS_PY_TENSOR:pixel_values_py"
     output_stream: "OVTENSOR:pixel_values"
@@ -95,7 +95,7 @@ node {
 }
 
 node {
-  name: "ConvertBackNode"
+  name: "LogitsConverter"
   calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVTENSOR:logits_per_image"
     output_stream: "OVMS_PY_TENSOR:logits_per_image_py"
@@ -110,12 +110,12 @@ node {
 }
 
 node {
-  name: "PythonPostprocessNode"
+  name: "PythonPostprocessor"
   calculator: "PythonExecutorCalculator"
   input_side_packet: "PYTHON_NODE_RESOURCES:py"
   input_stream: "INPUT1:logits_per_image_py"
   input_stream: "INPUT2:input_labels"
-  output_stream: "OUTPUT:detection"
+  output_stream: "OUTPUT:output_label"
   node_options: {
     [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
       handler_path: "/workspace/postprocess.py"

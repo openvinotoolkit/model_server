@@ -32,5 +32,5 @@ class OvmsPythonModel:
         max_label = input_labels[max_prob]
         max_label = str(max_label)
 
-        return [Tensor("detection", max_label.encode())]
+        return [Tensor("output_label", max_label.encode())]
 
