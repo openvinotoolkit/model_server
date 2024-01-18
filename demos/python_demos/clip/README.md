@@ -1,4 +1,4 @@
-# CLIP demo with python node {#python_clip_image_classification}
+# CLIP image classification {#ovms_demo_clip_image_classification}
 
 Python node execution with Openvino Model Server inference example.
 The client sends request with an image and input labels to the graph and receives the label with the highest probability. The preprocessing python node is executed first and prepares inputs vector based on user inputs from the request. Then inputs are used to get similarity matrix from inference on the CLIP model. After that postprocessing python node is executed and extracts the label with highest score among the input labels and sends it back to the user.
