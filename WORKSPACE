@@ -356,6 +356,13 @@ google_cloud_cpp_common_deps()
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
+http_archive( # 1.60.0
+    name = "com_github_grpc_grpc",
+    urls = [
+        "https://github.com/grpc/grpc/archive/0ef13a7555dbaadd4633399242524129eef5e231.tar.gz",
+    ],
+    strip_prefix = "grpc-0ef13a7555dbaadd4633399242524129eef5e231",
+)
 
 # cxxopts
 http_archive(
