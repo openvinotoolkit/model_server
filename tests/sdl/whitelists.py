@@ -51,7 +51,7 @@ dynamic_libraries = {
     OvmsBaseImageType.UBUNTU_PYTHON: {'libexpat.so',},
     OvmsBaseImageType.UBUNTU20: {'librt.so',},
     OvmsBaseImageType.UBUNTU20_PYTHON: {'libpython3.8.so', 'libutil.so',},
-    OvmsBaseImageType.UBUNTU22: {'libm.so', 'libdl.so', 'libpthread.so',},
+    OvmsBaseImageType.UBUNTU22: {'libm.so',},
     OvmsBaseImageType.UBUNTU22_PYTHON: {'libpython3.10.so',},
     OvmsBaseImageType.REDHAT: set(),
     OvmsBaseImageType.REDHAT_PYTHON:{'libpython3.9.so', 'libutil.so',},
