@@ -21,6 +21,7 @@ make python_image
 ## Install client requirements
 
 ```bash
+cd demos/python_demos/clip_image_classification/
 pip3 install -r requirements.txt 
 ```
 
