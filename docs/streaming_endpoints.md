@@ -1,4 +1,4 @@
-# gRPC Streaming API (preview) {#ovms_docs_streaming_endpoints}
+# gRPC Streaming API {#ovms_docs_streaming_endpoints}
 
 ## Introduction
 OpenVINO Model Server implements gRPC KServe extension which adds separate RPC for [bidirectional streaming](https://grpc.io/docs/what-is-grpc/core-concepts/#bidirectional-streaming-rpc) use cases. It means that besides unary RPC, where client sends a single request and gets back a single response, client is able to initiate connection and send/receive messages in any number and order using `ModelStreamInfer` procedure:

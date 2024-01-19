@@ -4,6 +4,8 @@ OpenVINO Model Server allows users to write custom processing nodes in Python, s
 
 In this quickstart you will create a servable with a single custom Python code that will expect a string and return the same string, but all in uppercase. 
 
+Check out the [documentation](reference.md) to learn more about this feature.
+
 To achieve that let's follow the steps:
 1. Prepare Docker Image And Workspace
 2. Write Python Code For The Server 
@@ -66,7 +68,7 @@ You also get to decide in what format you want to return the data. It makes sens
 output_data = text.upper().encode()
 ```
 
-The outputs are expected to be a `list` of `pyovms.Tensor`, so you will need to pack the output to `pyovms.Tensor` with proper output name (in that case `OUTPUT`) and return it as a list. 
+The outputs are expected to be a `list` of `pyovms.Tensor`, so you will need to pack the output to `pyovms.Tensor` with proper output name (in that case `uppercase`) and return it as a list. 
 
 The complete code would look like this:
 
@@ -75,14 +77,11 @@ from pyovms import Tensor
 
 class OvmsPythonModel:
 
-    def initialize(self, kwargs: dict):
-        return True
-
     def execute(self, inputs: list):
         input_data = inputs[0]
         text = bytes(input_data).decode()
         output_data = text.upper().encode()
-        return [Tensor("OUTPUT", output_data)]
+        return [Tensor("uppercase", output_data)]
  ```
 
 Let's create `model.py` file with that code and save it to `workspace/models/python_model`
@@ -93,14 +92,11 @@ from pyovms import Tensor
 
 class OvmsPythonModel:
 
-    def initialize(self, kwargs: dict):
-        return True
-
     def execute(self, inputs: list):
         input_data = inputs[0]
         text = bytes(input_data).decode()
         output_data = text.upper().encode()
-        return [Tensor("OUTPUT", output_data)]
+        return [Tensor("uppercase", output_data)]
 ' >> models/python_model/model.py
 ```
 
@@ -198,7 +194,7 @@ The last part would be to send this data to the server:
 
 ```python
 results = client.infer("python_model", [infer_input])
-print(results.as_numpy("OUTPUT").tobytes().decode())
+print(results.as_numpy("uppercase").tobytes().decode())
 ```
 
 That part will pack `infer_input` into a request and send it to the servable called `uppercase_model`. 
@@ -216,7 +212,7 @@ data = "Make this text uppercase.".encode()
 infer_input = grpcclient.InferInput("text", [len(data)], "BYTES")
 infer_input._raw_content = data
 results = client.infer("python_model", [infer_input])
-print(results.as_numpy("OUTPUT").tobytes().decode())
+print(results.as_numpy("uppercase").tobytes().decode())
 ' >> client.py 
 ```
 
