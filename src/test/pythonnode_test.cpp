@@ -131,7 +131,7 @@ TEST_F(PythonFlowTest, FinalizationPass) {
     ASSERT_TRUE(std::filesystem::exists(path));
 }
 
-TEST_F(PythonFlowTest, HandlerPathNotDefined) {
+TEST_F(PythonFlowTest, ExecutorWithEmptyOptions) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "in"
