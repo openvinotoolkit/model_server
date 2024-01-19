@@ -416,6 +416,41 @@ class OvmsPythonModel:
         return [my_output]
 ```
 
+#### Access inputs via index
+
+In basic configurations, when `execute` runs with all expected inputs the order of `Tensors` in `inputs` list is not random. When `PythonExecutorCalculator` iterates through input streams to create `Tensors`, the streams are sorted by their tags. That knowledge can be useful while writing `execute` method to directly access data from particular streams. See an example:
+
+```pbtxt
+node {
+  name: "python_node"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "B:b"
+  input_stream: "A:a"
+  input_stream: "C:c"
+  output_stream: "OUTPUT:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/ovms/workspace/model.py"
+    }
+  }
+}
+```
+
+In that case, inputs can be access like this:
+```python
+from pyovms import Tensor
+
+class OvmsPythonModel:
+    def execute(self, inputs):
+        a = inputs[0] # Tensor with name "a" from input stream with tag "A"
+        b = inputs[1] # Tensor with name "b" from input stream with tag "B"
+        c = inputs[2] # Tensor with name "c" from input stream with tag "C"
+        ...
+```
+
+**Note**: Node configuration and `execute` implementation should always match. For example if the node is configured to work with [incomplete inputs](#incomplete-inputs), then accessing `Tensors` via index will not be useful. 
+
 ### Graph input and output streams
 
 So far only node input and output streams have been mentioned, but the configuration also requires defining graph's input and output streams.
