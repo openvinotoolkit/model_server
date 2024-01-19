@@ -25,9 +25,9 @@ Read [release notes](https://github.com/openvinotoolkit/model_server/releases) t
 - **[NEW]** [gRPC streaming](docs/streaming_endpoints.md)
 - [MediaPipe graphs serving](docs/mediapipe.md) 
 - Model management - including [model versioning](docs/model_version_policy.md) and [model updates in runtime](docs/online_config_changes.md)
-- [Dynamic model inputs](https://docs.openvino.ai/2023.2/ovms_docs_shape_batch_layout.html)
-- [Directed Acyclic Graph Scheduler](https://docs.openvino.ai/2023.2/ovms_docs_dag.html) along with [custom nodes in DAG pipelines](https://docs.openvino.ai/2023.2/ovms_docs_custom_node_development.html)
-- [Metrics](https://docs.openvino.ai/2023.2/ovms_docs_metrics.html) - metrics compatible with Prometheus standard
+- [Dynamic model inputs](docs/shape_batch_size_and_layout.md)
+- [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) along with [custom nodes in DAG pipelines](docs/custom_node_development.md)
+- [Metrics](docs/metrics.md) - metrics compatible with Prometheus standard
 - Support for multiple frameworks, such as TensorFlow, PaddlePaddle and ONNX
 - Support for [AI accelerators](https://docs.openvino.ai/2023.2/openvino_docs_OV_UG_supported_plugins_Supported_Devices.html)
 

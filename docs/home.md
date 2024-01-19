@@ -37,13 +37,13 @@ The models used by the server need to be stored locally or hosted remotely by ob
 Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md) or explore [Model Server features](features.md).
 
 ### Key features:
-- **[NEW]** [Python code execution](docs/python_support/reference.md)
-- **[NEW]** [gRPC streaming](docs/streaming_endpoints.md)
-- [MediaPipe graphs serving](docs/mediapipe.md) 
-- Model management - including [model versioning](docs/model_version_policy.md) and [model updates in runtime](docs/online_config_changes.md)
-- [Dynamic model inputs](https://docs.openvino.ai/2023.2/ovms_docs_shape_batch_layout.html)
-- [Directed Acyclic Graph Scheduler](https://docs.openvino.ai/2023.2/ovms_docs_dag.html) along with [custom nodes in DAG pipelines](https://docs.openvino.ai/2023.2/ovms_docs_custom_node_development.html)
-- [Metrics](https://docs.openvino.ai/2023.2/ovms_docs_metrics.html) - metrics compatible with Prometheus standard
+- **[NEW]** [Python code execution](python_support/reference.md)
+- **[NEW]** [gRPC streaming](streaming_endpoints.md)
+- [MediaPipe graphs serving](mediapipe.md) 
+- Model management - including [model versioning](model_version_policy.md) and [model updates in runtime](online_config_changes.md)
+- [Dynamic model inputs](shape_batch_size_and_layout.md)
+- [Directed Acyclic Graph Scheduler](dag_scheduler.md) along with [custom nodes in DAG pipelines](custom_node_development.md)
+- [Metrics](metrics.md) - metrics compatible with Prometheus standard
 - Support for multiple frameworks, such as TensorFlow, PaddlePaddle and ONNX
 - Support for [AI accelerators](https://docs.openvino.ai/2023.2/openvino_docs_OV_UG_supported_plugins_Supported_Devices.html)
 
