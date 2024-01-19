@@ -42,8 +42,13 @@ We are introducing a set of calculators which can bring to the graphs execution 
 
 Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms)
 
-## Python calculator
-TBD TODO
+## PythonExecutorCalculator
+
+`PythonExecutorCalculator` enables Python code execution in a graph node. Learn more about [Python nodes](python_support/reference.md).
+
+## PyTensorOvTensorConverterCalculator
+
+`PyTensorOvTensorConverterCalculator` enables conversion between nodes that are run by `PythonExecutorCalculator` and nodes that receive and/or produce [OV Tensors](https://docs.openvino.ai/2023.2/classov_1_1Tensor.html)
 
 ## How to create the graph for deployment in OpenVINO Model Server <a name="create-graph"></a>
 
