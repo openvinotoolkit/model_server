@@ -57,16 +57,25 @@ python3 client.py --url localhost:9000
 
 Expected output:
 ```bash
+Using timeout for server ready of 15 seconds.
+Server Ready: False
+Waiting time left - 14 seconds.
+Server Ready: False
+Waiting time left - 13 seconds.
+Server Ready: False
+Waiting time left - 12 seconds.
+Server Ready: False
+Waiting time left - 11 seconds.
+Server Ready: True
 Using image_url:
 https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg
 
 Using input_labels:
 ['cat', 'dog', 'wolf', 'tiger', 'man', 'horse', 'frog', 'tree', 'house', 'computer']
 
-Iteration 1
+Iteration 0
 Detection:
 dog
-
 
 processing time for all iterations
 average time: 90.00 ms; average speed: 11.11 fps
