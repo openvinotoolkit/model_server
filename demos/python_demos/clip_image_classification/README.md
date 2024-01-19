@@ -15,7 +15,7 @@ The picture below shows the execution flow in the graph.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image
+make python_image RUN_TESTS=0
 ```
 
 ## Install client requirements
@@ -45,7 +45,6 @@ Mount the `./servable` which contains:
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculators
 
 ```bash
-cd demos/python_demos/clip
 docker run -it --rm -p 9000:9000 -v ${PWD}/servable:/workspace -v ${PWD}/model:/model/ openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
