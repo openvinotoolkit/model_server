@@ -17,196 +17,17 @@
 #include "schema.hpp"
 
 #include <string>
+#include <utility>
 
 #include <rapidjson/error/en.h>
 #include <rapidjson/error/error.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
-#include <spdlog/spdlog.h>
+
+#include "logging.hpp"
 
 namespace ovms {
-const std::string MODEL_CONFIG_DEFINITION = R"(
-"model_config": {
-	"type": "object",
-	"required": ["config"],
-	"properties": {
-		"config": {
-			"type": "object",
-			"required": ["name", "base_path"],
-			"properties": {
-				"name": {
-					"type": "string"
-				},
-				"base_path": {
-					"type": "string"
-				},
-				"batch_size": {
-					"type": ["integer", "string"],
-					"minimum": 0
-				},
-				"model_version_policy": {
-	"$ref": "#/definitions/model_version_policy"
-				},
-				"shape": {
-		"$ref": "#/definitions/layout_shape_def"
-				},
-				"layout": {
-		"$ref": "#/definitions/layout_shape_def"
-				},
-				"nireq": {
-					"type": "integer",
-					"minimum": 0
-				},
-				"target_device": {
-					"type": "string"
-				},
-				"allow_cache": {
-					"type": "boolean"
-				},
-				"plugin_config": {
-					"type": "object",
-		"additionalProperties": {"anyOf": [
-						{"type": "string"},
-						{"type": "boolean"},
-						{"type": "number"}
-					]}
-				},
-				"stateful": {
-					"type": "boolean"
-				},
-				"idle_sequence_cleanup": {
-					"type": "boolean"
-				},
-				"low_latency_transformation": {
-					"type": "boolean"
-				},
-				"max_sequence_number": {
-					"type": "integer",
-					"minimum": 0
-				},
-				"custom_loader_options": {
-					"type": "object",
-												"required": ["loader_name"],
-												"properties": {
-													"loader_name": {
-														"type": "string"
-													}
-												},
-												"minProperties": 1
-				}
-			},
-			"additionalProperties": false
-		},
-		"additionalProperties": false
-})";
-
-const std::string MODELS_CONFIG_SCHEMA = R"({
-    "definitions": {)" + MODEL_CONFIG_DEFINITION +
-                                         R"(},
-		"custom_loader_config": {
-			"type": "object",
-			"required": ["config"],
-			"properties": {
-				"config": {
-					"type": "object",
-					"required": ["loader_name", "library_path"],
-					"properties": {
-						"loader_name": {
-							"type": "string"
-						},
-						"library_path": {
-							"type": "string"
-						},
-						"loader_config_file": {
-							"type": "string"
-						}
-					},
-					"additionalProperties": false
-				},
-				"additionalProperties": false
-			}
-		},
-    "layout_shape_def": {
-        "oneOf": [
-        {
-            "type": "object",
-            "additionalProperties": {"type": "string"}
-        },
-        {
-            "type": "string"
-        }
-        ]
-    },
-        "all_version_policy":{
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {},
-            "minProperties": 0,
-            "maxProperties": 0
-        },
-        "specific_version_policy":{
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "versions" : {
-                  "type": "array",
-                  "items": {
-                        "type": "integer",
-                        "minimum": 1
-                  }
-                }
-            },
-            "required": ["versions"]
-        },
-        "latest_version_policy":{
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "num_versions" : {
-                    "type": "integer",
-                    "minimum": 1
-                }
-            },
-            "required": ["num_versions"]
-        },
-        "model_version_policy": {
-            "oneOf": [
-                {
-                  "properties" : {"all" : {"$ref": "#/definitions/all_version_policy"}},
-                  "required": ["all"],
-                  "additionalProperties": false
-                },
-                {
-                  "properties" : {"specific" : {"$ref": "#/definitions/specific_version_policy"}},
-                  "required": ["specific"],
-                  "additionalProperties": false
-                },
-                {
-                  "properties" : {"latest" : {"$ref": "#/definitions/latest_version_policy"}},
-                  "required": ["latest"],
-                  "additionalProperties": false
-                }
-            ]
-        },
-    "mediapipe_config": {
-        "type": "object",
-        "required": ["name"],
-        "properties": {
-             "name": {
-                 "type": "string"
-             },
-             "base_path": {
-                 "type": "string"
-             },
-             "graph_path": {
-                 "type": "string"
-             },
-             "subconfig": {
-                 "type": "string"
-             }
-        },
-        "additionalProperties": false
-    },
+const std::string DAG_DEFINITIONS = R"(
 		"source_node_names": {
 			"type": "object",
 			"required": ["node_name", "data_item"],
@@ -347,6 +168,197 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
 			},
 			"additionalProperties": false
 		}
+)";
+
+const std::string MODEL_CONFIG_DEFINITION = R"(
+"model_config": {
+	"type": "object",
+	"required": ["config"],
+    "maxProperties": 1,
+	"properties": {
+		"config": {
+			"type": "object",
+			"required": ["name", "base_path"],
+			"properties": {
+				"name": {
+					"type": "string"
+				},
+				"base_path": {
+					"type": "string"
+				},
+				"batch_size": {
+					"type": ["integer", "string"],
+					"minimum": 0
+				},
+				"model_version_policy": {
+	"$ref": "#/definitions/model_version_policy"
+				},
+				"shape": {
+		"$ref": "#/definitions/layout_shape_def"
+				},
+				"layout": {
+		"$ref": "#/definitions/layout_shape_def"
+				},
+				"nireq": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"target_device": {
+					"type": "string"
+				},
+				"allow_cache": {
+					"type": "boolean"
+				},
+				"plugin_config": {
+					"type": "object",
+		"additionalProperties": {"anyOf": [
+						{"type": "string"},
+						{"type": "boolean"},
+						{"type": "number"}
+					]}
+				},
+				"stateful": {
+					"type": "boolean"
+				},
+				"idle_sequence_cleanup": {
+					"type": "boolean"
+				},
+				"low_latency_transformation": {
+					"type": "boolean"
+				},
+				"max_sequence_number": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"custom_loader_options": {
+					"type": "object",
+					"required": ["loader_name"],
+					"properties": {
+						"loader_name": {
+							"type": "string"
+						}
+					},
+					"minProperties": 1
+				}
+			},
+			"additionalProperties": false
+		},
+		"additionalProperties": false
+})";
+
+const std::string MODELS_CONFIG_SCHEMA = R"({
+    "definitions": {)" + MODEL_CONFIG_DEFINITION +
+                                         R"(},)" + DAG_DEFINITIONS + R"(,
+		"custom_loader_config": {
+			"type": "object",
+			"required": ["config"],
+            "maxProperties": 1,
+			"properties": {
+				"config": {
+					"type": "object",
+					"required": ["loader_name", "library_path"],
+					"properties": {
+						"loader_name": {
+							"type": "string"
+						},
+						"library_path": {
+							"type": "string"
+						},
+						"loader_config_file": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false
+				},
+				"additionalProperties": false
+			}
+		},
+    "layout_shape_def": {
+        "oneOf": [
+        {
+            "type": "object",
+            "additionalProperties": {"type": "string"}
+        },
+        {
+            "type": "string"
+        }
+        ]
+    },
+        "all_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {},
+            "minProperties": 0,
+            "maxProperties": 0
+        },
+        "specific_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "maxProperties": 1,
+            "properties": {
+                "versions" : {
+                  "type": "array",
+                  "items": {
+                        "type": "integer",
+                        "minimum": 1
+                  }
+                }
+            },
+            "required": ["versions"]
+        },
+        "latest_version_policy":{
+            "type": "object",
+            "additionalProperties": false,
+            "maxProperties": 1,
+            "properties": {
+                "num_versions" : {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            },
+            "required": ["num_versions"]
+        },
+        "model_version_policy": {
+            "oneOf": [
+                {
+                  "maxProperties": 1,
+                  "properties" : {"all" : {"$ref": "#/definitions/all_version_policy"}},
+                  "required": ["all"],
+                  "additionalProperties": false
+                },
+                {
+                  "maxProperties": 1,
+                  "properties" : {"specific" : {"$ref": "#/definitions/specific_version_policy"}},
+                  "required": ["specific"],
+                  "additionalProperties": false
+                },
+                {
+                  "maxProperties": 1,
+                  "properties" : {"latest" : {"$ref": "#/definitions/latest_version_policy"}},
+                  "required": ["latest"],
+                  "additionalProperties": false
+                }
+            ]
+        },
+    "mediapipe_config": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+             "name": {
+                 "type": "string"
+             },
+             "base_path": {
+                 "type": "string"
+             },
+             "graph_path": {
+                 "type": "string"
+             },
+             "subconfig": {
+                 "type": "string"
+             }
+        },
+        "additionalProperties": false
+    }
 	},
 	"type": "object",
 	"required": ["model_config_list"],
@@ -384,6 +396,7 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
 			}
 		},
 		"monitoring": {
+            "maxProperties": 1,
 			"type": "object",
 			"required": ["metrics"],
 			"properties":{
@@ -444,12 +457,16 @@ const std::string MEDIAPIPE_SUBCONFIG_SCHEMA = R"({
 }
 })";
 
-StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* schema) {
+Status validateJsonAgainstSchema(rapidjson::Document& json, const char* schema, bool detailedError) {
     rapidjson::Document schemaJson;
     rapidjson::ParseResult parsingSucceeded = schemaJson.Parse(schema);
     if (!parsingSucceeded) {
-        SPDLOG_ERROR("JSON schema parse error: {}, at: {}", rapidjson::GetParseError_En(parsingSucceeded.Code()), parsingSucceeded.Offset());
-        return StatusCode::JSON_INVALID;
+        std::string errorMsg = "JSON schema parse error:";
+        errorMsg += rapidjson::GetParseError_En(parsingSucceeded.Code());
+        errorMsg += ", at: ";
+        errorMsg += parsingSucceeded.Offset();
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "JSON schema parse error: {}, at: {}", rapidjson::GetParseError_En(parsingSucceeded.Code()), parsingSucceeded.Offset());
+        return detailedError ? Status(StatusCode::JSON_INVALID, std::move(errorMsg)) : StatusCode::JSON_INVALID;
     }
     rapidjson::SchemaDocument parsedSchema(schemaJson);
     rapidjson::SchemaValidator validator(parsedSchema);
@@ -462,8 +479,14 @@ StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* sche
         validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
         std::string key = sb.GetString();
 
-        SPDLOG_ERROR("Given config is invalid according to schema: {}. Keyword: {} Key: {}", schema, keyword, key);
-        return StatusCode::JSON_INVALID;
+        std::string errorMsg = "JSON schema parse error:";
+        errorMsg += schema;
+        errorMsg += ". Keyword:";
+        errorMsg += keyword;
+        errorMsg += " Key: ";
+        errorMsg += key;
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, errorMsg);
+        return detailedError ? Status(StatusCode::JSON_INVALID, std::move(errorMsg)) : StatusCode::JSON_INVALID;
     }
 
     return StatusCode::OK;
