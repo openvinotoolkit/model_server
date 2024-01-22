@@ -181,7 +181,7 @@ def convert_to_int4():
                 pt_model_id, export=True, compile=False
             ).half()
             model.config.save_pretrained(int4_model_dir)
-            ov_model = model.model
+            ov_model = model._original_model
             del model
             gc.collect()
         else:
