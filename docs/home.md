@@ -36,6 +36,17 @@ OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving mod
 The models used by the server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Repository](./models_repository.md) documentation. Model server works inside [Docker containers](deploying_server.md), on [Bare Metal](deploying_server.md), and in [Kubernetes environment](deploying_server.md).
 Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md) or explore [Model Server features](features.md).
 
+### Key features:
+- **[NEW]** [Python code execution](python_support/reference.md)
+- **[NEW]** [gRPC streaming](streaming_endpoints.md)
+- [MediaPipe graphs serving](mediapipe.md) 
+- Model management - including [model versioning](model_version_policy.md) and [model updates in runtime](online_config_changes.md)
+- [Dynamic model inputs](shape_batch_size_and_layout.md)
+- [Directed Acyclic Graph Scheduler](dag_scheduler.md) along with [custom nodes in DAG pipelines](custom_node_development.md)
+- [Metrics](metrics.md) - metrics compatible with Prometheus standard
+- Support for multiple frameworks, such as TensorFlow, PaddlePaddle and ONNX
+- Support for [AI accelerators](https://docs.openvino.ai/2023.2/openvino_docs_OV_UG_supported_plugins_Supported_Devices.html)
+
 ## Additional Resources
 
 * [Simplified Deployments with OpenVINO™ Model Server and TensorFlow Serving](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Simplified-Deployments-with-OpenVINO-Model-Server-and-TensorFlow/post/1353218) 

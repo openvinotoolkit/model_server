@@ -20,20 +20,16 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
-Key features: 
-- support for multiple frameworks, such as Caffe, TensorFlow, MXNet, PaddlePaddle and ONNX
-- online deployment of new [model versions](https://docs.openvino.ai/2023.2/ovms_docs_model_version_policy.html)
-- [configuration updates in runtime](https://docs.openvino.ai/2023.2/ovms_docs_online_config_changes.html)
-- support for [AI accelerators](https://docs.openvino.ai/2023.2/openvino_docs_OV_UG_supported_plugins_Supported_Devices.html)
-- works with Bare Metal Hosts as well as [Docker containers](https://docs.openvino.ai/2023.2/ovms_docs_deploying_server.html) 
-- [model reshaping](https://docs.openvino.ai/2023.2/ovms_docs_shape_batch_layout.html) in runtime
-- [directed Acyclic Graph Scheduler](https://docs.openvino.ai/2023.2/ovms_docs_dag.html) - connecting multiple models to deploy complex processing solutions and reducing data transfer overhead
-- [custom nodes in DAG pipelines](https://docs.openvino.ai/2023.2/ovms_docs_custom_node_development.html) - allowing model inference and data transformations to be implemented with a custom node C/C++ dynamic library
-- [serving stateful models](https://docs.openvino.ai/2023.2/ovms_docs_stateful_models.html) - models that operate on sequences of data and maintain their state between inference requests
-- [binary format of the input data](https://docs.openvino.ai/2023.2/ovms_docs_binary_input.html) - data can be sent in JPEG or PNG formats to reduce traffic and offload the client applications
-- [model caching](https://docs.openvino.ai/2023.2/ovms_docs_model_cache.html) - cache the models on first load and re-use models from cache on subsequent loads
-- [metrics](https://docs.openvino.ai/2023.2/ovms_docs_metrics.html) - metrics compatible with Prometheus standard
-
+### Key features:
+- **[NEW]** [Python code execution](docs/python_support/reference.md)
+- **[NEW]** [gRPC streaming](docs/streaming_endpoints.md)
+- [MediaPipe graphs serving](docs/mediapipe.md) 
+- Model management - including [model versioning](docs/model_version_policy.md) and [model updates in runtime](docs/online_config_changes.md)
+- [Dynamic model inputs](docs/shape_batch_size_and_layout.md)
+- [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) along with [custom nodes in DAG pipelines](docs/custom_node_development.md)
+- [Metrics](docs/metrics.md) - metrics compatible with Prometheus standard
+- Support for multiple frameworks, such as TensorFlow, PaddlePaddle and ONNX
+- Support for [AI accelerators](https://docs.openvino.ai/2023.2/openvino_docs_OV_UG_supported_plugins_Supported_Devices.html)
 
 **Note:** OVMS has been tested on RedHat, and Ubuntu. The latest publicly released docker images are based on Ubuntu and UBI.
 They are stored in:
