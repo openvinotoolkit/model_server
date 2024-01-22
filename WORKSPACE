@@ -421,14 +421,6 @@ new_git_repository(
     commit = "03a6cee5d486ee9eabb625e4388e69fe9c50ef20"
 )
 
-git_repository(
-    name = "oneTBB",
-    branch = "v2021.10.0", # need newer version to be compatible with bazel 6.0
-    remote = "https://github.com/oneapi-src/oneTBB/",
-    patch_args = ["-p1"],
-    patches = ["mwaitpkg.patch",]
-)
-
 new_local_repository(
     name = "mediapipe_calculators",
     build_file = "@//third_party/mediapipe_calculators:BUILD",

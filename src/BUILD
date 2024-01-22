@@ -126,7 +126,6 @@ cc_shared_library(
         "@com_github_grpc_grpc//:__subpackages__",
         "@upb//:__subpackages__",
         "@zlib//:__subpackages__",
-        "@oneTBB//:__subpackages__",
         "@com_github_glog_glog//:__subpackages__",
         "@com_github_gflags_gflags//:__subpackages__",
         "@XNNPACK//:__subpackages__",
