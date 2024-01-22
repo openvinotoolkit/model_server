@@ -23,3 +23,4 @@ cp iris_tracking.pbtxt ovms/irisTracking
 curl https://storage.googleapis.com/mediapipe-assets/face_detection_short_range.tflite -o ovms/face_detection_short_range/1/face_detection_short_range.tflite --create-dirs
 curl https://storage.googleapis.com/mediapipe-assets/face_landmark.tflite -o ovms/face_landmark/1/face_landmark.tflite --create-dirs
 curl https://storage.googleapis.com/mediapipe-assets/iris_landmark.tflite -o ovms/iris_landmark/1/iris_landmark.tflite --create-dirs
+chmod 755 ovms/ -R
