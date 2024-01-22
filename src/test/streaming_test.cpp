@@ -1441,6 +1441,35 @@ node {
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
+TEST_F(StreamingTest, FirstRequestRestrictedParamName) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddSidePacketToSingleStreamTestCalculator"
+  input_stream: "in"
+  input_side_packet: "val"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}, nullptr};
+
+    // Mock receiving the invalid request and disconnection
+    // Request with invalid param py (special pythons ession side packet)
+    prepareRequestWithParam(this->firstRequest, {{"in", 3.5f}}, {"py", 65});
+
+    EXPECT_CALL(this->stream, Read(_)).Times(0);
+    EXPECT_CALL(this->stream, Write(_, _)).Times(0);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
 TEST_F(StreamingTest, FirstRequestMissingRequiredParameter) {
     const std::string pbTxt{R"(
 input_stream: "in"

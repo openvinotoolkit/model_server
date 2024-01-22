@@ -131,6 +131,30 @@ TEST_F(PythonFlowTest, FinalizationPass) {
     ASSERT_TRUE(std::filesystem::exists(path));
 }
 
+TEST_F(PythonFlowTest, ExecutorWithEmptyOptions) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
 TEST_F(PythonFlowTest, PythonNodeFileDoesNotExist) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
@@ -1617,6 +1641,46 @@ TEST_F(PythonFlowTest, ConverterWithMissingTagMap) {
             calculator: "PyTensorOvTensorConverterCalculator"
             input_stream: "OVTENSOR:in"
             output_stream: "OVMS_PY_TENSOR:out"
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST_F(PythonFlowTest, ConverterWithEmptyOptions) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVTENSOR:in"
+            output_stream: "OVMS_PY_TENSOR:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+                }
+            }
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST_F(PythonFlowTest, ConverterWithEmptyTagMap) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVTENSOR:in"
+            output_stream: "OVMS_PY_TENSOR:out"
             node_options: {
                 [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
                     tag_to_output_tensor_names {}
@@ -1814,6 +1878,100 @@ TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
         } catch (const pybind11::error_already_set& e) {
             ASSERT_EQ(1, 0) << e.what();
         }
+    }
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_OvTensorDimensionSizeExceeded) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVTENSOR:input"
+        output_stream: "OVMS_PY_TENSOR:output"
+        node_options: {
+                [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+                    tag_to_output_tensor_names {
+                        key: "OVMS_PY_TENSOR"
+                        value: "input"
+                    }
+                }
+            }
+    )";
+
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    void* ptr = (void*)1;  // Pointer != NULL allows creating fake ov::Tensor
+    int64_t maxInt64 = std::numeric_limits<int64_t>::max();
+    uint64_t badDimension = static_cast<uint64_t>(maxInt64) + 1;
+
+    std::unique_ptr<ov::Tensor> tensor = std::make_unique<ov::Tensor>(ov::element::u8, ov::Shape{1, badDimension}, ptr);
+    runner.MutableInputs()->Tag("OVTENSOR").packets.push_back(mediapipe::Adopt<ov::Tensor>(tensor.release()).At(mediapipe::Timestamp(0)));
+
+    py::gil_scoped_acquire acquire;
+    try {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.code() << " " << status.message();
+    } catch (const pybind11::error_already_set& e) {
+        ASSERT_EQ(1, 0) << e.what();
+    }
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_PyTensorDimensionNegative) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVMS_PY_TENSOR:input"
+        output_stream: "OVTENSOR:output"
+    )";
+
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    py::gil_scoped_acquire acquire;
+    try {
+        std::string datatype = "FP32";
+        std::string name = "python_result";
+        int numElements = 3;
+        float input[] = {1.0, 2.0, 3.0};
+        py::ssize_t badDimension = -numElements;
+        std::unique_ptr<PyObjectWrapper<py::object>> pyTensor;
+        getPythonBackend()->createOvmsPyTensor(name, (void*)input, std::vector<py::ssize_t>{1, badDimension}, datatype, numElements * sizeof(float), pyTensor);
+
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(pyTensor.release()).At(mediapipe::Timestamp(0)));
+
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.code() << " " << status.message();
+    } catch (const pybind11::error_already_set& e) {
+        ASSERT_EQ(1, 0) << e.what();
+    }
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_PyTensorBufferMismatch) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVMS_PY_TENSOR:input"
+        output_stream: "OVTENSOR:output"
+    )";
+
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    py::gil_scoped_acquire acquire;
+    try {
+        std::string datatype = "FP32";
+        std::string name = "python_result";
+        int numElements = 3;
+        float input[] = {1.0, 2.0, 3.0};
+        std::unique_ptr<PyObjectWrapper<py::object>> pyTensor;
+        getPythonBackend()->createOvmsPyTensor(name, (void*)input, std::vector<py::ssize_t>{1, numElements}, datatype, numElements * sizeof(float) * 2 /*too large*/, pyTensor);
+
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(pyTensor.release()).At(mediapipe::Timestamp(0)));
+
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.code() << " " << status.message();
+    } catch (const pybind11::error_already_set& e) {
+        ASSERT_EQ(1, 0) << e.what();
     }
 }
 

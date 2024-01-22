@@ -1489,6 +1489,33 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
     ASSERT_NE(it, response.outputs().end());
 }
 
+TEST_F(MediapipeFlowTest, InferWithRestrictedParamName) {
+    SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_graph_with_side_packets.json");
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    for (auto restrictedParamName : std::vector<std::string>{"py"}) {
+        ::KFSRequest request;
+        ::KFSResponse response;
+        const std::string modelName = "mediaWithParams";
+        request.Clear();
+        response.Clear();
+        inputs_info_t inputsMeta{
+            {"in_not_used", {{1, 1}, ovms::Precision::I32}}};
+        std::vector<float> requestData{0.};
+        preparePredictRequest(request, inputsMeta, requestData);
+        request.mutable_model_name()->assign(modelName);
+        // here add params
+        const std::string stringParamValue = "abecadlo";
+        const bool boolParamValue = true;
+        const int64_t int64ParamValue = 42;
+        request.mutable_parameters()->operator[]("string_param").set_string_param(stringParamValue);
+        request.mutable_parameters()->operator[]("bool_param").set_bool_param(boolParamValue);
+        request.mutable_parameters()->operator[]("int64_param").set_int64_param(int64ParamValue);
+        request.mutable_parameters()->operator[](restrictedParamName).set_int64_param(int64ParamValue);
+        ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::FAILED_PRECONDITION);
+    }
+}
+
 using testing::ElementsAre;
 
 TEST_F(MediapipeFlowAddTest, AdapterMetadata) {
