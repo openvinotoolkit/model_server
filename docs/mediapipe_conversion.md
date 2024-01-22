@@ -1,11 +1,11 @@
 # How to update existing graphs from MediaPipe framework to use OpenVINO for inference {#ovms_docs_mediapipe_conversion}
 In this document we will walkthrough steps required to update existing Mediapipe graphs using Tensorflow/TfLite to make them use OpenVINO Runtime for the inference. The step will include:
-- retreiving models from existing solutions
+- retrieving models from existing solutions
 - prepare configuration of OpenVINOInferenceSession calculator
 - make changes to existing pbtxt graphs to replace TensorFlow calculators with OpenVINO calculators
 
 ## How to get models used in MediaPipe solutions
-When you build MediaPipe applications or solutions from the [https://github.com/google/mediapipe](https://github.com/google/mediapipe) repo, typically the bazel build would download the needed models as a data dependency. When the graph is to be deployed with OpenVINO Inference calulators, the models needs to be stored in the [models repository](https://docs.openvino.ai/2023.2/ovms_docs_models_repository.html). 
+When you build MediaPipe applications or solutions from the [https://github.com/google/mediapipe](https://github.com/google/mediapipe) repo, typically the bazel build would download the needed models as a data dependency. When the graph is to be deployed with OpenVINO Inference calculators, the models needs to be stored in the [models repository](https://docs.openvino.ai/2023.2/ovms_docs_models_repository.html). 
 That way you can take advantage of the [models versioning feature](./model_version_policy.md) and store the models on the local or the [cloud storage](./using_cloud_storage.md). The OpenVINO calculator is using as a parameter the path to the [config.json](https://docs.openvino.ai/2023.2/ovms_docs_serving_model.html#serving-multiple-models) file with models configuration with the specific model name.
 To get the model used in MediaPipe demo you can either trigger the original build target that depends upon that model and then search in bazel cache or download directly from locations below.
 * https://storage.googleapis.com/mediapipe-models/
@@ -117,11 +117,11 @@ grep -R -n "register_as = \"HolisticLandmarkCpu"
 ```
 We will find that in using bazel `mediapipe_simple_subgraph` function another `pbtxt` file was registered as a graph. Since in that file there is no inference calculator we need to repeat the procedure until we find all inference calculators used directly or indirectly using subgraphs.
 
-After performing those steps we have a list of pbtxt files with inference nodes that need adjustements.
+After performing those steps we have a list of pbtxt files with inference nodes that need adjustments.
 
 ### 2. Replacement of inference calculators in graph and subgraphs
 
-We start with basic replacement of inference calculator in graph and subraphs if needed. Existing configuration could look like:
+We start with basic replacement of inference calculator in graph and subgraphs if needed. Existing configuration could look like:
 ```
 node {
   calculator: "HandLandmarkModelLoader"
