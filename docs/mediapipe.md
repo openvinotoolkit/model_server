@@ -186,7 +186,7 @@ Subconfig file may only contain *model_config_list* section  - in the same forma
 ## Deployment testing <a name="testing"></a>
 ### Debug logs
 The simplest method to validate the graph execution is to set the Model Server `log_level` to `DEBUG`.
-`docker run --rm -it -v $(pwd):/config openvino/model_server:latest --config_path /config/config.json --log_level TRACE`
+`docker run --rm -it -v $(pwd):/config openvino/model_server:latest --config_path /config/config.json --log_level DEBUG`
 
 It will report in a verbose way all the operations in the mediapipe framework from the graph initialization and execution.
 The model server logs could confirm the graph correct format and loading all the required models.
