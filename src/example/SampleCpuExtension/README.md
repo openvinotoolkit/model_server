@@ -1,6 +1,6 @@
 # CPU Extensions {#ovms_sample_cpu_extension}
 
-Any CPU layer, unsupported by OpenVINO, can be implemented as a shared library. While loaded in OVMS as a cpu extension, it can help in executing the model. An example presented here is based on the code from in OpenVINO™ repository: [extension template](https://github.com/openvinotoolkit/openvino/tree/master/src/core/template_extension/new).
+Any CPU layer, unsupported by OpenVINO, can be implemented as a shared library. While loaded in OVMS as a cpu extension, it can help in executing the model. An example presented here is based on the code from in OpenVINO™ repository: [extension template](https://github.com/openvinotoolkit/openvino/tree/master/src/core/template_extension).
 
 It includes a demonstrative implementation of the Relu layer which can be applied on many existing
 public models. That implementation display in the model server logs information about the 
