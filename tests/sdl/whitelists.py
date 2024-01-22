@@ -42,6 +42,7 @@ class OvmsBaseImageType(Enum):
     REDHAT_GPU = "redhat_gpu"
 
 
+# Libraries listed by ldd /ovms/bin/ovms
 dynamic_libraries = {
     OvmsBaseImageType.COMMON: {
         'libgcc_s.so', 'liblzma.so', 'libstdc++.so', 'libuuid.so', 'libxml2.so', 'libtbb.so'
@@ -50,7 +51,7 @@ dynamic_libraries = {
     OvmsBaseImageType.UBUNTU_PYTHON: {'libexpat.so',},
     OvmsBaseImageType.UBUNTU20: {'librt.so',},
     OvmsBaseImageType.UBUNTU20_PYTHON: {'libpython3.8.so', 'libutil.so',},
-    OvmsBaseImageType.UBUNTU22: {'libm.so', 'libdl.so', 'libpthread.so',},
+    OvmsBaseImageType.UBUNTU22: {'libm.so',},
     OvmsBaseImageType.UBUNTU22_PYTHON: {'libpython3.10.so',},
     OvmsBaseImageType.REDHAT: set(),
     OvmsBaseImageType.REDHAT_PYTHON:{'libpython3.9.so', 'libutil.so',},
@@ -71,6 +72,7 @@ whitelisted_dynamic_libraries = {
                                "python": dynamic_libraries[OvmsBaseImageType.REDHAT_PYTHON]},
 }
 
+# Libraries located in /ovms/lib/
 libraries = {
     OvmsBaseImageType.COMMON: {
         'libazurestorage.so', 'libcpprest.so', 'libface_detection_cc_proto.so', 'libface_detection_options_registry.so',
@@ -84,7 +86,7 @@ libraries = {
         'libopenvino_paddle_frontend.so', 'libopenvino_pytorch_frontend.so', 'libopenvino_tensorflow_frontend.so',
         'libopenvino_tensorflow_lite_frontend.so', 'libuser_ov_extensions.so', 'libcore_tokenizers.so'
     },
-    OvmsBaseImageType.UBUNTU: {'libtbb.so',},
+    OvmsBaseImageType.UBUNTU: set(),
     OvmsBaseImageType.UBUNTU20_PYTHON: set(),
     OvmsBaseImageType.UBUNTU22_PYTHON: set(),
     OvmsBaseImageType.REDHAT: {'libpugixml.so',},
@@ -100,12 +102,12 @@ whitelisted_libraries = {
     OvmsImageType.REDHAT_GPU: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.REDHAT]},
 }
 
+# Apt/yum packages
 packages = {
     OvmsBaseImageType.UBUNTU: {
         'ca-certificates',
         'curl',
         'libpugixml1v5',
-        'libtbb2',
         'libxml2',
         'openssl'
     },
@@ -119,6 +121,7 @@ packages = {
         'libicu66',
         'libssl1.1',
         'tzdata',
+        'libtbb2',
     },
     OvmsBaseImageType.UBUNTU20_PYTHON: {
         'libmpdec2',
@@ -127,7 +130,7 @@ packages = {
         'libpython3.8-stdlib',
         'mime-support',
     },
-    OvmsBaseImageType.UBUNTU22: {'libicu70', 'libtbbmalloc2',},
+    OvmsBaseImageType.UBUNTU22: {'libicu70', 'libtbbmalloc2', 'libtbb12'},
     OvmsBaseImageType.UBUNTU22_PYTHON: {
         'libmpdec3',
         'libpython3.10',

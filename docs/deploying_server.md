@@ -100,7 +100,7 @@ or build it yourself:
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build
+make docker_build BASE_OS=ubuntu20
 # Unpack the package
 tar -xzvf dist/ubuntu/ovms.tar.gz
 ```
@@ -126,7 +126,7 @@ or build it yourself:
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build BASE_OS_TAG_UBUNTU=22.04
+make docker_build
 # Unpack the package
 tar -xzvf dist/ubuntu/ovms.tar.gz
 ```
@@ -134,7 +134,7 @@ tar -xzvf dist/ubuntu/ovms.tar.gz
 Install required libraries:
 
 ```{code} sh
-sudo apt update -y && apt install -y libpugixml1v5
+sudo apt update -y && apt install -y libpugixml1v5 libtbb12
 ```
 :::
 :::{tab-item} RHEL 8.7
