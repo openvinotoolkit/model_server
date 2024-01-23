@@ -1,4 +1,5 @@
 boto3==1.14.14
+checksec-py==0.7.1
 docker==5.0.3
 grpcio==1.53.0
 paramiko==2.11.0
