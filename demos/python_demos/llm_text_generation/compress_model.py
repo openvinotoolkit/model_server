@@ -65,7 +65,7 @@ def convert_to_fp16():
         return
     if not model_configuration["remote"]:
         ov_model = OVModelForCausalLM.from_pretrained(
-            pt_model_id, export=True, compile=False
+            pt_model_id, export=True, compile=False, load_in_8bit=False
         )
         ov_model.half()
         ov_model.save_pretrained(fp16_model_dir)
@@ -95,7 +95,7 @@ def convert_to_int8():
             ov_model = OVModelForCausalLM.from_pretrained(fp16_model_dir, compile=False)
         else:
             ov_model = OVModelForCausalLM.from_pretrained(
-                pt_model_id, export=True, compile=False
+                pt_model_id, export=True, compile=False, load_in_8bit=False
             )
             ov_model.half()
         quantizer = OVQuantizer.from_pretrained(ov_model)
@@ -178,10 +178,10 @@ def convert_to_int4():
     if not model_configuration["remote"]:
         if not fp16_model_dir.exists():
             model = OVModelForCausalLM.from_pretrained(
-                pt_model_id, export=True, compile=False
+                pt_model_id, export=True, compile=False, load_in_8bit=False
             ).half()
             model.config.save_pretrained(int4_model_dir)
-            ov_model = model.model
+            ov_model = model._original_model
             del model
             gc.collect()
         else:

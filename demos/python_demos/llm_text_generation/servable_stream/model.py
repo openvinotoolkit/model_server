@@ -126,6 +126,7 @@ class OvmsPythonModel:
 
     def execute(self, inputs: list):
         print("-------- Running execute")
+        ov_model_exec = self.ov_model.clone()
         text = bytes(inputs[0]).decode()
         temporal_history = [[text, ""]]
 
@@ -146,7 +147,7 @@ class OvmsPythonModel:
             generate_kwargs["stopping_criteria"] = StoppingCriteriaList(stop_tokens)
 
         def generate():
-            self.ov_model.generate(**generate_kwargs)
+            ov_model_exec.generate(**generate_kwargs)
 
         t1 = threading.Thread(target=generate)
         t1.start()
