@@ -17,7 +17,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "ovms_py_tensor.hpp"
+#include "src/python/ovms_py_tensor.hpp"
 
 namespace py = pybind11;
 using namespace ovms;

@@ -40,25 +40,11 @@ load("@pip_deps//:requirements.bzl", "all_requirements")
 pybind_extension(
     name = "pyovms",
     srcs = ["ovms_py_tensor_py.cpp",], # TODO consider naming convention if exist
-    deps = ["ovmspytensor",],
+    deps = ["//src/python:ovmspytensor",],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-)
-
-cc_library(
-    name = "ovmspytensor",
-    hdrs = ["ovms_py_tensor.hpp",],
-    srcs = ["ovms_py_tensor.cpp",],
-    deps = PYBIND_DEPS,
-    include_prefix = "bindings/python",
-    visibility = ["//visibility:public"],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
-    #data = [":pyovms.so"], #todo split to header?
 )
 
 py_test(
@@ -66,7 +52,7 @@ py_test(
     srcs = glob(["tests/*.py"]),
     main = "tests/run.py",
     imports=["python"],
-    data = ["//src/bindings/python:pyovms.so"],
+    data = [":pyovms.so"],
     deps = all_requirements
 )
 

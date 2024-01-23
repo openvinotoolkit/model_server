@@ -15,8 +15,8 @@
 //*****************************************************************************
 #include <unordered_map>
 
-#include "bindings/python/ovms_py_tensor.hpp"
 #include "pythonnoderesources.hpp"
+#include "src/python/ovms_py_tensor.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

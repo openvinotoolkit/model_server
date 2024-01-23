@@ -25,8 +25,8 @@
 #include <pybind11/stl.h>
 
 #include "../precision.hpp"
-#include "bindings/python/ovms_py_tensor.hpp"
 #include "python_backend.hpp"
+#include "src/python/ovms_py_tensor.hpp"
 #include "src/python/pytensor_ovtensor_converter_calculator.pb.h"
 
 namespace py = pybind11;

@@ -391,7 +391,12 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    data = ["//src/bindings/python:pyovms.so"],
+    data = select({
+        "//src:not_disable_python": [
+            "//src/python/binding:pyovms.so",
+        ],
+        "//src:disable_python": []
+    }),
     alwayslink = 1,
 )
 
@@ -982,13 +987,13 @@ cc_binary(
         "//src:libcustom_node_horizontal_ocr.so",
         "//src:libcustom_node_model_zoo_intel_object_detection.so",
         "//src:libcustom_node_image_transformation.so",
-	    ] + select({
+    ] + select({
             "//conditions:default": [
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
             ],
             "//src:disable_mediapipe" : [],
         }),
-    data = ["//src/bindings/python:pyovms.so"],
+    data = ["//src/python/binding:pyovms.so"],
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
 

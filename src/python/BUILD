@@ -66,7 +66,7 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = ["//src/bindings/python:pyovms.so"],
+    data = ["//src/python/binding:pyovms.so"],
 )
 
 cc_library(
@@ -81,7 +81,7 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = ["//src/bindings/python:pyovms.so"],
+    data = ["//src/python/binding:pyovms.so"],
 )
 
 cc_library(
@@ -101,7 +101,7 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = ["//src/bindings/python:pyovms.so"],
+    data = ["//src/python/binding:pyovms.so"],
 )
 
 cc_library(
@@ -111,7 +111,7 @@ cc_library(
         "@linux_openvino//:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmsprecision",
-        "//src/bindings/python:ovmspytensor",
+        "ovmspytensor",
         "pytensorovtensorconvertercalculator_cc_proto",
         "pythonbackend",
     ],
@@ -119,7 +119,7 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = ["//src/bindings/python:pyovms.so"],
+    data = ["//src/python/binding:pyovms.so"],
 )
 
 cc_library(
@@ -128,17 +128,32 @@ cc_library(
     deps = PYBIND_DEPS + [
         "@linux_openvino//:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
+        "ovmspytensor",
         "pythonexecutorcalculator_cc_proto",
         "pythonbackend",
         "pythonnoderesources",
-        "//src/bindings/python:ovmspytensor",
     ],
     visibility = ["//visibility:private"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = ["//src/bindings/python:pyovms.so"],
+    data = ["//src/python/binding:pyovms.so"],
 )
+
+cc_library(
+    name = "ovmspytensor",
+    hdrs = ["ovms_py_tensor.hpp",],
+    srcs = ["ovms_py_tensor.cpp",],
+    deps = PYBIND_DEPS,
+    include_prefix = "binding/python",
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+    #data = [":pyovms.so"], #todo split to header?
+)
+
 
 cc_library(
     name = "libovmspythonmodule",
@@ -148,7 +163,7 @@ cc_library(
         "//src:cpp_headers", # TODO make ovmslib depend on that
         "//src:libovmslogging",
         "//src:libovmsmediapipe_utils",
-        "//src/bindings/python:ovmspytensor",
+        "ovmspytensor",
         "pytensorovtensorconvertercalculator",
         "pythonbackend",
         "pythonexecutorcalculator",
@@ -159,5 +174,5 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
-    data = ["//src/bindings/python:pyovms.so"],
+    data = ["//src/python/binding:pyovms.so"],
 )
