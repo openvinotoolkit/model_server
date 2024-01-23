@@ -7,7 +7,7 @@ In this quickstart you will create a servable with a single custom Python code t
 Check out the [documentation](reference.md) to learn more about this feature.
 
 To achieve that let's follow the steps:
-1. Prepare Docker Image And Workspace
+1. Prepare Workspace
 2. Write Python Code For The Server 
 3. Prepare Graph Configuration File
 4. Prepare Server Configuration File
@@ -15,7 +15,7 @@ To achieve that let's follow the steps:
 6. Create Client Application
 7. Send Requests From The Client
 
-### Step 1: Prepare Docker Image And Workspace
+### Step 1: Prepare Workspace
 
 Let's have all the work done in a new `workspace` directory. Also create the following subdirectories:
 - `workspace/models` (catalog that will be mounted to the deployment)
@@ -27,15 +27,7 @@ You can do that in one go:
 mkdir -p workspace/models/python_model && cd workspace
 ```
 
-Since changing all the letters in the string to uppercase is a very basic example, the basic Python-enabled model server image without extra Python packages is sufficient. If you need some external modules, you need to add them to the image manually. 
-Until the image is published in next release, it needs to be built from sources:
-
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make docker_build MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 OV_USE_BINARY=1 RUN_TESTS=0
-cd ..
-```
+Since changing all the letters in the string to uppercase is a very basic example, the basic Python-enabled model server image without extra Python packages is sufficient. If you need some external modules, you need to add them to the image manually. For that simple use case, let's use publically available `openvino/model_server:latest` image from Docker Hub.
 
 You will also need a client module, so in your environment install a required dependency:
 ```bash
@@ -44,9 +36,9 @@ pip3 install tritonclient[grpc]
 
 ### Step 2: Write Python Code For The Server 
 
-Let's start with the server side code. Your job is to implement an `OvmsPythonModel` class. Model Server expects it to have at least `initialize` and `execute` methods.
+Let's start with the server side code. Your job is to implement an `OvmsPythonModel` class. Model Server expects it to have at least `execute` method implemented.
 
-Since there's nothing to initialize, let's focus on `execute` method that will be called every time model receives a request. The server will read inputs from that request and pass them to `execute` function as an `inputs` argument. 
+In basic configuration `execute` method is called every time model receives a request. The server reads inputs from that request and passes them to `execute` function as an `inputs` argument. 
 
 `inputs` is a `list` of `pyovms.Tensor` objects. In this case you will have only one input so the code can start like this:
 
@@ -102,7 +94,7 @@ class OvmsPythonModel:
 
 ### Step 3: Prepare Graph Configuration File
 
-Python logic execution in OpenVINO Model Server is supported via Mediapipe graphs. That means you will need to prepare graph definition for your processing flow. In that case, a graph with just one node - Python node - is enough. Let's create appropriate `graph.pbtxt` file in your `workspace/models/python_model` catalog:
+Python logic execution in OpenVINO Model Server is supported via MediaPipe graphs. That means you need to prepare graph definition for your processing flow. In that case, a graph with just one node - Python node - is enough. Let's create appropriate `graph.pbtxt` file in your `workspace/models/python_model` catalog:
 
 ```bash
 echo '
@@ -124,6 +116,15 @@ node {
 ```
 
 Above configuration file creates a graph with a single Python node that uses `PythonExecutorCalculator`, sets inputs and outputs and provides your Python code location in `handler_path`. 
+
+`input_stream` and `output_stream` in the first two lines define graph inputs and outputs. The names to the **right** of `:` are names to be used in request and response. In this case: 
+- **input**: "text"
+- **output**: "uppercase"
+
+You can also see `input_stream` and `output_stream` on the node level. Those refer to naming in the `execute` method code. Notice how in the previous step, in `execute` implementation, you name the output tensor - "uppercase". 
+
+In that case the names of the streams both on the graph and on the node level are exactly the same, which means that a graph input is also a node input and a node output is also a graph output.
+
 The `input_side_packet` value is an internal field used by the model server to share resources between graph instances - do not change it. 
 
 ### Step 4: Prepare Server Configuration File
@@ -188,7 +189,7 @@ infer_input = grpcclient.InferInput("text", [len(data)], "BYTES")
 infer_input._raw_content = data
 ```
 
-You've created InferInput object that will correspond to the servable input with the name "text" (more about it soon), shape [len(data)] - where len(data) is the number of encoded bytes - and datatype "BYTES". The data itself has been written to a raw_content field. All of these values can be accessed on the server side.
+You've created InferInput object that will correspond to the graph input with the name "text", shape [len(data)] - where len(data) is the number of encoded bytes - and datatype "BYTES". The data itself has been written to a raw_content field. All of these values can be accessed on the server side.
 
 The last part would be to send this data to the server:
 
