@@ -20,7 +20,9 @@ BUILDKIT_STEP_LOG_MAX_SPEED=10000000
 
 VIRTUALENV_EXE := python3 -m virtualenv -p python3
 VIRTUALENV_DIR := .venv
+VIRTUALENV_STYLE_DIR := .venv-style
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
+ACTIVATE_STYLE="$(VIRTUALENV_STYLE_DIR)/bin/activate"
 STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
 	--output=vs7 \
 	--recursive \
@@ -234,6 +236,11 @@ venv:$(ACTIVATE)
 	@echo -n "Using venv "
 	@. $(ACTIVATE); python3 --version
 
+venv-style:$(ACTIVATE_STYLE)
+	@echo $(BUILD_ARGS)
+	@echo -n "Using venv "
+	@python3 --version
+
 $(ACTIVATE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
@@ -242,11 +249,19 @@ $(ACTIVATE):
 	@. $(ACTIVATE); pip3 install -qq -r tests/requirements.txt
 	@touch $(ACTIVATE)
 
-cppclean: venv
-	@echo "Checking cppclean..."
-	@. $(ACTIVATE); bash -c "./ci/cppclean.sh"
+$(ACTIVATE_STYLE):
+	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_STYLE_DIR)..."
+	@test -d $(VIRTUALENV_STYLE_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_STYLE_DIR)
+	@. $(ACTIVATE_STYLE); pip3 install --upgrade pip
+	@. $(ACTIVATE_STYLE); pip3 install -vUqq setuptools
+	@. $(ACTIVATE_STYLE); pip3 install -qq -r ci/style_requirements.txt
+	@touch $(ACTIVATE_STYLE)
 
-style: venv clang-format-check cpplint cppclean
+cppclean: venv-style
+	@echo "Checking cppclean..."
+	@bash -c "./ci/cppclean.sh"
+
+style: venv-style clang-format-check cpplint cppclean
 
 hadolint:
 	@echo "Checking SDL requirements..."
@@ -255,11 +270,11 @@ hadolint:
 
 bandit:
 	@echo "Checking python files..."
-	@. $(ACTIVATE); bash -c "./ci/bandit.sh"
+	@. $(ACTIVATE_STYLE); bash -c "./ci/bandit.sh"
 
 license-headers:
 	@echo "Checking license headers in files..."
-	@. $(ACTIVATE); bash -c "python3 ./ci/lib_search.py . > missing_headers.txt"
+	@. $(ACTIVATE_STYLE); bash -c "python3 ./ci/lib_search.py . > missing_headers.txt"
 	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
         echo "Files with missing headers";\
         cat missing_headers.txt;\
@@ -267,22 +282,22 @@ license-headers:
 	fi
 	@rm missing_headers.txt
 
-sdl-check: venv hadolint bandit license-headers
+sdl-check: venv-style hadolint bandit license-headers
 
 	@echo "Checking forbidden functions in files..."
-	@. $(ACTIVATE); bash -c "python3 ./ci/lib_search.py . functions > forbidden_functions.txt"
+	@. $(ACTIVATE_STYLE); bash -c "python3 ./ci/lib_search.py . functions > forbidden_functions.txt"
 	@if ! grep -FRq "All files checked for forbidden functions" forbidden_functions.txt; then\
 		error Run python3 ./ci/lib_search.py . functions - to see forbidden functions file list.;\
 	fi
 	@rm forbidden_functions.txt
 
-cpplint: venv
+cpplint: venv-style
 	@echo "Style-checking codebase..."
-	@. $(ACTIVATE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
+	@. $(ACTIVATE_STYLE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
 
-clang-format: venv
+clang-format: venv-style
 	@echo "Formatting files with clang-format.."
-	@. $(ACTIVATE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format -style=file -i {} \;
+	@. $(ACTIVATE_STYLE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format -style=file -i {} \;
 
 clang-format-check: clang-format
 	@echo "Checking if clang-format changes were committed ..."
