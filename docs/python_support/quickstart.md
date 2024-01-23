@@ -121,7 +121,7 @@ Above configuration file creates a graph with a single Python node that uses `Py
 - **input**: "text"
 - **output**: "uppercase"
 
-You can also see `input_stream` and `output_stream` on the node level. They are connected to how inputs and outputs are accessed and created in the `execute` code. Notice how in the previous step, in `execute` implementation, you call the output tensor - "uppercase". 
+You can also see `input_stream` and `output_stream` on the node level. Those refer to naming in the `execute` method code. Notice how in the previous step, in `execute` implementation, you name the output tensor - "uppercase". 
 
 In that case the names of the streams both on the graph and on the node level are exactly the same, which means that a graph input is also a node input and a node output is also a graph output.
 
