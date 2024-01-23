@@ -273,7 +273,6 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* serve
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(server_settings);
     ovms::ModelsSettingsImpl* modelsSettings = reinterpret_cast<ovms::ModelsSettingsImpl*>(models_settings);
-    serverSettings->withPython = false;
     auto res = srv->start(serverSettings, modelsSettings);
     if (res.ok())
         return nullptr;
