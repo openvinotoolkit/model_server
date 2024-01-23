@@ -47,9 +47,9 @@ private:
     ServerSettingsImpl serverSettings;
 
 public:
-     ServerSettingsImpl getServerSettings() {
-          return serverSettings;
-     }
+    ServerSettingsImpl getServerSettings() {
+        return serverSettings;
+    }
     /**
          * @brief Gets the instance of the config
          */
