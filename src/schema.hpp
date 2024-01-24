@@ -23,8 +23,9 @@
 
 namespace ovms {
 extern const std::string MODELS_CONFIG_SCHEMA;
+extern const std::string MODEL_CONFIG_DEFINITION2;
 extern const char* MODELS_MAPPING_SCHEMA;
 extern const std::string MEDIAPIPE_SUBCONFIG_SCHEMA;
 
-StatusCode validateJsonAgainstSchema(rapidjson::Document& json, const char* schema);
+Status validateJsonAgainstSchema(rapidjson::Document& json, const char* schema, bool detailedError = false);
 }  // namespace ovms

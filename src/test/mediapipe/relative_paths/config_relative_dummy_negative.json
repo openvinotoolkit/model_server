@@ -4,13 +4,15 @@
                 "name": "dummy1",
                 "base_path": "dummy1",
                 "shape": "(1, 10)"
-		},
+            }
+        },
+        {
          "config": {
                 "name": "dummy2",
                 "base_path": "dummy2",
                 "shape": "(1, 10)"
-		}
-	}
+            }
+        }
     ],
     "mediapipe_config_list": [
         {
