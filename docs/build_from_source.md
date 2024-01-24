@@ -163,7 +163,7 @@ make release_image PYTHON_DISABLE=1
 
 ### `GPU`
 
-When set to `1`, OpenVINO&trade Model Server will be built with the drivers required by [GPU plugin](https://docs.openvino.ai/2023.2/openvino_docs_OV_UG_supported_plugins_GPU.html) support. Default value: `0`.
+When set to `1`, OpenVINO&trade Model Server will be built with the drivers required by [GPU plugin](https://docs.openvino.ai/2023.3/openvino_docs_OV_UG_supported_plugins_GPU.html) support. Default value: `0`.
 
 Example:
 ```bash
