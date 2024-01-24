@@ -39,7 +39,6 @@ model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
 model_id = model_configuration["model_id"]
 
 MODEL_PATH = "./" + SELECTED_MODEL
-OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
 
 print('Downloading and converting...')
 ov_model = OVModelForCausalLM.from_pretrained(
@@ -48,7 +47,7 @@ ov_model = OVModelForCausalLM.from_pretrained(
     device='CPU',
     compile=False,
     trust_remote_code=True,
-    ov_config=OV_CONFIG)
+    load_in_8bit=False)
 
 print(f'Saving model to {MODEL_PATH} ...')
 ov_model.save_pretrained(MODEL_PATH)
