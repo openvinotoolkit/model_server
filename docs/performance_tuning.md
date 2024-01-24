@@ -125,7 +125,7 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 | ENABLE_CPU_PINNING | This property allows CPU threads pinning during inference. |
 
 
-> **NOTE:** For additional information about all parameters read about [OpenVINO device properties](https://docs.openvino.ai/2023.3/groupov_runtime_cpp_prop_api.html?#detailed-documentation).
+> **NOTE:** For additional information about all parameters read about [OpenVINO device properties](https://docs.openvino.ai/2023.3/api/c_cpp_api/group__ov__runtime__cpp__prop__api.html).
 
 - Example:
 Following docker command will set `NUM_STREAMS` parameter to a value `1`:
@@ -168,7 +168,7 @@ The default value is 1 second which ensures prompt response to creating new mode
 
 Depending on the device employed to run the inference operation, you can tune the execution behavior with a set of parameters. Each device is handled by its OpenVINO plugin.
 
-> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/2023.3/groupov_runtime_cpp_prop_api.html?#detailed-documentation).
+> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/2023.3/api/c_cpp_api/group__ov__runtime__cpp__prop__api.html).
 
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter. 
 
@@ -183,7 +183,7 @@ docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 
 ## Analyzing performance issues
 
 Recommended steps to investigate achievable performance and discover bottlenecks:
-1. [Launch OV benchmark app](https://docs.openvino.ai/2023.3/openvino_inference_engine_tools_benchmark_tool_README.html?highlight=benchmark)
+1. [Launch OV benchmark app](https://docs.openvino.ai/2023.3/openvino_sample_benchmark_tool.html)
 
       **Note:** It is useful to drop plugin configuration from benchmark app using `-dump_config` and then use the same plugin configuration in model loaded into OVMS
 
