@@ -27,7 +27,7 @@ RUN pip3 install numpy
 ENTRYPOINT [ `/ovms/bin/ovms` ]
 ```
 
-You can also modify `requirements.txt` from our [python demos](https://github.com/openvinotoolkit/model_server/tree/main/demos/python_demos) and from repository top level directory run `make python_image` 
+You can also modify `requirements.txt` from our [python demos](https://github.com/openvinotoolkit/model_server/tree/releases/2023/3/demos/python_demos) and from repository top level directory run `make python_image` 
 
 ## `OvmsPythonModel` class
 
@@ -909,7 +909,7 @@ class OvmsPythonModel:
 
 In such case, the client could implement different actions depending on which output it receives on the stream. 
 
-Another example of such configuration is signaling that generation is finished when running in [generative mode](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#generative-mode). This solution is used in [text generation demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/python_demos/llm_text_generation).
+Another example of such configuration is signaling that generation is finished when running in [generative mode](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#generative-mode). This solution is used in [text generation demo](https://github.com/openvinotoolkit/model_server/tree/releases/2023/3/demos/python_demos/llm_text_generation).
 
 
 ### Calculator type conversions
@@ -990,4 +990,4 @@ node {
 }
 ```
 
-See a [CLIP demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/python_demos/clip_image_classification) for a complete example of a graph that uses Python nodes, OV Inference nodes and converter nodes.
+See a [CLIP demo](https://github.com/openvinotoolkit/model_server/tree/releases/2023/3/demos/python_demos/clip_image_classification) for a complete example of a graph that uses Python nodes, OV Inference nodes and converter nodes.

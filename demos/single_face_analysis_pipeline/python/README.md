@@ -52,7 +52,7 @@ docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server 
 
 ## Requesting the Service
 
-Exemplary client [single_face_analysis_pipeline.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/single_face_analysis_pipeline/python/single_face_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
+Exemplary client [single_face_analysis_pipeline.py](https://github.com/openvinotoolkit/model_server/blob/releases/2023/3/demos/single_face_analysis_pipeline/python/single_face_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
 
 ```bash
 pip3 install -r requirements.txt

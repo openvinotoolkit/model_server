@@ -17,7 +17,7 @@ Example of batch size 2 of the string input - `abcd` and `ab`:
 ]
 ```
 Such data in a tensor format can be passed to the custom node to perform the preprocessing like string tokenization. The output of the preprocessing node can be passed to the model.
-There is a built-in [Tokenizer](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/tokenizer) custom node for that use case based on Blingfire library.
+There is a built-in [Tokenizer](https://github.com/openvinotoolkit/model_server/tree/releases/2023/3/src/custom_nodes/tokenizer) custom node for that use case based on Blingfire library.
 
 Similarly, a custom node can perform string detokenization and return a string to the model server client.
 
