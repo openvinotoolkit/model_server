@@ -75,7 +75,7 @@ class OvmsPythonModel:
         The generator is then called multiple times with no additional input data and produces
         multiple sets of outputs over time. Works only with streaming endpoints. 
 
-        Implemeting this function is required.
+        Implementing this function is required.
 
         Parameters:
         -----------
@@ -247,10 +247,10 @@ This `Tensor` class is a C++ class with a Python binding that implements Python 
 
 | Name           | Type | Description |
 | ------------- |:-----------| :-----------| 
-| name     | string | Name of the string that also assiciates it with input or output stream of the node |
+| name     | string | Name of the string that also associates it with input or output stream of the node |
 | shape   | tuple | Tuple of numbers defining the shape of the tensor | 
 | datatype | string | Type of elements in the buffer. |
-| data | memoryview | Memoryview of the underlaying data buffer |
+| data | memoryview | Memoryview of the underlying data buffer |
 | size | number | Size of data buffer in bytes |
 
 *Note*: `datatype` attribute is not part of buffer protocol implementation.
@@ -273,7 +273,7 @@ Inputs will be provided to the `execute` function, but outputs must be prepared 
 
 `Tensor(name, data)`
 
-- `name`: a string that assosiates Tensor data with specific name. This name is also used by `PythonExecutorCalculator` to push data to the correct output stream in the node. More about it in [node configuration section](https://docs.openvino.ai/2023.3/ovms_docs_python_support_reference.html#input-and-output-streams-in-python-code).
+- `name`: a string that associates Tensor data with specific name. This name is also used by `PythonExecutorCalculator` to push data to the correct output stream in the node. More about it in [node configuration section](https://docs.openvino.ai/2023.3/ovms_docs_python_support_reference.html#input-and-output-streams-in-python-code).
 - `data`: an object that implements Python [Buffer Protocol](https://docs.python.org/3/c-api/buffer.html#buffer-protocol). This could be an instance of some built-in type like `bytes` or types from external modules like `numpy.ndarray`. 
 
 ```python
@@ -283,7 +283,7 @@ class OvmsPythonModel:
     def execute(self, inputs):
         # Create Tensor called my_output with encoded text
         output = Tensor("my_output", "some text".encode())
-        # A list of Tensors is expected, even if there's only one ouput
+        # A list of Tensors is expected, even if there's only one output
         return [output]
 ``` 
 
@@ -297,7 +297,7 @@ There are two places where `pyovms.Tensor` objects are created and accessed:
 - in `execute` method of `OvmsPythonModel` class
 - in model server core during serialization and deserialization if Python node inputs or outputs as also graph inputs or outputs
 
-Model Server receives requests and sends responses on gRPC inferface via KServe API which defines [expected data types for tensors](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#tensor-data-types).
+Model Server receives requests and sends responses on gRPC interface via KServe API which defines [expected data types for tensors](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#tensor-data-types).
 On the other hand Python [Buffer Protocol](https://docs.python.org/3/c-api/buffer.html#buffer-protocol) requires `format` to be specified as [struct format characters](https://docs.python.org/3/library/struct.html#format-characters). 
 
 In order to let users work with KServe types without enforcing the usage of struct format characters on the client side, model server attempts to do the mapping as follows when creating `Tensor` objects from the request:
@@ -326,9 +326,9 @@ In some cases, users may work with more complex types that are not listed above 
 
 #### Custom types
 
-The `datatype` field in the tensor is a `string` and model server will not reject datatype that is not among above KServe types. If some custom type is defined in the request and server cannot map it to a format character it will translate it to `B` treating it as a 1-D raw binary buffer. For consistency the shape of the underlaying buffer in that case will also differ from the shape defined in the request. Let's see it on an example:
+The `datatype` field in the tensor is a `string` and model server will not reject datatype that is not among above KServe types. If some custom type is defined in the request and server cannot map it to a format character it will translate it to `B` treating it as a 1-D raw binary buffer. For consistency the shape of the underlying buffer in that case will also differ from the shape defined in the request. Let's see it on an example:
 
-1. Model Server receives request with the follwing input:
+1. Model Server receives request with the following input:
     * datatype: "my_string"
     * shape: (3,)
     * data: "null0terminated0string0" string encoded in UTF-8
@@ -661,14 +661,14 @@ When it comes to Python node `PythonExecutorCalculator`:
 
 **Multiple generation cycles on a single graph instance**
 
-Keep in mind that node keeps the timestamp and overwrites it everytime new input arrives. It means that if you want to run multiple generation cycles on a single graph instance you **must** use manual timestamping - next request timestamp must be larger than the one received in the last response. 
+Keep in mind that node keeps the timestamp and overwrites it every time new input arrives. It means that if you want to run multiple generation cycles on a single graph instance you **must** use manual timestamping - next request timestamp must be larger than the one received in the last response. 
 
 #### Outputs synchronization in gRPC streaming
 
 Timestamping has a crucial role when synchronizing packets from different streams both on the inputs and outputs as well as inside the graph. MediaPipe provides outputs of the graph to the model server and what happens next depends on what endpoint is used:
 
 - on gRPC unary endpoints server waits for the packets from all required outputs and sends them in a single response. 
-- on gRPC streaming endpoints server serializes output packets as soon as they arrive and sends them back in separatele responses.
+- on gRPC streaming endpoints server serializes output packets as soon as they arrive and sends them back in separate responses.
 
 It means that if you have a graph that has two or more outputs and use gRPC streaming endpoint you will have to take care of gathering the outputs. You can do that using `OVMS_MP_TIMESTAMP`.
 
@@ -684,7 +684,7 @@ Python nodes can be configured to run in two execution modes - regular and gener
 
 In regular execution mode the node produces one set of outputs per one set of inputs. It works via both gRPC unary and streaming endpoints and is a common mode for use cases like computer vision.
 
-In generative execution mode the node produces multiple sets of outputs over time per single set of inputs. It works only via gRPC streaming endpoints and is useful for use cases where total processing time is big and you want to return some intermediate results before the exection is completed. That mode is well suited to Large Language Models to serve them in a more interactive manner.
+In generative execution mode the node produces multiple sets of outputs over time per single set of inputs. It works only via gRPC streaming endpoints and is useful for use cases where total processing time is big and you want to return some intermediate results before the execution is completed. That mode is well suited to Large Language Models to serve them in a more interactive manner.
 
 Depending on which mode is used, both the Python code and graph configuration must be in line.
 
@@ -806,7 +806,7 @@ Apart from basic configuration present also in regular mode, this graph contains
     
     In regular configuration `DefaultInputStreamHandler` is used by default, but for generative mode it's not sufficient. When default handler is defined, node waits for all input streams before calling `Process`. In generative mode `Process` should be called once for data coming from the graph and then multiple times only by receiving signal on `LOOPBACK`, but inputs from a graph and `LOOPBACK` will never be present at the same time. 
 
-    For generative mode to work, inputs from the graph and `LOOPBACK` must be decoupled, meaning `Process` can be called with a set of inputs from the graph, but also with just `LOOPBACK`. It can be acheived via `SyncSetInputStreamHandler`. Above configuration sample creates a set with `LOOPBACK`, which also, implicitly creates another set, with all remaining inputs.
+    For generative mode to work, inputs from the graph and `LOOPBACK` must be decoupled, meaning `Process` can be called with a set of inputs from the graph, but also with just `LOOPBACK`. It can be achieved via `SyncSetInputStreamHandler`. Above configuration sample creates a set with `LOOPBACK`, which also, implicitly creates another set, with all remaining inputs.
     Effectively there are two sets that do not depend on each other:
     - `LOOPBACK`
     - ... every other input specified by the user.
@@ -819,7 +819,7 @@ For working configurations and code samples see the [demos](https://docs.openvin
 ### Incomplete inputs
 
 There are usecases when firing `Process` with only a subset of inputs defined in node configuration is desired. By default, node waits for all inputs with the same timestamp and launches `Process` once they're all available. Such behavior is implemented by the `DefaultInputStreamHandler` which is used by default. 
-To configure the node to lauch `Process` with only a subset of inputs you should use a different input stream handler for different [input policy](https://developers.google.com/mediapipe/framework/framework_concepts/synchronization#input_policies). 
+To configure the node to launch `Process` with only a subset of inputs you should use a different input stream handler for different [input policy](https://developers.google.com/mediapipe/framework/framework_concepts/synchronization#input_policies). 
 
 Such configuration is used in [generative execution mode](https://docs.openvino.ai/2023.3/ovms_docs_python_support_reference.html#generative-mode), but let's see another example:
 
@@ -863,7 +863,7 @@ class OvmsPythonModel:
                 return [Tensor("result", output)]
  ```
 
- In a scenario above the node runs some procesing on the image with provided set of labels.
+ In a scenario above the node runs some processing on the image with provided set of labels.
  When configuration allows for sending incomplete inputs, then the client can send labels only one time and then send only images. 
 
  **Note**: Keep in mind that members of `OvmsPythonModel` objects are shared between **all** graph instances. It means that if in above scenario one client in one graph changes `labels`, then that change is also effective in every other graph instance (for every other client that sends requests to that graph). Saving data between executions that will be exclusive to a single graph instance is planned to be supported in future versions.
