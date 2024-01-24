@@ -2677,7 +2677,7 @@ TEST_F(PythonFlowTest, Positive_NodeFiresProcessWithoutAllInputs) {
     checkDummyResponse("output", data, req, res, 2 /* expect +2 */, 1, "mediaDummy");
 }
 
-void setUpConverterPrecisionTest(std::shared_ptr<MediapipeGraphExecutor>& pipeline){
+void setUpConverterPrecisionTest(std::shared_ptr<MediapipeGraphExecutor>& pipeline) {
     ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(
     input_stream: "OVTENSOR:in"
@@ -2722,7 +2722,6 @@ void setUpConverterPrecisionTest(std::shared_ptr<MediapipeGraphExecutor>& pipeli
 
     ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
-
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorTest_INT8) {
