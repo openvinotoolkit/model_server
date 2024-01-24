@@ -1,4 +1,6 @@
-# GPT-J Causal Language Modeling Demo {#ovms_demo_gptj_causal_lm}
+# [DEPRECATED] GPT-J Causal Language Modeling Demo {#ovms_demo_gptj_causal_lm}
+
+**This demo is deprecated and will be removed in 2024.0. Check out new [python demos](../../python_demos) for latest examples with language models.**
 
 ### Introduction
 This demo illustrates usage of GPT-like models in OpenVINO™ Model Server. GPT-J 6B model used in this example can be found at [huggingface](https://huggingface.co/EleutherAI/gpt-j-6B) (~25GB). Steps below automate download and conversion steps to be able to load it using OpenVINO™. Example python client provided at the end of the document requests Model Server for the next word of the sentence until `EOS` (end of sequence) token is received. 

@@ -2,6 +2,6 @@ accelerate==0.20.3
 numpy==1.23
 torch==1.13.1
 onnx==1.15.0
-optimum[openvino,nncf]==1.14.1
+optimum[openvino,nncf]>=1.14.1
 ovmsclient
-openvino
+openvino==2023.2.0
