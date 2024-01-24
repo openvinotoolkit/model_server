@@ -8,13 +8,13 @@ Enable dynamic shape by setting the `shape` parameter to range or undefined:
 - `--shape "(1,3,200:500,200:500)"` when model is supposed to support height and width values in a range of 200-500. Note that any dimension can support range of values, height and width are only examples here.
 
 > Note that some models do not support dynamic dimensions. Learn more about supported model graph layers including all limitations
-on [Shape Inference Document](https://docs.openvino.ai/2023.2/openvino_docs_OV_UG_ShapeInference.html).
+on [Shape Inference Document](https://docs.openvino.ai/2023.3/openvino_docs_OV_UG_ShapeInference.html).
 
 Another option to use dynamic shape feature is to export the model with dynamic dimension using Model Optimizer. OpenVINO Model Server will inherit the dynamic shape and no additional settings are needed.
 
 To the demonstrate dynamic dimensions, take advantage of:
 
-- Example client in Python [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/face_detection/python/face_detection.py) that can be used to request inference with the desired input shape.
+- Example client in Python [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/releases/2023/3/demos/face_detection/python/face_detection.py) that can be used to request inference with the desired input shape.
 
 - An example [face_detection_retail_0004](https://docs.openvinotoolkit.org/2021.4/omz_models_model_face_detection_retail_0004.html) model.
 

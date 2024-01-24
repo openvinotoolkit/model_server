@@ -2,7 +2,7 @@
 
 ## Overview
 
-The script [image_classification.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/image_classification/python/image_classification.py) reads all images and their labels specified in the text file. It then classifies them with [ResNet50](https://docs.openvino.ai/2023.1/omz_models_model_resnet50_binary_0001.html) model and presents accuracy results.
+The script [image_classification.py](https://github.com/openvinotoolkit/model_server/blob/releases/2023/3/demos/image_classification/python/image_classification.py) reads all images and their labels specified in the text file. It then classifies them with [ResNet50](https://docs.openvino.ai/2023.3/omz_models_model_resnet50_binary_0001.html) model and presents accuracy results.
 
 
 ## Download ResNet50 model

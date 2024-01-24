@@ -56,7 +56,7 @@ workspace
         └── resnet50-binary-0001.xml
 ```
 
-Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](https://docs.openvino.ai/2023.2/ovms_what_is_openvino_model_server.html)):
+Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](https://docs.openvino.ai/2023.3/ovms_what_is_openvino_model_server.html)):
 ```bash
 docker run -u $(id -u) -p 9000:9000 -p 8000:8000 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path \
                      /workspace/resnet50-binary-0001 --model_name resnet50-binary-0001 --port 9000 --rest_port 8000
@@ -345,4 +345,4 @@ docker run -v ${PWD}/workspace:/workspace --network host benchmark_client -a loc
 ```
 
 Many other client options together with benchmarking examples are presented in
-[an additional PDF document](https://github.com/openvinotoolkit/model_server/blob/main/docs/python-benchmarking-client-16feb.pdf). 
+[an additional PDF document](https://github.com/openvinotoolkit/model_server/blob/releases/2023/3/docs/python-benchmarking-client-16feb.pdf). 

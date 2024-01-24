@@ -8,7 +8,7 @@ custom extension execution.
 
 ## Creating cpu_extension library
 
-Compile the library by running `make cpu_extension BASE_OS=ubuntu` in root directory of [Model Server repository](https://github.com/openvinotoolkit/model_server/tree/main). The implementation of this library slightly differs from the template in OpenVINO™ repository and can be found in [SampleCpuExtension directory](https://github.com/openvinotoolkit/model_server/tree/main/src/example/SampleCpuExtension).
+Compile the library by running `make cpu_extension BASE_OS=ubuntu` in root directory of [Model Server repository](https://github.com/openvinotoolkit/model_server/tree/main). The implementation of this library slightly differs from the template in OpenVINO™ repository and can be found in [SampleCpuExtension directory](https://github.com/openvinotoolkit/model_server/tree/releases/2023/3/src/example/SampleCpuExtension).
 
 Shared library will be generated in the `lib` folder. Such library can be used to run Model Server, using `--cpu_extension` argument.
 
@@ -40,4 +40,4 @@ $ docker run -it --rm -p 9000:9000 -v `pwd`/lib/${BASE_OS}:/extension:ro -v `pwd
  --port 9000 --model_name resnet --model_path /resnet --cpu_extension /extension/libcustom_relu_cpu_extension.so
 ```
 
-> **NOTE**: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/2023.2/openvino_docs_Extensibility_UG_Intro.html) 
+> **NOTE**: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/2023.3/openvino_docs_Extensibility_UG_Intro.html) 

@@ -32,7 +32,7 @@ docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 ope
 ```bash
 pip install -r requirements.txt
 # download a sample image for analysis
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/people/people2.jpeg
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/3/demos/common/static/images/people/people2.jpeg
 echo "people2.jpeg" > input_images.txt
 # launch the client
 python mediapipe_iris_tracking.py --grpc_port 9000 --images_list input_images.txt

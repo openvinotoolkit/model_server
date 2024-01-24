@@ -5,8 +5,8 @@ In this document we will walkthrough steps required to update existing Mediapipe
 - make changes to existing pbtxt graphs to replace TensorFlow calculators with OpenVINO calculators
 
 ## How to get models used in MediaPipe solutions
-When you build MediaPipe applications or solutions from the [https://github.com/google/mediapipe](https://github.com/google/mediapipe) repo, typically the bazel build would download the needed models as a data dependency. When the graph is to be deployed with OpenVINO Inference calculators, the models needs to be stored in the [models repository](https://docs.openvino.ai/2023.2/ovms_docs_models_repository.html). 
-That way you can take advantage of the [models versioning feature](./model_version_policy.md) and store the models on the local or the [cloud storage](./using_cloud_storage.md). The OpenVINO calculator is using as a parameter the path to the [config.json](https://docs.openvino.ai/2023.2/ovms_docs_serving_model.html#serving-multiple-models) file with models configuration with the specific model name.
+When you build MediaPipe applications or solutions from the [https://github.com/google/mediapipe](https://github.com/google/mediapipe) repo, typically the bazel build would download the needed models as a data dependency. When the graph is to be deployed with OpenVINO Inference calculators, the models needs to be stored in the [models repository](https://docs.openvino.ai/2023.3/ovms_docs_models_repository.html). 
+That way you can take advantage of the [models versioning feature](./model_version_policy.md) and store the models on the local or the [cloud storage](./using_cloud_storage.md). The OpenVINO calculator is using as a parameter the path to the [config.json](https://docs.openvino.ai/2023.3/ovms_docs_serving_model.html#serving-multiple-models) file with models configuration with the specific model name.
 To get the model used in MediaPipe demo you can either trigger the original build target that depends upon that model and then search in bazel cache or download directly from locations below.
 * https://storage.googleapis.com/mediapipe-models/
 * https://storage.googleapis.com/mediapipe-assets/
@@ -98,7 +98,7 @@ and the subconfig.json:
   ]
 }
 ```
-You can find more details about OpenVINO Model Server configuration in [documentation](https://docs.openvino.ai/2023.2/ovms_docs_serving_model.html#serving-multiple-models).
+You can find more details about OpenVINO Model Server configuration in [documentation](https://docs.openvino.ai/2023.3/ovms_docs_serving_model.html#serving-multiple-models).
 
 *Note*: base paths in config.json are relative to the file path of config.json.
 
@@ -190,7 +190,7 @@ input_order_list: ["Identity","Identity_1","Identity_2","Identity_3"]
 ### 3. Adjust graph input/output streams
 
 This step is required if you plan to deploy the graph in OpenVINO Model Server and existing graph does not have supported input/output packet types. Check for supported input and output packet types [here](./mediapipe.md).
-In that cases you may need to add converter calculators as it was done [here](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/object_detection/graph.pbtxt#L31).
+In that cases you may need to add converter calculators as it was done [here](https://github.com/openvinotoolkit/model_server/blob/releases/2023/3/demos/mediapipe/object_detection/graph.pbtxt#L31).
 
 ### 4. Set the config.json file path in the session calculator
 

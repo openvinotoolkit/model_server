@@ -3,7 +3,7 @@
 This guide shows how to implement a model ensemble using the [DAG Scheduler](../../../docs/dag_scheduler.md).
 
 - Let's consider you develop an application to perform image classification. There are many different models that can be used for this task. The goal is to combine results from inferences executed on two different models and calculate argmax to pick the most probable classification label. 
-- For this task, select two models: [googlenet-v2](https://docs.openvino.ai/2023.2/omz_models_model_googlenet_v2_tf.html) and [resnet-50](https://docs.openvino.ai/2023.2/omz_models_model_resnet_50_tf.html#doxid-omz-models-model-resnet-50-tf). Additionally, create own model **argmax** to combine and select top result. The aim is to perform this task on the server side with no intermediate results passed over the network. The server should take care of feeding inputs/outputs in subsequent models. Both - googlenet and resnet predictions should run in parallel. 
+- For this task, select two models: [googlenet-v2](https://docs.openvino.ai/2023.3/omz_models_model_googlenet_v2_tf.html) and [resnet-50](https://docs.openvino.ai/2023.3/omz_models_model_resnet_50_tf.html#doxid-omz-models-model-resnet-50-tf). Additionally, create own model **argmax** to combine and select top result. The aim is to perform this task on the server side with no intermediate results passed over the network. The server should take care of feeding inputs/outputs in subsequent models. Both - googlenet and resnet predictions should run in parallel. 
 - Diagram for this pipeline would look like this: 
 
 ![diagram](model_ensemble_diagram.svg)
@@ -24,7 +24,7 @@ make
 The steps in `Makefile` are:
 
 1. Download and use the models from [open model zoo](https://github.com/openvinotoolkit/open_model_zoo).
-2. Use [python script](https://github.com/openvinotoolkit/model_server/blob/main/tests/models/argmax_sum.py) located in this repository. Since it uses tensorflow to create models in _saved model_ format, hence tensorflow pip package is required.
+2. Use [python script](https://github.com/openvinotoolkit/model_server/blob/releases/2023/3/tests/models/argmax_sum.py) located in this repository. Since it uses tensorflow to create models in _saved model_ format, hence tensorflow pip package is required.
 3. Prepare argmax model with `(1, 1001)` input shapes to match output of the googlenet and resnet output shapes. The generated model will sum inputs and calculate the index with the highest value. The model output will indicate the most likely predicted class from the ImageNet* dataset.
 4. Convert models to IR format and [prepare models repository](../../../docs/models_repository.md).
 
@@ -54,7 +54,7 @@ models
 ## Step 2: Define required models and pipeline <a name="define-models"></a>
 Pipelines need to be defined in the configuration file to use them. The same configuration file is used to define served models and served pipelines.
 
-Use the [config.json located here](https://github.com/openvinotoolkit/model_server/blob/main/demos/model_ensemble/python/config.json), the content is as follows:
+Use the [config.json located here](https://github.com/openvinotoolkit/model_server/blob/releases/2023/3/demos/model_ensemble/python/config.json), the content is as follows:
 ```bash
 cat config.json
 {

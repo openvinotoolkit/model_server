@@ -1,13 +1,13 @@
 # Dynamic Batch Size with Automatic Model Reloading{#ovms_docs_dynamic_bs_auto_reload}
 
-*NOTE*: This feature is deprecated. Use [model dynamic shapes instead](https://docs.openvino.ai/2023.2/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model).
+*NOTE*: This feature is deprecated. Use [model dynamic shapes instead](https://docs.openvino.ai/2023.3/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model).
 
 ## Introduction
 This guide shows how to configure a model to accept input data with different batch sizes. In this example, it is done by reloading the model with a new batch size each time a request is received with a batch size different than what is currently set. 
 
 Enabling dynamic batch size via model reload is as simple as setting the `batch_size` parameter to `auto`. To configure and use the dynamic batch size, take advantage of:
 
-- An example client in Python [grpc_predict_resnet.py](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/grpc_predict_resnet.py) that can be used to request inference with the desired batch size.
+- An example client in Python [grpc_predict_resnet.py](https://github.com/openvinotoolkit/model_server/blob/releases/2023/3/client/python/tensorflow-serving-api/samples/grpc_predict_resnet.py) that can be used to request inference with the desired batch size.
 
 - A sample [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md) model.
 

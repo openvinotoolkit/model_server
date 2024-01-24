@@ -12,7 +12,7 @@ cd model_server/demos/image_classification/cpp
 make
 ```
 
->**Note**: In this directory you can only see the code specific to the benchmark client. The code shared with other C++ demos as well as all building utilities are placed in the [common C++ directory](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/cpp).
+>**Note**: In this directory you can only see the code specific to the benchmark client. The code shared with other C++ demos as well as all building utilities are placed in the [common C++ directory](https://github.com/openvinotoolkit/model_server/tree/releases/2023/3/demos/common/cpp).
 
 ## Prepare classification model
 

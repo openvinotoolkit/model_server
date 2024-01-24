@@ -85,7 +85,7 @@ The outputs of this node match inputs of GPT-like models.
 OVMS supports automatic conversion from `U8 2D` format to TensorflowServing/KServe proto.
 
 # Custom node parameters
-Parameters can be defined in pipeline definition in OVMS configuration file. [Read more](https://github.com/openvinotoolkit/model_server/blob/main/docs/custom_node_development.md) about node parameters.
+Parameters can be defined in pipeline definition in OVMS configuration file. [Read more](https://github.com/openvinotoolkit/model_server/blob/releases/2023/3/docs/custom_node_development.md) about node parameters.
 
 ## Parameters for libtokenizer.so
 | Parameter        | Description           | Default  | Required |

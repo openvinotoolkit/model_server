@@ -13,7 +13,7 @@ The API includes following endpoints:
 * <a href="#kfs-model-infer"> Inference API </a>
 * <a href="#kfs-model-stream-infer"> Streaming Inference API </a>
 
-> **NOTE**: Examples of using each of above endpoints can be found in [KServe samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples/README.md).
+> **NOTE**: Examples of using each of above endpoints can be found in [KServe samples](https://github.com/openvinotoolkit/model_server/tree/releases/2023/3/client/python/kserve-api/samples/README.md).
 
 
 ## Server Live API <a name="kfs-server-live"></a>
@@ -57,7 +57,7 @@ Check documentation for more [details](./streaming_endpoints.md).
 
 ## See Also
 
-- [Example client code](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples/README.md) shows how to use GRPC API and REST API.
+- [Example client code](https://github.com/openvinotoolkit/model_server/tree/releases/2023/3/client/python/kserve-api/samples/README.md) shows how to use GRPC API and REST API.
 - [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2)
 - [gRPC](https://grpc.io/)
 
