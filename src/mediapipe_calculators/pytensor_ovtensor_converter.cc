@@ -48,9 +48,13 @@ public:
         RET_CHECK((*(cc->Inputs().GetTags().begin()) == OV_TENSOR_TAG_NAME && *(cc->Outputs().GetTags().begin()) == OVMS_PY_TENSOR_TAG_NAME) || (*(cc->Inputs().GetTags().begin()) == OVMS_PY_TENSOR_TAG_NAME && *(cc->Outputs().GetTags().begin()) == OV_TENSOR_TAG_NAME));
         if (*(cc->Inputs().GetTags().begin()) == OV_TENSOR_TAG_NAME) {
             RET_CHECK(cc->Options<PyTensorOvTensorConverterCalculatorOptions>().tag_to_output_tensor_names().count(OVMS_PY_TENSOR_TAG_NAME) > 0);
+            if (cc->Options<PyTensorOvTensorConverterCalculatorOptions>().tag_to_output_tensor_names().count(OVMS_PY_TENSOR_TAG_NAME) > 1)
+                LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->GetNodeName() << "] tag_to_output_tensor_names map contains some keys that will be ignored";
             cc->Inputs().Tag(OV_TENSOR_TAG_NAME).Set<ov::Tensor>();
             cc->Outputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Set<PyObjectWrapper<py::object>>();
         } else {
+            if (cc->Options<PyTensorOvTensorConverterCalculatorOptions>().tag_to_output_tensor_names().count(OVMS_PY_TENSOR_TAG_NAME) > 0)
+                LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->GetNodeName() << "] tag_to_output_tensor_names map contains some keys that will be ignored";
             cc->Inputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Set<PyObjectWrapper<py::object>>();
             cc->Outputs().Tag(OV_TENSOR_TAG_NAME).Set<ov::Tensor>();
         }
