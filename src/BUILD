@@ -993,7 +993,12 @@ cc_binary(
             ],
             "//src:disable_mediapipe" : [],
         }),
-    data = ["//src/python/binding:pyovms.so"],
+    data = select({
+        "//src:not_disable_python": [
+            "//src/python/binding:pyovms.so",
+        ],
+        "//src:disable_python": []
+    }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
 

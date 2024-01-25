@@ -39,7 +39,7 @@ load("@pip_deps//:requirements.bzl", "all_requirements")
 
 pybind_extension(
     name = "pyovms",
-    srcs = ["ovms_py_tensor_py.cpp",], # TODO consider naming convention if exist
+    srcs = ["ovms_py_tensor.cpp",], # TODO consider naming convention if exist
     deps = ["//src/python:ovmspytensor",],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
