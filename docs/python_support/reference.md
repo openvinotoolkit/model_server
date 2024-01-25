@@ -859,7 +859,7 @@ class OvmsPythonModel:
             if input.name == "labels":
                 self.labels = prepare_new_labels(input)
             else: # the only other name is "image"
-                output = self.model.process(image, self.labels)
+                output = self.model.process(input, self.labels)
                 return [Tensor("result", output)]
  ```
 
