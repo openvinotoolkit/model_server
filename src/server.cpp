@@ -279,10 +279,12 @@ Status Server::startModules(ovms::Config& config) {
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
 #if (PYTHON_DISABLE == 0)
-    it = modules.find(PYTHON_INTERPRETER_MODULE_NAME);
-    if (it != modules.end()) {
-        auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
-        pythonModule->releaseGILFromThisThread();
+    if (config.getServerSettings().withPython) {
+        it = modules.find(PYTHON_INTERPRETER_MODULE_NAME);
+        if (it != modules.end()) {
+            auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
+            pythonModule->releaseGILFromThisThread();
+        }
     }
 #endif
     return status;
