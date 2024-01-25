@@ -51,7 +51,7 @@ py_test(
     name = "test_python_binding",
     srcs = glob(["tests/*.py"]),
     main = "tests/run.py",
-    imports=["python"],
+    imports=["."],
     data = [":pyovms.so"],
     deps = all_requirements
 )
