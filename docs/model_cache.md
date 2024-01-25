@@ -1,7 +1,7 @@
 # Model Cache {#ovms_docs_model_cache}
 
 ## Overview
-The Model Server can leverage a [OpenVINO&trade; model cache functionality](https://docs.openvino.ai/2023.2/openvino_docs_OV_UG_Model_caching_overview.html), to speed up subsequent model loading on a target device. 
+The Model Server can leverage a [OpenVINO&trade; model cache functionality](https://docs.openvino.ai/2023.3/openvino_docs_OV_UG_Model_caching_overview.html), to speed up subsequent model loading on a target device. 
 The cached files make the Model Server initialization usually faster. 
 The boost depends on a model and a target device. The most noticeable improvement will be observed with GPU devices. On other devices, like CPU, it is possible to observe no speed up effect or even slower loading process depending on used model. Test the setup before final deployment.
 

@@ -18,7 +18,7 @@
 mkdir -p mediapipe/mediapipe/modules/hand_landmark/
 mkdir -p ovms
 # copy a text file for hand landmark module
-wget -O mediapipe/mediapipe/modules/hand_landmark/handedness.txt https://raw.githubusercontent.com/openvinotoolkit/mediapipe/v2023.2/mediapipe/modules/hand_landmark/handedness.txt
+wget -O mediapipe/mediapipe/modules/hand_landmark/handedness.txt https://raw.githubusercontent.com/openvinotoolkit/mediapipe/v2023.3/mediapipe/modules/hand_landmark/handedness.txt
 # copy ovms config including a graph definition
 cp config_holistic.json ovms/
 cp iris_tracking.pbtxt ovms/

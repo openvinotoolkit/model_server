@@ -920,7 +920,7 @@ That's why converter calculators exists. They work as adapters between nodes and
 
 #### PyTensorOvTensorConverterCalculator
 
-OpenVINO Model Server comes with a built-in `PyTensorOvTensorConverterCalculator` that provides conversion between [Python Tensor](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#python-tensor) and [OV Tensor](https://docs.openvino.ai/2023.2/classov_1_1Tensor.html).
+OpenVINO Model Server comes with a built-in `PyTensorOvTensorConverterCalculator` that provides conversion between [Python Tensor](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#python-tensor) and [OV Tensor](https://docs.openvino.ai/2023.3/api/c_cpp_api/classov_1_1_tensor.html).
 
 Currently `PyTensorOvTensorConverterCalculator` works with only one input and one output. 
 - The stream that expects Python Tensor **must** have tag `OVMS_PY_TENSOR` 

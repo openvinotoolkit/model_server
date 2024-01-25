@@ -11,7 +11,7 @@ cd model_server/demos/image_classification/go
 
 ## Get the model
 
-To run end to end flow and get correct results, please download `resnet-50-tf` model and convert it to IR format by following [instructions available on the OpenVINO Model Zoo page](https://docs.openvino.ai/2023.2/omz_models_model_resnet_50_tf.html)
+To run end to end flow and get correct results, please download `resnet-50-tf` model and convert it to IR format by following [instructions available on the OpenVINO Model Zoo page](https://docs.openvino.ai/2023.3/omz_models_model_resnet_50_tf.html)
 
 Place converted model files (XML and BIN) under the following path: `<PATH_TO_MODELS>/resnet-50-tf/1`
 
