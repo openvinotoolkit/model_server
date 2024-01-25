@@ -41,6 +41,7 @@
 #include "../dags/node_library.hpp"
 #include "../execution_context.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
