@@ -316,7 +316,9 @@ void Server::shutdownModules() {
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
 #if (PYTHON_DISABLE == 0)
-    ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
+    if (ovms::Config::instance().getServerSettings().withPython) {
+        ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
+    }
 #endif
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
