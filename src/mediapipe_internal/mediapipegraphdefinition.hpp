@@ -47,11 +47,10 @@ class MetricConfig;
 class MetricRegistry;
 class ModelManager;
 class MediapipeGraphExecutor;
-class PythonNodeResources;
 class Status;
 class PythonBackend;
-
-typedef std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>> PythonNodeResourcesMap;
+class PythonNodeResources;
+using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -76,9 +75,6 @@ public:
     const MediapipeGraphConfig& getMediapipeGraphConfig() const { return this->mgconfig; }
 
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
-
-    static std::string getStreamName(const std::string& streamFullName);
-    static std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName);
 
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);

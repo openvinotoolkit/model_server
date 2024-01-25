@@ -247,7 +247,8 @@ COPY external /ovms/external/
 COPY third_party /ovms/third_party/
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
-COPY src/bindings/python/tests/requirements.txt /ovms/src/bindings/python/tests/requirements.txt
+COPY src/python/binding/BUILD /ovms/src/python/binding/BUILD
+COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/requirements.txt
 
 # Set up Bazel
 ENV BAZEL_VERSION 6.0.0
@@ -301,7 +302,7 @@ RUN make
 RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino/python/openvino-2023.3.dist-info && \
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2023.3' > /opt/intel/openvino/python/openvino-2023.3.dist-info/METADATA
-ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src
+ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 WORKDIR /ovms
 

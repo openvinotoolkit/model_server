@@ -17,7 +17,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -35,7 +34,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "azurefilesystem.hpp"
 #include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderconfig.hpp"
@@ -50,8 +48,7 @@
 #include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
 #include "filesystem.hpp"
-#include "gcsfilesystem.hpp"
-#include "localfilesystem.hpp"
+#include "filesystemfactory.hpp"
 #include "logging.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipefactory.hpp"
@@ -61,7 +58,6 @@
 #include "metric_registry.hpp"
 #include "modelinstance.hpp"  // for logging
 #include "ov_utils.hpp"
-#include "s3filesystem.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
 
@@ -1277,21 +1273,7 @@ std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::
 }
 
 std::shared_ptr<FileSystem> ModelManager::getFilesystem(const std::string& basePath) {
-    if (basePath.rfind(FileSystem::S3_URL_PREFIX, 0) == 0) {
-        Aws::SDKOptions options;
-        Aws::InitAPI(options);
-        return std::make_shared<S3FileSystem>(options, basePath);
-    }
-    if (basePath.rfind(FileSystem::GCS_URL_PREFIX, 0) == 0) {
-        return std::make_shared<ovms::GCSFileSystem>();
-    }
-    if (basePath.rfind(FileSystem::AZURE_URL_FILE_PREFIX, 0) == 0) {
-        return std::make_shared<ovms::AzureFileSystem>();
-    }
-    if (basePath.rfind(FileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
-        return std::make_shared<ovms::AzureFileSystem>();
-    }
-    return std::make_shared<LocalFileSystem>();
+    return ovms::getFilesystem(basePath);
 }
 
 const std::string ModelManager::getFullPath(const std::string& pathToCheck) const {

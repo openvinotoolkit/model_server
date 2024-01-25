@@ -19,7 +19,7 @@
 #include <gtest/gtest.h>
 #include <pybind11/pybind11.h>
 
-#include "../../python/ovms_py_tensor.hpp"
+#include "bindings/python/ovms_py_tensor.hpp"
 
 using namespace ovms;
 

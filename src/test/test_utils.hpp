@@ -914,6 +914,7 @@ public:
 };
 
 std::shared_ptr<const ovms::TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const ovms::TensorInfo> src, ovms::Precision precision);
+
 #if (MEDIAPIPE_DISABLE == 0)
 class DummyMediapipeGraphDefinition : public ovms::MediapipeGraphDefinition {
 public:

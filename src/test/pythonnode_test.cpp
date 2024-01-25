@@ -37,15 +37,14 @@
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
 #include "../precision.hpp"
+#include "../python/pythoninterpretermodule.hpp"
 #include "../python/pythonnoderesources.hpp"
-#include "../pythoninterpretermodule.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
-#include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -54,7 +53,6 @@
 
 #include "opencv2/opencv.hpp"
 #include "python/python_backend.hpp"
-#include "pythoninterpretermodule.hpp"
 #include "test_utils.hpp"
 
 namespace py = pybind11;
@@ -871,7 +869,7 @@ public:
         tensor.numElements = numElements;
         tensor.size = numElements * sizeof(T);
         tensor.shape = std::vector<py::ssize_t>{1, numElements};
-        getPythonBackend()->createOvmsPyTensor(tensor.name, (void*)tensor.data, tensor.shape, tensor.datatype, tensor.size, tensor.pyTensor);
+        EXPECT_TRUE(getPythonBackend()->createOvmsPyTensor(tensor.name, (void*)tensor.data, tensor.shape, tensor.datatype, tensor.size, tensor.pyTensor));
         return tensor;
     }
 

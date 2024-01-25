@@ -269,7 +269,8 @@ COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
-COPY src/bindings/python/tests/requirements.txt /ovms/src/bindings/python/tests/requirements.txt
+COPY src/python/binding/BUILD /ovms/src/python/binding/BUILD
+COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/requirements.txt
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/
 
@@ -289,7 +290,7 @@ COPY src/ /ovms/src/
 
 # run python testes on a version from os not TFS
 ARG RUN_TESTS=1
-RUN if [ "$RUN_TESTS" == "1" ] ; then bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:test_python_binding; fi ;
+RUN if [ "$RUN_TESTS" == "1" ] ; then bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src/python/binding:test_python_binding; fi ;
 
 # Python <3.10 needed to build TFS in current version
 RUN if [ "$BASE_IMAGE" == "ubuntu:22.04" ] ; then \
@@ -330,7 +331,7 @@ ARG PROJECT_VERSION="2023.3"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 ARG minitrace_flags
-ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src
+ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp" && \
     bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" && \
@@ -346,7 +347,7 @@ RUN ./rununittest.sh
 
 # C api shared library
 # hadolint ignore=DL3059
-ARG CAPI_FLAGS=--strip=always --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1
+ARG CAPI_FLAGS=--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1
 RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
 
 ARG FUZZER_BUILD=0

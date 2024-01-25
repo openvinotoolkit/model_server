@@ -227,7 +227,7 @@ load("@rules_python//python:pip.bzl", "pip_parse")
 
 pip_parse(
     name = "pip_deps",
-    requirements_lock = "//src:bindings/python/tests/requirements.txt",
+    requirements_lock = "//src/python/binding:tests/requirements.txt",
 )
 
 load("@pip_deps//:requirements.bzl", "install_deps")
@@ -252,15 +252,6 @@ cc_library(
 )
 """,
 )
-
-#load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
-#tensorflow_http_archive(
-#    name = "org_tensorflow",
-#    sha256 = "fd687f8e26833cb917ae0bd8e434c9bd30c92042361c8ae69679983d3c66a440",
-#    git_commit = "15198b1818bd2bf1b5b55bf5b02bf42398d222fc",
-#    patch = "tf.patch",
-#    repo_mapping = {"@curl" : "@curl"}
-#)
 
 # TensorFlow repo should always go after the other external dependencies.
 # TF on 2023-06-13.

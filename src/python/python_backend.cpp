@@ -66,7 +66,11 @@ bool PythonBackend::createOvmsPyTensor(const std::string& name, void* ptr, const
     } catch (std::exception& e) {
         SPDLOG_DEBUG("PythonBackend::createOvmsPyTensor - Error: {}", e.what());
         return false;
+    } catch (...) {
+        SPDLOG_DEBUG("PythonBackend::createOvmsPyTensor - Unknown Error");
+        return false;
     }
+    return false;
 }
 
 void PythonBackend::validateOvmsPyTensor(const py::object& object) const {

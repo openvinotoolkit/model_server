@@ -58,9 +58,9 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "../python/ovms_py_tensor.hpp"
 #include "../python/python_backend.hpp"
 #include "../python/pythonnoderesources.hpp"
+#include "src/python/ovms_py_tensor.hpp"
 namespace py = pybind11;
 #endif
 

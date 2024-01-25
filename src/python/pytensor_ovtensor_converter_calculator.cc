@@ -17,8 +17,6 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../precision.hpp"
-#include "../python/ovms_py_tensor.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
@@ -26,8 +24,10 @@
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
 
-#include "../python/python_backend.hpp"
-#include "src/mediapipe_calculators/pytensor_ovtensor_converter.pb.h"
+#include "../precision.hpp"
+#include "python_backend.hpp"
+#include "src/python/ovms_py_tensor.hpp"
+#include "src/python/pytensor_ovtensor_converter_calculator.pb.h"
 
 namespace py = pybind11;
 using namespace py::literals;

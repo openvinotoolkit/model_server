@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "../../python/ovms_py_tensor.hpp"
+#include "src/python/ovms_py_tensor.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
