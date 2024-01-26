@@ -273,6 +273,9 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         serverSettings->logLevel = result->operator[]("log_level").as<std::string>();
     if (result->count("log_path"))
         serverSettings->logPath = result->operator[]("log_path").as<std::string>();
+    #if (PYTHON_DISABLE == 0)
+        serverSettings->withPython = true;
+    #endif
 
 #ifdef MTR_ENABLED
     if (result->count("trace_path"))

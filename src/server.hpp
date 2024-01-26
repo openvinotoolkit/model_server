@@ -42,7 +42,7 @@ protected:
 public:
     static Server& instance();
     int start(int argc, char** argv);
-    Status start(ServerSettingsImpl*, ModelsSettingsImpl*, bool withPython = true);
+    Status start(ServerSettingsImpl*, ModelsSettingsImpl*);
     ModuleState getModuleState(const std::string& name) const;
     const Module* getModule(const std::string& name) const;
     bool isReady() const;
@@ -50,8 +50,7 @@ public:
 
     void setShutdownRequest(int i);
     virtual ~Server();
-    // TODO: Include withPython in ovms::Config
-    Status startModules(ovms::Config& config, bool withPython = true);
+    Status startModules(ovms::Config& config);
     void shutdownModules();
 
 private:

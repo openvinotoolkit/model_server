@@ -231,7 +231,7 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         }                                                                                             \
     }
 
-Status Server::startModules(ovms::Config& config, bool withPython) {
+Status Server::startModules(ovms::Config& config) {
     // The order of starting modules is slightly different from inserting modules
     // due to dependency of modules on each other during runtime
     // To avoid unnecessary runtime calls in eg. prediction we have different order
@@ -246,7 +246,7 @@ Status Server::startModules(ovms::Config& config, bool withPython) {
     bool inserted = false;
     auto it = modules.end();
 #if (PYTHON_DISABLE == 0)
-    if (withPython) {
+    if (config.getServerSettings().withPython) {
         INSERT_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
         START_MODULE(it);
     }
@@ -272,10 +272,12 @@ Status Server::startModules(ovms::Config& config, bool withPython) {
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
 #if (PYTHON_DISABLE == 0)
-    it = modules.find(PYTHON_INTERPRETER_MODULE_NAME);
-    if (it != modules.end()) {
-        auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
-        pythonModule->releaseGILFromThisThread();
+    if (config.getServerSettings().withPython) {
+        it = modules.find(PYTHON_INTERPRETER_MODULE_NAME);
+        if (it != modules.end()) {
+            auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
+            pythonModule->releaseGILFromThisThread();
+        }
     }
 #endif
     return status;
@@ -307,7 +309,9 @@ void Server::shutdownModules() {
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
 #if (PYTHON_DISABLE == 0)
-    ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
+    if (ovms::Config::instance().getServerSettings().withPython) {
+        ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
+    }
 #endif
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
@@ -347,7 +351,7 @@ int Server::start(int argc, char** argv) {
 }
 
 // C-API Start
-Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings, bool withPython) {
+Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     try {
         std::unique_lock lock{this->startMtx, std::defer_lock};
         auto locked = lock.try_lock();
@@ -364,7 +368,7 @@ Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* mod
             return StatusCode::OPTIONS_USAGE_ERROR;
         configure_logger(config.logLevel(), config.logPath());
         logConfig(config);
-        return this->startModules(config, withPython);
+        return this->startModules(config);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
         return Status(StatusCode::INTERNAL_ERROR, e.what());

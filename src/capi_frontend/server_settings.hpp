@@ -42,6 +42,7 @@ struct ServerSettingsImpl {
     uint32_t sequenceCleanerPollWaitMinutes = 5;
     uint32_t resourcesCleanerPollWaitSeconds = 1;
     std::string cacheDir;
+    bool withPython = false;
 };
 
 struct ModelsSettingsImpl {
