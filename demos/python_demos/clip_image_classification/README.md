@@ -15,7 +15,7 @@ The picture below shows the execution flow in the graph.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image RUN_TESTS=0
+make python_image
 ```
 
 ## Install client requirements
