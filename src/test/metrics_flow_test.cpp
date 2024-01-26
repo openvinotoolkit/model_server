@@ -125,6 +125,18 @@ protected:
 
     std::string prepareConfigContent();
 
+    void unloadAllModels() {
+        std::string content = R"(
+            {
+                "model_config_list": [],
+                "pipeline_config_list": []
+            }
+        )";
+        std::string fileToReload = this->directoryPath + "/config.json";
+        createConfigFileWithContent(content, this->directoryPath + "/config.json");
+        ASSERT_EQ(server.getManager().loadConfig(fileToReload), StatusCode::OK);
+    }
+
     void SetUp() override {
         TestWithTempDir::SetUp();
         char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080"};  // Workaround to have rest_port parsed in order to enable metrics
@@ -507,6 +519,27 @@ TEST_F(MetricFlowTest, RestModelInfer) {
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
+}
+
+TEST_F(MetricFlowTest, RestModelInferOnUnloadedModel) {
+    this->unloadAllModels();
+
+    HttpRestApiHandler handler(server, 0);
+    HttpRequestComponents components;
+
+    const int numberOfRequests = 5;
+
+    for (int i = 0; i < numberOfRequests; i++) {
+        components.model_name = modelName;
+        components.model_version = 1;  // This is required to ensure we request specific version which is unloaded
+        std::string request = R"({"inputs":[{"name":"b","shape":[1,10],"datatype":"FP32","data":[1,2,3,4,5,6,7,8,9,10]}], "parameters":{"binary_data_output":true}})";
+        std::string response;
+        std::optional<int> inferenceHeaderContentLength;
+        ASSERT_EQ(handler.processInferKFSRequest(components, response, request, inferenceHeaderContentLength), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+    }
+
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelInfer", "KServe", 0);
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "REST", "ModelInfer", "KServe", numberOfRequests);
 }
 
 TEST_F(MetricFlowTest, RestModelMetadata) {
