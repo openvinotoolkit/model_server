@@ -39,7 +39,17 @@ In-case of problems, see <a href="#debug">Debugging</a>.
    ```
    make docker_build DLDT_PACKAGE_URL=<URL>
    ```
+
    > **Note**: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download)
+
+   `docker_build` target by default builds multiple docker images:
+   - `openvino/model_server:latest` - smallest release image containing only necessary files to run model server on CPU
+   - `openvino/model_server:latest-gpu` - release image containing support for Intel GPU and CPU
+   - `openvino/model_server:latest-nginx-mtls` - release image containing exemplary NGINX MTLS configuration
+   - `openvino/model_server-build:latest` - image with builder environment containing all the tools to build OVMS
+
+   > **Note**: docker_build target accepts the same set of parameters as release_image target described here: [build_from_source.md](./build_from_source.md)
+
 2. Mount the source code in the Docker container :
 	```bash
 	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest 

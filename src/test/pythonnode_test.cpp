@@ -37,15 +37,14 @@
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
 #include "../precision.hpp"
+#include "../python/pythoninterpretermodule.hpp"
 #include "../python/pythonnoderesources.hpp"
-#include "../pythoninterpretermodule.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
-#include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -54,7 +53,6 @@
 
 #include "opencv2/opencv.hpp"
 #include "python/python_backend.hpp"
-#include "pythoninterpretermodule.hpp"
 #include "test_utils.hpp"
 
 namespace py = pybind11;
@@ -71,7 +69,7 @@ It's launching along with the server and even though most tests will not use the
 */
 std::unique_ptr<std::thread> serverThread;
 
-class PythonFlowTest : public ::testing::TestWithParam<std::pair<std::string, std::string>> {
+class PythonFlowTest : public ::testing::Test {
 protected:
     ovms::ExecutionContext defaultExecutionContext{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::Predict};
 
@@ -129,6 +127,30 @@ TEST_F(PythonFlowTest, FinalizationPass) {
     ASSERT_NE(graphDefinition, nullptr);
     EXPECT_TRUE(graphDefinition->getStatus().isAvailable());
     ASSERT_TRUE(std::filesystem::exists(path));
+}
+
+TEST_F(PythonFlowTest, ExecutorWithEmptyOptions) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 TEST_F(PythonFlowTest, PythonNodeFileDoesNotExist) {
@@ -847,7 +869,7 @@ public:
         tensor.numElements = numElements;
         tensor.size = numElements * sizeof(T);
         tensor.shape = std::vector<py::ssize_t>{1, numElements};
-        getPythonBackend()->createOvmsPyTensor(tensor.name, (void*)tensor.data, tensor.shape, tensor.datatype, tensor.size, tensor.pyTensor);
+        EXPECT_TRUE(getPythonBackend()->createOvmsPyTensor(tensor.name, (void*)tensor.data, tensor.shape, tensor.datatype, tensor.size, tensor.pyTensor));
         return tensor;
     }
 
@@ -1283,66 +1305,6 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOu
     checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
 }
 
-TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOutsideInt32) {
-    ConstructorEnabledModelManager manager{"", getPythonBackend()};
-    std::string testPbtxt = R"(
-    input_stream: "OVTENSOR:in"
-    output_stream: "OVTENSOR:out"
-        node {
-            name: "pythonNode1"
-            calculator: "PyTensorOvTensorConverterCalculator"
-            input_stream: "OVTENSOR:in"
-            output_stream: "OVMS_PY_TENSOR:output1"
-            node_options: {
-                [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
-                    tag_to_output_tensor_names {
-                    key: "OVMS_PY_TENSOR"
-                    value: "input"
-                    }
-                }
-            }
-        }
-        node {
-            name: "pythonNode2"
-            calculator: "PythonExecutorCalculator"
-            input_side_packet: "PYTHON_NODE_RESOURCES:py"
-            input_stream: "INPUT:output1"
-            output_stream: "OUTPUT:output2"
-            node_options: {
-                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-                    handler_path: "/ovms/src/test/mediapipe/python/scripts/single_io_increment.py"
-                }
-            }
-        }
-        node {
-            name: "pythonNode3"
-            calculator: "PyTensorOvTensorConverterCalculator"
-            input_stream: "OVMS_PY_TENSOR:output2"
-            output_stream: "OVTENSOR:out"
-        }
-    )";
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
-
-    std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
-    ASSERT_NE(pipeline, nullptr);
-
-    KFSRequest req;
-    KFSResponse res;
-
-    const std::vector<int32_t> data{1, 20, 3, -1, 20, 3, 1, 20, 3, -5};
-    req.set_model_name("mediaDummy");
-    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::I32}, data, false);
-
-    ServableMetricReporter* smr{nullptr};
-    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
-
-    checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
-}
-
 TEST_F(PythonFlowTest, PythonCalculatorTestConvertersUnsupportedTypeInPythonTensor) {
     ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(
@@ -1607,7 +1569,101 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInTwoOutTwoParallelExecutorsWit
     checkDummyResponse("out2", data, req, res, 2 /* expect +2 */, 1, "mediaDummy", 2);
 }
 
-TEST_F(PythonFlowTest, ConverterWithMissingTagMap) {
+TEST_F(PythonFlowTest, ConverterWithInvalidInputOutputTags) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "INVALID1:in"
+            output_stream: "INVALID2:out"
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST_F(PythonFlowTest, ConverterWithOVTENSORInputAndOutput) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVTENSOR:in"
+            output_stream: "OVTENSOR:out"
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST_F(PythonFlowTest, ConverterWithOVMS_PY_TENSORInputAndOutput) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVMS_PY_TENSOR:in"
+            output_stream: "OVMS_PY_TENSOR:out"
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST_F(PythonFlowTest, ConverterWithMissingOptions) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVTENSOR:in"
+            output_stream: "OVMS_PY_TENSOR:out"
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST_F(PythonFlowTest, ConverterWithEmptyOptions) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVTENSOR:in"
+            output_stream: "OVMS_PY_TENSOR:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+                }
+            }
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST_F(PythonFlowTest, ConverterWithEmptyTagMap) {
     ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(
     input_stream: "OVTENSOR:in"
@@ -1628,6 +1684,62 @@ TEST_F(PythonFlowTest, ConverterWithMissingTagMap) {
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST_F(PythonFlowTest, ConverterWithInvalidTagInMap) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVTENSOR:in"
+            output_stream: "OVMS_PY_TENSOR:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+                    tag_to_output_tensor_names {
+                        key: "INVALID"
+                        value: "TAG"
+                    }
+                }
+            }
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST_F(PythonFlowTest, ConverterWithValidAndInvalidTagInMap) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVTENSOR:in"
+            output_stream: "OVMS_PY_TENSOR:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+                    tag_to_output_tensor_names {
+                        key: "INVALID"
+                        value: "TAG"
+                    }
+                    tag_to_output_tensor_names {
+                        key: "OVMS_PY_TENSOR"
+                        value: "input"
+                    }
+                }
+            }
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
@@ -1814,6 +1926,100 @@ TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
         } catch (const pybind11::error_already_set& e) {
             ASSERT_EQ(1, 0) << e.what();
         }
+    }
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_OvTensorDimensionSizeExceeded) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVTENSOR:input"
+        output_stream: "OVMS_PY_TENSOR:output"
+        node_options: {
+                [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+                    tag_to_output_tensor_names {
+                        key: "OVMS_PY_TENSOR"
+                        value: "input"
+                    }
+                }
+            }
+    )";
+
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    void* ptr = (void*)1;  // Pointer != NULL allows creating fake ov::Tensor
+    int64_t maxInt64 = std::numeric_limits<int64_t>::max();
+    uint64_t badDimension = static_cast<uint64_t>(maxInt64) + 1;
+
+    std::unique_ptr<ov::Tensor> tensor = std::make_unique<ov::Tensor>(ov::element::u8, ov::Shape{1, badDimension}, ptr);
+    runner.MutableInputs()->Tag("OVTENSOR").packets.push_back(mediapipe::Adopt<ov::Tensor>(tensor.release()).At(mediapipe::Timestamp(0)));
+
+    py::gil_scoped_acquire acquire;
+    try {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.code() << " " << status.message();
+    } catch (const pybind11::error_already_set& e) {
+        ASSERT_EQ(1, 0) << e.what();
+    }
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_PyTensorDimensionNegative) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVMS_PY_TENSOR:input"
+        output_stream: "OVTENSOR:output"
+    )";
+
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    py::gil_scoped_acquire acquire;
+    try {
+        std::string datatype = "FP32";
+        std::string name = "python_result";
+        int numElements = 3;
+        float input[] = {1.0, 2.0, 3.0};
+        py::ssize_t badDimension = -numElements;
+        std::unique_ptr<PyObjectWrapper<py::object>> pyTensor;
+        getPythonBackend()->createOvmsPyTensor(name, (void*)input, std::vector<py::ssize_t>{1, badDimension}, datatype, numElements * sizeof(float), pyTensor);
+
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(pyTensor.release()).At(mediapipe::Timestamp(0)));
+
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.code() << " " << status.message();
+    } catch (const pybind11::error_already_set& e) {
+        ASSERT_EQ(1, 0) << e.what();
+    }
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_PyTensorBufferMismatch) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVMS_PY_TENSOR:input"
+        output_stream: "OVTENSOR:output"
+    )";
+
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    py::gil_scoped_acquire acquire;
+    try {
+        std::string datatype = "FP32";
+        std::string name = "python_result";
+        int numElements = 3;
+        float input[] = {1.0, 2.0, 3.0};
+        std::unique_ptr<PyObjectWrapper<py::object>> pyTensor;
+        getPythonBackend()->createOvmsPyTensor(name, (void*)input, std::vector<py::ssize_t>{1, numElements}, datatype, numElements * sizeof(float) * 2 /*too large*/, pyTensor);
+
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(pyTensor.release()).At(mediapipe::Timestamp(0)));
+
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.code() << " " << status.message();
+    } catch (const pybind11::error_already_set& e) {
+        ASSERT_EQ(1, 0) << e.what();
     }
 }
 
@@ -2467,4 +2673,187 @@ TEST_F(PythonFlowTest, Positive_NodeFiresProcessWithoutAllInputs) {
     ServableMetricReporter* smr{nullptr};
     ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
     checkDummyResponse("output", data, req, res, 2 /* expect +2 */, 1, "mediaDummy");
+}
+
+void setUpConverterPrecisionTest(std::shared_ptr<MediapipeGraphExecutor>& pipeline) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVTENSOR:out"
+        node {
+            name: "pythonNode1"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVTENSOR:in"
+            output_stream: "OVMS_PY_TENSOR:output1"
+            node_options: {
+                [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+                    tag_to_output_tensor_names {
+                    key: "OVMS_PY_TENSOR"
+                    value: "output1"
+                    }
+                }
+            }
+        }
+        node {
+            name: "pythonNode2"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT:output1"
+            output_stream: "OUTPUT:output2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/single_io_increment.py"
+                }
+            }
+        }
+        node {
+            name: "pythonNode3"
+            calculator: "PyTensorOvTensorConverterCalculator"
+            input_stream: "OVMS_PY_TENSOR:output2"
+            output_stream: "OVTENSOR:out"
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+}
+
+TEST_F(PythonFlowTest, PythonCalculatorTest_INT8) {
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setUpConverterPrecisionTest(pipeline);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<int8_t> data{1, 20, 3, -1, 20, 3, 1, 20, 3, -5};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::I8}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+}
+
+TEST_F(PythonFlowTest, PythonCalculatorTest_UINT8) {
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setUpConverterPrecisionTest(pipeline);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<uint8_t> data{1, 20, 3, 1, 20, 3, 1, 20, 3, 5};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::U8}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+}
+
+TEST_F(PythonFlowTest, PythonCalculatorTest_INT16) {
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setUpConverterPrecisionTest(pipeline);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<int16_t> data{1, 20, 3, -1, 20, 3, 1, 20, 3, -5};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::I16}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+}
+
+TEST_F(PythonFlowTest, PythonCalculatorTest_UINT16) {
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setUpConverterPrecisionTest(pipeline);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<uint16_t> data{1, 20, 3, 1, 20, 3, 1, 20, 3, 5};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::U16}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+}
+
+TEST_F(PythonFlowTest, PythonCalculatorTest_INT32) {
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setUpConverterPrecisionTest(pipeline);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<int32_t> data{1, 20, 3, -1, 20, 3, 1, 20, 3, -5};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::I32}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+}
+
+TEST_F(PythonFlowTest, PythonCalculatorTest_INT64) {
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setUpConverterPrecisionTest(pipeline);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<int64_t> data{1, 20, 3, -1, 20, 3, 1, 20, 3, -5};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::I64}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+}
+
+TEST_F(PythonFlowTest, PythonCalculatorTest_FP32) {
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setUpConverterPrecisionTest(pipeline);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<float> data{1, 20, 3, -1, 20, 3, 1, 20, 3, -5};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
+}
+
+TEST_F(PythonFlowTest, PythonCalculatorTest_FP64) {
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    setUpConverterPrecisionTest(pipeline);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<double> data{1, 20, 3, -1, 20, 3, 1, 20, 3, -5};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "in", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP64}, data, false);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    checkDummyResponse("out", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
 }

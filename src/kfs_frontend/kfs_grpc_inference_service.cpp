@@ -309,7 +309,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
     }
     if (!status.ok()) {
         if (modelInstance) {
-            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().requestFailGrpcModelInfer);
+            INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
         }
         SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
         return status;

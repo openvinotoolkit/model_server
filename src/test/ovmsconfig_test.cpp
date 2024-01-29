@@ -299,6 +299,20 @@ TEST_F(OvmsConfigDeathTest, negativeUint64Max) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "rest_port number out of range from 0 to 65535");
 }
 
+TEST_F(OvmsConfigDeathTest, negativeMissingDashes) {
+    char* n_argv[] = {
+        "ovms",
+        "--config_path",
+        "/config.json",
+        "--port",
+        "44",
+        "grpc_workers",
+        "2",
+    };
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(EX_USAGE), "error parsing options - unmatched arguments: grpc_workers, 2, ");
+}
+
 class OvmsParamsTest : public ::testing::Test {
 };
 

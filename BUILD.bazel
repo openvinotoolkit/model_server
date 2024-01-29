@@ -76,7 +76,6 @@ cc_library(
         "@linux_openvino//:openvino",
         "@linux_opencv//:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
-        "@oneTBB//:tbb",
         ] + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework:calculator_framework",

@@ -752,6 +752,182 @@ TEST(SchemaTest, parseModelMappingWhenConfigIsNotJson) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 
+using SchemaTestCase_t = std::tuple<std::string, std::string, std::string>;
+using testing::HasSubstr;
+enum SchemaTestCasePart {
+    NAME = 0,
+    CONFIG = 1,
+    ERROR_MSG = 2
+};
+
+class ConfigSchema : public ::testing::TestWithParam<SchemaTestCase_t> {};
+TEST_P(ConfigSchema, DoubledFields) {
+    if (std::get<SchemaTestCasePart::ERROR_MSG>(GetParam()).find("SKIPPED") != std::string::npos)
+        GTEST_SKIP();
+    const char* invalidConfig = std::get<SchemaTestCasePart::CONFIG>(GetParam()).c_str();
+    rapidjson::Document invalidConfigDocument;
+    invalidConfigDocument.Parse(invalidConfig);
+    auto result = ovms::validateJsonAgainstSchema(invalidConfigDocument, ovms::MODELS_CONFIG_SCHEMA.c_str(), true);
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID) << std::get<SchemaTestCasePart::CONFIG>(GetParam()) << "\n"
+                                                      << result.string();
+    EXPECT_THAT(result.string(), testing::HasSubstr(std::get<SchemaTestCasePart::ERROR_MSG>(GetParam())));
+}
+
+const size_t CONFIGS = 9;
+std::array<SchemaTestCase_t, CONFIGS> DOUBLED_MODEL_CONFIG_KEYS_CONFIGS = {
+    std::tuple("Doubled_ModelConfig", R"(
+      {
+          "model_config_list": [
+              {
+                  "config": {
+                      "name": "dummy",
+                      "base_path": "dummy_path"
+                  },
+                  "config": {
+                      "name": "dummy2",
+                      "base_path": "dummy_path"
+                  }
+              }
+          ]
+  })",
+        "#/definitions/model_config. Keyword:maxProperties Key: #/model_config_list/0"),
+    std::tuple("Doubled_ModelConfigList", R"(
+      {
+          "model_config_list": [],
+          "model_config_list": [
+              {
+                  "config": {
+                      "name": "dummy",
+                      "base_path": "dummy_path"
+                  }
+              }
+          ]
+  })",
+        "SKIPPED"),
+    std::tuple("Doubled_CustomLoaderConfig", R"(
+      {
+          "model_config_list": [],
+          "custom_loader_config_list": [
+             {
+                 "config":{ "loader_name": "A", "library_path":"B"},
+                 "config":{ "loader_name": "A", "library_path":"B"}
+             }
+          ]
+  })",
+        "#/definitions/custom_loader_config. Keyword:maxProperties Key: #/custom_loader_config_list/0"),
+    std::tuple("Doubled_ModelConfigVersionPolicyAll", R"(
+      {
+          "model_config_list": [
+              {
+                  "config": {
+                      "name": "dummy",
+                      "base_path": "dummy_path",
+                      "model_version_policy": {
+                          "all": {},
+                          "all": {}
+                      }
+                  }
+              }
+          ]
+  })",
+        "#/definitions/model_version_policy"),
+    std::tuple("Doubled_ModelConfigVersionPolicySpecific", R"(
+      {
+          "model_config_list": [
+              {
+                  "config": {
+                      "name": "dummy",
+                      "base_path": "dummy_path",
+                      "model_version_policy": {
+                          "specific": {
+                              "versions": [1, 2]
+                          },
+                          "specific": {
+                              "versions": [1, 3]
+                          }
+                      }
+                  }
+              }
+          ]
+  })",
+        "#/definitions/model_version_policy"),
+    std::tuple("Doubled_ModelConfigVersionPolicySpecificVersions", R"(
+      {
+          "model_config_list": [
+              {
+                  "config": {
+                      "name": "dummy",
+                      "base_path": "dummy_path",
+                      "model_version_policy": {
+                          "specific": {
+                              "versions": [1, 2],
+                              "versions": [1, 2]
+                          }
+                      }
+                  }
+              }
+          ]
+  })",
+        "#/definitions/model_version_policy"),
+    std::tuple("Doubled_ModelConfigVersionPolicyLatest", R"(
+      {
+          "model_config_list": [
+              {
+                  "config": {
+                      "name": "dummy",
+                      "base_path": "dummy_path",
+                      "model_version_policy": {
+                          "latest": {
+                              "num_versions":1
+                          },
+                          "latest": {
+                              "num_versions":1
+                          }
+                      }
+                  }
+              }
+          ]
+  })",
+        "#/definitions/model_version_policy"),
+    std::tuple("Doubled_ModelConfigVersionPolicyLatestNumVersions", R"(
+      {
+          "model_config_list": [
+              {
+                  "config": {
+                      "name": "dummy",
+                      "base_path": "dummy_path",
+                      "model_version_policy": {
+                          "latest": {
+                              "num_versions":1,
+                              "num_versions":2
+                          }
+                      }
+                  }
+              }
+          ]
+  })",
+        "#/definitions/model_version_policy"),
+    std::tuple("Doubled_MonitoringMetrics", R"(
+      {
+          "model_config_list": [],
+          "monitoring": {
+              "metrics": {
+                  "enable" : true
+              },
+              "metrics": {
+                  "enable" : true
+              }
+          }
+  })",
+        "#/properties/monitoring. Keyword:maxProperties Key: #/monitoring")};
+
+INSTANTIATE_TEST_SUITE_P(Doubled,
+    ConfigSchema,
+    ::testing::ValuesIn(DOUBLED_MODEL_CONFIG_KEYS_CONFIGS),
+    [](const ::testing::TestParamInfo<ConfigSchema::ParamType>& info) {
+        return std::get<SchemaTestCasePart::NAME>(info.param);
+    });
+
 TEST(SchemaTest, ModelConfigNireqNegative) {
     const char* modelConfigNireqNegative = R"(
     {

@@ -21,6 +21,7 @@
 #include <unordered_map>
 
 #include "module.hpp"
+#include "module_names.hpp"
 
 namespace ovms {
 class Config;
@@ -28,13 +29,6 @@ class Status;
 
 class ServerSettingsImpl;
 class ModelsSettingsImpl;
-
-extern const std::string PROFILER_MODULE_NAME;
-extern const std::string GRPC_SERVER_MODULE_NAME;
-extern const std::string HTTP_SERVER_MODULE_NAME;
-extern const std::string SERVABLE_MANAGER_MODULE_NAME;
-extern const std::string METRICS_MODULE_NAME;
-extern const std::string PYTHON_INTERPRETER_MODULE_NAME;
 
 class Server {
     mutable std::shared_mutex modulesMtx;
@@ -48,7 +42,7 @@ protected:
 public:
     static Server& instance();
     int start(int argc, char** argv);
-    Status start(ServerSettingsImpl*, ModelsSettingsImpl*, bool withPython = true);
+    Status start(ServerSettingsImpl*, ModelsSettingsImpl*);
     ModuleState getModuleState(const std::string& name) const;
     const Module* getModule(const std::string& name) const;
     bool isReady() const;
@@ -56,8 +50,7 @@ public:
 
     void setShutdownRequest(int i);
     virtual ~Server();
-    // TODO: Include withPython in ovms::Config
-    Status startModules(ovms::Config& config, bool withPython = true);
+    Status startModules(ovms::Config& config);
     void shutdownModules();
 
 private:

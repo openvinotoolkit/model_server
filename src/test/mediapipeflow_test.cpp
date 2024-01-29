@@ -39,6 +39,7 @@
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
@@ -119,6 +120,7 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/relative_paths/config_mp_passthrough.json");
     }
 };
+
 #if (PYTHON_DISABLE == 0)
 class MediapipePyTensorOvTensorConverterTest : public MediapipeFlowTest {
 public:
@@ -126,7 +128,6 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_pytensor_ovtensor_converter.json");
     }
 };
-
 class MediapipeOvTensorPyTensorConverterTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -134,6 +135,7 @@ public:
     }
 };
 #endif
+
 class MediapipeTfLiteTensorTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -168,6 +170,7 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
     // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
+
 #if (PYTHON_DISABLE == 0)
 TEST_F(MediapipePyTensorOvTensorConverterTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -239,6 +242,7 @@ TEST_F(MediapipeOvTensorPyTensorConverterTest, Infer) {
         << readableError(expectedOutput, actualOutput, dataLengthToCheck / sizeof(float));
 }
 #endif
+
 TEST_F(MediapipeTFTest, Passthrough) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -1489,6 +1493,33 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
     ASSERT_NE(it, response.outputs().end());
 }
 
+TEST_F(MediapipeFlowTest, InferWithRestrictedParamName) {
+    SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_graph_with_side_packets.json");
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    for (auto restrictedParamName : std::vector<std::string>{"py"}) {
+        ::KFSRequest request;
+        ::KFSResponse response;
+        const std::string modelName = "mediaWithParams";
+        request.Clear();
+        response.Clear();
+        inputs_info_t inputsMeta{
+            {"in_not_used", {{1, 1}, ovms::Precision::I32}}};
+        std::vector<float> requestData{0.};
+        preparePredictRequest(request, inputsMeta, requestData);
+        request.mutable_model_name()->assign(modelName);
+        // here add params
+        const std::string stringParamValue = "abecadlo";
+        const bool boolParamValue = true;
+        const int64_t int64ParamValue = 42;
+        request.mutable_parameters()->operator[]("string_param").set_string_param(stringParamValue);
+        request.mutable_parameters()->operator[]("bool_param").set_bool_param(boolParamValue);
+        request.mutable_parameters()->operator[]("int64_param").set_int64_param(int64ParamValue);
+        request.mutable_parameters()->operator[](restrictedParamName).set_int64_param(int64ParamValue);
+        ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::FAILED_PRECONDITION);
+    }
+}
+
 using testing::ElementsAre;
 
 TEST_F(MediapipeFlowAddTest, AdapterMetadata) {
@@ -2646,22 +2677,22 @@ TEST(MediapipeStreamTypes, Recognition) {
     using ovms::MediapipeGraphDefinition;
     using streamNameTypePair_t = std::pair<std::string, mediapipe_packet_type_enum>;
     // basic tag name matching
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::TFTENSOR), MediapipeGraphDefinition::getStreamNamePair("TFTENSOR:out"));
-    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::OVTENSOR), MediapipeGraphDefinition::getStreamNamePair("OVTENSOR:input"));
-    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::KFS_REQUEST), MediapipeGraphDefinition::getStreamNamePair("REQUEST:input"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), MediapipeGraphDefinition::getStreamNamePair("RESPONSE:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MEDIAPIPE_IMAGE), MediapipeGraphDefinition::getStreamNamePair("IMAGE:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::TFTENSOR), ovms::getStreamNamePair("TFTENSOR:out"));
+    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::OVTENSOR), ovms::getStreamNamePair("OVTENSOR:input"));
+    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::KFS_REQUEST), ovms::getStreamNamePair("REQUEST:input"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), ovms::getStreamNamePair("RESPONSE:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MEDIAPIPE_IMAGE), ovms::getStreamNamePair("IMAGE:out"));
     // string after suffix doesn't matter
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR1:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR_1:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), MediapipeGraphDefinition::getStreamNamePair("RESPONSE_COSTAM:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR1:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR_1:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), ovms::getStreamNamePair("RESPONSE_COSTAM:out"));
     // number as additional part doesn't affect recognized type
-    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR:1:in"));
+    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR:1:in"));
     // negative
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), MediapipeGraphDefinition::getStreamNamePair("TENSO:out"));             // negative - non-matching tag
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), MediapipeGraphDefinition::getStreamNamePair("SOME_STRANGE_TAG:out"));  // negative - non-matching tag
-    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::UNKNOWN), MediapipeGraphDefinition::getStreamNamePair("in"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), ovms::getStreamNamePair("TENSO:out"));             // negative - non-matching tag
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), ovms::getStreamNamePair("SOME_STRANGE_TAG:out"));  // negative - non-matching tag
+    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::UNKNOWN), ovms::getStreamNamePair("in"));
 }
 
 // TEST_F(MediapipeConfig, MediapipeFullRelativePathsSubconfigNegative) {

@@ -13,7 +13,7 @@ This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Li
 - [Docker Engine](https://docs.docker.com/engine/) installed 
 - Intel® Core™ processor (6-13th gen.) or Intel® Xeon® processor (1st to 4th gen.)
 - Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/) 
-- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2023.2/openvino_docs_OV_UG_Working_with_devices.html). Accelerators are tested only on bare-metal Linux hosts.
+- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2023.3/openvino_docs_OV_UG_Working_with_devices.html). Accelerators are tested only on bare-metal Linux hosts.
 
 ### Launch Model Server Container 
 
@@ -100,7 +100,7 @@ or build it yourself:
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build
+make docker_build BASE_OS=ubuntu20
 # Unpack the package
 tar -xzvf dist/ubuntu/ovms.tar.gz
 ```
@@ -126,7 +126,7 @@ or build it yourself:
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build BASE_OS_TAG_UBUNTU=22.04
+make docker_build
 # Unpack the package
 tar -xzvf dist/ubuntu/ovms.tar.gz
 ```
@@ -134,7 +134,7 @@ tar -xzvf dist/ubuntu/ovms.tar.gz
 Install required libraries:
 
 ```{code} sh
-sudo apt update -y && apt install -y libpugixml1v5
+sudo apt update -y && apt install -y libpugixml1v5 libtbb12
 ```
 :::
 :::{tab-item} RHEL 8.7
@@ -180,7 +180,7 @@ Learn more about model server [starting parameters](parameters.md).
 
 > **NOTE**:
 > When serving models on [AI accelerators](accelerators.md), some additional steps may be required to install device drivers and dependencies. 
-> Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/2023.2/openvino_docs_install_guides_configurations_header.html) documentation.
+> Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/2023.3/openvino_docs_install_guides_configurations_header.html) documentation.
 
 
 ## Deploying Model Server in Kubernetes 

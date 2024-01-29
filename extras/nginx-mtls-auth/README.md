@@ -64,7 +64,7 @@ Dockerfile in this directory is building on top of existing OpenVINO Model Serve
 In this image, wrapper script is being executed by container-friendly init system (`dumb-init` was selected as an example). It is responsible for providing compatible command-line interface for Model Server CLI, while transparently exposing only encrypted endpoints.
 When started, it parses command line options and adjusts both NGINX and Model Server execution parameters, then runs both processes and tracks their progress. Model Server process is running as a non-privileged user `ovms`, but initially `root` is being used to perform administrative actions.
 
-GRPC over mTLS is always exposed; REST is exposed when usual `--rest_port` parameter is passed as an command argument to the model server.
+Although `--rest_port` is an optional parameter in regular model server deployment, it is required when running with NGINX mTLS module.  Such setup exposes both gRPC and REST APIs over mTLS.
 
 Wrapper is ensuring that model server is binding to a `loopback` interface on some random unallocated ports internally. NGINX configuration is exposing ports specified by Model Server command line arguments; it's listening on all IPv4 interfaces (`0.0.0.0`).
 

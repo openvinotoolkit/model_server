@@ -227,7 +227,7 @@ load("@rules_python//python:pip.bzl", "pip_parse")
 
 pip_parse(
     name = "pip_deps",
-    requirements_lock = "//src:bindings/python/tests/requirements.txt",
+    requirements_lock = "//src/python/binding:tests/requirements.txt",
 )
 
 load("@pip_deps//:requirements.bzl", "install_deps")
@@ -252,15 +252,6 @@ cc_library(
 )
 """,
 )
-
-#load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
-#tensorflow_http_archive(
-#    name = "org_tensorflow",
-#    sha256 = "fd687f8e26833cb917ae0bd8e434c9bd30c92042361c8ae69679983d3c66a440",
-#    git_commit = "15198b1818bd2bf1b5b55bf5b02bf42398d222fc",
-#    patch = "tf.patch",
-#    repo_mapping = {"@curl" : "@curl"}
-#)
 
 # TensorFlow repo should always go after the other external dependencies.
 # TF on 2023-06-13.
@@ -356,13 +347,20 @@ google_cloud_cpp_common_deps()
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
+http_archive( # 1.60.0
+    name = "com_github_grpc_grpc",
+    urls = [
+        "https://github.com/grpc/grpc/archive/0ef13a7555dbaadd4633399242524129eef5e231.tar.gz",
+    ],
+    strip_prefix = "grpc-0ef13a7555dbaadd4633399242524129eef5e231",
+)
 
 # cxxopts
 http_archive(
     name = "com_github_jarro2783_cxxopts",
-    url = "https://github.com/jarro2783/cxxopts/archive/v2.2.0.zip",
-    sha256 = "f9640c00d9938bedb291a21f9287902a3a8cee38db6910b905f8eba4a6416204",
-    strip_prefix = "cxxopts-2.2.0",
+    url = "https://github.com/jarro2783/cxxopts/archive/v3.1.1.zip",
+    sha256 = "25b644a2bfa9c6704d723be51b026bc02420dfdee1277a49bfe5df3f19b0eaa4",
+    strip_prefix = "cxxopts-3.1.1",
     build_file = "@//third_party/cxxopts:BUILD",
 )
 
@@ -419,14 +417,6 @@ new_git_repository(
     remote = "https:///github.com/openvinotoolkit/model_api/",
     build_file = "@_model-api//:BUILD",
     commit = "03a6cee5d486ee9eabb625e4388e69fe9c50ef20"
-)
-
-git_repository(
-    name = "oneTBB",
-    branch = "v2021.10.0", # need newer version to be compatible with bazel 6.0
-    remote = "https://github.com/oneapi-src/oneTBB/",
-    patch_args = ["-p1"],
-    patches = ["mwaitpkg.patch",]
 )
 
 new_local_repository(

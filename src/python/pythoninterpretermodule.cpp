@@ -20,11 +20,12 @@
 
 #include <pybind11/embed.h>  // everything needed for embedding
 
-#include "config.hpp"
-#include "logging.hpp"
-#include "python/python_backend.hpp"
-#include "server.hpp"
-#include "status.hpp"
+#include "../config.hpp"
+#include "../logging.hpp"
+#include "../module.hpp"
+#include "../module_names.hpp"
+#include "../status.hpp"
+#include "python_backend.hpp"
 
 namespace py = pybind11;
 

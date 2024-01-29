@@ -24,7 +24,7 @@
 #include "modelmanager.hpp"
 #include "server.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "pythoninterpretermodule.hpp"
+#include "python/pythoninterpretermodule.hpp"
 #endif
 
 namespace ovms {

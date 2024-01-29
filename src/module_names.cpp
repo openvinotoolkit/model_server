@@ -1,5 +1,5 @@
 //****************************************************************************
-// Copyright 2023 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,33 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-#include <memory>
-#include <thread>
-
-#include "module.hpp"
-
-namespace pybind11 {
-class gil_scoped_release;
-}
-namespace py = pybind11;
+#include "module_names.hpp"
 
 namespace ovms {
-class Config;
-class PythonBackend;
-
-class PythonInterpreterModule : public Module {
-    PythonBackend* pythonBackend{nullptr};
-    mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
-    std::thread::id threadId;
-
-public:
-    PythonInterpreterModule();
-    ~PythonInterpreterModule();
-    Status start(const ovms::Config& config) override;
-    void shutdown() override;
-    PythonBackend* getPythonBackend() const;
-    void releaseGILFromThisThread() const;
-    void reacquireGILForThisThread() const;
-};
+const std::string PROFILER_MODULE_NAME = "ProfilerModule";
+const std::string GRPC_SERVER_MODULE_NAME = "GRPCServerModule";
+const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
+const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
+const std::string METRICS_MODULE_NAME = "MetricsModule";
+const std::string PYTHON_INTERPRETER_MODULE_NAME = "PythonInterpreterModule";
 }  // namespace ovms

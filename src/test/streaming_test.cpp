@@ -29,7 +29,7 @@
 #include "test_utils.hpp"
 
 #if (PYTHON_DISABLE == 0)
-#include "../pythoninterpretermodule.hpp"
+#include "../python/pythoninterpretermodule.hpp"
 #endif
 
 using namespace ovms;
@@ -579,6 +579,66 @@ node {
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
 
+TEST_F(PythonStreamingTest, Positive_SingleStreamSend1Receive1PythonWithConverters) {
+    const std::string testPbtxt{R"(
+input_stream: "OVTENSOR:in"
+output_stream: "OVTENSOR:out"
+node {
+    name: "pythonNode1"
+    calculator: "PyTensorOvTensorConverterCalculator"
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:input"
+    node_options: {
+        [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+            tag_to_output_tensor_names {
+            key: "OVMS_PY_TENSOR"
+            value: "input"
+            }
+        }
+    }
+}
+node {
+    calculator: "PythonExecutorCalculator"
+    name: "pythonNode2"
+    input_side_packet: "PYTHON_NODE_RESOURCES:py"
+    input_stream: "INPUT:input"
+    output_stream: "OUTPUT:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+            handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment.py"
+        }
+    }
+}
+node {
+    name: "pythonNode3"
+    calculator: "PyTensorOvTensorConverterCalculator"
+    input_stream: "OVMS_PY_TENSOR:output"
+    output_stream: "OVTENSOR:out"
+}
+)"};
+
+    ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
+    ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    this->pythonModule->releaseGILFromThisThread();
+    // Mock only 1 request and disconnect immediately
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Disconnect());
+
+    // Expect 1 response
+    // The PythonExecutorCalculator produces increasing timestamps
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0));
+
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
 TEST_F(PythonStreamingTest, Positive_SingleStreamSend3Receive3Python) {
     const std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR:input"
@@ -618,6 +678,69 @@ node {
         .WillOnce(SendWithTimestamp({{"output", 4.5f}}, 0))
         .WillOnce(SendWithTimestamp({{"output", 8.2f}}, 1))
         .WillOnce(SendWithTimestamp({{"output", 103.4f}}, 2));
+
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+TEST_F(PythonStreamingTest, Positive_SingleStreamSend3Receive3PythonWithConverters) {
+    const std::string testPbtxt{R"(
+input_stream: "OVTENSOR:in"
+output_stream: "OVTENSOR:out"
+node {
+    name: "pythonNode1"
+    calculator: "PyTensorOvTensorConverterCalculator"
+    input_stream: "OVTENSOR:in"
+    output_stream: "OVMS_PY_TENSOR:input"
+    node_options: {
+        [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+            tag_to_output_tensor_names {
+            key: "OVMS_PY_TENSOR"
+            value: "input"
+            }
+        }
+    }
+}
+node {
+    calculator: "PythonExecutorCalculator"
+    name: "pythonNode2"
+    input_side_packet: "PYTHON_NODE_RESOURCES:py"
+    input_stream: "INPUT:input"
+    output_stream: "OUTPUT:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+            handler_path: "/ovms/src/test/mediapipe/python/scripts/symmetric_scalar_increment.py"
+        }
+    }
+}
+node {
+    name: "pythonNode3"
+    calculator: "PyTensorOvTensorConverterCalculator"
+    input_stream: "OVMS_PY_TENSOR:output"
+    output_stream: "OVTENSOR:out"
+}
+)"};
+
+    ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
+    ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    this->pythonModule->releaseGILFromThisThread();
+    // Mock receiving 3 requests and disconnection
+    prepareRequest(this->firstRequest, {{"in", 3.5f}});  // no timestamp specified, server will assign one
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Receive({{"in", 7.2f}}))    // no timestamp specified, server will assign one
+        .WillOnce(Receive({{"in", 102.4f}}))  // no timestamp specified, server will assign one
+        .WillOnce(Disconnect());
+
+    // Expect 3 responses
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0))
+        .WillOnce(SendWithTimestamp({{"out", 8.2f}}, 1))
+        .WillOnce(SendWithTimestamp({{"out", 103.4f}}, 2));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
 }
@@ -1439,6 +1562,35 @@ node {
         .WillOnce(SendWithTimestamp({{"out", 167.4f}}, 2));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+}
+
+TEST_F(StreamingTest, FirstRequestRestrictedParamName) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "AddSidePacketToSingleStreamTestCalculator"
+  input_stream: "in"
+  input_side_packet: "val"
+  output_stream: "out"
+}
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    MediapipeGraphExecutor executor{
+        this->name, this->version, config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, {}, nullptr};
+
+    // Mock receiving the invalid request and disconnection
+    // Request with invalid param py (special pythons ession side packet)
+    prepareRequestWithParam(this->firstRequest, {{"in", 3.5f}}, {"py", 65});
+
+    EXPECT_CALL(this->stream, Read(_)).Times(0);
+    EXPECT_CALL(this->stream, Write(_, _)).Times(0);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
 TEST_F(StreamingTest, FirstRequestMissingRequiredParameter) {

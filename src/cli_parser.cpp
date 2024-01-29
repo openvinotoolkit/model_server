@@ -172,6 +172,15 @@ void CLIParser::parse(int argc, char** argv) {
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
+        if (result->unmatched().size()) {
+            std::cerr << "error parsing options - unmatched arguments: ";
+            for (auto& argument : result->unmatched()) {
+                std::cerr << argument << ", ";
+            }
+            std::cerr << std::endl;
+            exit(EX_USAGE);
+        }
+
         if (result->count("version")) {
             std::string project_name(PROJECT_NAME);
             std::string project_version(PROJECT_VERSION);
@@ -185,7 +194,7 @@ void CLIParser::parse(int argc, char** argv) {
             std::cout << options->help({"", "multi model", "single model"}) << std::endl;
             exit(EX_OK);
         }
-    } catch (const cxxopts::OptionException& e) {
+    } catch (const std::exception& e) {
         std::cerr << "error parsing options: " << e.what() << std::endl;
         exit(EX_USAGE);
     }
@@ -264,6 +273,9 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         serverSettings->logLevel = result->operator[]("log_level").as<std::string>();
     if (result->count("log_path"))
         serverSettings->logPath = result->operator[]("log_path").as<std::string>();
+    #if (PYTHON_DISABLE == 0)
+        serverSettings->withPython = true;
+    #endif
 
 #ifdef MTR_ENABLED
     if (result->count("trace_path"))

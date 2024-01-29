@@ -118,7 +118,7 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
             std::cout << options->help({"", "multi model", "single model"}) << std::endl;
             exit(EX_OK);
         }
-    } catch (const cxxopts::OptionException& e) {
+    } catch (const std::exception& e) {
         std::cerr << "error parsing options: " << e.what() << std::endl;
         exit(EX_USAGE);
     }

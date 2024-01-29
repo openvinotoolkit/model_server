@@ -6,6 +6,7 @@ maxdepth: 1
 hidden:
 ---
 
+ovms_demo_clip_image_classification
 ovms_demo_age_gender_guide
 ovms_demo_horizontal_text_detection
 ovms_demo_optical_character_recognition
@@ -37,11 +38,23 @@ ovms_demo_python_seq2seq
 ovms_demo_python_stable_diffusion
 ```
 
-OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities. Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
+OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities.
+### Check Out New Generative AI Demos
+ - [Text Generation](python_demos/llm_text_generation/README.md)
+ - [Stable Diffusion](python_demos/stable_diffusion/README.md)
 
-## Python 
+**See also new multi-modal demo:**
+- [CLIP image classification](python_demos/clip_image_classification/README.md)
+ 
+Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
+
+## With Python Client 
 | Demo | Description |
 |---|---|
+|[Text Generation](python_demos/llm_text_generation/README.md) | Generate text using one of popular LLMs sending prompts via gRPC API unary or interactive streaming endpoint.|
+|[Stable Diffusion](python_demos/stable_diffusion/README.md) | Generate image using Stable Diffusion model sending prompts via gRPC API unary or interactive streaming endpoint.|
+|[CLIP image classification](python_demos/clip_image_classification/README.md) | Classify image according to provided labels using CLIP model embedded in a multi-node MediaPipe graph.|
+|[Seq2seq translation](python_demos/seq2seq_translation/README.md) | Translate text using seq2seq model via gRPC API.|
 |[Age gender recognition](age_gender_recognition/python/README.md) | Run prediction on a JPEG image using age gender recognition model via gRPC API.|
 |[Horizontal Text Detection in Real-Time](horizontal_text_detection/python/README.md) | Run prediction on camera stream using a horizontal text detection model via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [horizontal_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/horizontal_ocr) and [demultiplexer](../docs/demultiplexing.md). |
 |[Optical Character Recognition Pipeline](optical_character_recognition/python/README.md) | Run prediction on a JPEG image using a pipeline of text recognition and text detection models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [east_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/east_ocr) and [demultiplexer](../docs/demultiplexing.md). |
@@ -62,14 +75,14 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 |[Benchmark App](benchmark/python/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
 |[Face Blur Pipeline](face_blur/python/README.md)|Detect faces and blur image using a pipeline of object detection models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [face_blur custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/face_blur). |
 
-## C++
+## With C++ Client
 | Demo | Description |
 |---|---|
 |[C API applications](c_api_minimal_app/README.md)|How to use C API from the OpenVINO Model Server to create C and C++ application.|
 |[Image Classification](image_classification/cpp/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
 |[Benchmark App](benchmark/cpp/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
 
-## Go
+## With Go Client
 | Demo | Description |
 |---|---|
 |[Image Classification](image_classification/go/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
