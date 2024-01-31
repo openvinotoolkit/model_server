@@ -1,0 +1,5 @@
+version: "1"
+rules:
+  - base: main
+    upstream: openvino_model_server_openvinotoolkit:main   # change `wei` to the owner of upstream repo
+    mergeMethod: hardreset
