@@ -15,7 +15,7 @@ The picture below shows the execution flow in the graph.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image RUN_TESTS=0
+make python_image
 ```
 
 ## Install client requirements
@@ -59,15 +59,6 @@ python3 client.py --url localhost:9000
 
 Expected output:
 ```bash
-Using timeout for server ready of 15 seconds.
-Server Ready: False
-Waiting time left - 14 seconds.
-Server Ready: False
-Waiting time left - 13 seconds.
-Server Ready: False
-Waiting time left - 12 seconds.
-Server Ready: False
-Waiting time left - 11 seconds.
 Server Ready: True
 Using image_url:
 https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg

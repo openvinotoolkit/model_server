@@ -21,8 +21,6 @@ __pycache__
 dist/
 lib/
 !client/python/ovmsclient/lib
-demos/python_demos/clip_image_classification/model/
-demos/python_demos/clip_image_classification/data/
 cppclean_src
 cppclean_test
 tags

@@ -47,7 +47,6 @@ iterations = args.get('iterations')
 iteration = 0
 
 timeout = int(args.get('timeout'))
-print(f'Using timeout for server ready of {timeout} seconds.')
 # Check models ready
 client = grpcclient.InferenceServerClient(args['url'])
 channel = grpc.insecure_channel(args['url'])
@@ -61,7 +60,6 @@ while(timeout):
         break
     time.sleep(1)
     timeout-=1
-    print(f'Waiting time left - {timeout} seconds.')
 
 if not response.ready:
     print("Models are not ready. Increase timeout or check server setup and errors.")
