@@ -1,6 +1,6 @@
 # CLIP image classification {#ovms_demo_clip_image_classification}
 
-Image classification demo using multi-modal CLIP model for inference and [Python code](https://docs.openvino.ai/2023.3/ovms_docs_python_support_reference.html) for pre and postprocessing.
+Image classification demo using multi-modal CLIP model for inference and [Python code](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html) for pre and postprocessing.
 The client sends request with an image and input labels to the graph and receives the label with the highest probability. The preprocessing python node is executed first and prepares inputs vector based on user inputs from the request. Then inputs are used to get similarity matrix from inference on the CLIP model. After that postprocessing python node is executed and extracts the label with highest score among the input labels and sends it back to the user.
 
 Demo is based on this [CLIP notebook](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-convert.ipynb)
@@ -15,14 +15,16 @@ The picture below shows the execution flow in the graph.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image RUN_TESTS=0
+make python_image
 ```
 
 ## Install client requirements
 
 ```bash
 cd demos/python_demos/clip_image_classification/
-pip3 install -r requirements.txt 
+virtualenv .venv
+. .venv/bin/activate
+pip3 install -r requirements.txt
 ```
 
 ## Download and convert model
@@ -57,15 +59,6 @@ python3 client.py --url localhost:9000
 
 Expected output:
 ```bash
-Using timeout for server ready of 15 seconds.
-Server Ready: False
-Waiting time left - 14 seconds.
-Server Ready: False
-Waiting time left - 13 seconds.
-Server Ready: False
-Waiting time left - 12 seconds.
-Server Ready: False
-Waiting time left - 11 seconds.
 Server Ready: True
 Using image_url:
 https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg
