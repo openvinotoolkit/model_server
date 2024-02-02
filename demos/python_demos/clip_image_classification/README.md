@@ -22,7 +22,9 @@ make python_image RUN_TESTS=0
 
 ```bash
 cd demos/python_demos/clip_image_classification/
-pip3 install -r requirements.txt 
+virtualenv .venv
+. .venv/bin/activate
+pip3 install -r requirements.txt
 ```
 
 ## Download and convert model
