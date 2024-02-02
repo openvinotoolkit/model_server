@@ -18,13 +18,13 @@
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
-BASE_OS_TAG_UBUNTU ?= 20.04
+BASE_OS_TAG_UBUNTU ?= 22.04
 BASE_OS_TAG_REDHAT ?= 8.8
-REDHAT_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2023.2/ovms_redhat.tar.gz"
-UBUNTU_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2023.2/ovms_ubuntu20.tar.gz"
+REDHAT_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2023.3/ovms_redhat.tar.gz"
+UBUNTU_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2023.3/ovms_ubuntu22.tar.gz"
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
-OVMS_CPP_IMAGE_TAG ?= latest
+OVMS_CPP_IMAGE_TAG ?= 2023.3
 BASE_OS ?= ubuntu
 DIST_OS ?= $(BASE_OS)
 
@@ -62,7 +62,8 @@ build_image:
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG)
+		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG) \
+		--no-cache
 
 all_web: clean from_web build_image
 	
