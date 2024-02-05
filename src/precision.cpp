@@ -99,8 +99,8 @@ const std::string& toKfsString(Precision precision) {
         {Precision::UNDEFINED, "UNDEFINED"}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
-        static const std::string UNKNOWN{"UNKNOWN"};
-        return UNKNOWN;
+        static const std::string UNDEFINED{"UNDEFINED"};
+        return UNDEFINED;
     }
     return it->second;
 }
