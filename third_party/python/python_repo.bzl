@@ -15,6 +15,7 @@
 #
 
 def _python_repository_impl(repository_ctx):
+    base_os_image = repository_ctx.os.environ.get("BASE_IMAGE", "")
     result = repository_ctx.execute(["cat","/etc/os-release"],quiet=False)
     ubuntu20_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 20")
     ubuntu22_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 22")
