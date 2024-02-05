@@ -22,7 +22,9 @@ make python_image RUN_TESTS=0
 
 ```bash
 cd demos/python_demos/clip_image_classification/
-pip3 install -r requirements.txt 
+virtualenv .venv
+. .venv/bin/activate
+pip3 install -r requirements.txt
 ```
 
 ## Download and convert model
@@ -57,15 +59,6 @@ python3 client.py --url localhost:9000
 
 Expected output:
 ```bash
-Using timeout for server ready of 15 seconds.
-Server Ready: False
-Waiting time left - 14 seconds.
-Server Ready: False
-Waiting time left - 13 seconds.
-Server Ready: False
-Waiting time left - 12 seconds.
-Server Ready: False
-Waiting time left - 11 seconds.
 Server Ready: True
 Using image_url:
 https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg
