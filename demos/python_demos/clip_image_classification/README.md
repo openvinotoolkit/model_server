@@ -21,13 +21,16 @@ make python_image
 ## Install client requirements
 
 ```bash
-pip3 install -r requirements.txt 
+cd demos/python_demos/clip_image_classification/
+virtualenv .venv
+. .venv/bin/activate
+pip3 install -r requirements.txt
 ```
 
 ## Download and convert model
 
 ```bash
-pip3 install -r download_model_requirements.txt 
+pip3 install -r download_model_requirements.txt
 ```
 
 ```bash
@@ -44,8 +47,7 @@ Mount the `./servable` which contains:
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculators
 
 ```bash
-cd demos/python_demos/clip
-docker run -it --rm -p 9000:9000 -v ${PWD}/servable:/workspace -v ${PWD}/model:/model/ openvino/model_server:py --config_path /workspace/config.json --port 9000
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable:/workspace -v ${PWD}/model:/model/ openvino/model_server:py --config_path /workspace/config.json --port 9000
 ```
 
 ## Requesting detection name
@@ -57,16 +59,16 @@ python3 client.py --url localhost:9000
 
 Expected output:
 ```bash
+Server Ready: True
 Using image_url:
 https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg
 
 Using input_labels:
 ['cat', 'dog', 'wolf', 'tiger', 'man', 'horse', 'frog', 'tree', 'house', 'computer']
 
-Iteration 1
+Iteration 0
 Detection:
 dog
-
 
 processing time for all iterations
 average time: 90.00 ms; average speed: 11.11 fps

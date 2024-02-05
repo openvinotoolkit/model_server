@@ -16,6 +16,8 @@
 import sys
 sys.path.append("../../common/python")
 import tritonclient.grpc as grpcclient
+from tritonclient.grpc import service_pb2
+from tritonclient.grpc import service_pb2_grpc
 import argparse
 import datetime
 import numpy as np
@@ -23,9 +25,13 @@ from client_utils import print_statistics
 from urllib.request import urlretrieve
 from pathlib import Path
 import os
+import grpc
+import time
 
 parser = argparse.ArgumentParser(description='Client for clip example')
 
+parser.add_argument('--timeout', required=False, default='15',
+                    help='Specify timeout to wait for models readiness on the server in seconds. default 15 seconds.')
 parser.add_argument('--url', required=False, default='localhost:9000',
                     help='Specify url to grpc service. default:localhost:9000')
 parser.add_argument('--input_labels', required=False, default="cat,dog,wolf,tiger,man,horse,frog,tree,house,computer",
@@ -40,7 +46,24 @@ args = vars(parser.parse_args())
 iterations = args.get('iterations')
 iteration = 0
 
+timeout = int(args.get('timeout'))
+# Check models ready
 client = grpcclient.InferenceServerClient(args['url'])
+channel = grpc.insecure_channel(args['url'])
+grpc_stub = service_pb2_grpc.GRPCInferenceServiceStub(channel)
+
+while(timeout):
+    request = service_pb2.ServerReadyRequest()
+    response = grpc_stub.ServerReady(request)
+    print("Server Ready: {}".format(response.ready))
+    if response.ready:
+        break
+    time.sleep(1)
+    timeout-=1
+
+if not response.ready:
+    print("Models are not ready. Increase timeout or check server setup and errors.")
+    exit(-1)
 
 image_url = args['image_url']
 print(f"Using image_url:\n{image_url}\n")
