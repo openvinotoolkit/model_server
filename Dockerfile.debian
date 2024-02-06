@@ -111,7 +111,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             libusb-1.0-0-dev \
             libtool \
             libnuma-dev \
-            libtbb2 \
+            libtbb-dev \
             libssl-dev \
             nlohmann-json3-dev \
             python2 \
