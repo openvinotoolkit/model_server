@@ -638,3 +638,6 @@ cpu_extension:
 		--build-arg BASE_IMAGE=${BASE_IMAGE} .
 	mkdir -p ./lib/${OS}
 	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${OS}
+
+run_unit_tests:
+	docker run -e RUN_TESTS=1 -e JOBS=$(JOBS) $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh
