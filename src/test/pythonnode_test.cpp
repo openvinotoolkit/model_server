@@ -1964,6 +1964,43 @@ TEST_F(PythonFlowTest, ConverterCalculator_OvTensorDimensionSizeExceeded) {
     }
 }
 
+TEST_F(PythonFlowTest, ConverterCalculator_UnsupportedOvTensorTypes) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVTENSOR:input"
+        output_stream: "OVMS_PY_TENSOR:output"
+        node_options: {
+                [type.googleapis.com / mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+                    tag_to_output_tensor_names {
+                        key: "OVMS_PY_TENSOR"
+                        value: "input"
+                    }
+                }
+            }
+    )";
+
+    // Cannot create ov::tensor with those type: Precision::BIN, Precision::CUSTOM, Precision::MIXED, Precision::Q78, Precision::DYNAMIC, Precision::UNDEFINED
+    static std::vector<Precision> unsupportedPrecision = {Precision::I4, Precision::U4, Precision::U1};
+
+    for (Precision ovmsPrecision : unsupportedPrecision) {
+        mediapipe::CalculatorRunner runner(testPbtxt);
+
+        std::cout << "Testing precision: " << toString(ovmsPrecision) << std::endl;
+        std::unique_ptr<ov::Tensor> tensor = std::make_unique<ov::Tensor>(ovmsPrecisionToIE2Precision(ovmsPrecision), ov::Shape{1, 1});
+        runner.MutableInputs()->Tag("OVTENSOR").packets.push_back(mediapipe::Adopt<ov::Tensor>(tensor.release()).At(mediapipe::Timestamp(0)));
+
+        py::gil_scoped_acquire acquire;
+        try {
+            py::gil_scoped_release release;
+            auto status = runner.Run();
+            ASSERT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.code() << " " << status.message();
+        } catch (const pybind11::error_already_set& e) {
+            ASSERT_EQ(1, 0) << e.what();
+        }
+    }
+}
+
 TEST_F(PythonFlowTest, ConverterCalculator_PyTensorDimensionNegative) {
     std::string testPbtxt = R"(
         calculator: "PyTensorOvTensorConverterCalculator"
