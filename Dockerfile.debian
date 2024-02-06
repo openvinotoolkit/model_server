@@ -278,7 +278,8 @@ COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
-COPY src/bindings/python/tests/requirements.txt /ovms/src/bindings/python/tests/requirements.txt
+COPY src/python/binding/BUILD /ovms/src/python/binding/BUILD
+COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/requirements.txt
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/
 
