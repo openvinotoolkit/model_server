@@ -20,14 +20,11 @@
 #include <string>
 #include <thread>
 
-#include <openvino/core/parallel.hpp>
-
 #include "logging.hpp"
 #include "status.hpp"
 
 namespace ovms {
 uint16_t getCoreCount() {
-    // return parallel_get_num_threads();
     return std::thread::hardware_concurrency();
 }
 }  // namespace ovms

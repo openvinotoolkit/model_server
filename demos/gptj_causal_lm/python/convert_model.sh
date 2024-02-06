@@ -14,18 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-python3 -m transformers.onnx \
-    --feature causal-lm \
-    --atol 1e-04 \
-    --preprocessor tokenizer \
-    --model=local-pt-checkpoint/ \
-    --framework pt \
-    onnx/1
-
-# Desired output:
-# Validating ONNX model...
-#         -[✓] ONNX model output names match reference model ({'logits'})
-#         - Validating ONNX Model output "logits":
-#                 -[✓] (3, 9, 50400) matches (3, 9, 50400)
-#                 -[✓] all values close (atol: 0.0001)
-# All good, model saved at: onnx/1/model.onnx
+optimum-cli export openvino --model local-pt-checkpoint/ model/1 --task causal-lm --framework pt

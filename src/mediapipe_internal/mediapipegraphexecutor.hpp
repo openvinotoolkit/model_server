@@ -29,11 +29,13 @@
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
+#include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
 #include "packettypes.hpp"
 
 namespace ovms {
 class Status;
-class PythonNodeResource;
+class PythonNodeResources;
+class PythonBackend;
 
 class MediapipeGraphExecutor {
     const std::string name;
@@ -44,14 +46,28 @@ class MediapipeGraphExecutor {
     const std::vector<std::string> inputNames;
     const std::vector<std::string> outputNames;
 
-    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
+    PythonNodeResourcesMap pythonNodeResourcesMap;
+    PythonBackend* pythonBackend;
+
+    ::mediapipe::Timestamp currentStreamTimestamp;
+
+    static Status deserializeTimestampIfAvailable(const KFSRequest& request, ::mediapipe::Timestamp& timestamp);
+    Status partialDeserialize(std::shared_ptr<const ::inference::ModelInferRequest> request, ::mediapipe::CalculatorGraph& graph);
+    Status validateSubsequentRequest(const ::inference::ModelInferRequest& request) const;
+
+protected:
+    Status serializePacket(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const;
 
 public:
+    static const std::string TIMESTAMP_PARAMETER_NAME;
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
         stream_types_mapping_t inputTypes,
         stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-        const std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>>& pythonNodeResources);
+        const PythonNodeResourcesMap& pythonNodeResourcesMap,
+        PythonBackend* pythonBackend);
     Status infer(const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) const;
+
+    Status inferStream(const ::inference::ModelInferRequest& firstRequest, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>& stream);
 };
 }  // namespace ovms

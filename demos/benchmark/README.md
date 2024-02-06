@@ -1,15 +1,14 @@
 # Benchmark Client {#ovms_demo_benchmark_client}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_demo_benchmark_app
-   ovms_demo_benchmark_app_cpp
-
-@endsphinxdirective
+ovms_demo_benchmark_app
+ovms_demo_benchmark_app_cpp
+```
 
 ## Python
 | Demo | Description |

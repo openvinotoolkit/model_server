@@ -1,3 +1,5 @@
+# Segmentation Example with a PaddlePaddle Model {#ovms_demo_using_paddlepaddle_model}
+
 ## Overview
 
 This guide demonstrates how to run inference requests for PaddlePaddle model with OpenVINO Model Server.
@@ -7,7 +9,7 @@ As an example, we will use [ocrnet-hrnet-w48-paddle](https://github.com/openvino
 
 - [Docker](https://docs.docker.com/engine/install/) installed
 
-- Python 3.6 or newer installed
+- Python 3.7 or newer installed
 
 ## Preparing to Run
 

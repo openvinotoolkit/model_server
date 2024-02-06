@@ -492,6 +492,18 @@ TEST(ModelConfig, plugin_config_string) {
                                         Pair("OptionX", "2.45")));
 }
 
+TEST(ModelConfig, plugin_config_boolean) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"OptionA\": true,\"OptionX\":false}";
+
+    auto status = config.parsePluginConfig(pluginConfig_str);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_THAT(actualPluginConfig, UnorderedElementsAre(
+                                        Pair("OptionA", true),
+                                        Pair("OptionX", false)));
+}
+
 TEST(ModelConfig, plugin_config_invalid) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"OptionX\":{}}";

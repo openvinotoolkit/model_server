@@ -51,6 +51,10 @@ const std::string& toString(Precision precision);
 
 Precision fromString(const std::string& s);
 
+const std::string& toKfsString(Precision precision);
+
+Precision fromKfsString(const std::string& s);
+
 Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type);
 
 ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision);

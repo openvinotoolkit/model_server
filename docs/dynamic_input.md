@@ -1,20 +1,18 @@
 # Dynamic Input Parameters {#ovms_docs_dynamic_input}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_docs_dynamic_bs_demultiplexer
-   ovms_docs_dynamic_bs_auto_reload
-   ovms_docs_dynamic_shape_auto_reload
-   ovms_docs_dynamic_shape_custom_node
-   ovms_docs_dynamic_shape_binary_inputs
-   ovms_docs_dynamic_shape_dynamic_model
-
-
-@endsphinxdirective
+ovms_docs_dynamic_bs_demultiplexer
+ovms_docs_dynamic_bs_auto_reload
+ovms_docs_dynamic_shape_auto_reload
+ovms_docs_dynamic_shape_custom_node
+ovms_docs_dynamic_shape_binary_inputs
+ovms_docs_dynamic_shape_dynamic_model
+```
 
 Models served by the OpenVINO Model Server can be configured to accept data with different batch sizes and in different shapes.
 There are multiple ways of enabling dynamic inputs for the model:

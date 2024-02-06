@@ -47,23 +47,6 @@
 using namespace ovms;
 using namespace rapidjson;
 
-class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
-public:
-    std::string inputConfig;
-
-public:
-    DummyMediapipeGraphDefinition(const std::string name,
-        const MediapipeGraphConfig& config,
-        std::string inputConfig) :
-        MediapipeGraphDefinition(name, config, nullptr, nullptr) {}
-
-    // Do not read from path - use predefined config contents
-    Status validateForConfigFileExistence() override {
-        this->chosenConfig = this->inputConfig;
-        return StatusCode::OK;
-    }
-};
-
 class GetMediapipeGraphMetadataResponse : public ::testing::Test {
 protected:
     KFSModelMetadataResponse response;

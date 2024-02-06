@@ -20,6 +20,7 @@
 #include <regex>
 #include <set>
 #include <string>
+#include <thread>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -1682,7 +1683,7 @@ public:
             createPipelineRetCodesCounters[executePipelineStatus.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(executePipelineStatus.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(executePipelineStatus.getCode()) != allowedLoadResults.end()))
-                << executePipelineStatus.string() << "\n";
+                << executePipelineStatus.string() << " thread id:" << std::this_thread::get_id() << "\n";
             if (executePipelineStatus.ok()) {
                 checkPipelineResponse(pipelineOutputName, request, response);
             }

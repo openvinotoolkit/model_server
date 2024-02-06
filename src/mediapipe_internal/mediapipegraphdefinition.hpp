@@ -47,8 +47,10 @@ class MetricConfig;
 class MetricRegistry;
 class ModelManager;
 class MediapipeGraphExecutor;
-class PythonNodeResource;
 class Status;
+class PythonBackend;
+class PythonNodeResources;
+using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -58,7 +60,8 @@ public:
     MediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config = MGC,
         MetricRegistry* registry = nullptr,
-        const MetricConfig* metricConfig = nullptr);
+        const MetricConfig* metricConfig = nullptr,
+        PythonBackend* pythonBackend = nullptr);
 
     const std::string& getName() const { return name; }
     const PipelineDefinitionStatus& getStatus() const {
@@ -72,9 +75,6 @@ public:
     const MediapipeGraphConfig& getMediapipeGraphConfig() const { return this->mgconfig; }
 
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
-
-    static std::string getStreamName(const std::string& streamFullName);
-    static std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName);
 
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
@@ -91,7 +91,7 @@ public:
     static constexpr model_version_t VERSION = 1;
 
 protected:
-    std::unordered_map<std::string, std::shared_ptr<PythonNodeResource>> pythonNodeResources;
+    PythonNodeResourcesMap pythonNodeResourcesMap;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
@@ -154,6 +154,8 @@ private:
     std::vector<std::string> inputSidePacketNames;
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
+
+    PythonBackend* pythonBackend;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

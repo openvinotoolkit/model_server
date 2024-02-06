@@ -4,7 +4,8 @@
             "config": {
                 "name": "dummy",
                 "base_path": "/ovms/src/test/dummy",
-                "shape": {"b":"(1,1:10)"}
+                "shape": {"b":"(1,1:10)"},
+                "plugin_config": {"ENABLE_CPU_PINNING": false}
             }
         }
     ]

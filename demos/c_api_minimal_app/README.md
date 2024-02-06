@@ -46,7 +46,7 @@ The example output is:
 [2022-12-19 11:39:41.428][14][modelmanager][info][modelmanager.cpp:495] Configuration file doesn't have pipelines property.
 [2022-12-19 11:39:41.428][14][serving][info][servablemanagermodule.cpp:44] ServableManagerModule started
 Server ready for inference
-[2022-12-19 11:39:41.428][14][serving][debug][capi.cpp:606] Processing C-API request for model: dummy; version: 1
+[2022-12-19 11:39:41.428][14][serving][debug][capi.cpp:606] Processing C-API inference request for servable: dummy; version: 1
 [2022-12-19 11:39:41.428][14][serving][debug][modelmanager.cpp:1350] Requesting model: dummy; version: 1.
 [2022-12-19 11:39:41.428][14][serving][debug][modelinstance.cpp:1013] Model: dummy, version: 1 already loaded
 [2022-12-19 11:39:41.428][14][serving][debug][modelinstance.cpp:1187] Getting infer req duration in model dummy, version 1, nireq 0: 0.002 ms

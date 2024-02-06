@@ -28,6 +28,7 @@
 
 #define OUTPUT_NAME_TOKENS "input_ids"
 #define OUTPUT_NAME_ATTENTION "attention_mask"
+#define OUTPUT_NAME_POSITION "position_ids"
 
 using namespace custom_nodes::tokenizer;
 
@@ -107,7 +108,7 @@ TEST(TokenizerTest, outputs_info) {
 
     int ret = getOutputsInfo(&info, &infoCount, params, 1, (void*)&model);
     ASSERT_EQ(ret, 0);
-    ASSERT_EQ(infoCount, 2);
+    ASSERT_EQ(infoCount, 3);
 
     ASSERT_EQ(std::strcmp(info[0].name, OUTPUT_NAME_TOKENS), 0);
     ASSERT_EQ(info[0].dimsCount, 2);
@@ -116,6 +117,12 @@ TEST(TokenizerTest, outputs_info) {
     ASSERT_EQ(info[0].precision, I64);
 
     ASSERT_EQ(std::strcmp(info[1].name, OUTPUT_NAME_ATTENTION), 0);
+    ASSERT_EQ(info[1].dimsCount, 2);
+    ASSERT_EQ(info[1].dims[0], -1);
+    ASSERT_EQ(info[1].dims[1], -1);
+    ASSERT_EQ(info[1].precision, I64);
+
+    ASSERT_EQ(std::strcmp(info[2].name, OUTPUT_NAME_POSITION), 0);
     ASSERT_EQ(info[1].dimsCount, 2);
     ASSERT_EQ(info[1].dims[0], -1);
     ASSERT_EQ(info[1].dims[1], -1);
@@ -156,6 +163,7 @@ protected:
     struct output {
         std::vector<int64_t> tokens;
         std::vector<int64_t> attention;
+        std::vector<int64_t> position;
     };
     void run(std::vector<std::string> in, std::vector<output>& out) {
         struct CustomNodeTensor inputs[1];
@@ -166,7 +174,7 @@ protected:
         free(inputs[0].data);
         free(inputs[0].dims);
         ASSERT_EQ(ret, 0);
-        ASSERT_EQ(outputsCount, 2);
+        ASSERT_EQ(outputsCount, 3);
         std::vector<output> result;
         result.resize(outputs->dims[0]);
         for (int i = 0; i < outputsCount; i++) {
@@ -179,6 +187,12 @@ protected:
             } else if (std::strcmp(outputs[i].name, OUTPUT_NAME_TOKENS) == 0) {
                 for (int j = 0; j < outputs[i].dims[0]; j++) {
                     result[j].tokens = std::vector<int64_t>(
+                        (int64_t*)outputs[i].data + j * outputs[i].dims[1],
+                        (int64_t*)outputs[i].data + j * outputs[i].dims[1] + outputs[i].dims[1]);
+                }
+            } else if (std::strcmp(outputs[i].name, OUTPUT_NAME_POSITION) == 0) {
+                for (int j = 0; j < outputs[i].dims[0]; j++) {
+                    result[j].position = std::vector<int64_t>(
                         (int64_t*)outputs[i].data + j * outputs[i].dims[1],
                         (int64_t*)outputs[i].data + j * outputs[i].dims[1] + outputs[i].dims[1]);
                 }

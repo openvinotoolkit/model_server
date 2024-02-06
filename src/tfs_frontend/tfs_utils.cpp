@@ -53,55 +53,6 @@ TFSDataType getPrecisionAsDataType(Precision precision) {
     return it->second;
 }
 
-TfLiteType getPrecisionAsTfLiteDataType(Precision precision) {
-    static std::unordered_map<Precision, TfLiteType> precisionMap{
-        {Precision::FP32, kTfLiteFloat32},
-        {Precision::FP64, kTfLiteFloat64},
-        {Precision::FP16, kTfLiteFloat16},
-        {Precision::I64, kTfLiteInt64},
-        {Precision::I32, kTfLiteInt32},
-        {Precision::I16, kTfLiteInt16},
-        {Precision::I8, kTfLiteInt8},
-        {Precision::U64, kTfLiteUInt64},
-        {Precision::U16, kTfLiteUInt16},
-        {Precision::U8, kTfLiteUInt8},
-        //    {Precision::MIXED, kTfLite},
-        //    {Precision::Q78, kTfLite},
-        //    {Precision::BIN, kTfLite},
-        {Precision::BOOL, kTfLiteBool}
-        //    {Precision::CUSTOM, kTfLite}
-    };
-    auto it = precisionMap.find(precision);
-    if (it == precisionMap.end()) {
-        return kTfLiteNoType;
-    }
-    return it->second;
-}
-
-Precision TfLitePrecisionToOvmsPrecision(TfLiteType precision) {
-    static std::unordered_map<TfLiteType, Precision> precisionMap{
-        {kTfLiteFloat32, Precision::FP32},
-        {kTfLiteFloat64, Precision::FP64},
-        {kTfLiteFloat16, Precision::FP16},
-        {kTfLiteInt64, Precision::I64},
-        {kTfLiteInt32, Precision::I32},
-        {kTfLiteInt16, Precision::I16},
-        {kTfLiteInt8, Precision::I8},
-        {kTfLiteUInt64, Precision::U64},
-        {kTfLiteUInt16, Precision::U16},
-        {kTfLiteUInt8, Precision::U8},
-        //    {kTfLite, Precision::MIXED},
-        //    {kTfLite, Precision::Q78},
-        //    {kTfLite, Precision::BIN},
-        {kTfLiteBool, Precision::BOOL}
-        //    {kTfLite, Precision::CUSTOM}
-    };
-    auto it = precisionMap.find(precision);
-    if (it == precisionMap.end()) {
-        return Precision::UNDEFINED;
-    }
-    return it->second;
-}
 std::string getDataTypeAsString(TFSDataType dataType) {
     switch (dataType) {
     case TFSDataType::DT_FLOAT:

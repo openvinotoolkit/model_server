@@ -81,8 +81,8 @@ TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
     std::copy(tensorsData[0].begin(), tensorsData[0].end(), tensorDataNonDemultiplexed2.begin());
     std::copy(tensorsData[1].begin(), tensorsData[1].end(), tensorDataNonDemultiplexed2.begin() + tensorsData[0].size());
     TensorWithSourceMap intermediateResultTensors{
-        {mockerDemultiplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorDataNonDemultiplexed.data()))},
-        {mockerDemultiplexerNodeOutputName2, TensorWithSource(createSharedTensor(precision, shape, tensorDataNonDemultiplexed2.data()))}};
+        {mockerDemultiplexerNodeOutputName, TensorWithSource(createTensorWithNoDataOwnership(precision, shape, tensorDataNonDemultiplexed.data()))},
+        {mockerDemultiplexerNodeOutputName2, TensorWithSource(createTensorWithNoDataOwnership(precision, shape, tensorDataNonDemultiplexed2.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     ConstructorEnabledModelManager manager;
@@ -120,7 +120,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
     const std::vector<size_t> shape{1, demultiplyCount - 1, 3};
     const auto precision{ov::element::Type_t::f32};
     TensorWithSourceMap intermediateResultTensors{
-        {mockerDemultiplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
+        {mockerDemultiplexerNodeOutputName, TensorWithSource(createTensorWithNoDataOwnership(precision, shape, tensorData.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     ConstructorEnabledModelManager manager;
@@ -141,7 +141,7 @@ TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenNotEnoughDimensionsInOutp
     const std::vector<size_t> shape{1, demultiplyCount};
     const auto precision{ov::element::Type_t::f32};
     TensorWithSourceMap intermediateResultTensors{
-        {mockerDemultiplexerNodeOutputName, TensorWithSource(createSharedTensor(precision, shape, tensorData.data()))}};
+        {mockerDemultiplexerNodeOutputName, TensorWithSource(createTensorWithNoDataOwnership(precision, shape, tensorData.data()))}};
     // construct demultiplexer node
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     ConstructorEnabledModelManager manager;
@@ -161,7 +161,7 @@ TEST(DemultiplexerTest, ShardsShareDataWithSourceTensor) {
     // imitate (2, 1, 1) to demultiply to 2x (1, 1)
     const std::vector<size_t> shape{demultiplyCount, 1, 1};
     const auto precision{ov::element::Type_t::f32};
-    auto intermediateTensor = createSharedTensor(precision, shape, tensorData.data());
+    auto intermediateTensor = createTensorWithNoDataOwnership(precision, shape, tensorData.data());
     TensorWithSourceMap intermediateResultTensors{
         {mockerDemultiplexerNodeOutputName, TensorWithSource(intermediateTensor)}};
     // construct demultiplexer node

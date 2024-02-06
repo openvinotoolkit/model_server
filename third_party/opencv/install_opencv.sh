@@ -19,7 +19,7 @@ set -exo pipefail
 # Option parsing
 
 os=${os:-auto}
-opencv_branch=${opencv_branch:-4.7.0}
+opencv_branch=${opencv_branch:-4.9.0}
 work_dir=${work_dir:-/opt}
 
 

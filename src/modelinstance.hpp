@@ -279,6 +279,7 @@ private:
          */
     Status loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
+    Status gatherReshapeInfo(bool isBatchingModeAuto, const DynamicModelParameter& parameter, bool& isReshapeRequired, std::map<std::string, ov::PartialShape>& modelShapes);
     /**
          * @brief Internal method for loading outputs
          *

@@ -17,7 +17,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -35,7 +34,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "azurefilesystem.hpp"
 #include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderconfig.hpp"
@@ -50,8 +48,7 @@
 #include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
 #include "filesystem.hpp"
-#include "gcsfilesystem.hpp"
-#include "localfilesystem.hpp"
+#include "filesystemfactory.hpp"
 #include "logging.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipefactory.hpp"
@@ -64,7 +61,6 @@
 #include "metric_registry.hpp"
 #include "modelinstance.hpp"  // for logging
 #include "ov_utils.hpp"
-#include "s3filesystem.hpp"
 #include "schema.hpp"
 #include "stringutils.hpp"
 
@@ -81,11 +77,16 @@ mediapipe::BeginLoopRectanglePredictionCalculator loopbegin;
 mediapipe::EndLoopRectanglePredictionsCalculator endloop;
 #endif
 
-ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry) :
+ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
     ieCore(std::make_unique<ov::Core>()),
+#if (MEDIAPIPE_DISABLE == 0)
+    mediapipeFactory(pythonBackend),
+#endif
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
     modelCacheDirectory(modelCacheDirectory),
-    metricRegistry(registry) {
+    metricRegistry(registry),
+    pythonBackend(pythonBackend) {
+    OV_LOGGER("ov::Core(): {}", reinterpret_cast<void*>(this->ieCore.get()));
     // Take --cache_dir from CLI
     if (this->modelCacheDirectory.empty()) {
         this->modelCacheDirectory = ovms::Config::instance().cacheDir();
@@ -114,6 +115,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
         SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
         try {
+            OV_LOGGER("ov::Core: {}, ieCore->add_extension({})", reinterpret_cast<const void*>(this->ieCore.get()), ovms::Config::instance().cpuExtensionLibraryPath());
             ieCore->add_extension(ovms::Config::instance().cpuExtensionLibraryPath());
             SPDLOG_INFO("Extension added.");
         } catch (std::exception& ex) {
@@ -128,35 +130,16 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
 }
 
 void ModelManager::logPluginConfiguration() {
+    OV_LOGGER("ov::Core: {}, ieCore->get_available_devices()", reinterpret_cast<const void*>(this->ieCore.get()));
     auto availableDevices = ieCore->get_available_devices();
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
     auto availablePlugins = availableDevices;
     for (const auto& plugin : availablePlugins) {
-        std::vector<ov::PropertyName> supportedConfigKeys;
-        auto supportedPropertiesKey = ov::supported_properties;
-        try {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Logging plugin: {}; configuration", plugin);
-            auto supportedConfigKeys2 = ieCore->get_property(plugin, supportedPropertiesKey);
-            supportedConfigKeys = std::move(supportedConfigKeys2);
-        } catch (std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value. Error: {}", plugin, supportedPropertiesKey.name(), e.what());
-        } catch (...) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; key: {}; value.", plugin, supportedPropertiesKey.name());
-        }
-        for (auto& key : supportedConfigKeys) {
-            std::string value;
-            try {
-                auto paramValue = ieCore->get_property(plugin, key);
-                value = paramValue.as<std::string>();
-            } catch (std::exception& e) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; config key: {}; Error: {}", plugin, key, e.what());
-                continue;
-            } catch (...) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Exception thrown from IE when requesting plugin: {}; config key: {}", plugin, key);
-                continue;
-            }
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Global plugin: {}; key: {}; value: {}", plugin, key, value);
-        }
+        logOVPluginConfig([this, &plugin](const std::string& key) {
+                OV_LOGGER("ov ::Core:{} get_property({}, {})", reinterpret_cast<void*>(this->ieCore.get()), plugin, key);
+                return this->ieCore->get_property(plugin, key); },
+            std::string("OpenVINO Core plugin: ") + plugin,
+            "");
     }
 }
 
@@ -386,7 +369,7 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory) {
     if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
-        return StatusCode::OK;  // TODO @atobiszei do we want to have OK?
+        return StatusCode::OK;
     }
 
     MediapipeGraphDefinition* mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
@@ -1301,21 +1284,7 @@ std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::
 }
 
 std::shared_ptr<FileSystem> ModelManager::getFilesystem(const std::string& basePath) {
-    if (basePath.rfind(FileSystem::S3_URL_PREFIX, 0) == 0) {
-        Aws::SDKOptions options;
-        Aws::InitAPI(options);
-        return std::make_shared<S3FileSystem>(options, basePath);
-    }
-    if (basePath.rfind(FileSystem::GCS_URL_PREFIX, 0) == 0) {
-        return std::make_shared<ovms::GCSFileSystem>();
-    }
-    if (basePath.rfind(FileSystem::AZURE_URL_FILE_PREFIX, 0) == 0) {
-        return std::make_shared<ovms::AzureFileSystem>();
-    }
-    if (basePath.rfind(FileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
-        return std::make_shared<ovms::AzureFileSystem>();
-    }
-    return std::make_shared<LocalFileSystem>();
+    return ovms::getFilesystem(basePath);
 }
 
 const std::string ModelManager::getFullPath(const std::string& pathToCheck) const {
