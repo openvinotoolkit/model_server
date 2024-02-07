@@ -14,12 +14,13 @@
 # limitations under the License.
 #
 import tritonclient.grpc as grpcclient
-from tritonclient.utils import deserialize_bytes_tensor, serialize_byte_tensor
+from tritonclient.utils import deserialize_bytes_tensor
 import argparse
 from threading import Event
 import datetime
 import numpy as np
 import os
+from utils import serialize_prompts
 
 parser = argparse.ArgumentParser(description='Client for llm example')
 
@@ -56,8 +57,10 @@ def callback(result, error):
         event.set()
     elif result.as_numpy('completion') is not None:
         if len(prompts) == 1:
+            # For single batch, partial response is represented as single buffer of bytes
             print(result.as_numpy('completion').tobytes().decode(), flush=True, end='')
         else:
+            # For multi batch, responses are packed in 4byte len tritonclient format
             os.system('clear')
             for i, completion in enumerate(deserialize_bytes_tensor(result._result.raw_output_contents[0])):
                 completions[i] += completion.decode()
@@ -68,18 +71,6 @@ def callback(result, error):
         start_time = datetime.datetime.now()
     else:
         assert False, "unexpected output"
-
-
-def serialize_prompts(prompts):
-    infer_input = grpcclient.InferInput("pre_prompt", [len(prompts)], "BYTES")
-    if len(prompts) == 1:
-        # Single batch serialized directly as bytes
-        infer_input._raw_content = prompts[0].encode()
-        return infer_input
-    # Multi batch serialized in tritonclient 4byte len format
-    infer_input._raw_content = serialize_byte_tensor(
-        np.array(prompts, dtype=np.object_)).item()
-    return infer_input
 
 
 client.start_stream(callback=callback)
