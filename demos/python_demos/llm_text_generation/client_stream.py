@@ -45,6 +45,8 @@ processing_times = np.zeros((0),int) # tracks response latency in ms
 
 prompts = args['prompt']
 completions = [f"==== Prompt: {prompts[i]} ====\n" for i in range(len(prompts))]
+if len(prompts) == 1:
+    print(f"Question:\n{prompts[0]}\n")
 
 def callback(result, error):
     endtime = datetime.datetime.now()

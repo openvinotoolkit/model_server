@@ -40,7 +40,7 @@ start_time = datetime.datetime.now()
 results = client.infer("python_model", [infer_input], client_timeout=10*60)  # 10 minutes
 endtime = datetime.datetime.now()
 if len(args['prompt']) == 1:
-    print(results.as_numpy('completion').tobytes().decode())
+    print(f"Question:\n{args['prompt'][0]}\n\nCompletion:\n{results.as_numpy('completion').tobytes().decode()}\n")
 else:
     for i, arr in enumerate(deserialize_bytes_tensor(results._result.raw_output_contents[0])):
         print(f"==== Prompt: {args['prompt'][i]} ====")

@@ -126,7 +126,7 @@ def deserialize_prompts(batch_size, input_tensor):
 
 def serialize_completions(batch_size, result):
     if batch_size == 1:
-        return [Tensor("completion", result.encode())]
+        return [Tensor("completion", result[0].encode())]
     return [Tensor("completion", serialize_byte_tensor(
         np.array(result, dtype=np.object_)).item())]
 
@@ -176,7 +176,10 @@ class OvmsPythonModel:
         completions = ["" for _ in range(batch_size)]
         for i, partial_result in enumerate(streamer):
             print('iteration', i)
-            completions = [a + b for a, b in zip(completions, partial_result)]
+            if batch_size == 1:
+                completions[0] += partial_result
+            else:
+                completions = [a + b for a, b in zip(completions, partial_result)]
         print('end')
 
         return serialize_completions(batch_size, completions)
