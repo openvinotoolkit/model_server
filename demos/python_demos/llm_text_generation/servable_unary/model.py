@@ -164,4 +164,3 @@ class OvmsPythonModel:
         print('end')
 
         return [Tensor("completion", partial_text.encode())]
-

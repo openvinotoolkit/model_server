@@ -15,13 +15,16 @@
 #*****************************************************************************
 
 import os
-from pyovms import Tensor
+import threading
+import numpy as np
+
 from optimum.intel import OVModelForCausalLM
 from transformers import AutoTokenizer, AutoConfig, TextIteratorStreamer, StoppingCriteria, StoppingCriteriaList
+from tritonclient.utils import deserialize_bytes_tensor, serialize_byte_tensor
 
-import threading
+from pyovms import Tensor
 
-from config import SUPPORTED_LLM_MODELS
+from config import SUPPORTED_LLM_MODELS, BatchTextIteratorStreamer
 
 SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
 
@@ -113,6 +116,20 @@ def convert_history_to_text(history):
     return text
 
 
+def deserialize_prompts(batch_size, input_tensor):
+    if batch_size == 1:
+        return [bytes(input_tensor).decode()]
+    np_arr = deserialize_bytes_tensor(bytes(input_tensor))
+    return [arr.decode() for arr in np_arr]
+
+
+def serialize_completions(batch_size, result):
+    if batch_size == 1:
+        return [Tensor("completion", result.encode())]
+    return [Tensor("completion", serialize_byte_tensor(
+        np.array(result, dtype=np.object_)).item())]
+
+
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
         print("-------- Running initialize")
@@ -125,16 +142,18 @@ class OvmsPythonModel:
         return True
 
     def execute(self, inputs: list):
-        print("-------- Running execute")
-        ov_model_exec = self.ov_model.clone()
-        text = bytes(inputs[0]).decode()
-        temporal_history = [[text, ""]]
+        print(f"-------- Running execute, shape: {inputs[0].shape}")
+        batch_size = inputs[0].shape[0]
+        prompts = deserialize_prompts(batch_size, inputs[0])
+        messages = [convert_history_to_text([[prompt, ""]]) for prompt in prompts]
+        tokens = tokenizer(messages, return_tensors="pt", **tokenizer_kwargs, padding=True)
 
-        messages = convert_history_to_text(temporal_history)
-        input_ids = tokenizer(messages, return_tensors="pt", **tokenizer_kwargs).input_ids
-        streamer = TextIteratorStreamer(tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
+        if batch_size == 1:
+            streamer = TextIteratorStreamer(tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
+        else:
+            streamer = BatchTextIteratorStreamer(batch_size=batch_size, tokenizer=tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
+
         generate_kwargs = dict(
-            input_ids=input_ids,
             max_new_tokens=1024,
             temperature=1.0,
             do_sample=True,
@@ -146,18 +165,14 @@ class OvmsPythonModel:
         if stop_tokens is not None:
             generate_kwargs["stopping_criteria"] = StoppingCriteriaList(stop_tokens)
 
+        ov_model_exec = self.ov_model.clone()
         def generate():
-            ov_model_exec.generate(**generate_kwargs)
+            ov_model_exec.generate(**tokens, **generate_kwargs)
 
         t1 = threading.Thread(target=generate)
         t1.start()
 
-        partial_text = ""
-        iteration = 0
-        for new_text in streamer:
-            yield [Tensor("completion", new_text.encode())]
-            partial_text = text_processor(partial_text, new_text)
-            iteration += 1
-            print('iteration', iteration)
+        for partial_result in streamer:
+            yield serialize_completions(batch_size, partial_result)
         yield [Tensor("end_signal", "".encode())]
         print('end')

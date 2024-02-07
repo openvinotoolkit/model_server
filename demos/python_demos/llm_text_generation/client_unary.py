@@ -43,4 +43,3 @@ endtime = datetime.datetime.now()
 print(f"Completion:\n{results.as_numpy('completion').tobytes().decode()}\n")
 
 print("Total time", int((endtime - start_time).total_seconds() * 1000), "ms")
-
