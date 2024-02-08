@@ -1,7 +1,7 @@
 # Model Cache {#ovms_docs_model_cache}
 
 ## Overview
-The Model Server can leverage a [OpenVINO&trade; model cache functionality](https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_Model_caching_overview.html), to speed up subsequent model loading on a target device. 
+The Model Server can leverage a [OpenVINO&trade; model cache functionality](https://docs.openvino.ai/2023.3/openvino_docs_OV_UG_Model_caching_overview.html), to speed up subsequent model loading on a target device. 
 The cached files make the Model Server initialization usually faster. 
 The boost depends on a model and a target device. The most noticeable improvement will be observed with GPU devices. On other devices, like CPU, it is possible to observe no speed up effect or even slower loading process depending on used model. Test the setup before final deployment.
 
@@ -51,13 +51,10 @@ $ curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model
 
 ### Starting the service
 
-@sphinxdirective
-.. code-block:: sh
-
-    $ mkdir cache
-    $ docker run -p 9000:9000 -d -u $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v ${PWD}/model/fdsample:/model:ro -v ${PWD}/cache:/opt/cache:rw openvino/model_server:latest-gpu --model_name model --model_path /model --target_device GPU --port 9000
-
-@endsphinxdirective
+```bash
+$ mkdir cache
+$ docker run -p 9000:9000 -d -u $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v ${PWD}/model/fdsample:/model:ro -v ${PWD}/cache:/opt/cache:rw openvino/model_server:latest-gpu --model_name model --model_path /model --target_device GPU --port 9000
+```
 
 Expected message in the logs `Model cache is enabled: /opt/cache`.
 

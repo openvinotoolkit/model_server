@@ -59,6 +59,9 @@ build --define=PYTHON_DISABLE=0
 coverage --define=PYTHON_DISABLE=0
 test --define=PYTHON_DISABLE=0
 
+# sometimes failed logs exceed this threshold
+test --experimental_ui_max_stdouterr_bytes=104857600
+
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos
 

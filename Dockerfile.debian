@@ -111,7 +111,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             libusb-1.0-0-dev \
             libtool \
             libnuma-dev \
-            libtbb2 \
+            libtbb-dev \
             libssl-dev \
             nlohmann-json3-dev \
             python2 \
@@ -214,7 +214,7 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
 
 WORKDIR /openvino_contrib/modules/custom_operations/user_ie_extensions
-RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="sentence_piece" && cmake --build . --parallel $JOBS
+RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="tokenizer" && cmake --build . --parallel $JOBS
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
@@ -278,7 +278,8 @@ COPY .bazelrc WORKSPACE /ovms/
 COPY external /ovms/external/
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
-COPY src/bindings/python/tests/requirements.txt /ovms/src/bindings/python/tests/requirements.txt
+COPY src/python/binding/BUILD /ovms/src/python/binding/BUILD
+COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/requirements.txt
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/
 

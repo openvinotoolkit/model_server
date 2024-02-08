@@ -128,6 +128,7 @@ def check_dir(start_dir):
         "ssdlite_object_detection_labelmap.txt",
         "build_dependencies.sh",
         "iris_tracking.pbtxt",
+        "graph_two_inputs_model.pbtxt"
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']

@@ -110,6 +110,7 @@ static const net_http::HTTPStatusCode http(const ovms::Status& status) {
         // Predict request validation
         {StatusCode::INVALID_NO_OF_INPUTS, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_MISSING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_UNEXPECTED_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_BATCH_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},

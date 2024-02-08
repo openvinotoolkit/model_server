@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <chrono>
 #include <fstream>
+#include <memory>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -24,6 +25,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
 #include <sys/stat.h>
 
 #pragma GCC diagnostic push
@@ -37,9 +39,10 @@
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../mediapipe_internal/pythonnoderesource.hpp"
+#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
@@ -51,11 +54,15 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
 #include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
+#include "mediapipe/framework/formats/image_frame.h"
+#include "mediapipe/framework/formats/tensor.h"
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
 #if (PYTHON_DISABLE == 0)
 #include <pybind11/embed.h>
+
+#include "../python/pythonnoderesources.hpp"
 namespace py = pybind11;
 using namespace py::literals;
 #endif
@@ -114,11 +121,35 @@ public:
     }
 };
 
+#if (PYTHON_DISABLE == 0)
+class MediapipePyTensorOvTensorConverterTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_pytensor_ovtensor_converter.json");
+    }
+};
+class MediapipeOvTensorPyTensorConverterTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_ovtensor_pytensor_converter.json");
+    }
+};
+#endif
+
 class MediapipeTfLiteTensorTest : public MediapipeFlowTest {
 public:
     void SetUp() {
         SetUpServer("/ovms/src/test/mediapipe/relative_paths/config_tflite_passthrough.json");
     }
+};
+
+template <class W, class R>
+class MockedServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<W, R> {
+public:
+    MOCK_METHOD(void, SendInitialMetadata, (), (override));
+    MOCK_METHOD(bool, NextMessageSize, (uint32_t * sz), (override));
+    MOCK_METHOD(bool, Read, (R * msg), (override));
+    MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
 };
 
 TEST_F(MediapipeFlowKfsTest, Infer) {
@@ -136,16 +167,81 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
     preparePredictRequest(request, inputsMeta, requestData1);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    auto outputs = response.outputs();
-    ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(outputs[0].name(), "out");
-    ASSERT_EQ(outputs[0].shape().size(), 2);
-    ASSERT_EQ(outputs[0].shape()[0], 1);
-    ASSERT_EQ(outputs[0].shape()[1], 10);
-
     // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
+
+#if (PYTHON_DISABLE == 0)
+TEST_F(MediapipePyTensorOvTensorConverterTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediapipePyTensorOvTensorConverter";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{
+        {"in", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    ASSERT_EQ(response.model_name(), "mediapipePyTensorOvTensorConverter");
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:"
+                                                         << "out";
+    const auto& output = *response.outputs().begin();
+    const std::string& content = response.raw_output_contents(0);
+
+    ASSERT_EQ(content.size(), 10 * sizeof(float));
+    ASSERT_EQ(output.shape_size(), 2);
+    ASSERT_EQ(output.shape(0), 1);
+    ASSERT_EQ(output.shape(1), 10);
+    ASSERT_EQ(output.datatype(), "FP32");
+
+    const float* actualOutput = (const float*)content.data();
+    float* expectedOutput = requestData1.data();
+    const int dataLengthToCheck = 10 * sizeof(float);
+    EXPECT_EQ(actualOutput[0], expectedOutput[0]);
+    EXPECT_EQ(0, std::memcmp(actualOutput, expectedOutput, dataLengthToCheck))
+        << readableError(expectedOutput, actualOutput, dataLengthToCheck / sizeof(float));
+}
+
+TEST_F(MediapipeOvTensorPyTensorConverterTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediapipeOvTensorPyTensorConverter";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{
+        {"in", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    ASSERT_EQ(response.model_name(), "mediapipeOvTensorPyTensorConverter");
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), "out") << "Did not find:"
+                                                         << "out";
+    const auto& output = *response.outputs().begin();
+    const std::string& content = response.raw_output_contents(0);
+
+    ASSERT_EQ(content.size(), 10 * sizeof(float));
+    ASSERT_EQ(output.shape_size(), 2);
+    ASSERT_EQ(output.shape(0), 1);
+    ASSERT_EQ(output.shape(1), 10);
+
+    const float* actualOutput = (const float*)content.data();
+    float* expectedOutput = requestData1.data();
+    const int dataLengthToCheck = 10 * sizeof(float);
+    EXPECT_EQ(actualOutput[0], expectedOutput[0]);
+    EXPECT_EQ(0, std::memcmp(actualOutput, expectedOutput, dataLengthToCheck))
+        << readableError(expectedOutput, actualOutput, dataLengthToCheck / sizeof(float));
+}
+#endif
 
 TEST_F(MediapipeTFTest, Passthrough) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -386,8 +482,7 @@ public:
         ASSERT_TRUE(!imageRaw.empty());
         cv::Mat image;
         size_t matFormat = convertKFSDataTypeToMatFormat(datatype);
-        size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 3);
-        imageRaw.convertTo(image, matFormatWithChannels);
+        imageRaw.convertTo(image, matFormat);
 
         KFSTensorInputProto* input = request.add_inputs();
         input->set_name("in");
@@ -426,8 +521,7 @@ public:
         ASSERT_TRUE(!imageRaw.empty());
         cv::Mat grayscaled;
         size_t matFormat = convertKFSDataTypeToMatFormat(datatype);
-        size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 1);
-        imageRaw.convertTo(grayscaled, matFormatWithChannels);
+        imageRaw.convertTo(grayscaled, matFormat);
 
         KFSTensorInputProto* input = request.add_inputs();
         input->set_name("in");
@@ -494,8 +588,7 @@ TEST_F(MediapipeFlowImageInput, InvalidShape) {
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat image;
     size_t matFormat = convertKFSDataTypeToMatFormat("UINT8");
-    size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 3);
-    imageRaw.convertTo(image, matFormatWithChannels);
+    imageRaw.convertTo(image, matFormat);
     std::string* content = request.add_raw_input_contents();
     size_t elementSize = image.elemSize1();
     content->resize(image.cols * image.rows * image.channels() * elementSize);
@@ -548,8 +641,7 @@ TEST_F(MediapipeFlowImageInput, InvalidDatatype) {
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat image;
     size_t matFormat = convertKFSDataTypeToMatFormat("INT64");
-    size_t matFormatWithChannels = CV_MAKETYPE(matFormat, 3);
-    imageRaw.convertTo(image, matFormatWithChannels);
+    imageRaw.convertTo(image, matFormat);
     std::string* content = request.add_raw_input_contents();
     size_t elementSize = image.elemSize1();
     content->resize(image.cols * image.rows * image.channels() * elementSize);
@@ -565,6 +657,46 @@ TEST_F(MediapipeFlowImageInput, InvalidDatatype) {
 
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
+}
+
+TEST_F(MediapipeFlowImageInput, Float32_4Channels) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "mediapipeImageInput";
+    request.Clear();
+    response.Clear();
+    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+    ASSERT_TRUE(!imageRaw.empty());
+    cv::Mat imageFP32;
+    imageRaw.convertTo(imageFP32, CV_32F);
+    cv::Mat image;
+    cv::cvtColor(imageFP32, image, cv::COLOR_BGR2BGRA);
+
+    KFSTensorInputProto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->mutable_shape()->Clear();
+    input->add_shape(image.rows);
+    input->add_shape(image.cols);
+    input->add_shape(image.channels());
+
+    std::string* content = request.add_raw_input_contents();
+    size_t elementSize = image.elemSize1();
+    content->resize(image.cols * image.rows * image.channels() * elementSize);
+    std::memcpy(content->data(), image.data, image.cols * image.rows * image.channels() * elementSize);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    ASSERT_EQ(response.model_name(), modelName);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.outputs()[0].shape().size(), 3);
+    ASSERT_EQ(response.outputs()[0].shape()[0], image.cols);
+    ASSERT_EQ(response.outputs()[0].shape()[1], image.rows);
+    ASSERT_EQ(response.outputs()[0].shape()[2], image.channels());
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.raw_output_contents()[0].size(), image.cols * image.rows * image.channels() * elementSize);
+    ASSERT_EQ(0, memcmp(response.raw_output_contents()[0].data(), image.data, image.cols * image.rows * image.channels() * elementSize));
 }
 
 class MediapipeFlowImageInputThreeChannels : public MediapipeFlowImageInput {};
@@ -882,6 +1014,28 @@ TEST_F(MediapipeFlowDummyNegativeTest, NegativeShouldNotReachInferDueToNonexiste
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::UNAVAILABLE);
 }
 
+TEST_F(MediapipeFlowDummyNegativeTest, NegativeShouldNotReachInferStreamDueToNonexistentCalculator) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+
+    const std::string modelName = "mediaDummyNonexistentCaclulator";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
+    preparePredictRequest(request, inputsMeta);
+    request.mutable_model_name()->assign(modelName);
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+    EXPECT_CALL(stream, Read(::testing::_))
+        .WillOnce([request](::inference::ModelInferRequest* req) {
+            *req = request;
+            return true;  // sending 1st request with wrong endpoint name
+        });
+    EXPECT_CALL(stream, Write(::testing::_, ::testing::_)).Times(0);
+    ASSERT_EQ(impl.ModelStreamInferImpl(nullptr, &stream), StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET);
+}
+
 TEST_F(MediapipeFlowScalarTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -970,6 +1124,292 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
+const std::vector<std::string> mediaGraphsDummy{"mediaDummy",
+    "mediaDummyADAPTFULL"};
+const std::vector<std::string> mediaGraphsAdd{"mediapipeAdd",
+    "mediapipeAddADAPTFULL"};
+
+class MediapipeStreamFlowAddTest : public MediapipeFlowAddTest {
+protected:
+    constexpr static const size_t NUM_REQUESTS{3};
+    const std::string modelName = mediaGraphsAdd[1];
+    ::KFSRequest request[NUM_REQUESTS];
+    ::KFSResponse response[NUM_REQUESTS];
+    std::vector<float> requestData1[NUM_REQUESTS];
+
+    void SetUp() override {
+        MediapipeFlowAddTest::SetUp();
+        for (size_t i = 0; i < NUM_REQUESTS; i++) {
+            this->request[i].Clear();
+            this->response[i].Clear();
+        }
+        inputs_info_t inputsMeta{
+            {"in1", {DUMMY_MODEL_SHAPE, precision}},
+            {"in2", {DUMMY_MODEL_SHAPE, precision}}};
+        this->requestData1[0] = {3., 7., 1., 6., 4., 2., 0, 5., 9., 8.};
+        this->requestData1[1] = {6., 1., 4., 2., 0., 1., 9, 8., 9., 2.};
+        this->requestData1[2] = {4., 2., 0., 1., 9., 8., 5, 1., 4., 6.};
+        for (size_t i = 0; i < NUM_REQUESTS; i++) {
+            preparePredictRequest(this->request[i], inputsMeta, this->requestData1[i]);
+            this->request[i].mutable_model_name()->assign(modelName);
+        }
+    }
+
+    MediapipeGraphDefinition* getMPDefinitionByName(const std::string& name) {
+        const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
+        ModelManager& modelManager = smm->getServableManager();
+        const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+        return factory.findDefinitionByName(name);
+    }
+};
+
+// Smoke test - send multiple requests with ov::Tensor, receive multiple responses
+// Gets the executor from model manager
+TEST_F(MediapipeStreamFlowAddTest, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+    EXPECT_CALL(stream, Read(::testing::_))
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            *req = this->request[0];
+            return true;  // correct sending 1st request
+        })
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            *req = this->request[1];
+            return true;  // correct sending 2nd request
+        })
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            *req = this->request[2];
+            return true;  // correct sending 3rd request
+        })
+        .WillOnce([](::inference::ModelInferRequest* req) {
+            return false;  // disconnection
+        });
+    EXPECT_CALL(stream, Write(::testing::_, ::testing::_))
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            // expect first response
+            checkAddResponse("out", this->requestData1[0], this->requestData1[0], this->request[0], msg.infer_response(), 1, 1, this->modelName);
+            return true;
+        })
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            // expect second response
+            checkAddResponse("out", this->requestData1[1], this->requestData1[1], this->request[1], msg.infer_response(), 1, 1, this->modelName);
+            return true;
+        })
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            // expect third and no more responses
+            checkAddResponse("out", this->requestData1[2], this->requestData1[2], this->request[2], msg.infer_response(), 1, 1, this->modelName);
+            return true;
+        });
+    auto status = impl.ModelStreamInferImpl(nullptr, &stream);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+}
+
+// Inference on unloaded mediapipe graph
+// Expect old stream to continue responding until closure
+// Expect new stream to be rejected
+TEST_F(MediapipeStreamFlowAddTest, InferOnUnloadedGraph) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
+    ModelManager& modelManager = smm->getServableManager();
+
+    auto* definition = this->getMPDefinitionByName(this->modelName);
+    ASSERT_NE(definition, nullptr);
+
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+    std::promise<void> startUnloading;
+    std::promise<void> finishedUnloading;
+    EXPECT_CALL(stream, Read(::testing::_))
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            *req = this->request[0];
+            return true;  // correct sending 1st request
+        })
+        .WillOnce([this, &finishedUnloading](::inference::ModelInferRequest* req) {
+            *req = this->request[1];
+            // Second Read() operation will wait, until graph unloading is finished
+            finishedUnloading.get_future().get();
+            return true;  // correct sending 2nd request
+        })
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            *req = this->request[2];
+            return true;  // correct sending 3rd request
+        })
+        .WillOnce([](::inference::ModelInferRequest* req) {
+            return false;  // disconnection
+        });
+    EXPECT_CALL(stream, Write(::testing::_, ::testing::_))
+        .WillOnce([this, &startUnloading](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            // expect first response
+            checkAddResponse("out", this->requestData1[0], this->requestData1[0], this->request[0], msg.infer_response(), 1, 1, this->modelName);
+            // notify that we should start unloading (first request is processed and response is sent)
+            startUnloading.set_value();
+            return true;
+        })
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            // expect second response
+            checkAddResponse("out", this->requestData1[1], this->requestData1[1], this->request[1], msg.infer_response(), 1, 1, this->modelName);
+            return true;
+        })
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            // expect third and no more responses
+            checkAddResponse("out", this->requestData1[2], this->requestData1[2], this->request[2], msg.infer_response(), 1, 1, this->modelName);
+            return true;
+        });
+    std::thread unloader([&startUnloading, &finishedUnloading, &definition, &modelManager]() {
+        // Wait till first response notifies that we should start unloading
+        startUnloading.get_future().get();
+        definition->retire(modelManager);
+        // Notify second request to arrive because we unloaded the graph
+        finishedUnloading.set_value();
+    });
+    auto status = impl.ModelStreamInferImpl(nullptr, &stream);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    unloader.join();
+
+    // Opening new stream, expect graph to be unavailable
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> newStream;
+    EXPECT_CALL(newStream, Read(::testing::_))
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            *req = this->request[0];
+            return true;  // sending 1st request which should fail creating new graph
+        });
+    EXPECT_CALL(newStream, Write(::testing::_, ::testing::_)).Times(0);
+    status = impl.ModelStreamInferImpl(nullptr, &newStream);
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE) << status.string();
+}
+
+// Inference on reloaded mediapipe graph, completely different pipeline
+// Expects old stream to still use old configuration
+// Expect new stream to use new configuration
+TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
+    ModelManager& modelManager = smm->getServableManager();
+
+    auto* definition = this->getMPDefinitionByName(this->modelName);
+    ASSERT_NE(definition, nullptr);
+
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+    std::promise<void> startReloading;
+    std::promise<void> finishedReloading;
+    EXPECT_CALL(stream, Read(::testing::_))
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            *req = this->request[0];
+            return true;  // correct sending 1st request
+        })
+        .WillOnce([this, &finishedReloading](::inference::ModelInferRequest* req) {
+            *req = this->request[1];
+            // Second Read() operation will wait, until graph reloading is finished
+            finishedReloading.get_future().get();
+            return true;  // correct sending 2nd request
+        })
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            *req = this->request[2];
+            return true;  // correct sending 3rd request
+        })
+        .WillOnce([](::inference::ModelInferRequest* req) {
+            return false;  // disconnection
+        });
+    EXPECT_CALL(stream, Write(::testing::_, ::testing::_))
+        .WillOnce([this, &startReloading](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            // expect first response
+            checkAddResponse("out", this->requestData1[0], this->requestData1[0], this->request[0], msg.infer_response(), 1, 1, this->modelName);
+            // notify that we should start reloading (first request is processed and response is sent)
+            startReloading.set_value();
+            return true;
+        })
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            // expect second response
+            checkAddResponse("out", this->requestData1[1], this->requestData1[1], this->request[1], msg.infer_response(), 1, 1, this->modelName);
+            return true;
+        })
+        .WillOnce([this](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            // expect third and no more responses
+            checkAddResponse("out", this->requestData1[2], this->requestData1[2], this->request[2], msg.infer_response(), 1, 1, this->modelName);
+            return true;
+        });
+    std::thread reloader([&startReloading, &finishedReloading, &definition, &modelManager, this]() {
+        // Wait till first response notifies that we should start reloading
+        startReloading.get_future().get();
+        MediapipeGraphConfig mgc{
+            this->modelName,
+            "",                                               // default base path
+            "/ovms/src/test/mediapipe/graphscalar_tf.pbtxt",  // graphPath - valid but includes missing models, will fail for new streams
+            "",                                               // default subconfig path
+            ""                                                // dummy md5
+        };
+        auto status = definition->reload(modelManager, mgc);
+        ASSERT_EQ(status, StatusCode::OK) << status.string();
+        // Notify second request to arrive because we unloaded the graph
+        finishedReloading.set_value();
+    });
+    auto status = impl.ModelStreamInferImpl(nullptr, &stream);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    reloader.join();
+
+    // Opening new stream, expect new graph to be available but errors in processing
+    std::promise<void> canDisconnect;
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> newStream;
+    EXPECT_CALL(newStream, Read(::testing::_))
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            *req = this->request[0];
+            return true;  // sending 1st request which should fail creating new graph
+        })
+        .WillOnce([&canDisconnect](::inference::ModelInferRequest* req) {
+            canDisconnect.get_future().get();
+            return false;
+        });
+    EXPECT_CALL(newStream, Write(::testing::_, ::testing::_))
+        .WillOnce([&canDisconnect](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+            [&msg]() {
+                const auto& outputs = msg.infer_response().outputs();
+                ASSERT_EQ(outputs.size(), 0);
+                ASSERT_EQ(msg.error_message(), Status(StatusCode::INVALID_UNEXPECTED_INPUT).string() + " - in1 is unexpected; partial deserialization of first request");
+            }();
+            canDisconnect.set_value();
+            return true;
+        });
+    status = impl.ModelStreamInferImpl(nullptr, &newStream);
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
+TEST_F(MediapipeStreamFlowAddTest, NegativeShouldNotReachInferDueToRetiredGraph) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
+    ModelManager& modelManager = smm->getServableManager();
+    auto* definition = this->getMPDefinitionByName(this->modelName);
+    ASSERT_NE(definition, nullptr);
+    definition->retire(modelManager);
+
+    // Opening new stream, expect graph to be unavailable
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+    EXPECT_CALL(stream, Read(::testing::_))
+        .WillOnce([this](::inference::ModelInferRequest* req) {
+            *req = this->request[0];
+            return true;  // sending 1st request which should fail creating new graph
+        });
+    EXPECT_CALL(stream, Write(::testing::_, ::testing::_)).Times(0);
+    auto status = impl.ModelStreamInferImpl(nullptr, &stream);
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE) << status.string();
+}
+
+TEST_P(MediapipeFlowAddTest, InferStreamDisconnectionBeforeFirstRequest) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+    EXPECT_CALL(stream, Read(::testing::_))
+        .WillOnce([](::inference::ModelInferRequest* req) {
+            return false;  // immediate disconnection
+        });
+    EXPECT_CALL(stream, Write(::testing::_, ::testing::_)).Times(0);
+    auto status = impl.ModelStreamInferImpl(nullptr, &stream);
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE) << status.string();
+}
+
 TEST_F(MediapipeFlowTest, InferWithParams) {
     SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_graph_with_side_packets.json");
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -1051,6 +1491,33 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
         break;
     }
     ASSERT_NE(it, response.outputs().end());
+}
+
+TEST_F(MediapipeFlowTest, InferWithRestrictedParamName) {
+    SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_graph_with_side_packets.json");
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    for (auto restrictedParamName : std::vector<std::string>{"py"}) {
+        ::KFSRequest request;
+        ::KFSResponse response;
+        const std::string modelName = "mediaWithParams";
+        request.Clear();
+        response.Clear();
+        inputs_info_t inputsMeta{
+            {"in_not_used", {{1, 1}, ovms::Precision::I32}}};
+        std::vector<float> requestData{0.};
+        preparePredictRequest(request, inputsMeta, requestData);
+        request.mutable_model_name()->assign(modelName);
+        // here add params
+        const std::string stringParamValue = "abecadlo";
+        const bool boolParamValue = true;
+        const int64_t int64ParamValue = 42;
+        request.mutable_parameters()->operator[]("string_param").set_string_param(stringParamValue);
+        request.mutable_parameters()->operator[]("bool_param").set_bool_param(boolParamValue);
+        request.mutable_parameters()->operator[]("int64_param").set_int64_param(int64ParamValue);
+        request.mutable_parameters()->operator[](restrictedParamName).set_int64_param(int64ParamValue);
+        ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::FAILED_PRECONDITION);
+    }
 }
 
 using testing::ElementsAre;
@@ -1226,23 +1693,6 @@ TEST(Mediapipe, MetadataDummy) {
     EXPECT_EQ(output->getPrecision(), ovms::Precision::UNDEFINED);
 }
 
-class DummyMediapipeGraphDefinition : public MediapipeGraphDefinition {
-public:
-    std::string inputConfig;
-
-public:
-    DummyMediapipeGraphDefinition(const std::string name,
-        const MediapipeGraphConfig& config,
-        std::string inputConfig) :
-        MediapipeGraphDefinition(name, config, nullptr, nullptr) {}
-
-    // Do not read from path - use predefined config contents
-    Status validateForConfigFileExistence() override {
-        this->chosenConfig = this->inputConfig;
-        return StatusCode::OK;
-    }
-};
-
 TEST(Mediapipe, MetadataDummyInputTypes) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
@@ -1401,7 +1851,7 @@ TEST(Mediapipe, MetadataNegativeWrongInputTypes) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME);
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
 TEST(Mediapipe, MetadataNegativeWrongOutputTypes) {
@@ -1425,7 +1875,7 @@ TEST(Mediapipe, MetadataNegativeWrongOutputTypes) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME);
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
 TEST(Mediapipe, MetadataEmptyConfig) {
@@ -1437,11 +1887,6 @@ TEST(Mediapipe, MetadataEmptyConfig) {
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
-
-const std::vector<std::string> mediaGraphsDummy{"mediaDummy",
-    "mediaDummyADAPTFULL"};
-const std::vector<std::string> mediaGraphsAdd{"mediapipeAdd",
-    "mediapipeAddADAPTFULL"};
 
 const std::vector<std::string> mediaGraphsKfs{"mediapipeDummyKFS"};
 
@@ -1944,6 +2389,125 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 0);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
 }
+class MediapipeSerialization : public ::testing::Test {
+    class MockedMediapipeGraphExecutor : public ovms::MediapipeGraphExecutor {
+    public:
+        Status serializePacket(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const {
+            return ovms::MediapipeGraphExecutor::serializePacket(name, response, packet);
+        }
+
+        MockedMediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
+            stream_types_mapping_t inputTypes,
+            stream_types_mapping_t outputTypes,
+            std::vector<std::string> inputNames, std::vector<std::string> outputNames,
+            const PythonNodeResourcesMap& pythonNodeResourcesMap,
+            PythonBackend* pythonBackend) :
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, pythonBackend) {}
+    };
+
+protected:
+    std::unique_ptr<MockedMediapipeGraphExecutor> executor;
+    ::inference::ModelInferResponse mp_response;
+    void SetUp() {
+        ovms::stream_types_mapping_t mapping;
+        mapping["kfs_response"] = mediapipe_packet_type_enum::KFS_RESPONSE;
+        mapping["tf_response"] = mediapipe_packet_type_enum::TFTENSOR;
+        mapping["ov_response"] = mediapipe_packet_type_enum::OVTENSOR;
+        mapping["mp_response"] = mediapipe_packet_type_enum::MPTENSOR;
+        mapping["mp_img_response"] = mediapipe_packet_type_enum::MEDIAPIPE_IMAGE;
+        const std::vector<std::string> inputNames;
+        const std::vector<std::string> outputNames;
+        const ::mediapipe::CalculatorGraphConfig config;
+        PythonNodeResourcesMap pythonNodeResourcesMap;
+        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, nullptr);
+    }
+};
+
+TEST_F(MediapipeSerialization, KFSResponse) {
+    KFSResponse response;
+    response.set_id("1");
+    auto output = response.add_outputs();
+    output->add_shape(1);
+    output->set_datatype("FP32");
+    std::vector<float> data = {1.0f};
+    response.add_raw_output_contents()->assign(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<KFSResponse*>(&response);
+    ASSERT_EQ(executor->serializePacket("kfs_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(mp_response.id(), "1");
+    ASSERT_EQ(mp_response.outputs_size(), 1);
+    auto mp_output = mp_response.outputs(0);
+    ASSERT_EQ(mp_output.datatype(), "FP32");
+    ASSERT_EQ(mp_output.shape_size(), 1);
+    ASSERT_EQ(mp_output.shape(0), 1);
+    ASSERT_EQ(mp_response.raw_output_contents_size(), 1);
+    ASSERT_EQ(mp_response.raw_output_contents().at(0).size(), 4);
+    ASSERT_EQ(reinterpret_cast<const float*>(mp_response.raw_output_contents().at(0).data())[0], 1.0f);
+}
+
+TEST_F(MediapipeSerialization, TFTensor) {
+    tensorflow::Tensor response(TFSDataType::DT_FLOAT, {1});
+    response.flat<float>()(0) = 1.0f;
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<tensorflow::Tensor>(response);
+    ASSERT_EQ(executor->serializePacket("tf_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
+    ASSERT_EQ(mp_response.outputs_size(), 1);
+    auto mp_output = mp_response.outputs(0);
+    ASSERT_EQ(mp_output.shape_size(), 1);
+    ASSERT_EQ(mp_output.shape(0), 1);
+    ASSERT_EQ(mp_response.raw_output_contents_size(), 1);
+    ASSERT_EQ(mp_response.raw_output_contents().at(0).size(), 4);
+    ASSERT_EQ(reinterpret_cast<const float*>(mp_response.raw_output_contents().at(0).data())[0], 1.0f);
+}
+
+TEST_F(MediapipeSerialization, OVTensor) {
+    std::vector<float> data = {1.0f};
+    ov::element::Type type(ov::element::Type_t::f32);
+    ov::Tensor response(type, {1}, data.data());
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<ov::Tensor>(response);
+    ASSERT_EQ(executor->serializePacket("ov_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
+    ASSERT_EQ(mp_response.outputs_size(), 1);
+    auto mp_output = mp_response.outputs(0);
+    ASSERT_EQ(mp_output.shape_size(), 1);
+    ASSERT_EQ(mp_output.shape(0), 1);
+    ASSERT_EQ(mp_response.raw_output_contents_size(), 1);
+    ASSERT_EQ(mp_response.raw_output_contents().at(0).size(), 4);
+    ASSERT_EQ(reinterpret_cast<const float*>(mp_response.raw_output_contents().at(0).data())[0], 1.0f);
+}
+
+TEST_F(MediapipeSerialization, MPTensor) {
+    mediapipe::Tensor response(mediapipe::Tensor::ElementType::kFloat32, {1});
+    response.GetCpuWriteView().buffer<float>()[0] = 1.0f;
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<mediapipe::Tensor>(std::move(response));
+    ASSERT_EQ(executor->serializePacket("mp_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
+    ASSERT_EQ(mp_response.outputs_size(), 1);
+    auto mp_output = mp_response.outputs(0);
+    ASSERT_EQ(mp_output.shape_size(), 1);
+    ASSERT_EQ(mp_output.shape(0), 1);
+    ASSERT_EQ(mp_response.raw_output_contents_size(), 1);
+    ASSERT_EQ(mp_response.raw_output_contents().at(0).size(), 4);
+    ASSERT_EQ(reinterpret_cast<const float*>(mp_response.raw_output_contents().at(0).data())[0], 1.0f);
+}
+
+TEST_F(MediapipeSerialization, MPImageTensor) {
+    mediapipe::ImageFrame response(static_cast<mediapipe::ImageFormat::Format>(1), 1, 1);
+    response.MutablePixelData()[0] = (char)1;
+    response.MutablePixelData()[1] = (char)1;
+    response.MutablePixelData()[2] = (char)1;
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<mediapipe::ImageFrame>(std::move(response));
+    ASSERT_EQ(executor->serializePacket("mp_img_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(mp_response.outputs(0).datatype(), "UINT8");
+    ASSERT_EQ(mp_response.outputs_size(), 1);
+    auto mp_output = mp_response.outputs(0);
+    ASSERT_EQ(mp_output.shape_size(), 3);
+    ASSERT_EQ(mp_output.shape(0), 1);
+    ASSERT_EQ(mp_response.raw_output_contents_size(), 1);
+    ASSERT_EQ(mp_response.raw_output_contents().at(0).size(), 3);
+    EXPECT_EQ(mp_response.raw_output_contents().at(0).data()[0], 1);
+    EXPECT_EQ(mp_response.raw_output_contents().at(0).data()[1], 1);
+    EXPECT_EQ(mp_response.raw_output_contents().at(0).data()[2], 1);
+}
 
 TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     std::string graphPbtxtFileContent = pbtxtContent;
@@ -2113,22 +2677,22 @@ TEST(MediapipeStreamTypes, Recognition) {
     using ovms::MediapipeGraphDefinition;
     using streamNameTypePair_t = std::pair<std::string, mediapipe_packet_type_enum>;
     // basic tag name matching
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::TFTENSOR), MediapipeGraphDefinition::getStreamNamePair("TFTENSOR:out"));
-    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::OVTENSOR), MediapipeGraphDefinition::getStreamNamePair("OVTENSOR:input"));
-    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::KFS_REQUEST), MediapipeGraphDefinition::getStreamNamePair("REQUEST:input"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), MediapipeGraphDefinition::getStreamNamePair("RESPONSE:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MEDIAPIPE_IMAGE), MediapipeGraphDefinition::getStreamNamePair("IMAGE:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::TFTENSOR), ovms::getStreamNamePair("TFTENSOR:out"));
+    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::OVTENSOR), ovms::getStreamNamePair("OVTENSOR:input"));
+    EXPECT_EQ(streamNameTypePair_t("input", mediapipe_packet_type_enum::KFS_REQUEST), ovms::getStreamNamePair("REQUEST:input"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), ovms::getStreamNamePair("RESPONSE:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MEDIAPIPE_IMAGE), ovms::getStreamNamePair("IMAGE:out"));
     // string after suffix doesn't matter
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR1:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR_1:out"));
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), MediapipeGraphDefinition::getStreamNamePair("RESPONSE_COSTAM:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR1:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR_1:out"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::KFS_RESPONSE), ovms::getStreamNamePair("RESPONSE_COSTAM:out"));
     // number as additional part doesn't affect recognized type
-    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::MPTENSOR), MediapipeGraphDefinition::getStreamNamePair("TENSOR:1:in"));
+    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::MPTENSOR), ovms::getStreamNamePair("TENSOR:1:in"));
     // negative
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), MediapipeGraphDefinition::getStreamNamePair("TENSO:out"));             // negative - non-matching tag
-    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), MediapipeGraphDefinition::getStreamNamePair("SOME_STRANGE_TAG:out"));  // negative - non-matching tag
-    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::UNKNOWN), MediapipeGraphDefinition::getStreamNamePair("in"));
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), ovms::getStreamNamePair("TENSO:out"));             // negative - non-matching tag
+    EXPECT_EQ(streamNameTypePair_t("out", mediapipe_packet_type_enum::UNKNOWN), ovms::getStreamNamePair("SOME_STRANGE_TAG:out"));  // negative - non-matching tag
+    EXPECT_EQ(streamNameTypePair_t("in", mediapipe_packet_type_enum::UNKNOWN), ovms::getStreamNamePair("in"));
 }
 
 // TEST_F(MediapipeConfig, MediapipeFullRelativePathsSubconfigNegative) {

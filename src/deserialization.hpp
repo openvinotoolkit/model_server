@@ -31,6 +31,7 @@
 #include "capi_frontend/inferencerequest.hpp"
 #include "capi_frontend/inferencetensor.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
+#include "logging.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tensor_conversion.hpp"
@@ -218,6 +219,7 @@ public:
             case ovms::Precision::Q78:
             case ovms::Precision::BIN:
             default:
+                OV_LOGGER("ov::Tensor()");
                 return ov::Tensor();
             }
         }
@@ -250,6 +252,7 @@ public:
         case ovms::Precision::Q78:
         case ovms::Precision::BIN:
         default:
+            OV_LOGGER("ov::Tensor()");
             return ov::Tensor();
         }
     }
@@ -268,8 +271,10 @@ public:
             return makeTensor(requestInput, tensorInfo);
         }
         case ovms::Precision::FP16: {
+            OV_LOGGER("ov::Shape()");
             ov::Shape shape;
             for (std::int64_t i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
+                OV_LOGGER("ov::Shape::push_back({})", requestInput.tensor_shape().dim(i).size());
                 shape.push_back(requestInput.tensor_shape().dim(i).size());
             }
             ov::Tensor tensor(ov::element::f16, shape);

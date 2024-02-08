@@ -25,7 +25,6 @@
 #include <sstream>
 #include <utility>
 
-#include "logging.hpp"
 namespace ovms {
 
 std::string joins(const std::vector<std::string>& listOfStrings, const std::string delimiter) {

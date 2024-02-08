@@ -1,3 +1,0 @@
-ovmsclient
-opencv-python
-flask

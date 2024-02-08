@@ -960,11 +960,8 @@ TYPED_TEST(TestPredict, Succesfull0DimInferenceOnBatchAutoModel) {
 
     // Do the inference
     auto status = this->performInferenceWithRequest(request, response, "dummy");
-    ASSERT_EQ(status, StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE) << status.string();
-
-    // TODO: Re-enable positive check when models with static 0 dimension become available in OpenVINO
-    // ASSERT_EQ(status, StatusCode::OK) << status.string();
-    // this->checkOutputShape(response, {0,10}, DUMMY_MODEL_OUTPUT_NAME);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {0, 10}, DUMMY_MODEL_OUTPUT_NAME);
 
     // Prepare non 0-dim request, test recovery
     preparer.preparePredictRequest(request,
@@ -992,11 +989,8 @@ TYPED_TEST(TestPredict, Succesfull0DimInferenceOnShapeAutoModel) {
 
     // Do the inference
     auto status = this->performInferenceWithRequest(request, response, "dummy");
-    ASSERT_EQ(status, StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE) << status.string();
-
-    // TODO: Re-enable positive check when models with static 0 dimension become available in OpenVINO
-    // ASSERT_EQ(status, StatusCode::OK) << status.string();
-    // this->checkOutputShape(response, {1,0}, DUMMY_MODEL_OUTPUT_NAME);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    this->checkOutputShape(response, {1, 0}, DUMMY_MODEL_OUTPUT_NAME);
 
     // Prepare non 0-dim request, test recovery
     preparer.preparePredictRequest(request,

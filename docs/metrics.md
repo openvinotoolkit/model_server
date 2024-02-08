@@ -8,8 +8,6 @@ This document describes how to use metrics endpoint in the OpenVINO Model Server
 
 - Auto scaling of the model server instances in Kubernetes and OpenShift based on application related metrics
 
-> **NOTE**: Currently, metrics feature is released as a preview feature.
-
 Built-in metrics allow tracking the performance without any extra logic on the client side or using network traffic monitoring tools like load balancers or reverse-proxies.
 
 It also exposes metrics which are not related to the network traffic. 

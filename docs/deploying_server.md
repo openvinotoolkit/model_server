@@ -1,4 +1,4 @@
-# Deploying Model Server {#ovms_docs_deploying_server}
+# Deploy Model Server {#ovms_docs_deploying_server}
 
 1. Docker is the recommended way to deploy OpenVINO Model Server. Pre-built container images are available on Docker Hub and Red Hat Ecosystem Catalog. 
 2. Host Model Server on baremetal.
@@ -13,7 +13,7 @@ This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Li
 - [Docker Engine](https://docs.docker.com/engine/) installed 
 - Intel® Core™ processor (6-13th gen.) or Intel® Xeon® processor (1st to 4th gen.)
 - Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/) 
-- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_Working_with_devices.html). Accelerators are tested only on bare-metal Linux hosts.
+- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2023.3/openvino_docs_OV_UG_Working_with_devices.html). Accelerators are tested only on bare-metal Linux hosts.
 
 ### Launch Model Server Container 
 
@@ -35,20 +35,28 @@ docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 
 #### Step 2. Prepare Data for Serving
 
+##### 2.1 Start the container with the model
+
 ```bash
-# start the container with the model
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
 docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest \ 
 --model_name resnet --model_path /models/resnet50 \ 
 --layout NHWC:NCHW --port 9000 
+```
 
-# download input files: an image and a label mapping file
+##### 2.2 Download input files: an image and a label mapping file
+
+```bash
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/zebra.jpeg
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/classes.py
+```
 
-# install the Python-based ovmsclient package
+##### 2.3 Install the Python-based ovmsclient package
+
+```bash
 pip3 install ovmsclient
 ```
+
 
 #### Step 3. Run Prediction
 
@@ -76,87 +84,86 @@ If everything is set up correctly, you will see 'zebra' prediction in the output
 It is possible to deploy Model Server outside of container.
 To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubuntu22 or RHEL8.
 
-@sphinxdirective
+::::{tab-set}
+:::{tab-item} Ubuntu 20.04
+:sync: ubuntu-20-04
+Download precomiled package:
 
-.. tab:: Ubuntu 20.04  
+```{code} sh
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu20.tar.gz
+```
 
-   Download precompiled package:
-   
-   .. code-block:: sh
+or build it yourself:
 
-      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu20.tar.gz
-   
-   or build it yourself:
-   
-   .. code-block:: sh
+```{code} sh
+# Clone the model server repository
+git clone https://github.com/openvinotoolkit/model_server
+cd model_server
+# Build docker images (the binary is one of the artifacts)
+make docker_build BASE_OS=ubuntu20
+# Unpack the package
+tar -xzvf dist/ubuntu/ovms.tar.gz
+```
 
-      # Clone the model server repository
-      git clone https://github.com/openvinotoolkit/model_server
-      cd model_server
-      # Build docker images (the binary is one of the artifacts)
-      make docker_build
-      # Unpack the package
-      tar -xzvf dist/ubuntu/ovms.tar.gz
+Install required libraries:
 
-   Install required libraries:
+```{code} sh
+sudo apt update -y && apt install -y libpugixml1v5 libtbb2
+```
+:::
+:::{tab-item} Ubuntu 22.04
+:sync: ubuntu-22-04
+Download precomiled package:
 
-   .. code-block:: sh
+```{code} sh
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu22.tar.gz
+```
 
-      sudo apt update -y && apt install -y libpugixml1v5 libtbb2
+or build it yourself:
 
-.. tab:: Ubuntu 22.04  
+```{code} sh
+# Clone the model server repository
+git clone https://github.com/openvinotoolkit/model_server
+cd model_server
+# Build docker images (the binary is one of the artifacts)
+make docker_build
+# Unpack the package
+tar -xzvf dist/ubuntu/ovms.tar.gz
+```
 
-   Download precompiled package:
-   
-   .. code-block:: sh
+Install required libraries:
 
-      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu22.tar.gz
-   
-   or build it yourself:
-   
-   .. code-block:: sh
+```{code} sh
+sudo apt update -y && apt install -y libpugixml1v5 libtbb12
+```
+:::
+:::{tab-item} RHEL 8.7
+:sync: rhel-8-7
+Download precomiled package:
 
-      # Clone the model server repository
-      git clone https://github.com/openvinotoolkit/model_server
-      cd model_server
-      # Build docker images (the binary is one of the artifacts)
-      make docker_build BASE_OS_TAG_UBUNTU=22.04
-      # Unpack the package
-      tar -xzvf dist/ubuntu/ovms.tar.gz
+```{code} sh
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_redhat.tar.gz
+```
 
-   Install required libraries:
+or build it yourself:
 
-   .. code-block:: sh
+```{code} sh
+# Clone the model server repository
+git clone https://github.com/openvinotoolkit/model_server
+cd model_server
+# Build docker images (the binary is one of the artifacts)
+make docker_build BASE_OS=redhat
+# Unpack the package
+tar -xzvf dist/redhat/ovms.tar.gz
+```
 
-      sudo apt update -y && apt install -y libpugixml1v5
+Install required libraries:
 
-.. tab:: RHEL 8.7 
-
-   Download precompiled package:
-   
-   .. code-block:: sh
-
-      wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_redhat.tar.gz
-   
-   or build it yourself:
-
-   .. code-block:: sh  
-
-      # Clone the model server repository
-      git clone https://github.com/openvinotoolkit/model_server
-      cd model_server
-      # Build docker images (the binary is one of the artifacts)
-      make docker_build BASE_OS=redhat
-      # Unpack the package
-      tar -xzvf dist/redhat/ovms.tar.gz
-
-   Install required libraries:
-
-   .. code-block:: sh
-
-      sudo dnf install -y pkg-config && sudo rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
-
-@endsphinxdirective
+```{code} sh
+sudo dnf install -y pkg-config && sudo rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm
+```
+:::
+::::
 
 Start the server:
 
@@ -173,7 +180,7 @@ Learn more about model server [starting parameters](parameters.md).
 
 > **NOTE**:
 > When serving models on [AI accelerators](accelerators.md), some additional steps may be required to install device drivers and dependencies. 
-> Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/2023.1/openvino_docs_install_guides_configurations_header.html) documentation.
+> Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/2023.3/openvino_docs_install_guides_configurations_header.html) documentation.
 
 
 ## Deploying Model Server in Kubernetes 

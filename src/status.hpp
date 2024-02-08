@@ -90,6 +90,7 @@ enum class StatusCode {
     // Predict request validation
     INVALID_NO_OF_INPUTS,             /*!< Invalid number of inputs */
     INVALID_MISSING_INPUT,            /*!< Missing one or more of inputs */
+    INVALID_UNEXPECTED_INPUT,         /*!< Unexpected one or more of inputs */
     INVALID_MISSING_OUTPUT,           /*!< Missing one or more of outputs */
     INVALID_NO_OF_SHAPE_DIMENSIONS,   /*!< Invalid number of shape dimensions */
     INVALID_BATCH_SIZE,               /*!< Input batch size other than required */
@@ -255,6 +256,10 @@ enum class StatusCode {
     MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG,
     MEDIAPIPE_KFS_PASSTHROUGH_MISSING_INPUT_REQUEST_TAG,
     MEDIAPIPE_GRAPH_NAME_OCCUPIED,
+    MEDIAPIPE_INVALID_TIMESTAMP,
+    MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE,
+    MEDIAPIPE_INCORRECT_SERVABLE_NAME,
+    MEDIAPIPE_INCORRECT_SERVABLE_VERSION,
 
     // Python Nodes
     PYTHON_NODE_NAME_ALREADY_EXISTS,

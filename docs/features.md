@@ -1,25 +1,37 @@
 # Model Server Features {#ovms_docs_features}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
+ovms_docs_dag
+ovms_docs_mediapipe
+ovms_docs_streaming_endpoints
+ovms_docs_python_support_reference
+ovms_docs_stateful_models
+ovms_docs_binary_input
+ovms_docs_text
+ovms_docs_shape_batch_layout
+ovms_docs_dynamic_input
+ovms_docs_online_config_changes
+ovms_docs_model_version_policy
+ovms_docs_metrics
+ovms_docs_c_api
+ovms_docs_advanced
+```
 
-   ovms_docs_dag
-   ovms_docs_mediapipe
-   ovms_docs_stateful_models
-   ovms_docs_binary_input
-   ovms_docs_text
-   ovms_docs_shape_batch_layout
-   ovms_docs_dynamic_input
-   ovms_docs_online_config_changes
-   ovms_docs_model_version_policy
-   ovms_docs_metrics
-   ovms_docs_c_api
-   ovms_docs_advanced
+## Python Code Execution
+Write Python code that will do your custom processing and serve it in the Model Server. 
+Take advantage of a rich environment of Python modules in domains like data processing and data science to create flexible solutions without the need to write C++ code.
 
-@endsphinxdirective
+[Learn more](python_support/reference.md)
+
+## Serving MediaPipe Graphs
+Create [MediaPipe](https://developers.google.com/mediapipe/framework/framework_concepts/overview) graphs and serve them. Configure multiple nodes and connect them to create powerful pipelines.
+
+[Learn more](mediapipe.md)
 
 ## Serving Pipelines of Models
 Connect multiple models in a pipeline and reduce data transfer overhead with Directed Acyclic Graph (DAG) Scheduler. 

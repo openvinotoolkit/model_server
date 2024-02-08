@@ -1,16 +1,15 @@
 # Image Classification Demos {#ovms_docs_image_classification}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_demo_image_classification
-   ovms_demo_image_classification_cpp
-   ovms_demo_image_classification_go
-
-@endsphinxdirective
+ovms_demo_image_classification
+ovms_demo_image_classification_cpp
+ovms_demo_image_classification_go
+```
 
 ## Python 
 | Demo | Description |

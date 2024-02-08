@@ -16,6 +16,7 @@
 #include "serialization.hpp"
 
 #include "kfs_frontend/kfs_utils.hpp"
+#include "logging.hpp"
 #include "ov_utils.hpp"
 #include "precision.hpp"
 #include "status.hpp"
@@ -285,6 +286,7 @@ template <>
 Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     try {
+        OV_LOGGER("ov::InferRequest: {}, outputSource.get_tensor({})", reinterpret_cast<void*>(&outputSource), name);
         tensor = outputSource.get_tensor(name);
     } catch (const ov::Exception& e) {
         Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;

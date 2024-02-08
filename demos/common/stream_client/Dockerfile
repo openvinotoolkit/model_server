@@ -62,7 +62,7 @@ RUN apt-get update -qq && apt-get --no-install-recommends -y install \
   libgstreamer-plugins-base1.0-dev \
   && rm -rf /var/lib/apt/lists/*
 RUN pip3 install numpy==1.24.3
-RUN git clone https://github.com/oneapi-src/oneVPL.git onevpl && \
+RUN git clone https://github.com/oneapi-src/oneVPL.git onevpl --branch v2023.3.1 && \
   cd onevpl && \
   export VPL_INSTALL_DIR=`pwd`/../_vplinstall && \
   mkdir _build && \
@@ -84,7 +84,7 @@ RUN git clone https://github.com/FFmpeg/FFmpeg.git /ffmpeg && \
     ./configure --enable-libvpl --toolchain=gcc-tsan --enable-gpl --enable-libvpx --enable-zlib  --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/lib64/pkgconfig --enable-libx264 --enable-libx265 --incdir=/usr/include && \
     make -j $JOBS && \
     make install
-RUN git clone https://github.com/opencv/opencv.git /opencv && \
+RUN git clone https://github.com/opencv/opencv.git /opencv --branch 4.8.1 && \
     cd /opencv && \
     mkdir build && \
     cd build && \
@@ -110,7 +110,8 @@ COPY --from=BASE /lib64 /lib64
 COPY --from=BASE /cvlib /lib/x86_64-linux-gnu/
 COPY --from=BASE /fflib /lib/x86_64-linux-gnu/
 RUN apt-get update -qq && apt-get --no-install-recommends -y install python3 python3-pip libavcodec58 libavformat58 libswscale5 libgstreamer-opencv1.0-0 gstreamer1.0* && rm -rf /var/lib/apt/lists/*
-RUN pip3 install tritonclient[grpc] numpy==1.24.3
+COPY ./requirements.txt ./requirements.txt 
+RUN sed -i '/opencv-python/d' requirements.txt && pip3 install -r requirements.txt
 RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "
 COPY ./stream_client.py ./stream_client.py 
-ENTRYPOINT ["python3", "/workspace/rtsp_client.py"]
+ENTRYPOINT ["python3", "/workspace/client.py"]

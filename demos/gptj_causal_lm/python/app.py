@@ -19,6 +19,7 @@ import ovmsclient
 import torch
 import argparse
 from transformers import AutoTokenizer
+import numpy as np
 
 parser = argparse.ArgumentParser(description='Demo for GPT-J causal LM requests using ovmsclient gRPC API')
 
@@ -38,9 +39,10 @@ iteration = 0
 first_latency = -1
 last_latency = -1
 while True:
-    inputs = tokenizer(input_sentence, return_tensors="np")
+    inputs = dict(tokenizer(input_sentence, return_tensors="np"))
+    inputs["position_ids"] = np.array([[i for i in range(0, inputs['input_ids'].shape[1])]], dtype=np.int64) # https://huggingface.co/docs/transformers/glossary#position-ids
     start_time = time.time()
-    results = client.predict(inputs=dict(inputs), model_name=args['model_name'])
+    results = client.predict(inputs=inputs, model_name=args['model_name'])
     latency = time.time() - start_time
     if first_latency == -1:
         first_latency = latency
