@@ -29,7 +29,6 @@ namespace mediapipe {
 using std::endl;
 
 class OVMSTestKFSPassCalculator : public CalculatorBase {
-    std::shared_ptr<KFSResponse> response;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -57,8 +56,9 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
+        std::unique_ptr<KFSResponse> response;
         const KFSRequest* request = cc->Inputs().Tag("REQUEST").Get<const KFSRequest*>();
-        response = std::make_shared<KFSResponse>();
+        response = std::make_unique<KFSResponse>();
         for (int i = 0; i < request->inputs().size(); i++) {
             auto* output = response->add_outputs();
             output->set_datatype(request->inputs()[i].datatype());
