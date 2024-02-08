@@ -21,6 +21,7 @@
 #pragma GCC diagnostic pop
 #include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "src/test/mediapipe/calculators/ovmscalculator.pb.h"
+#include <iostream>
 
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
@@ -71,8 +72,11 @@ public:
         for (int i = 0; i < request->raw_input_contents().size(); i++) {
             response->add_raw_output_contents()->assign(request->raw_input_contents()[i].data(), request->raw_input_contents()[i].size());
         }
+        auto param = inference::InferParameter();
+        param.mutable_string_param()->assign(200, 'c');
+        response->mutable_parameters()->insert({"predictions", param});
 
-        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse*>(response.get()).At(cc->InputTimestamp()));
+        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse*>(response.release()).At(cc->InputTimestamp()));
 
         return absl::OkStatus();
     }
