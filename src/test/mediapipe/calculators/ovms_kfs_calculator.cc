@@ -76,7 +76,7 @@ public:
         param.mutable_string_param()->assign(200, 'c');
         response->mutable_parameters()->insert({"predictions", param});
 
-        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse*>(response.release()).At(cc->InputTimestamp()));
+        cc->Outputs().Tag("RESPONSE").Add(response.release(), cc->InputTimestamp());
 
         return absl::OkStatus();
     }
