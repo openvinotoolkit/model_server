@@ -709,6 +709,7 @@ Status receiveAndSerializePacket<KFSResponse*>(const ::mediapipe::Packet& packet
             return Status(StatusCode::UNKNOWN_ERROR, std::move(details));
         }
         response = std::move(*received);
+        delete received;
         return StatusCode::OK;
     }
     HANDLE_PACKET_RECEIVAL_EXCEPTIONS();
