@@ -125,7 +125,7 @@ if __name__ == '__main__':
             if args.get('labels_numpy_path') is not None:
                 lb = lbs[x:(x + batch_size)]
             inputs = []
-            if args.get('dag-batch-size-auto'):
+            if args.get('audag-batch-size-to'):
                 newShape = img.shape[0:1] + (1,) + img.shape[1:]
                 inputs.append(httpclient.InferInput(args['input_name'], newShape, "FP32"))
             else:
