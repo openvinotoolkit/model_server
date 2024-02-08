@@ -2424,14 +2424,14 @@ protected:
 };
 
 TEST_F(MediapipeSerialization, KFSResponse) {
-    KFSResponse response;
-    response.set_id("1");
-    auto output = response.add_outputs();
+    std::unique_ptr<KFSResponse> response = std::make_unique<KFSResponse>();
+    response->set_id("1");
+    auto output = response->add_outputs();
     output->add_shape(1);
     output->set_datatype("FP32");
     std::vector<float> data = {1.0f};
-    response.add_raw_output_contents()->assign(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
-    ::mediapipe::Packet packet = ::mediapipe::MakePacket<KFSResponse*>(&response);
+    response->add_raw_output_contents()->assign(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<KFSResponse*>(response.release());
     ASSERT_EQ(executor->serializePacket("kfs_response", mp_response, packet), StatusCode::OK);
     ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs_size(), 1);
