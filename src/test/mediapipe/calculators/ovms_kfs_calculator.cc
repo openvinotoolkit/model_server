@@ -19,9 +19,9 @@
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
+
 #include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "src/test/mediapipe/calculators/ovmscalculator.pb.h"
-#include <iostream>
 
 // here we need to decide if we have several calculators (1 for OVMS repository, 1-N inside mediapipe)
 // for the one inside OVMS repo it makes sense to reuse code from ovms lib
