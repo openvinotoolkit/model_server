@@ -17,7 +17,7 @@ pipeline {
                   sh 'git fetch origin ${CHANGE_TARGET}'
                   def git_diff = sh (script: "git diff --name-only FETCH_HEAD", returnStdout: true).trim()
                   println("git diff ${git_diff}")
-                  def matched = (git_diff =~ /src|third_party/)
+                  def matched = (git_diff =~ /demos|third_party/)
                   if (matched){
                     image_build_needed = "true"
                   }
