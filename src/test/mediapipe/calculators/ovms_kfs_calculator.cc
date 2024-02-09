@@ -29,8 +29,18 @@ namespace mediapipe {
 
 using std::endl;
 
-class OVMSTestKFSPassCalculator : public CalculatorBase {
+class HolderWithResponseOwnership : public ::mediapipe::packet_internal::ForeignHolder<KFSResponse*> {
+    KFSResponse* hiddenPtr = nullptr;
+    std::unique_ptr<KFSResponse> res;
 
+public:
+    explicit HolderWithResponseOwnership(KFSResponse* barePtr, std::unique_ptr<KFSResponse>&& res) :
+        ::mediapipe::packet_internal::ForeignHolder<KFSResponse*>(&hiddenPtr),
+        hiddenPtr(barePtr),
+        res(std::move(res)) {}
+};
+
+class OVMSTestKFSPassCalculator : public CalculatorBase {
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
@@ -75,8 +85,7 @@ public:
         auto param = inference::InferParameter();
         param.mutable_string_param()->assign(200, 'c');
         response->mutable_parameters()->insert({"predictions", param});
-
-        cc->Outputs().Tag("RESPONSE").Add(response.release(), cc->InputTimestamp());
+        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::packet_internal::Create(new HolderWithResponseOwnership(response.get(), std::move(response))).At(cc->InputTimestamp()));
 
         return absl::OkStatus();
     }
