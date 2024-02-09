@@ -16,7 +16,7 @@ pipeline {
                 if (env.CHANGE_ID){
                   sh 'git fetch origin ${CHANGE_TARGET}'
                   def git_diff = sh (script: "git diff --name-only FETCH_HEAD", returnStdout: true).trim()
-                  println("git diff ${git_diff}")
+                  println("git diff:\n ${git_diff}")
                   def matched = (git_diff =~ /demos|third-party/)
                   if (matched){
                     image_build_needed = "true"
@@ -44,7 +44,7 @@ pipeline {
         }
 
         stage("Build docker image") {
-          when { expression { image_build_needed } }
+          when { expression { image_build_needed == "true" } }
           steps {
               dir ('model_server'){
                 sh 'make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1'
