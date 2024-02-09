@@ -4,3 +4,4 @@ git+https://github.com/dtrawins/optimum-intel.git@concurrency_support
 onnx
 pillow
 optimum[diffusers]
+tritonclient[grpc]==2.37.0.9383150  # Required to use batch string serialization/deserialization (4byte length prepend)

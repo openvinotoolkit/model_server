@@ -14,19 +14,23 @@
 # limitations under the License.
 #
 import tritonclient.grpc as grpcclient
+from tritonclient.utils import deserialize_bytes_tensor
 import argparse
 from threading import Event
 import datetime
 import numpy as np
+import os
+from utils import serialize_prompts
 
 parser = argparse.ArgumentParser(description='Client for llm example')
 
 parser.add_argument('--url', required=False, default='localhost:9000',
                     help='Specify url to grpc service. default:localhost:9000')
-parser.add_argument('--prompt',
-                    required=False,
-                    default='Describe the state of the healthcare industry in the United States in max 2 sentences',
-                    help='Question for the endpoint to answer')
+parser.add_argument('-p', '--prompt',
+                    required=True,
+                    default=[],
+                    action="append",
+                    help='Questions for the endpoint to answer')
 args = vars(parser.parse_args())
 
 channel_args = [
@@ -39,6 +43,11 @@ client = grpcclient.InferenceServerClient(args['url'], channel_args=channel_args
 event = Event()
 processing_times = np.zeros((0),int) # tracks response latency in ms
 
+prompts = args['prompt']
+completions = [f"==== Prompt: {prompts[i]} ====\n" for i in range(len(prompts))]
+if len(prompts) == 1:
+    print(f"Question:\n{prompts[0]}\n")
+
 def callback(result, error):
     endtime = datetime.datetime.now()
     global event
@@ -49,20 +58,25 @@ def callback(result, error):
     if result.as_numpy('end_signal') is not None:
         event.set()
     elif result.as_numpy('completion') is not None:
-        print(result.as_numpy('completion').tobytes().decode(), flush=True, end='')
+        if len(prompts) == 1:
+            # For single batch, partial response is represented as single buffer of bytes
+            print(result.as_numpy('completion').tobytes().decode(), flush=True, end='')
+        else:
+            # For multi batch, responses are packed in 4byte len tritonclient format
+            os.system('clear')
+            for i, completion in enumerate(deserialize_bytes_tensor(result._result.raw_output_contents[0])):
+                completions[i] += completion.decode()
+                print(completions[i])
+                print()
         duration = int((endtime - start_time).total_seconds() * 1000)
         processing_times = np.append(processing_times, duration)
         start_time = datetime.datetime.now()
     else:
         assert False, "unexpected output"
 
-text = args['prompt']
-print(f"Question:\n{text}\n")
-data = text.encode()
 
 client.start_stream(callback=callback)
-infer_input = grpcclient.InferInput("pre_prompt", [len(data)], "BYTES")
-infer_input._raw_content = data
+infer_input = serialize_prompts(prompts)
 start_time = datetime.datetime.now()
 client.async_stream_infer(model_name="python_model", inputs=[infer_input])
 

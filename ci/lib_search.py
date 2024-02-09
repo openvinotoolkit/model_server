@@ -60,6 +60,7 @@ def check_dir(start_dir):
     exclude_files = [
         '.bandit',
         '.bin',
+        '.dockerignore',
         '.git',
         '.groovy',
         '.jpeg',
