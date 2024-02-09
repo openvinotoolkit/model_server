@@ -14,17 +14,20 @@
 # limitations under the License.
 #
 import tritonclient.grpc as grpcclient
+from tritonclient.utils import deserialize_bytes_tensor
 import argparse
 import datetime
+from utils import serialize_prompts
 
 parser = argparse.ArgumentParser(description='Client for llm example')
 
 parser.add_argument('--url', required=False, default='localhost:9000',
                     help='Specify url to grpc service. default:localhost:9000')
-parser.add_argument('--prompt',
-                    required=False,
-                    default='Describe the state of the healthcare industry in the United States in max 2 sentences',
-                    help='Question for the endpoint to answer')
+parser.add_argument('-p', '--prompt',
+                    required=True,
+                    default=[],
+                    action="append",
+                    help='Questions for the endpoint to answer')
 args = vars(parser.parse_args())
 
 channel_args = [
@@ -32,15 +35,16 @@ channel_args = [
     ("grpc.http2.max_pings_without_data", 0),
 ]
 client = grpcclient.InferenceServerClient(args['url'], channel_args=channel_args)
-text = args['prompt']
-print(f"Question:\n{text}\n")
-data = text.encode()
-infer_input = grpcclient.InferInput("pre_prompt", [len(data)], "BYTES")
-infer_input._raw_content = data
+infer_input = serialize_prompts(args['prompt'])
 start_time = datetime.datetime.now()
 results = client.infer("python_model", [infer_input], client_timeout=10*60)  # 10 minutes
 endtime = datetime.datetime.now()
-print(f"Completion:\n{results.as_numpy('completion').tobytes().decode()}\n")
+if len(args['prompt']) == 1:
+    print(f"Question:\n{args['prompt'][0]}\n\nCompletion:\n{results.as_numpy('completion').tobytes().decode()}\n")
+else:
+    for i, arr in enumerate(deserialize_bytes_tensor(results._result.raw_output_contents[0])):
+        print(f"==== Prompt: {args['prompt'][i]} ====")
+        print(arr.decode())
+        print()
 
 print("Total time", int((endtime - start_time).total_seconds() * 1000), "ms")
-
