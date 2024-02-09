@@ -192,6 +192,8 @@ SUPPORTED_EMBEDDING_MODELS = {
     },
 }
 
+
+# Example from https://discuss.huggingface.co/t/textiteratorstreamer-compatibility-with-batch-processing/46763/2
 class BatchTextIteratorStreamer(TextIteratorStreamer):
     def __init__(self, batch_size:int, tokenizer: "AutoTokenizer", skip_prompt: bool = False, timeout: Optional[float] = None, **decode_kwargs):
         super().__init__(tokenizer, skip_prompt, timeout, **decode_kwargs)
