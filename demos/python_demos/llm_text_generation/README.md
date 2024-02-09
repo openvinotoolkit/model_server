@@ -6,7 +6,7 @@ Two use cases are possible:
 - with unary calls - when the client is sending prompts to the graph and receives a complete generated responses at the end of processing
 - with gRPC streaming - when the client is sending prompts the graph and receives a stream of partial responses during the processing
 
-The unary calls are simpler but the response might be sometimes slow when many cycles are needed on the server side.
+The unary calls are simpler but there is no immediate feedback as the response goes back only when it is fully generated.
 
 The gRPC stream is a great feature when more interactive approach is needed allowing the user to read the response as they are getting generated.
 
