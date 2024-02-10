@@ -1,4 +1,5 @@
 def image_build_needed = "false"
+def shortCommit = ""
 
 pipeline {
     agent {
@@ -16,7 +17,7 @@ pipeline {
                 if (env.CHANGE_ID){
                   sh 'git fetch origin ${CHANGE_TARGET}'
                   def git_diff = sh (script: "git diff --name-only \$(git merge-base FETCH_HEAD HEAD)", returnStdout: true).trim()
-                  println("git diff:\n ${git_diff}")
+                  println("git diff:\n${git_diff}")
                   def matched = (git_diff =~ /src|third_party/)
                   if (matched){
                     image_build_needed = "true"
@@ -47,8 +48,8 @@ pipeline {
           when { expression { image_build_needed == "true" } }
           steps {
               dir ('model_server'){
-                sh 'make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1'
-                sh 'make release_image RUN_TESTS=0 OV_USE_BINARY=1'
+                sh 'make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 OVMS_CPP_IMAGE_TAG=${shortCommit}'
+                sh 'make release_image RUN_TESTS=0 OV_USE_BINARY=1 OVMS_CPP_IMAGE_TAG=${shortCommit}'
               }
           }
         }
@@ -59,14 +60,14 @@ pipeline {
             stage("Run unit tests") {
               steps {
                 dir ('model_server'){
-                  sh 'make run_unit_tests'
+                  sh 'make run_unit_tests OVMS_CPP_IMAGE_TAG=${shortCommit}'
                 }
               }
             }
             stage("Run functional tests") {
               steps {
                 dir ('model_server'){
-                  sh 'make test_functional'
+                  sh 'make test_functional OVMS_CPP_IMAGE_TAG=${shortCommit}'
                 }
               }            
             }
@@ -79,8 +80,7 @@ pipeline {
                     userRemoteConfigs: [[credentialsId: 'workflow-lab',
                     url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh 'pwd'
-                    sh 'make create-venv'
-                    sh 'TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 ./run_tests.sh'
+                    sh 'make create-venv && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 ./run_tests.sh'
                   }
                 }
               }            
