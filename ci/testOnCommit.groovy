@@ -15,9 +15,9 @@ pipeline {
                 echo sh(script: 'env|sort', returnStdout: true)
                 if (env.CHANGE_ID){
                   sh 'git fetch origin ${CHANGE_TARGET}'
-                  def git_diff = sh (script: "git diff --name-only FETCH_HEAD", returnStdout: true).trim()
+                  def git_diff = sh (script: "git diff --name-only $(git merge-base FETCH_HEAD HEAD)", returnStdout: true).trim()
                   println("git diff:\n ${git_diff}")
-                  def matched = (git_diff =~ /demos|third-party/)
+                  def matched = (git_diff =~ /src|third_party/)
                   if (matched){
                     image_build_needed = "true"
                   }
