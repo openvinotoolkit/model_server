@@ -48,8 +48,8 @@ pipeline {
           when { expression { image_build_needed == "true" } }
           steps {
               dir ('model_server'){
-                sh 'make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 OVMS_CPP_IMAGE_TAG=${shortCommit}'
-                sh 'make release_image RUN_TESTS=0 OV_USE_BINARY=1 OVMS_CPP_IMAGE_TAG=${shortCommit}'
+                sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
           }
         }
@@ -60,14 +60,14 @@ pipeline {
             stage("Run unit tests") {
               steps {
                 dir ('model_server'){
-                  sh 'make run_unit_tests OVMS_CPP_IMAGE_TAG=${shortCommit}'
+                  sh "make run_unit_tests OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 }
               }
             }
             stage("Run functional tests") {
               steps {
                 dir ('model_server'){
-                  sh 'make test_functional OVMS_CPP_IMAGE_TAG=${shortCommit}'
+                  sh "make test_functional OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 }
               }            
             }
