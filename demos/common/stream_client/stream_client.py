@@ -102,7 +102,7 @@ class StreamClient:
         verbose : bool
             Should client output debug information.
         exact : bool
-            Should client push every frame into output backwend.
+            Should client push every frame into output backend.
         benchmark : bool
             Should client collect processing times
         """
