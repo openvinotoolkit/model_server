@@ -2431,7 +2431,7 @@ TEST_F(MediapipeSerialization, KFSResponse) {
     output->set_datatype("FP32");
     std::vector<float> data = {1.0f};
     response.add_raw_output_contents()->assign(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
-    ::mediapipe::Packet packet = ::mediapipe::MakePacket<KFSResponse*>(&response);
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<KFSResponse>(response);
     ASSERT_EQ(executor->serializePacket("kfs_response", mp_response, packet), StatusCode::OK);
     ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs_size(), 1);

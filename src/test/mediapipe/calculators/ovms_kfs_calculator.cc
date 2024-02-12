@@ -29,7 +29,6 @@ namespace mediapipe {
 using std::endl;
 
 class OVMSTestKFSPassCalculator : public CalculatorBase {
-
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
