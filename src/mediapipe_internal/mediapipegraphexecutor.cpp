@@ -697,18 +697,10 @@ Status receiveAndSerializePacket<ov::Tensor>(const ::mediapipe::Packet& packet, 
 }
 
 template <>
-Status receiveAndSerializePacket<KFSResponse*>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
+Status receiveAndSerializePacket<KFSResponse>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
-        auto received = packet.Get<KFSResponse*>();
-        if (received == nullptr) {
-            std::stringstream ss;
-            ss << "Received nullptr KFSResponse for: "
-               << outputStreamName;
-            std::string details{ss.str()};
-            SPDLOG_DEBUG(details);
-            return Status(StatusCode::UNKNOWN_ERROR, std::move(details));
-        }
-        response = std::move(*received);
+        auto received = packet.Get<KFSResponse>();
+        response = std::move(received);
         return StatusCode::OK;
     }
     HANDLE_PACKET_RECEIVAL_EXCEPTIONS();
@@ -1074,7 +1066,7 @@ Status MediapipeGraphExecutor::serializePacket(const std::string& name, ::infere
     SPDLOG_DEBUG("Received packet from output stream: {}", name);
     if (this->outputTypes.at(name) == mediapipe_packet_type_enum::KFS_RESPONSE) {
         SPDLOG_DEBUG("Response processing packet type KFSPass name: {}", name);
-        status = receiveAndSerializePacket<KFSResponse*>(packet, response, name);
+        status = receiveAndSerializePacket<KFSResponse>(packet, response, name);
     } else if (this->outputTypes.at(name) == mediapipe_packet_type_enum::TFTENSOR) {
         SPDLOG_DEBUG("Response processing packet type TF Tensor name: {}", name);
         status = receiveAndSerializePacket<tensorflow::Tensor>(packet, response, name);
