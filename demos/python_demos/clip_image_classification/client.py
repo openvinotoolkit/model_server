@@ -93,7 +93,7 @@ processing_times = []
 for iteration in range(iterations):
     print(f"Iteration {iteration}")
     start_time = datetime.datetime.now()
-    results = client.infer("python_model", [image_input , labels_input])
+    results = client.infer("python_model_grpc", [image_input , labels_input])
     end_time = datetime.datetime.now()
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times.append(int(duration))
