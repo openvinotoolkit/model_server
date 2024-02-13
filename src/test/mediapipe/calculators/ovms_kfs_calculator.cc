@@ -70,7 +70,7 @@ public:
             response.add_raw_output_contents()->assign(request->raw_input_contents()[i].data(), request->raw_input_contents()[i].size());
         }
 
-        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse>(response).At(cc->InputTimestamp()));
+        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse>(std::move(response)).At(cc->InputTimestamp()));
 
         return absl::OkStatus();
     }
