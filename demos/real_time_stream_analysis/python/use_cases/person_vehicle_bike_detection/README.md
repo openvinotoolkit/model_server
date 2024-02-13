@@ -13,12 +13,10 @@ wget -P workspace/person-vehicle-bike-detection-2002/1 https://storage.openvinot
 ## Run OpenVINO Model Server
 
 Once you have the model, launch OpenVINO Model Sever and mount model catalog to the container:
-
+To run the Docker container in detached mode, replace `--rm` with `-d`
 ```bash
-docker run --rm -v $PWD/workspace/person-vehicle-bike-detection-2002:/model -p 9000:9000 openvino/model_server:latest --model_path /model --model_name person-vehicle-bike-detection --layout NHWC:NCHW --shape auto --port 9000 
+docker run --rm --name person-vehicle-bike-detection -v $PWD/workspace/person-vehicle-bike-detection-2002:/model -p 9000:9000 openvino/model_server:latest --model_path /model --model_name person-vehicle-bike-detection --layout NHWC:NCHW --shape auto --port 9000 
 ```
-
-to run the Docker container in detached mode, replace `--rm` with `--name person-vehicle-bike-detection -d`
 
 ## Switch Use Case used for pre and post processing
 
