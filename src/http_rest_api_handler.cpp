@@ -372,20 +372,27 @@ static std::set<std::string> getRequestedBinaryOutputsNames(::KFSRequest& grpc_r
 Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength) {
     Timer<TIMER_END> timer;
     timer.start(TOTAL);
-    ServableMetricReporter* reporter = nullptr;
+
     std::string modelName(request_components.model_name);
     std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
+    ServableMetricReporter* reporter = nullptr;
+    #if (MEDIAPIPE_DISABLE == 1)
+    auto pstatus = this->getReporter(request_components, reporter);
+    if (!pstatus.ok()) {
+        SPDLOG_DEBUG("Failed to get metrics reporter for model: {}; version: {}", modelName, modelVersionLog);
+        return pstatus;
+    }
+    #endif
     ::KFSRequest grpc_request;
     timer.start(PREPARE_GRPC_REQUEST);
     using std::chrono::microseconds;
     auto status = prepareGrpcRequest(modelName, request_components.model_version, request_body, grpc_request, request_components.inferenceHeaderContentLength);
     ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};
     if (!status.ok()) {
-        auto pstatus = this->getReporter(request_components, reporter);
-        if (pstatus.ok()) {
-            INCREMENT_IF_ENABLED(reporter->getInferRequestMetric(executionContext, status.ok()));
-        }
+        #if (MEDIAPIPE_DISABLE == 1)
+        INCREMENT_IF_ENABLED(reporter->getInferRequestMetric(executionContext, status.ok()));
+        #endif
         SPDLOG_DEBUG("REST to GRPC request conversion failed for model: {}", modelName);
         return status;
     }
@@ -406,7 +413,9 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     timer.stop(TOTAL);
     double totalTime = timer.elapsed<std::chrono::microseconds>(TOTAL);
     SPDLOG_DEBUG("Total REST request processing time: {} ms", totalTime / 1000);
+    #if (MEDIAPIPE_DISABLE == 1)
     OBSERVE_IF_ENABLED(reporter->requestTimeRest, totalTime);
+    #endif
     return StatusCode::OK;
 }
 

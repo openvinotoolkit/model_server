@@ -96,7 +96,7 @@ with open(sample_path, "rb") as f:
     image_data.append(f.read())
 
 #nmpy = np.array(image_data , dtype=np.object_)
-npydata = np.array(image_data, dtype=np.bytes_)
+npydata = np.array(image_data, dtype=np.object_)
 npylabelsdata = np.array(input_labels_array, dtype=np.bytes_)
 inputs = []
 inputs.append(httpclient.InferInput('image', [len(npydata)], "BYTES"))
@@ -104,6 +104,7 @@ inputs[0].set_data_from_numpy(npydata)
 
 inputs.append(httpclient.InferInput('input_labels', [len(npylabelsdata)], "BYTES"))
 inputs[1].set_data_from_numpy(npylabelsdata)
+
 
 parameters = {
         "binary_data_size" : 16
@@ -127,8 +128,8 @@ for iteration in range(iterations):
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times.append(int(duration))
 
-    result_dict = json.loads(results.text)
+    #result_dict = json.loads(results.text)
 
-    print(f"Detection:\n{results.as_numpy['output_label'].tobytes().decode()}\n")
+    print(f"Detection:\n{results.as_numpy('output_label').tobytes().decode()}\n")
 
 print_statistics(np.array(processing_times,int), batch_size = 1)
