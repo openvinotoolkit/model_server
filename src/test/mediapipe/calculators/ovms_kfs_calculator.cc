@@ -56,9 +56,9 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         const KFSRequest* request = cc->Inputs().Tag("REQUEST").Get<const KFSRequest*>();
-        std::unique_ptr<KFSResponse> response = std::make_unique<KFSResponse>();
+        KFSResponse response;
         for (int i = 0; i < request->inputs().size(); i++) {
-            auto* output = response->add_outputs();
+            auto* output = response.add_outputs();
             output->set_datatype(request->inputs()[i].datatype());
             output->set_name("out");
             for (int j = 0; j < request->inputs()[i].shape_size(); j++) {
@@ -67,10 +67,10 @@ public:
         }
 
         for (int i = 0; i < request->raw_input_contents().size(); i++) {
-            response->add_raw_output_contents()->assign(request->raw_input_contents()[i].data(), request->raw_input_contents()[i].size());
+            response.add_raw_output_contents()->assign(request->raw_input_contents()[i].data(), request->raw_input_contents()[i].size());
         }
 
-        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse>(*response.release()).At(cc->InputTimestamp()));
+        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse>(response).At(cc->InputTimestamp()));
 
         return absl::OkStatus();
     }
