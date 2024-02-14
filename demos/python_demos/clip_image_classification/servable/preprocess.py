@@ -31,22 +31,17 @@ class OvmsPythonModel:
         print(inputs[1].datatype)
         print("LEN " + str(len(bytes(inputs[0]))))
         image = Image.open(BytesIO(bytes(inputs[0])[4:]))
-        #image_buffer = np.array(inputs[0].data, dtype=np.object_)
-        #image_buffer = image_buffer
-        #print(np.uint8(image_buffer).shape)
-        #image = Image.fromarray(np.uint8(image_buffer)[4:]).convert('RGB')
+ 
         print(list(image.getdata()[0]))
         print(np.uint8(image).shape)
-        input_labels = np.array(inputs[1].data, dtype=np.uint8).tobytes().decode("utf-8")[4:]
+        input_labels = np.array(inputs[1].data, dtype=np.uint8).tobytes()[4:].decode("utf-8")
         #print(input_labels)
 
         input_labels_split = input_labels.split(",")
         print(input_labels_split)
 
         text_descriptions = [f"This is a photo of a {label}" for label in input_labels_split]
-        
-        #error1 = int(1).split("o")
-        print("processor")
+
         model_inputs = self.processor(text=text_descriptions, images=[image], return_tensors="pt", padding=True)
 
         # dtype=np.dtype("q") must be used for correct mapping of struct format character to datatype
@@ -57,6 +52,6 @@ class OvmsPythonModel:
         input_ids_py = Tensor("input_ids_py", input_ids)
         attention_mask_py = Tensor("attention_mask_py", attention_mask)
         pixel_values_py = Tensor("pixel_values_py", model_inputs["pixel_values"].numpy())
-        print("DONE")
+
         return [input_ids_py, attention_mask_py, pixel_values_py]
 
