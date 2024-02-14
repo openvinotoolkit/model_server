@@ -865,9 +865,13 @@ cc_library( # make ovms_lib dependent, use share doptions
             "s3filesystem.cpp",
     ],
     deps = [
-        "@awssdk//:s3",
-        "@awssdk//:core",
-        "@awssdk//:deps",
+        #"@awssdk//:s3",
+        #"@awssdk//:core",
+        #"@awssdk//:deps",
+        "@awssdkcpp2//:s3",
+        "@awssdkcpp2//:core",
+        #"@awssdk2//:s3",
+        #"@awssdk2//:core",
         "libovmsfilesystem",
         "libovmslogging",
         "libovmsstring_utils",
@@ -878,6 +882,9 @@ cc_library( # make ovms_lib dependent, use share doptions
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
+    # Check if needed TODO
+    linkstatic = True,
+    alwayslink = 1,
 )
 
 cc_library(
