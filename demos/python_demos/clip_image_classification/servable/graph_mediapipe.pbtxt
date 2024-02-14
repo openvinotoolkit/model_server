@@ -1,0 +1,42 @@
+# MediaPipe graph that performs object detection on desktop with TensorFlow Lite
+# on CPU.
+# Used in the example in
+# mediapipe/examples/desktop/object_detection:object_detection_openvino.
+
+# max_queue_size limits the number of packets enqueued on any input stream
+# by throttling inputs to the graph. This makes the graph only process one
+# frame per time.
+max_queue_size: 1
+
+input_stream: "input"
+output_stream: "output"
+
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:session"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "resnet"  # servable name inside OVMS
+      servable_version: "1"
+    }
+  }
+}
+
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "A:input"
+  output_stream: "B:output"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions]: {
+          tag_to_input_tensor_names {
+            key: "A"
+            value: "0"
+          }
+          tag_to_output_tensor_names {
+            key: "B"
+            value: "1463"
+          }
+        }
+  }
+}

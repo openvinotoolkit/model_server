@@ -2,18 +2,14 @@
     "model_config_list": [
         {
             "config": {
-            "name": "clip",
-            "base_path": "/model/"
+            "name": "resnet",
+            "base_path": "/model/resnet"
         }
     }],
     "mediapipe_config_list": [
     {
-        "name":"python_model",
-        "graph_path":"/workspace/graph.pbtxt"
-    },
-    {
-        "name":"python_model_grpc",
-        "graph_path":"/workspace/graph_grpc.pbtxt"
+        "name":"mediapipe_pass",
+        "graph_path":"/workspace/graph_mediapipe.pbtxt"
     }
     ]
 }

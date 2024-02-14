@@ -90,14 +90,19 @@ image_data = []
 with open(sample_path, "rb") as f:
     image_data.append(f.read())
 
-npydata = np.array(image_data, dtype=np.object_)
+npydata = np.array(image_data, dtype=np.bytes_)
 npylabelsdata = np.array(input_labels_array, dtype=np.bytes_)
 inputs = []
-inputs.append(httpclient.InferInput('image', [len(npydata)], "BYTES"))
+inputs.append(httpclient.InferInput('input', [len(npydata)], "BYTES"))
 inputs[0].set_data_from_numpy(npydata)
 
-inputs.append(httpclient.InferInput('input_labels', [len(npylabelsdata)], "BYTES"))
-inputs[1].set_data_from_numpy(npylabelsdata)
+#inputs.append(httpclient.InferInput('input_labels', [len(npylabelsdata)], "BYTES"))
+#inputs[1].set_data_from_numpy(npylabelsdata)
+
+
+parameters = {
+        "binary_data_size" : len(npydata)
+      }
 
 processing_times = []
 for iteration in range(iterations):
@@ -105,7 +110,7 @@ for iteration in range(iterations):
     print(f"Iteration {iteration}")
     start_time = datetime.datetime.now()
 
-    model_name = "python_model"
+    model_name = "mediapipe_pass"
 
     results = triton_client.infer(
                 model_name=model_name,
@@ -116,6 +121,6 @@ for iteration in range(iterations):
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times.append(int(duration))
 
-    print(f"Detection:\n{results.as_numpy('output_label').tobytes().decode()}\n")
+    print(f"Detection:\n{results.as_numpy('resnet_v1_50/predictions/Reshape_1').tobytes().decode()}\n")
 
 print_statistics(np.array(processing_times,int), batch_size = 1)
