@@ -27,9 +27,6 @@ from client_utils import print_statistics
 from urllib.request import urlretrieve
 from pathlib import Path
 import os
-import grpc
-import time
-import cv2
 
 parser = argparse.ArgumentParser(description='Client for clip example')
 
@@ -85,8 +82,6 @@ if not os.path.exists(sample_path):
         sample_path,
     )
 
-img = cv2.imread(str(sample_path), cv2.IMREAD_COLOR)
-
 input_labels_array = [args['input_labels']]
 input_labels = args['input_labels'].split(",")
 print(f"Using input_labels:\n{input_labels}\n")
@@ -95,7 +90,6 @@ image_data = []
 with open(sample_path, "rb") as f:
     image_data.append(f.read())
 
-#nmpy = np.array(image_data , dtype=np.object_)
 npydata = np.array(image_data, dtype=np.object_)
 npylabelsdata = np.array(input_labels_array, dtype=np.bytes_)
 inputs = []
@@ -105,11 +99,6 @@ inputs[0].set_data_from_numpy(npydata)
 inputs.append(httpclient.InferInput('input_labels', [len(npylabelsdata)], "BYTES"))
 inputs[1].set_data_from_numpy(npylabelsdata)
 
-
-parameters = {
-        "binary_data_size" : 16
-      }
-
 processing_times = []
 for iteration in range(iterations):
     outputs = []
@@ -117,7 +106,6 @@ for iteration in range(iterations):
     start_time = datetime.datetime.now()
 
     model_name = "python_model"
-    #results = requests.post(f'http://{rest_address}:{rest_port}/v2/models/{model_name}/infer', data=data_json, timeout=15)
 
     results = triton_client.infer(
                 model_name=model_name,
@@ -127,8 +115,6 @@ for iteration in range(iterations):
     end_time = datetime.datetime.now()
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times.append(int(duration))
-
-    #result_dict = json.loads(results.text)
 
     print(f"Detection:\n{results.as_numpy('output_label').tobytes().decode()}\n")
 
