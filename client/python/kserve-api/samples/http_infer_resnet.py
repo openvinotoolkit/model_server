@@ -146,6 +146,7 @@ if __name__ == '__main__':
                                                                                       round(1000 * batch_size / np.average(duration), 2)
                                                                                       ))
             # Comment out this section for non imagenet datasets
+            print(results)
             print("imagenet top results in a single batch:")
             for i in range(nu.shape[0]):
                 if is_pipeline_request:
