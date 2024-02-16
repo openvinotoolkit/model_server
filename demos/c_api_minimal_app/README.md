@@ -99,3 +99,65 @@ And then execute the alternative make target:
 cd demos/c_api_minimal_app
 make all_docker
 ```
+
+# Capi Benchmark
+
+This guide shows how to perform benchmark tests using OVMS's CAPI. 
+
+Clone OpenVINO™ Model Server GitHub repository and go to the top directory.
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+```
+Build the tool
+```bash
+bazel build //src:capi_benchmark
+```
+
+- Command
+```
+bazel-bin/src/capi_benchmark --help
+OpenVINO Model Server
+Usage:
+  bazel-bin/src/capi_benchmark [OPTION...]
+
+  -h, --help                    Show this help message and exit
+      --port PORT               gRPC server port (default: 9178)
+      --rest_port REST_PORT     REST server port, the REST server will not
+                                be started if rest_port is blank or set to
+                                0 (default: 0)
+      --log_level LOG_LEVEL     serving log level - one of TRACE, DEBUG,
+                                INFO, WARNING, ERROR (default: ERROR)
+      --config_path CONFIG_PATH
+                                Config file path for OVMS to read (default:
+                                /ovms/src/test/c_api/config_benchmark.json)
+      --niter NITER             number of inferences to conduct (default:
+                                1000)
+      --nstreams NIREQ          nstreams from OVMS configuration (default:
+                                1)
+      --servable_name MODEL_NAME
+                                Model name to sent request to
+      --servable_version MODEL_VERSION
+                                workload threads per ireq (default: 0)
+      --input_name INPUTS_NAMES
+                                Servable's input name
+      --shape SHAPE             Semicolon separated list of inputs names
+                                followed by their shapes in brackers. For
+                                example: "inputA[1,3,224,224],inputB[1,10]"
+      --mode MODE               Workload mode. Possible values:
+                                INFERENCE_ONLY, RESET_BUFFER, RESET_REQUEST
+                                (default: INFERENCE_ONLY)
+      --seed SEED               Random values generator seed.
+```
+
+Perform the measurement using sample model, one can specify different model using `config_path` option and specifying desired config file.
+```bash
+bazel-bin/src/capi_benchmark --servable_name dummy
+Mode requested: INFERENCE_ONLY
+Server ready for inference
+Benchmark starting workload
+FPS: 28295.7
+Average latency whole prediction path:0.035ms
+main() exit
+```
+

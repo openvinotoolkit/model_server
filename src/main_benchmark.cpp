@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <future>
 #include <iomanip>
 #include <iostream>
@@ -78,14 +80,10 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 "number of inferences to conduct",
                 cxxopts::value<uint32_t>()->default_value("1000"),
                 "NITER")
-            ("nireq",
-                "nireq from OVMS configuration",
+            ("nstreams",
+                "nstreams from OVMS configuration",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "NIREQ")
-            ("threads_per_ireq",
-                "maximum workload threads per ireq",
-                cxxopts::value<uint32_t>()->default_value("2"),
-                "THREADS_PER_IREQ")
             // inference data
             ("servable_name",
                 "Model name to sent request to",
@@ -95,8 +93,8 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 "workload threads per ireq",
                 cxxopts::value<int64_t>()->default_value("0"),
                 "MODEL_VERSION")
-            ("inputs_names",
-                "Comma separated list of inputs names",
+            ("input_name",
+                "Servable's input name",
                 cxxopts::value<std::string>(),
                 "INPUTS_NAMES")
             ("shape",
@@ -419,32 +417,48 @@ int main(int argc, char** argv) {
         return EX_USAGE;
     }
     // input names handling
-    std::string cliInputsNames(cliparser.result->operator[]("inputs_names").as<std::string>());
-    auto inputsNames = ovms::tokenize(cliInputsNames, ',');
-    if (inputsNames.size() != 1) {
-        std::cout << __LINE__ << std::endl;
-        return EX_USAGE;
+    OVMS_ServableMetadata* metadata;
+    OVMS_GetServableMetadata(srv, servableName.c_str(), servableVersion, &metadata);
+    const char* name;
+    OVMS_DataType dt;
+    size_t dimCount;
+    int64_t* shapeMinArray;
+    int64_t* discarded;
+    OVMS_ServableMetadataInput(metadata, 0, &name, &dt, &dimCount, &shapeMinArray, &discarded);
+    std::string inputName;
+    if (cliparser.result->count("input_name")){
+	inputName = cliparser.result->operator[]("input_name").as<std::string>();
+    }else{
+      inputName = name;
     }
-    std::string inputName = inputsNames[0];
     // datatype handling
-    OVMS_DataType datatype = OVMS_DATATYPE_FP32;
+    OVMS_DataType datatype;
+    if(dt != OVMS_DATATYPE_UNDEFINED){
+      datatype = dt;
+    }
+    datatype = OVMS_DATATYPE_FP32;
     // shape handling
     signed_shape_t shape;
-    try {
-        shape = parseShapes(cliparser.result->operator[]("shape").as<std::string>());
+    if (cliparser.result->count("shape")){
+	try {
+	    shape = parseShapes(cliparser.result->operator[]("shape").as<std::string>());
+	}
+	catch(...){
+	    std::cerr << "Invalid shape parameter.";
+	    exit(EX_CONFIG);
+	}
+    }else{
+      for(size_t i = 0; i < dimCount; i++){
+	shape.push_back(shapeMinArray[i]);
+      }
     }
-    catch(...){
-        std::cerr << "Invalid shape parameter.";
-        exit(EX_CONFIG);
-    }
+    
     ///////////////////////
     // benchmark parameters
     ///////////////////////
-    size_t nireq = cliparser.result->operator[]("nireq").as<uint32_t>();
     size_t niter = cliparser.result->operator[]("niter").as<uint32_t>();
-    size_t threadsPerIreq = cliparser.result->operator[]("threads_per_ireq").as<uint32_t>();
-    size_t threadCount = std::min(nireq * threadsPerIreq, niter);
-    size_t niterPerThread = niter / threadCount;
+    size_t threadCount = cliparser.result->operator[]("nstreams").as<uint32_t>();
+    size_t niterPerThread = niter * threadCount;
 
     auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
     std::vector<float> data(elementsCount, 0.1);
@@ -560,14 +574,10 @@ int main(int argc, char** argv) {
     auto workloadEnd = std::chrono::high_resolution_clock::now();
     auto wholeTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(workloadEnd - workloadStart).count();
     std::cout << "FPS: " << double(niter) / wholeTimeUs * 1'000'000 << std::endl;
-    auto totalUs = std::accumulate(wholeThreadsTimesUs.begin(), wholeThreadsTimesUs.end(), 0);
-    std::cout << "Average per thread FPS: " << double(niter) * threadCount/totalUs * 1'000'000 << std::endl;
     OVMS_InferenceRequestDelete(request);
     double totalWhole = std::accumulate(wholeTimes.begin(), wholeTimes.end(), double(0)) / threadCount;
-    double totalPure = std::accumulate(pureTimes.begin(), pureTimes.end(), double(0)) / threadCount;
     std::cout << std::fixed << std::setprecision(3);
-    std::cout << "Average latency whole prediction path:" << totalWhole << "ms" << std::endl;
-    std::cout << "Average latency pure C-API inference:" << totalPure << "ms" << std::endl;
+    std::cout << "Average latency whole prediction path: " << totalWhole << "ms" << std::endl;
     // OVMS cleanup
     OVMS_ServerDelete(srv);
     OVMS_ModelsSettingsDelete(modelsSettings);
