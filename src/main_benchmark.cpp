@@ -427,32 +427,31 @@ int main(int argc, char** argv) {
     OVMS_ServableMetadataInput(metadata, 0, &name, &dt, &dimCount, &shapeMinArray, &discarded);
     std::string inputName;
     if (cliparser.result->count("input_name")){
-	inputName = cliparser.result->operator[]("input_name").as<std::string>();
+        inputName = cliparser.result->operator[]("input_name").as<std::string>();
     }else{
-      inputName = name;
+        inputName = name;
     }
     // datatype handling
     OVMS_DataType datatype;
-    if(dt != OVMS_DATATYPE_UNDEFINED){
-      datatype = dt;
+    if (dt != OVMS_DATATYPE_UNDEFINED) {
+        datatype = dt;
     }
     datatype = OVMS_DATATYPE_FP32;
     // shape handling
     signed_shape_t shape;
     if (cliparser.result->count("shape")){
-	try {
-	    shape = parseShapes(cliparser.result->operator[]("shape").as<std::string>());
-	}
-	catch(...){
-	    std::cerr << "Invalid shape parameter.";
-	    exit(EX_CONFIG);
-	}
+      try {
+          shape = parseShapes(cliparser.result->operator[]("shape").as<std::string>());
+      }
+      catch(...){
+          std::cerr << "Invalid shape parameter.";
+          exit(EX_CONFIG);
+      }
     }else{
-      for(size_t i = 0; i < dimCount; i++){
-	shape.push_back(shapeMinArray[i]);
+      for (size_t i = 0; i < dimCount; i++) {
+          shape.push_back(shapeMinArray[i]);
       }
     }
-    
     ///////////////////////
     // benchmark parameters
     ///////////////////////
