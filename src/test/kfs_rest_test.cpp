@@ -121,29 +121,43 @@ public:
     }
 };
 
-class HttpRestApiHandlerWithMediapipeTest : public HttpRestApiHandlerTest {
-public:
-    static void SetUpTestSuite() {
-        HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
-        std::string port = "9000";
-        randomizePort(port);
-        char* argv[] = {
-            (char*)"OpenVINO Model Server",
-            (char*)"--config_path",
-            (char*)"/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json",
-            (char*)"--log_level",
-            (char*)"DEBUG",
-            (char*)"--port",
-            (char*)port.c_str(),
-            nullptr};
-        thread = std::make_unique<std::thread>(
-            [&argv]() {
-                ASSERT_EQ(EXIT_SUCCESS, server->start(7, argv));
-            });
+class HttpRestApiHandlerWithMediapipe : public ::testing::TestWithParam<std::string> {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<HttpRestApiHandler> handler;
+
+    std::unique_ptr<std::thread> t;
+    std::string port = "9173";
+
+    void SetUpServer(const char* configPath) {
+        ::SetUpServer(this->t, this->server, this->port, configPath);
         auto start = std::chrono::high_resolution_clock::now();
-        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
         }
+
+        handler = std::make_unique<HttpRestApiHandler>(server, 5);
+    }
+
+    void TearDown() {
+        handler.reset();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
+class HttpRestApiHandlerWithMediapipeTest : public HttpRestApiHandlerWithMediapipe {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json");
+    }
+};
+
+class HttpRestApiHandlerWithMediapipeForkTest : public HttpRestApiHandlerWithMediapipe {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_rest.json");
     }
 };
 
@@ -180,17 +194,8 @@ public:
 std::unique_ptr<MockedServer> HttpRestApiHandlerTest::server = nullptr;
 std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
 
-TEST_F(HttpRestApiHandlerWithMediapipeTest, inferRequest) {
-    std::string binaryData{0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009};
+void testInference(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler){
     std::string request = "/v2/models/mediapipeAdd/versions/1/infer";
-    std::string tensor = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":10}}";
-    std::string param = ",\"parameters\":{\"binary_data_output\":true}";
-    std::string request_body = "{\"inputs\":[" + tensor + ", " + tensor + "]}";
-    int headerLength = request_body.length();
-
-    request_body += binaryData;
-    request_body += binaryData;
-    //request_body += "}";
     
     std::vector<std::pair<std::string, std::string>> headers;
     std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", std::to_string(headerLength)};
@@ -199,19 +204,79 @@ TEST_F(HttpRestApiHandlerWithMediapipeTest, inferRequest) {
     ovms::HttpRequestComponents comp;
 
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), ovms::StatusCode::OK);
+    
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
 
+    std::cout << "RESPONSE" << response.c_str() << std::endl;
     rapidjson::Document doc;
     doc.Parse(response.c_str());
-    auto output = doc["out"].GetArray()[0].GetObject()["data"].GetArray();
+    ASSERT_EQ(doc.HasParseError(), false);
+    
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
     ASSERT_EQ(output.Size(), 10);
-    int i = 1;
+   
     for (auto& data : output) {
-        ASSERT_EQ(data.GetFloat(), i++);
+        ASSERT_EQ(data.GetFloat(), 2);
     }
 }
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnarrowing"
+
+TEST_F(HttpRestApiHandlerWithMediapipeTest, inferRequestFP32) {
+    // 10 floats equaling 1 array 
+    std::string binaryData{0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F};
+
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
+    std::string param = ",\"parameters\":{\"binary_data_output\":true}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    request_body += binaryData;
+    request_body += binaryData;
+
+    testInference(headerLength, request_body, handler);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP32) {
+    // 10 floats equaling 1 array 
+    std::string binaryData{0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F};
+
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
+    std::string param = ",\"parameters\":{\"binary_data_output\":true}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    request_body += binaryData;
+    request_body += binaryData;
+
+    testInference(headerLength, request_body, handler);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestBYTES) {
+    // 10 floats equaling 1 array 
+    std::string binaryData{0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F};
+
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[10],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":40}}";
+    std::string param = ",\"parameters\":{\"binary_data_output\":true}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[10],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":40}}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    request_body += binaryData;
+    request_body += binaryData;
+
+    testInference(headerLength, request_body, handler);
+}
+
+#pragma GCC diagnostic pop
 
 TEST_F(HttpRestApiHandlerTest, MetricsParameters) {
     std::string request = "/metrics?test=test";
