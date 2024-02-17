@@ -249,8 +249,7 @@ TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorE
     MockTensorProtoDeserializator::mock = &mockTPobject;
     EXPECT_CALL(mockTPobject, deserializeTensorProto(_, _))
         .Times(1)
-        .WillRepeatedly(
-            Throw(ov::Exception("")));
+        .WillRepeatedly(Throw(ov::Exception::default_msg));
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     Status status;
     status = deserializePredictRequest<MockTensorProtoDeserializator>(
@@ -536,8 +535,7 @@ TEST_F(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetT
     MockTensorProtoDeserializator::mock = &mockTPobject;
     EXPECT_CALL(mockTPobject, deserializeTensorProto(_, _, _))
         .Times(1)
-        .WillRepeatedly(
-            Throw(ov::Exception("")));
+        .WillRepeatedly(Throw(ov::Exception::default_msg));
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     Status status;
     status = deserializePredictRequest<MockTensorProtoDeserializator>(
