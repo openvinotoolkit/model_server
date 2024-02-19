@@ -8,7 +8,7 @@
     }],
     "mediapipe_config_list": [
     {
-        "name":"mediapipe_pass",
+        "name":"python_model",
         "graph_path":"/workspace/graph.pbtxt"
     }
     ]

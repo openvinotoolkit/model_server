@@ -19,6 +19,7 @@ from transformers import CLIPProcessor
 from PIL import Image
 import numpy as np
 from io import BytesIO
+from tritonclient.utils import deserialize_bytes_tensor
 
 class OvmsPythonModel:
 
@@ -27,18 +28,21 @@ class OvmsPythonModel:
         self.processor = CLIPProcessor.from_pretrained(model_id)
 
     def execute(self, inputs: list):
-        print(inputs[0].datatype)
-        print(inputs[1].datatype)
-        print("LEN " + str(len(bytes(inputs[0]))))
-        image = Image.open(BytesIO(bytes(inputs[0])[4:]))
- 
-        print(list(image.getdata()[0]))
-        print(np.uint8(image).shape)
-        input_labels = np.array(inputs[1].data, dtype=np.uint8).tobytes()[4:].decode("utf-8")
-        #print(input_labels)
+        if inputs[0].datatype != 'BYTES':
+            print("ERROR: Wrong datatype set for input tensor 1. Expected BYTES got: " + str(inputs[0].datatype))
+
+        if inputs[1].datatype != 'BYTES':
+            print("ERROR: Wrong datatype set for input tensor 2. Expected BYTES got: " + str(inputs[1].datatype))
+
+        if len(bytes(inputs[0])) != 206580:
+            print("ERROR: Demo image expected size is 206580 bytes, got: " + str(len(bytes(inputs[0]))))
+            print("ERROR: Expecting 4 additional bytes at the begining of the data bufer for deserialize_bytes_tensor function")
+
+        image = Image.open(BytesIO((deserialize_bytes_tensor(bytes(inputs[0]))[0])))
+
+        input_labels = deserialize_bytes_tensor(bytes(inputs[1]))[0].decode()
 
         input_labels_split = input_labels.split(",")
-        print(input_labels_split)
 
         text_descriptions = [f"This is a photo of a {label}" for label in input_labels_split]
 

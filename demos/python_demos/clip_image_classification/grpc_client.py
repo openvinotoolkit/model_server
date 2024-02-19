@@ -18,6 +18,8 @@ sys.path.append("../../common/python")
 import tritonclient.grpc as grpcclient
 from tritonclient.grpc import service_pb2
 from tritonclient.grpc import service_pb2_grpc
+from tritonclient.utils import serialize_byte_tensor
+
 import argparse
 import datetime
 import numpy as np
@@ -28,7 +30,7 @@ import os
 import grpc
 import time
 
-parser = argparse.ArgumentParser(description='Client for clip example')
+parser = argparse.ArgumentParser(description='GRPC Client for clip example')
 
 parser.add_argument('--timeout', required=False, default='15',
                     help='Specify timeout to wait for models readiness on the server in seconds. default 15 seconds.')
@@ -41,6 +43,7 @@ parser.add_argument('--image_url', required=False, default='https://storage.open
 parser.add_argument('--iterations', default=1,
                         help='Number of requests iterations, as default use number of images in numpy memmap. default: 1 ',
                         dest='iterations', type=int)
+
 args = vars(parser.parse_args())
 
 iterations = args.get('iterations')
@@ -78,25 +81,29 @@ if not os.path.exists(sample_path):
     )
 
 with open(sample_path, "rb") as f:
-    data = f.read()
+    image_data = f.read()
 
-image_input = grpcclient.InferInput("image", [len(data)], "UINT8")
-image_input._raw_content = data
+image_data_bytes = serialize_byte_tensor(np.array(image_data, dtype=np.object_)).item()
+image_input = grpcclient.InferInput("image", [len(image_data_bytes)], "BYTES")
+image_input._raw_content = image_data_bytes
 
-input_labels = args['input_labels'].split(",")
+input_labels_array = args['input_labels']
+input_labels = input_labels_array.split(",")
 print(f"Using input_labels:\n{input_labels}\n")
-labels_npy = np.array(input_labels)
-labels_input = grpcclient.InferInput("input_labels", [len(labels_npy)], labels_npy.dtype.str)
-labels_input._raw_content = labels_npy.tobytes()
+
+labels_bytes = serialize_byte_tensor(np.array(input_labels_array, dtype=np.object_)).item()
+labels_input = grpcclient.InferInput("input_labels", [len(labels_bytes)], "BYTES")
+labels_input._raw_content = labels_bytes
 
 processing_times = []
 for iteration in range(iterations):
     print(f"Iteration {iteration}")
     start_time = datetime.datetime.now()
-    results = client.infer("python_model_grpc", [image_input , labels_input])
+    results = client.infer("python_model", [image_input , labels_input])
     end_time = datetime.datetime.now()
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times.append(int(duration))
-    print(f"Detection:\n{results.as_numpy('output_label').tobytes().decode()}\n")
+    print(f"GRPC Detection:\n{results.as_numpy('output_label').tobytes().decode()}\n")
 
 print_statistics(np.array(processing_times,int), batch_size = 1)
+
