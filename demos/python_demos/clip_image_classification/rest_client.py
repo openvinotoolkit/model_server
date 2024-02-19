@@ -47,7 +47,7 @@ ssl_options = None
 
 triton_client = httpclient.InferenceServerClient(
                 url=address,
-                ssl=args['tls'],
+                ssl=False,
                 ssl_options=ssl_options,
                 verbose=False)
 
