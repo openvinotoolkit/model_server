@@ -407,7 +407,7 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     timer.stop(TOTAL);
     double totalTime = timer.elapsed<std::chrono::microseconds>(TOTAL);
     SPDLOG_DEBUG("Total REST request processing time: {} ms", totalTime / 1000);
-    
+
     if (!reporter) {
         return StatusCode::OK;
         // TODO fix after Mediapipe metrics implementation

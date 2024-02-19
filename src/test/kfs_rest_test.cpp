@@ -194,9 +194,9 @@ public:
 std::unique_ptr<MockedServer> HttpRestApiHandlerTest::server = nullptr;
 std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
 
-void testInference(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler){
+void testInference(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler) {
     std::string request = "/v2/models/mediapipeAdd/versions/1/infer";
-    
+
     std::vector<std::pair<std::string, std::string>> headers;
     std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", std::to_string(headerLength)};
     headers.emplace_back(binaryInputsHeader);
@@ -204,7 +204,7 @@ void testInference(int headerLength, std::string& request_body, std::unique_ptr<
     ovms::HttpRequestComponents comp;
 
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), ovms::StatusCode::OK);
-    
+
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
@@ -213,10 +213,10 @@ void testInference(int headerLength, std::string& request_body, std::unique_ptr<
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     ASSERT_EQ(doc.HasParseError(), false);
-    
+
     auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
     ASSERT_EQ(output.Size(), 10);
-   
+
     for (auto& data : output) {
         ASSERT_EQ(data.GetFloat(), 2);
     }
@@ -226,8 +226,8 @@ void testInference(int headerLength, std::string& request_body, std::unique_ptr<
 #pragma GCC diagnostic ignored "-Wnarrowing"
 
 TEST_F(HttpRestApiHandlerWithMediapipeTest, inferRequestFP32) {
-    // 10 floats equaling 1 array 
-    std::string binaryData{0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F};
+    // 10 floats equaling 1 array
+    std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
 
     std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
     std::string param = ",\"parameters\":{\"binary_data_output\":true}";
@@ -243,8 +243,8 @@ TEST_F(HttpRestApiHandlerWithMediapipeTest, inferRequestFP32) {
 }
 
 TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP32) {
-    // 10 floats equaling 1 array 
-    std::string binaryData{0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F};
+    // 10 floats equaling 1 array
+    std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
 
     std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
     std::string param = ",\"parameters\":{\"binary_data_output\":true}";
