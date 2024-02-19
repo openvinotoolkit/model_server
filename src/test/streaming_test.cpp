@@ -1585,7 +1585,7 @@ node {
         {"in"}, {"out"}, {}, nullptr};
 
     // Mock receiving the invalid request and disconnection
-    // Request with invalid param py (special pythons ession side packet)
+    // Request with invalid param py (special pythons session side packet)
     prepareRequestWithParam(this->firstRequest, {{"in", 3.5f}}, {"py", 65});
 
     EXPECT_CALL(this->stream, Read(_)).Times(0);

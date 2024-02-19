@@ -249,7 +249,8 @@ TEST_F(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorE
     MockTensorProtoDeserializator::mock = &mockTPobject;
     EXPECT_CALL(mockTPobject, deserializeTensorProto(_, _))
         .Times(1)
-        .WillRepeatedly(Throw(ov::Exception::default_msg));
+        .WillRepeatedly([](const tensorflow::TensorProto& requestInput,
+                            const std::shared_ptr<const ovms::TensorInfo>& tensorInfo) -> ov::Tensor { OPENVINO_THROW(""); });
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     Status status;
     status = deserializePredictRequest<MockTensorProtoDeserializator>(
@@ -535,7 +536,9 @@ TEST_F(KserveGRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetT
     MockTensorProtoDeserializator::mock = &mockTPobject;
     EXPECT_CALL(mockTPobject, deserializeTensorProto(_, _, _))
         .Times(1)
-        .WillRepeatedly(Throw(ov::Exception::default_msg));
+        .WillRepeatedly([](const ::KFSRequest::InferInputTensor& requestInput,
+                            const std::shared_ptr<const TensorInfo>& tensorInfo,
+                            const std::string* buffer) -> ov::Tensor { OPENVINO_THROW(""); });
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     Status status;
     status = deserializePredictRequest<MockTensorProtoDeserializator>(
