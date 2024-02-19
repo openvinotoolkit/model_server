@@ -288,8 +288,6 @@ static size_t calculateBinaryDataSize(::KFSRequest::InferInputTensor& input) {
 static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
     const char* binary_inputs_buffer = &(request_body[endOfJson]);
     size_t binary_buffer_size = request_body.length() - endOfJson;
-    //SPDLOG_DEBUG("request_body  {}", request_body);
-    SPDLOG_DEBUG("binary_buffer_size  {}", binary_buffer_size);
 
     size_t binary_input_offset = 0;
     for (int i = 0; i < grpc_request.mutable_inputs()->size(); i++) {
@@ -317,8 +315,6 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             }
         }
 
-        SPDLOG_DEBUG("binary_input_size  {}", binary_input_size);
-        SPDLOG_DEBUG("binary_input_offset  {}", binary_input_offset);
         auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs_buffer, *input, grpc_request.add_raw_input_contents());
         if (!status.ok())
             return status;

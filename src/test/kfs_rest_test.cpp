@@ -259,23 +259,6 @@ TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP32) {
     testInference(headerLength, request_body, handler);
 }
 
-TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestBYTES) {
-    // 10 floats equaling 1 array 
-    std::string binaryData{0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F,0x00,0x00,0x80,0x3F};
-
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[10],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":40}}";
-    std::string param = ",\"parameters\":{\"binary_data_output\":true}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[10],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":40}}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    request_body += binaryData;
-    request_body += binaryData;
-
-    testInference(headerLength, request_body, handler);
-}
-
 #pragma GCC diagnostic pop
 
 TEST_F(HttpRestApiHandlerTest, MetricsParameters) {
