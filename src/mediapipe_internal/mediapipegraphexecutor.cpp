@@ -320,6 +320,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         size_t expectElementsCount = ov::shape_size(shape.begin(), shape.end());
         size_t expectedBytes = precision.size() * expectElementsCount;
+
         if (expectedBytes != bufferLocation.size()) {
             std::stringstream ss;
             ss << "Expected: " << expectedBytes << " bytes; Actual: " << bufferLocation.size() << " bytes; input name: " << requestedName;

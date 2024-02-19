@@ -15,25 +15,17 @@
 #
 import sys
 sys.path.append("../../common/python")
-import tritonclient.grpc as grpcclient
-from tritonclient.grpc import service_pb2
-from tritonclient.grpc import service_pb2_grpc
 import tritonclient.http as httpclient
 import argparse
 import datetime
-import json
 import numpy as np
 from client_utils import print_statistics
 from urllib.request import urlretrieve
 from pathlib import Path
 import os
 
-parser = argparse.ArgumentParser(description='Client for clip example')
+parser = argparse.ArgumentParser(description='REST Client for clip example')
 
-parser.add_argument('--timeout', required=False, default='15',
-                    help='Specify timeout to wait for models readiness on the server in seconds. default 15 seconds.')
-parser.add_argument('--url', required=False, default='localhost:9000',
-                    help='Specify url to grpc service. default:localhost:9000')
 parser.add_argument('--input_labels', required=False, default="cat,dog,wolf,tiger,man,horse,frog,tree,house,computer",
                     help="Specify input_labels to the CLIP model. default:cat,dog,wolf,tiger,man,horse,frog,tree,house,computer")
 parser.add_argument('--image_url', required=False, default='https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg',
@@ -47,7 +39,6 @@ parser.add_argument('--client_cert', required=False, help='Path to client certif
 parser.add_argument('--client_key', required=False, help='Path to client key', default=None)
 parser.add_argument('--http_address',required=False, default='localhost',  help='Specify url to http service. default:localhost')
 parser.add_argument('--http_port',required=False, default=8000, help='Specify port to http service. default: 8000')
-parser.add_argument('--binary_data', default=False, action='store_true', help='Send input data in binary format', dest='binary_data')
 
 args = vars(parser.parse_args())
 
@@ -91,13 +82,14 @@ with open(sample_path, "rb") as f:
     image_data.append(f.read())
 
 npydata = np.array(image_data, dtype=np.object_)
-npylabelsdata = np.array(input_labels_array, dtype=np.bytes_)
+npylabelsdata = np.array(input_labels_array, dtype=np.object_)
+
 inputs = []
 inputs.append(httpclient.InferInput('image', [len(npydata)], "BYTES"))
-inputs[0].set_data_from_numpy(npydata)
+inputs[0].set_data_from_numpy(npydata, binary_data=True)
 
 inputs.append(httpclient.InferInput('input_labels', [len(npylabelsdata)], "BYTES"))
-inputs[1].set_data_from_numpy(npylabelsdata)
+inputs[1].set_data_from_numpy(npylabelsdata, binary_data=True)
 
 processing_times = []
 for iteration in range(iterations):
@@ -109,8 +101,7 @@ for iteration in range(iterations):
 
     results = triton_client.infer(
                 model_name=model_name,
-                inputs=inputs,
-                parameters=parameters)
+                inputs=inputs)
     
     end_time = datetime.datetime.now()
     duration = (end_time - start_time).total_seconds() * 1000

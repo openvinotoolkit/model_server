@@ -10,10 +10,6 @@
     {
         "name":"python_model",
         "graph_path":"/workspace/graph.pbtxt"
-    },
-    {
-        "name":"python_model_grpc",
-        "graph_path":"/workspace/graph_grpc.pbtxt"
     }
     ]
 }
