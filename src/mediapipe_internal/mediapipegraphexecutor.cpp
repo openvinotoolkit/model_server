@@ -564,8 +564,8 @@ static Status createInputSidePackets(std::map<std::string, mediapipe::Packet>& i
         } else if (valueChoice.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kBoolParam) {
             inputSidePackets[name] = mediapipe::MakePacket<bool>(valueChoice.bool_param());
         } else {
-            SPDLOG_DEBUG("Handling parameters of different types than: bool, string, int64 is not supported");
-            return Status(StatusCode::NOT_IMPLEMENTED, "Handling parameters of different types than: bool, string, int64 is not supported");
+            SPDLOG_DEBUG("Handling parameters of other types than: bool, string, int64 is not supported");
+            return Status(StatusCode::NOT_IMPLEMENTED, "Handling parameters of other types than: bool, string, int64 is not supported");
         }
     }
     return StatusCode::OK;
