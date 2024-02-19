@@ -33,10 +33,7 @@ parser.add_argument('--image_url', required=False, default='https://storage.open
 parser.add_argument('--iterations', default=1,
                         help='Number of requests iterations, as default use number of images in numpy memmap. default: 1 ',
                         dest='iterations', type=int)
-parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with gRPC endpoint')
-parser.add_argument('--server_cert', required=False, help='Path to server certificate', default=None)
-parser.add_argument('--client_cert', required=False, help='Path to client certificate', default=None)
-parser.add_argument('--client_key', required=False, help='Path to client key', default=None)
+
 parser.add_argument('--http_address',required=False, default='localhost',  help='Specify url to http service. default:localhost')
 parser.add_argument('--http_port',required=False, default=8000, help='Specify port to http service. default: 8000')
 
@@ -46,14 +43,7 @@ iterations = args.get('iterations')
 iteration = 0
 
 address = "{}:{}".format(args['http_address'],args['http_port'])
-if args['tls']:
-        ssl_options = {
-            'keyfile':args['client_key'],
-            'cert_file':args['client_cert'],
-            'ca_certs':args['server_cert']
-        }
-else:
-    ssl_options = None
+ssl_options = None
 
 triton_client = httpclient.InferenceServerClient(
                 url=address,

@@ -1,2 +1,1 @@
 tritonclient[all]==2.37.0.9383150
-opencv-python>=4.6.0
