@@ -288,7 +288,7 @@ static size_t calculateBinaryDataSize(::KFSRequest::InferInputTensor& input) {
 static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
     const char* binary_inputs_buffer = &(request_body[endOfJson]);
     size_t binary_buffer_size = request_body.length() - endOfJson;
-    SPDLOG_DEBUG("request_body  {}", request_body);
+    //SPDLOG_DEBUG("request_body  {}", request_body);
     SPDLOG_DEBUG("binary_buffer_size  {}", binary_buffer_size);
 
     size_t binary_input_offset = 0;
