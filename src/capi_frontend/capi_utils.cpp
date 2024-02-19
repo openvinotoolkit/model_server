@@ -121,6 +121,8 @@ OVMS_DataType getPrecisionAsOVMSDataType(Precision precision) {
         return OVMS_DATATYPE_MIXED;
     case Precision::Q78:
         return OVMS_DATATYPE_Q78;
+    case Precision::STRING:
+        return OVMS_DATATYPE_STRING;
     case Precision::BIN:
         return OVMS_DATATYPE_BIN;
     default:
@@ -159,6 +161,8 @@ Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype) {
         return Precision::U4;
     case OVMS_DATATYPE_U1:
         return Precision::U1;
+    case OVMS_DATATYPE_STRING:
+        return Precision::STRING;
     case OVMS_DATATYPE_BOOL:
         return Precision::BOOL;
     case OVMS_DATATYPE_CUSTOM:

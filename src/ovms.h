@@ -68,6 +68,7 @@ typedef enum OVMS_DataType_enum {
     OVMS_DATATYPE_MIXED,
     OVMS_DATATYPE_Q78,
     OVMS_DATATYPE_BIN,
+    OVMS_DATATYPE_STRING,
     OVMS_DATATYPE_END
 } OVMS_DataType;
 

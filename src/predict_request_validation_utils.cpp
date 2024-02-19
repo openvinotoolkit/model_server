@@ -745,6 +745,7 @@ static size_t getElementsCount(const KFSTensorInputProto& proto, ovms::Precision
     case ovms::Precision::MIXED:
     case ovms::Precision::Q78:
     case ovms::Precision::BIN:
+    case ovms::Precision::STRING:
     default:
         return 0;
     }

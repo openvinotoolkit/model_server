@@ -47,6 +47,7 @@ static Status serializePrecision(
     case ovms::Precision::U16:
     case ovms::Precision::FP16:
     case ovms::Precision::I64:
+    case ovms::Precision::STRING:
         responseOutput.set_dtype(getPrecisionAsDataType(servableOutput->getPrecision()));
         break;
 
@@ -93,6 +94,7 @@ static Status serializePrecision(
     case ovms::Precision::U16:
     case ovms::Precision::U8:
     case ovms::Precision::BOOL:
+    case ovms::Precision::STRING:
         responseOutput.set_datatype(ovmsPrecisionToKFSPrecision(servableOutput->getPrecision()));
         break;
     case ovms::Precision::UNDEFINED:
@@ -215,6 +217,8 @@ static void serializeContent(::inference::ModelInferResponse::InferOutputTensor&
         SERIALIZE_BY_DATATYPE(mutable_uint_contents, uint8_t)
     } else if (responseOutput.datatype() == "FP64") {
         SERIALIZE_BY_DATATYPE(mutable_fp64_contents, double)
+    } else if (responseOutput.datatype() == "STRING") {
+        responseOutput.mutable_contents()->add_bytes_contents((char*)tensor.data(), tensor.get_byte_size());
     } else if (responseOutput.datatype() == "BYTES") {
         responseOutput.mutable_contents()->add_bytes_contents((char*)tensor.data(), tensor.get_byte_size());
     }
