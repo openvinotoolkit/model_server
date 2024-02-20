@@ -62,35 +62,35 @@ cc_library(
         ]),
     }),
     hdrs = [
-        "src/aws-cpp-sdk-core/include/aws/core/SDKConfig.h", # this will be created by genrule:
+        "aws-cpp-sdk-core/include/aws/core/SDKConfig.h", # this will be created by genrule:
          ":SDKConfig_h",
     ] + glob([
-        "src/aws-cpp-sdk-core/include/aws/core/*.h",  # AWS_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/auth/*.h",  # AWS_AUTH_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/client/*.h",  # AWS_CLIENT_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/internal/*.h",  # AWS_INTERNAL_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/net/*.h",  # NET_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/http/*.h",  # HTTP_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/http/standard/*.h",  # HTTP_STANDARD_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/config/*.h",  # CONFIG_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/monitoring/*.h",  # MONITORING_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/platform/*.h",  # PLATFORM_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/*.h",  # UTILS_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/event/*.h",  # UTILS_EVENT_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/base64/*.h",  # UTILS_BASE64_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/crypto/*.h",  # UTILS_CRYPTO_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/json/*.h",  # UTILS_JSON_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/threading/*.h",  # UTILS_THREADING_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/xml/*.h",  # UTILS_XML_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/memory/*.h",  # UTILS_MEMORY_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/memory/stl/*.h",  # UTILS_STL_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/logging/*.h",  # UTILS_LOGGING_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/ratelimiter/*.h",  # UTILS_RATE_LIMITER_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/stream/*.h",  # UTILS_STREAM_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/external/cjson/*.h",  # CJSON_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/external/tinyxml2/*.h",  # TINYXML2_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/http/curl/*.h",  # HTTP_CURL_CLIENT_HEADERS
-        "src/aws-cpp-sdk-core/include/aws/core/utils/crypto/openssl/*.h",  # UTILS_CRYPTO_OPENSSL_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/*.h",  # AWS_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/auth/*.h",  # AWS_AUTH_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/client/*.h",  # AWS_CLIENT_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/internal/*.h",  # AWS_INTERNAL_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/net/*.h",  # NET_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/http/*.h",  # HTTP_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/http/standard/*.h",  # HTTP_STANDARD_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/config/*.h",  # CONFIG_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/monitoring/*.h",  # MONITORING_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/platform/*.h",  # PLATFORM_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/*.h",  # UTILS_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/event/*.h",  # UTILS_EVENT_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/base64/*.h",  # UTILS_BASE64_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/crypto/*.h",  # UTILS_CRYPTO_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/json/*.h",  # UTILS_JSON_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/threading/*.h",  # UTILS_THREADING_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/xml/*.h",  # UTILS_XML_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/memory/*.h",  # UTILS_MEMORY_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/memory/stl/*.h",  # UTILS_STL_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/logging/*.h",  # UTILS_LOGGING_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/ratelimiter/*.h",  # UTILS_RATE_LIMITER_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/stream/*.h",  # UTILS_STREAM_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/external/cjson/*.h",  # CJSON_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/external/tinyxml2/*.h",  # TINYXML2_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/http/curl/*.h",  # HTTP_CURL_CLIENT_HEADERS
+        "aws-cpp-sdk-core/include/aws/core/utils/crypto/openssl/*.h",  # UTILS_CRYPTO_OPENSSL_HEADERS
     ]),
     defines = [
         'AWS_SDK_VERSION_STRING=\\"1.1.111\\"',
@@ -113,13 +113,13 @@ cc_library(
        
     ],
     includes = [
-        "src/aws-cpp-sdk-core/include",
+        "aws-cpp-sdk-core/include",
     ],
     linkopts = [],
     deps = [
         ":SDKConfig_h",
         "@aws-c-common//:aws-c-common", # TODO check genrule
-        "@aws-crt-cpp//:aws-crt-cpp",
+ #       "@aws-crt-cpp//:aws-crt-cpp",
         "@aws-c-event-stream//:aws-c-event-stream", # TODO check genrule
         #"@aws-c-event-stream",
         #"@boringssl//:crypto",
@@ -149,7 +149,7 @@ cc_library(
 genrule(
     name = "SDKConfig_h",
     outs = [
-        "src/aws-cpp-sdk-core/include/aws/core/SDKConfig.h",
+        "aws-cpp-sdk-core/include/aws/core/SDKConfig.h",
     ],
     cmd = "\n".join([
         "cat <<'EOF' >$@",

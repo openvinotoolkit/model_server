@@ -294,74 +294,18 @@ workspace()
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 rules_pkg_dependencies()
 
-# AWS S3 SDK
-new_local_repository(
-    name = "awssdk",
-    build_file = "@//third_party/aws:BUILD",
-    path = "/awssdk",
-)
 
-# TF IO uses 1.7.339
-# we need to match aws-c-common given that aws-sdk-cpp is not built with bazel
-# TODO wrap it into awssdkcpp_deps function
-# check aws-sdk-cpp third-party/CMakeLists.txt" for version
-# for some reason TF IO uses 0.4.29 while the sdk we uses tag
-# / commit ac02e17 -> v0.3.5?
-# TODO DONE check licenses for TF IO apache OK
-# TODO needs aws-c-event-stream
-http_archive(
-    name = "aws-c-common",
-    build_file = "@//third_party/aws-c-common:BUILD",
-    sha256 = "01c2a58553a37b3aa5914d9e0bf7bf14507ff4937bc5872a678892ca20fcae1f",
-    strip_prefix = "aws-c-common-0.4.29",
-    urls = [
-        "https://github.com/awslabs/aws-c-common/archive/v0.4.29.tar.gz",
-    ],
-)
-# here we need to be past this commit:
-# 97ab2e5 as this is used in aws-sdk-cpp third-party/CMakeLists.txt 0.1.4 contains this commit
-http_archive(
-    name = "aws-c-event-stream",
-    build_file = "//third_party/aws-c-event-stream:BUILD",
-    sha256 = "31d880d1c868d3f3df1e1f4b45e56ac73724a4dc3449d04d47fc0746f6f077b6",
-    strip_prefix = "aws-c-event-stream-0.1.4",
-    urls = [
-        "https://github.com/awslabs/aws-c-event-stream/archive/v0.1.4.tar.gz",
-    ],
-)
-# this is needed by aws-c-event-stream 
-# TODO check what version to use
-http_archive(
-    name = "aws-checksums",
-    build_file = "//third_party/aws-checksums:BUILD",
-    sha256 = "6e6bed6f75cf54006b6bafb01b3b96df19605572131a2260fddaf0e87949ced0",
-    strip_prefix = "aws-checksums-0.1.5",
-    urls = [
-        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/awslabs/aws-checksums/archive/v0.1.5.tar.gz",
-        "https://github.com/awslabs/aws-checksums/archive/v0.1.5.tar.gz",
-    ],
-)
-
-
-http_archive(
-    name = "awssdkcpp2",
-    build_file = "@//third_party/aws:BUILD.bazel",
-    strip_prefix = "aws-sdk-cpp-1.7.336",
-    urls = [
-        #"https://github.com/aws/aws-sdk-cpp/archive/1.7.129.tar.gz",
-        "https://github.com/aws/aws-sdk-cpp/archive/refs/tags/1.7.336.tar.gz"
-    ],
-)
-
-http_archive(
-    name = "awssdk2",
-    build_file = "@//third_party/aws2:BUILD.bazel",
-    strip_prefix = "aws-sdk-cpp-1.7.336",
-    urls = [
-        #"https://github.com/aws/aws-sdk-cpp/archive/1.7.129.tar.gz",
-        "https://github.com/aws/aws-sdk-cpp/archive/refs/tags/1.7.336.tar.gz"
-    ],
-)
+load("@//:aws-sdk-cpp.bzl", "aws_workspace")
+load("@//:aws-sdk-cpp.bzl", "aws_cmake_workspace")
+aws_cmake_workspace()
+#load("@//:aws-sdk-cpp.bzl", "aws_1_11_111_workspace")
+#load("@//:aws-sdk-cpp.bzl", "aws_1_10_57_workspace")
+#aws_1_10_57_workspace()
+load("@//:aws-sdk-cpp.bzl", "aws_1_9_379_workspace")
+#aws_1_9_379_workspace()
+#load("@//:aws-sdk-cpp.bzl", "aws_1_8_187_workspace")
+#aws_1_8_187_workspace()
+#load("@//:aws-sdk-cpp.bzl", "aws_1_7_336_workspace")
 
 # Azure Storage SDK
 new_local_repository(
