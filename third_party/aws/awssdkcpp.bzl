@@ -32,10 +32,16 @@ filegroup(
 
 cmake(
     name = "aws-sdk-cpp_cmake",
+    build_args = [
+        #"--verbose",
+        "--",  # <- Pass remaining options to the native tool.
+        "-j 18",
+    ],
     cache_entries = {{
         "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_ONLY": "s3",
+        "BUILD_ONLY": "s3", # core builds always
         "ENABLE_TESTING": "OFF",
+        "AUTORUN_UNIT_TESTS": "OFF",
         "BUILD_SHARED_LIBS": "OFF",
         "MINIMIZE_SIZE": "ON",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
@@ -47,6 +53,7 @@ cmake(
         "HTTP_PROXY": "{http_proxy}",
         "HTTPS_PROXY": "{https_proxy}",
     }},
+    #deps = [":remove_problematic_file",],
     lib_source = ":all_srcs",
     #out_lib_dir = "lib/linux/intel64/Release",
     out_lib_dir = "lib",
@@ -57,12 +64,22 @@ cmake(
 #order matter
 "linux/intel64/Release/libaws-cpp-sdk-s3.a",
 "linux/intel64/Release/libaws-cpp-sdk-core.a",
+"libaws-crt-cpp.a",
+"libaws-c-s3.a",
+"libaws-c-auth.a",
+"libaws-c-io.a",
+"libs2n.a",
+"libaws-c-cal.a",
+"libaws-c-http.a",
+"libaws-c-compression.a",
+"libaws-c-sdkutils.a",
+"libaws-c-mqtt.a",
 "libaws-c-event-stream.a",
 "libaws-checksums.a",
 "libaws-c-common.a",
 ],
     tags = ["requires-network"],
-    alwayslink = True,
+    alwayslink = False,
 )
 
 cc_library(
@@ -72,6 +89,14 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     alwayslink = True,
+)
+
+# we need to delete those files as there are problem with cmake in bazel in handling non-ASCII characters in filenames
+genrule(
+    name = "remove_problematic_file",
+    srcs = [],
+    outs = ["removed_file_test_c.txt"],
+    cmd = "rm -f external/aws-sdk-cpp/crt/aws-crt-cpp/crt/aws-c-common/tests/file_test.c && touch $(OUTS)",
 )
 
 """
