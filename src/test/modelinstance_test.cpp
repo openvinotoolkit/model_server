@@ -629,7 +629,7 @@ TEST_F(TestLoadModel, SuccessfulLoadDummyDimensionRanges) {
 TEST_F(TestLoadModel, CorrectNumberOfStreamsSet) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setPluginConfig({{"CPU_THROUGHPUT_STREAMS", "6"}});
+    config.setPluginConfig({{"NUM_STREAMS", "6"}});
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     ASSERT_EQ(modelInstance.getNumOfStreams(), 6);
