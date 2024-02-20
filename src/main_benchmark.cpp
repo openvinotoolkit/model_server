@@ -59,14 +59,6 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
             ("h, help",
                 "Show this help message and exit")
             // server options
-            ("port",
-                "gRPC server port",
-                cxxopts::value<uint32_t>()->default_value("9178"),
-                "PORT")
-            ("rest_port",
-                "REST server port, the REST server will not be started if rest_port is blank or set to 0",
-                cxxopts::value<uint32_t>()->default_value("0"),
-                "REST_PORT")
             ("log_level",
                 "serving log level - one of TRACE, DEBUG, INFO, WARNING, ERROR",
                 cxxopts::value<std::string>()->default_value("ERROR"),
@@ -83,20 +75,20 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
             ("nstreams",
                 "nstreams from OVMS configuration",
                 cxxopts::value<uint32_t>()->default_value("1"),
-                "NIREQ")
+                "NSTREAMS")
             // inference data
             ("servable_name",
                 "Model name to sent request to",
                 cxxopts::value<std::string>(),
                 "MODEL_NAME")
             ("servable_version",
-                "workload threads per ireq",
+                "workload threads per ireq, if not set version will be set by default model version policy",
                 cxxopts::value<int64_t>()->default_value("0"),
                 "MODEL_VERSION")
             ("input_name",
                 "Servable's input name",
                 cxxopts::value<std::string>(),
-                "INPUTS_NAMES")
+                "INPUT_NAME")
             ("shape",
                 "Semicolon separated list of inputs names followed by their shapes in brackers. For example: \"inputA[1,3,224,224],inputB[1,10]\"",
                 cxxopts::value<std::string>(),
@@ -352,10 +344,9 @@ int main(int argc, char** argv) {
     OVMS_ModelsSettingsNew(&modelsSettings);
     OVMS_ServerNew(&srv);
 
-    uint32_t grpcPort = cliparser.result->operator[]("port").as<uint32_t>();
-    uint32_t restPort = cliparser.result->operator[]("rest_port").as<uint32_t>();
+    uint32_t grpcPort = 9178;
     OVMS_ServerSettingsSetGrpcPort(serverSettings, grpcPort);
-    OVMS_ServerSettingsSetRestPort(serverSettings, restPort);
+    OVMS_ServerSettingsSetRestPort(serverSettings, 0);
 
     std::string cliLogLevel(cliparser.result->operator[]("log_level").as<std::string>());
     OVMS_LogLevel_enum logLevel;
@@ -457,7 +448,7 @@ int main(int argc, char** argv) {
     ///////////////////////
     size_t niter = cliparser.result->operator[]("niter").as<uint32_t>();
     size_t threadCount = cliparser.result->operator[]("nstreams").as<uint32_t>();
-    size_t niterPerThread = niter * threadCount;
+    size_t niterPerThread = std::max(niter / threadCount, 1);
 
     auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
     std::vector<float> data(elementsCount, 0.1);
