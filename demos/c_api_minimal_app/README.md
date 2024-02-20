@@ -102,7 +102,10 @@ make all_docker
 
 # Capi Benchmark
 
-This guide shows how to perform benchmark tests using OVMS's CAPI. 
+This guide shows how to perform benchmark tests using OpenVINO Model Server C-API.
+It starts the model server and initiates a load from multithreaded clients sending sequential requests with synthetic data.
+It can demonstrate expected throughput and latency for a specific model, configuration and C-API calls.
+
 
 Clone OpenVINO™ Model Server GitHub repository and go to the top directory.
 ```bash

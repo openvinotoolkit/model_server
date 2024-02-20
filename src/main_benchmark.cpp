@@ -576,7 +576,7 @@ int main(int argc, char** argv) {
     OVMS_InferenceRequestDelete(request);
     double totalWhole = std::accumulate(wholeTimes.begin(), wholeTimes.end(), double(0)) / threadCount;
     std::cout << std::fixed << std::setprecision(3);
-    std::cout << "Average latency whole prediction path: " << totalWhole << "ms" << std::endl;
+    std::cout << "Average latency : " << totalWhole << "ms" << std::endl;
     // OVMS cleanup
     OVMS_ServerDelete(srv);
     OVMS_ModelsSettingsDelete(modelsSettings);
