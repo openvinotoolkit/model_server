@@ -149,7 +149,7 @@ signed_shape_t parseShapes(const std::string& cliInputShapes) {
             std::cout << __LINE__ << " " << s << std::endl;
             throw std::invalid_argument("Invalid shape argument");
         }
-        return dimOpt; 
+        return dimOpt;
     });
     return shape;
 }
