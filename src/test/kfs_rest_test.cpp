@@ -209,7 +209,6 @@ void testInference(int headerLength, std::string& request_body, std::unique_ptr<
     ovms::HttpResponseComponents responseComponents;
     ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
 
-    std::cout << "RESPONSE" << response.c_str() << std::endl;
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     ASSERT_EQ(doc.HasParseError(), false);
