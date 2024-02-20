@@ -1,86 +1,21 @@
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+#
+# Copyright (c) 2024 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
-load("@//third_party/aws:awssdkcpp.bzl", "aws_sdk_cpp_repository")
 
-def aws_workspace():
-    # AWS S3 SDK
-    native.new_local_repository(
-        name = "awssdk",
-        build_file = "@//third_party/aws:BUILD",
-        path = "/awssdk",
-    )
-
-def aws_1_11_111_workspace():
-    # TF IO uses 1.7.339
-    # we need to match aws-c-common given that aws-sdk-cpp is not built with bazel
-    # TODO wrap it into awssdkcpp_deps function
-    # check aws-sdk-cpp third-party/CMakeLists.txt" for version
-    # for some reason TF IO uses 0.4.29 while the sdk we uses tag
-    # / commit ac02e17 -> v0.3.5?
-    # TODO DONE check licenses for TF IO apache OK
-    # TODO needs aws-c-event-stream
-    http_archive(
-        name = "aws-c-common",
-        build_file = "@//third_party/aws-c-common:BUILD",
-        sha256 = "01c2a58553a37b3aa5914d9e0bf7bf14507ff4937bc5872a678892ca20fcae1f",
-        strip_prefix = "aws-c-common-0.4.29",
-        urls = [
-            "https://github.com/awslabs/aws-c-common/archive/v0.4.29.tar.gz",
-        ],
-    )
-    # here we need to be past this commit:
-    # 97ab2e5 as this is used in aws-sdk-cpp third-party/CMakeLists.txt 0.1.4 contains this commit
-    http_archive(
-        name = "aws-c-event-stream",
-        build_file = "//third_party/aws-c-event-stream:BUILD",
-        sha256 = "31d880d1c868d3f3df1e1f4b45e56ac73724a4dc3449d04d47fc0746f6f077b6",
-        strip_prefix = "aws-c-event-stream-0.1.4",
-        urls = [
-            "https://github.com/awslabs/aws-c-event-stream/archive/v0.1.4.tar.gz",
-        ],
-    )
-    # this is needed by aws-c-event-stream 
-    # TODO check what version to use
-    http_archive(
-        name = "aws-checksums",
-        build_file = "//third_party/aws-checksums:BUILD",
-        sha256 = "6e6bed6f75cf54006b6bafb01b3b96df19605572131a2260fddaf0e87949ced0",
-        strip_prefix = "aws-checksums-0.1.5",
-        urls = [
-            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/awslabs/aws-checksums/archive/v0.1.5.tar.gz",
-            "https://github.com/awslabs/aws-checksums/archive/v0.1.5.tar.gz",
-        ],
-    )
-    
-    http_archive(
-        name = "awssdkcpp2",
-        build_file = "@//third_party/aws:BUILD",
-        strip_prefix = "aws-sdk-cpp-1.11.111",
-        urls = [
-            #"https://github.com/aws/aws-sdk-cpp/archive/1.7.129.tar.gz",
-            "https://github.com/aws/aws-sdk-cpp/archive/refs/tags/1.11.111.tar.gz"
-        ],
-    )
-    new_git_repository(
-        name = "aws-sdk-cpp",
-        remote = "https://github.com/aws/aws-sdk-cpp.git",
-        build_file = "@//third_party/aws:BUILD.bazel",
-        commit = "2fcf454a9893fd40cfe3de5aa929521ed7f1b370", # 1.11.111
-        init_submodules = True,
-    )
-    new_git_repository(
-        name = "aws-crt-cpp",
-        remote = "https://github.com/awslabs/aws-crt-cpp.git",
-        build_file = "@//third_party/aws-crt-cpp:BUILD",
-        commit = "cb474daeeaf5c025bd3408103adf61b97b74e600", # from aws-sdk-cpp 1.11.111
-        init_submodules = True,
-    )
 def aws_cmake_workspace():
-    ###########
-    # aws with cmake build
-    ###########
     aws_sdk_cpp_repository(name="_aws_sdk_cpp2")
     new_git_repository(
         name = "aws-sdk-cpp",
@@ -88,184 +23,101 @@ def aws_cmake_workspace():
         build_file = "@_aws_sdk_cpp2//:BUILD",
         #commit = "2fcf454a9893fd40cfe3de5aa929521ed7f1b370", # 1.11.111
         #tag = "1.7.129", # 1.11.111
-        tag = "1.11.268", # issues with ASCI handling of file_test.c *xample file.txt in bazel
-        #tag = "1.9.49", # 1.11.111
+        tag = "1.11.268",
         init_submodules = True,
         recursive_init_submodules = True,
-        patch_cmds = ["find . -name '*xample.txt' -delete"],
+        patch_cmds = ["find . -name '*xample.txt' -delete"], # issues with ASCI handling of file_test.c *xample file.txt in bazel
     )
-    ############
-    # end of awsk with cmake
-    ###########
-def aws_1_7_336_workspace():
-    # TF IO uses 1.7.339
-    # we need to match aws-c-common given that aws-sdk-cpp is not built with bazel
-    # TODO wrap it into awssdkcpp_deps function
-    # check aws-sdk-cpp third-party/CMakeLists.txt" for version
-    # for some reason TF IO uses 0.4.29 while the sdk we uses tag
-    # / commit ac02e17 -> v0.3.5?
-    # TODO DONE check licenses for TF IO apache OK
-    # TODO needs aws-c-event-stream
-    http_archive(
-        name = "aws-c-common",
-        build_file = "@//third_party/aws-c-common:BUILD",
-        sha256 = "01c2a58553a37b3aa5914d9e0bf7bf14507ff4937bc5872a678892ca20fcae1f",
-        strip_prefix = "aws-c-common-0.4.29",
-        urls = [
-            "https://github.com/awslabs/aws-c-common/archive/v0.4.29.tar.gz",
-        ],
-    )
-    # here we need to be past this commit:
-    # 97ab2e5 as this is used in aws-sdk-cpp third-party/CMakeLists.txt 0.1.4 contains this commit
-    http_archive(
-        name = "aws-c-event-stream",
-        build_file = "//third_party/aws-c-event-stream:BUILD",
-        sha256 = "31d880d1c868d3f3df1e1f4b45e56ac73724a4dc3449d04d47fc0746f6f077b6",
-        strip_prefix = "aws-c-event-stream-0.1.4",
-        urls = [
-            "https://github.com/awslabs/aws-c-event-stream/archive/v0.1.4.tar.gz",
-        ],
-    )
-    # this is needed by aws-c-event-stream 
-    # TODO check what version to use
-    http_archive(
-        name = "aws-checksums",
-        build_file = "//third_party/aws-checksums:BUILD",
-        sha256 = "6e6bed6f75cf54006b6bafb01b3b96df19605572131a2260fddaf0e87949ced0",
-        strip_prefix = "aws-checksums-0.1.5",
-        urls = [
-            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/awslabs/aws-checksums/archive/v0.1.5.tar.gz",
-            "https://github.com/awslabs/aws-checksums/archive/v0.1.5.tar.gz",
-        ],
-    )
-    
-    http_archive(
-        name = "awssdkcpp2",
-        build_file = "@//third_party/aws:BUILD",
-        strip_prefix = "aws-sdk-cpp-1.11.111",
-        urls = [
-            #"https://github.com/aws/aws-sdk-cpp/archive/1.7.129.tar.gz",
-            "https://github.com/aws/aws-sdk-cpp/archive/refs/tags/1.11.111.tar.gz"
-        ],
-    )
-    new_git_repository(
-        name = "aws-sdk-cpp",
-        remote = "https://github.com/aws/aws-sdk-cpp.git",
-        build_file = "@//third_party/aws:BUILD.bazel",
-        commit = "2fcf454a9893fd40cfe3de5aa929521ed7f1b370", # 1.11.111
-        init_submodules = True,
-    )
-def aws_1_10_57_workspace():
-    # TF IO uses 1.7.339
-    # we need to match aws-c-common given that aws-sdk-cpp is not built with bazel
-    # TODO wrap it into awssdkcpp_deps function
-    # check aws-sdk-cpp third-party/CMakeLists.txt" for version
-    # for some reason TF IO uses 0.4.29 while the sdk we uses tag
-    # / commit ac02e17 -> v0.3.5?
-    # TODO DONE check licenses for TF IO apache OK
-    # TODO needs aws-c-event-stream
-    http_archive(
-        name = "aws-c-common",
-        build_file = "@//third_party/aws-c-common:BUILD",
-        sha256 = "01c2a58553a37b3aa5914d9e0bf7bf14507ff4937bc5872a678892ca20fcae1f",
-        strip_prefix = "aws-c-common-0.4.29",
-        urls = [
-            "https://github.com/awslabs/aws-c-common/archive/v0.4.29.tar.gz",
-        ],
-    )
-    # here we need to be past this commit:
-    # 97ab2e5 as this is used in aws-sdk-cpp third-party/CMakeLists.txt 0.1.4 contains this commit
-    http_archive(
-        name = "aws-c-event-stream",
-        build_file = "//third_party/aws-c-event-stream:BUILD",
-        sha256 = "31d880d1c868d3f3df1e1f4b45e56ac73724a4dc3449d04d47fc0746f6f077b6",
-        strip_prefix = "aws-c-event-stream-0.1.4",
-        urls = [
-            "https://github.com/awslabs/aws-c-event-stream/archive/v0.1.4.tar.gz",
-        ],
-    )
-    # this is needed by aws-c-event-stream 
-    # TODO check what version to use
-    http_archive(
-        name = "aws-checksums",
-        build_file = "//third_party/aws-checksums:BUILD",
-        sha256 = "84f226f28f9f97077c924fb9f3f59e446791e8826813155cdf9b3702ba2ec0c5",
-        strip_prefix = "aws-checksums-0.1.14",
-        urls = [
-            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/awslabs/aws-checksums/archive/v0.1.14.tar.gz",
-            "https://github.com/awslabs/aws-checksums/archive/v0.1.14.tar.gz",
-        ],
-    )
-    
-    http_archive(
-        name = "aws-sdk-cpp",
-        build_file = "//third_party/aws-sdk-cpp_1_10_57:BUILD.bazel",
-        strip_prefix = "aws-sdk-cpp-1.10.57",
-        urls = [
-            #"https://github.com/aws/aws-sdk-cpp/archive/1.7.129.tar.gz",
-            "https://github.com/aws/aws-sdk-cpp/archive/refs/tags/1.10.57.tar.gz"
-        ],
-    )
-def aws_1_9_379_workspace():
-    # TF IO uses 1.7.339
-    # we need to match aws-c-common given that aws-sdk-cpp is not built with bazel
-    # TODO wrap it into awssdkcpp_deps function
-    # check aws-sdk-cpp third-party/CMakeLists.txt" for version
-    # for some reason TF IO uses 0.4.29 while the sdk we uses tag
-    # / commit ac02e17 -> v0.3.5?
-    # TODO DONE check licenses for TF IO apache OK
-    # TODO needs aws-c-event-stream
-    http_archive(
-        name = "aws-c-common",
-        build_file = "@//third_party/aws-c-common:BUILD",
-        sha256 = "9d2ea0e6ff0e6e3e93b77a108cfaf514bdfcaa96fb99ffd6368f964b47cf39de",
-        strip_prefix = "aws-c-common-0.8.4",
-        urls = [
-            "https://github.com/awslabs/aws-c-common/archive/v0.8.4.tar.gz",
-        ],
-    )
-    # here we need to be past this commit:
-    # 97ab2e5 as this is used in aws-sdk-cpp third-party/CMakeLists.txt 0.1.4 contains this commit
-    http_archive(
-        name = "aws-c-event-stream",
-        build_file = "//third_party/aws-c-event-stream:BUILD",
-        sha256 = "31d880d1c868d3f3df1e1f4b45e56ac73724a4dc3449d04d47fc0746f6f077b6",
-        strip_prefix = "aws-c-event-stream-0.1.4",
-        urls = [
-            "https://github.com/awslabs/aws-c-event-stream/archive/v0.1.4.tar.gz",
-        ],
-    )
-    # this is needed by aws-c-event-stream 
-    # TODO check what version to use
-    http_archive(
-        name = "aws-checksums",
-        build_file = "//third_party/aws-checksums:BUILD",
-        sha256 = "84f226f28f9f97077c924fb9f3f59e446791e8826813155cdf9b3702ba2ec0c5",
-        strip_prefix = "aws-checksums-0.1.14",
-        urls = [
-            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/awslabs/aws-checksums/archive/v0.1.14.tar.gz",
-            "https://github.com/awslabs/aws-checksums/archive/v0.1.14.tar.gz",
-        ],
-    )
-    
-    new_git_repository(
-        name = "aws-sdk-cpp",
-        build_file = "//third_party/aws-sdk-cpp_1_9_379:BUILD.bazel",
-        remote = "https://github.com/awslabs/aws-sdk-cpp.git",
-        #strip_prefix = "aws-sdk-cpp-1.9.379",
-        #urls = [
-            #"https://github.com/aws/aws-sdk-cpp/archive/1.7.129.tar.gz",
-            #    "https://github.com/aws/aws-sdk-cpp/archive/refs/tags/1.9.379.tar.gz"
-            #],
-        tag = "1.9.379",
-        init_submodules = True,
-        recursive_init_submodules = True,
 
-    )
-    new_git_repository(
-        name = "aws-crt-cpp",
-        remote = "https://github.com/awslabs/aws-crt-cpp.git",
-        build_file = "@//third_party/aws-crt-cpp:BUILD",
-        commit = "cb474daeeaf5c025bd3408103adf61b97b74e600", # from aws-sdk-cpp 1.11.111
-        init_submodules = True,
-    )
+def _impl(repository_ctx):
+    http_proxy = repository_ctx.os.environ.get("http_proxy", "")
+    https_proxy = repository_ctx.os.environ.get("https_proxy", "")
+    # Note we need to escape '{/}' by doubling them due to call to format
+    build_file_content = """
+load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+
+visibility = ["//visibility:public"]
+# TODO
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
+cmake(
+    name = "aws-sdk-cpp_cmake",
+    build_args = [
+        #"--verbose",
+        "--",  # <- Pass remaining options to the native tool.
+        "-j 18",
+    ],
+    cache_entries = {{
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_ONLY": "s3", # core builds always
+        "ENABLE_TESTING": "OFF",
+        "AUTORUN_UNIT_TESTS": "OFF",
+        "BUILD_SHARED_LIBS": "OFF",
+        "MINIMIZE_SIZE": "ON",
+        "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
+        "FORCE_SHARED_CRT": "OFF",
+        "SIMPLE_INSTALL": "OFF",
+        "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
+    }},
+    env = {{
+        "HTTP_PROXY": "{http_proxy}",
+        "HTTPS_PROXY": "{https_proxy}",
+    }},
+    #deps = [":remove_problematic_file",],
+    lib_source = ":all_srcs",
+    #out_lib_dir = "lib/linux/intel64/Release",
+    out_lib_dir = "lib",
+    out_static_libs = [
+#"libaws-cpp-sdk-s3.a",
+#"libaws-cpp-sdk-core.a",
+#"libaws-c-event-stream.a",
+#order matter
+"linux/intel64/Release/libaws-cpp-sdk-s3.a",
+"linux/intel64/Release/libaws-cpp-sdk-core.a",
+"libaws-crt-cpp.a",
+"libaws-c-s3.a",
+"libaws-c-auth.a",
+"libaws-c-io.a",
+"libs2n.a",
+"libaws-c-cal.a",
+"libaws-c-http.a",
+"libaws-c-compression.a",
+"libaws-c-sdkutils.a",
+"libaws-c-mqtt.a",
+"libaws-c-event-stream.a",
+"libaws-checksums.a",
+"libaws-c-common.a",
+],
+    tags = ["requires-network"],
+    alwayslink = False,
+)
+
+cc_library(
+    name = "aws-sdk-cpp",
+    deps = [
+        ":aws-sdk-cpp_cmake",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = True,
+)
+
+# we need to delete those files as there are problem with cmake in bazel in handling non-ASCII characters in filenames
+genrule(
+    name = "remove_problematic_file",
+    srcs = [],
+    outs = ["removed_file_test_c.txt"],
+    cmd = "rm -f external/aws-sdk-cpp/crt/aws-crt-cpp/crt/aws-c-common/tests/file_test.c && touch $(OUTS)",
+)
+
+"""
+    repository_ctx.file("BUILD", build_file_content.format(http_proxy=http_proxy, https_proxy=https_proxy))
+
+aws_sdk_cpp_repository = repository_rule(
+    implementation = _impl,
+    local=False,
+)
