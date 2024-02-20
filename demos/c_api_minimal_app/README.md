@@ -110,19 +110,19 @@ It can demonstrate expected throughput and latency for a specific model, configu
 Clone OpenVINO™ Model Server GitHub repository and go to the top directory.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
+cd model_server/demos/c_api_minimal_app
 ```
 Build the tool
 ```bash
-bazel build //src:capi_benchmark
+make
 ```
 
 - Command
 ```
-bazel-bin/src/capi_benchmark --help
+docker run openvino/model_server-capi:latest -c /ovms/bin/capi_benchmark
 OpenVINO Model Server
 Usage:
-  bazel-bin/src/capi_benchmark [OPTION...]
+  /ovms/bin/capi_benchmark [OPTION...]
 
   -h, --help                    Show this help message and exit
       --log_level LOG_LEVEL     serving log level - one of TRACE, DEBUG,
@@ -152,12 +152,12 @@ Usage:
 
 Perform the measurement using sample model, one can specify different model using `config_path` option and specifying desired config file.
 ```bash
-bazel-bin/src/capi_benchmark --servable_name dummy --nstreams 12
+docker run openvino/model_server-capi:latest -c '/ovms/bin/capi_benchmark --servable_name dummy --nstreams 12 --config_path /ovms/demos/config_benchmark.json'
 Mode requested: INFERENCE_ONLY
 Server ready for inference
 Benchmark starting workload
 FPS: 235128
-Average latency : 0.044ms
+Average latency : 0.053ms
 main() exit
 ```
 

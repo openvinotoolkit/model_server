@@ -16,7 +16,6 @@
 
 ARG BASE_IMAGE=ubuntu:22.04
 FROM $BASE_IMAGE as base_build
-RUN echo "OO"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -38,17 +37,20 @@ RUN	set -e ; \
         groupadd --gid 5000 ovms ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
-ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5 libtbb12"
+ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5 libtbb12 wget"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ${BUILD_DEPENDENCIES} && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
+RUN wget https://raw.githubusercontent.com/jarro2783/cxxopts/master/include/cxxopts.hpp --no-check-certificate; mkdir -p /ovms/include; mv cxxopts.hpp /ovms/include
 COPY --from=base_build /ovms /ovms
 COPY demos /ovms/demos
 WORKDIR /ovms/demos
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/ovms/lib"
 RUN make -f MakefileCapi cpp
 RUN make -f MakefileCapi c
+RUN make -f MakefileCapi benchmark
 
 USER ovms
 ENTRYPOINT ["/bin/bash"]

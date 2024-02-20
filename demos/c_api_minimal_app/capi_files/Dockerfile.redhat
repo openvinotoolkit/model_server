@@ -47,6 +47,7 @@ COPY demos /ovms/demos
 WORKDIR /ovms/demos
 RUN make -f MakefileCapi cpp
 RUN make -f MakefileCapi c
+RUN make -f MakefileCapi benchmark
 
 USER ovms
 ENTRYPOINT ["/bin/bash"]

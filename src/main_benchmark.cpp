@@ -24,6 +24,7 @@
 #include <optional>
 #include <random>
 #include <sstream>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -32,9 +33,7 @@
 #include <stdio.h>
 #include <sysexits.h>
 
-#include "capi_frontend/capi_utils.hpp"
 #include "ovms.h"  // NOLINT
-#include "stringutils.hpp"
 
 namespace {
 
@@ -114,8 +113,19 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
     }
 }
 
+std::vector<std::string> tokenize(const std::string& str, const char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream iss(str);
+    while (std::getline(iss, token, delimiter)) {
+        tokens.push_back(token);
+    }
+
+    return tokens;
+}
+
 signed_shape_t parseShapes(const std::string& cliInputShapes) {
-    auto inputShapes = ovms::tokenize(cliInputShapes, ';');
+    auto inputShapes = tokenize(cliInputShapes, ';');
     if (inputShapes.size() != 1) {
         std::cout << __LINE__ << std::endl;
         throw std::invalid_argument("Invalid shape argument");
@@ -130,16 +140,17 @@ signed_shape_t parseShapes(const std::string& cliInputShapes) {
         throw std::invalid_argument("Invalid shape argument");
     }
     std::string shapeString = firstShape.substr(leftBracket + 1, rightBracket - leftBracket - 1);
-    auto dimsString = ovms::tokenize(shapeString, ',');
+    auto dimsString = tokenize(shapeString, ',');
     signed_shape_t shape;
     std::transform(dimsString.begin(), dimsString.end(), std::back_inserter(shape),
                                    [](const std::string& s) -> signed_shape_t::value_type {
-        auto dimOpt = ovms::stoi64(s);
-        if (!dimOpt.has_value() || dimOpt.value() <= 0) {
+        auto dimOpt = std::stoi(s);
+        if (dimOpt <= 0) {
             std::cout << __LINE__ << " " << s << std::endl;
             throw std::invalid_argument("Invalid shape argument");
         }
-                                   return dimOpt.value(); });
+        return dimOpt; 
+    });
     return shape;
 }
 
@@ -182,7 +193,7 @@ OVMS_InferenceRequest* prepareRequest(OVMS_Server* server, const std::string& se
     OVMS_InferenceRequestNew(&request, server, servableName.c_str(), servableVersion);
     OVMS_InferenceRequestAddInput(request, inputName.c_str(), datatype, shape.data(), shape.size());
     auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
-    OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, ovms::DataTypeToByteSize(datatype) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);
+    OVMS_InferenceRequestInputSetData(request, inputName.c_str(), data, sizeof(float) * elementsCount, OVMS_BUFFERTYPE_CPU, 0);
     return request;
 }
 
