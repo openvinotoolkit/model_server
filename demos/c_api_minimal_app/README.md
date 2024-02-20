@@ -125,10 +125,6 @@ Usage:
   bazel-bin/src/capi_benchmark [OPTION...]
 
   -h, --help                    Show this help message and exit
-      --port PORT               gRPC server port (default: 9178)
-      --rest_port REST_PORT     REST server port, the REST server will not
-                                be started if rest_port is blank or set to
-                                0 (default: 0)
       --log_level LOG_LEVEL     serving log level - one of TRACE, DEBUG,
                                 INFO, WARNING, ERROR (default: ERROR)
       --config_path CONFIG_PATH
@@ -136,14 +132,15 @@ Usage:
                                 /ovms/src/test/c_api/config_benchmark.json)
       --niter NITER             number of inferences to conduct (default:
                                 1000)
-      --nstreams NIREQ          nstreams from OVMS configuration (default:
+      --nstreams NSTREAMS       nstreams from OVMS configuration (default:
                                 1)
       --servable_name MODEL_NAME
                                 Model name to sent request to
       --servable_version MODEL_VERSION
-                                workload threads per ireq (default: 0)
-      --input_name INPUTS_NAMES
-                                Servable's input name
+                                workload threads per ireq, if not set
+                                version will be set by default model
+                                version policy (default: 0)
+      --input_name INPUT_NAME   Servable's input name
       --shape SHAPE             Semicolon separated list of inputs names
                                 followed by their shapes in brackers. For
                                 example: "inputA[1,3,224,224],inputB[1,10]"
@@ -155,12 +152,12 @@ Usage:
 
 Perform the measurement using sample model, one can specify different model using `config_path` option and specifying desired config file.
 ```bash
-bazel-bin/src/capi_benchmark --servable_name dummy
+bazel-bin/src/capi_benchmark --servable_name dummy --nstreams 12
 Mode requested: INFERENCE_ONLY
 Server ready for inference
 Benchmark starting workload
-FPS: 28295.7
-Average latency whole prediction path:0.035ms
+FPS: 235128
+Average latency : 0.044ms
 main() exit
 ```
 

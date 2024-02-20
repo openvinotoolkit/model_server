@@ -448,7 +448,7 @@ int main(int argc, char** argv) {
     ///////////////////////
     size_t niter = cliparser.result->operator[]("niter").as<uint32_t>();
     size_t threadCount = cliparser.result->operator[]("nstreams").as<uint32_t>();
-    size_t niterPerThread = std::max(niter / threadCount, 1);
+    size_t niterPerThread = std::max(niter / threadCount, size_t(1));
 
     auto elementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<signed_shape_t::value_type>());
     std::vector<float> data(elementsCount, 0.1);
