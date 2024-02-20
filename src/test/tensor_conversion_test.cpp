@@ -468,7 +468,7 @@ TEST_P(NativeFileInputConversionTFSValidPrecisionTest, Valid) {
         ovms::Shape{1, 1, 1, 3},
         Layout{"NHWC"});
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(stringVal, tensor, tensorInfo, nullptr), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_shape(), (ov::Shape{1, 1, 1, 3}));
     ASSERT_EQ(tensor.get_size(), 3);
@@ -483,7 +483,7 @@ TEST_P(NativeFileInputConversionTFSInvalidPrecisionTest, Invalid) {
         ovms::Shape{1, 1, 1, 3},
         Layout{"NHWC"});
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(stringVal, tensor, tensorInfo, nullptr), ovms::StatusCode::INVALID_PRECISION);
 }
 
@@ -562,7 +562,7 @@ TEST_P(NativeFileInputConversionKFSValidPrecisionTest, Valid) {
         ovms::Shape{1, 1, 1, 3},
         Layout{"NHWC"});
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(inferTensorContent, tensor, tensorInfo, nullptr), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_shape(), (ov::Shape{1, 1, 1, 3}));
     ASSERT_EQ(tensor.get_size(), 3);
@@ -577,7 +577,7 @@ TEST_P(NativeFileInputConversionKFSInvalidPrecisionTest, Invalid) {
         ovms::Shape{1, 1, 1, 3},
         Layout{"NHWC"});
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(inferTensorContent, tensor, tensorInfo, nullptr), ovms::StatusCode::INVALID_PRECISION);
 }
 

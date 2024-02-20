@@ -29,8 +29,6 @@ namespace mediapipe {
 using std::endl;
 
 class OVMSTestKFSPassCalculator : public CalculatorBase {
-    std::shared_ptr<KFSResponse> response;
-
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
@@ -38,7 +36,7 @@ public:
         RET_CHECK(cc->Inputs().GetTags().size() == 1);
         RET_CHECK(cc->Outputs().GetTags().size() == 1);
         cc->Inputs().Tag("REQUEST").Set<const KFSRequest*>();
-        cc->Outputs().Tag("RESPONSE").Set<KFSResponse*>();
+        cc->Outputs().Tag("RESPONSE").Set<KFSResponse>();
 
         return absl::OkStatus();
     }
@@ -58,9 +56,9 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         const KFSRequest* request = cc->Inputs().Tag("REQUEST").Get<const KFSRequest*>();
-        response = std::make_shared<KFSResponse>();
+        KFSResponse response;
         for (int i = 0; i < request->inputs().size(); i++) {
-            auto* output = response->add_outputs();
+            auto* output = response.add_outputs();
             output->set_datatype(request->inputs()[i].datatype());
             output->set_name("out");
             for (int j = 0; j < request->inputs()[i].shape_size(); j++) {
@@ -69,10 +67,10 @@ public:
         }
 
         for (int i = 0; i < request->raw_input_contents().size(); i++) {
-            response->add_raw_output_contents()->assign(request->raw_input_contents()[i].data(), request->raw_input_contents()[i].size());
+            response.add_raw_output_contents()->assign(request->raw_input_contents()[i].data(), request->raw_input_contents()[i].size());
         }
 
-        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse*>(response.get()).At(cc->InputTimestamp()));
+        cc->Outputs().Tag("RESPONSE").AddPacket(::mediapipe::MakePacket<KFSResponse>(std::move(response)).At(cc->InputTimestamp()));
 
         return absl::OkStatus();
     }
