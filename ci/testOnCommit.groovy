@@ -80,7 +80,7 @@ pipeline {
                     userRemoteConfigs: [[credentialsId: 'workflow-lab',
                     url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh 'pwd'
-                    sh 'make create-venv && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 ./run_tests.sh'
+                    sh "make create-venv && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_AIRPLANE_MODE=True make tests"
                   }
                 }
               }            
