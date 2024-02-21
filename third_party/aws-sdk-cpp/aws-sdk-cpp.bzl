@@ -53,7 +53,7 @@ cmake(
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
         # there is no elegant paralell compilation support
         "VERBOSE=1",
-        "-j 18",
+        "-j 4",
     ],
     cache_entries = {{
         "CMAKE_BUILD_TYPE": "Release",
