@@ -294,8 +294,8 @@ workspace()
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 rules_pkg_dependencies()
 
-load("@//:aws-sdk-cpp.bzl", "aws_cmake_workspace")
-aws_cmake_workspace()
+load("@//:third_party/aws-sdk-cpp/aws-sdk-cpp.bzl", "aws_sdk_cpp")
+aws_sdk_cpp()
 
 # Azure Storage SDK
 new_local_repository(

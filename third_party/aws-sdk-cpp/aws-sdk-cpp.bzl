@@ -14,19 +14,19 @@
 # limitations under the License.
 #
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
-
-def aws_cmake_workspace():
-    aws_sdk_cpp_repository(name="_aws_sdk_cpp2")
+def aws_sdk_cpp():
+    aws_sdk_cpp_repository(name="_aws_sdk_cpp")
     new_git_repository(
         name = "aws-sdk-cpp",
         remote = "https://github.com/aws/aws-sdk-cpp.git",
-        build_file = "@_aws_sdk_cpp2//:BUILD",
-        #commit = "2fcf454a9893fd40cfe3de5aa929521ed7f1b370", # 1.11.111
-        #tag = "1.7.129", # 1.11.111
+        build_file = "@_aws_sdk_cpp//:BUILD",
         tag = "1.11.268",
         init_submodules = True,
         recursive_init_submodules = True,
-        patch_cmds = ["find . -name '*xample.txt' -delete"], # issues with ASCI handling of file_test.c *xample file.txt in bazel
+        # https://github.com/bazelbuild/bazel/issues/374
+        # issues with ASCI handling of file_test.c *xample file.txt in bazel
+        patch_cmds = ["find . -name '*xample.txt' -delete"],
+
     )
 
 def _impl(repository_ctx):
@@ -48,8 +48,11 @@ filegroup(
 cmake(
     name = "aws-sdk-cpp_cmake",
     build_args = [
-        #"--verbose",
+        "--verbose",
         "--",  # <- Pass remaining options to the native tool.
+        # https://github.com/bazelbuild/rules_foreign_cc/issues/329
+        # there is no elegant paralell compilation support
+        "VERBOSE=1",
         "-j 18",
     ],
     cache_entries = {{
@@ -68,30 +71,25 @@ cmake(
         "HTTP_PROXY": "{http_proxy}",
         "HTTPS_PROXY": "{https_proxy}",
     }},
-    #deps = [":remove_problematic_file",],
     lib_source = ":all_srcs",
-    #out_lib_dir = "lib/linux/intel64/Release",
     out_lib_dir = "lib",
     out_static_libs = [
-#"libaws-cpp-sdk-s3.a",
-#"libaws-cpp-sdk-core.a",
-#"libaws-c-event-stream.a",
-#order matter
-"linux/intel64/Release/libaws-cpp-sdk-s3.a",
-"linux/intel64/Release/libaws-cpp-sdk-core.a",
-"libaws-crt-cpp.a",
-"libaws-c-s3.a",
-"libaws-c-auth.a",
-"libaws-c-io.a",
-"libs2n.a",
-"libaws-c-cal.a",
-"libaws-c-http.a",
-"libaws-c-compression.a",
-"libaws-c-sdkutils.a",
-"libaws-c-mqtt.a",
-"libaws-c-event-stream.a",
-"libaws-checksums.a",
-"libaws-c-common.a",
+    # linking order
+    "linux/intel64/Release/libaws-cpp-sdk-s3.a",
+    "linux/intel64/Release/libaws-cpp-sdk-core.a",
+    "libaws-crt-cpp.a",
+    "libaws-c-s3.a",
+    "libaws-c-auth.a",
+    "libaws-c-io.a",
+    "libs2n.a",
+    "libaws-c-cal.a",
+    "libaws-c-http.a",
+    "libaws-c-compression.a",
+    "libaws-c-sdkutils.a",
+    "libaws-c-mqtt.a",
+    "libaws-c-event-stream.a",
+    "libaws-checksums.a",
+    "libaws-c-common.a",
 ],
     tags = ["requires-network"],
     alwayslink = False,
@@ -103,17 +101,8 @@ cc_library(
         ":aws-sdk-cpp_cmake",
     ],
     visibility = ["//visibility:public"],
-    alwayslink = True,
+    alwayslink = False,
 )
-
-# we need to delete those files as there are problem with cmake in bazel in handling non-ASCII characters in filenames
-genrule(
-    name = "remove_problematic_file",
-    srcs = [],
-    outs = ["removed_file_test_c.txt"],
-    cmd = "rm -f external/aws-sdk-cpp/crt/aws-crt-cpp/crt/aws-c-common/tests/file_test.c && touch $(OUTS)",
-)
-
 """
     repository_ctx.file("BUILD", build_file_content.format(http_proxy=http_proxy, https_proxy=https_proxy))
 
