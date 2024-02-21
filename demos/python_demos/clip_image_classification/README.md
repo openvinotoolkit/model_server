@@ -85,7 +85,7 @@ time variance: 0.00
 
 Run the rest client script
 ```bash
-python3 rest_client.py --http_port 8000
+python3 rest_client.py --url localhost:8000
 ```
 
 Expected output:

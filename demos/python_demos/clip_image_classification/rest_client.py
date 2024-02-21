@@ -34,19 +34,19 @@ parser.add_argument('--iterations', default=1,
                         help='Number of requests iterations, as default use number of images in numpy memmap. default: 1 ',
                         dest='iterations', type=int)
 
-parser.add_argument('--http_address',required=False, default='localhost',  help='Specify url to http service. default:localhost')
-parser.add_argument('--http_port',required=False, default=8000, help='Specify port to http service. default: 8000')
+parser.add_argument('--url', required=False, default='localhost:8000',
+                    help='Specify url to grpc service. default:localhost:8000')
 
 args = vars(parser.parse_args())
 
 iterations = args.get('iterations')
 iteration = 0
 
-address = "{}:{}".format(args['http_address'],args['http_port'])
+url = args['url']
 ssl_options = None
 
 triton_client = httpclient.InferenceServerClient(
-                url=address,
+                url=url,
                 ssl=False,
                 ssl_options=ssl_options,
                 verbose=False)
