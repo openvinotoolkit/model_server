@@ -26,7 +26,6 @@ def aws_sdk_cpp():
         # https://github.com/bazelbuild/bazel/issues/374
         # issues with ASCI handling of file_test.c *xample file.txt in bazel
         patch_cmds = ["find . -name '*xample.txt' -delete"],
-
     )
 
 def _impl(repository_ctx):
