@@ -30,7 +30,7 @@ import os
 import grpc
 import time
 
-parser = argparse.ArgumentParser(description='GRPC Client for clip example')
+parser = argparse.ArgumentParser(description='GRPC client for clip example')
 
 parser.add_argument('--timeout', required=False, default='15',
                     help='Specify timeout to wait for models readiness on the server in seconds. default 15 seconds.')
