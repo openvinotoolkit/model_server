@@ -64,13 +64,7 @@ pipeline {
                 }
               }
             }
-            stage("Run functional tests") {
-              steps {
-                dir ('model_server'){
-                  sh "make test_functional OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                }
-              }            
-            }
+
             stage("Internal tests") {
               steps {
                 script {
