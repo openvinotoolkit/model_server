@@ -236,12 +236,11 @@ class OvmsPythonModel:
             raise ValueError("Batch size must be 1")
         prompts = deserialize_prompts(batch_size, inputs[0])
 
-        #ov_model_exec = self.ov_model.clone()
-        #print(ov_model_exec.compiled_model)
+        ov_model_exec = self.ov_model.clone()
         streamer = TextIteratorStreamer(
             tok, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
         generate_kwargs = dict(
-            model=self.ov_model,#ov_model_exec,
+            model=ov_model_exec,
             tokenizer=tok,
             max_new_tokens=256,
             streamer=streamer,
