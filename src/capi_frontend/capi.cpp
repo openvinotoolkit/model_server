@@ -844,13 +844,6 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
 
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     auto status = getModelInstance(server, req->getServableName(), req->getServableVersion(), modelInstance, modelInstanceUnloadGuard);
-    if (status.ok()) {
-        for (auto tensor : modelInstance->getInputsInfo()) {
-            if (tensor.second->getPrecision() == ovms::Precision::STRING) {
-                return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::INVALID_PRECISION, "Inference on models using string precision input with capi is unsupported"));
-            }
-        }
-    }
 
     std::unique_ptr<ovms::InferenceResponse> res(new ovms::InferenceResponse(req->getServableName(), req->getServableVersion()));
     if (status == StatusCode::MODEL_NAME_MISSING) {

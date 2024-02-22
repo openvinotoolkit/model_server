@@ -895,6 +895,9 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid precision - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_PRECISION, details);
     }
+    if (tensor.getDataType() == OVMS_DATATYPE_STRING) {
+        return Status(StatusCode::INVALID_PRECISION, "Inference on models using string precision input with capi is unsupported");
+    }
     return StatusCode::OK;
 }
 
