@@ -94,6 +94,7 @@ cmake(
 ],
     tags = ["requires-network"],
     alwayslink = False,
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -152,6 +153,7 @@ cmake(
 ],
     tags = ["requires-network"],
     alwayslink = False,
+    visibility = ["//visibility:public"],
 )
 cc_library(
     name = "aws-sdk-cpp_redhat",
