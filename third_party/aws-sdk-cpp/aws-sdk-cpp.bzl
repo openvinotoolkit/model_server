@@ -28,6 +28,7 @@ def aws_sdk_cpp():
         patch_cmds = ["find . -name '*xample.txt' -delete"],
     )
 
+
 def _impl(repository_ctx):
     http_proxy = repository_ctx.os.environ.get("http_proxy", "")
     https_proxy = repository_ctx.os.environ.get("https_proxy", "")
@@ -35,6 +36,7 @@ def _impl(repository_ctx):
     build_file_content = """
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+#distro_flag()
 
 visibility = ["//visibility:public"]
 # TODO
@@ -45,7 +47,7 @@ filegroup(
 )
 
 cmake(
-    name = "aws-sdk-cpp_cmake",
+    name = "aws-sdk-cpp_cmake_ubuntu",
     build_args = [
         "--verbose",
         "--",  # <- Pass remaining options to the native tool.
@@ -95,9 +97,66 @@ cmake(
 )
 
 cc_library(
-    name = "aws-sdk-cpp",
+    name = "aws-sdk-cpp_ubuntu",
     deps = [
-        ":aws-sdk-cpp_cmake",
+        ":aws-sdk-cpp_cmake_ubuntu",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = False,
+)
+cmake(
+    name = "aws-sdk-cpp_cmake_redhat",
+    build_args = [
+        "--verbose",
+        "--",  # <- Pass remaining options to the native tool.
+        # https://github.com/bazelbuild/rules_foreign_cc/issues/329
+        # there is no elegant paralell compilation support
+        "VERBOSE=1",
+        "-j 4",
+    ],
+    cache_entries = {{
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_ONLY": "s3", # core builds always
+        "ENABLE_TESTING": "OFF",
+        "AUTORUN_UNIT_TESTS": "OFF",
+        "BUILD_SHARED_LIBS": "OFF",
+        "MINIMIZE_SIZE": "ON",
+        "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
+        "FORCE_SHARED_CRT": "OFF",
+        "SIMPLE_INSTALL": "OFF",
+        "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
+    }},
+    env = {{
+        "HTTP_PROXY": "{http_proxy}",
+        "HTTPS_PROXY": "{https_proxy}",
+    }},
+    lib_source = ":all_srcs",
+    out_lib_dir = "lib64",
+    out_static_libs = [
+    # linking order
+    "linux/intel64/Release/libaws-cpp-sdk-s3.a",
+    "linux/intel64/Release/libaws-cpp-sdk-core.a",
+    "libaws-crt-cpp.a",
+    "libaws-c-s3.a",
+    "libaws-c-auth.a",
+    "libaws-c-io.a",
+    "libs2n.a",
+    "libaws-c-cal.a",
+    "libaws-c-http.a",
+    "libaws-c-compression.a",
+    "libaws-c-sdkutils.a",
+    "libaws-c-mqtt.a",
+    "libaws-c-event-stream.a",
+    "libaws-checksums.a",
+    "libaws-c-common.a",
+],
+    tags = ["requires-network"],
+    alwayslink = False,
+)
+cc_library(
+    name = "aws-sdk-cpp_redhat",
+    deps = [
+        ":aws-sdk-cpp_cmake_redhat",
     ],
     visibility = ["//visibility:public"],
     alwayslink = False,

@@ -261,6 +261,7 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/co
 
 # Mediapipe
 COPY BUILD.bazel /ovms/
+COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 

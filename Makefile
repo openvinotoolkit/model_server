@@ -121,8 +121,15 @@ ifeq ($(OV_TRACING_ENABLE),1)
 else
 	OV_TRACING_PARAMS = ""
 endif
+ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+  TARGET_DISTRO_PARAMS = "--//:distro=ubuntu"
+else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
+  TARGET_DISTRO_PARAMS = "--//:distro=redhat"
+else
+  $(error BASE_OS must be either ubuntu or redhat)
+endif
 
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 
 
 # Option to Override release image.

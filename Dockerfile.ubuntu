@@ -273,6 +273,7 @@ COPY third_party /ovms/third_party/
 
 # Mediapipe
 COPY BUILD.bazel /ovms/
+COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
