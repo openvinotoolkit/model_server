@@ -257,7 +257,6 @@ WORKDIR /ovms
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
 # Mediapipe
 COPY BUILD.bazel /ovms/

@@ -37,6 +37,16 @@ def _impl(repository_ctx):
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 #distro_flag()
+config_setting(
+    name = "dbg",
+    values = {{"compilation_mode": "dbg"}},
+)
+
+# Define a config_setting for release mode
+config_setting(
+    name = "opt",
+    values = {{"compilation_mode": "opt"}},
+)
 
 visibility = ["//visibility:public"]
 # TODO
@@ -74,24 +84,31 @@ cmake(
     }},
     lib_source = ":all_srcs",
     out_lib_dir = "lib",
-    out_static_libs = [
     # linking order
-    "linux/intel64/Release/libaws-cpp-sdk-s3.a",
-    "linux/intel64/Release/libaws-cpp-sdk-core.a",
-    "libaws-crt-cpp.a",
-    "libaws-c-s3.a",
-    "libaws-c-auth.a",
-    "libaws-c-io.a",
-    "libs2n.a",
-    "libaws-c-cal.a",
-    "libaws-c-http.a",
-    "libaws-c-compression.a",
-    "libaws-c-sdkutils.a",
-    "libaws-c-mqtt.a",
-    "libaws-c-event-stream.a",
-    "libaws-checksums.a",
-    "libaws-c-common.a",
-],
+    out_static_libs = select({{
+        "//conditions:default": [
+            "linux/intel64/Release/libaws-cpp-sdk-s3.a",
+            "linux/intel64/Release/libaws-cpp-sdk-core.a",
+        ],
+        ":dbg": [
+            "linux/intel64/Debug/libaws-cpp-sdk-s3.a",
+            "linux/intel64/Debug/libaws-cpp-sdk-core.a",
+        ],
+        }}) + [
+            "libaws-crt-cpp.a",
+            "libaws-c-s3.a",
+            "libaws-c-auth.a",
+            "libaws-c-cal.a",
+            "libaws-c-http.a",
+            "libaws-c-io.a",
+            "libs2n.a",
+            "libaws-c-compression.a",
+            "libaws-c-sdkutils.a",
+            "libaws-c-mqtt.a",
+            "libaws-c-event-stream.a",
+            "libaws-checksums.a",
+            "libaws-c-common.a",
+        ],
     tags = ["requires-network"],
     alwayslink = False,
     visibility = ["//visibility:public"],
@@ -133,24 +150,31 @@ cmake(
     }},
     lib_source = ":all_srcs",
     out_lib_dir = "lib64",
-    out_static_libs = [
     # linking order
-    "linux/intel64/Release/libaws-cpp-sdk-s3.a",
-    "linux/intel64/Release/libaws-cpp-sdk-core.a",
-    "libaws-crt-cpp.a",
-    "libaws-c-s3.a",
-    "libaws-c-auth.a",
-    "libaws-c-io.a",
-    "libs2n.a",
-    "libaws-c-cal.a",
-    "libaws-c-http.a",
-    "libaws-c-compression.a",
-    "libaws-c-sdkutils.a",
-    "libaws-c-mqtt.a",
-    "libaws-c-event-stream.a",
-    "libaws-checksums.a",
-    "libaws-c-common.a",
-],
+    out_static_libs = select({{
+        "//conditions:default": [
+            "linux/intel64/Release/libaws-cpp-sdk-s3.a",
+            "linux/intel64/Release/libaws-cpp-sdk-core.a",
+        ],
+        ":dbg": [
+            "linux/intel64/Debug/libaws-cpp-sdk-s3.a",
+            "linux/intel64/Debug/libaws-cpp-sdk-core.a",
+        ],
+        }}) + [
+            "libaws-crt-cpp.a",
+            "libaws-c-s3.a",
+            "libaws-c-auth.a",
+            "libaws-c-cal.a",
+            "libaws-c-http.a",
+            "libaws-c-io.a",
+            "libs2n.a",
+            "libaws-c-compression.a",
+            "libaws-c-sdkutils.a",
+            "libaws-c-mqtt.a",
+            "libaws-c-event-stream.a",
+            "libaws-checksums.a",
+            "libaws-c-common.a",
+        ],
     tags = ["requires-network"],
     alwayslink = False,
     visibility = ["//visibility:public"],
