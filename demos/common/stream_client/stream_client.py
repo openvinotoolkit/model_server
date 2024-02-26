@@ -143,6 +143,7 @@ class StreamClient:
                 self.dropped_frames += 1
             if self.verbose:
                 print(error)
+            self.req_q.get()
             return
         if i == None:
             i = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
