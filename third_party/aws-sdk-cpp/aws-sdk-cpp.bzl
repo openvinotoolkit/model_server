@@ -36,20 +36,19 @@ def _impl(repository_ctx):
     build_file_content = """
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-#distro_flag()
+
+visibility = ["//visibility:public"]
+
 config_setting(
     name = "dbg",
     values = {{"compilation_mode": "dbg"}},
 )
 
-# Define a config_setting for release mode
 config_setting(
     name = "opt",
     values = {{"compilation_mode": "opt"}},
 )
 
-visibility = ["//visibility:public"]
-# TODO
 filegroup(
     name = "all_srcs",
     srcs = glob(["**"]),
@@ -86,14 +85,14 @@ cmake(
     out_lib_dir = "lib",
     # linking order
     out_static_libs = select({{
-        "//conditions:default": [
-            "linux/intel64/Release/libaws-cpp-sdk-s3.a",
-            "linux/intel64/Release/libaws-cpp-sdk-core.a",
-        ],
-        ":dbg": [
-            "linux/intel64/Debug/libaws-cpp-sdk-s3.a",
-            "linux/intel64/Debug/libaws-cpp-sdk-core.a",
-        ],
+           "//conditions:default": [
+                "linux/intel64/Release/libaws-cpp-sdk-s3.a",
+                "linux/intel64/Release/libaws-cpp-sdk-core.a",
+            ],
+            ":dbg": [
+                "linux/intel64/Debug/libaws-cpp-sdk-s3.a",
+                "linux/intel64/Debug/libaws-cpp-sdk-core.a",
+            ],
         }}) + [
             "libaws-crt-cpp.a",
             "libaws-c-s3.a",
@@ -152,14 +151,14 @@ cmake(
     out_lib_dir = "lib64",
     # linking order
     out_static_libs = select({{
-        "//conditions:default": [
-            "linux/intel64/Release/libaws-cpp-sdk-s3.a",
-            "linux/intel64/Release/libaws-cpp-sdk-core.a",
-        ],
-        ":dbg": [
-            "linux/intel64/Debug/libaws-cpp-sdk-s3.a",
-            "linux/intel64/Debug/libaws-cpp-sdk-core.a",
-        ],
+            "//conditions:default": [
+               "linux/intel64/Release/libaws-cpp-sdk-s3.a",
+                "linux/intel64/Release/libaws-cpp-sdk-core.a",
+            ],
+            ":dbg": [
+                "linux/intel64/Debug/libaws-cpp-sdk-s3.a",
+                "linux/intel64/Debug/libaws-cpp-sdk-core.a",
+            ],
         }}) + [
             "libaws-crt-cpp.a",
             "libaws-c-s3.a",
