@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <chrono>
 #include <functional>
+#include <unordered_set>
 
 #include "../capi_frontend/capi_utils.hpp"
 #include "../capi_frontend/inferenceparameter.hpp"
@@ -148,6 +149,28 @@ ovms::tensor_map_t prepareTensors(
             kv.second);
     }
     return result;
+}
+
+std::string readableSetError(std::unordered_set<std::string> actual, std::unordered_set<std::string> expected) {
+    std::stringstream ss;
+    std::unordered_set<std::string>::const_iterator it;
+    if (actual.size() >= expected.size()) {
+        for (auto iter = actual.begin(); iter != actual.end(); ++iter) {
+            it = expected.find(*iter);
+            if (it == expected.end()) {
+                ss << "Missing element in expected set: " << *iter << std::endl;
+            }
+        }
+    } else {
+        for (auto iter = expected.begin(); iter != expected.end(); ++iter) {
+            it = actual.find(*iter);
+            if (it == actual.end()) {
+                ss << "Missing element in actual set: " << *iter << std::endl;
+            }
+        }
+    }
+
+    return ss.str();
 }
 
 void checkDummyResponse(const std::string outputName,
