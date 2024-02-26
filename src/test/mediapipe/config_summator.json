@@ -10,7 +10,7 @@
     "mediapipe_config_list": [
     {
         "name":"mediapipeAdd",
-        "graph_path":"/ovms/src/test/mediapipe/graphrestmediapipe.pbtxt"
+        "graph_path":"/ovms/src/test/mediapipe/summator_graph.pbtxt"
     }
     ]
 }

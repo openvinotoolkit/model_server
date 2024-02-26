@@ -103,7 +103,7 @@ for iteration in range(iterations):
     end_time = datetime.datetime.now()
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times.append(int(duration))
-    print(f"GRPC Detection:\n{results.as_numpy('output_label').tobytes().decode()}\n")
+    print(f"Detection:\n{results.as_numpy('output_label').tobytes().decode()}\n")
 
 print_statistics(np.array(processing_times,int), batch_size = 1)
 

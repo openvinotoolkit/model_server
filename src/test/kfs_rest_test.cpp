@@ -150,7 +150,7 @@ protected:
 class HttpRestApiHandlerWithMediapipeForkTest : public HttpRestApiHandlerWithMediapipe {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_rest.json");
+        SetUpServer("/ovms/src/test/mediapipe/config_summator.json");
     }
 };
 
