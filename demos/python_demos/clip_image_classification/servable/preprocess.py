@@ -28,22 +28,9 @@ class OvmsPythonModel:
         self.processor = CLIPProcessor.from_pretrained(model_id)
 
     def execute(self, inputs: list):
-        if inputs[0].datatype != 'BYTES':
-            print("ERROR: Wrong datatype set for input tensor 1. Expected BYTES got: " + str(inputs[0].datatype))
-
-        if inputs[1].datatype != 'BYTES':
-            print("ERROR: Wrong datatype set for input tensor 2. Expected BYTES got: " + str(inputs[1].datatype))
-
-        if len(bytes(inputs[0])) != 206580:
-            print("ERROR: Demo image expected size is 206580 bytes, got: " + str(len(bytes(inputs[0]))))
-            print("ERROR: Expecting 4 additional bytes at the begining of the data bufer for deserialize_bytes_tensor function")
-
         image = Image.open(BytesIO((deserialize_bytes_tensor(bytes(inputs[0]))[0])))
-
         input_labels = deserialize_bytes_tensor(bytes(inputs[1]))[0].decode()
-
         input_labels_split = input_labels.split(",")
-
         text_descriptions = [f"This is a photo of a {label}" for label in input_labels_split]
 
         model_inputs = self.processor(text=text_descriptions, images=[image], return_tensors="pt", padding=True)
