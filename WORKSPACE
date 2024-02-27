@@ -294,12 +294,8 @@ workspace()
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 rules_pkg_dependencies()
 
-# AWS S3 SDK
-new_local_repository(
-    name = "awssdk",
-    build_file = "@//third_party/aws:BUILD",
-    path = "/awssdk",
-)
+load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
+aws_sdk_cpp()
 
 # Azure Storage SDK
 new_local_repository(

@@ -55,7 +55,7 @@ cc_library(
         ] + select({
             "//conditions:default": [
             ],
-            "//src:fuzzer_build" : [
+            "//:fuzzer_build" : [
                 "-fsanitize=address",
                 "-fprofile-generate",
                 "-ftest-coverage",
@@ -74,7 +74,7 @@ cc_library(
     linkopts = select({
         "//conditions:default": [
         ],
-        "//src:fuzzer_build" : [
+        "//:fuzzer_build" : [
             "-fprofile-generate",
             "-fsanitize=address",
             "-fsanitize-coverage=trace-pc",

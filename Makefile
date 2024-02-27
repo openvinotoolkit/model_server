@@ -104,11 +104,9 @@ endif
 STRIP = "always"
 BAZEL_DEBUG_BUILD_FLAGS ?= ""
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
-    BAZEL_DEBUG_BUILD_FLAGS = " --copt=-g -c dbg"
-	STRIP = "never"
+  BAZEL_DEBUG_BUILD_FLAGS = " --copt=-g -c dbg"
+  STRIP = "never"
 endif
-
-CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)" --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1"
 
 ifeq ($(MINITRACE),ON)
   MINITRACE_FLAGS=" --copt=-DMTR_ENABLED"
@@ -117,13 +115,20 @@ else
 endif
 
 ifeq ($(OV_TRACING_ENABLE),1)
-	OV_TRACING_PARAMS = " --cxxopt=-DOV_TRACING=1"
+  OV_TRACING_PARAMS = " --cxxopt=-DOV_TRACING=1"
 else
-	OV_TRACING_PARAMS = ""
+  OV_TRACING_PARAMS = ""
 endif
 
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)
-
+ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+  TARGET_DISTRO_PARAMS = " --//:distro=ubuntu"
+else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
+  TARGET_DISTRO_PARAMS = " --//:distro=redhat"
+else
+  $(error BASE_OS must be either ubuntu or redhat)
+endif
+CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)" --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:

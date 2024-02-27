@@ -80,13 +80,6 @@ RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="-fPIC -Wno-erro
 # no-error flag related to https://github.com/aws/aws-sdk-cpp/issues/1582
 ####### End of Azure SDK
 
-# Build AWS S3 SDK
-RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
-WORKDIR /awssdk/build
-RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS="-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized" .. && make --jobs=$JOBS
-
-####### End of AWS S3 SDK
-
 ####### Build OpenCV
 WORKDIR /ovms/third_party/opencv
 RUN ./install_opencv.sh
@@ -280,6 +273,7 @@ COPY third_party /ovms/third_party/
 
 # Mediapipe
 COPY BUILD.bazel /ovms/
+COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 

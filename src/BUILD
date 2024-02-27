@@ -15,29 +15,23 @@
 #
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
-load("//src:common_settings.bzl",
+load("//:common_settings.bzl",
      "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
      "create_config_settings")
-
-constraint_setting(name = "linux_distribution_family")
-constraint_value(constraint_setting = "linux_distribution_family", name = "fedora") # like RHEL/CentOS
-constraint_value(constraint_setting = "linux_distribution_family", name = "debian") # like Ubuntu
-
-create_config_settings()
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
+        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
 }) + select({
         "//conditions:default": ["-DPYTHON_DISABLE=1"],
-        "//src:not_disable_python" : ["-DPYTHON_DISABLE=0"],
+        "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
 }) + select({
         "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
-        "//src:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+        "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
 })
 
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
     "//conditions:default": [],
-    "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
+    "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
 })
 
 COPTS_TESTS = [
@@ -49,10 +43,10 @@ COPTS_TESTS = [
     "-fvisibility=hidden",# Needed for pybind targets
 ] + select({
         "//conditions:default": ["-DPYTHON_DISABLE=1"],
-        "//src:not_disable_python" : ["-DPYTHON_DISABLE=0"],
+        "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
 }) + select({
         "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
-        "//src:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+        "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
 })
 
 cc_library(
@@ -80,7 +74,7 @@ cc_shared_library(
         "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
         "@com_github_jarro2783_cxxopts//:__subpackages__",
-        "@awssdk//:__subpackages__",
+        "@aws-sdk-cpp//:__subpackages__",
         "@boost//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
         "@curl//:__subpackages__",
@@ -342,7 +336,7 @@ cc_library(
         "tensor_conversion.hpp",
         "tensor_conversion.cpp",
          ] + select({
-            "//src:not_disable_mediapipe": [
+            "//:not_disable_mediapipe": [
                 "mediapipe_internal/mediapipefactory.cpp",
                 "mediapipe_internal/mediapipefactory.hpp",
                 "mediapipe_internal/mediapipegraphconfig.hpp",
@@ -353,13 +347,13 @@ cc_library(
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_internal/packettypes.hpp",
             ],
-            "//src:disable_mediapipe" : [],
+            "//:disable_mediapipe" : [],
         }),
         deps = select({
-            "//src:not_disable_python": [
+            "//:not_disable_python": [
                 "//src/python:libovmspythonmodule",
             ],
-            "//src:disable_python": []
+            "//:disable_python": []
         }) + [
             "cpp_headers",
             "libovmsfilesystem",
@@ -385,17 +379,17 @@ cc_library(
                 "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
                 "libovmsmediapipe_utils",
             ],
-            "//src:disable_mediapipe" : [],
+            "//:disable_mediapipe" : [],
         }),
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     data = select({
-        "//src:not_disable_python": [
+        "//:not_disable_python": [
             "//src/python/binding:pyovms.so",
         ],
-        "//src:disable_python": []
+        "//:disable_python": []
     }),
     alwayslink = 1,
 )
@@ -864,10 +858,14 @@ cc_library( # make ovms_lib dependent, use share doptions
     srcs = [
             "s3filesystem.cpp",
     ],
-    deps = [
-        "@awssdk//:s3",
-        "@awssdk//:core",
-        "@awssdk//:deps",
+    deps = select({
+            "//:ubuntu_build": [
+                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
+            ],
+            "//:redhat_build": [
+                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
+            ],
+        }) + [
         "libovmsfilesystem",
         "libovmslogging",
         "libovmsstring_utils",
@@ -991,13 +989,13 @@ cc_binary(
             "//conditions:default": [
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
             ],
-            "//src:disable_mediapipe" : [],
+            "//:disable_mediapipe" : [],
         }),
     data = select({
-        "//src:not_disable_python": [
+        "//:not_disable_python": [
             "//src/python/binding:pyovms.so",
         ],
-        "//src:disable_python": []
+        "//:disable_python": []
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
@@ -1081,7 +1079,7 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
-            "//src:not_disable_mediapipe": [
+            "//:not_disable_mediapipe": [
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/mediapipeflow_test.cpp",
@@ -1089,14 +1087,14 @@ cc_test(
                 "test/mediapipe_validation_test.cpp",
                 "test/streaming_test.cpp",
             ],
-            "//src:disable_mediapipe" : [],
+            "//:disable_mediapipe" : [],
         }) + select({
-            "//src:not_disable_python": [
+            "//:not_disable_python": [
                 "test/pythonnode_test.cpp",
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
             ],
-            "//src:disable_python" : [],
+            "//:disable_python" : [],
         }),
     data = [
         "test/add_two_inputs_model/1/add.xml",
@@ -1220,7 +1218,7 @@ cc_test(
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
-            "//src:disable_mediapipe" : [],
+            "//:disable_mediapipe" : [],
         }),
     copts = COPTS_TESTS,
 )
