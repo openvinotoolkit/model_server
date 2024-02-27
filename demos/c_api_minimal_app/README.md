@@ -150,6 +150,12 @@ Usage:
       --seed SEED               Random values generator seed.
 ```
 
+## Available modes
+
+- INFERENCE_ONLY (default), measures only the time it takes to preform inferences using C-API
+- RESET_BUFFER, include time it takes to recreate inference request data buffer
+- RESET_REQUEST, include time it takes to recreate whole inference request 
+
 Perform the measurement using sample model, one can specify different model using `config_path` option and specifying desired config file.
 ```bash
 docker run openvino/model_server-capi:latest -c '/ovms/bin/capi_benchmark --servable_name dummy --nstreams 12 --config_path /ovms/demos/config_benchmark.json'
