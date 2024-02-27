@@ -951,6 +951,7 @@ static inline Status checkTimestamp(const KFSRequest& request, const Timestamp& 
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSRequest> request, ::mediapipe::CalculatorGraph& graph) {
     OVMS_RETURN_ON_FAIL(deserializeTimestampIfAvailable(*request, this->currentStreamTimestamp));
     OVMS_RETURN_ON_FAIL(checkTimestamp(*request, this->currentStreamTimestamp));
+    OVMS_RETURN_ON_FAIL(validateRequestCoherencyKFS(*request, request->model_name(), MediapipeGraphDefinition::VERSION)); // TODO version
     for (const auto& input : request->inputs()) {
         const auto& inputName = input.name();
         if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto streamName) { return streamName == inputName; }) == this->inputNames.end()) {

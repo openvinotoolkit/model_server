@@ -28,6 +28,7 @@
 
 namespace ovms {
 class Status;
+
 namespace request_validation_utils {
 
 template <typename RequestType>
