@@ -664,6 +664,10 @@ void randomizePort(std::string& port) {
         *digitToRandomize = '0' + dist(eng);
     }
 }
+std::string getRandomizedPort(std::string port) {
+    randomizePort(port);
+    return port;
+}
 void randomizePorts(std::string& port1, std::string& port2) {
     randomizePort(port1);
     randomizePort(port2);

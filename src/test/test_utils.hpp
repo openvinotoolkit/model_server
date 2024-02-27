@@ -931,6 +931,7 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
 
 void randomizePort(std::string& port);
 void randomizePorts(std::string& port1, std::string& port2);
+std::string getRandomizedPort(std::string port);
 
 extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
 

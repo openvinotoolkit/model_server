@@ -37,6 +37,7 @@ TFSDataType getPrecisionAsDataType(Precision precision) {
         {Precision::I32, TFSDataType::DT_INT32},
         {Precision::I16, TFSDataType::DT_INT16},
         {Precision::I8, TFSDataType::DT_INT8},
+        {Precision::U32, TFSDataType::DT_UINT32},
         {Precision::U64, TFSDataType::DT_UINT64},
         {Precision::U16, TFSDataType::DT_UINT16},
         {Precision::U8, TFSDataType::DT_UINT8},
