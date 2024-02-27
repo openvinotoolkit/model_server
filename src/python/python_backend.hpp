@@ -42,6 +42,9 @@ public:
     bool createOvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype,
         py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor, bool copy = false);
 
+    bool createOvmsPyTensor(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype,
+        py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor);
+
     // Checks if object is tensorClass instance. Throws UnexpectedPythonObjectError if it's not.
     void validateOvmsPyTensor(const py::object& object) const;
 };
