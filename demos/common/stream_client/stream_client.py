@@ -119,7 +119,7 @@ class StreamClient:
         self.exact = exact
         self.benchmark = benchmark
 
-        self.req_q = threading.Semaphore(max_inflight_packets)
+        self.req_s = threading.Semaphore(max_inflight_packets)
 
     def grab_frame(self):
         success, frame = self.cap.read()
@@ -138,13 +138,12 @@ class StreamClient:
     dropped_frames = 0
     frames = 0
     def callback(self, frame, i, timestamp, result, error):
-        self.req_q.release()
+        self.req_s.release()
         if error is not None:
             if self.benchmark:
                 self.dropped_frames += 1
             if self.verbose:
                 print(error)
-            return
         if i == None:
             i = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
         if timestamp == None:
@@ -227,7 +226,7 @@ class StreamClient:
         total_time_start = time.time()
         try:
             while not self.force_exit:
-                self.req_q.acquire()
+                self.req_s.acquire()
                 timestamp = time.time()
                 frame = self.grab_frame()
                 if frame is not None:
