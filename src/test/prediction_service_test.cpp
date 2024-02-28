@@ -1926,6 +1926,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D_data_in_buffer) {
     this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
 }
 
+// Legacy, supported via Native OV String since 2024.0
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
         GTEST_SKIP() << "String inputs not supported for C-API";
@@ -1940,22 +1941,28 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
-    this->checkOutputShape(response, {1, 33}, PASSTHROUGH_MODEL_OUTPUT_NAME);
-    std::vector<uint8_t> expectedData = {
-        4, 0, 0, 0,  // batch size
-        0, 0, 0, 0,  // first string start offset
-        3, 0, 0, 0,  // end of "ala" in condensed content
-        3, 0, 0, 0,  // end of "" in condensed content
-        5, 0, 0, 0,  // end of "ma" in condensed content
-        9, 0, 0, 0,  // end of "kota" in condensed content
-        'a', 'l', 'a',
-        'm', 'a',
-        'k', 'o', 't', 'a'};
-    bool checkRaw = true;
-    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_NativeString) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "String inputs not supported for C-API";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {"ala", "", "ma", "kota"};
+    prepareInferStringRequest(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, inputStrings);
+    ovms::ModelConfig config = NATIVE_STRING_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    // The model has string output which is not implemented yet.
+    // Here we ensure that inference succeeded and it fails at serialization stage.
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION);
+}
+
+// Legacy, supported via Native OV String since 2024.0
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_1D) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
         GTEST_SKIP() << "String inputs not supported for C-API";
@@ -1970,15 +1977,28 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_1D) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
-    this->checkOutputShape(response, {1, 8}, PASSTHROUGH_MODEL_OUTPUT_NAME);
-    std::vector<uint8_t> expectedData = {
-        0, 0, 0, 0,
-        0, 0, 0, 0};
-    bool checkRaw = true;
-    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_NativeString) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "String inputs not supported for C-API";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {};
+    prepareInferStringRequest(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, inputStrings);
+    ovms::ModelConfig config = NATIVE_STRING_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    // The model has string output which is not implemented yet.
+    // Here we ensure that inference succeeded and it fails at serialization stage.
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION);
+}
+
+// Legacy, supported via Native OV String since 2024.0
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D_data_in_buffer) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest) || typeid(typename TypeParam::first_type) == typeid(TFSRequestType))
         GTEST_SKIP() << "String inputs in buffer not supported for C-API and TFS api";
@@ -1993,20 +2013,23 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D_data_in_buffer) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
-    this->checkOutputShape(response, {1, 33}, PASSTHROUGH_MODEL_OUTPUT_NAME);
-    std::vector<uint8_t> expectedData = {
-        4, 0, 0, 0,  // batch size
-        0, 0, 0, 0,  // first string start offset
-        3, 0, 0, 0,  // end of "ala" in condensed content
-        3, 0, 0, 0,  // end of "" in condensed content
-        5, 0, 0, 0,  // end of "ma" in condensed content
-        9, 0, 0, 0,  // end of "kota" in condensed content
-        'a', 'l', 'a',
-        'm', 'a',
-        'k', 'o', 't', 'a'};
-    bool checkRaw = true;
-    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
+}
+
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_NativeString_data_in_buffer) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest) || typeid(typename TypeParam::first_type) == typeid(TFSRequestType))
+        GTEST_SKIP() << "String inputs in buffer not supported for C-API and TFS api";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {"ala", "", "ma", "kota"};
+    prepareInferStringRequest(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, inputStrings, false);
+    ovms::ModelConfig config = NATIVE_STRING_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION);
 }
 
 class TestPredictKFS : public TestPredict<KFSInterface> {};

@@ -98,7 +98,7 @@ const std::string& toKfsString(Precision precision) {
         {Precision::U16, "UINT16"},
         {Precision::U8, "UINT8"},
         {Precision::BOOL, "BOOL"},
-        {Precision::STRING, "STRING"},
+        {Precision::STRING, "BYTES"},
         {Precision::UNDEFINED, "UNDEFINED"}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
@@ -123,7 +123,7 @@ Precision fromKfsString(const std::string& s) {
         {"UINT16", Precision::U16},
         {"UINT8", Precision::U8},
         {"BOOL", Precision::BOOL},
-        {"STRING", Precision::STRING},
+        {"BYTES", Precision::STRING},
         {"UNDEFINED", Precision::UNDEFINED}};
     auto it = precisionMap.find(s);
     if (it == precisionMap.end()) {

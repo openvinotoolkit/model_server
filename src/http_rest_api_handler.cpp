@@ -265,8 +265,6 @@ static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
         return input.contents().fp64_contents_size() == 0;
     if (input.datatype() == "BYTES")
         return input.contents().bytes_contents_size() == 0;
-    if (input.datatype() == "STRING")
-        return input.contents().bytes_contents_size() == 0;
     return true;
 }
 

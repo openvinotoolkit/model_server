@@ -229,6 +229,9 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_NATIVE) {
+        return StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+    }
     if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
         return convertOVTensor2DToStringResponse(tensor, responseOutput);
     }
@@ -258,6 +261,9 @@ Status serializeTensorToTensorProtoRaw(
     if (!status.ok()) {
         return status;
     }
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_NATIVE) {
+        return StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+    }
     if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
         serializeStringContent(rawOutputContents, tensor);
     } else {
@@ -271,6 +277,9 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_NATIVE) {
+        return StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+    }
     if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
         return convertOVTensor2DToStringResponse(tensor, responseOutput);
     }

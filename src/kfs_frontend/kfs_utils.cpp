@@ -42,8 +42,7 @@ Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
         {"UINT64", Precision::U64},
         {"UINT32", Precision::U32},
         {"UINT16", Precision::U16},
-        {"STRING", Precision::STRING},
-        // {"BYTES", Precision::??},
+        {"BYTES", Precision::STRING},
         {"UINT8", Precision::U8}};
     auto it = precisionMap.find(datatype);
     if (it == precisionMap.end()) {
@@ -66,7 +65,6 @@ size_t KFSDataTypeSize(const KFSDataType& datatype) {
         {"FP16", 2},
         {"FP32", 4},
         {"FP64", 8},
-        {"STRING", 1},
         {"BYTES", 1}};
     auto it = datatypeSizeMap.find(datatype);
     if (it == datatypeSizeMap.end()) {
@@ -88,7 +86,7 @@ const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision) {
         {Precision::U32, "UINT32"},
         {Precision::U16, "UINT16"},
         {Precision::U8, "UINT8"},
-        {Precision::STRING, "STRING"},
+        {Precision::STRING, "BYTES"},
         {Precision::BOOL, "BOOL"}};
     // {Precision::BF16, ""},
     // {Precision::U4, ""},
