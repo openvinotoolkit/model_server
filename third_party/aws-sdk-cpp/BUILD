@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,11 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-FROM registry.access.redhat.com/ubi8/ubi:8.9
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y gcc-c++ wget make unzip
-COPY Makefile /src/example/SampleCustomLoader/
-COPY sampleCustLoader.cpp /src/example/SampleCustomLoader/
-COPY customloaderinterface.hpp /src/
-WORKDIR /src/example/SampleCustomLoader
-RUN make all

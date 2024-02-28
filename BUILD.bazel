@@ -23,33 +23,12 @@ exports_files([
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
-
-config_setting(
-    name = "disable_mediapipe",
-    define_values = {
-        "MEDIAPIPE_DISABLE": "1",
-    },
-    visibility = ["//visibility:public"],
-)
-
-more_selects.config_setting_negation(
-    name = "not_disable_mediapipe",
-    negate = ":disable_mediapipe",
-)
+load("//:common_settings.bzl",
+     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
+     "create_config_settings")
+create_config_settings()
 
 #To build without python use flags - bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
-config_setting(
-    name = "disable_python",
-    define_values = {
-        "PYTHON_DISABLE": "1",
-    },
-    visibility = ["//visibility:public"],
-)
-
-more_selects.config_setting_negation(
-    name = "not_disable_python",
-    negate = ":disable_python",
-)
 
 cc_library(
   name = "ovms_dependencies",
@@ -62,9 +41,18 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
-        "@awssdk//:s3",
-        "@awssdk//:core",
-        "@awssdk//:deps",
+
+
+        ] + select({
+            "//:ubuntu_build": [
+                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
+                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_ubuntu",
+            ],
+            "//:redhat_build": [
+                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
+                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_redhat",
+            ],
+        }) + [
         "@azure//:storage",
         "@cpprest//:sdk",
         "@boost//:lib",

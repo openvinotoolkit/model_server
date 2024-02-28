@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.8
-ARG FINAL_IMAGE=registry.access.redhat.com/ubi8/ubi-minimal:8.8
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.9
+ARG FINAL_IMAGE=registry.access.redhat.com/ubi8/ubi-minimal:8.9
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM $BASE_IMAGE as base_build

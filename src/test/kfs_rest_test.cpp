@@ -121,6 +121,39 @@ public:
     }
 };
 
+class HttpRestApiHandlerWithMediapipe : public ::testing::TestWithParam<std::string> {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<HttpRestApiHandler> handler;
+
+    std::unique_ptr<std::thread> t;
+    std::string port = "9173";
+
+    void SetUpServer(const char* configPath) {
+        ::SetUpServer(this->t, this->server, this->port, configPath);
+        auto start = std::chrono::high_resolution_clock::now();
+        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+        }
+
+        handler = std::make_unique<HttpRestApiHandler>(server, 5);
+    }
+
+    void TearDown() {
+        handler.reset();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
+class HttpRestApiHandlerWithMediapipeForkTest : public HttpRestApiHandlerWithMediapipe {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_summator.json");
+    }
+};
+
 class HttpRestApiHandlerWithDynamicModelTest : public HttpRestApiHandlerTest {
 public:
     static void SetUpTestSuite() {
@@ -153,6 +186,55 @@ public:
 
 std::unique_ptr<MockedServer> HttpRestApiHandlerTest::server = nullptr;
 std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
+
+static void testInference(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler) {
+    std::string request = "/v2/models/mediapipeAdd/versions/1/infer";
+
+    std::vector<std::pair<std::string, std::string>> headers;
+    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", std::to_string(headerLength)};
+    headers.emplace_back(binaryInputsHeader);
+
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), ovms::StatusCode::OK);
+
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_EQ(doc.HasParseError(), false);
+
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    ASSERT_EQ(output.Size(), 10);
+
+    for (auto& data : output) {
+        ASSERT_EQ(data.GetFloat(), 2);
+    }
+}
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnarrowing"
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP32) {
+    // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
+    std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
+
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
+    std::string param = ",\"parameters\":{\"binary_data_output\":true}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    request_body += binaryData;
+    request_body += binaryData;
+
+    testInference(headerLength, request_body, handler);
+}
+
+#pragma GCC diagnostic pop
 
 TEST_F(HttpRestApiHandlerTest, MetricsParameters) {
     std::string request = "/metrics?test=test";

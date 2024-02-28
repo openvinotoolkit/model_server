@@ -47,14 +47,14 @@ Mount the `./servable` which contains:
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculators
 
 ```bash
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable:/workspace -v ${PWD}/model:/model/ openvino/model_server:py --config_path /workspace/config.json --port 9000
+docker run -d --rm -p 9000:9000 -p 8000:8000 -v ${PWD}/servable:/workspace -v ${PWD}/model:/model/ openvino/model_server:py --config_path /workspace/config.json --port 9000 --rest_port 8000
 ```
 
-## Requesting detection name
+## Requesting detection name with grpc request
 
-Run the client script
+Run the grpc client script
 ```bash
-python3 client.py --url localhost:9000
+python3 grpc_client.py --url localhost:9000
 ```
 
 Expected output:
@@ -77,6 +77,37 @@ max time: 90.00 ms; min speed: 11.11 fps
 min time: 90.00 ms; max speed: 11.11 fps
 time percentile 90: 90.00 ms; speed percentile 90: 11.11 fps
 time percentile 50: 90.00 ms; speed percentile 50: 11.11 fps
+time standard deviation: 0.00
+time variance: 0.00
+```
+
+## Requesting detection name with rest request
+
+Run the rest client script
+```bash
+python3 rest_client.py --url localhost:8000
+```
+
+Expected output:
+```bash
+Using image_url:
+https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg
+
+Using input_labels:
+['cat', 'dog', 'wolf', 'tiger', 'man', 'horse', 'frog', 'tree', 'house', 'computer']
+
+Iteration 0
+Detection:
+dog
+
+
+processing time for all iterations
+average time: 93.00 ms; average speed: 10.75 fps
+median time: 93.00 ms; median speed: 10.75 fps
+max time: 93.00 ms; min speed: 10.75 fps
+min time: 93.00 ms; max speed: 10.75 fps
+time percentile 90: 93.00 ms; speed percentile 90: 10.75 fps
+time percentile 50: 93.00 ms; speed percentile 50: 10.75 fps
 time standard deviation: 0.00
 time variance: 0.00
 ```

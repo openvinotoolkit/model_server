@@ -15,9 +15,7 @@
 #
 import sys
 sys.path.append("../../common/python")
-import tritonclient.grpc as grpcclient
-from tritonclient.grpc import service_pb2
-from tritonclient.grpc import service_pb2_grpc
+import tritonclient.http as httpclient
 import argparse
 import datetime
 import numpy as np
@@ -25,15 +23,9 @@ from client_utils import print_statistics
 from urllib.request import urlretrieve
 from pathlib import Path
 import os
-import grpc
-import time
 
-parser = argparse.ArgumentParser(description='Client for clip example')
+parser = argparse.ArgumentParser(description='REST Client for clip example')
 
-parser.add_argument('--timeout', required=False, default='15',
-                    help='Specify timeout to wait for models readiness on the server in seconds. default 15 seconds.')
-parser.add_argument('--url', required=False, default='localhost:9000',
-                    help='Specify url to grpc service. default:localhost:9000')
 parser.add_argument('--input_labels', required=False, default="cat,dog,wolf,tiger,man,horse,frog,tree,house,computer",
                     help="Specify input_labels to the CLIP model. default:cat,dog,wolf,tiger,man,horse,frog,tree,house,computer")
 parser.add_argument('--image_url', required=False, default='https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco.jpg',
@@ -41,29 +33,23 @@ parser.add_argument('--image_url', required=False, default='https://storage.open
 parser.add_argument('--iterations', default=1,
                         help='Number of requests iterations, as default use number of images in numpy memmap. default: 1 ',
                         dest='iterations', type=int)
+
+parser.add_argument('--url', required=False, default='localhost:8000',
+                    help='Specify url to grpc service. default:localhost:8000')
+
 args = vars(parser.parse_args())
 
 iterations = args.get('iterations')
 iteration = 0
 
-timeout = int(args.get('timeout'))
-# Check models ready
-client = grpcclient.InferenceServerClient(args['url'])
-channel = grpc.insecure_channel(args['url'])
-grpc_stub = service_pb2_grpc.GRPCInferenceServiceStub(channel)
+url = args['url']
+ssl_options = None
 
-while(timeout):
-    request = service_pb2.ServerReadyRequest()
-    response = grpc_stub.ServerReady(request)
-    print("Server Ready: {}".format(response.ready))
-    if response.ready:
-        break
-    time.sleep(1)
-    timeout-=1
-
-if not response.ready:
-    print("Models are not ready. Increase timeout or check server setup and errors.")
-    exit(-1)
+triton_client = httpclient.InferenceServerClient(
+                url=url,
+                ssl=False,
+                ssl_options=ssl_options,
+                verbose=False)
 
 image_url = args['image_url']
 print(f"Using image_url:\n{image_url}\n")
@@ -77,26 +63,40 @@ if not os.path.exists(sample_path):
         sample_path,
     )
 
-with open(sample_path, "rb") as f:
-    data = f.read()
-
-image_input = grpcclient.InferInput("image", [len(data)], "UINT8")
-image_input._raw_content = data
-
+input_labels_array = [args['input_labels']]
 input_labels = args['input_labels'].split(",")
 print(f"Using input_labels:\n{input_labels}\n")
-labels_npy = np.array(input_labels)
-labels_input = grpcclient.InferInput("input_labels", [len(labels_npy)], labels_npy.dtype.str)
-labels_input._raw_content = labels_npy.tobytes()
+
+image_data = []
+with open(sample_path, "rb") as f:
+    image_data.append(f.read())
+
+npydata = np.array(image_data, dtype=np.object_)
+npylabelsdata = np.array(input_labels_array, dtype=np.object_)
+
+inputs = []
+inputs.append(httpclient.InferInput('image', [len(npydata)], "BYTES"))
+inputs[0].set_data_from_numpy(npydata, binary_data=True)
+
+inputs.append(httpclient.InferInput('input_labels', [len(npylabelsdata)], "BYTES"))
+inputs[1].set_data_from_numpy(npylabelsdata, binary_data=True)
 
 processing_times = []
 for iteration in range(iterations):
+    outputs = []
     print(f"Iteration {iteration}")
     start_time = datetime.datetime.now()
-    results = client.infer("python_model", [image_input , labels_input])
+
+    model_name = "python_model"
+
+    results = triton_client.infer(
+                model_name=model_name,
+                inputs=inputs)
+    
     end_time = datetime.datetime.now()
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times.append(int(duration))
+
     print(f"Detection:\n{results.as_numpy('output_label').tobytes().decode()}\n")
 
 print_statistics(np.array(processing_times,int), batch_size = 1)
