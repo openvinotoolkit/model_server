@@ -140,10 +140,6 @@ Usage:
                                 workload threads per ireq, if not set
                                 version will be set by default model
                                 version policy (default: 0)
-      --input_name INPUT_NAME   Servable's input name
-      --shape SHAPE             Semicolon separated list of inputs names
-                                followed by their shapes in brackers. For
-                                example: "inputA[1,3,224,224],inputB[1,10]"
       --mode MODE               Workload mode. Possible values:
                                 INFERENCE_ONLY, RESET_BUFFER, RESET_REQUEST
                                 (default: INFERENCE_ONLY)

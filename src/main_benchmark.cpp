@@ -72,7 +72,7 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 cxxopts::value<uint32_t>()->default_value("1000"),
                 "NITER")
             ("nstreams",
-                "nstreams from OVMS configuration",
+                "number of execution streams to be performed simultaneously (suggested for best throughput is NUM_STREAMS of a ovms model config)",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "NSTREAMS")
             // inference data
@@ -84,14 +84,6 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 "workload threads per ireq, if not set version will be set by default model version policy",
                 cxxopts::value<int64_t>()->default_value("0"),
                 "MODEL_VERSION")
-            ("input_name",
-                "Servable's input name",
-                cxxopts::value<std::string>(),
-                "INPUT_NAME")
-            ("shape",
-                "Semicolon separated list of inputs names followed by their shapes in brackers. For example: \"inputA[1,3,224,224],inputB[1,10]\"",
-                cxxopts::value<std::string>(),
-                "SHAPE")
             ("mode",
                 "Workload mode. Possible values: INFERENCE_ONLY, RESET_BUFFER, RESET_REQUEST",
                 cxxopts::value<std::string>()->default_value("INFERENCE_ONLY"),
@@ -111,47 +103,6 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
         std::cerr << "error parsing options: " << e.what() << std::endl;
         exit(EX_USAGE);
     }
-}
-
-std::vector<std::string> tokenize(const std::string& str, const char delimiter) {
-    std::vector<std::string> tokens;
-    std::string token;
-    std::istringstream iss(str);
-    while (std::getline(iss, token, delimiter)) {
-        tokens.push_back(token);
-    }
-
-    return tokens;
-}
-
-signed_shape_t parseShapes(const std::string& cliInputShapes) {
-    auto inputShapes = tokenize(cliInputShapes, ';');
-    if (inputShapes.size() != 1) {
-        std::cout << __LINE__ << std::endl;
-        throw std::invalid_argument("Invalid shape argument");
-    }
-    std::string firstShape = inputShapes[0];
-    size_t leftBracket = firstShape.find("[");
-    size_t rightBracket = firstShape.find("]");
-    if ((leftBracket == std::string::npos) ||
-        (rightBracket == std::string::npos) ||
-        (leftBracket > rightBracket)) {
-        std::cout << __LINE__ << std::endl;
-        throw std::invalid_argument("Invalid shape argument");
-    }
-    std::string shapeString = firstShape.substr(leftBracket + 1, rightBracket - leftBracket - 1);
-    auto dimsString = tokenize(shapeString, ',');
-    signed_shape_t shape;
-    std::transform(dimsString.begin(), dimsString.end(), std::back_inserter(shape),
-                                   [](const std::string& s) -> signed_shape_t::value_type {
-        auto dimOpt = std::stoi(s);
-        if (dimOpt <= 0) {
-            std::cout << __LINE__ << " " << s << std::endl;
-            throw std::invalid_argument("Invalid shape argument");
-        }
-        return dimOpt;
-    });
-    return shape;
 }
 
 volatile sig_atomic_t shutdown_request = 0;
@@ -357,7 +308,6 @@ int main(int argc, char** argv) {
 
     uint32_t grpcPort = 9178;
     OVMS_ServerSettingsSetGrpcPort(serverSettings, grpcPort);
-    OVMS_ServerSettingsSetRestPort(serverSettings, 0);
 
     std::string cliLogLevel(cliparser.result->operator[]("log_level").as<std::string>());
     OVMS_LogLevel_enum logLevel;
@@ -427,32 +377,18 @@ int main(int argc, char** argv) {
     int64_t* shapeMinArray;
     int64_t* discarded;
     OVMS_ServableMetadataInput(metadata, 0, &name, &dt, &dimCount, &shapeMinArray, &discarded);
-    std::string inputName;
-    if (cliparser.result->count("input_name")){
-        inputName = cliparser.result->operator[]("input_name").as<std::string>();
-    }else{
-        inputName = name;
-    }
+    std::string inputName(name);
     // datatype handling
     OVMS_DataType datatype;
     if (dt != OVMS_DATATYPE_UNDEFINED) {
         datatype = dt;
+    } else {
+        datatype = OVMS_DATATYPE_FP32;
     }
-    datatype = OVMS_DATATYPE_FP32;
     // shape handling
     signed_shape_t shape;
-    if (cliparser.result->count("shape")){
-      try {
-          shape = parseShapes(cliparser.result->operator[]("shape").as<std::string>());
-      }
-      catch(...){
-          std::cerr << "Invalid shape parameter.";
-          exit(EX_CONFIG);
-      }
-    }else{
-      for (size_t i = 0; i < dimCount; i++) {
-          shape.push_back(shapeMinArray[i]);
-      }
+    for (size_t i = 0; i < dimCount; i++) {
+        shape.push_back(shapeMinArray[i]);
     }
     ///////////////////////
     // benchmark parameters
