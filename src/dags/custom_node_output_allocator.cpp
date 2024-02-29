@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "custom_node_output_allocator.hpp"
 
+#include <utility>
+
 #include "../custom_node_interface.h"  // NOLINT
 #include "../logging.hpp"
 
