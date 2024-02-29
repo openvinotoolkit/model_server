@@ -276,6 +276,11 @@ Status Server::startModules(ovms::Config& config) {
         it = modules.find(PYTHON_INTERPRETER_MODULE_NAME);
         if (it != modules.end()) {
             auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
+            if (!pythonModule) {
+                SPDLOG_ERROR("PythonInterpreterModule not initialized");
+                return StatusCode::INTERNAL_ERROR;
+            }
+
             pythonModule->releaseGILFromThisThread();
         }
     }

@@ -30,7 +30,7 @@ bool operator==(const CustomNodeTensor& t1, const CustomNodeTensor& t2) {
 }
 CustomNodeOutputAllocator::CustomNodeOutputAllocator(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager) :
     tensor(tensor),
-    nodeLibrary(nodeLibrary),
+    nodeLibrary(std::move(nodeLibrary)),
     customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}
 void* CustomNodeOutputAllocator::allocate(const size_t bytes, const size_t alignment) {
     return (void*)tensor.data;
