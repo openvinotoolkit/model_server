@@ -24,6 +24,7 @@
 #include <thread>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -421,6 +422,8 @@ std::string readableError(const T* expected_output, const T* actual_output, cons
     }
     return ss.str();
 }
+
+std::string readableSetError(std::unordered_set<std::string> expected, std::unordered_set<std::string> actual);
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,

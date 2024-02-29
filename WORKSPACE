@@ -102,7 +102,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "b0a0e72b16c16b27187da566dee7ff57bfdcf499", # Adress & remove TODO's (#61)
+    commit = "508e0950252501942566176c1701843d9ea492a7", # Add geti calculators
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -419,4 +419,10 @@ new_local_repository(
     name = "mediapipe_calculators",
     build_file = "@//third_party/mediapipe_calculators:BUILD",
     path = "/ovms/third_party/mediapipe_calculators",
+)
+
+git_repository(
+    name = "nlohmann_json",
+    remote = "https://github.com/nlohmann/json/",
+    tag = "v3.11.3",
 )
