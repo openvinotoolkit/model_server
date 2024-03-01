@@ -1186,6 +1186,8 @@ cc_test(
         "test/mediapipe/python/scripts/return_custom_datatype.py",
         "test/passthrough/1/passthrough.xml",
         "test/passthrough/1/passthrough.bin",
+        "test/passthrough_string/1/passthrough.xml",
+        "test/passthrough_string/1/passthrough.bin",
         "test/summator/1/summator.xml",
         "test/summator/1/summator.bin",
         "test/scalar/1/saved_model.xml",

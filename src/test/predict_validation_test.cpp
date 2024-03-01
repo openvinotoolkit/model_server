@@ -2006,18 +2006,19 @@ TYPED_TEST(PredictValidationString1DTest, positive) {
     std::vector<std::string> inputStrings = {"String_123"};
     prepareInferStringRequest(this->request, this->tensorName, inputStrings);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
-    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
     // bs=2
+    this->request.Clear();
     inputStrings = {"String_123", "other"};
     prepareInferStringRequest(this->request, this->tensorName, inputStrings);
     status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
-    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
 TYPED_TEST(PredictValidationString1DTest, negative_wrong_request_shape) {
     prepareInferStringInputWithTwoDimensionShapeTensor(this->request, this->tensorName);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+    EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
 TYPED_TEST(PredictValidationString1DTest, positive_over_1gb) {
@@ -2025,7 +2026,7 @@ TYPED_TEST(PredictValidationString1DTest, positive_over_1gb) {
     std::vector<std::string> inputStrings = {longString, "", ""};  // sum=1.5gb
     prepareInferStringRequest(this->request, this->tensorName, inputStrings);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
-    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
 TYPED_TEST(PredictValidationString1DTest, negative_negative_shape) {
@@ -2037,7 +2038,7 @@ TYPED_TEST(PredictValidationString1DTest, negative_negative_shape) {
 TYPED_TEST(PredictValidationString1DTest, zero_dim_request_to_dynamic_1d_u8_endpoint) {
     prepareInferStringInputWithZeroDimShape(this->request, this->tensorName);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
-    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();  // Validated at deserialization stage
+    EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED) << status.string();  // Validated at deserialization stage
 }
 
 TYPED_TEST(PredictValidationString1DTest, string_not_allowed_with_demultiplexer) {
@@ -2046,6 +2047,68 @@ TYPED_TEST(PredictValidationString1DTest, string_not_allowed_with_demultiplexer)
     prepareInferStringRequest(this->request, this->tensorName, inputStrings);
     auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
+}
+
+template <typename TensorType>
+class PredictValidationStringNativeTest : public ::testing::Test {
+protected:
+    TensorType request;
+    const char* tensorName = DUMMY_MODEL_INPUT_NAME;
+    ovms::tensor_map_t mockedInputsInfo;
+    void SetUp() override {
+        auto shape1d = ovms::Shape{-1};
+        mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(tensorName, ovms::Precision::STRING, shape1d, ovms::Layout{"N..."});
+    }
+};
+
+TYPED_TEST_SUITE(PredictValidationStringNativeTest, MyTypes);
+
+TYPED_TEST(PredictValidationStringNativeTest, positive) {
+    // bs=1
+    std::vector<std::string> inputStrings = {"String_123"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    // bs=2
+    this->request.Clear();
+    inputStrings = {"String_123", "other"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+}
+
+TYPED_TEST(PredictValidationStringNativeTest, negative_wrong_request_shape) {
+    prepareInferStringInputWithTwoDimensionShapeTensor(this->request, this->tensorName);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
+}
+
+TYPED_TEST(PredictValidationStringNativeTest, positive_over_1gb) {
+    std::string longString(1024 * 1024 * 512 * 1, 'a');                            // 512mb
+    std::vector<std::string> inputStrings = {longString, longString, longString};  // sum=1.5gb
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+}
+
+TYPED_TEST(PredictValidationStringNativeTest, negative_negative_shape) {
+    prepareInferStringInputWithNegativeShape(this->request, this->tensorName);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TYPED_TEST(PredictValidationStringNativeTest, zero_dim_request) {
+    prepareInferStringInputWithZeroDimShape(this->request, this->tensorName);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+}
+
+TYPED_TEST(PredictValidationStringNativeTest, string_not_allowed_with_demultiplexer) {
+    this->mockedInputsInfo[this->tensorName] = this->mockedInputsInfo[this->tensorName]->createCopyWithDemultiplexerDimensionPrefix(ovms::Dimension::any());
+    std::vector<std::string> inputStrings = {"String_123"};
+    prepareInferStringRequest(this->request, this->tensorName, inputStrings);
+    auto status = ovms::request_validation_utils::validate(this->request, this->mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
 #pragma GCC diagnostic pop

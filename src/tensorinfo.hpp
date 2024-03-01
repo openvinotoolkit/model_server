@@ -45,8 +45,8 @@ class TensorInfo {
 public:
     enum class ProcessingHint {
         IMAGE,
-        STRING_1D_U8,
         STRING_2D_U8,
+        STRING_NATIVE,
         NO_PROCESSING
     };
 

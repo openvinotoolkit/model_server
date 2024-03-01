@@ -65,6 +65,7 @@ const std::string dummy_fp64_model_location = std::filesystem::current_path().u8
 const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model";
 const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
 const std::string passthrough_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough";
+const std::string passthrough_string_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough_string";
 const std::string dummy_saved_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model";
 const std::string dummy_tflite_location = std::filesystem::current_path().u8string() + "/src/test/dummy_tflite";
 const std::string scalar_model_location = std::filesystem::current_path().u8string() + "/src/test/scalar";
@@ -144,6 +145,21 @@ const ovms::ModelConfig PASSTHROUGH_MODEL_CONFIG{
     passthrough_model_location,  // local path
 };
 
+const ovms::ModelConfig NATIVE_STRING_MODEL_CONFIG{
+    "passthrough_string",
+    passthrough_string_model_location,  // base path
+    "CPU",                              // target device
+    "",                                 // batchsize
+    1,                                  // NIREQ
+    false,                              // is stateful
+    true,                               // idle sequence cleanup enabled
+    false,                              // low latency transformation enabled
+    500,                                // stateful sequence max number
+    "",                                 // cache directory
+    1,                                  // model_version unused since version are read from path
+    passthrough_string_model_location,  // local path
+};
+
 const ovms::ModelConfig DUMMY_SAVED_MODEL_CONFIG{
     "dummy_saved_model",
     dummy_saved_model_location,  // base path
@@ -212,6 +228,9 @@ constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 
 constexpr const char* PASSTHROUGH_MODEL_INPUT_NAME = "input";
 constexpr const char* PASSTHROUGH_MODEL_OUTPUT_NAME = "copy:0";
+
+constexpr const char* PASSTHROUGH_STRING_MODEL_INPUT_NAME = "my_name";
+constexpr const char* PASSTHROUGH_STRING_MODEL_OUTPUT_NAME = "my_name";
 
 constexpr const char* SCALAR_MODEL_INPUT_NAME = "model_scalar_input";
 constexpr const char* SCALAR_MODEL_OUTPUT_NAME = "model_scalar_output";
