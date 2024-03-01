@@ -156,7 +156,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
 	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.0.0.14509.34caeefd078_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
-	INSTALL_DRIVER_VERSION ?= "23.22.26516"
+	INSTALL_DRIVER_VERSION ?= "23.30.26918"
 	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.0.0.14509.34caeefd078_x86_64.tgz
   endif
 endif
@@ -171,7 +171,7 @@ ifeq ($(BASE_OS),redhat)
 	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   endif	
   DIST_OS=redhat
-  INSTALL_DRIVER_VERSION ?= "23.22.26516"
+  INSTALL_DRIVER_VERSION ?= "23.43.27642"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.0.0.14509.34caeefd078_x86_64.tgz
 endif
 
