@@ -2730,27 +2730,35 @@ public:
 };
 REGISTER_CALCULATOR(LongLoadingCalculator);
 }  // namespace mediapipe
+
+static void stopServer() {
+    OVMS_Server* cserver;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(1);
+}
+static bool isMpReady(const std::string name) {
+    ovms::Server& server = ovms::Server::instance();
+    SPDLOG_TRACE("serverReady:{}", server.isReady());
+    const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+    if (!servableModule) {
+        return false;
+    }
+    ModelManager* manager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
+    auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName(name);
+    if (!mediapipeGraphDefinition) {
+        return false;
+    }
+    return mediapipeGraphDefinition->getStatus().isAvailable();
+}
+
 class MediapipeFlowStartTest : public TestWithTempDir {
 protected:
     bool isMpReady(const std::string name) {
-        ovms::Server& server = ovms::Server::instance();
-        SPDLOG_ERROR("serverReady:{}", server.isReady());
-        const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
-        if (!servableModule) {
-            return false;
-        }
-        ModelManager* manager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
-        auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName(name);
-        if (!mediapipeGraphDefinition) {
-            return false;
-        }
-        return mediapipeGraphDefinition->getStatus().isAvailable();
+        return ::isMpReady(name);
     }
     void stopServer() {
-        OVMS_Server* cserver;
-        ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-        ovms::Server& server = ovms::Server::instance();
-        server.setShutdownRequest(1);
+        ::stopServer();
     }
     void TearDown() {
         OVMS_Server* cserver = nullptr;
@@ -2820,7 +2828,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     auto start = std::chrono::high_resolution_clock::now();
     while (!isMpReady(servableName) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
-        std::this_thread::sleep_for(std::chrono::microseconds(100));
+        std::this_thread::sleep_for(std::chrono::microseconds(600));
     }
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     if (!grpcModule) {
@@ -2834,6 +2842,108 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     size_t dummysInTheGraph = 1;
     checkDummyResponse("out", requestData, request, response, dummysInTheGraph, 1, servableName);
     this->stopServer();
+    t.join();
+}
+
+template <typename T>
+std::vector<T> prepareData(size_t elemCount, T value, bool maxValue) {
+    return std::vector<T>(elemCount, value);  // FIXME TODO use maxValue
+}
+
+template <class T>
+class KFSss : public testing::Test {
+protected:
+};
+
+std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>> TYPE_TO_OVMS_PRECISION_TO_STATUS{
+    // OK to replace with MP internal? basically we are checking if it doesnt crash. We don't have a model/ calc for each of the types
+    // could be improved iwht using passthrough calc
+    {typeid(float), {ovms::Precision::FP32, ovms::StatusCode::OK}},
+    {typeid(uint64_t), {ovms::Precision::U64, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
+    {typeid(uint32_t), {ovms::Precision::U32, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
+    {typeid(uint16_t), {ovms::Precision::U16, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
+    {typeid(uint8_t), {ovms::Precision::U8, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
+    {typeid(int64_t), {ovms::Precision::I64, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
+    {typeid(int32_t), {ovms::Precision::I32, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
+    {typeid(int16_t), {ovms::Precision::I16, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
+    {typeid(int8_t), {ovms::Precision::I8, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
+    {typeid(bool), {ovms::Precision::BOOL, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
+    {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
+    {typeid(void), {ovms::Precision::BIN, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}}};
+
+// TODO bool needs spearate handling due to special std::vector<bool> ...
+typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t, char> InferInputTensorContentsTypesToTest;  // TODO add all kfs relevant
+TYPED_TEST_SUITE(KFSss, InferInputTensorContentsTypesToTest);
+TYPED_TEST(KFSss, OVTensorCheckExpectedStatusCode) {
+    std::string configFilePath = "config.json";
+    const std::string configContent = R"(
+{
+    "model_config_list": [
+        {"config": {
+            "name": "dummy",
+            "base_path": "/ovms/src/test/dummy"
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipeDummy",
+        "graph_path": "/ovms/src/test/mediapipe/graphdummyadapterfull.pbtxt"
+    }
+    ]
+}
+)";
+    createConfigFileWithContent(configContent, configFilePath);
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    std::string port{"9000"};
+    randomizePort(port);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--config_path",
+        (char*)configFilePath.c_str(),
+        (char*)"--port",
+        (char*)port.c_str()};
+    int argc = 5;
+    std::thread t([&argc, &argv, &server]() {
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    });
+    // prepare request
+    KFSRequest request;
+    request.Clear();
+    bool maxValue = false;
+    bool putDataInInputContents = true;
+    size_t elemCount = 10;
+    TypeParam value = 1.0;
+    std::vector<TypeParam> data = prepareData<TypeParam>(elemCount, value, maxValue);
+    preparePredictRequest(request,
+        {{"in", {{1, 10}, TYPE_TO_OVMS_PRECISION_TO_STATUS[typeid(TypeParam)].first}}},
+        data, putDataInInputContents);
+    const std::string servableName{"mediapipeDummy"};
+    request.mutable_model_name()->assign(servableName);
+    // execute infer
+    ::KFSResponse response;
+    response.Clear();
+    auto start = std::chrono::high_resolution_clock::now();
+    while (!isMpReady(servableName) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
+    }
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    if (!grpcModule) {
+        stopServer();
+        t.join();
+        throw 42;
+    }
+    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
+    ModelManager& modelManager = smm->getServableManager();
+    std::shared_ptr<MediapipeGraphExecutor> executor;
+    ASSERT_EQ(modelManager.createPipeline(executor, request.model_name(), &request, &response), ovms::StatusCode::OK);
+    using ovms::ExecutionContext;
+    ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer};
+    ServableMetricReporter* reporter = nullptr;
+    auto status = executor->infer(&request, &response, executionContext, reporter);
+    EXPECT_EQ(status, TYPE_TO_OVMS_PRECISION_TO_STATUS[typeid(TypeParam)].second) << status.string();
+    stopServer();
     t.join();
 }
 

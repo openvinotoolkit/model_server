@@ -212,12 +212,20 @@ static const KFSDataType& MPPrecisionToKFSPrecision(::mediapipe::Tensor::Element
         return Status(StatusCode::UNKNOWN_ERROR, std::move(details));                                       \
     }
 
-#define COPY_INPUT_VALUE_BY_VALUE(TYPE, PROTO_PREFIX)                                      \
-    TYPE* ptr = reinterpret_cast<TYPE*>(data);                                             \
-    /* TODO check if has content return*/                                                  \
-    for (auto& number : request.inputs(inputIndex).contents().PROTO_PREFIX##_contents()) { \
-        *(ptr++) = number;                                                                 \
-    }                                                                                      \
+#define COPY_INPUT_VALUE_BY_VALUE(TYPE, PROTO_PREFIX)                                                                                       \
+    TYPE* ptr = reinterpret_cast<TYPE*>(data);                                                                                              \
+    /* TODO check if has content correct size*/                                                                                             \
+    const auto& input = request.inputs(inputIndex);                                                                                         \
+    if (!input.has_contents()) {                                                                                                            \
+        return Status(StatusCode::INVALID_CONTENT_SIZE, "Input does not have input tensor contents field");                                 \
+    }                                                                                                                                       \
+    const auto& contents = input.contents();                                                                                                \
+    if (!contents.PROTO_PREFIX##_contents_size()) {                                                                                         \
+        return Status(StatusCode::INVALID_CONTENT_SIZE, "Input does not have proper size of input tensor " #PROTO_PREFIX "contents field"); \
+    }                                                                                                                                       \
+    for (auto& number : contents.PROTO_PREFIX##_contents()) {                                                                               \
+        *(ptr++) = number;                                                                                                                  \
+    }                                                                                                                                       \
     break;
 
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<mediapipe::Tensor>& outTensor, PythonBackend* pythonBackend) {
@@ -389,7 +397,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         size_t expectElementsCount = ov::shape_size(shape.begin(), shape.end());
         size_t expectedBytes = precision.size() * expectElementsCount;
         if (request.raw_input_contents().size()) {
-            auto& bufferLocation = request.raw_input_contents().at(inputIndex);  // TODO
+            auto& bufferLocation = request.raw_input_contents().at(inputIndex);
             if (expectedBytes != bufferLocation.size()) {
                 std::stringstream ss;
                 ss << "Expected: " << expectedBytes << " bytes; Actual: " << bufferLocation.size() << " bytes; input name: " << requestedName;
@@ -403,7 +411,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 outTensor = std::make_unique<ov::Tensor>(precision, shape, const_cast<void*>((const void*)bufferLocation.data()));
             }
         } else {
-            outTensor = std::make_unique<ov::Tensor>(precision, shape);  // OpenVINO does not accept nullptr as data ptr
+            outTensor = std::make_unique<ov::Tensor>(precision, shape);
             if (expectedBytes == 0) {
                 return StatusCode::OK;
             }
@@ -697,6 +705,8 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
     }
     SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
+    // TODO FIXME
+    /*
     if (request->raw_input_contents().size() == 0) {  // TODO
         const std::string details = "Invalid message structure - raw_input_content is empty";
         SPDLOG_DEBUG("[servable name: {} version: {}] {}", request->model_name(), request->model_version(), details);
@@ -709,6 +719,7 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request->model_name(), request->model_version(), details);
         return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
     }
+*/
     std::unique_ptr<T> inputTensor;
     OVMS_RETURN_ON_FAIL(deserializeTensor(name, *request, inputTensor, pythonBackend));
     MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
@@ -1069,7 +1080,7 @@ static inline Status checkTimestamp(const KFSRequest& request, const Timestamp& 
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSRequest> request, ::mediapipe::CalculatorGraph& graph) {
     OVMS_RETURN_ON_FAIL(deserializeTimestampIfAvailable(*request, this->currentStreamTimestamp));
     OVMS_RETURN_ON_FAIL(checkTimestamp(*request, this->currentStreamTimestamp));
-    OVMS_RETURN_ON_FAIL(validateRequestCoherencyKFS(*request, request->model_name(), MediapipeGraphDefinition::VERSION));  // TODO version
+    OVMS_RETURN_ON_FAIL(validateRequestCoherencyKFS(*request, request->model_name(), MediapipeGraphDefinition::VERSION));
     for (const auto& input : request->inputs()) {
         const auto& inputName = input.name();
         if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto streamName) { return streamName == inputName; }) == this->inputNames.end()) {
