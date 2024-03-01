@@ -184,6 +184,9 @@ public:
         return absl::OkStatus();
     }
 
+#define RETURN_EXECUTION_FAILED_STATUS() \
+    return absl::Status(absl::StatusCode::kInternal, "Error occurred during graph execution") \
+
     absl::Status Process(CalculatorContext* cc) final {
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Process start";
         py::gil_scoped_acquire acquire;
@@ -212,23 +215,21 @@ public:
             }
         } catch (const UnexpectedOutputTensorError& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
-            return absl::Status(absl::StatusCode::kInternal, "Python execute function returned unexpected output");
+            RETURN_EXECUTION_FAILED_STATUS();
         } catch (const UnexpectedPythonObjectError& e) {
-            // TODO: maybe some more descriptive information where to seek the issue.
-            LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution. Wrong object on execute input or output: " << e.what();
-            return absl::Status(absl::StatusCode::kInternal, "Python execute function received or returned bad value");
+            LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution. Wrong object on execute output: " << e.what();
+            RETURN_EXECUTION_FAILED_STATUS();
         } catch (const BadPythonNodeConfigurationError& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
-            return absl::Status(absl::StatusCode::kInternal, "Error occurred due to bad Python node configuration");
+            RETURN_EXECUTION_FAILED_STATUS();
         } catch (const pybind11::error_already_set& e) {
-            LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
-            return absl::Status(absl::StatusCode::kInternal, "Error occurred during Python code execution");
+            RETURN_EXECUTION_FAILED_STATUS();
         } catch (std::exception& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
-            return absl::Status(absl::StatusCode::kUnknown, "Unexpected error occurred");
+            RETURN_EXECUTION_FAILED_STATUS();
         } catch (...) {
             LOG(INFO) << "Unexpected error occurred during node " << cc->NodeName() << " execution";
-            return absl::Status(absl::StatusCode::kUnknown, "Unexpected error occurred");
+            RETURN_EXECUTION_FAILED_STATUS();
         }
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Process end";
         return absl::OkStatus();
