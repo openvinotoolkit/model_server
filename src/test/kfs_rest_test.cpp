@@ -19,6 +19,15 @@
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
+#include "tensorflow_serving/util/net_http/server/public/httpserver.h"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
+#include "tensorflow_serving/util/threadpool_executor.h"
+#pragma GCC diagnostic pop
+
 #include "../config.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
@@ -176,6 +185,34 @@ public:
         thread = std::make_unique<std::thread>(
             [&argv]() {
                 ASSERT_EQ(EXIT_SUCCESS, server->start(11, argv));
+            });
+        auto start = std::chrono::high_resolution_clock::now();
+        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+        }
+    }
+};
+
+class HttpRestApiHandlerWithStringModelTest : public HttpRestApiHandlerTest {
+public:
+    static void SetUpTestSuite() {
+        HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
+        std::string port = "9000";
+        randomizePort(port);
+        char* argv[] = {
+            (char*)"OpenVINO Model Server",
+            (char*)"--model_name",
+            (char*)"string",
+            (char*)"--model_path",
+            (char*)"/ovms/src/test/passthrough_string",
+            (char*)"--log_level",
+            (char*)"DEBUG",
+            (char*)"--port",
+            (char*)port.c_str(),
+            nullptr};
+        thread = std::make_unique<std::thread>(
+            [&argv]() {
+                ASSERT_EQ(EXIT_SUCCESS, server->start(9, argv));
             });
         auto start = std::chrono::high_resolution_clock::now();
         while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
@@ -1112,6 +1149,58 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidJson) {
     auto status = HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - Error: Invalid value. Offset: 12");
+}
+
+TEST_F(HttpRestApiHandlerWithStringModelTest, invalidPrecision) {
+    std::string request = "/v2/models/string/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"my_name\",\"shape\":[2],\"datatype\":\"FP32\",\"data\":[\"Hello\", \"World\"]}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape) {
+    std::string request = "/v2/models/string/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"my_name\",\"shape\":[3],\"datatype\":\"BYTES\",\"data\":[\"Hello\", \"World\"]}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+
+// Serialization is unsupported
+TEST_F(HttpRestApiHandlerWithStringModelTest, failsAtSerializationStep) {
+    std::string request = "/v2/models/string/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"my_name\",\"shape\":[2],\"datatype\":\"BYTES\",\"data\":[\"Hello\", \"World\"]}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION);
+}
+
+// Serialization is unsupported
+TEST_F(HttpRestApiHandlerWithStringModelTest, failsAtSerializationStep_binaryExtension) {
+    std::string request = "/v2/models/string/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"my_name\",\"shape\":[2],\"datatype\":\"BYTES\",\"parameters\":{\"binary_data_size\":15}}],\"parameters\":{\"binary_data_output\":true}}";
+    size_t jsonEnd = request_body.size();
+
+    std::string binaryData{0x05, 0x00, 0x00, 0x00, 'H', 'e', 'l', 'l', 'o', 0x02, 0x00, 0x00, 0x00, '1', '2'};
+    request_body += binaryData;
+
+    std::vector<std::pair<std::string, std::string>> headers{
+        {"Inference-Header-Content-Length", std::to_string(jsonEnd)},
+        {"Content-Type", "application/json"},
+    };
+    ovms::HttpResponseComponents responseComponents;
+    std::string output;
+    ASSERT_EQ(handler->processRequest("POST", request, request_body, &headers, &output, responseComponents), ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION);
 }
 
 TEST_F(HttpRestApiHandlerTest, serverReady) {

@@ -563,11 +563,11 @@ Status convertStringRequestToOVTensor2D(
     return StatusCode::OK;
 }
 
-static Status convertStringRequestFromBufferToNativeOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
+static Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
     return StatusCode::NOT_IMPLEMENTED;
 }
 
-static Status convertStringRequestFromBufferToNativeOVTensor(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
+static Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
     std::vector<uint32_t> stringSizes;
     uint32_t totalStringsLength = 0;
     while (totalStringsLength + stringSizes.size() * sizeof(uint32_t) + sizeof(uint32_t) <= buffer->size()) {
@@ -594,7 +594,7 @@ template <typename TensorType>
 Status convertStringRequestToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
     if (buffer != nullptr) {
-        return convertStringRequestFromBufferToNativeOVTensor(src, tensor, buffer);
+        return convertBinaryExtensionStringFromBufferToNativeOVTensor(src, tensor, buffer);
     }
     int batchSize = getBinaryInputsSize(src);
     tensor = ov::Tensor(ov::element::Type_t::string, ov::Shape{static_cast<size_t>(batchSize)});

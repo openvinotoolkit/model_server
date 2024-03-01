@@ -270,7 +270,10 @@ static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
 
 static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs_buffer, ::KFSRequest::InferInputTensor& input, std::string* rawInputContentsBuffer) {
     if (binary_input_offset + binary_input_size > binary_buffer_size) {
-        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
+        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}, binary input offset {}, binary_input size {}",
+            binary_buffer_size,
+            binary_input_offset,
+            binary_input_size);
         return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
     }
     rawInputContentsBuffer->assign(binary_inputs_buffer + binary_input_offset, binary_input_size);

@@ -812,22 +812,6 @@ TEST_F(KFSRestParserTest, parseValidRequestWithNoDataButBinaryInputsParameter) {
     ASSERT_EQ(parameter->second.int64_param(), 4);
 }
 
-TEST_F(KFSRestParserTest, parseStringInput) {
-    std::string request = R"({
-    "inputs" : [
-        {
-        "name" : "b",
-        "shape" : [ 1 ],
-        "datatype" : "STRING",
-        "data" : [ ]
-        }
-    ]
-    })";
-    auto status = parser.parse(request.c_str());
-    auto proto = parser.getProto();
-    ASSERT_EQ(proto.inputs()[0].datatype(), "STRING");
-}
-
 TEST_F(KFSRestParserTest, parseInValidRequestUINT32WithFloatingPointValues) {
     std::string request = R"({
     "inputs" : [
