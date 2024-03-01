@@ -185,7 +185,7 @@ public:
          *
          * @return status
          */
-    Status addVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr);
+    Status addVersions(std::shared_ptr<model_versions_t>& versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t>& versionsFailed, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr);
 
     /**
          * @brief Retires versions of Model
@@ -194,7 +194,7 @@ public:
          *
          * @return status
          */
-    Status retireVersions(std::shared_ptr<model_versions_t> versions);
+    Status retireVersions(std::shared_ptr<model_versions_t>& versions);
 
     /**
          * @brief Cleans up versions of Model
@@ -203,7 +203,7 @@ public:
          *
          * @return status
          */
-    Status cleanupFailedLoad(std::shared_ptr<model_versions_t> versions);
+    Status cleanupFailedLoad(std::shared_ptr<model_versions_t>& versions);
 
     /**
          * @brief Retires all versions of Model
@@ -222,7 +222,7 @@ public:
          *
          * @return status
          */
-    Status reloadVersions(std::shared_ptr<model_versions_t> versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed);
+    Status reloadVersions(std::shared_ptr<model_versions_t>& versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t>& versionsFailed);
 
     void subscribe(PipelineDefinition& pd);
     void unsubscribe(PipelineDefinition& pd);

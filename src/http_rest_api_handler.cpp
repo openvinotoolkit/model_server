@@ -134,7 +134,7 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
 }
 
 void HttpRestApiHandler::registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)> f) {
-    handlers[type] = f;
+    handlers[type] = std::move(f);
 }
 
 void HttpRestApiHandler::registerAll() {
@@ -731,9 +731,6 @@ Status HttpRestApiHandler::processPredictRequest(
     }
     if (!status.ok())
         return status;
-    if (!reporterOut) {
-        return StatusCode::INTERNAL_ERROR;  // should not happen
-    }
 
     status = makeJsonFromPredictResponse(responseProto, response, requestOrder);
     if (!status.ok())
