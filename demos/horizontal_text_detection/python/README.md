@@ -216,14 +216,12 @@ docker build ../../common/stream_client/ -t rtsp_client
 
 ```bash
 docker run -v $(pwd):/workspace rtsp_client --help
-usage: rtsp_client.py [-h] [--grpc_address GRPC_ADDRESS]
-                      [--input_stream INPUT_STREAM]
-                      [--output_stream OUTPUT_STREAM]
-                      [--model_name MODEL_NAME] [--width WIDTH]
-                      [--height HEIGHT] [--input_name INPUT_NAME] [--verbose]
-                      [--benchmark]
-                      [--limit_stream_duration LIMIT_STREAM_DURATION]
-                      [--limit_frames LIMIT_FRAMES]
+usage: client.py [-h] [--grpc_address GRPC_ADDRESS]
+                 [--input_stream INPUT_STREAM] [--output_stream OUTPUT_STREAM]
+                 [--model_name MODEL_NAME] [--width WIDTH] [--height HEIGHT]
+                 [--input_name INPUT_NAME] [--verbose] [--benchmark]
+                 [--limit_stream_duration LIMIT_STREAM_DURATION]
+                 [--limit_frames LIMIT_FRAMES]
 
 options:
   -h, --help            show this help message and exit
