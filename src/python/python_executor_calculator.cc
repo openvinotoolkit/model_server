@@ -185,7 +185,7 @@ public:
     }
 
 #define RETURN_EXECUTION_FAILED_STATUS() \
-    return absl::Status(absl::StatusCode::kInternal, "Error occurred during graph execution") \
+    return absl::Status(absl::StatusCode::kInternal, "Error occurred during graph execution")
 
     absl::Status Process(CalculatorContext* cc) final {
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Process start";
