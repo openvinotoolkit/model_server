@@ -934,7 +934,7 @@ Status PipelineDefinition::validateDemultiplexerGatherNodesOrder() {
         auto [nodeName, demultiplyStack] = nodesToCheck.back();
         nodesToCheck.pop_back();
         for (auto& [connectedNodeName, aliasName] : connections[nodeName]) {
-            auto newDemultiplyStack(std::move(demultiplyStack));
+            auto newDemultiplyStack(demultiplyStack);
             auto& connectedNodeInfo = findNodeByName(connectedNodeName);
             if (connectedNodeInfo.demultiplyCount) {
                 if (newDemultiplyStack.empty()) {
