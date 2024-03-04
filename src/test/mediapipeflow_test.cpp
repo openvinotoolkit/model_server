@@ -3122,7 +3122,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "VisibilitySmoothingCalculator",
         "WarpAffineCalculator",
         "WarpAffineCalculatorCpu",
-        "WorldLandmarkProjectionCalculator"});
+        "WorldLandmarkProjectionCalculator" });
 
     ASSERT_THAT(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), UnorderedElementsAreArray(expected)) << readableSetError(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), expected);
 }
