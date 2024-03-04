@@ -14,10 +14,10 @@ ovms_docs_dynamic_bs_demultiplexer
 ovms_docs_dynamic_shape_custom_node
 ```
 
-Models served by the OpenVINO Model Server can be configured to accept data with different batch sizes and in different shapes.
-There are multiple ways of enabling dynamic inputs for the model:
+OpenVINO Model Server servables can be configured to accept data with different batch sizes and in different shapes.
+There are multiple ways of enabling dynamic inputs depending on the kind of servable.
 
-**Single models**:
+**Single Models**:
 
 - [dynamic input shape with dynamic IR/ONNX model](./dynamic_shape_dynamic_model.md) - leverage OpenVINO native dynamic shape feature to send data with arbitrary shape. Consider using this option if model accepts dynamic dimensions.
 
@@ -27,13 +27,13 @@ There are multiple ways of enabling dynamic inputs for the model:
 
 - [**DEPRECATED**] [dynamic shape with automatic model reloading](./dynamic_shape_auto_reload.md) - configure the Model Server to reload the model each time the model receives a request with data in shape other than what is currently set. Consider using this option when request shape may change, but usually stays the same. Each request with varying shape will impact the performance due to model reloading.
 
-**DAGs**:
+**DAG Pipelines**:
 
 - [dynamic batch size with a demultiplexer](./dynamic_bs_demultiplexer.md) - create a simple pipeline that splits data of any batch size and performs inference on each element in the batch separately. Consider using this option if incoming requests will be containing various batch size. This option does not need to reload underlying model, therefore there is no model reloading impact on the performance.
 
 - [dynamic input shape with a custom node](./dynamic_shape_custom_node.md) - create a simple pipeline by pairing your model with a custom node that performs data preprocessing and provides the model with data in an acceptable shape. Consider this option if you want to fit the image into model shape by performing image resize operation before inference. This may affect accuracy.
 
-**MediaPipe graphs**:
+**MediaPipe Graphs**:
 
 OpenVINO Model Server defines serveral types that can be handled on [MediaPipe graph](https://docs.openvino.ai/2023.3/ovms_docs_mediapipe.html#integration-with-mediapipe) input. Whether the input is dynamic or not depends on what happens next in the graph. There are 3 situations when input to the graph can be dynamic:
 

@@ -9,7 +9,7 @@ hidden:
 ovms_docs_cloud_storage
 ```
 
-The AI models served by OpenVINO&trade; Model Server must be in either of the four formats:
+The AI models served by OpenVINO&trade; Model Server must be in either of the five formats:
 - [OpenVINO IR](https://docs.openvino.ai/2023.3/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets), where the graph is represented in .bin and .xml files 
 - [ONNX](https://onnx.ai/), using the .onnx file
 - [PaddlePaddle](https://www.paddlepaddle.org.cn/en), using .pdiparams and .pdmodel files
