@@ -223,7 +223,7 @@ class OvmsPythonModel:
         text_splitter = TEXT_SPLITERS[spliter_name](chunk_size=chunk_size, chunk_overlap=chunk_overlap)
         self.texts = text_splitter.split_documents(documents)
         self.db = Chroma.from_documents(self.texts, self.embedding)
-        vector_search_top_k = 6  # TODO: Param?
+        vector_search_top_k = 4  # TODO: Param?
         self.retriever = self.db.as_retriever(search_kwargs={"k": vector_search_top_k})
 
         print("Document database loaded")
@@ -244,7 +244,7 @@ class OvmsPythonModel:
             tokenizer=tok,
             max_new_tokens=256,
             streamer=streamer,
-            temperature=1.0,
+            temperature=0.1,
             do_sample=True,
             top_p=1.0,
             top_k=50,

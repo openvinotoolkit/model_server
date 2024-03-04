@@ -1,7 +1,7 @@
 --extra-index-url https://download.pytorch.org/whl/cpu 
 git+https://github.com/huggingface/optimum-intel.git
 # Optimum here is needed to download the model
-openvino>=2023.3.0
+openvino-nightly
 nncf>=2.8.0
 onnx
-transformers>=4.34.0
+transformers>=4.37.0

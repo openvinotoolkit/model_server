@@ -21,14 +21,8 @@ from servable_stream.config import SUPPORTED_EMBEDDING_MODELS, SUPPORTED_LLM_MOD
 from converter import converters
 
 from transformers import (
-    AutoModelForCausalLM,
     AutoModel,
     AutoTokenizer,
-    AutoConfig,
-    TextIteratorStreamer,
-    pipeline,
-    StoppingCriteria,
-    StoppingCriteriaList,
 )
 
 parser = argparse.ArgumentParser(description='Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot')
