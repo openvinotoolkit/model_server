@@ -76,17 +76,17 @@ whitelisted_dynamic_libraries = {
 libraries = {
     OvmsBaseImageType.COMMON: {
         'libazurestorage.so', 'libcpprest.so', 'libface_detection_cc_proto.so', 'libface_detection_options_registry.so',
-        'libgna.so', 'libinference_calculator_cc_proto.so', 'libinference_calculator_options_registry.so',
+        'libinference_calculator_cc_proto.so', 'libinference_calculator_options_registry.so',
         'libopencv_calib3d.so', 'libopencv_core.so', 'libopencv_features2d.so', 'libopencv_flann.so',
         'libopencv_highgui.so', 'libopencv_imgcodecs.so', 'libopencv_imgproc.so', 'libopencv_optflow.so',
         'libopencv_video.so', 'libopencv_videoio.so', 'libopencv_ximgproc.so', 'libopenvino.so',
-        'libopenvino_auto_batch_plugin.so', 'libopenvino_auto_plugin.so', 'libopenvino_c.so', 'libopenvino_gapi_preproc.so',
-        'libopenvino_hetero_plugin.so', 'libopenvino_intel_cpu_plugin.so', 'libopenvino_intel_gna_plugin.so',
+        'libopenvino_auto_batch_plugin.so', 'libopenvino_auto_plugin.so', 'libopenvino_c.so',
+        'libopenvino_hetero_plugin.so', 'libopenvino_intel_cpu_plugin.so',
         'libopenvino_intel_gpu_plugin.so', 'libopenvino_ir_frontend.so', 'libopenvino_onnx_frontend.so',
         'libopenvino_paddle_frontend.so', 'libopenvino_pytorch_frontend.so', 'libopenvino_tensorflow_frontend.so',
         'libopenvino_tensorflow_lite_frontend.so', 'libopenvino_tokenizers.so', 'libcore_tokenizers.so'
     },
-    OvmsBaseImageType.UBUNTU: set(),
+    OvmsBaseImageType.UBUNTU: {'libopenvino_intel_npu_plugin.so',},
     OvmsBaseImageType.UBUNTU20_PYTHON: set(),
     OvmsBaseImageType.UBUNTU22_PYTHON: set(),
     OvmsBaseImageType.REDHAT: {'libpugixml.so',},
