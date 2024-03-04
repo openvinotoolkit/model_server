@@ -22,23 +22,14 @@ universal-sentence-encoder-multilingual/
 
 ```
 
-## Optionally build OVMS with CPU extension library for sentencepiece_tokenizer layer
+## Use OpenVINO tokenizers library
 
-Model universal-sentence-encoder-multilingual includes a layer SentencepieceTokenizer which is not supported by OpenVINO at the moment. It can be however implemented using a [CPU extension](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/custom_operations/user_ie_extensions/tokenizer), which is a dynamic library performing the execution of the model layer.
-The layer SentencepieceTokenizer expects on the input a list of strings. The CPU extension replaces the input format to an array with UINT8 precision with a shape `[-1]`. It is serialized representation of the list of strings in a form or bytes. When this extension is deployed in OpenVINO Model Server, you don't need to worry about the serialization as it is handled internally. The model server accepts the input in a string format and performs the conversion to OpenVINO requirement transparently.
+Model universal-sentence-encoder-multilingual includes a layer SentencepieceTokenizer which is not supported by core OpenVINO at the moment. It can be however implemented using a [CPU extension](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/custom_operations/user_ie_extensions/tokenizer), which is a dynamic library performing the execution of the model layer.
 
-The image `openvino/model_server:2023.3` and newer includes ready to use OpenVINO Model Server with the CPU extension. It can be also built from source using the commands:
-
-```bash
-git clone https://github.com/openvinotoolkit/model_server
-cd model_server
-make docker_build OV_USE_BINARY=0
-cd ..
-
-```
+The image `openvino/model_server:2023.3` and newer includes ready to use OpenVINO Model Server with the CPU extension.
 
 ## Start the model server in a container
-When the new docker image is built, you can start the service with a command:
+You can start the service with a command:
 ```bash
 docker run -d --name ovms -p 9000:9000 -p 8000:8000 -v $(pwd)/universal-sentence-encoder-multilingual:/model openvino/model_server:latest --model_name usem --model_path /model --cpu_extension /ovms/lib/libopenvino_tokenizers.so --plugin_config '{"NUM_STREAMS": 1}' --port 9000 --rest_port 8000
 ```
