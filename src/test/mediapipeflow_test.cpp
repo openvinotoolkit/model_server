@@ -2872,7 +2872,15 @@ TEST(WhitelistRegistered, InputStreamHandlers) {
 }
 
 TEST(WhitelistRegistered, MediapipeCalculatorsList) {
-    std::unordered_set<std::string> expected({"AddHeaderCalculator",
+    std::unordered_set<std::string> expected({
+#if (PYTHON_DISABLE == 0)
+        // Expected when building with python
+        "CalculatorRunnerSinkCalculator",
+        "CalculatorRunnerSourceCalculator",
+        "PyTensorOvTensorConverterCalculator",
+        "PythonExecutorCalculator",
+#endif
+        "AddHeaderCalculator",
         "AddNumbersMultiInputsOutputsTestCalculator",
         "AddOne3CycleIterationsTestCalculator",
         "AddOneSingleStreamTestCalculator",
@@ -2898,8 +2906,6 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "BeginLoopUint64tCalculator",
         "BoxDetectorCalculator",
         "BoxTrackerCalculator",
-        "CalculatorRunnerSinkCalculator",
-        "CalculatorRunnerSourceCalculator",
         "CallbackCalculator",
         "CallbackPacketCalculator",
         "CallbackWithHeaderCalculator",
@@ -3054,8 +3060,6 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "PacketThinnerCalculator",
         "PassThroughCalculator",
         "PreviousLoopbackCalculator",
-        "PyTensorOvTensorConverterCalculator",
-        "PythonExecutorCalculator",
         "QuantizeFloatVectorCalculator",
         "RectToRenderDataCalculator",
         "RectToRenderScaleCalculator",
@@ -3118,7 +3122,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "VisibilitySmoothingCalculator",
         "WarpAffineCalculator",
         "WarpAffineCalculatorCpu",
-        "WorldLandmarkProjectionCalculator"});
+        "WorldLandmarkProjectionCalculator" });
 
     ASSERT_THAT(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), UnorderedElementsAreArray(expected)) << readableSetError(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), expected);
 }
