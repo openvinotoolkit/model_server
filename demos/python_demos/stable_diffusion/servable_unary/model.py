@@ -36,7 +36,8 @@ class OvmsPythonModel:
     def execute(self, inputs: list):
         print("Running execute")
         text = bytes(inputs[0]).decode()
-        image = self.pipe(text).images[0]
+        pipe_exec = self.pipe.clone()
+        image = pipe_exec(text).images[0]
         output = io.BytesIO()
         image.save(output, format='PNG')
         return [Tensor("image", output.getvalue())]

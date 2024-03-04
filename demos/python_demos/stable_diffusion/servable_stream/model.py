@@ -35,6 +35,7 @@ class OvmsPythonModel:
 
     def execute(self, inputs: list):
         print("Running execute")
+        pipe_exec = self.pipe.clone()
         text = bytes(inputs[0]).decode()
 
         q = Queue()
@@ -46,7 +47,7 @@ class OvmsPythonModel:
                 image = np.concatenate(
                     [self.pipe.vae_decoder(latent_sample=latents[i : i + 1])[0] for i in range(latents.shape[0])]
                 )
-                pil_images = self.pipe.image_processor.postprocess(image, output_type='pil', do_denormalize=[True])
+                pil_images = pipe_exec.image_processor.postprocess(image, output_type='pil', do_denormalize=[True])
                 pil_image = pil_images[0]
                 output = io.BytesIO()
                 pil_image.save(output, format='PNG')
@@ -54,7 +55,7 @@ class OvmsPythonModel:
                 print('end callback')
 
             print('generating for prompt:', text)
-            image = self.pipe(
+            image = pipe_exec(
                 text,
                 num_inference_steps=50,
                 callback=callback_on_step_end_impl,

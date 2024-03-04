@@ -10,14 +10,16 @@ Here we present two scenarios:
 
 ## Build image
 
-From the root of the repository run:
+Building the image with all required python dependencies is required. Follow the commands:
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image
+make python_image OVMS_CPP_DOCKER_IMAGE=openvino/model_server:latest-gpu
 ```
-It will create an image called `openvino/model_server:py`.
+It will create an image called `openvino/model_server:py`
+
+> **NOTE** To use the model server compiled from the latest `main` branch, build the base image using the command `make release_image RUN_TESTS=0 GPU=1` and update the parameter `OVMS_CPP_DOCKER_IMAGE` to the generated image name.
 
 ## Download models
 

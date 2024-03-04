@@ -30,7 +30,8 @@ class OvmsPythonModel:
 
     def execute(self, inputs: list):
         text = bytes(inputs[0]).decode()
-        results = self.pipe(text)
+        pipe_exec = self.pipe.clone()
+        results = pipe_exec(text)
         translation = results[0]["translation_text"]
         return [Tensor("translation", translation.encode())]
 
