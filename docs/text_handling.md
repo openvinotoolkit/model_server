@@ -18,7 +18,7 @@ The extension performs tokenization operation for the string data type.
 A demonstration of such use case is in the MUSE model which can be imported directly but the models server. The client can send the text data without any preprocessing and take advantage of much faster execution time.
 Check the [MUSE demo](../demos/universal-sentence-encoder/README.md).
 
-## DAG pipeline to delegate tokenization to the server
+## DAG pipeline to delegate tokenization to the server (deprecated)
 When the model is using tokens on input or output, you can create a DAG pipeline which include custom nodes performing pre and post processing.
 OpenVINO Model Server can accept the text data format on the gRPC and REST API interface and deserializes it to the 2D array of bytes, where each row represents single, null terminated sentence, padded with `\0` aligned to longest batch.
 
