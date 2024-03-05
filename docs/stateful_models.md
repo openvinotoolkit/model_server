@@ -305,7 +305,7 @@ If set to `true` sequence cleaner will check that model. Otherwise, sequence cle
 There are limitations for using stateful models with OVMS:
 
  - Support inference execution only using CPU as the target device.
- - Support Kaldi models with memory layers and non-Kaldi models with Tensor Iterator. See this [docs about stateful networks](https://docs.openvino.ai/2024/openvino_docs_OV_UG_model_state_intro.html) to learn about stateful networks representation in OpenVINO.
+ - Support Kaldi models with memory layers and non-Kaldi models with Tensor Iterator. See this [docs about stateful networks](https://docs.openvino.ai/2024/openvino-workflow/running-inference/stateful-models.html) to learn about stateful networks representation in OpenVINO.
  - [Auto batch size and shape](shape_batch_size_and_layout.md) are **not** available in stateful models.
  - Stateful model instances **cannot** be used in [DAGs](dag_scheduler.md).
  - Requests ordering is guaranteed only when a single client sends subsequent requests in a synchronous manner. Concurrent interaction with the same sequence might negatively affect the accuracy of the results.
