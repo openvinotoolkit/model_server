@@ -71,7 +71,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -v
 | `stateful` | `bool` | If set to true, model is loaded as stateful. | false |
 | `idle_sequence_cleanup` | `bool` | If set to true, model will be subject to periodic sequence cleaner scans. <br> See [idle sequence cleanup](#stateful_cleanup). | true |
 | `max_sequence_number` | `uint32` | Determines how many sequences can be  handled concurrently by a model instance. | 500 |
-| `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvino.ai/2024/openvino_docs_OV_UG_model_state_intro.html#lowlatency-transformations) on model load. | false |
+| `low_latency_transformation` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvino.ai/2024/openvino-workflow/running-inference/stateful-models.html) on model load. | false |
 
 **Note:** Setting `idle_sequence_cleanup`, `max_sequence_number` and `low_latency_transformation` require setting `stateful` to true.
 
