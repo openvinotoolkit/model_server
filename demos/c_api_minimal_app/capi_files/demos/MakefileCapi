@@ -15,7 +15,7 @@
 #
 cpp:
 	mkdir -vp /ovms/bin
-	g++ main_capi.cpp -I/ovms/include -L/ovms/lib -lovms_shared -lssl -lcrypto -fPIC --std=c++17 -o /ovms/bin/capi_cpp_example
+	g++ main_capi.cpp -I/ovms/include -L/ovms/lib -lovms_shared -fPIC --std=c++17 -o /ovms/bin/capi_cpp_example
 	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/lib /ovms/bin/capi_cpp_example
 
 c:

@@ -62,8 +62,7 @@ build_image:
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG) \
-		--no-cache
+		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG)
 
 all_web: clean from_web build_image
 	
