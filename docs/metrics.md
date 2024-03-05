@@ -222,6 +222,10 @@ DAG metrics
 The remaining metrics track the execution for the individual models in the pipeline separately.
 It means that each request to the DAG pipeline will update also the metrics for all individual models used as the execution nodes.
 
+## Metrics implementation for MediaPipe Graphs
+
+For [MediaPipe Graphs](./mediapipe.md) metrics endpoint is not supported.
+
 ## Visualize with Grafana
 
 With server metrics being scraped by [Prometheus](https://prometheus.io/) it is possible to integrate [Grafana](https://grafana.com/) to visualize them on the dashboards. Once you have Grafana configured with Prometheus as a data source, you can create your own dashboard or import one. 
