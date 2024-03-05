@@ -14,7 +14,7 @@ ovms_docs_demo_tensorflow_conversion
 
 For images, to reduce data size and lower bandwidth usage you can send them in binary-encoded instead of array-like format. How you can do it, depends on the kind of servable.   
 
-**Single Models**:
+**Single Models and DAG Pipelines**:
 
 While OpenVINO models don't have the ability to process images directly in their binary format, the model server can accept them and convert
 automatically from JPEG/PNG to OpenVINO friendly format using built-in [OpenCV](https://opencv.org/) library. To take advantage of this feature, there are two requirements:
@@ -24,10 +24,6 @@ automatically from JPEG/PNG to OpenVINO friendly format using built-in [OpenCV](
       - [KServe API](./binary_input_kfs.md)
 
 It's worth noting that with KServe API, you can also send raw data with or without image encoding via REST API. This makes KServe REST API more performant choice comparing to json format in TFS API. The guide linked above explains how to work with both regular data in binary format as well as JPEG/PNG encoded images. 
-
-**DAG Pipelines**:
-
-When serving DAG Pipeline it is possible to configure it to accept binary encoded images. You can do it, by creating a [custom node](./custom_node_development.md) that would implement image decoding and setting it as the pipeline entry. 
 
 **MediaPipe Graphs**:
 
