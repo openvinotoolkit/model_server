@@ -63,7 +63,7 @@ Date: Tue, 09 Aug 2022 09:22:14 GMT
 Content-Length: 2
 ```
 
-See also [code samples](https://github.com/openvinotoolkit/model_server/tree/releases/2024/0/ses/2024/0/client/python/kserve-api/samples) for getting server readiness with KServe API on HTTP Server Ready endpoint.
+See also [code samples](https://github.com/openvinotoolkit/model_server/tree/releases/2024/0/client/python/kserve-api/samples) for getting server readiness with KServe API on HTTP Server Ready endpoint.
 
 ## Server Metadata API <a name="kfs-server-metadata"></a>
 **Description**
