@@ -14,7 +14,7 @@
 # limitations under the License.
 #*****************************************************************************
 
-# Based on: https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
+# Based on: https://github.com/openvinotoolkit/openvino_notebooks/blob/releases/2024/0/notebooks/254-llm-chatbot
 
 from functools import wraps
 import torch

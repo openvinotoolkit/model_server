@@ -20,7 +20,7 @@ from servable_stream.config import SUPPORTED_LLM_MODELS
 
 import argparse
 
-parser = argparse.ArgumentParser(description='Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot')
+parser = argparse.ArgumentParser(description='Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/releases/2024/0/notebooks/254-llm-chatbot')
 
 supported_models_list = []
 for key, _ in SUPPORTED_LLM_MODELS.items() :
