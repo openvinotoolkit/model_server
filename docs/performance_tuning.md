@@ -44,7 +44,7 @@ docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render*
 
 #### LATENCY
 This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
-Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/2024/openvino_docs_OV_UG_Performance_Hints.html#performance-hints-how-it-works).
+Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/2024/openvino-workflow/running-inference/optimize-inference/high-level-performance-hints.html#performance-hints-how-it-works).
 
 To enable Performance Hints for your application, use the following command:
 
@@ -183,7 +183,7 @@ docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 
 ## Analyzing performance issues
 
 Recommended steps to investigate achievable performance and discover bottlenecks:
-1. [Launch OV benchmark app](https://docs.openvino.ai/2024/openvino_sample_benchmark_tool.html)
+1. [Launch OV benchmark app](https://docs.openvino.ai/2024/learn-openvino/openvino-samples/benchmark-tool.html)
 
       **Note:** It is useful to drop plugin configuration from benchmark app using `-dump_config` and then use the same plugin configuration in model loaded into OVMS
 
