@@ -10,7 +10,7 @@ When the model server is configured to serve python script (via MediaPipe Graph 
 
 ## Serving a model with a string in input layer
 
-Some AI model training frameworks support the layers accepting the string format on the input or output. They include the layers performing the tokenization operations inside the neural network.
+Some AI models support the layers with string format on the input or output. They include the layers performing the tokenization operations inside the neural network.
 While core OpenVINO does not contain the layers accepting string data type, it is possible to extend it with a CPU extension.
 Model Server includes a built-in extension for wide list of custom [tokenizers and detokenizers](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/custom_operations/user_ie_extensions/tokenizer) layers.
 The extension enables accepting OpenVINO tensors of type `ov::element::Type_t::string` and performing tokenization. The server creates string tensor out of KServe/TensorflowServing API strings automatically.
