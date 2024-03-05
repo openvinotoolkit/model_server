@@ -4,7 +4,7 @@ OpenVINO Model Server can now greatly simplify writing the applications with Nat
 
 We addressed both the situation when the original model requires tokens on input or output and there is added support for models with embedded tokenization layer. Below are demonstrated use cases with a simple client application sending and receiving text in a string format. Whole complexity of the text conversion is fully delegated to the remote serving endpoint.
 
-## Accepting strings by serving Python script
+## Serving a MediaPipe graph with strings processing via a python node
 
 When the model server is configured to serve python script (via MediaPipe Graph with PythonExecutorCalculator), it is possible to communicate via arbitrary format including string or list of strings. Refer to full [Python execution documentation](python_support/reference.md) or end-to-end [LLM text generation demo](../demos/python_demos/llm_text_generation/README.md).
 
