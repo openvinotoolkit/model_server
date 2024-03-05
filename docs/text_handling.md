@@ -8,7 +8,7 @@ We addressed both the situation when the original model requires tokens on input
 
 When the model server is configured to serve python script (via MediaPipe Graph with PythonExecutorCalculator), it is possible to communicate via arbitrary format including string or list of strings. Refer to full [Python execution documentation](python_support/reference.md) or end-to-end [LLM text generation demo](../demos/python_demos/llm_text_generation/README.md).
 
-## Custom CPU Extension (Custom Operations) for tokenization via OpenVINO model
+## Serving a model with a string in input layer
 
 Some AI model training frameworks support the layers accepting the string format on the input or output. They include the layers performing the tokenization operations inside the neural network.
 While core OpenVINO does not contain the layers accepting string data type, it is possible to extend it with a CPU extension.
