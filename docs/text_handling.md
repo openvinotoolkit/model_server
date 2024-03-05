@@ -4,8 +4,21 @@ OpenVINO Model Server can now greatly simplify writing the applications with Nat
 
 We addressed both the situation when the original model requires tokens on input or output and there is added support for models with embedded tokenization layer. Below are demonstrated use cases with a simple client application sending and receiving text in a string format. Whole complexity of the text conversion is fully delegated to the remote serving endpoint.
 
+## Serving a MediaPipe graph with strings processing via a python node
 
-## DAG pipeline to delegate tokenization to the server
+When the model server is configured to serve python script (via MediaPipe Graph with PythonExecutorCalculator), it is possible to send a string or a list of strings. Refer to full [Python execution documentation](python_support/reference.md) or end-to-end [LLM text generation demo](../demos/python_demos/llm_text_generation/README.md).
+
+## Serving a model with a string in input layer
+
+Some AI models support the layers with string format on the input or output. They include the layers performing the tokenization operations inside the neural network.
+OpenVINO supports such layers with string data type using a CPU extension.
+Model Server includes a built-in extension for wide list of custom [tokenizers and detokenizers](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/custom_operations/user_ie_extensions/tokenizer) layers.
+The extension performs tokenization operation for the string data type. 
+
+A demonstration of such use case is in the MUSE model which can be imported directly but the models server. The client can send the text data without any preprocessing and take advantage of much faster execution time.
+Check the [MUSE demo](../demos/universal-sentence-encoder/README.md).
+
+## DAG pipeline to delegate tokenization to the server (deprecated)
 When the model is using tokens on input or output, you can create a DAG pipeline which include custom nodes performing pre and post processing.
 OpenVINO Model Server can accept the text data format on the gRPC and REST API interface and deserializes it to the 2D array of bytes, where each row represents single, null terminated sentence, padded with `\0` aligned to longest batch.
 
@@ -24,17 +37,3 @@ Similarly, a custom node can perform string detokenization and return a string t
 Check the [end-to-end demonstration](../demos/gptj_causal_lm/python/README.md) of such use case with GPT based text generation.
 
 The client API snippets with string data format are included in [KServe API](./clients_kfs.md) and [TFS API](./clients_tfs.md).
-
-
-## Custom CPU extension for tokenization layer in the model
-
-Some AI model training frameworks supports the layers accepting the string format on the input or output. They include the layers performing the tokenization operations inside the neural network.
-While OpenVINO doesn't support natively string data type, it is possible to extend the capabilities with a CPU extension.
-We included in the model server a built-in extension for [SentencepieceTokenizer](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/custom_operations) layer from TensorFlow.
-The extension is capable of converting 1D U8 OpenVINO tensor into appropriate format for [SentencepieceTokenizer]. OVMS is able to detect such layer and create 1D U8 tensor out of KServe/TensorflowServing API strings automatically.
-
-A demonstration of such use case is in the MUSE model which can be imported directly but the models server. The client can send the text data without any preprocessing and take advantage of much faster execution time.
-Check the [MUSE demo](../demos/universal-sentence-encoder/README.md).
-
-
-
