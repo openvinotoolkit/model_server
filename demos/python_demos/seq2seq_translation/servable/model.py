@@ -17,7 +17,6 @@
 from pyovms import Tensor
 from optimum.intel import OVModelForSeq2SeqLM
 from transformers import AutoTokenizer, pipeline
-import time
 
 class OvmsPythonModel:
 
@@ -30,8 +29,8 @@ class OvmsPythonModel:
 
     def execute(self, inputs: list):
         text = bytes(inputs[0]).decode()
-        pipe_exec = self.pipe.clone()
-        results = pipe_exec(text)
+        results = self.pipe(text)
         translation = results[0]["translation_text"]
         return [Tensor("translation", translation.encode())]
+
 

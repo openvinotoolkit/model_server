@@ -7,7 +7,7 @@ Building the image with all required python dependencies is required. Follow the
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image OVMS_CPP_DOCKER_IMAGE=openvino/model_server:latest-gpu
+make python_image OVMS_CPP_DOCKER_IMAGE=openvino/model_server OVMS_CPP_IMAGE_TAG=latest-gpu
 ```
 It will create an image called `openvino/model_server:py`
 
