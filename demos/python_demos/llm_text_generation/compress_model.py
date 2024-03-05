@@ -29,7 +29,7 @@ from servable_stream.config import SUPPORTED_LLM_MODELS
 import argparse
 nncf.set_log_level(logging.ERROR)
 
-parser = argparse.ArgumentParser(description='Script to compress LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot')
+parser = argparse.ArgumentParser(description='Script to compress LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/releases/2024/0/notebooks/254-llm-chatbot')
 
 supported_models_list = []
 for model in SUPPORTED_LLM_MODELS :

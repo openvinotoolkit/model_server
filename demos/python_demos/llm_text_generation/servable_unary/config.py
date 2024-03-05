@@ -15,7 +15,7 @@
 #*****************************************************************************
 
 # This entire file is for customization depending on the LLM model.
-# More info: https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot/config.py
+# More info: https://github.com/openvinotoolkit/openvino_notebooks/blob/releases/2024/0/notebooks/254-llm-chatbot/config.py
 
 from transformers import (
     StoppingCriteria,

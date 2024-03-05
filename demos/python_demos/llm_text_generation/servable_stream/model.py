@@ -83,7 +83,7 @@ if stop_tokens is not None:
 
 # For multi Q&A use cases
 # Taken from notebook:
-# https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot/
+# https://github.com/openvinotoolkit/openvino_notebooks/blob/releases/2024/0/notebooks/254-llm-chatbot/
 def convert_history_to_text(history):
     """
     function for conversion history stored as list pairs of user and assistant messages to string according to model expected conversation template

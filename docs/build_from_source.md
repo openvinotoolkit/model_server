@@ -196,4 +196,4 @@ dist/ubuntu
 ```
 
 
-Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/main/docs/developer_guide.md).
+Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/releases/2024/0/docs/developer_guide.md).
