@@ -510,7 +510,7 @@ RUN     apt-get update -y ; \
             curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.1.0/intel-driver-compiler-npu_1.1.0.20231117-6904283384_ubuntu22.04_amd64.deb ; \
             curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.1.0/intel-fw-npu_1.1.0.20231117-6904283384_ubuntu22.04_amd64.deb ; \
             curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.1.0/intel-level-zero-npu_1.1.0.20231117-6904283384_ubuntu22.04_amd64.deb ; \
-            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.10.0/level-zero_1.10.0+u22.04_amd64.deb ; \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.12.0/level-zero_1.12.0+u22.04_amd64.deb ; \
             dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
         fi ; \
         apt-get clean ; \
