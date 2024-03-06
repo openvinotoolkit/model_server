@@ -87,13 +87,7 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
 ::::{tab-set}
 :::{tab-item} Ubuntu 20.04
 :sync: ubuntu-20-04
-Download precompiled package:
-
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu20.tar.gz
-```
-
-or build it yourself:
+Build the binary:
 
 ```{code} sh
 # Clone the model server repository
@@ -116,7 +110,7 @@ sudo apt update -y && apt install -y libpugixml1v5 libtbb2
 Download precompiled package:
 
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.0/ovms_ubuntu22.tar.gz
 ```
 
 or build it yourself:
@@ -142,7 +136,7 @@ sudo apt update -y && apt install -y libpugixml1v5 libtbb12
 Download precompiled package:
 
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2023.1/ovms_redhat.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.0/ovms_redhat.tar.gz
 ```
 
 or build it yourself:
