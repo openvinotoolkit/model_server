@@ -1,6 +1,6 @@
 # Dynamic Batch Size with Automatic Model Reloading{#ovms_docs_dynamic_bs_auto_reload}
 
-*NOTE*: This feature is deprecated. Use [model dynamic shapes instead](https://docs.openvino.ai/2023.3/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model).
+*NOTE*: This feature is deprecated. Use [model dynamic shapes instead](https://docs.openvino.ai/2024/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model).
 
 ## Introduction
 This guide shows how to configure a model to accept input data with different batch sizes. In this example, it is done by reloading the model with a new batch size each time a request is received with a batch size different than what is currently set. 

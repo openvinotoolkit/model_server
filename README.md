@@ -29,7 +29,7 @@ Read [release notes](https://github.com/openvinotoolkit/model_server/releases) t
 - [Directed Acyclic Graph Scheduler](https://docs.openvino.ai/nightly/ovms_docs_dag.html) along with [custom nodes in DAG pipelines](https://docs.openvino.ai/nightly/ovms_docs_custom_node_development.html)
 - [Metrics](https://docs.openvino.ai/nightly/ovms_docs_metrics.html) - metrics compatible with Prometheus standard
 - Support for multiple frameworks, such as TensorFlow, PaddlePaddle and ONNX
-- Support for [AI accelerators](https://docs.openvino.ai/nightly/openvino_docs_OV_UG_supported_plugins_Supported_Devices.html)
+- Support for [AI accelerators](https://docs.openvino.ai/nightly/about-openvino/compatibility-and-support/supported-devices.html)
 
 **Note:** OVMS has been tested on RedHat, and Ubuntu. The latest publicly released docker images are based on Ubuntu and UBI.
 They are stored in:
