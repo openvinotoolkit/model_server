@@ -25,7 +25,7 @@ In the demo will be used two gRPC communication patterns which might be advantag
 ## Requirements
 - on the client side it could be Windows, Mac or Linux. FFMPEG should be preinstalled in order to follow the scenario with RTSP client. Python3.7+ is needed.
 - the server can be deployed on Linux, MacOS (only with CPU execution on x86_64 arch) or inside WSL on Windows operating system.
-- images sent over gRPC are not encoded, so there should be good network connectivity between the client and the server. At least 100Mb/s for realtime video analysis at high rate.
+- images sent over gRPC are not encoded, so there should be good network connectivity between the client and the server. At least 100Mb/s for real-time video analysis at high rate.
 
 ## gRPC streaming with MediaPipe graphs
 

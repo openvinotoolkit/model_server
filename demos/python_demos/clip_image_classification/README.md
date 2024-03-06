@@ -3,7 +3,7 @@
 Image classification demo using multi-modal CLIP model for inference and [Python code](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html) for pre and postprocessing.
 The client sends request with an image and input labels to the graph and receives the label with the highest probability. The preprocessing python node is executed first and prepares inputs vector based on user inputs from the request. Then inputs are used to get similarity matrix from inference on the CLIP model. After that postprocessing python node is executed and extracts the label with highest score among the input labels and sends it back to the user.
 
-Demo is based on this [CLIP notebook](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-convert.ipynb)
+Demo is based on this [CLIP notebook](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-classification.ipynb)
 
 
 The picture below shows the execution flow in the graph.
@@ -42,7 +42,7 @@ Prerequisites:
 -  image of OVMS with Python support and Optimum installed
 
 Mount the `./servable` which contains:
-- `postprocess.py` and `preprocess.py` - python scripts which are required for execution and use of [CLIP](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-convert.ipynb) model
+- `postprocess.py` and `preprocess.py` - python scripts which are required for execution and use of [CLIP](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-classification.ipynb) model
 - `config.json` - which defines which servables should be loaded
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculators
 
