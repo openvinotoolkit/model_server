@@ -9,6 +9,7 @@ from pyovms import Tensor
 
 from threading import Thread
 
+from huggingface_hub import login
 from tritonclient.utils import deserialize_bytes_tensor, serialize_byte_tensor
 from langchain_community.llms import HuggingFacePipeline
 from optimum.intel.openvino import OVModelForCausalLM
@@ -28,6 +29,10 @@ from transformers import (
 from config import SUPPORTED_EMBEDDING_MODELS, SUPPORTED_LLM_MODELS
 from ov_embedding_model import OVEmbeddings
 
+HF_TOKEN = os.environ.get('HF_TOKEN')
+if HF_TOKEN:
+    login(token=HF_TOKEN)
+
 SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
 llm_model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
 
@@ -38,8 +43,7 @@ llm_model_dir = "/llm_model"
 model_name = llm_model_configuration["model_id"]
 stop_tokens = llm_model_configuration.get("stop_tokens")
 class_key = SELECTED_MODEL.split("-")[0]
-#tok = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)  # TODO: Get tokenizer offline?
-tok = AutoTokenizer.from_pretrained(llm_model_dir, trust_remote_code=True)  # TODO: Get tokenizer offline?
+tok = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)  # Get tokenizer online
 
 embedding_model_dir = "/embed_model"
 
@@ -60,6 +64,7 @@ if stop_tokens is not None:
         stop_tokens = tok.convert_tokens_to_ids(stop_tokens)
     stop_tokens = [StopOnTokens(stop_tokens)]
 
+from ov_llm_model import model_classes
 model_class = (
     OVModelForCausalLM
     if not llm_model_configuration["remote"]
@@ -67,6 +72,7 @@ model_class = (
 )
 
 ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
+
 
 # Document Splitter
 from typing import List
@@ -238,17 +244,17 @@ class OvmsPythonModel:
 
         ov_model_exec = self.ov_model.clone()
         streamer = TextIteratorStreamer(
-            tok, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
+            tok, timeout=60.0, skip_prompt=True, skip_special_tokens=True)
         generate_kwargs = dict(
             model=ov_model_exec,
             tokenizer=tok,
             max_new_tokens=256,
-            streamer=streamer,
             temperature=0.1,
             do_sample=True,
             top_p=1.0,
             top_k=50,
             repetition_penalty=1.1,
+            streamer=streamer,
         )
         if stop_tokens is not None:
             generate_kwargs["stopping_criteria"] = StoppingCriteriaList(stop_tokens)
@@ -256,7 +262,7 @@ class OvmsPythonModel:
         pipe = pipeline("text-generation", **generate_kwargs)
         llm = HuggingFacePipeline(pipeline=pipe)
 
-        prompt = PromptTemplate.from_template(llm_model_configuration["prompt_template"])
+        prompt = PromptTemplate.from_template(llm_model_configuration["rag_prompt_template"])
         chain_type_kwargs = {"prompt": prompt}
         rag_chain = RetrievalQA.from_chain_type(
             llm=llm,
@@ -267,7 +273,7 @@ class OvmsPythonModel:
 
         question = prompts[0]
         def infer():
-            rag_chain.run(question)
+            rag_chain.invoke(question)
         t1 = Thread(target=infer)
         t1.start()
 

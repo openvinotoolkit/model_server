@@ -131,9 +131,9 @@ Mount the servable directory which contains:
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculator
 
 ```bash
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/llm_model \
+docker run -it --rm -p 9099:9099 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/llm_model \
 -v ${PWD}/all-mpnet-base-v2:/embed_model -v ${PWD}/documents:/documents -e SELECTED_MODEL=${SELECTED_MODEL} \
-registry.connect.redhat.com/intel/openvino-model-server:py --config_path /workspace/config.json --port 9000
+dk_py --config_path /workspace/config.json --port 9099
 ```
 
 You may deploy the compressed model(s) by simply changing the model path mounted to the container. For example, to deploy the 8-bit weight compressed model:

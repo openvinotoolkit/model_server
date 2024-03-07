@@ -26,7 +26,7 @@ class OvmsStreamer:
     def __init__(self, server_name, server_port):
         self.server_name = server_name
         self.server_port = server_port
-        self.client = grpcclient.InferenceServerClient(f"{server_name}:{server_port}", channel_args=channel_args)
+        self.client = grpcclient.InferenceServerClient(f"{server_name}:{server_port}", channel_args=channel_args, verbose=False)
         self.result_queue = queue.Queue()
 
     def request_async(self, question):

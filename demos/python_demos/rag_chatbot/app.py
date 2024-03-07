@@ -20,7 +20,8 @@ def callback(message, history):
     streamer.request_async(message)
     result = ""
     for completion in streamer:
+        print(completion, end='', flush=True)
         result += completion
         yield result
 
-gr.ChatInterface(callback, concurrency_limit=None).launch(server_name=args.web_url.split(':')[0], server_port=int(args.web_url.split(':')[1]))
+gr.ChatInterface(callback).queue().launch(server_name=args.web_url.split(':')[0], server_port=int(args.web_url.split(':')[1]))
