@@ -473,6 +473,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         }
 
         auto formatIt = datatypeToBufferFormat.find(requestInputItr->datatype());
+        SPDLOG_DEBUG("Converting datatype {} to datatype {} for tensor {}", requestInputItr->datatype(), formatIt != datatypeToBufferFormat.end() ? formatIt : requestInputItr->datatype(), requestedName);
         if (formatIt != datatypeToBufferFormat.end()) {
             // If datatype is known, we check if a valid buffer can be created with provided data
             size_t itemsize = bufferFormatToItemsize.at(formatIt->second);
