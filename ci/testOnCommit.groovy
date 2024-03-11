@@ -70,7 +70,7 @@ pipeline {
                 script {
                   dir ('tests'){ 
                     checkout scmGit(
-                    branches: [[name: 'develop']],
+                    branches: [[name: 'CVS-133486_docker_address_already_in_use_fix ']],
                     userRemoteConfigs: [[credentialsId: 'workflow-lab',
                     url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh 'pwd'
