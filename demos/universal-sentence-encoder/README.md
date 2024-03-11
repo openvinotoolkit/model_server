@@ -51,7 +51,12 @@ predict_request.inputs["input_name"].CopyFrom(make_tensor_proto(data))
 predict_response = prediction_service_stub.Predict(predict_request, 10.0)
 ```
 
-Here is a basic client execution :
+Clone the repo:
+```bash
+git clone https://github.com/openvinotoolkit/model_server
+```
+
+Here is a basic client execution:
 ```bash
 pip install --upgrade pip
 pip install -r model_server/demos/universal-sentence-encoder/requirements.txt
