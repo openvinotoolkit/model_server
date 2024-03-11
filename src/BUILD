@@ -1177,6 +1177,8 @@ cc_test(
         "test/mediapipe/relative_paths/graph2/subconfig.json",
         "test/mediapipe/relative_paths/graph2/graphadd.pbtxt",
         "test/mediapipe/python/scripts/bad_execute_read_more_than_one_input.py",
+        "test/mediapipe/python/scripts/bad_execute_no_method.py",
+        "test/mediapipe/python/scripts/bad_missing_class.py",
         "test/mediapipe/python/scripts/symmetric_increment.py",
         "test/mediapipe/python/scripts/symmetric_increment_by_2.py",
         "test/mediapipe/python/scripts/single_io_increment.py",
