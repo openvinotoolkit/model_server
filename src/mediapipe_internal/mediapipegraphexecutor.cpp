@@ -456,7 +456,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             case ov::element::Type_t::undefined:
             case ov::element::Type_t::dynamic:
             default:
-                return ovms::Status(ovms::StatusCode::NOT_IMPLEMENTED, "There is no support for types different than fp32, i32, i8, u8, bool");
+                return ovms::Status(ovms::StatusCode::NOT_IMPLEMENTED, "There is no support for types different than fp32, i64, i32, i16, i8, u64, u32, u16, u8, bool");
             }
         }
     }
@@ -516,7 +516,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto requestInputItr = request.inputs().begin();
     OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, requestedName, request));
     auto inputIndex = requestInputItr - request.inputs().begin();
-    auto& bufferLocation = request.raw_input_contents().at(inputIndex);  // TODO
+    auto& bufferLocation = request.raw_input_contents().at(inputIndex);  // TODO probably doesn't make sense to handle input.content()
 
     if (requestInputItr->shape().size() != 3) {
         std::stringstream ss;
@@ -551,7 +551,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     }
     size_t elementSize = KFSDataTypeSize(requestInputItr->datatype());
     size_t expectedSize = numberOfChannels * numberOfCols * numberOfRows * elementSize;
-    if (bufferLocation.size() != expectedSize) {  // TODO FIXME probably doesn't make sense to support since image shoudl be continuous
+    if (bufferLocation.size() != expectedSize) {  // TODO FIXME probably doesn't make sense to support since image should be continuous
         std::stringstream ss;
         ss << "Invalid Mediapipe Image input buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedSize;
         const std::string details = ss.str();
@@ -584,7 +584,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         return status;
     }
     auto inputIndex = requestInputItr - request.inputs().begin();
-    auto& bufferLocation = request.raw_input_contents().at(inputIndex);  // TODO
+    auto& bufferLocation = request.raw_input_contents().at(inputIndex);  // TODO for python we would need separate createOVMSPyTensor and then copy value by value?
     try {
         std::vector<py::ssize_t> shape;
         for (int i = 0; i < requestInputItr->shape().size(); i++) {
@@ -705,7 +705,8 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
     }
     SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
-    // TODO FIXME
+    // TODO FIXME tests
+    // we should check for coherency (all inpyts in one place or other) and then validate for below
     /*
     if (request->raw_input_contents().size() == 0) {  // TODO
         const std::string details = "Invalid message structure - raw_input_content is empty";

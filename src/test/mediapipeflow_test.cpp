@@ -2859,20 +2859,25 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
     // OK to replace with MP internal? basically we are checking if it doesnt crash. We don't have a model/ calc for each of the types
     // could be improved iwht using passthrough calc
     {typeid(float), {ovms::Precision::FP32, ovms::StatusCode::OK}},
-    {typeid(uint64_t), {ovms::Precision::U64, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
-    {typeid(uint32_t), {ovms::Precision::U32, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
-    {typeid(uint16_t), {ovms::Precision::U16, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
-    {typeid(uint8_t), {ovms::Precision::U8, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
-    {typeid(int64_t), {ovms::Precision::I64, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
-    {typeid(int32_t), {ovms::Precision::I32, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
-    {typeid(int16_t), {ovms::Precision::I16, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
-    {typeid(int8_t), {ovms::Precision::I8, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
-    {typeid(bool), {ovms::Precision::BOOL, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
-    {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}},
+    {typeid(uint64_t), {ovms::Precision::U64, ovms::StatusCode::OK}},
+    {typeid(uint32_t), {ovms::Precision::U32, ovms::StatusCode::OK}},
+    {typeid(uint16_t), {ovms::Precision::U16, ovms::StatusCode::OK}},
+    {typeid(uint8_t), {ovms::Precision::U8, ovms::StatusCode::OK}},
+    {typeid(int64_t), {ovms::Precision::I64, ovms::StatusCode::OK}},
+    {typeid(int32_t), {ovms::Precision::I32, ovms::StatusCode::OK}},
+    {typeid(int16_t), {ovms::Precision::I16, ovms::StatusCode::OK}},
+    {typeid(int8_t), {ovms::Precision::I8, ovms::StatusCode::OK}},
+    {typeid(bool), {ovms::Precision::BOOL, ovms::StatusCode::OK}},
+    {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::OK}},
     {typeid(void), {ovms::Precision::BIN, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}}};
 
 // TODO bool needs spearate handling due to special std::vector<bool> ...
-typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t, char> InferInputTensorContentsTypesToTest;  // TODO add all kfs relevant
+// * add test when input content size is incorrect
+// * add test for all deserialization/serialization types - probably changing TYPES with PassThrough calculator should suffice
+//   so we would need 3 tests like one below with differebt pbtxt(tags) & expected status list
+//   (ov tensor, mp image, tf tensor, ov tensors?, mp tensors? tf tensors?, tflite tensor/s?, mpimage)
+//   defining that for specific type fails is expected or it should pass and not crash/leak
+typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t, bool> InferInputTensorContentsTypesToTest;  // TODO add all kfs relevant bool
 TYPED_TEST_SUITE(KFSss, InferInputTensorContentsTypesToTest);
 TYPED_TEST(KFSss, OVTensorCheckExpectedStatusCode) {
     std::string configFilePath = "config.json";
@@ -2888,7 +2893,7 @@ TYPED_TEST(KFSss, OVTensorCheckExpectedStatusCode) {
     "mediapipe_config_list": [
     {
         "name":"mediapipeDummy",
-        "graph_path": "/ovms/src/test/mediapipe/graphdummyadapterfull.pbtxt"
+        "graph_path": "/ovms/src/test/mediapipe/graphpassthrough.pbtxt"
     }
     ]
 }
