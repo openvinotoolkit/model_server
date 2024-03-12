@@ -65,7 +65,7 @@ start_message = model_configuration["start_message"]
 stop_tokens = model_configuration.get("stop_tokens")
 tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
-tokenizer.pad_token = tokenizer.eos_token  # Workaround for models with tokenizer with uninitialized pad token
+tokenizer.pad_token = tokenizer.eos_token  # For models with tokenizer with uninitialized pad token
 
 # HF class that is capable of stopping the generation
 # when given tokens appear in specific order

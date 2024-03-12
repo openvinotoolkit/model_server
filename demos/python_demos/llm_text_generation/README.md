@@ -79,11 +79,11 @@ Running this script will create new directories with compressed versions of the 
 The compressed models can be used in place of the original as they have compatible inputs and outputs.
 
 ```bash
-ls  -1 | grep tiny-llama-1b-chat
-tiny-llama-1b-chat
-tiny-llama-1b-chat_FP16
-tiny-llama-1b-chat_INT4_compressed_weights
-tiny-llama-1b-chat_INT8_compressed_weights
+du -sh tiny*
+4.2G    tiny-llama-1b-chat
+2.1G    tiny-llama-1b-chat_FP16
+702M    tiny-llama-1b-chat_INT4_compressed_weights
+1.1G    tiny-llama-1b-chat_INT8_compressed_weights
 ```
 
 > **NOTE** Applying quantization to model weights may impact the model accuracy. Please test and verify that the results are of acceptable quality for your use case.

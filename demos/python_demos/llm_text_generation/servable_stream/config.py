@@ -70,6 +70,9 @@ def internlm_partial_text_processor(partial_text, new_text):
     return partial_text.split("<|im_end|>")[0]
 
 
+# Some models are commented out and not maintained in this demo.
+# Full list of documented configurations can be found in the original jupyter notebook:
+# https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot/config.py
 SUPPORTED_LLM_MODELS = {
     "English":{
         "tiny-llama-1b-chat": {
