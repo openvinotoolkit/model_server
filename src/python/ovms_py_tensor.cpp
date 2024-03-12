@@ -72,10 +72,7 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, const py::buffer& buffer, co
 
     size = std::accumulate(std::begin(bufferShape), std::end(bufferShape), 1, std::multiplies<py::ssize_t>()) * itemsize;
 
-    if (shape.has_value())
-        userShape = shape.value();
-    else
-        userShape = bufferShape;
+    userShape = shape.value_or(bufferShape);
 
     if (datatype.has_value()) {
         this->datatype = datatype.value();
