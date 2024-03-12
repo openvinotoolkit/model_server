@@ -58,3 +58,42 @@ def test_creating_from_python_bytes():
     assert ovms_py_tensor.data.itemsize == 1
     assert ovms_py_tensor.data.strides == (1,)
     assert ovms_py_tensor.data.tobytes() == data
+
+def test_creating_from_python_numpy_string_with_datatype_override():
+    npy_arr = np.array(["batch", "of", "strings", "in", "numpy", "format"])
+    ovms_py_tensor = Tensor("input", npy_arr, datatype=npy_arr.dtype.str)
+    assert ovms_py_tensor.name == "input"
+    assert ovms_py_tensor.shape == npy_arr.shape
+    assert ovms_py_tensor.data.ndim == npy_arr.data.ndim
+    assert ovms_py_tensor.data.shape == npy_arr.data.shape
+    assert ovms_py_tensor.data.format == npy_arr.data.format
+    assert ovms_py_tensor.datatype == npy_arr.dtype.str
+    assert ovms_py_tensor.data.itemsize == npy_arr.data.itemsize
+    assert ovms_py_tensor.data.strides == npy_arr.data.strides
+    assert ovms_py_tensor.data.tobytes() == npy_arr.data.tobytes()
+
+    arr_from_tensor = np.frombuffer(ovms_py_tensor, dtype=ovms_py_tensor.datatype)
+    assert np.array_equal(npy_arr, arr_from_tensor)
+
+def test_creating_from_numpy_numerical_array_with_shape_override():
+    npy_arr = np.array(np.ones((1,3,300,300), dtype=np.float32))
+    ovms_py_tensor = Tensor("input", npy_arr, shape=(1,3))
+    assert ovms_py_tensor.name == "input"
+    assert ovms_py_tensor.shape == (1,3)
+    assert npy_arr.data.shape == ovms_py_tensor.data.shape
+    assert npy_arr.data.format == ovms_py_tensor.data.format
+    assert npy_arr.data.itemsize == ovms_py_tensor.data.itemsize
+    assert npy_arr.data.strides == ovms_py_tensor.data.strides
+    assert npy_arr.data == ovms_py_tensor.data
+
+def test_creating_from_numpy_numerical_array_with_shape_and_datatype_override():
+    npy_arr = np.array(np.ones((300,300,3), dtype=np.uint8))
+    ovms_py_tensor = Tensor("input", npy_arr, shape=(1,), datatype="IMAGE_FRAME")
+    assert ovms_py_tensor.name == "input"
+    assert ovms_py_tensor.shape == (1,)
+    assert ovms_py_tensor.datatype == "IMAGE_FRAME"
+    assert npy_arr.data.shape == ovms_py_tensor.data.shape
+    assert npy_arr.data.format == ovms_py_tensor.data.format
+    assert npy_arr.data.itemsize == ovms_py_tensor.data.itemsize
+    assert npy_arr.data.strides == ovms_py_tensor.data.strides
+    assert npy_arr.data == ovms_py_tensor.data

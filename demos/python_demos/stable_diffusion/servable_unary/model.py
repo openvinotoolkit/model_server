@@ -27,14 +27,14 @@ OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        print("-------- Running initialize")
+        print("-------- Running initialize", flush=True)
         self.pipe = OVStableDiffusionPipeline.from_pretrained(MODEL_PATH, device="AUTO", ov_config=OV_CONFIG)
         self.pipe.scheduler = DDIMScheduler.from_config(self.pipe.scheduler.config)
-        print("-------- Model loaded")
+        print("-------- Model loaded", flush=True)
         return True
 
     def execute(self, inputs: list):
-        print("Running execute")
+        print("Running execute", flush=True)
         text = bytes(inputs[0]).decode()
         image = self.pipe(text).images[0]
         output = io.BytesIO()
