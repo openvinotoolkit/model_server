@@ -24,7 +24,7 @@ REDHAT_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/d
 UBUNTU_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2024.0/ovms_ubuntu22.tar.gz"
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
-OVMS_CPP_IMAGE_TAG ?= 2023.3
+OVMS_CPP_IMAGE_TAG ?= 2024.0
 BASE_OS ?= ubuntu
 DIST_OS ?= $(BASE_OS)
 

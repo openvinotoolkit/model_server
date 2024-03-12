@@ -37,7 +37,7 @@ RUN	set -e ; \
         groupadd --gid 5000 ovms ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
-ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5 libtbb2 wget"
+ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5 libtbb12 wget"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ${BUILD_DEPENDENCIES} && \
