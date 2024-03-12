@@ -51,7 +51,7 @@ BASE_OS ?= ubuntu22
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
-BASE_OS_TAG_UBUNTU ?= 20.04
+BASE_OS_TAG_UBUNTU ?= 22.04
 BASE_OS_TAG_REDHAT ?= 8.9
 
 INSTALL_RPMS_FROM_URL ?=

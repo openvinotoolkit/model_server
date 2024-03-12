@@ -16,6 +16,7 @@
 
 ARG BASE_IMAGE=ubuntu:22.04
 FROM $BASE_IMAGE as base_build
+RUN echo "OO"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -41,8 +42,6 @@ ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5 libtbb12 wget
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ${BUILD_DEPENDENCIES} && \
-    wget http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.22_amd64.deb && \
-    dpkg -i libssl1.1_1.1.1f-1ubuntu2.22_amd64.deb && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 COPY --from=base_build /ovms /ovms
