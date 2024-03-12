@@ -16,23 +16,23 @@
 
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
-load("//src:common_settings.bzl",
+load("//:common_settings.bzl",
      "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "PYBIND_DEPS")
 
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
-        "//src:fuzzer_build" : COMMON_FUZZER_COPTS,
+        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
 }) + select({
         "//conditions:default": ["-DPYTHON_DISABLE=1"],
-        "//src:not_disable_python" : ["-DPYTHON_DISABLE=0"],
+        "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
 }) + select({
         "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
-        "//src:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+        "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
 })
 
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
     "//conditions:default": [],
-    "//src:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
+    "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
 })
 
 load("@pip_deps//:requirements.bzl", "all_requirements")

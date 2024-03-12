@@ -99,6 +99,17 @@ TEST(OVUtils, CopyTensor) {
     EXPECT_NE(originalTensor.data(), copyTensor.data());
 }
 
+TEST(OVUtils, UnsupportedStringTensorClone) {
+    const auto elementType = ov::element::Type(ov::element::Type_t::string);
+
+    std::vector<std::string> data{"abc", "def"};
+
+    ov::Tensor originalTensor(elementType, ov::Shape{data.size()}, &data[0]);
+    ov::Tensor copyTensor;
+
+    ASSERT_EQ(ovms::tensorClone(copyTensor, originalTensor), ovms::StatusCode::OV_CLONE_TENSOR_ERROR);
+}
+
 TEST(OVUtils, ConstCopyTensor) {
     const std::vector<size_t> shape{2, 3, 4, 5};
     const auto elementType = ov::element::Type(ov::element::Type_t::f32);

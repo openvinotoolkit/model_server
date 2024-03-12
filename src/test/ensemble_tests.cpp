@@ -268,6 +268,47 @@ TYPED_TEST(EnsembleFlowBothApiTest, DummyModel) {
     this->checkDummyResponse(dummySeriallyConnectedCount, 1, pipelineName);
 }
 
+TYPED_TEST(EnsembleFlowBothApiTest, NativeStringModel) {
+    // Most basic configuration, just process single passthrough string model request
+    // input   passthrough    output
+    //  O---------->O---------->O
+    ConstructorEnabledModelManager managerWithStringModel;
+    this->config = NATIVE_STRING_MODEL_CONFIG;
+    this->config.setBatchingParams("");
+    ASSERT_EQ(managerWithStringModel.reloadModelWithVersions(this->config), ovms::StatusCode::OK_RELOADED);
+
+    // Configure pipeline
+    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(PASSTHROUGH_STRING_MODEL_INPUT_NAME,
+        ovms::Precision::STRING,
+        ovms::Shape{-1},
+        Layout{"N..."});
+    this->dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(PASSTHROUGH_STRING_MODEL_OUTPUT_NAME,
+        ovms::Precision::STRING,
+        ovms::Shape{-1},
+        Layout{"N..."});
+    const tensor_map_t inputsInfo{{this->customPipelineInputName, this->dagDummyModelInputTensorInfo}};
+    std::vector<std::string> inputStrings = {"ala", "", "ma", "kota"};
+    this->request.Clear();
+    prepareInferStringRequest(this->request, this->customPipelineInputName, inputStrings);
+    auto input_node = std::make_unique<EntryNode<typename TypeParam::first_type>>(&this->request, inputsInfo);
+    auto model_node = std::make_unique<DLNode>("string_node", "passthrough_string", this->requestedModelVersion, managerWithStringModel);
+    const tensor_map_t outputsInfo{{this->customPipelineOutputName, this->dagDummyModelOutputTensorInfo}};
+    std::set<std::string> gatherFromNode = {};
+    std::string pipelineName = "test_pipeline";
+    auto output_node = std::make_unique<ExitNode<typename TypeParam::second_type>>(&this->response, outputsInfo, gatherFromNode, true, pipelineName);
+    Pipeline pipeline(*input_node, *output_node, *this->reporter);
+    pipeline.connect(*input_node, *model_node, {{this->customPipelineInputName, PASSTHROUGH_STRING_MODEL_INPUT_NAME}});
+    pipeline.connect(*model_node, *output_node, {{PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, this->customPipelineOutputName}});
+
+    pipeline.push(std::move(input_node));
+    pipeline.push(std::move(model_node));
+    pipeline.push(std::move(output_node));
+
+    // The model has string output which is not implemented yet.
+    // Here we ensure that inference succeeded and it fails at the stage of cloning model output into another models/response in DAG.
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OV_CLONE_TENSOR_ERROR);
+}
+
 TYPED_TEST(EnsembleFlowBothApiTest, ScalarModel) {
     // Most basic configuration, just process single scalar model request
     // input   scalar    output
@@ -1945,6 +1986,36 @@ TEST_F(EnsembleFlowTest, CorrectPipelineDefinitionNodesValidation) {
     // Create pipeline definition
     std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
     ASSERT_EQ(pipelineDefinition->validateNodes(managerWithDummyModel), StatusCode::OK);
+}
+
+TEST_F(EnsembleFlowTest, PipelineWithStringModelConnectionUnsupported) {
+    ConstructorEnabledModelManager managerWithStringModel;
+    ovms::ModelConfig config = NATIVE_STRING_MODEL_CONFIG;
+    ASSERT_EQ(managerWithStringModel.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
+
+    // Simulate reading from pipeline_config.json
+    std::vector<NodeInfo> info{
+        {NodeKind::ENTRY, ENTRY_NODE_NAME, "", std::nullopt, {{customPipelineInputName, customPipelineInputName}}},
+        {NodeKind::DL, "string_node_1", "passthrough_string", std::nullopt, {{PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, PASSTHROUGH_STRING_MODEL_OUTPUT_NAME}}},
+        {NodeKind::DL, "string_node_2", "passthrough_string", std::nullopt, {{PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, PASSTHROUGH_STRING_MODEL_OUTPUT_NAME}}},
+        {NodeKind::EXIT, EXIT_NODE_NAME},
+    };
+
+    pipeline_connections_t connections;
+
+    // request (customPipelineInputName) O--------->O string node 1 (PASSTHROUGH_STRING_MODEL_INPUT_NAME)
+    connections["string_node_1"] = {
+        {ENTRY_NODE_NAME, {{customPipelineInputName, PASSTHROUGH_STRING_MODEL_INPUT_NAME}}}};
+    // string node 1 (PASSTHROUGH_STRING_MODEL_OUTPUT_NAME) O--------->O string node 2 (PASSTHROUGH_STRING_MODEL_INPUT_NAME)
+    connections["string_node_2"] = {
+        {"string_node_1", {{PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, PASSTHROUGH_STRING_MODEL_INPUT_NAME}}}};
+    // string node 2 (PASSTHROUGH_STRING_MODEL_OUTPUT_NAME) O--------->O response (customPipelineOutputName)
+    connections[EXIT_NODE_NAME] = {
+        {"string_node_2", {{PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, customPipelineOutputName}}}};
+
+    // Create pipeline definition
+    std::unique_ptr<PipelineDefinition> pipelineDefinition = std::make_unique<PipelineDefinition>("my_new_pipeline", info, connections);
+    ASSERT_EQ(pipelineDefinition->validateNodes(managerWithStringModel), StatusCode::NOT_IMPLEMENTED);
 }
 
 TEST_F(EnsembleFlowTest, PipelineDefinitionNodesWithModelBatchingModeAutoValidation) {
@@ -6207,4 +6278,106 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYCustomN
 
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     checkIncrement4DimResponse<float>("pipeline_output", {45.0, 36.0, 246.0}, response, {1, 1, 3, 1, 1});
+}
+
+// Demultiplexer at request level (before model inference)
+static const char* pipelineSingleStringModelWithDemultiplexerRequest = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "passthrough_string",
+                "base_path": "/ovms/src/test/passthrough_string",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipe",
+            "inputs": ["pipeline_input"],
+            "demultiply_count": 0,
+            "nodes": [
+                {
+                    "name": "pipe_node",
+                    "model_name": "passthrough_string",
+                    "type": "DL model",
+                    "inputs": [
+                        {"my_name": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "my_name",
+                         "alias": "out"}
+                    ]
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "pipe_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineWithStringDemultiplexerRequestUnsupported) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleStringModelWithDemultiplexerRequest, fileToReload);
+    ConstructorEnabledModelManager manager;
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::PIPELINE_STRING_DEMUILTIPLICATION_UNSUPPORTED);
+}
+
+// Demultiplexer at node level (after model inference)
+static const char* pipelineSingleStringModelWithDemultiplexerNode = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "passthrough_string",
+                "base_path": "/ovms/src/test/passthrough_string",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}},
+                "nireq": 1
+            }
+        }
+    ],
+    "pipeline_config_list": [
+        {
+            "name": "pipe",
+            "inputs": ["pipeline_input"],
+            "nodes": [
+                {
+                    "name": "pipe_node",
+                    "model_name": "passthrough_string",
+                    "type": "DL model",
+                    "inputs": [
+                        {"my_name": {"node_name": "request",
+                                   "data_item": "pipeline_input"}}
+                    ],
+                    "outputs": [
+                        {"data_item": "my_name",
+                         "alias": "out"}
+                    ],
+                    "demultiply_count": 0
+                }
+            ],
+            "outputs": [
+                {"pipeline_output": {"node_name": "pipe_node",
+                                     "data_item": "out"}
+                }
+            ]
+        }
+    ]
+})";
+
+TEST_F(EnsembleFlowTest, PipelineWithStringDemultiplexerNodeUnsupported) {
+    std::string fileToReload = directoryPath + "/config.json";
+    createConfigFileWithContent(pipelineSingleStringModelWithDemultiplexerNode, fileToReload);
+    ConstructorEnabledModelManager manager;
+
+    ASSERT_EQ(manager.loadConfig(fileToReload), StatusCode::PIPELINE_STRING_DEMUILTIPLICATION_UNSUPPORTED);
 }

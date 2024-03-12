@@ -19,6 +19,7 @@ from transformers import CLIPProcessor
 from PIL import Image
 import numpy as np
 from io import BytesIO
+from tritonclient.utils import deserialize_bytes_tensor
 
 class OvmsPythonModel:
 
@@ -27,10 +28,11 @@ class OvmsPythonModel:
         self.processor = CLIPProcessor.from_pretrained(model_id)
 
     def execute(self, inputs: list):
-        image = Image.open(BytesIO(inputs[0]))
-        
-        input_labels = np.frombuffer(inputs[1].data, dtype=inputs[1].datatype)
-        text_descriptions = [f"This is a photo of a {label}" for label in input_labels]
+        image = Image.open(BytesIO((deserialize_bytes_tensor(bytes(inputs[0]))[0])))
+        input_labels = deserialize_bytes_tensor(bytes(inputs[1]))[0].decode()
+        input_labels_split = input_labels.split(",")
+        text_descriptions = [f"This is a photo of a {label}" for label in input_labels_split]
+
         model_inputs = self.processor(text=text_descriptions, images=[image], return_tensors="pt", padding=True)
 
         # dtype=np.dtype("q") must be used for correct mapping of struct format character to datatype

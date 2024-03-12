@@ -42,7 +42,7 @@ Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
         {"UINT64", Precision::U64},
         {"UINT32", Precision::U32},
         {"UINT16", Precision::U16},
-        // {"BYTES", Precision::??},
+        {"BYTES", Precision::STRING},
         {"UINT8", Precision::U8}};
     auto it = precisionMap.find(datatype);
     if (it == precisionMap.end()) {
@@ -86,6 +86,7 @@ const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision) {
         {Precision::U32, "UINT32"},
         {Precision::U16, "UINT16"},
         {Precision::U8, "UINT8"},
+        {Precision::STRING, "BYTES"},
         {Precision::BOOL, "BOOL"}};
     // {Precision::BF16, ""},
     // {Precision::U4, ""},

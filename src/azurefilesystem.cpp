@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <set>
+#include <utility>
 #include <vector>
 
 #include "logging.hpp"
@@ -58,7 +59,7 @@ static as::cloud_storage_account createDefaultOrAnonymousAccount() {
         } else {
             https_proxy = std::string(proxy_env);
             web::web_proxy wproxy(https_proxy);
-            as::operation_context::set_default_proxy(wproxy);
+            as::operation_context::set_default_proxy(std::move(wproxy));
 
             SPDLOG_LOGGER_DEBUG(azurestorage_logger, "Proxy detected: {}" + https_proxy);
         }

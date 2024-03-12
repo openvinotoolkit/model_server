@@ -140,7 +140,7 @@ Status Model::addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegi
     return StatusCode::OK;
 }
 
-Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed, MetricRegistry* registry, const MetricConfig* metricConfig) {
+Status Model::addVersions(std::shared_ptr<model_versions_t>& versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t>& versionsFailed, MetricRegistry* registry, const MetricConfig* metricConfig) {
     Status result = StatusCode::OK;
     downloadModels(fs, config, versionsToStart);
     versionsFailed->clear();
@@ -162,7 +162,7 @@ Status Model::addVersions(std::shared_ptr<model_versions_t> versionsToStart, ovm
     return result;
 }
 
-Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire) {
+Status Model::retireVersions(std::shared_ptr<model_versions_t>& versionsToRetire) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToRetire) {
         SPDLOG_INFO("Will unload model: {}; version: {} ...", getName(), version);
@@ -184,7 +184,7 @@ Status Model::retireVersions(std::shared_ptr<model_versions_t> versionsToRetire)
     return result;
 }
 
-Status Model::cleanupFailedLoad(std::shared_ptr<model_versions_t> versionsToCleanUp) {
+Status Model::cleanupFailedLoad(std::shared_ptr<model_versions_t>& versionsToCleanUp) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToCleanUp) {
         SPDLOG_INFO("Will clean up model: {}; version: {} ...", getName(), version);
@@ -246,7 +246,7 @@ void Model::cleanupAllVersions() {
     subscriptionManager.notifySubscribers();
 }
 
-Status Model::reloadVersions(std::shared_ptr<model_versions_t> versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t> versionsFailed) {
+Status Model::reloadVersions(std::shared_ptr<model_versions_t>& versionsToReload, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t>& versionsFailed) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToReload) {
         SPDLOG_INFO("Will reload model: {}; version: {} ...", getName(), version);

@@ -40,13 +40,13 @@ if [ "$RUN_TESTS" == "1" ] ; then
     if [ "$CHECK_COVERAGE" == "1" ] ; then
         { bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
             ${SHARED_OPTIONS} ${TEST_FILTER} \
-            //src:ovms_test > ${TEST_LOG} 2>&1 || \
+            //src:ovms_test ${BAZEL_OPTIONS} > ${TEST_LOG} 2>&1 || \
             test_fail_procedure; } && \
             generate_coverage_report;
     fi
     { bazel test \
         ${SHARED_OPTIONS} "${TEST_FILTER}" \
-        //src:ovms_test > ${TEST_LOG} 2>&1 || \
+        //src:ovms_test ${BAZEL_OPTIONS} > ${TEST_LOG} 2>&1 || \
         test_fail_procedure; } && \
         test_success_procedure && \
         rm -rf ${TEST_LOG};

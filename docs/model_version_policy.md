@@ -1,5 +1,7 @@
 # Model Version Policy {#ovms_docs_model_version_policy}
 
+> Note: It only concerns single models. DAG Pipelines and MediaPipe Graphs are not versioned.
+
 The model version policy determines which versions of a model or models will be served by the OpenVINO Model Server. 
 This parameter enables controlling memory consumption of the server and deciding which versions will be used regardless of what exists
 in the model repository when the server is started. The `model_version_policy` parameter is optional. 

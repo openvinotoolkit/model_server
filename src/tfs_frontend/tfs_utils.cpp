@@ -40,6 +40,7 @@ TFSDataType getPrecisionAsDataType(Precision precision) {
         {Precision::U64, TFSDataType::DT_UINT64},
         {Precision::U16, TFSDataType::DT_UINT16},
         {Precision::U8, TFSDataType::DT_UINT8},
+        {Precision::STRING, TFSDataType::DT_STRING},
         //    {Precision::MIXED, TFSDataType::DT_INVALID},
         //    {Precision::Q78, TFSDataType::DT_INVALID},
         //    {Precision::BIN, TFSDataType::DT_INVALID},
@@ -110,6 +111,7 @@ Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype) {
         {TFSDataType::DT_UINT64, Precision::U64},
         {TFSDataType::DT_UINT16, Precision::U16},
         {TFSDataType::DT_UINT8, Precision::U8},
+        {TFSDataType::DT_STRING, Precision::STRING},
         {TFSDataType::DT_BOOL, Precision::BOOL}};
     auto it = precisionMap.find(datatype);
     if (it == precisionMap.end()) {

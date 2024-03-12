@@ -17,6 +17,7 @@
 from pyovms import Tensor
 import numpy as np
 from scipy.special import softmax
+from tritonclient.utils import deserialize_bytes_tensor
 
 class OvmsPythonModel:
 
@@ -24,7 +25,9 @@ class OvmsPythonModel:
         pass
     
     def execute(self, inputs: list):
-        input_labels = np.frombuffer(inputs[0].data, inputs[0].datatype)
+        input_labels_bytes = deserialize_bytes_tensor(bytes(inputs[0]))[0].decode()
+        input_labels = input_labels_bytes.split(",")
+        input_labels = np.array(input_labels)
 
         ov_logits_per_image = np.array(inputs[1], copy=False)
         probs = softmax(ov_logits_per_image, axis=1)[0]

@@ -134,7 +134,7 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
 }
 
 void HttpRestApiHandler::registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)> f) {
-    handlers[type] = f;
+    handlers[type] = std::move(f);
 }
 
 void HttpRestApiHandler::registerAll() {
@@ -270,7 +270,10 @@ static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
 
 static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs_buffer, ::KFSRequest::InferInputTensor& input, std::string* rawInputContentsBuffer) {
     if (binary_input_offset + binary_input_size > binary_buffer_size) {
-        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}", binary_buffer_size);
+        SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}, binary input offset {}, binary_input size {}",
+            binary_buffer_size,
+            binary_input_offset,
+            binary_input_size);
         return StatusCode::REST_BINARY_BUFFER_EXCEEDED;
     }
     rawInputContentsBuffer->assign(binary_inputs_buffer + binary_input_offset, binary_input_size);
@@ -314,6 +317,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
                 binary_input_size = calculateBinaryDataSize(*input);
             }
         }
+
         auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs_buffer, *input, grpc_request.add_raw_input_contents());
         if (!status.ok())
             return status;
@@ -406,6 +410,11 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
     timer.stop(TOTAL);
     double totalTime = timer.elapsed<std::chrono::microseconds>(TOTAL);
     SPDLOG_DEBUG("Total REST request processing time: {} ms", totalTime / 1000);
+
+    if (!reporter) {
+        return StatusCode::OK;
+        // TODO fix after Mediapipe metrics implementation
+    }
     OBSERVE_IF_ENABLED(reporter->requestTimeRest, totalTime);
     return StatusCode::OK;
 }
@@ -722,9 +731,6 @@ Status HttpRestApiHandler::processPredictRequest(
     }
     if (!status.ok())
         return status;
-    if (!reporterOut) {
-        return StatusCode::INTERNAL_ERROR;  // should not happen
-    }
 
     status = makeJsonFromPredictResponse(responseProto, response, requestOrder);
     if (!status.ok())

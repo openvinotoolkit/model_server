@@ -160,7 +160,7 @@ public:
     explicit RequestExecutor(int num_threads) :
         executor_(tensorflow::Env::Default(), "httprestserver", num_threads) {}
 
-    void Schedule(std::function<void()> fn) override { executor_.Schedule(fn); }
+    void Schedule(std::function<void()> fn) override { executor_.Schedule(std::move(fn)); }
 
 private:
     tensorflow::serving::ThreadPoolExecutor executor_;
@@ -251,7 +251,7 @@ std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address
     net_http::RequestHandlerOptions handler_options;
     server->RegisterRequestDispatcher(
         [dispatcher](net_http::ServerRequestInterface* req) {
-            return dispatcher->dispatch(req);
+            return dispatcher->dispatch(std::move(req));
         },
         handler_options);
 

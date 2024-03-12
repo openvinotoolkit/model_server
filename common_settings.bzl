@@ -19,7 +19,10 @@
 #To build without mediapipe use flags - bazel build --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 //src:ovms
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("//:distro.bzl", "distro_flag")
 def create_config_settings():
+    distro_flag()
     native.config_setting(
         name = "disable_mediapipe",
         define_values = {

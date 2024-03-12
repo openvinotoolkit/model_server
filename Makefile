@@ -52,7 +52,7 @@ BASE_OS ?= ubuntu22
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 20.04
-BASE_OS_TAG_REDHAT ?= 8.8
+BASE_OS_TAG_REDHAT ?= 8.9
 
 INSTALL_RPMS_FROM_URL ?=
 
@@ -68,7 +68,7 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 5e7e51dc77822ab6cb9e45c7208100c57bec4104  # 2024.0
+OV_SOURCE_BRANCH ?= 34caeefd07800b59065345d651949efbe8ab6649  # 2024.0
 OV_CONTRIB_BRANCH ?= b36781b43e0fbcbbb386619b853d842c67728f3f  # 2024.0
 
 OV_SOURCE_ORG ?= openvinotoolkit
@@ -104,11 +104,9 @@ endif
 STRIP = "always"
 BAZEL_DEBUG_BUILD_FLAGS ?= ""
 ifeq ($(BAZEL_BUILD_TYPE),dbg)
-    BAZEL_DEBUG_BUILD_FLAGS = " --copt=-g -c dbg"
-	STRIP = "never"
+  BAZEL_DEBUG_BUILD_FLAGS = " --copt=-g -c dbg"
+  STRIP = "never"
 endif
-
-CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)" --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1"
 
 ifeq ($(MINITRACE),ON)
   MINITRACE_FLAGS=" --copt=-DMTR_ENABLED"
@@ -117,13 +115,20 @@ else
 endif
 
 ifeq ($(OV_TRACING_ENABLE),1)
-	OV_TRACING_PARAMS = " --cxxopt=-DOV_TRACING=1"
+  OV_TRACING_PARAMS = " --cxxopt=-DOV_TRACING=1"
 else
-	OV_TRACING_PARAMS = ""
+  OV_TRACING_PARAMS = ""
 endif
 
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)
-
+ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+  TARGET_DISTRO_PARAMS = " --//:distro=ubuntu"
+else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
+  TARGET_DISTRO_PARAMS = " --//:distro=redhat"
+else
+  $(error BASE_OS must be either ubuntu or redhat)
+endif
+CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)" --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
@@ -148,10 +153,10 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   endif
   ifeq ($(BASE_OS_TAG),20.04)
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.0.0.14488.5e7e51dc778_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.0.0.14509.34caeefd078_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
 	INSTALL_DRIVER_VERSION ?= "23.22.26516"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.0.0.14488.5e7e51dc778_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.0.0.14509.34caeefd078_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -166,7 +171,7 @@ ifeq ($(BASE_OS),redhat)
   endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.0.0.14488.5e7e51dc778_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.0.0.14509.34caeefd078_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -414,7 +419,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 endif
 ifeq ($(BASE_OS),redhat)
 	touch base_packages.txt
-	docker run registry.access.redhat.com/ubi8-minimal:8.8 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
+	docker run registry.access.redhat.com/ubi8-minimal:8.9 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
 	docker run --entrypoint rpm $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -qa  --qf "%{NAME}\n" | sort > all_packages.txt
 	rm -rf ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
 	mkdir ovms_rhel_$(OVMS_CPP_IMAGE_TAG)

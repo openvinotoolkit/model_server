@@ -47,6 +47,7 @@ static Status serializePrecision(
     case ovms::Precision::U16:
     case ovms::Precision::FP16:
     case ovms::Precision::I64:
+    case ovms::Precision::STRING:
         responseOutput.set_dtype(getPrecisionAsDataType(servableOutput->getPrecision()));
         break;
 
@@ -93,6 +94,7 @@ static Status serializePrecision(
     case ovms::Precision::U16:
     case ovms::Precision::U8:
     case ovms::Precision::BOOL:
+    case ovms::Precision::STRING:
         responseOutput.set_datatype(ovmsPrecisionToKFSPrecision(servableOutput->getPrecision()));
         break;
     case ovms::Precision::UNDEFINED:
@@ -225,6 +227,9 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_NATIVE) {
+        return StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+    }
     if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
         return convertOVTensor2DToStringResponse(tensor, responseOutput);
     }
@@ -254,6 +259,9 @@ Status serializeTensorToTensorProtoRaw(
     if (!status.ok()) {
         return status;
     }
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_NATIVE) {
+        return StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+    }
     if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
         serializeStringContent(rawOutputContents, tensor);
     } else {
@@ -267,6 +275,9 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_NATIVE) {
+        return StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+    }
     if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
         return convertOVTensor2DToStringResponse(tensor, responseOutput);
     }
