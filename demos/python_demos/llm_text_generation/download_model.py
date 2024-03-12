@@ -51,13 +51,12 @@ print(f'Saving model to {MODEL_PATH} ...')
 ov_model.save_pretrained(MODEL_PATH)
 print('Done.')
 
-if not ov_model.stateful:
-    print("ERROR: Saved model is not stateful")
-    exit(1)
-
 print(f'Downloading tokenizer to {MODEL_PATH} ...')
 tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
 print(f'Saving tokenizer to {MODEL_PATH} ...')
 tok.save_pretrained(MODEL_PATH)
 print('Done.')
 
+if not ov_model.stateful:
+    print("WARNING: Saved model is not stateful")
+    exit(1)
