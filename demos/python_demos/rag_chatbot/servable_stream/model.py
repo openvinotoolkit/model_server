@@ -232,7 +232,7 @@ class OvmsPythonModel:
         print("Document database loaded")
 
     def execute(self, inputs: list):
-        print("Exec")
+        print("Executing")
 
         batch_size = inputs[0].shape[0]
         if batch_size != 1:

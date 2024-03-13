@@ -1,11 +1,15 @@
 # LLM-powered RAG chatbot serving via Python Calculator in MediaPipe Graph {#ovms_demo_python_rag_chatbot}
 
 This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models based off given documents.
-The demo explains how to serve MediaPipe Graph with Python Calculator. In Python Calculator, we use Hugging Face Optimum with OpenVINO Runtime as execution engine. Entire processing is wrapped inside LangChain Retrieval QA pipeline.
+The demo explains how to serve MediaPipe Graph with Python node that implements demo logic using Python libraries like Hugging Face Optimum with OpenVINO Runtime as execution engine and LangChain Retrieval QA pipeline that wraps entire processing.
 
 Using the gRPC streaming interactive approach allows the user to read the response as they are getting generated.
 
-This demo presents the use case with [tiny-llama-1b-chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1) model but the included python scripts are prepared for several other LLM models. Those are tiny-llama-1b-chat, llama-2-chat-7b and notus-7b-v1.
+This demo presents the use case with [tiny-llama-1b-chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1) model but the included python scripts are prepared for several other LLM models. Those are:
+- tiny-llama-1b-chat
+- llama-2-chat-7b
+- notus-7b-v1
+
 In this demo the model can be set by:
 ```bash
 export SELECTED_MODEL=tiny-llama-1b-chat
@@ -131,7 +135,7 @@ Mount the `./embed_model` directory with the document embedding model.
 Mount the servable directory which contains:
 - python scripts which are required for execution and use [Hugging Face](https://huggingface.co/) utilities with [optimum-intel](https://github.com/huggingface/optimum-intel) acceleration.
 - `config.json` - which defines which servables should be loaded
-- `graph.pbtxt` - which defines MediaPipe graph containing python calculator
+- `graph.pbtxt` - which defines MediaPipe graph containing python node
 
 ```bash
 docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/llm_model \

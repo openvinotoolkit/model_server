@@ -44,7 +44,7 @@ Prerequisites:
 Mount the `./servable` which contains:
 - `postprocess.py` and `preprocess.py` - python scripts which are required for execution and use of [CLIP](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/228-clip-zero-shot-image-classification/228-clip-zero-shot-classification.ipynb) model
 - `config.json` - which defines which servables should be loaded
-- `graph.pbtxt` - which defines MediaPipe graph containing python calculators
+- `graph.pbtxt` - which defines MediaPipe graph containing python nodes
 
 ```bash
 docker run -d --rm -p 9000:9000 -p 8000:8000 -v ${PWD}/servable:/workspace -v ${PWD}/model:/model/ openvino/model_server:py --config_path /workspace/config.json --port 9000 --rest_port 8000

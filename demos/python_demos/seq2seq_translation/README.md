@@ -17,7 +17,7 @@ Prerequisites:
 Mount the `./servable` which contains:
 - `model.py` and `config.py` - python scripts which are required for execution and use [Hugging Face](https://huggingface.co/) utilities with [optimum-intel](https://github.com/huggingface/optimum-intel) acceleration.
 - `config.json` - which defines which servables should be loaded
-- `graph.pbtxt` - which defines MediaPipe graph containing python calculator
+- `graph.pbtxt` - which defines MediaPipe graph containing python node
 
 ```bash
 cd demos/python_demos/seq2seq_translation

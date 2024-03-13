@@ -1,7 +1,7 @@
 # LLM text generation with python node {#ovms_demo_python_llm_text_generation}
 
 This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models. 
-The demo explains how to serve MediaPipe Graph with Python Calculator. In Python Calculator, we use Hugging Face Optimum with OpenVINO Runtime as execution engine.
+The demo explains how to serve MediaPipe Graph using Python libraries. We use Hugging Face Optimum with OpenVINO Runtime as execution engine.
 Two use cases are possible:
 - with unary calls - when the client is sending prompts to the graph and receives a complete generated responses at the end of processing
 - with gRPC streaming - when the client is sending prompts the graph and receives a stream of partial responses during the processing
@@ -10,7 +10,11 @@ The unary calls are simpler but there is no immediate feedback as the response g
 
 The gRPC stream is a great feature when more interactive approach is needed allowing the user to read the response as they are getting generated.
 
-This demo presents the use case with [tiny-llama-1b-chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1) model but the included python scripts are prepared for several other LLM models. Those are tiny-llama-1b-chat, llama-2-chat-7b and notus-7b-v1.
+This demo presents the use case with [tiny-llama-1b-chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1) model but the included python scripts are prepared for several other LLM models. Those are:
+- tiny-llama-1b-chat
+- llama-2-chat-7b
+- notus-7b-v1
+
 In this demo the model can be set by:
 ```bash
 export SELECTED_MODEL=tiny-llama-1b-chat
@@ -99,7 +103,7 @@ Mount the `./model` directory with the model.
 Mount the `./servable_unary` or `./servable_stream` which contains:
 - `model.py` and `config.py` - python scripts which are required for execution and use [Hugging Face](https://huggingface.co/) utilities with [optimum-intel](https://github.com/huggingface/optimum-intel) acceleration.
 - `config.json` - which defines which servables should be loaded
-- `graph.pbtxt` - which defines MediaPipe graph containing python calculator
+- `graph.pbtxt` - which defines MediaPipe graph containing python node
 
 Depending on the use case, `./servable_unary` and `./servable_stream` showcase different approach:
 - *unary* - single request - single response, useful when the request does not take too long and there are no intermediate results
