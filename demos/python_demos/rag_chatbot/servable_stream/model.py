@@ -206,7 +206,7 @@ def serialize_completions(batch_size, result):
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        print(f"Loading LLM model {SELECTED_MODEL}...")
+        print(f"Loading LLM model {SELECTED_MODEL}...", flush=True)
         self.ov_model = model_class.from_pretrained(
             llm_model_dir,
             device="AUTO",
@@ -214,8 +214,8 @@ class OvmsPythonModel:
             compile=True,
             config=AutoConfig.from_pretrained(llm_model_dir, trust_remote_code=True),
             trust_remote_code=True)
-        print("LLM model loaded")
-        print(f"Loading embedding model {EMBEDDING_MODEL}...")
+        print("LLM model loaded", flush=True)
+        print(f"Loading embedding model {EMBEDDING_MODEL}...", flush=True)
         self.embedding = OVEmbeddings.from_model_id(
             embedding_model_dir,
             do_norm=embedding_model_configuration["do_norm"],
@@ -227,13 +227,13 @@ class OvmsPythonModel:
                 "model_max_length": 512,
             },
         )
-        print("Embedding model loaded")
-        print("Building document database...")
+        print("Embedding model loaded", flush=True)
+        print("Building document database...", flush=True)
 
         documents = []
         for file_path in os.listdir("/documents"):
             abs_path = f"/documents/{file_path}"
-            print(f"Reading document {abs_path}...")
+            print(f"Reading document {abs_path}...", flush=True)
             documents.extend(load_single_document(abs_path))
 
         spliter_name = "RecursiveCharacter"  # TODO: Param?
@@ -245,10 +245,10 @@ class OvmsPythonModel:
         vector_search_top_k = 4  # TODO: Param?
         self.retriever = self.db.as_retriever(search_kwargs={"k": vector_search_top_k})
 
-        print("Document database loaded")
+        print("Document database loaded", flush=True)
 
     def execute(self, inputs: list):
-        print("Executing")
+        print("Executing", flush=True)
 
         batch_size = inputs[0].shape[0]
         if batch_size != 1:
@@ -286,7 +286,6 @@ class OvmsPythonModel:
 
         question = prompts[0]
         def infer(q):
-            print('AAA', q)
             rag_chain.invoke(q)
 
         t1 = Thread(target=infer, args=(question,))
