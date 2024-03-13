@@ -334,10 +334,10 @@ SUPPORTED_EMBEDDING_MODELS = {
         "model_id": "sentence-transformers/all-mpnet-base-v2",
         "do_norm": True,
     },
-    "text2vec-large-chinese": {
-        "model_id": "GanymedeNil/text2vec-large-chinese",
-        "do_norm": False,
-    },
+    # "text2vec-large-chinese": {
+    #     "model_id": "GanymedeNil/text2vec-large-chinese",
+    #     "do_norm": False,
+    # },
 }
 
 # Example from https://discuss.huggingface.co/t/textiteratorstreamer-compatibility-with-batch-processing/46763/2

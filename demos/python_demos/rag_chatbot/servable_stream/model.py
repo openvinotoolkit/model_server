@@ -30,7 +30,8 @@ from ov_embedding_model import OVEmbeddings
 
 
 SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
-llm_model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
+LANGUAGE = os.environ.get('LANGUAGE', 'English')
+llm_model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 
 EMBEDDING_MODEL = 'all-mpnet-base-v2'
 embedding_model_configuration = SUPPORTED_EMBEDDING_MODELS[EMBEDDING_MODEL]
@@ -39,7 +40,6 @@ llm_model_dir = "/llm_model"
 model_name = llm_model_configuration["model_id"]
 stop_tokens = llm_model_configuration.get("stop_tokens")
 class_key = SELECTED_MODEL.split("-")[0]
-#tok = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)  # Get tokenizer online
 tok = AutoTokenizer.from_pretrained(llm_model_dir, trust_remote_code=True)
 
 embedding_model_dir = "/embed_model"
@@ -190,16 +190,16 @@ def serialize_completions(batch_size, result):
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        print("Loading LLM model...")
+        print(f"Loading LLM model {SELECTED_MODEL}...")
         self.ov_model = model_class.from_pretrained(
             llm_model_dir,
-            device="CPU",
+            device="AUTO",
             ov_config=ov_config,
             compile=True,
             config=AutoConfig.from_pretrained(llm_model_dir, trust_remote_code=True),
             trust_remote_code=True)
         print("LLM model loaded")
-        print("Loading embedding model...")
+        print(f"Loading embedding model {EMBEDDING_MODEL}...")
         self.embedding = OVEmbeddings.from_model_id(
             embedding_model_dir,
             do_norm=embedding_model_configuration["do_norm"],
@@ -269,9 +269,11 @@ class OvmsPythonModel:
         )
 
         question = prompts[0]
-        def infer():
-            rag_chain.invoke(question)
-        t1 = Thread(target=infer)
+        def infer(q):
+            print('AAA', q)
+            rag_chain.invoke(q)
+
+        t1 = Thread(target=infer, args=(question,))
         t1.start()
 
         for new_text in streamer:

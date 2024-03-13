@@ -5,7 +5,7 @@ The demo explains how to serve MediaPipe Graph with Python Calculator. In Python
 
 Using the gRPC streaming interactive approach allows the user to read the response as they are getting generated.
 
-This demo presents the use case with [tiny-llama-1b-chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1) model but the included python scripts are prepared for several other LLM models. Those are tiny-llama-1b-chat, red-pajama-3b-chat, llama-2-chat-7b, mpt-7b-chat,qwen-7b-chat, chatglm3-6b, mistral-7b, zephyr-7b-beta,neural-chat-7b-v3-1, notus-7b-v1 and youri-7b-chat.
+This demo presents the use case with [tiny-llama-1b-chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1) model but the included python scripts are prepared for several other LLM models. Those are tiny-llama-1b-chat, llama-2-chat-7b and notus-7b-v1.
 In this demo the model can be set by:
 ```bash
 export SELECTED_MODEL=tiny-llama-1b-chat
@@ -15,20 +15,20 @@ export SELECTED_MODEL=tiny-llama-1b-chat
 A Linux host with Docker engine installed and sufficient available RAM to load the model and optionally equipped with an Intel GPU card. This demo was tested on a host with Intel® Xeon® Gold 6430 and an Intel® Data Center GPU Flex 170. 
 Running the demo with smaller models like `tiny-llama-1b-chat` requires approximately 4GB of available RAM.
 
-## Build image TODO
+## Build image
 
 Building the image with all required python dependencies is required. Follow the commands to build RedHat image:
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image BASE_OS=redhat OVMS_CPP_DOCKER_IMAGE=registry.connect.redhat.com/intel/openvino-model-server OVMS_CPP_IMAGE_TAG=2023.3
+make python_image BASE_OS=redhat OVMS_CPP_DOCKER_IMAGE=registry.connect.redhat.com/intel/openvino-model-server OVMS_CPP_IMAGE_TAG=2024.0
 ```
 It will create an image called `registry.connect.redhat.com/intel/openvino-model-server:py`
 
 You can also build Ubuntu 22.04 image:
 ```
-make python_image BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=openvino/model_server OVMS_CPP_IMAGE_TAG=2023.3
+make python_image BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=openvino/model_server OVMS_CPP_IMAGE_TAG=2024.0
 ```
 It will create an image called `openvino/model_server:py`
 

@@ -24,4 +24,4 @@ def callback(message, history):
         result += completion
         yield result
 
-gr.ChatInterface(callback).queue().launch(server_name=args.web_url.split(':')[0], server_port=int(args.web_url.split(':')[1]))
+gr.ChatInterface(callback).queue(concurrency_count=16).launch(server_name=args.web_url.split(':')[0], server_port=int(args.web_url.split(':')[1]))
