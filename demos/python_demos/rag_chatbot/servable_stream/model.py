@@ -9,7 +9,6 @@ from pyovms import Tensor
 
 from threading import Thread
 
-from huggingface_hub import login
 from tritonclient.utils import deserialize_bytes_tensor, serialize_byte_tensor
 from langchain_community.llms import HuggingFacePipeline
 from optimum.intel.openvino import OVModelForCausalLM
@@ -29,9 +28,6 @@ from transformers import (
 from config import SUPPORTED_EMBEDDING_MODELS, SUPPORTED_LLM_MODELS
 from ov_embedding_model import OVEmbeddings
 
-HF_TOKEN = os.environ.get('HF_TOKEN')
-if HF_TOKEN:
-    login(token=HF_TOKEN)
 
 SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
 llm_model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
@@ -43,7 +39,8 @@ llm_model_dir = "/llm_model"
 model_name = llm_model_configuration["model_id"]
 stop_tokens = llm_model_configuration.get("stop_tokens")
 class_key = SELECTED_MODEL.split("-")[0]
-tok = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)  # Get tokenizer online
+#tok = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)  # Get tokenizer online
+tok = AutoTokenizer.from_pretrained(llm_model_dir, trust_remote_code=True)
 
 embedding_model_dir = "/embed_model"
 

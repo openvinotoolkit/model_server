@@ -13,34 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
+from optimum.intel.openvino import OVModelForCausalLM
+from transformers import AutoTokenizer
+from servable_stream.config import SUPPORTED_LLM_MODELS
 
 import argparse
 
-from optimum.intel.openvino import OVModelForCausalLM
-from transformers import AutoTokenizer
-from servable_stream.config import SUPPORTED_EMBEDDING_MODELS, SUPPORTED_LLM_MODELS
-
 parser = argparse.ArgumentParser(description='Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot')
 
-supported_models_list = []
-for key, _ in SUPPORTED_LLM_MODELS.items() :
-    supported_models_list.append(key)
+supported_models_list = [model_name for model in SUPPORTED_LLM_MODELS.values() for model_name in model]
 
 parser.add_argument('--model',
                     required=True,
                     choices=supported_models_list,
                     help='Select the LLM model out of supported list')
-args = parser.parse_args()
+args = vars(parser.parse_args())
 
-SELECTED_MODEL = args.model
+SELECTED_MODEL = args['model']
+LANGUAGE = 'English'
 
-model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
+model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 
 model_id = model_configuration["model_id"]
 
 MODEL_PATH = "./" + SELECTED_MODEL
 
-print(f'Downloading and converting {model_id}...')
+print('Downloading and converting...')
 ov_model = OVModelForCausalLM.from_pretrained(
     model_id,
     export=True,
@@ -59,3 +57,6 @@ print(f'Saving tokenizer to {MODEL_PATH} ...')
 tok.save_pretrained(MODEL_PATH)
 print('Done.')
 
+if not ov_model.stateful:
+    print("WARNING: Saved model is not stateful")
+    exit(1)
