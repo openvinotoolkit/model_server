@@ -43,14 +43,13 @@ pip install -r requirements.txt
 
 python download_model.py --help
 INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
-usage: download_model.py [-h] --model
-                         {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+usage: download_model.py [-h] --model {tiny-llama-1b-chat,llama-2-chat-7b,notus-7b-v1}
 
 Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+  --model {tiny-llama-1b-chat,llama-2-chat-7b,notus-7b-v1}
                         Select the LLM model out of supported list
 
 python download_model.py --model ${SELECTED_MODEL}
@@ -63,15 +62,15 @@ The model will appear in `./tiny-llama-1b-chat` directory.
 [Weight Compression](https://docs.openvino.ai/canonical/weight_compression.html) may be applied on the original model. Applying 8-bit or 4-bit weight compression reduces the model size and memory requirements while speeding up execution by running calculations on lower precision layers.
 
 ```bash
+python compress_model.py --help
 INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
-usage: compress_model.py [-h] --model
-                         {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+usage: compress_model.py [-h] --model {tiny-llama-1b-chat,llama-2-chat-7b,notus-7b-v1}
 
 Script to compress LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mpt-7b-chat,qwen-7b-chat,chatglm3-6b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+  --model {tiny-llama-1b-chat,llama-2-chat-7b,notus-7b-v1}
                         Select the LLM model out of supported list
 
 python compress_model.py --model ${SELECTED_MODEL}
@@ -82,11 +81,11 @@ Running this script will create new directories with compressed versions of the 
 The compressed models can be used in place of the original as they have compatible inputs and outputs.
 
 ```bash
-ls  -1 | grep tiny-llama-1b-chat
-tiny-llama-1b-chat
-tiny-llama-1b-chat_FP16
-tiny-llama-1b-chat_INT4_compressed_weights
-tiny-llama-1b-chat_INT8_compressed_weights
+du -sh tiny*
+4.2G    tiny-llama-1b-chat
+2.1G    tiny-llama-1b-chat_FP16
+702M    tiny-llama-1b-chat_INT4_compressed_weights
+1.1G    tiny-llama-1b-chat_INT8_compressed_weights
 ```
 
 > **NOTE** Applying quantization to model weights may impact the model accuracy. Please test and verify that the results are of acceptable quality for your use case.
@@ -100,13 +99,13 @@ Download the model using `download_embedding_model.py` script:
 
 ```bash
 python download_embedding_model.py --help
-usage: download_embedding_model.py [-h] --model {all-mpnet-base-v2,text2vec-large-chinese}
+usage: download_embedding_model.py [-h] --model {all-mpnet-base-v2}
 
 Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  --model {all-mpnet-base-v2,text2vec-large-chinese}
+  --model {all-mpnet-base-v2}
                         Select the LLM model out of supported list
 
 python download_embedding_model.py --model all-mpnet-base-v2
@@ -114,10 +113,14 @@ python download_embedding_model.py --model all-mpnet-base-v2
 ```
 The model will appear in `./all-mpnet-base-v2` directory.
 
-## Download test documents for knowledge base
-We will use single CSV file with [FIFA World Cups information](https://raw.githubusercontent.com/rangelak/fifa-stats/master/data/fifa-world-cup.csv).
+## Prepare documents for knowledge base
+We will use single `aipc.txt` file stored in `documents/` directory:
 ```bash
-wget -P documents/ https://raw.githubusercontent.com/rangelak/fifa-stats/master/data/fifa-world-cup.csv
+tree documents
+documents
+└── aipc.txt
+
+0 directories, 1 file
 ```
 
 ## Deploy OpenVINO Model Server with Python Calculator
@@ -131,9 +134,9 @@ Mount the servable directory which contains:
 - `graph.pbtxt` - which defines MediaPipe graph containing python calculator
 
 ```bash
-docker run -it --rm -p 9099:9099 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/llm_model \
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/llm_model \
 -v ${PWD}/all-mpnet-base-v2:/embed_model -v ${PWD}/documents:/documents -e SELECTED_MODEL=${SELECTED_MODEL} \
-dk_py --config_path /workspace/config.json --port 9099
+registry.connect.redhat.com/intel/openvino-model-server:py --config_path /workspace/config.json --port 9000
 ```
 
 You may deploy the compressed model(s) by simply changing the model path mounted to the container. For example, to deploy the 8-bit weight compressed model:
