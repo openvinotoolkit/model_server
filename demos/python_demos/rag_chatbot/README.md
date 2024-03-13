@@ -21,7 +21,7 @@ Running the demo with smaller models like `tiny-llama-1b-chat` requires approxim
 
 ## Build image
 
-Building the image with all required python dependencies is required. Follow the commands to build RedHat image:
+Building the image with all required python dependencies is required. Follow the commands to build the model server with RedHat UBI image:
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
