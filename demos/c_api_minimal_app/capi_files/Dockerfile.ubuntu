@@ -14,8 +14,9 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=ubuntu:20.04
+ARG BASE_IMAGE=ubuntu:22.04
 FROM $BASE_IMAGE as base_build
+RUN echo "OO"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -27,7 +28,7 @@ RUN tar -xf ovms.tar.gz
 RUN chown -R ovms:ovms /ovms
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-ARG BASE_IMAGE=ubuntu:20.04
+ARG BASE_IMAGE=ubuntu:22.04
 FROM $BASE_IMAGE as release
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
@@ -37,7 +38,7 @@ RUN	set -e ; \
         groupadd --gid 5000 ovms ; \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
-ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5 libtbb2"
+ARG BUILD_DEPENDENCIES="build-essential libxml2 curl libpugixml1v5 libtbb12"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ${BUILD_DEPENDENCIES} && \
