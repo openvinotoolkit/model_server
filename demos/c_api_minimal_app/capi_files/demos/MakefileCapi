@@ -16,10 +16,15 @@
 cpp:
 	mkdir -vp /ovms/bin
 	g++ main_capi.cpp -I/ovms/include -L/ovms/lib -lovms_shared -fPIC --std=c++17 -o /ovms/bin/capi_cpp_example
-	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/lib /ovms/bin/capi_cpp_example
+	/ovms/bin/capi_cpp_example
+
+benchmark:
+	mkdir -vp /ovms/bin
+	g++ main_benchmark.cpp -I/ovms/include -L/ovms/lib -lovms_shared -fPIC --std=c++17 -lpthread -o /ovms/bin/capi_benchmark
+	/ovms/bin/capi_benchmark
 
 c:
 	mkdir -vp /ovms/bin
 	gcc -c main_capi.c -I/ovms/include -o /ovms/bin/main_capi.o -std=c99
 	gcc -o /ovms/bin/capi_c_example /ovms/bin/main_capi.o -L/ovms/lib -lovms_shared
-	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/lib /ovms/bin/capi_c_example
+	/ovms/bin/capi_c_example

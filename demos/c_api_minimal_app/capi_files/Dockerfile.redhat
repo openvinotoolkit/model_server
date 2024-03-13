@@ -33,7 +33,7 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal:8.8 as release
 SHELL ["/bin/bash", "-c"]
 
 RUN microdnf upgrade -y
-RUN microdnf install shadow-utils make gcc gcc-c++; \
+RUN microdnf install shadow-utils make gcc gcc-c++ wget; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
         groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
@@ -44,9 +44,12 @@ COPY --from=base_build /ovms /ovms
 COPY --from=base_build /licenses /licenses
 COPY demos /ovms/demos
 
+RUN wget https://raw.githubusercontent.com/jarro2783/cxxopts/master/include/cxxopts.hpp --no-check-certificate; mkdir -p /ovms/include; mv cxxopts.hpp /ovms/include
 WORKDIR /ovms/demos
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/ovms/lib"
 RUN make -f MakefileCapi cpp
 RUN make -f MakefileCapi c
+RUN make -f MakefileCapi benchmark
 
 USER ovms
 ENTRYPOINT ["/bin/bash"]
