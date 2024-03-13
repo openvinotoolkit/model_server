@@ -26,8 +26,7 @@ from tritonclient.utils import deserialize_bytes_tensor, serialize_byte_tensor
 
 from pyovms import Tensor
 
-from config import SUPPORTED_LLM_MODELS
-from streamer import BatchTextIteratorStreamer
+from config import SUPPORTED_LLM_MODELS, BatchTextIteratorStreamer
 
 SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
 LANGUAGE = os.environ.get("LANGUAGE", 'English')
