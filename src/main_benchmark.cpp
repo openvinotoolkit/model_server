@@ -403,7 +403,7 @@ int main(int argc, char** argv) {
     std::string inputName(name);
     // datatype handling
     OVMS_DataType datatype;
-    if (dt == OVMS_DATATYPE_U64 || dt == OVMS_DATATYPE_I64 || dt == OVMS_DATATYPE_FP64) {
+    if (dt == OVMS_DATATYPE_STRING || dt == OVMS_DATATYPE_U64 || dt == OVMS_DATATYPE_I64 || dt == OVMS_DATATYPE_FP64) {
         std::cerr << "Benchmarking models with following input types is currently upsupported: STRING, U64, I64, FP64" << std::endl;
         return 1;
     }
