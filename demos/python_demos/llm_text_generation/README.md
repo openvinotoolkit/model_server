@@ -10,7 +10,7 @@ The unary calls are simpler but there is no immediate feedback as the response g
 
 The gRPC stream is a great feature when more interactive approach is needed allowing the user to read the response as they are getting generated.
 
-This demo presents the use case with [tiny-llama-1b-chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1) model but the included python scripts are prepared for several other LLM models. Those are tiny-llama-1b-chat,red-pajama-3b-chat, llama-2-chat-7b, mistral-7b, zephyr-7b-beta, neural-chat-7b-v3-1, notus-7b-v1 and youri-7b-chat.
+This demo presents the use case with [tiny-llama-1b-chat](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1) model but the included python scripts are prepared for several other LLM models. Those are tiny-llama-1b-chat, llama-2-chat-7b and notus-7b-v1.
 In this demo the model can be set by:
 ```bash
 export SELECTED_MODEL=tiny-llama-1b-chat
@@ -41,13 +41,13 @@ pip install -r requirements.txt
 
 python download_model.py --help
 INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
-usage: download_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+usage: download_model.py [-h] --model {tiny-llama-1b-chat,llama-2-chat-7b,notus-7b-v1}
 
 Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+  --model {tiny-llama-1b-chat,llama-2-chat-7b,notus-7b-v1}
                         Select the LLM model out of supported list
 
 python download_model.py --model ${SELECTED_MODEL}
@@ -62,13 +62,13 @@ The model will appear in `./tiny-llama-1b-chat` directory.
 ```bash
 python compress_model.py --help
 INFO:nncf:NNCF initialized successfully. Supported frameworks detected: torch, onnx, openvino
-usage: compress_model.py [-h] --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+usage: compress_model.py [-h] --model {tiny-llama-1b-chat,llama-2-chat-7b,notus-7b-v1}
 
 Script to compress LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  --model {tiny-llama-1b-chat,red-pajama-3b-chat,llama-2-chat-7b,mistral-7b,zephyr-7b-beta,neural-chat-7b-v3-1,notus-7b-v1,youri-7b-chat}
+  --model {tiny-llama-1b-chat,llama-2-chat-7b,notus-7b-v1}
                         Select the LLM model out of supported list
 
 python compress_model.py --model ${SELECTED_MODEL}
@@ -79,11 +79,11 @@ Running this script will create new directories with compressed versions of the 
 The compressed models can be used in place of the original as they have compatible inputs and outputs.
 
 ```bash
-ls  -1 | grep tiny-llama-1b-chat
-tiny-llama-1b-chat
-tiny-llama-1b-chat_FP16
-tiny-llama-1b-chat_INT4_compressed_weights
-tiny-llama-1b-chat_INT8_compressed_weights
+du -sh tiny*
+4.2G    tiny-llama-1b-chat
+2.1G    tiny-llama-1b-chat_FP16
+702M    tiny-llama-1b-chat_INT4_compressed_weights
+1.1G    tiny-llama-1b-chat_INT8_compressed_weights
 ```
 
 > **NOTE** Applying quantization to model weights may impact the model accuracy. Please test and verify that the results are of acceptable quality for your use case.

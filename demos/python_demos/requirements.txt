@@ -1,7 +1,10 @@
 --extra-index-url https://download.pytorch.org/whl/cpu 
 git+https://github.com/dtrawins/optimum-intel.git@concurrency_support
 ## used a fork to provide support for multi concurrency https://github.com/huggingface/optimum-intel/pull/519
-onnx
-pillow
-optimum[diffusers]
+onnx==1.15.0
+pillow==10.2.0
+optimum[diffusers]==1.17.1
 tritonclient[grpc]==2.37.0.9383150  # Required to use batch string serialization/deserialization (4byte length prepend)
+transformers==4.37.1
+diffusers==0.26.3
+datasets==2.18.0
