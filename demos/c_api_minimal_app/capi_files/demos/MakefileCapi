@@ -27,4 +27,4 @@ c:
 	mkdir -vp /ovms/bin
 	gcc -c main_capi.c -I/ovms/include -o /ovms/bin/main_capi.o -std=c99
 	gcc -o /ovms/bin/capi_c_example /ovms/bin/main_capi.o -L/ovms/lib -lovms_shared
-	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/lib /ovms/bin/capi_c_example
+	/ovms/bin/capi_c_example
