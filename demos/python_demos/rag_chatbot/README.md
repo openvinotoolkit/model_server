@@ -1,6 +1,6 @@
 # LLM-powered RAG chatbot serving via Python Calculator in MediaPipe Graph {#ovms_demo_python_rag_chatbot}
 
-This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models based off given documents.
+This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models based on attached documents.
 The demo explains how to serve MediaPipe Graph with Python node that implements demo logic using Python libraries like Hugging Face Optimum with OpenVINO Runtime as execution engine and LangChain Retrieval QA pipeline that wraps entire processing.
 
 Using the gRPC streaming interactive approach allows the user to read the response as they are getting generated.
