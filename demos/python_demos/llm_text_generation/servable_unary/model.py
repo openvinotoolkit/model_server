@@ -31,7 +31,7 @@ from config import SUPPORTED_LLM_MODELS, BatchTextIteratorStreamer
 SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
 LANGUAGE = os.environ.get("LANGUAGE", 'English')
 
-print("SELECTED MODEL", SELECTED_MODEL)
+print("SELECTED MODEL", SELECTED_MODEL, flush=True)
 model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 
 MODEL_PATH = "/model"  # relative to container
@@ -136,17 +136,17 @@ def serialize_completions(batch_size, result):
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        print("-------- Running initialize")
+        print("-------- Running initialize", flush=True)
         self.ov_model = OVModelForCausalLM.from_pretrained(
             MODEL_PATH,
             device="AUTO",
             ov_config=OV_CONFIG,
             config=AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True))
-        print("-------- Model loaded")
+        print("-------- Model loaded", flush=True)
         return True
 
     def execute(self, inputs: list):
-        print(f"-------- Running execute, shape: {inputs[0].shape}")
+        print(f"-------- Running execute, shape: {inputs[0].shape}", flush=True)
         batch_size = inputs[0].shape[0]
         prompts = deserialize_prompts(batch_size, inputs[0])
         messages = [convert_history_to_text([[prompt, ""]]) for prompt in prompts]
@@ -178,11 +178,11 @@ class OvmsPythonModel:
 
         completions = ["" for _ in range(batch_size)]
         for i, partial_result in enumerate(streamer):
-            print('iteration', i)
+            print('iteration', i, flush=True)
             if batch_size == 1:
                 completions[0] += partial_result
             else:
                 completions = [a + b for a, b in zip(completions, partial_result)]
-        print('end')
+        print('end', flush=True)
 
         return serialize_completions(batch_size, completions)

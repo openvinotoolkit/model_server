@@ -178,6 +178,56 @@ TEST_F(PythonFlowTest, PythonNodeFileDoesNotExist) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST);
 }
 
+TEST_F(PythonFlowTest, PythonNodeClassDoesNotExist) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_missing_class.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
+}
+
+TEST_F(PythonFlowTest, PythonNodeExecuteNotImplemented) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/bad_execute_no_method.py"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
+}
+
 TEST_F(PythonFlowTest, PythonNodeNameAlreadyExist) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
