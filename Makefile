@@ -60,6 +60,7 @@ CHECK_COVERAGE ?=0
 RUN_TESTS ?= 1
 NVIDIA ?=0
 GPU ?= 0
+NPU ?= 0
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
 PYTHON_DISABLE ?= 0
@@ -155,7 +156,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
 	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.0.0.14509.34caeefd078_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
-	INSTALL_DRIVER_VERSION ?= "23.22.26516"
+	INSTALL_DRIVER_VERSION ?= "23.30.26918"
 	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.0.0.14509.34caeefd078_x86_64.tgz
   endif
 endif
@@ -170,7 +171,7 @@ ifeq ($(BASE_OS),redhat)
 	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   endif	
   DIST_OS=redhat
-  INSTALL_DRIVER_VERSION ?= "23.22.26516"
+  INSTALL_DRIVER_VERSION ?= "23.43.27642"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.0.0.14509.34caeefd078_x86_64.tgz
 endif
 
@@ -227,6 +228,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
 	--build-arg INSTALL_DRIVER_VERSION=$(INSTALL_DRIVER_VERSION)\
 	--build-arg GPU=$(GPU)\
+	--build-arg NPU=$(NPU)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
 	--build-arg JOBS=$(JOBS)\
 	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)
