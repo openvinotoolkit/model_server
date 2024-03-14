@@ -765,13 +765,10 @@ static size_t getElementsCount(const KFSTensorInputProto& proto, ovms::Precision
 template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateTensorContent(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision, size_t bufferId) const {
     size_t expectedValueCount = 1;
-        SPDLOG_DEBUG("DIM SIZE: {}", proto.shape().size());
     for (int i = 0; i < proto.shape().size(); i++) {
-        SPDLOG_DEBUG("DIM: {}", proto.shape()[i]);
         expectedValueCount *= proto.shape()[i];
     }
     if (request.raw_input_contents().size()) {
-        SPDLOG_DEBUG("Data is in raw input content: {}", request.raw_input_contents().size());
         if (proto.datatype() == "BYTES") {
             // Special content validation - 4 byte length metadata
             size_t processedBytes = 0;
@@ -817,7 +814,6 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
         // here we should check that the elements count is equal since for some precisions there is padding
         // we need to decide first which exact datatype_contents we extract that information from
         size_t elementsCount = getElementsCount(proto, expectedPrecision);
-        SPDLOG_DEBUG("EXPECTED: {} ACTUAL: {}", expectedValueCount, elementsCount);
         if (expectedValueCount != elementsCount) {
             std::stringstream ss;
             ss << "Expected: " << expectedValueCount << " values; Actual: " << elementsCount << " values; input name: " << getCurrentlyValidatedInputName();

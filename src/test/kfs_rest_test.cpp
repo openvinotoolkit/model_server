@@ -1173,6 +1173,28 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape) {
     ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
+TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_noData) {
+    std::string request = "/v2/models/string/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"my_name\",\"shape\":[1],\"datatype\":\"BYTES\"}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+
+TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_emptyData) {
+    std::string request = "/v2/models/string/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"my_name\",\"shape\":[1],\"datatype\":\"BYTES\",\"data\":[]}], \"id\":\"1\"}";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+
 // Serialization is unsupported
 TEST_F(HttpRestApiHandlerWithStringModelTest, failsAtSerializationStep) {
     std::string request = "/v2/models/string/versions/1/infer";
