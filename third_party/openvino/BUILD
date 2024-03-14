@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-
-
 package(
     default_visibility = ["//visibility:public"],
 )
