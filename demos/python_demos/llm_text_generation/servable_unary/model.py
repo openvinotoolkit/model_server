@@ -13,9 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
+
 import os
 import threading
 import numpy as np
+import torch
+
+from typing import Optional, List, Tuple
 from optimum.intel import OVModelForCausalLM
 from transformers import AutoTokenizer, AutoConfig, TextIteratorStreamer, StoppingCriteria, StoppingCriteriaList
 from tritonclient.utils import deserialize_bytes_tensor, serialize_byte_tensor
@@ -25,9 +29,10 @@ from pyovms import Tensor
 from config import SUPPORTED_LLM_MODELS, BatchTextIteratorStreamer
 
 SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
+LANGUAGE = os.environ.get("LANGUAGE", 'English')
 
-print("SELECTED MODEL", SELECTED_MODEL)
-model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
+print("SELECTED MODEL", SELECTED_MODEL, flush=True)
+model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 
 MODEL_PATH = "/model"  # relative to container
 OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
@@ -51,9 +56,6 @@ text_processor = model_configuration.get(
     "partial_text_processor", default_partial_text_processor
 )
 
-MODEL_PATH = "/model"  # relative to container
-OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
-
 # Model specific configuration
 model_name = model_configuration["model_id"]
 history_template = model_configuration["history_template"]
@@ -62,6 +64,7 @@ start_message = model_configuration["start_message"]
 stop_tokens = model_configuration.get("stop_tokens")
 tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
+tokenizer.pad_token = tokenizer.eos_token  # For models with tokenizer with uninitialized pad token
 
 # HF class that is capable of stopping the generation
 # when given tokens appear in specific order
@@ -77,14 +80,14 @@ class StopOnTokens(StoppingCriteria):
 
 if stop_tokens is not None:
     if isinstance(stop_tokens[0], str):
-        stop_tokens = tok.convert_tokens_to_ids(stop_tokens)
+        stop_tokens = tokenizer.convert_tokens_to_ids(stop_tokens)
 
     stop_tokens = [StopOnTokens(stop_tokens)]
 
 
 # For multi Q&A use cases
 # Taken from notebook:
-# https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot/254-llm-chatbot.ipynb
+# https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot/
 def convert_history_to_text(history):
     """
     function for conversion history stored as list pairs of user and assistant messages to string according to model expected conversation template
@@ -133,17 +136,17 @@ def serialize_completions(batch_size, result):
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        print("-------- Running initialize")
+        print("-------- Running initialize", flush=True)
         self.ov_model = OVModelForCausalLM.from_pretrained(
             MODEL_PATH,
             device="AUTO",
             ov_config=OV_CONFIG,
             config=AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True))
-        print("-------- Model loaded")
+        print("-------- Model loaded", flush=True)
         return True
 
     def execute(self, inputs: list):
-        print(f"-------- Running execute, shape: {inputs[0].shape}")
+        print(f"-------- Running execute, shape: {inputs[0].shape}", flush=True)
         batch_size = inputs[0].shape[0]
         prompts = deserialize_prompts(batch_size, inputs[0])
         messages = [convert_history_to_text([[prompt, ""]]) for prompt in prompts]
@@ -175,11 +178,11 @@ class OvmsPythonModel:
 
         completions = ["" for _ in range(batch_size)]
         for i, partial_result in enumerate(streamer):
-            print('iteration', i)
+            print('iteration', i, flush=True)
             if batch_size == 1:
                 completions[0] += partial_result
             else:
                 completions = [a + b for a, b in zip(completions, partial_result)]
-        print('end')
+        print('end', flush=True)
 
         return serialize_completions(batch_size, completions)

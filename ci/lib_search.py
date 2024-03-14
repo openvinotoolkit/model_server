@@ -131,6 +131,7 @@ def check_dir(start_dir):
         "iris_tracking.pbtxt",
         "graph_two_inputs_model.pbtxt",
         "test.log"
+        "aipc.txt"
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']

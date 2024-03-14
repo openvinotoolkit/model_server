@@ -17,6 +17,7 @@
 
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -120,7 +121,7 @@ public:
     // Construct object from request contents
     OvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copy);
 
-    // Construct object from buffer info
-    OvmsPyTensor(const std::string& name, const py::buffer& buffer);
+    // Construct object from buffer info. By default shape and datatype are infered from the buffer, but can be set directly if needed.
+    OvmsPyTensor(const std::string& name, const py::buffer& buffer, const std::optional<std::vector<py::ssize_t>>& shape, const std::optional<std::string>& datatype);
 };
 }  // namespace ovms

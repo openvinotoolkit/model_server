@@ -1,5 +1,5 @@
 #*****************************************************************************
-# Copyright 2023 Intel Corporation
+# Copyright 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,50 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
-from optimum.intel.openvino import OVModelForCausalLM
-from transformers import AutoTokenizer
-from servable_stream.config import SUPPORTED_LLM_MODELS
 
 import argparse
+from pathlib import Path
+
+from servable_stream.config import SUPPORTED_EMBEDDING_MODELS, SUPPORTED_LLM_MODELS
+from converter import converters
+
+from transformers import (
+    AutoModel,
+    AutoTokenizer,
+)
 
 parser = argparse.ArgumentParser(description='Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot')
 
-supported_models_list = [model_name for model in SUPPORTED_LLM_MODELS.values() for model_name in model]
+supported_models_list = []
+for key, _ in SUPPORTED_EMBEDDING_MODELS.items() :
+    supported_models_list.append(key)
 
 parser.add_argument('--model',
                     required=True,
                     choices=supported_models_list,
                     help='Select the LLM model out of supported list')
-args = vars(parser.parse_args())
+args = parser.parse_args()
 
-SELECTED_MODEL = args['model']
-LANGUAGE = 'English'
+SELECTED_MODEL = args.model
 
-model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
-
-model_id = model_configuration["model_id"]
+model_configuration = SUPPORTED_EMBEDDING_MODELS[SELECTED_MODEL]
 
 MODEL_PATH = "./" + SELECTED_MODEL
 
-print('Downloading and converting...')
-ov_model = OVModelForCausalLM.from_pretrained(
-    model_id,
-    export=True,
-    device='CPU',
-    compile=False,
-    trust_remote_code=True,
-    load_in_8bit=False)
+embedding_model_dir = Path(SELECTED_MODEL)
+embedding_model_configuration = SUPPORTED_EMBEDDING_MODELS[SELECTED_MODEL]
 
-print(f'Saving model to {MODEL_PATH} ...')
-ov_model.save_pretrained(MODEL_PATH)
-print('Done.')
-
-print(f'Downloading tokenizer to {MODEL_PATH} ...')
-tok = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-print(f'Saving tokenizer to {MODEL_PATH} ...')
-tok.save_pretrained(MODEL_PATH)
-print('Done.')
-
-if not ov_model.stateful:
-    print("WARNING: Saved model is not stateful")
-    exit(1)
+if not (embedding_model_dir / "openvino_model.xml").exists():
+    model = AutoModel.from_pretrained(embedding_model_configuration["model_id"])
+    converters[SELECTED_MODEL](model, embedding_model_dir)
+    tokenizer = AutoTokenizer.from_pretrained(embedding_model_configuration["model_id"])
+    tokenizer.save_pretrained(embedding_model_dir)
+    del model

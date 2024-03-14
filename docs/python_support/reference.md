@@ -271,23 +271,39 @@ def execute(self, inputs):
 
 Inputs will be provided to the `execute` function, but outputs must be prepared by the user. Output objects can be created using `pyovms.Tensor` class constructor:
 
-`Tensor(name, data)`
+`Tensor(name, data, shape=None, datatype=None)`
 
 - `name`: a string that associates Tensor data with specific name. This name is also used by `PythonExecutorCalculator` to push data to the correct output stream in the node. More about it in [node configuration section](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#input-and-output-streams-in-python-code).
+
 - `data`: an object that implements Python [Buffer Protocol](https://docs.python.org/3/c-api/buffer.html#buffer-protocol). This could be an instance of some built-in type like `bytes` or types from external modules like `numpy.ndarray`. 
 
+- `shape` (*optional*): a tuple or list defining the shape of the data. This value is directly assigned to `shape` attribute of the `Tensor`. By default, `shape` attribute is inherited from the `data` object. Providing `shape` to the constructor will override inherited value, so use it only if you know what you are doing. 
+
+- `datatype` (*optional*): a string defining the type of the data. This value is directly assigned to `datatype` attribute of the `Tensor`. By default, `datatype` attribute is inherited from the `data` object. Providing `datatype` to the constructor will override inherited value, so use it only if you know what you are doing. 
+
+**Note**: `shape` and `datatype` arguments do not modify internal structure of the data - there are no reshapes and type conversions. They only override `Tensor.shape` and `Tensor.datatype` attributes, so the user can provide custom context to the next node or server response. It means they can be completely detached from the data buffer properties and it's user's reponsibility to correctly interpret these attributes while reading the `Tensor` in the next node or the server response on the client side.  
+
 ```python
+import numpy as np
 from pyovms import Tensor
 
 class OvmsPythonModel:
     def execute(self, inputs):
-        # Create Tensor called my_output with encoded text
-        output = Tensor("my_output", "some text".encode())
+        # Create Tensor called my_output1 with encoded text
+        output1 = Tensor("my_output1", "some text".encode())
+
+        # Create Tensor called my_output with batch of string in numpy array
+        # with overriding tensor datatype to match numpy array dtype
+        npy_arr = np.array(["my", "batched", "string", "output"])
+        output2 = Tensor("my_output2", npy_arr, datatype=np_arr.dtype.str)
+
         # A list of Tensors is expected, even if there's only one output
-        return [output]
+        return [output1, output2]
 ``` 
 
-As `Tensor` gets created from another type it adapts all fields required by the buffer protocol as its own. In such case `datatype` and `shape` also are not defined explicitly. Learn more in [datatype considerations](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#datatype-considerations) section.
+As `Tensor` gets created from another type it adapts all fields required by the buffer protocol as its own. 
+Depending on how `Tensor` is created `shape` or `datatype` may be overridden.
+If they are not provided `Tensor` will adapt another buffer `shape` as it's own and will map it's `format` to a `datatype`. Learn more in [datatype considerations](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#datatype-considerations) section.
 
 If the node is connected to another Python node, then Tensors pushed to the output of this node, are inputs of another node. 
 
@@ -318,7 +334,7 @@ In order to let users work with KServe types without enforcing the usage of stru
 |`FP64`         | `d`              |
 
 
-The same mapping is applied the other way around when creating `Tensor` from another Python object in `execute` method. 
+The same mapping is applied the other way around when creating `Tensor` from another Python object in `execute` method (unless `datatype` argument is provided to the [constructor](#creating-output-tensors)). 
 
 `Tensor` object always holds both values in `Tensor.datatype` and `Tensor.data.format` attributes so they can be used in deserialization and serialization, but also in another node in the graph.
 
@@ -341,10 +357,12 @@ The `datatype` field in the tensor is a `string` and model server will not rejec
     
 In `execute` user has access to both information from the request as well as how the internal buffer looks like.
 
-Above scenario is the case only for the nodes that are directly connected to graph inputs. `pyovms.Tensor` objects produced inside `execute` inherit most of the fields from the objects they are created from, so user cannot manually set datatype. In such case tensor will try to map buffer protocol `format` to `datatype` according to the mapping mentioned before. 
+`pyovms.Tensor` objects produced inside `execute` inherit most of the fields from the objects they are created from and by default tensor will try to map buffer protocol `format` to `datatype` according to the mapping mentioned before. 
 
 If it fails, the `datatype` is set to `format`, so that if such tensor is the output tensor of the graph, client receives the most valuable information about the type of output data.
-  
+
+In case this approach is insufficient, user can manually set `datatype` attribute to more suitable one, by providing optional `datatype` argument to the `Tensor` [constructor](#creating-output-tensors).
+
 ## Configuration and deployment
 
 Python is enabled via [MediaPipe](../mediapipe.md) by built-in `PythonExecutorCalculator`, therefore, in order to execute Python code in OVMS you need to create a graph with a node that uses this calculator. 

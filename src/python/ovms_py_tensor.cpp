@@ -59,7 +59,7 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, void* data, const std::vecto
     }
 }
 
-OvmsPyTensor::OvmsPyTensor(const std::string& name, const py::buffer& buffer) :
+OvmsPyTensor::OvmsPyTensor(const std::string& name, const py::buffer& buffer, const std::optional<std::vector<py::ssize_t>>& shape, const std::optional<std::string>& datatype) :
     name(name),
     refObj(buffer) {
     py::buffer_info bufferInfo = buffer.request();
@@ -71,7 +71,13 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, const py::buffer& buffer) :
     strides = bufferInfo.strides;
 
     size = std::accumulate(std::begin(bufferShape), std::end(bufferShape), 1, std::multiplies<py::ssize_t>()) * itemsize;
-    userShape = bufferShape;
-    auto it = bufferFormatToDatatype.find(format);
-    datatype = it != bufferFormatToDatatype.end() ? it->second : format;
+
+    userShape = shape.value_or(bufferShape);
+
+    if (datatype.has_value()) {
+        this->datatype = datatype.value();
+    } else {
+        auto it = bufferFormatToDatatype.find(format);
+        this->datatype = it != bufferFormatToDatatype.end() ? it->second : format;
+    }
 }

@@ -51,7 +51,7 @@ BASE_OS ?= ubuntu22
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
-BASE_OS_TAG_UBUNTU ?= 20.04
+BASE_OS_TAG_UBUNTU ?= 22.04
 BASE_OS_TAG_REDHAT ?= 8.9
 
 INSTALL_RPMS_FROM_URL ?=
@@ -450,7 +450,7 @@ ifeq ($(BUILD_NGINX), 1)
 endif
 
 python_image:
-	@docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg IMAGE_NAME=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) demos/python_demos -t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_PYTHON_IMAGE_TAG)
+	@docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg IMAGE_NAME=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) -f demos/python_demos/Dockerfile.$(OS) demos/python_demos/ -t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_PYTHON_IMAGE_TAG)
 
 
 # Ci build expects index.html in genhtml directory
