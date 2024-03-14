@@ -130,7 +130,7 @@ def check_dir(start_dir):
         "build_dependencies.sh",
         "iris_tracking.pbtxt",
         "graph_two_inputs_model.pbtxt",
-        "test.log"
+        "test.log",
         "aipc.txt"
         ]
 
