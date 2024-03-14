@@ -27,28 +27,22 @@ pipeline {
 
         stage('style check') {
             steps {
-                dir ('model_server'){
-                  sh 'make style'
-                }
+                sh 'make style'
             }
         }
 
         stage('sdl check') {
             steps {
-                dir ('model_server'){
-                  sh 'make sdl-check'
-                }
+                sh 'make sdl-check'
             }
         }
 
         stage("Build docker image") {
           when { expression { image_build_needed == "true" } }
           steps {
-              dir ('model_server'){
                 sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
-          }
         }
 
         stage("Run tests in parallel") {
@@ -56,9 +50,7 @@ pipeline {
           parallel {
             stage("Run unit tests") {
               steps {
-                dir ('model_server'){
                   sh "make run_unit_tests OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                }
               }
             }
 
