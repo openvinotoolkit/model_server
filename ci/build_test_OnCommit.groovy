@@ -12,14 +12,17 @@ pipeline {
               shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
               echo shortCommit
               echo sh(script: 'env|sort', returnStdout: true)
-              if (env.CHANGE_ID){
+              def git_diff = ""
+              if (env.CHANGE_ID){ // PR - check changes between target branch
                 sh 'git fetch origin ${CHANGE_TARGET}'
-                def git_diff = sh (script: "git diff --name-only \$(git merge-base FETCH_HEAD HEAD)", returnStdout: true).trim()
+                git_diff = sh (script: "git diff --name-only \$(git merge-base FETCH_HEAD HEAD)", returnStdout: true).trim()
                 println("git diff:\n${git_diff}")
-                def matched = (git_diff =~ /src|third_party|(\n|^)Dockerfile|(\n|^)Makefile|\.cpp|\.h|BUILD|WORKSPACE|(\n|^)rununittest\.sh/)
+              } else {  // branches without PR - check changes in last commit
+                git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
+              }
+              def matched = (git_diff =~ /src|third_party|(\n|^)Dockerfile|(\n|^)Makefile|\.cpp|\.h|BUILD|WORKSPACE|(\n|^)rununittest\.sh/)
                 if (matched){
                   image_build_needed = "true"
-                }
               }
             }
           }
