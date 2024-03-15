@@ -74,8 +74,22 @@ node {
   output_stream: "OVTENSOR:logits_per_image"
   node_options: {
     [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions]: {
-          input_order_list :["input_ids", "attention_mask"]
-          output_order_list :["64", "33"]
+          tag_to_input_tensor_names {
+            key: "OVTENSOR"
+            value: "input_ids"
+          }
+          tag_to_input_tensor_names {
+            key: "OVTENSOR1"
+            value: "attention_mask"
+          }
+          tag_to_input_tensor_names {
+            key: "OVTENSOR2"
+            value: "64"
+          }
+          tag_to_output_tensor_names {
+            key: "OVTENSOR"
+            value: "33"
+          }
         }
   }
 }
