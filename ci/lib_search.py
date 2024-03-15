@@ -216,6 +216,7 @@ def check_func(start_dir):
         'graph.pbtxt',
         "build_dependencies.sh",
         "iris_tracking.pbtxt",
+        "internal_tests"
     ]
 
     exclude_directories = ['/dist/']
