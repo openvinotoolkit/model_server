@@ -198,13 +198,13 @@ public:
             }
         } catch (const pybind11::error_already_set& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
-            return absl::Status(absl::StatusCode::kInternal, "Error occurred during convertion");
+            return absl::Status(absl::StatusCode::kInternal, "Error occurred during graph execution");
         } catch (std::exception& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
-            return absl::Status(absl::StatusCode::kUnknown, "Unexpected error occurred");
+            return absl::Status(absl::StatusCode::kUnknown, "Error occurred during graph execution");
         } catch (...) {
             LOG(INFO) << "Unexpected error occurred during node " << cc->NodeName() << " execution";
-            return absl::Status(absl::StatusCode::kUnknown, "Unexpected error occurred");
+            return absl::Status(absl::StatusCode::kUnknown, "Error occurred during graph execution");
         }
 
         LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Process end";

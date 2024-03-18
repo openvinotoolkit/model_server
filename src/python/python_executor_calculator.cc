@@ -223,6 +223,7 @@ public:
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
             RETURN_EXECUTION_FAILED_STATUS();
         } catch (const pybind11::error_already_set& e) {
+            LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
             RETURN_EXECUTION_FAILED_STATUS();
         } catch (std::exception& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
