@@ -77,12 +77,12 @@ public:
 };
 
 class UnexpectedPythonObjectError : public std::exception {
-protected:    
+protected:
     std::string message;
 
 public:
     UnexpectedPythonObjectError() = delete;
-    UnexpectedPythonObjectError(const UnexpectedPythonObjectError& exception){
+    UnexpectedPythonObjectError(const UnexpectedPythonObjectError& exception) {
         this->message = std::string(exception.what());
     }
     UnexpectedPythonObjectError(const py::object& obj, const std::string& expectedType) {
@@ -96,15 +96,17 @@ public:
     }
 };
 
-class UnexpectedInputPythonObjectError : UnexpectedPythonObjectError{
+class UnexpectedInputPythonObjectError : UnexpectedPythonObjectError {
 public:
-    UnexpectedInputPythonObjectError(const UnexpectedPythonObjectError& exception) : UnexpectedPythonObjectError(exception) {}
-    const char* what() const throw() override {return UnexpectedPythonObjectError::what();}
+    UnexpectedInputPythonObjectError(const UnexpectedPythonObjectError& exception) :
+        UnexpectedPythonObjectError(exception) {}
+    const char* what() const throw() override { return UnexpectedPythonObjectError::what(); }
 };
-class UnexpectedOutputPythonObjectError : UnexpectedPythonObjectError{
+class UnexpectedOutputPythonObjectError : UnexpectedPythonObjectError {
 public:
-    UnexpectedOutputPythonObjectError(const UnexpectedPythonObjectError& exception) : UnexpectedPythonObjectError(exception) {}
-    const char* what() const throw() override {return UnexpectedPythonObjectError::what();}
+    UnexpectedOutputPythonObjectError(const UnexpectedPythonObjectError& exception) :
+        UnexpectedPythonObjectError(exception) {}
+    const char* what() const throw() override { return UnexpectedPythonObjectError::what(); }
 };
 
 class BadPythonNodeConfigurationError : public std::exception {
