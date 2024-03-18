@@ -62,6 +62,14 @@ class PythonExecutorCalculator : public CalculatorBase {
         }
     }
 
+    void validateInputTensor(const py::object& pyInput) {
+        try {
+            nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
+        } catch (UnexpectedPythonObjectError& e) {
+            throw UnexpectedInputPythonObjectError(e);
+        }
+    }
+
     void prepareInputs(CalculatorContext* cc, std::vector<py::object>* pyInputs) {
         for (const std::string& tag : cc->Inputs().GetTags()) {
             if (tag != "LOOPBACK") {
@@ -71,13 +79,17 @@ class PythonExecutorCalculator : public CalculatorBase {
                     continue;
                 }
                 const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getObject();
-                try {
-                    nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
-                } catch (UnexpectedPythonObjectError& e) {
-                    throw UnexpectedInputPythonObjectError(e);
-                }
+                validateInputTensor(pyInput);
                 pyInputs->push_back(pyInput);
             }
+        }
+    }
+
+    void validateOutputTensor(const py::object& pyOutput) {
+        try {
+            nodeResources->pythonBackend->validateOvmsPyTensor(pyOutput);
+        } catch (UnexpectedPythonObjectError& e) {
+            throw UnexpectedOutputPythonObjectError(e);
         }
     }
 
@@ -85,11 +97,7 @@ class PythonExecutorCalculator : public CalculatorBase {
         py::gil_scoped_acquire acquire;
         for (py::handle pyOutputHandle : pyOutputs) {
             py::object pyOutput = pyOutputHandle.cast<py::object>();
-            try {
-                nodeResources->pythonBackend->validateOvmsPyTensor(pyOutput);
-            } catch (UnexpectedPythonObjectError& e) {
-                throw UnexpectedOutputPythonObjectError(e);
-            }
+            validateOutputTensor(pyOutput);
             std::string outputName = pyOutput.attr("name").cast<std::string>();
 
             auto it = nodeResources->outputsNameTagMapping.find(outputName);
