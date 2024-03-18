@@ -772,6 +772,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
         if (proto.datatype() == "BYTES") {
             // Special content validation - 4 byte length metadata
             size_t processedBytes = 0;
+            size_t batchSize = 0;
             while (request.raw_input_contents(bufferId).size() >= processedBytes + sizeof(uint32_t)) {
                 uint32_t size = *reinterpret_cast<const uint32_t*>(request.raw_input_contents(bufferId).data() + processedBytes);
                 if (processedBytes + size + sizeof(uint32_t) > request.raw_input_contents(bufferId).size()) {
@@ -782,6 +783,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
                     return Status(StatusCode::INVALID_CONTENT_SIZE, details);
                 }
                 processedBytes += size + sizeof(uint32_t);
+                batchSize++;
             }
             if (request.raw_input_contents(bufferId).size() != processedBytes) {
                 std::stringstream ss;
@@ -789,6 +791,13 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
                 const std::string details = ss.str();
                 SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
                 return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+            }
+            if (batchSize != expectedValueCount) {
+                std::stringstream ss;
+                ss << "Expected: " << expectedValueCount << " values; Actual: " << batchSize << " values; input name: " << getCurrentlyValidatedInputName();
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid value count of tensor proto - {}", servableName, servableVersion, details);
+                return Status(StatusCode::INVALID_VALUE_COUNT, details);
             }
         } else {
             // Plain old data
