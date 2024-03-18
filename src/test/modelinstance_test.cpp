@@ -568,7 +568,9 @@ TEST_F(TestLoadModel, StringLoad) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     EXPECT_EQ(modelInstance.loadModel(NATIVE_STRING_MODEL_CONFIG), ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    ASSERT_EQ(modelInstance.getInputsInfo().size(), 1);
     ASSERT_EQ(modelInstance.getInputsInfo().begin()->second->getPrecision(), ovms::Precision::STRING);
+    ASSERT_EQ(modelInstance.getOutputsInfo().size(), 1);
     ASSERT_EQ(modelInstance.getOutputsInfo().begin()->second->getPrecision(), ovms::Precision::STRING);
 }
 
