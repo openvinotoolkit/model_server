@@ -76,6 +76,9 @@ public:
     }
 };
 
+class UnexpectedInputPythonObjectError : UnexpectedPythonObjectError{};
+class UnexpectedOutputPythonObjectError : UnexpectedPythonObjectError{};
+
 class UnexpectedPythonObjectError : public std::exception {
     std::string message;
 

@@ -71,7 +71,11 @@ class PythonExecutorCalculator : public CalculatorBase {
                     continue;
                 }
                 const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getObject();
-                nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
+                try {
+                    nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
+                } catch UnexpectedPythonObjectError {
+                    throw UnexpectedInputPythonObjectError;
+                }
                 pyInputs->push_back(pyInput);
             }
         }
@@ -81,7 +85,11 @@ class PythonExecutorCalculator : public CalculatorBase {
         py::gil_scoped_acquire acquire;
         for (py::handle pyOutputHandle : pyOutputs) {
             py::object pyOutput = pyOutputHandle.cast<py::object>();
-            nodeResources->pythonBackend->validateOvmsPyTensor(pyOutput);
+            try {
+                nodeResources->pythonBackend->validateOvmsPyTensor(pyOutput);
+            } catch UnexpectedPythonObjectError {
+                throw UnexpectedOutputPythonObjectError;
+            }
             std::string outputName = pyOutput.attr("name").cast<std::string>();
 
             auto it = nodeResources->outputsNameTagMapping.find(outputName);
