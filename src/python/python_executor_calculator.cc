@@ -73,8 +73,8 @@ class PythonExecutorCalculator : public CalculatorBase {
                 const py::object& pyInput = cc->Inputs().Tag(tag).Get<PyObjectWrapper<py::object>>().getObject();
                 try {
                     nodeResources->pythonBackend->validateOvmsPyTensor(pyInput);
-                } catch UnexpectedPythonObjectError {
-                    throw UnexpectedInputPythonObjectError;
+                } catch (UnexpectedPythonObjectError& e) {
+                    throw UnexpectedInputPythonObjectError(e);
                 }
                 pyInputs->push_back(pyInput);
             }
@@ -87,8 +87,8 @@ class PythonExecutorCalculator : public CalculatorBase {
             py::object pyOutput = pyOutputHandle.cast<py::object>();
             try {
                 nodeResources->pythonBackend->validateOvmsPyTensor(pyOutput);
-            } catch UnexpectedPythonObjectError {
-                throw UnexpectedOutputPythonObjectError;
+            } catch (UnexpectedPythonObjectError& e) {
+                throw UnexpectedOutputPythonObjectError(e);
             }
             std::string outputName = pyOutput.attr("name").cast<std::string>();
 
@@ -224,8 +224,11 @@ public:
         } catch (const UnexpectedOutputTensorError& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
             RETURN_EXECUTION_FAILED_STATUS();
-        } catch (const UnexpectedPythonObjectError& e) {
+        } catch (const UnexpectedOutputPythonObjectError& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution. Wrong object on execute output: " << e.what();
+            RETURN_EXECUTION_FAILED_STATUS();
+        } catch (const UnexpectedInputPythonObjectError& e) {
+            LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution. Wrong object on execute input: " << e.what();
             RETURN_EXECUTION_FAILED_STATUS();
         } catch (const BadPythonNodeConfigurationError& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();

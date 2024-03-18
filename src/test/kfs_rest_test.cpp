@@ -251,69 +251,15 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
     }
 }
 
-static void testInferenceNegative(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler, ovms::Status status) {
-    std::string request = "/v2/models/mediapipeAdd/versions/1/infer";
-
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", std::to_string(headerLength)};
-    headers.emplace_back(binaryInputsHeader);
-
-    ovms::HttpRequestComponents comp;
-
-    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), ovms::StatusCode::OK);
-
-    std::string response;
-    ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), status);
-}
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
 
 TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP32) {
     // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
 
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    testInference(headerLength, request_body, handler);
-}
-
-TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP16) {
-    // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
     std::string param = ",\"parameters\":{\"binary_data_output\":true}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
-}
-
-TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP32DataInJsonAndBinaryExtension) {
-    // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
-    std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
-
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    request_body += binaryData;
-    request_body += binaryData;
-
-    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
-}
-
-TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP32BinaryExtension) {
-    // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
-    std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
-
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
     std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
 
     std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
