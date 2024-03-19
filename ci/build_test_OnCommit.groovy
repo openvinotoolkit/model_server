@@ -1,4 +1,5 @@
 def image_build_needed = "false"
+def client_test_needed = "false"
 def shortCommit = ""
 
 pipeline {
@@ -20,9 +21,13 @@ pipeline {
               } else {  // branches without PR - check changes in last commit
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
-              def matched = (git_diff =~ /src|third_party|(\n|^)Dockerfile|(\n|^)Makefile|\.cpp|\.h|BUILD|WORKSPACE|(\n|^)rununittest\.sh/)
+              def matched = (git_diff =~ /src|third_party|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|BUILD|WORKSPACE|(\n|^)rununittest\.sh/)
                 if (matched){
                   image_build_needed = "true"
+              }
+              matched = (git_diff =~ /client/)
+                if (matched){
+                  client_test_needed = "true"
               }
             }
           }
@@ -38,6 +43,13 @@ pipeline {
             steps {
                 sh 'make sdl-check'
             }
+        }
+        
+        stage('client test') {
+          when { expression { client_test_needed == "true" } }
+          steps {
+                sh "make test_client_lib"
+              }
         }
 
         stage("Build docker image") {
