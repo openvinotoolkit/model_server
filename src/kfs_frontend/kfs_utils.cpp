@@ -189,8 +189,11 @@ Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& 
         offset += (sizeof(uint32_t) + inputSize);
         tmpBatchSize++;
     }
-    if (offset != buffer.size()) {
-        SPDLOG_DEBUG("Raw input contents invalid format. Every input need to be preceded by four bytes of its size.");
+    if (offset > buffer.size()) {
+        SPDLOG_DEBUG("Raw input contents invalid format. Every input need to be preceded by four bytes of its size. Buffer exceeded by {} bytes", offset - buffer.size());
+        return StatusCode::INVALID_INPUT_FORMAT;
+    } else if (offset < buffer.size()) {
+        SPDLOG_DEBUG("Raw input contents invalid format. Every input need to be preceded by four bytes of its size. Unprocessed {} bytes", buffer.size() - offset);
         return StatusCode::INVALID_INPUT_FORMAT;
     }
     batchSize = tmpBatchSize;

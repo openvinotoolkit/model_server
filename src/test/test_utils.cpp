@@ -220,6 +220,46 @@ void checkScalarResponse(const std::string outputName,
     ASSERT_EQ(*((float*)content->data()), inputScalar);
 }
 
+void checkStringResponse(const std::string outputName,
+    const std::vector<std::string>& inputStrings, PredictResponse& response, const std::string& servableName) {
+    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
+    const auto& output_proto = response.outputs().at(outputName);
+
+    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 1);
+    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), inputStrings.size());
+    ASSERT_EQ(output_proto.dtype(), tensorflow::DT_STRING);
+
+    ASSERT_EQ(output_proto.string_val_size(), inputStrings.size());
+    for (size_t i = 0; i < inputStrings.size(); i++) {
+        ASSERT_EQ(output_proto.string_val(i), inputStrings[i]);
+    }
+}
+
+void checkStringResponse(const std::string outputName,
+    const std::vector<std::string>& inputStrings, ::KFSResponse& response, const std::string& servableName) {
+    ASSERT_EQ(response.model_name(), servableName);
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    ASSERT_EQ(response.outputs().begin()->name(), outputName) << "Did not find:" << outputName;
+    const auto& output_proto = *response.outputs().begin();
+    std::string* content = response.mutable_raw_output_contents(0);
+
+    ASSERT_EQ(output_proto.shape_size(), 1);
+    ASSERT_EQ(output_proto.shape(0), inputStrings.size());
+
+    size_t offset = 0;
+    for (size_t i = 0; i < inputStrings.size(); i++) {
+        ASSERT_GE(content->size(), offset + 4);
+        uint32_t batchLength = *((uint32_t*)(content->data() + offset));
+        ASSERT_EQ(batchLength, inputStrings[i].size());
+        offset += 4;
+        ASSERT_GE(content->size(), offset + batchLength);
+        ASSERT_EQ(std::string(content->data() + offset, batchLength), inputStrings[i]);
+        offset += batchLength;
+    }
+    ASSERT_EQ(offset, content->size());
+}
+
 void checkAddResponse(const std::string outputName,
     const std::vector<float>& requestData1,
     const std::vector<float>& requestData2,

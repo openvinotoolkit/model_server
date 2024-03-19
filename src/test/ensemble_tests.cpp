@@ -96,6 +96,10 @@ public:
         ::checkScalarResponse(customPipelineOutputName, inputScalar, response, pipelineName);
     }
 
+    void checkStringResponse(const std::vector<std::string>& inputStrings, const std::string& pipelineName) {
+        ::checkStringResponse(customPipelineOutputName, inputStrings, response, pipelineName);
+    }
+
     ModelConfig config;
     RequestType request;
     ResponseType response;
@@ -278,11 +282,11 @@ TYPED_TEST(EnsembleFlowBothApiTest, NativeStringModel) {
     ASSERT_EQ(managerWithStringModel.reloadModelWithVersions(this->config), ovms::StatusCode::OK_RELOADED);
 
     // Configure pipeline
-    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(PASSTHROUGH_STRING_MODEL_INPUT_NAME,
+    this->dagDummyModelInputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineInputName,
         ovms::Precision::STRING,
         ovms::Shape{-1},
         Layout{"N..."});
-    this->dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(PASSTHROUGH_STRING_MODEL_OUTPUT_NAME,
+    this->dagDummyModelOutputTensorInfo = std::make_shared<ovms::TensorInfo>(this->customPipelineOutputName,
         ovms::Precision::STRING,
         ovms::Shape{-1},
         Layout{"N..."});
@@ -304,9 +308,9 @@ TYPED_TEST(EnsembleFlowBothApiTest, NativeStringModel) {
     pipeline.push(std::move(model_node));
     pipeline.push(std::move(output_node));
 
-    // The model has string output which is not implemented yet.
-    // Here we ensure that inference succeeded and it fails at the stage of cloning model output into another models/response in DAG.
-    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OV_CLONE_TENSOR_ERROR);
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
+
+    this->checkStringResponse(inputStrings, pipelineName);
 }
 
 TYPED_TEST(EnsembleFlowBothApiTest, ScalarModel) {
