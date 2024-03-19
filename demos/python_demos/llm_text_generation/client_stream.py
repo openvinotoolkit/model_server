@@ -45,6 +45,7 @@ processing_times = np.zeros((0),int) # tracks response latency in ms
 
 prompts = args['prompt']
 completions = [f"==== Prompt: {prompts[i]} ====\n" for i in range(len(prompts))]
+token_count = [0]
 if len(prompts) == 1:
     print(f"Question:\n{prompts[0]}\n")
 
@@ -58,7 +59,7 @@ def callback(result, error):
     if result.as_numpy('end_signal') is not None:
         event.set()
     elif result.as_numpy('token_count') is not None:
-        print("\n\nNumber of tokens ", result.as_numpy('token_count')[0])
+        token_count[0] = result.as_numpy('token_count')[0]
     elif result.as_numpy('completion') is not None:
         if len(prompts) == 1:
             # For single batch, partial response is represented as single buffer of bytes
@@ -86,6 +87,9 @@ event.wait()
 client.stop_stream()
 print('\nEND')
 
+print("\n\nNumber of tokens ", token_count[0])
+print("Generated tokens per second ", round(token_count[0] / (np.sum(processing_times) / 1000), 2))
+print("Time per generated token", round((np.sum(processing_times) / 1000) / token_count[0], 2), "s")
 print("Total time", np.sum(processing_times), "ms")
 print("Number of responses", processing_times.size)
 print("First response time", processing_times[0], "ms")
