@@ -1186,6 +1186,8 @@ cc_test(
         "test/mediapipe/python/scripts/symmetric_scalar_increment_generator.py",
         "test/mediapipe/python/scripts/good_finalize_remove_file.py",
         "test/mediapipe/python/scripts/return_custom_datatype.py",
+        "test/mediapipe/python/scripts/return_non_tensor_object.py",
+        "test/mediapipe/python/scripts/return_none_object.py",
         "test/passthrough/1/passthrough.xml",
         "test/passthrough/1/passthrough.bin",
         "test/passthrough_string/1/passthrough.xml",

@@ -1030,7 +1030,70 @@ node_options: {
     EXPECT_CALL(this->stream, Read(_));
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
-// TODO: Add more negative tests for wrong configurations
+
+TEST_F(PythonStreamingTest, Negative_calculatorReturnNotListOrIteratorObject) {
+    const std::string testPbtxt{R"(
+input_stream: "OVMS_PY_TENSOR:input"
+output_stream: "OVMS_PY_TENSOR:output"
+node {
+    calculator: "PythonExecutorCalculator"
+    name: "pythonNode"
+    input_side_packet: "PYTHON_NODE_RESOURCES:py"
+    input_stream: "INPUT:input"
+    output_stream: "OUTPUT:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+            handler_path: "/ovms/src/test/mediapipe/python/scripts/return_none_object.py"
+        }
+    }
+}
+)"};
+
+    ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
+    ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    this->pythonModule->releaseGILFromThisThread();
+    prepareRequest(this->firstRequest, {{"input", 3.5f}});
+
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(PythonStreamingTest, Negative_calculatorReturnListWithNonTensorObject) {
+    const std::string testPbtxt{R"(
+input_stream: "OVMS_PY_TENSOR:input"
+output_stream: "OVMS_PY_TENSOR:output"
+node {
+    calculator: "PythonExecutorCalculator"
+    name: "pythonNode"
+    input_side_packet: "PYTHON_NODE_RESOURCES:py"
+    input_stream: "INPUT:input"
+    output_stream: "OUTPUT:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+            handler_path: "/ovms/src/test/mediapipe/python/scripts/return_non_tensor_object.py"
+        }
+    }
+}
+)"};
+
+    ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
+    ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    this->pythonModule->releaseGILFromThisThread();
+    prepareRequest(this->firstRequest, {{"input", 3.5f}});
+
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
 
 // --- End Python cases
 #endif

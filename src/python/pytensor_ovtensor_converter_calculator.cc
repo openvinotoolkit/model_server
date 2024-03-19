@@ -196,19 +196,15 @@ public:
                     cc->Outputs().Tag(OV_TENSOR_TAG_NAME).Add(output.release(), cc->InputTimestamp());
                 }
             }
-        } catch (const UnexpectedPythonObjectError& e) {
-            // TODO: maybe some more descriptive information where to seek the issue.
-            LOG(INFO) << "Wrong object on node " << cc->NodeName() << " provided to converter: " << e.what();
-            return absl::Status(absl::StatusCode::kInternal, "Python converter received unexpected object");
         } catch (const pybind11::error_already_set& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
-            return absl::Status(absl::StatusCode::kInternal, "Error occurred during convertion");
+            return absl::Status(absl::StatusCode::kInternal, "Error occurred during graph execution");
         } catch (std::exception& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
-            return absl::Status(absl::StatusCode::kUnknown, "Unexpected error occurred");
+            return absl::Status(absl::StatusCode::kUnknown, "Error occurred during graph execution");
         } catch (...) {
             LOG(INFO) << "Unexpected error occurred during node " << cc->NodeName() << " execution";
-            return absl::Status(absl::StatusCode::kUnknown, "Unexpected error occurred");
+            return absl::Status(absl::StatusCode::kUnknown, "Error occurred during graph execution");
         }
 
         LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Process end";
