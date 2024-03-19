@@ -39,6 +39,7 @@ from transformers import (
     pipeline,
     StoppingCriteria,
     StoppingCriteriaList,
+    set_seed
 )
 
 from config import SUPPORTED_EMBEDDING_MODELS, SUPPORTED_LLM_MODELS
@@ -47,6 +48,7 @@ from ov_embedding_model import OVEmbeddings
 
 SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
 LANGUAGE = os.environ.get('LANGUAGE', 'English')
+SEED = os.environ.get('SEED')
 llm_model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 
 EMBEDDING_MODEL = 'all-mpnet-base-v2'
@@ -288,6 +290,7 @@ class OvmsPythonModel:
         def infer(q):
             rag_chain.invoke(q)
 
+        if SEED is not None: set_seed(int(SEED))
         t1 = Thread(target=infer, args=(question,))
         t1.start()
 

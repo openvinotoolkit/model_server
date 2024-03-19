@@ -21,7 +21,7 @@ import torch
 
 from typing import Optional, List, Tuple
 from optimum.intel import OVModelForCausalLM
-from transformers import AutoTokenizer, AutoConfig, TextIteratorStreamer, StoppingCriteria, StoppingCriteriaList
+from transformers import AutoTokenizer, AutoConfig, TextIteratorStreamer, StoppingCriteria, StoppingCriteriaList, set_seed
 from tritonclient.utils import deserialize_bytes_tensor, serialize_byte_tensor
 
 from pyovms import Tensor
@@ -30,6 +30,7 @@ from config import SUPPORTED_LLM_MODELS, BatchTextIteratorStreamer
 
 SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
 LANGUAGE = os.environ.get("LANGUAGE", 'English')
+SEED = os.environ.get("SEED")
 
 print("SELECTED MODEL", SELECTED_MODEL, flush=True)
 model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
@@ -173,6 +174,7 @@ class OvmsPythonModel:
         def generate():
             ov_model_exec.generate(**tokens, **generate_kwargs)
 
+        if SEED is not None: set_seed(int(SEED))
         t1 = threading.Thread(target=generate)
         t1.start()
 
