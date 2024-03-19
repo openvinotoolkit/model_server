@@ -145,6 +145,8 @@ class OvmsPythonModel:
         print("-------- Model loaded", flush=True)
         return True
 
+    token_count = 0
+
     def execute(self, inputs: list):
         print(f"-------- Running execute, shape: {inputs[0].shape}", flush=True)
         batch_size = inputs[0].shape[0]
@@ -171,7 +173,9 @@ class OvmsPythonModel:
 
         ov_model_exec = self.ov_model.clone()
         def generate():
-            ov_model_exec.generate(**tokens, **generate_kwargs)
+            result = ov_model_exec.generate(**tokens, **generate_kwargs)
+            self.token_count = len([1 for x in result.numpy().flatten() if x not in tokenizer.convert_tokens_to_ids(tokenizer.all_special_tokens)])
+
 
         t1 = threading.Thread(target=generate)
         t1.start()
@@ -184,5 +188,6 @@ class OvmsPythonModel:
             else:
                 completions = [a + b for a, b in zip(completions, partial_result)]
         print('end', flush=True)
-
-        return serialize_completions(batch_size, completions)
+        t1.join()
+        completions.append(str(self.token_count))
+        return serialize_completions(batch_size + 1, completions)
