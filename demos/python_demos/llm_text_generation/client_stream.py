@@ -56,6 +56,7 @@ def callback(result, error):
     if error:
         raise error
     if result.as_numpy('end_signal') is not None:
+        print("Number of tokens ", result.as_numpy('end_signal').tobytes().decode())
         event.set()
     elif result.as_numpy('completion') is not None:
         if len(prompts) == 1:
