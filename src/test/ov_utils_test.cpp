@@ -99,15 +99,33 @@ TEST(OVUtils, CopyTensor) {
     EXPECT_NE(originalTensor.data(), copyTensor.data());
 }
 
-TEST(OVUtils, UnsupportedStringTensorClone) {
+TEST(OVUtils, CloneStringTensor) {
     const auto elementType = ov::element::Type(ov::element::Type_t::string);
 
-    std::vector<std::string> data{"abc", "def"};
+    std::vector<std::string> data{"abc", "", "defgh"};
 
-    ov::Tensor originalTensor(elementType, ov::Shape{data.size()}, &data[0]);
+    ov::Shape shape{data.size()};
+    ov::Tensor originalTensor(elementType, shape, &data[0]);
     ov::Tensor copyTensor;
 
-    ASSERT_EQ(ovms::tensorClone(copyTensor, originalTensor), ovms::StatusCode::OV_CLONE_TENSOR_ERROR);
+    ASSERT_EQ(ovms::tensorClone(copyTensor, originalTensor), ovms::StatusCode::OK);
+
+    ASSERT_EQ(originalTensor.get_shape(), shape);
+    ASSERT_EQ(copyTensor.get_shape(), shape);
+
+    ASSERT_EQ(originalTensor.get_element_type(), elementType);
+    ASSERT_EQ(copyTensor.get_element_type(), elementType);
+
+    ASSERT_EQ(originalTensor.get_byte_size(), copyTensor.get_byte_size());
+
+    ASSERT_EQ(copyTensor.get_strides(), originalTensor.get_strides());
+
+    std::string* actualData = copyTensor.data<std::string>();
+    std::string* originalData = originalTensor.data<std::string>();
+    for (size_t i = 0; i < data.size(); i++) {
+        EXPECT_EQ(actualData[i], originalData[i]);
+        EXPECT_NE(actualData[i].data(), originalData[i].data());
+    }
 }
 
 TEST(OVUtils, ConstCopyTensor) {

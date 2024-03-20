@@ -64,8 +64,13 @@ std::string getTensorMapString(const std::map<std::string, std::shared_ptr<const
 Status tensorClone(ov::Tensor& destinationTensor, const ov::Tensor& sourceTensor) {
     OVMS_PROFILE_FUNCTION();
     if (sourceTensor.get_element_type() == ov::element::Type_t::string) {
-        SPDLOG_DEBUG("tensorClone for native string is unsupported");
-        return StatusCode::OV_CLONE_TENSOR_ERROR;
+        destinationTensor = ov::Tensor(sourceTensor.get_element_type(), sourceTensor.get_shape());
+        std::string* srcData = sourceTensor.data<std::string>();
+        std::string* destData = destinationTensor.data<std::string>();
+        for (size_t i = 0; i < sourceTensor.get_shape()[0]; i++) {
+            destData[i].assign(srcData[i]);
+        }
+        return StatusCode::OK;
     }
     OV_LOGGER("ov::Tensor(ov::element::type, shape)");
     destinationTensor = ov::Tensor(sourceTensor.get_element_type(), sourceTensor.get_shape());

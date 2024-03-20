@@ -175,6 +175,28 @@ static void serializeContent(std::string* content, ov::Tensor& tensor) {
 
 static void serializeStringContent(std::string* content, ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
+    if (content->size()) {
+        return;
+    }
+
+    std::string* strings = tensor.data<std::string>();
+    for (size_t i = 0; i < tensor.get_shape()[0]; i++) {
+        uint32_t strLen = strings[i].size();
+        content->append(reinterpret_cast<const char*>(&strLen), sizeof(strLen));
+        content->append((char*)strings[i].data(), strLen);
+    }
+}
+
+static void serializeOvTensorStringToTfProtoContent(tensorflow::TensorProto& proto, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
+    std::string* strings = tensor.data<std::string>();
+    for (size_t i = 0; i < tensor.get_shape()[0]; i++) {
+        proto.add_string_val(strings[i]);
+    }
+}
+
+static void serializeStringContentFrom2DU8(std::string* content, ov::Tensor& tensor) {
+    OVMS_PROFILE_FUNCTION();
     // We only fill if the content is not already filled.
     // It can be filled in gather exit node handler.
     if (!content->empty()) {
@@ -227,9 +249,6 @@ Status serializeTensorToTensorProto(
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
-    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_NATIVE) {
-        return StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
-    }
     if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
         return convertOVTensor2DToStringResponse(tensor, responseOutput);
     }
@@ -241,7 +260,11 @@ Status serializeTensorToTensorProto(
     if (!status.ok()) {
         return status;
     }
-    serializeContent(responseOutput.mutable_tensor_content(), tensor);
+    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_NATIVE) {
+        serializeOvTensorStringToTfProtoContent(responseOutput, tensor);
+    } else {
+        serializeContent(responseOutput.mutable_tensor_content(), tensor);
+    }
     return StatusCode::OK;
 }
 
@@ -259,10 +282,9 @@ Status serializeTensorToTensorProtoRaw(
     if (!status.ok()) {
         return status;
     }
-    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_NATIVE) {
-        return StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
-    }
     if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
+        serializeStringContentFrom2DU8(rawOutputContents, tensor);
+    } else if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_NATIVE) {
         serializeStringContent(rawOutputContents, tensor);
     } else {
         serializeContent(rawOutputContents, tensor);

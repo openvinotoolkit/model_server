@@ -529,6 +529,12 @@ void checkScalarResponse(const std::string outputName,
 void checkScalarResponse(const std::string outputName,
     float inputScalar, ::KFSResponse& response, const std::string& servableName = "");
 
+void checkStringResponse(const std::string outputName,
+    const std::vector<std::string>& inputStrings, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");
+
+void checkStringResponse(const std::string outputName,
+    const std::vector<std::string>& inputStrings, ::KFSResponse& response, const std::string& servableName = "");
+
 void assertStringOutputProto(const tensorflow::TensorProto& proto, const std::vector<std::string>& expectedStrings);
 void assertStringOutputProto(const KFSTensorOutputProto& proto, const std::vector<std::string>& expectedStrings);
 void assertStringOutputProto(const ovms::InferenceTensor& proto, const std::vector<std::string>& expectedStrings);
