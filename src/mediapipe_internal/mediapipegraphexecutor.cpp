@@ -214,7 +214,6 @@ static const KFSDataType& MPPrecisionToKFSPrecision(::mediapipe::Tensor::Element
 
 #define COPY_INPUT_VALUE_BY_VALUE(TYPE, PROTO_PREFIX)                                                                                       \
     TYPE* ptr = reinterpret_cast<TYPE*>(data);                                                                                              \
-    /* TODO check if has content correct size*/                                                                                             \
     const auto& input = request.inputs(inputIndex);                                                                                         \
     if (!input.has_contents()) {                                                                                                            \
         return Status(StatusCode::INVALID_CONTENT_SIZE, "Input does not have input tensor contents field");                                 \
@@ -549,7 +548,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         SPDLOG_DEBUG("Data should be located in raw_input_contents if node input tag is IMAGE");
         return StatusCode::MEDIAPIPE_EXECUTION_ERROR;
     }
-    auto& bufferLocation = request.raw_input_contents().at(inputIndex);  // TODO probably doesn't make sense to handle input.content()
+    auto& bufferLocation = request.raw_input_contents().at(inputIndex);
 
     if (requestInputItr->shape().size() != 3) {
         std::stringstream ss;
@@ -584,7 +583,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     }
     size_t elementSize = KFSDataTypeSize(requestInputItr->datatype());
     size_t expectedSize = numberOfChannels * numberOfCols * numberOfRows * elementSize;
-    if (bufferLocation.size() != expectedSize) {  // TODO FIXME probably doesn't make sense to support since image should be continuous
+    if (bufferLocation.size() != expectedSize) {
         std::stringstream ss;
         ss << "Invalid Mediapipe Image input buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedSize;
         const std::string details = ss.str();
@@ -655,7 +654,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 }
             }
 
-
             auto ok = pythonBackend->createOvmsPyTensor(
                 requestedName,
                 const_cast<void*>((const void*)bufferLocation.data()),
@@ -676,19 +674,14 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
                 return Status(StatusCode::INVALID_PRECISION, details);
             }
-            size_t itemsize = bufferFormatToItemsize.at(formatIt->second);
-            size_t expectedBufferSize = 1;
-            bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, itemsize, expectedBufferSize);
-            if (!expectedBufferSizeValid) {
-                const std::string details = "Provided shape and datatype declare too large buffer.";
-                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
-                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
-            }
+            size_t expectElementsCount = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<int>());
+            size_t expectedBytes = precision.size() * expectElementsCount;
+            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectElementsCount, requestedName, request));
             auto ok = pythonBackend->createOvmsPyTensor(
                 requestedName,
                 shape,
                 requestInputItr->datatype(),
-                expectedBufferSize,
+                expectedBytes,
                 outTensor);
 
             void* data = outTensor->getProperty<void*>("ptr");

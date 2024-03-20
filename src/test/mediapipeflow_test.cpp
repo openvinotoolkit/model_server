@@ -2863,11 +2863,14 @@ std::unordered_map<std::type_index, ovms::Precision> TYPE_TO_OVMS_PRECISION{
 
 template <typename T>
 std::vector<T> prepareData(size_t elemCount, T value, bool maxValue) {
-    return std::vector<T>(elemCount, value);  // FIXME TODO use maxValue
+    if(maxValue){
+        return std::vector<T>(elemCount, std::numeric_limits<T>::max());
+    }
+    return std::vector<T>(elemCount, value);
 }
 
 template <class T>
-class KFSss : public TestWithTempDir {
+class KFSGRPCContentFieldsSupportTest : public TestWithTempDir {
 protected:
     std::string configFilePath = "config.json";
     std::string configContent = R"(
@@ -3021,8 +3024,6 @@ void performInvalidContentSizeTest(const std::string& pbtxtContentOVTensor, ovms
 };
 
 std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>> TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR{
-    // OK to replace with MP internal? basically we are checking if it doesnt crash. We don't have a model/ calc for each of the types
-    // could be improved iwht using passthrough calc
     {typeid(float), {ovms::Precision::FP32, ovms::StatusCode::OK}},
     {typeid(uint64_t), {ovms::Precision::U64, ovms::StatusCode::OK}},
     {typeid(uint32_t), {ovms::Precision::U32, ovms::StatusCode::OK}},
@@ -3037,8 +3038,8 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
     {typeid(void), {ovms::Precision::BIN, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}}};
 
 typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t> InferInputTensorContentsTypesToTest;  // TODO add all kfs relevant bool
-TYPED_TEST_SUITE(KFSss, InferInputTensorContentsTypesToTest);
-TYPED_TEST(KFSss, OVTensorCheckExpectedStatusCode) {
+TYPED_TEST_SUITE(KFSGRPCContentFieldsSupportTest, InferInputTensorContentsTypesToTest);
+TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentOVTensor = R"(
         input_stream: "OVTENSOR:in"
         output_stream: "OVTENSOR:out"
@@ -3070,7 +3071,7 @@ TYPED_TEST(KFSss, OVTensorCheckExpectedStatusCode) {
     this->PerformInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
 }
 
-TYPED_TEST(KFSss, PyTensorCheckExpectedStatusCode) {
+TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
 const std::string pbtxtContentPytensor = R"(
         input_stream: "OVMS_PY_TENSOR:in"
         output_stream: "OVMS_PY_TENSOR:out"
@@ -3103,8 +3104,6 @@ const std::string pbtxtContentPytensor = R"(
 }
 
 std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>> TYPE_TO_OVMS_PRECISION_TO_STATUS_TF_TENSOR{
-    // OK to replace with MP internal? basically we are checking if it doesnt crash. We don't have a model/ calc for each of the types
-    // could be improved iwht using passthrough calc
     {typeid(float), {ovms::Precision::FP32, ovms::StatusCode::OK}},
     {typeid(uint64_t), {ovms::Precision::U64, ovms::StatusCode::OK}},
     {typeid(uint32_t), {ovms::Precision::U32, ovms::StatusCode::OK}},
@@ -3118,7 +3117,7 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
     {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::NOT_IMPLEMENTED}},
     {typeid(void), {ovms::Precision::BIN, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}}};
 
-TYPED_TEST(KFSss, TFTensorCheckExpectedStatusCode) {
+TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentTFtensor = R"(
         input_stream: "TFTENSOR:in"
         output_stream: "TFTENSOR:out"
@@ -3151,8 +3150,6 @@ TYPED_TEST(KFSss, TFTensorCheckExpectedStatusCode) {
 }
 
 std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>> TYPE_TO_OVMS_PRECISION_TO_STATUS_MP_TENSOR{
-    // OK to replace with MP internal? basically we are checking if it doesnt crash. We don't have a model/ calc for each of the types
-    // could be improved iwht using passthrough calc
     {typeid(float), {ovms::Precision::FP32, ovms::StatusCode::OK}},
     {typeid(uint64_t), {ovms::Precision::U64, ovms::StatusCode::INVALID_PRECISION}},
     {typeid(uint32_t), {ovms::Precision::U32, ovms::StatusCode::INVALID_PRECISION}},
@@ -3166,7 +3163,7 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
     {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::INVALID_PRECISION}},
     {typeid(void), {ovms::Precision::BIN, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}}};
 
-TYPED_TEST(KFSss, MPTensorCheckExpectedStatusCode) {
+TYPED_TEST(KFSGRPCContentFieldsSupportTest, MPTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentMPtensor = R"(
         input_stream: "TENSOR:in"
         output_stream: "TENSOR:out"
@@ -3198,7 +3195,7 @@ TYPED_TEST(KFSss, MPTensorCheckExpectedStatusCode) {
     this->PerformInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_MP_TENSOR[typeid(TypeParam)].second);
 }
 
-TYPED_TEST(KFSss, IMAGETensorCheckExpectedStatusCode) {
+TYPED_TEST(KFSGRPCContentFieldsSupportTest, IMAGETensorCheckExpectedStatusCode) {
     const std::string pbtxtContentIMAGEtensor = R"(
         input_stream: "IMAGE:in"
         output_stream: "IMAGE:out"
@@ -3230,7 +3227,7 @@ TYPED_TEST(KFSss, IMAGETensorCheckExpectedStatusCode) {
     this->PerformInference(ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TYPED_TEST(KFSss, OVTensorInvalidContentSize) {
+TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorInvalidContentSize) {
     const std::string pbtxtContentOVTensor = R"(
         input_stream: "OVTENSOR:in"
         output_stream: "OVTENSOR:out"
@@ -3257,7 +3254,7 @@ std::unordered_map<std::type_index, ovms::StatusCode> TYPE_TO_STATUS_MP_TENSOR_I
     {typeid(double), ovms::StatusCode::INVALID_PRECISION},
     {typeid(void), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}};
 
-TYPED_TEST(KFSss, MPTensorInvalidContentSize) {
+TYPED_TEST(KFSGRPCContentFieldsSupportTest, MPTensorInvalidContentSize) {
     const std::string pbtxtContentMPTensor = R"(
         input_stream: "TENSOR:in"
         output_stream: "TENSOR:out"
@@ -3270,7 +3267,7 @@ TYPED_TEST(KFSss, MPTensorInvalidContentSize) {
     this->performInvalidContentSizeTest(pbtxtContentMPTensor, TYPE_TO_STATUS_MP_TENSOR_INVALID_CONTENT_SIZE[typeid(TypeParam)]);
 }
 
-TYPED_TEST(KFSss, TFTensorInvalidContentSize) {
+TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorInvalidContentSize) {
     const std::string pbtxtContentTFTensor = R"(
         input_stream: "TFTENSOR:in"
         output_stream: "TFTENSOR:out"
@@ -3281,6 +3278,19 @@ TYPED_TEST(KFSss, TFTensorInvalidContentSize) {
         }
     )";
     this->performInvalidContentSizeTest(pbtxtContentTFTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+
+TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorInvalidContentSize) {
+    const std::string pbtxtContentPyTensor = R"(
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        }
+    )";
+    this->performInvalidContentSizeTest(pbtxtContentPyTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
 INSTANTIATE_TEST_SUITE_P(
