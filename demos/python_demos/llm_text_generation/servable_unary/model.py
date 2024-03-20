@@ -128,11 +128,11 @@ def deserialize_prompts(batch_size, input_tensor):
     return [arr.decode() for arr in np_arr]
 
 
-def serialize_completions(batch_size, result):
+def serialize_completions(batch_size, result, token_count):
     if batch_size == 1:
-        return [Tensor("completion", result[0].encode())]
+        return [Tensor("completion", result[0].encode()), Tensor("token_count", np.array([token_count], dtype=np.int32))]
     return [Tensor("completion", serialize_byte_tensor(
-        np.array(result, dtype=np.object_)).item())]
+        np.array(result, dtype=np.object_)).item()), Tensor("token_count", np.array([token_count], dtype=np.int32))]
 
 
 class OvmsPythonModel:
@@ -145,8 +145,6 @@ class OvmsPythonModel:
             config=AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True))
         print("-------- Model loaded", flush=True)
         return True
-
-    token_count = 0
 
     def execute(self, inputs: list):
         print(f"-------- Running execute, shape: {inputs[0].shape}", flush=True)
@@ -173,9 +171,10 @@ class OvmsPythonModel:
             generate_kwargs["stopping_criteria"] = StoppingCriteriaList(stop_tokens)
 
         ov_model_exec = self.ov_model.clone()
+        token_count: List[int]= []
         def generate():
             result = ov_model_exec.generate(**tokens, **generate_kwargs)
-            self.token_count = len([1 for x in result.numpy().flatten() if x not in tokenizer.convert_tokens_to_ids(tokenizer.all_special_tokens)])
+            token_count.append(len([1 for x in result.numpy().flatten() if x not in tokenizer.convert_tokens_to_ids(tokenizer.all_special_tokens)]))
 
 
         if SEED is not None: set_seed(int(SEED))
@@ -191,5 +190,4 @@ class OvmsPythonModel:
                 completions = [a + b for a, b in zip(completions, partial_result)]
         print('end', flush=True)
         t1.join()
-        completions.append(str(self.token_count))
-        return serialize_completions(batch_size + 1, completions)
+        return serialize_completions(batch_size, completions, token_count[0])

@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 input_stream: "OVMS_PY_TENSOR:pre_prompt"
-output_stream: "OVMS_PY_TENSOR:completion"
+output_stream: "OVMS_PY_TENSOR_1:completion"
+output_stream: "OVMS_PY_TENSOR_2:token_count"
 
 node {
   name: "pythonNode"
@@ -22,6 +23,7 @@ node {
   input_side_packet: "PYTHON_NODE_RESOURCES:py"
   input_stream: "INPUT:pre_prompt"
   output_stream: "OUTPUT:completion"
+  output_stream: "TOKEN_COUNT:token_count"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
       handler_path: "/workspace/model.py"
