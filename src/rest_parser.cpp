@@ -730,6 +730,10 @@ Status KFSRestParser::parseInput(rapidjson::Value& node, bool onlyOneInput) {
         if (!(dataItr->value.IsArray())) {
             return StatusCode::REST_COULD_NOT_PARSE_INPUT;
         }
+        if (std::strcmp(datatypeItr->value.GetString(), "FP16") == 0 || std::strcmp(datatypeItr->value.GetString(), "BF16") == 0) {
+            SPDLOG_DEBUG("{} datatype is supported only when data is located in raw_input_contents", datatypeItr->value.GetString());
+            return StatusCode::REST_COULD_NOT_PARSE_INPUT;
+        }
         return parseData(dataItr->value, *input);
     } else {
         auto binary_data_size_parameter = input->parameters().find("binary_data_size");

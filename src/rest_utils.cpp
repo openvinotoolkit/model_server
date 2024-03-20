@@ -387,6 +387,8 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
             PARSE_OUTPUT_DATA(int64_contents, int64_t, Int64)
         } else if (tensor.datatype() == "UINT64") {
             PARSE_OUTPUT_DATA(uint64_contents, uint64_t, Uint64)
+        } else if (tensor.datatype() == "BOOL") {
+            PARSE_OUTPUT_DATA(bool_contents, bool, Bool)
         } else if (tensor.datatype() == "BYTES") {
             PARSE_OUTPUT_DATA_STRING(bytes_contents, String)
         } else {

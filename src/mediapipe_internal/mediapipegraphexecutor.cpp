@@ -223,6 +223,7 @@ static const KFSDataType& MPPrecisionToKFSPrecision(::mediapipe::Tensor::Element
         return Status(StatusCode::INVALID_CONTENT_SIZE, "Input does not have proper size of input tensor " #PROTO_PREFIX "contents field"); \
     }                                                                                                                                       \
     for (auto& number : contents.PROTO_PREFIX##_contents()) {                                                                               \
+        SPDLOG_ERROR("STRING: {}", number);                                                                                                 \
         *(ptr++) = number;                                                                                                                  \
     }                                                                                                                                       \
     break;
@@ -491,12 +492,18 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             case ov::element::Type_t::boolean: {
                 COPY_INPUT_VALUE_BY_VALUE(bool, bool);
             }
+            case ov::element::Type_t::string: {
+                SPDLOG_ERROR("STRING");
+                COPY_INPUT_VALUE_BY_VALUE(std::string, bytes);
+            }
+            case ov::element::Type_t::f64: {
+                COPY_INPUT_VALUE_BY_VALUE(double, fp64);
+            }
             // the rest not supported by KFS
             case ov::element::Type_t::u1:
             case ov::element::Type_t::u4:
             case ov::element::Type_t::i4:
             case ov::element::Type_t::f16:
-            case ov::element::Type_t::f64:
             case ov::element::Type_t::bf16:
             case ov::element::Type_t::undefined:
             case ov::element::Type_t::dynamic:
