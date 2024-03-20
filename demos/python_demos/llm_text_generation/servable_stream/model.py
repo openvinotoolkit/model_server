@@ -170,10 +170,10 @@ class OvmsPythonModel:
             generate_kwargs["stopping_criteria"] = StoppingCriteriaList(stop_tokens)
 
         ov_model_exec = self.ov_model.clone()
-        self.token_count = 0
+        token_count: List[int]= []
         def generate():
             result = ov_model_exec.generate(**tokens, **generate_kwargs)
-            self.token_count += len([1 for x in result.numpy().flatten() if x not in tokenizer.convert_tokens_to_ids(tokenizer.all_special_tokens)])
+            token_count.append(len([1 for x in result.numpy().flatten() if x not in tokenizer.convert_tokens_to_ids(tokenizer.all_special_tokens)]))
 
         t1 = threading.Thread(target=generate)
         t1.start()
@@ -181,5 +181,6 @@ class OvmsPythonModel:
         for partial_result in streamer:
             yield serialize_completions(batch_size, partial_result)
         t1.join()
-        yield [Tensor("end_signal", f"{str(self.token_count)}".encode())]
+        yield [Tensor("token_count", np.array([token_count[0]], dtype=np.int32))]
+        yield [Tensor("end_signal", "".encode())]
         print('end', flush=True)
