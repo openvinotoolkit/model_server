@@ -2863,7 +2863,7 @@ std::unordered_map<std::type_index, ovms::Precision> TYPE_TO_OVMS_PRECISION{
 
 template <typename T>
 std::vector<T> prepareData(size_t elemCount, T value, bool maxValue) {
-    if(maxValue){
+    if (maxValue) {
         return std::vector<T>(elemCount, std::numeric_limits<T>::max());
     }
     return std::vector<T>(elemCount, value);
@@ -2908,23 +2908,23 @@ protected:
         createConfigFileWithContent(pbtxtContent, graphFilePath);
     }
 
-    void SetUp() override{
+    void SetUp() override {
         TestWithTempDir::SetUp();
         request.Clear();
         request.mutable_model_name()->assign(servableName);
     }
 
-    void TearDown() override{
+    void TearDown() override {
         TestWithTempDir::TearDown();
         stopServer();
         t->join();
     }
 
-    void PerformInference(ovms::StatusCode expectedStatus){
+    void PerformInference(ovms::StatusCode expectedStatus) {
         response.Clear();
         auto start = std::chrono::high_resolution_clock::now();
         while (!isMpReady(servableName) &&
-            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
             std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
         const ovms::Module* grpcModule = this->server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -2940,33 +2940,33 @@ protected:
         ServableMetricReporter* reporter = nullptr;
         auto status = executor->infer(&this->request, &response, executionContext, reporter);
         EXPECT_EQ(status, expectedStatus) << status.string();
-        if(expectedStatus == ovms::StatusCode::OK){
+        if (expectedStatus == ovms::StatusCode::OK) {
             ASSERT_EQ(response.outputs_size(), 1);
             ASSERT_EQ(response.raw_output_contents_size(), 1);
             ASSERT_EQ(response.raw_output_contents()[0].size(), 10 * ovms::KFSDataTypeSize(request.inputs()[0].datatype()));
         }
     }
 
-void performInvalidContentSizeTest(const std::string& pbtxtContentOVTensor, ovms::StatusCode expectedStatus){
-    this->CreateConfigAndPbtxt(pbtxtContentOVTensor);
-    char* argv[] = {(char*)"ovms",
-    (char*)"--config_path",
-    (char*)this->configFilePath.c_str(),
-    (char*)"--port",
-    (char*)this->port.c_str()};
-    int argc = 5;
-    this->server.setShutdownRequest(0);
-    this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
-        EXPECT_EQ(EXIT_SUCCESS, this->server.start(argc, argv));
-    });
-    // prepare data
-    T value = 1.0;
-    std::vector<T> data = prepareData<T>(this->elemCount, value, this->maxValue);
-    preparePredictRequest(this->request,
-        {{"in", {{1, 10}, TYPE_TO_OVMS_PRECISION[typeid(T)]}}},
-        data, this->putDataInInputContents);
-    auto tensor = this->request.mutable_inputs()->begin();
-    switch (TYPE_TO_OVMS_PRECISION[typeid(T)]) {
+    void performInvalidContentSizeTest(const std::string& pbtxtContentOVTensor, ovms::StatusCode expectedStatus) {
+        this->CreateConfigAndPbtxt(pbtxtContentOVTensor);
+        char* argv[] = {(char*)"ovms",
+            (char*)"--config_path",
+            (char*)this->configFilePath.c_str(),
+            (char*)"--port",
+            (char*)this->port.c_str()};
+        int argc = 5;
+        this->server.setShutdownRequest(0);
+        this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
+            EXPECT_EQ(EXIT_SUCCESS, this->server.start(argc, argv));
+        });
+        // prepare data
+        T value = 1.0;
+        std::vector<T> data = prepareData<T>(this->elemCount, value, this->maxValue);
+        preparePredictRequest(this->request,
+            {{"in", {{1, 10}, TYPE_TO_OVMS_PRECISION[typeid(T)]}}},
+            data, this->putDataInInputContents);
+        auto tensor = this->request.mutable_inputs()->begin();
+        switch (TYPE_TO_OVMS_PRECISION[typeid(T)]) {
         case ovms::Precision::FP64: {
             auto ptr = tensor->mutable_contents()->mutable_fp64_contents()->Add();
             *ptr = 0;
@@ -3016,11 +3016,11 @@ void performInvalidContentSizeTest(const std::string& pbtxtContentOVTensor, ovms
         case ovms::Precision::BIN:
         default: {
         }
+        }
+        const std::string servableName{"mediapipeDummy"};
+        this->request.mutable_model_name()->assign(servableName);
+        this->PerformInference(expectedStatus);
     }
-    const std::string servableName{"mediapipeDummy"};
-    this->request.mutable_model_name()->assign(servableName);
-    this->PerformInference(expectedStatus);
-}
 };
 
 std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>> TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR{
@@ -3051,10 +3051,10 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     )";
     this->CreateConfigAndPbtxt(pbtxtContentOVTensor);
     char* argv[] = {(char*)"ovms",
-    (char*)"--config_path",
-    (char*)this->configFilePath.c_str(),
-    (char*)"--port",
-    (char*)this->port.c_str()};
+        (char*)"--config_path",
+        (char*)this->configFilePath.c_str(),
+        (char*)"--port",
+        (char*)this->port.c_str()};
     int argc = 5;
     this->server.setShutdownRequest(0);
     this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
@@ -3072,7 +3072,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
 }
 
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
-const std::string pbtxtContentPytensor = R"(
+    const std::string pbtxtContentPytensor = R"(
         input_stream: "OVMS_PY_TENSOR:in"
         output_stream: "OVMS_PY_TENSOR:out"
         node {
@@ -3083,10 +3083,10 @@ const std::string pbtxtContentPytensor = R"(
     )";
     this->CreateConfigAndPbtxt(pbtxtContentPytensor);
     char* argv[] = {(char*)"ovms",
-    (char*)"--config_path",
-    (char*)this->configFilePath.c_str(),
-    (char*)"--port",
-    (char*)this->port.c_str()};
+        (char*)"--config_path",
+        (char*)this->configFilePath.c_str(),
+        (char*)"--port",
+        (char*)this->port.c_str()};
     int argc = 5;
     this->server.setShutdownRequest(0);
     this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
@@ -3129,10 +3129,10 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorCheckExpectedStatusCode) {
     )";
     this->CreateConfigAndPbtxt(pbtxtContentTFtensor);
     char* argv[] = {(char*)"ovms",
-    (char*)"--config_path",
-    (char*)this->configFilePath.c_str(),
-    (char*)"--port",
-    (char*)this->port.c_str()};
+        (char*)"--config_path",
+        (char*)this->configFilePath.c_str(),
+        (char*)"--port",
+        (char*)this->port.c_str()};
     int argc = 5;
     this->server.setShutdownRequest(0);
     this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
@@ -3175,10 +3175,10 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, MPTensorCheckExpectedStatusCode) {
     )";
     this->CreateConfigAndPbtxt(pbtxtContentMPtensor);
     char* argv[] = {(char*)"ovms",
-    (char*)"--config_path",
-    (char*)this->configFilePath.c_str(),
-    (char*)"--port",
-    (char*)this->port.c_str()};
+        (char*)"--config_path",
+        (char*)this->configFilePath.c_str(),
+        (char*)"--port",
+        (char*)this->port.c_str()};
     int argc = 5;
     this->server.setShutdownRequest(0);
     this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
@@ -3207,10 +3207,10 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, IMAGETensorCheckExpectedStatusCode) 
     )";
     this->CreateConfigAndPbtxt(pbtxtContentIMAGEtensor);
     char* argv[] = {(char*)"ovms",
-    (char*)"--config_path",
-    (char*)this->configFilePath.c_str(),
-    (char*)"--port",
-    (char*)this->port.c_str()};
+        (char*)"--config_path",
+        (char*)this->configFilePath.c_str(),
+        (char*)"--port",
+        (char*)this->port.c_str()};
     int argc = 5;
     this->server.setShutdownRequest(0);
     this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
