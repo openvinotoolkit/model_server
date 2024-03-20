@@ -227,7 +227,7 @@ static const KFSDataType& MPPrecisionToKFSPrecision(::mediapipe::Tensor::Element
     }                                                                                                                                       \
     break;
 
-static Status validateRawInputContent(const size_t expectedBytes, const std::string bufferLocation, const std::string& requestedName, const KFSRequest& request){
+static Status validateRawInputContent(const size_t expectedBytes, const std::string bufferLocation, const std::string& requestedName, const KFSRequest& request) {
     if (expectedBytes != bufferLocation.size()) {
         std::stringstream ss;
         ss << "Expected: " << expectedBytes << " bytes; Actual: " << bufferLocation.size() << " bytes; input name: " << requestedName;
@@ -238,7 +238,7 @@ static Status validateRawInputContent(const size_t expectedBytes, const std::str
     return StatusCode::OK;
 }
 
-static Status validateInputContent(const KFSTensorInputProto& proto, const size_t expectElementsCount, const std::string& requestedName, const KFSRequest& request){
+static Status validateInputContent(const KFSTensorInputProto& proto, const size_t expectElementsCount, const std::string& requestedName, const KFSRequest& request) {
     size_t elementsCount = getElementsCount(proto, KFSPrecisionToOvmsPrecision(proto.datatype()));
     if (expectElementsCount != elementsCount) {
         std::stringstream ss;
@@ -249,7 +249,6 @@ static Status validateInputContent(const KFSTensorInputProto& proto, const size_
     }
     return StatusCode::OK;
 }
-
 
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<mediapipe::Tensor>& outTensor, PythonBackend* pythonBackend) {
     auto requestInputItr = request.inputs().begin();
@@ -544,7 +543,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto requestInputItr = request.inputs().begin();
     OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, requestedName, request));
     auto inputIndex = requestInputItr - request.inputs().begin();
-    if(request.raw_input_contents_size() <= inputIndex){
+    if (request.raw_input_contents_size() <= inputIndex) {
         SPDLOG_DEBUG("Data should be located in raw_input_contents if node input tag is IMAGE");
         return StatusCode::MEDIAPIPE_EXECUTION_ERROR;
     }
@@ -631,7 +630,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
 
         ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         auto formatIt = datatypeToBufferFormat.find(requestInputItr->datatype());
-        if(request.raw_input_contents().size()) {
+        if (request.raw_input_contents().size()) {
             auto& bufferLocation = request.raw_input_contents().at(inputIndex);
             if (formatIt != datatypeToBufferFormat.end()) {
                 // If datatype is known, we check if a valid buffer can be created with provided data
@@ -666,9 +665,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 SPDLOG_DEBUG("Error creating Python tensor from data");
                 return StatusCode::UNKNOWN_ERROR;
             }
-        }
-        else
-        {
+        } else {
             if (formatIt == datatypeToBufferFormat.end()) {
                 const std::string details = "Provided datatype is invalid, custom datatypes are allowed only when raw_input_contents is used.";
                 SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
@@ -686,46 +683,46 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
 
             void* data = outTensor->getProperty<void*>("ptr");
             switch (precision) {
-                case ov::element::Type_t::f32: {
-                    COPY_INPUT_VALUE_BY_VALUE(float, fp32);
-                }
-                case ov::element::Type_t::i64: {
-                    COPY_INPUT_VALUE_BY_VALUE(int64_t, int64);
-                }
-                case ov::element::Type_t::i32: {
-                    COPY_INPUT_VALUE_BY_VALUE(int32_t, int);
-                }
-                case ov::element::Type_t::i16: {
-                    COPY_INPUT_VALUE_BY_VALUE(int16_t, int);
-                }
-                case ov::element::Type_t::i8: {
-                    COPY_INPUT_VALUE_BY_VALUE(int8_t, int);
-                }
-                case ov::element::Type_t::u64: {
-                    COPY_INPUT_VALUE_BY_VALUE(uint64_t, uint64);
-                }
-                case ov::element::Type_t::u32: {
-                }
-                case ov::element::Type_t::u16: {
-                    COPY_INPUT_VALUE_BY_VALUE(uint16_t, uint);
-                }
-                case ov::element::Type_t::u8: {
-                    COPY_INPUT_VALUE_BY_VALUE(uint8_t, uint);
-                }
-                case ov::element::Type_t::boolean: {
-                    COPY_INPUT_VALUE_BY_VALUE(bool, bool);
-                }
-                // the rest not supported by KFS
-                case ov::element::Type_t::u1:
-                case ov::element::Type_t::u4:
-                case ov::element::Type_t::i4:
-                case ov::element::Type_t::f16:
-                case ov::element::Type_t::f64:
-                case ov::element::Type_t::bf16:
-                case ov::element::Type_t::undefined:
-                case ov::element::Type_t::dynamic:
-                default:
-                    return ovms::Status(ovms::StatusCode::NOT_IMPLEMENTED, "There is no support for types different than fp32, i64, i32, i16, i8, u64, u32, u16, u8, bool");
+            case ov::element::Type_t::f32: {
+                COPY_INPUT_VALUE_BY_VALUE(float, fp32);
+            }
+            case ov::element::Type_t::i64: {
+                COPY_INPUT_VALUE_BY_VALUE(int64_t, int64);
+            }
+            case ov::element::Type_t::i32: {
+                COPY_INPUT_VALUE_BY_VALUE(int32_t, int);
+            }
+            case ov::element::Type_t::i16: {
+                COPY_INPUT_VALUE_BY_VALUE(int16_t, int);
+            }
+            case ov::element::Type_t::i8: {
+                COPY_INPUT_VALUE_BY_VALUE(int8_t, int);
+            }
+            case ov::element::Type_t::u64: {
+                COPY_INPUT_VALUE_BY_VALUE(uint64_t, uint64);
+            }
+            case ov::element::Type_t::u32: {
+            }
+            case ov::element::Type_t::u16: {
+                COPY_INPUT_VALUE_BY_VALUE(uint16_t, uint);
+            }
+            case ov::element::Type_t::u8: {
+                COPY_INPUT_VALUE_BY_VALUE(uint8_t, uint);
+            }
+            case ov::element::Type_t::boolean: {
+                COPY_INPUT_VALUE_BY_VALUE(bool, bool);
+            }
+            // the rest not supported by KFS
+            case ov::element::Type_t::u1:
+            case ov::element::Type_t::u4:
+            case ov::element::Type_t::i4:
+            case ov::element::Type_t::f16:
+            case ov::element::Type_t::f64:
+            case ov::element::Type_t::bf16:
+            case ov::element::Type_t::undefined:
+            case ov::element::Type_t::dynamic:
+            default:
+                return ovms::Status(ovms::StatusCode::NOT_IMPLEMENTED, "There is no support for types different than fp32, i64, i32, i16, i8, u64, u32, u16, u8, bool");
             }
 
             if (!ok) {

@@ -22,10 +22,10 @@
 
 #include <google/protobuf/map.h>
 
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
 #include "tensorinfo.hpp"
-#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 
 namespace ovms {
 class Status;
