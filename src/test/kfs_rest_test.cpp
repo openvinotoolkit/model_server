@@ -270,8 +270,17 @@ static void testInferenceNegative(int headerLength, std::string& request_body, s
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
 
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP64) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInference(headerLength, request_body, handler);
+}
+
 TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP32) {
-    // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
     std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
     std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
 
@@ -282,10 +291,118 @@ TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP32) {
 }
 
 TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP16) {
-    // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
     std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string param = ",\"parameters\":{\"binary_data_output\":true}";
     std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+    // Supported only when data is in binary extension
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestBF16) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"BF16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"BF16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+    // Supported only when data is in binary extension
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestINT64) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"INT64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"INT64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestINT32) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"INT32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"INT32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestINT16) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"INT16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"INT16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestINT8) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"INT8\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"INT8\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestUINT64) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"UINT64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"UINT64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestUINT32) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"UINT32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"UINT32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestUINT16) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"UINT16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"UINT16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestUINT8) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"UINT8\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"UINT8\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestBOOL) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"BOOL\", \"data\": [true,true,true,true,true,true,true,true,true,true]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"BOOL\", \"data\": [true,true,true,true,true,true,true,true,true,true]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::UNKNOWN_ERROR);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestBYTES) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,3],\"datatype\":\"BYTES\", \"data\": [\"abc\", \"def\", \"ghi\"]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,3],\"datatype\":\"BYTES\", \"data\": [\"abc\", \"def\", \"ghi\"]}";
 
     std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
     int headerLength = request_body.length();
