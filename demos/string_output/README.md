@@ -6,13 +6,15 @@ This demo demonstrates usage of OVMS with model that returns string as an output
 ### Download Image Net modl
 
 ```bash
+pip3 install -r requirements.txt
 python3 download_model.py
+rm ./model/1/fingerprint.pb
 ```
 
 ### Start the OVMS container:
 ```bash
 docker run -d -u $(id -u):$(id -g) -v $(pwd):/workspace -p 9178:9178 openvino/model_server:latest \
---model_path /model --model_name text --rest_port 9178
+--model_path /workspace/model --model_name image_net --rest_port 9178
 ```
 
 ## Send request
@@ -24,7 +26,7 @@ printf "%x\n" `stat -c "%s" ../common/static/images/bee.jpeg`
 1c21
 echo -n -e '\x21\x1c\x00\x00' >> request.json
 cat ../common/static/images/bee.jpeg >> request.json
-curl --data-binary "@./request.json" -X POST http://localhost:9022/v2/models/image_net/versions/0/infer -H "Inference-Header-Content-Length: 70"
+curl --data-binary "@./request.json" -X POST http://localhost:9178/v2/models/image_net/versions/0/infer -H "Inference-Header-Content-Length: 70"
 ```
 
 ## Expected output

@@ -1,14 +1,11 @@
 import os
-
-os.environ["KERAS_BACKEND"] = "tensorflow"
-
-import json
-import shutil
 import requests
 import numpy as np
 import tensorflow as tf
 import keras
 import matplotlib.pyplot as plt
+
+os.environ["KERAS_BACKEND"] = "tensorflow"
 
 def preprocess(image, mean=0.5, std=0.5, shape=(224, 224)):
     """Scale, normalize and resizes images."""
