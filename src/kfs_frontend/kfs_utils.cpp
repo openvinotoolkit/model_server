@@ -200,4 +200,20 @@ Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& 
     width = tmpMaxStringLength + 1;
     return StatusCode::OK;
 }
+
+Status validateRequestCoherencyKFS(const KFSRequest& request, const std::string servableName, model_version_t servableVersion) {
+    if (!request.raw_input_contents().empty()) {
+        for (auto& input : request.inputs()) {
+            if (input.has_contents()) {
+                std::stringstream ss;
+                ss << "Passing buffers both in InferInputTensor contents and in raw_input_contents is not allowed. Detected buffer in InferInputTensor contents for input: " << input.name();
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid request message - {}", servableName, servableVersion, details);
+                return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
+            }
+        }
+    }
+    return StatusCode::OK;
+}
+
 }  // namespace ovms
