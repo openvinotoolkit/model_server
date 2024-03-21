@@ -398,7 +398,7 @@ cc_library(
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + ["-lOpenCL",],
     data = select({
         "//:not_disable_python": [
             "//src/python/binding:pyovms.so",

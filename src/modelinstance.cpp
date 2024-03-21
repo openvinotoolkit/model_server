@@ -712,10 +712,58 @@ Status ModelInstance::loadOVModelUsingCustomLoader() {
     }
     return StatusCode::OK;
 }
+}
+//#include <CL/cl.h>
+//#include "openvino/runtime/intel_gpu/properties.hpp"
+//#include <openvino/runtime/intel_gpu/remote_properties.hpp>
+#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#include "openvino/runtime/remote_tensor.hpp"
+namespace ovms {
+static cl_context getOCLContext() {
+    cl_int err;
+
+    // Step 1: Querying Platforms
+    cl_uint numPlatforms = 0;
+    err = clGetPlatformIDs(0, nullptr, &numPlatforms);
+    if (err != CL_SUCCESS) {
+        std::cerr << "Error getting number of platforms\n";
+        throw 1;
+    }
+
+    cl_platform_id platform;
+    clGetPlatformIDs(1, &platform, nullptr);
+
+    // Step 2: Querying Devices
+    cl_uint numDevices = 0;
+    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, nullptr, &numDevices);
+    if (err != CL_SUCCESS) {
+        std::cerr << "Error getting number of devices\n";
+        throw 1;
+    }
+
+    cl_device_id device;
+    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, nullptr);
+    if (err != CL_SUCCESS) {
+        std::cerr << "Error getting GPU device\n";
+        throw 1;
+    }
+
+    // Step 3: Creating a Context
+    cl_context context = clCreateContext(nullptr, 1, &device, nullptr, nullptr, &err);
+    if (err != CL_SUCCESS) {
+        std::cerr << "Error creating context\n";
+        throw 1;
+    }
+    return context;
+}
 
 void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
     OV_LOGGER("ov::Core: {}, ov::Model: {}, targetDevice: {}, ieCore.compile_model(model, targetDevice, pluginConfig", reinterpret_cast<void*>(&ieCore), reinterpret_cast<void*>(this->model.get()), this->targetDevice);
-    compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
+    auto ocl_context = getOCLContext(); // TODO use params from config, use device from config
+ //   auto ov_context = compiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
+    ov::intel_gpu::ocl::ClContext ov_context(ieCore, ocl_context);
+    //compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
+    compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, ov_context, pluginConfig));
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
