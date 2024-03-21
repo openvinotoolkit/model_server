@@ -65,7 +65,5 @@ for i in range (iterations):
     response = client.predict(inputs, model_name, model_version, timeout)
 
     # response post processing
-    # label, confidence_score = resnet_postprocess(response, output_name)
-    # print(f"Image #{i%imgs.shape[0]} has been classified as {label}")
-    # print(f"Image #{i%imgs.shape[0]} has been classified as")
-    print(response)
+    label, confidence_score = resnet_postprocess(response, output_name)
+    print(f"Image #{i%imgs.shape[0]} has been classified as {label}")
