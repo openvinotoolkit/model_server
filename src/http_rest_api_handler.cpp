@@ -23,6 +23,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <thread>
+#include <chrono>
 
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -143,8 +145,9 @@ void HttpRestApiHandler::registerHandlerEx(RequestType type, std::function<Statu
 
 void HttpRestApiHandler::registerAll() {
     registerHandlerEx(OAI_ChatCompletions, [this](const HttpRequestComponents& request_components, tensorflow::serving::net_http::ServerRequestInterface* req) -> Status {
-        SPDLOG_ERROR("HERE: {}", request_components.model_name);
-        return StatusCode::REST_NOT_FOUND;
+        // SPDLOG_ERROR("HERE: {}", request_components.model_name);
+        // return StatusCode::REST_NOT_FOUND;
+        return processOAIChatCompletion(request_components, req);
     });
 
     registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
@@ -192,6 +195,46 @@ void HttpRestApiHandler::registerAll() {
     registerHandler(Metrics, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         return processMetrics(request_components, response, request_body);
     });
+}
+
+Status HttpRestApiHandler::processOAIChatCompletion(
+        const HttpRequestComponents& request_components,
+        tensorflow::serving::net_http::ServerRequestInterface* req) {
+    std::vector<std::string> partial_payloads{
+        "Here",
+        " is",
+        " best",
+        " tool",
+        " -",
+        " OpenVINO!",
+    };
+    std::string template_ = R"({
+        \"id\": \"chatcmpl-123\",
+        \"object\":\"chat.completion.chunk\",
+        \"created\":1694268190,
+        \"model\":\"gpt-3.5-turbo-0125\",
+        \"system_fingerprint\": \"fp_44709d6fcb\",
+        \"choices\":[{
+            \"index\":0,
+            \"delta\":{
+                \"role\":\"assistant\",
+                \"content\":\"<INS>\"},
+            \"logprobs\":null,
+            \"finish_reason\":null
+        }]})";
+
+
+    for (std::string chunk : partial_payloads) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::string temp_copy = template_;
+        size_t start_pos = temp_copy.find("<INS>");
+        temp_copy.replace(start_pos, 5, chunk);
+
+        SPDLOG_INFO("AAAAAAAAAAA {}", temp_copy);
+    }
+
+    SPDLOG_INFO("HERE 2! {}", request_components.model_name);
+    return StatusCode::PARTIAL_END;
 }
 
 Status HttpRestApiHandler::processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {

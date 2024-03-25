@@ -153,6 +153,10 @@ public:
         const std::optional<std::string_view>& modelVersionLabel,
         const std::string& request,
         std::string* response);
+    
+    Status processOAIChatCompletion(
+        const HttpRequestComponents& request_components,
+        tensorflow::serving::net_http::ServerRequestInterface* req);
 
     Status processSingleModelRequest(
         const std::string& modelName,
