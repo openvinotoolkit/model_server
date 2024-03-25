@@ -57,6 +57,8 @@ def callback(result, error):
         raise error
     if result.as_numpy('end_signal') is not None:
         event.set()
+    elif result.as_numpy('token_count') is not None:
+        print("\n\nNumber of tokens ", result.as_numpy('token_count')[0])
     elif result.as_numpy('completion') is not None:
         if len(prompts) == 1:
             # For single batch, partial response is represented as single buffer of bytes

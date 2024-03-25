@@ -42,9 +42,11 @@ endtime = datetime.datetime.now()
 if len(args['prompt']) == 1:
     print(f"Question:\n{args['prompt'][0]}\n\nCompletion:\n{results.as_numpy('completion').tobytes().decode()}\n")
 else:
-    for i, arr in enumerate(deserialize_bytes_tensor(results._result.raw_output_contents[0])):
-        print(f"==== Prompt: {args['prompt'][i]} ====")
-        print(arr.decode())
+    for i, arr in enumerate(deserialize_bytes_tensor(results.as_numpy("completion"))):
+        if i < len(args['prompt']):
+            print(f"==== Prompt: {args['prompt'][i]} ====")
+            print(arr.decode())
         print()
+print("Number of tokens ", results.as_numpy("token_count")[0])
 
 print("Total time", int((endtime - start_time).total_seconds() * 1000), "ms")
