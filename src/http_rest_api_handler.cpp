@@ -137,7 +137,16 @@ void HttpRestApiHandler::registerHandler(RequestType type, std::function<Status(
     handlers[type] = std::move(f);
 }
 
+void HttpRestApiHandler::registerHandlerEx(RequestType type, std::function<Status(const HttpRequestComponents&, tensorflow::serving::net_http::ServerRequestInterface*)> f) {
+    handlers_ex[type] = std::move(f);
+}
+
 void HttpRestApiHandler::registerAll() {
+    registerHandlerEx(OAI_ChatCompletions, [this](const HttpRequestComponents& request_components, tensorflow::serving::net_http::ServerRequestInterface* req) -> Status {
+        SPDLOG_ERROR("HERE: {}", request_components.model_name);
+        return StatusCode::REST_NOT_FOUND;
+    });
+
     registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
@@ -423,13 +432,19 @@ Status HttpRestApiHandler::dispatchToProcessor(
     const std::string& request_body,
     std::string* response,
     const HttpRequestComponents& request_components,
-    HttpResponseComponents& response_components) {
+    HttpResponseComponents& response_components,
+    tensorflow::serving::net_http::ServerRequestInterface* req) {
 
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
         return handler->second(request_components, *response, request_body, response_components);
     } else {
-        return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
+        auto handler_ex = handlers_ex.find(request_components.type);
+        if (handler_ex != handlers_ex.end()) {
+            return handler_ex->second(request_components, req);
+        } else {
+            return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
+        }
     }
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
@@ -535,10 +550,20 @@ static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestCo
     return StatusCode::OK;
 }
 
+std::string extractJSONField(const std::string& jsonString, const std::string& fieldName) {
+    std::regex pattern("\"" + fieldName + "\"\\s*:\\s*\"([^\"]*)\"");
+    std::smatch match;
+    if (std::regex_search(jsonString, match, pattern)) {
+        return match[1].str();
+    }
+    return ""; // Field not found
+}
+
 Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& requestComponents,
     const std::string_view http_method,
     const std::string& request_path,
-    const std::vector<std::pair<std::string, std::string>>& headers) {
+    const std::vector<std::pair<std::string, std::string>>& headers,
+    const std::string& body) {
     std::smatch sm;
     requestComponents.http_method = http_method;
     if (http_method != "POST" && http_method != "GET") {
@@ -551,6 +576,15 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     }
 
     if (http_method == "POST") {
+        // v3 completion
+        if (std::regex_match(request_path, sm, std::regex(R"((.?)\/v1\/chat/completions)"))) {
+            SPDLOG_ERROR("THIS IS V3");
+            auto model_name = extractJSONField(body, "model");
+            SPDLOG_INFO("MODEL FOUND: [{}]", model_name);
+            requestComponents.type = OAI_ChatCompletions;
+            requestComponents.model_name = model_name;
+            return StatusCode::OK;
+        }
         if (std::regex_match(request_path, sm, predictionRegex)) {
             requestComponents.type = Predict;
             requestComponents.model_name = sm[2];
@@ -677,7 +711,8 @@ Status HttpRestApiHandler::processRequest(
     const std::string& request_body,
     std::vector<std::pair<std::string, std::string>>* headers,
     std::string* response,
-    HttpResponseComponents& responseComponents) {
+    HttpResponseComponents& responseComponents,
+    tensorflow::serving::net_http::ServerRequestInterface* req) {
 
     std::smatch sm;
     std::string request_path_str(request_path);
@@ -687,7 +722,7 @@ Status HttpRestApiHandler::processRequest(
     }
 
     HttpRequestComponents requestComponents;
-    auto status = parseRequestComponents(requestComponents, http_method, request_path_str, *headers);
+    auto status = parseRequestComponents(requestComponents, http_method, request_path_str, *headers, request_body);
 
     headers->clear();
     response->clear();
@@ -695,7 +730,7 @@ Status HttpRestApiHandler::processRequest(
 
     if (!status.ok())
         return status;
-    return dispatchToProcessor(request_body, response, requestComponents, responseComponents);
+    return dispatchToProcessor(request_body, response, requestComponents, responseComponents, req);
 }
 
 Status HttpRestApiHandler::processPredictRequest(

@@ -27,6 +27,11 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
+#pragma GCC diagnostic pop
+
 #include "rest_parser.hpp"
 #include "status.hpp"
 
@@ -48,7 +53,8 @@ enum RequestType { Predict,
     KFS_GetServerReady,
     KFS_GetServerLive,
     KFS_GetServerMetadata,
-    Metrics };
+    Metrics,
+    OAI_ChatCompletions };
 
 struct HttpRequestComponents {
     RequestType type;
@@ -91,20 +97,23 @@ public:
     Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
         const std::string& request_path,
-        const std::vector<std::pair<std::string, std::string>>& headers = {});
+        const std::vector<std::pair<std::string, std::string>>& headers = {},
+        const std::string& body = "");
 
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
     static void parseParams(rapidjson::Value&, rapidjson::Document&);
     static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
 
     void registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)>);
+    void registerHandlerEx(RequestType type, std::function<Status(const HttpRequestComponents&, tensorflow::serving::net_http::ServerRequestInterface*)>);
     void registerAll();
 
     Status dispatchToProcessor(
         const std::string& request_body,
         std::string* response,
         const HttpRequestComponents& request_components,
-        HttpResponseComponents& response_components);
+        HttpResponseComponents& response_components,
+        tensorflow::serving::net_http::ServerRequestInterface* req);
 
     /**
      * @brief Process Request
@@ -123,7 +132,9 @@ public:
         const std::string& request_body,
         std::vector<std::pair<std::string, std::string>>* headers,
         std::string* response,
-        HttpResponseComponents& responseComponents);
+        HttpResponseComponents& responseComponents,
+        tensorflow::serving::net_http::ServerRequestInterface* req
+        );
 
     /**
      * @brief Process predict request
@@ -220,6 +231,7 @@ private:
     const std::regex metricsRegex;
 
     std::map<RequestType, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)>> handlers;
+    std::map<RequestType, std::function<Status(const HttpRequestComponents&, tensorflow::serving::net_http::ServerRequestInterface*)>> handlers_ex;
     int timeout_in_ms;
 
     ovms::Server& ovmsServer;
