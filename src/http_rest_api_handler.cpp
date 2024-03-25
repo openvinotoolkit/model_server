@@ -209,31 +209,35 @@ Status HttpRestApiHandler::processOAIChatCompletion(
         " OpenVINO!",
     };
     std::string template_ = R"({
-        \"id\": \"chatcmpl-123\",
-        \"object\":\"chat.completion.chunk\",
-        \"created\":1694268190,
-        \"model\":\"gpt-3.5-turbo-0125\",
-        \"system_fingerprint\": \"fp_44709d6fcb\",
-        \"choices\":[{
-            \"index\":0,
-            \"delta\":{
-                \"role\":\"assistant\",
-                \"content\":\"<INS>\"},
-            \"logprobs\":null,
-            \"finish_reason\":null
+        "id": "chatcmpl-123",
+        "object":"chat.completion.chunk",
+        "created":1694268190,
+        "model":"<MODEL>",
+        "system_fingerprint": "fp_44709d6fcb",
+        "choices":[{
+            "index\":0,
+            "delta\":{
+                "role\":"assistant\",
+                "content":"<INS>\"},
+            "logprobs":null,
+            "finish_reason":null
         }]})";
 
-
+    // Imitate workload
     for (std::string chunk : partial_payloads) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         std::string temp_copy = template_;
+
         size_t start_pos = temp_copy.find("<INS>");
         temp_copy.replace(start_pos, 5, chunk);
 
-        SPDLOG_INFO("AAAAAAAAAAA {}", temp_copy);
+        start_pos = temp_copy.find("<MODEL>");
+        temp_copy.replace(start_pos, 7, request_components.model_name);
+
+        req->WriteResponseString(temp_copy);
+        req->PartialReply();
     }
 
-    SPDLOG_INFO("HERE 2! {}", request_components.model_name);
     return StatusCode::PARTIAL_END;
 }
 

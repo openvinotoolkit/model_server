@@ -210,8 +210,8 @@ private:
         HttpResponseComponents responseComponents;
         const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, req);
         if (status == StatusCode::PARTIAL_END) {
-            req->Abort();
-            // req->PartialReplyEnd();
+            // req->Abort();
+            req->PartialReplyEnd();
             return;
         }
         if (!status.ok() && output.empty()) {
