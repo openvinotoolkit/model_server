@@ -21,7 +21,7 @@ pipeline {
               } else {  // branches without PR - check changes in last commit
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
-              def matched = (git_diff =~ /src|third_party|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|WORKSPACE|(\n|^)rununittest\.sh/)
+              def matched = (git_diff =~ /src|third_party|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|(\n|^)rununittest\.sh/)
                 if (matched){
                   image_build_needed = "true"
               }
