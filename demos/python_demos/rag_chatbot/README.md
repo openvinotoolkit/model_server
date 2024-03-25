@@ -61,6 +61,8 @@ python download_model.py --model ${SELECTED_MODEL}
 ```
 The model will appear in `./tiny-llama-1b-chat` directory.
 
+> **NOTE** Llama model requires license agreement, therefore it is required agree and log in to HuggingFace account via `huggingface-cli` before loading the model. [Read more](https://huggingface.co/docs/huggingface_hub/guides/cli) how to.
+
 ## Weight Compression - optional
 
 [Weight Compression](https://docs.openvino.ai/canonical/weight_compression.html) may be applied on the original model. Applying 8-bit or 4-bit weight compression reduces the model size and memory requirements while speeding up execution by running calculations on lower precision layers.

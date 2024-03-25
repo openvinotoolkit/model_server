@@ -20,7 +20,7 @@ import argparse
 from streamer import OvmsStreamer
 
 
-parser = argparse.ArgumentParser(description='Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot')
+parser = argparse.ArgumentParser(description='Gradio frontend launcher')
 
 parser.add_argument('--web_url',
                     required=True,
