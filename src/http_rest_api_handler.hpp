@@ -105,7 +105,7 @@ public:
     static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
 
     void registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)>);
-    void registerHandlerEx(RequestType type, std::function<Status(const HttpRequestComponents&, tensorflow::serving::net_http::ServerRequestInterface*)>);
+    void registerHandlerEx(RequestType type, std::function<Status(const HttpRequestComponents&, tensorflow::serving::net_http::ServerRequestInterface*, const std::string&)>);
     void registerAll();
 
     Status dispatchToProcessor(
@@ -156,7 +156,8 @@ public:
     
     Status processOAIChatCompletion(
         const HttpRequestComponents& request_components,
-        tensorflow::serving::net_http::ServerRequestInterface* req);
+        tensorflow::serving::net_http::ServerRequestInterface* req,
+        const std::string& body);
 
     Status processSingleModelRequest(
         const std::string& modelName,
@@ -235,7 +236,7 @@ private:
     const std::regex metricsRegex;
 
     std::map<RequestType, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)>> handlers;
-    std::map<RequestType, std::function<Status(const HttpRequestComponents&, tensorflow::serving::net_http::ServerRequestInterface*)>> handlers_ex;
+    std::map<RequestType, std::function<Status(const HttpRequestComponents&, tensorflow::serving::net_http::ServerRequestInterface*, const std::string& body)>> handlers_ex;
     int timeout_in_ms;
 
     ovms::Server& ovmsServer;

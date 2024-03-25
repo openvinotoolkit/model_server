@@ -953,6 +953,7 @@ Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSReque
     OVMS_RETURN_ON_FAIL(checkTimestamp(*request, this->currentStreamTimestamp));
     for (const auto& input : request->inputs()) {
         const auto& inputName = input.name();
+        SPDLOG_INFO("AAAAAAAAAAA------------{}", inputName);
         if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto streamName) { return streamName == inputName; }) == this->inputNames.end()) {
             SPDLOG_DEBUG("Request for {}, contains not expected input name: {}", request->model_name(), inputName);
             return Status(StatusCode::INVALID_UNEXPECTED_INPUT, std::string(inputName) + " is unexpected");
@@ -991,7 +992,9 @@ Status MediapipeGraphExecutor::inferStream(const KFSRequest& firstRequest, ::grp
 
         // Installing observers
         for (const auto& outputName : this->outputNames) {
+            SPDLOG_ERROR("INSTALLED {}", outputName);
             MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&stream, &streamWriterMutex, &outputName, this](const ::mediapipe::Packet& packet) -> absl::Status {
+                SPDLOG_ERROR("OBSERVING {}", outputName);
                 try {
                     ::inference::ModelStreamInferResponse resp;
                     OVMS_RETURN_MP_ERROR_ON_FAIL(serializePacket(outputName, *resp.mutable_infer_response(), packet), "error in serialization");

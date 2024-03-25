@@ -139,15 +139,15 @@ void HttpRestApiHandler::registerHandler(RequestType type, std::function<Status(
     handlers[type] = std::move(f);
 }
 
-void HttpRestApiHandler::registerHandlerEx(RequestType type, std::function<Status(const HttpRequestComponents&, tensorflow::serving::net_http::ServerRequestInterface*)> f) {
+void HttpRestApiHandler::registerHandlerEx(RequestType type, std::function<Status(const HttpRequestComponents&, tensorflow::serving::net_http::ServerRequestInterface*, const std::string&)> f) {
     handlers_ex[type] = std::move(f);
 }
 
 void HttpRestApiHandler::registerAll() {
-    registerHandlerEx(OAI_ChatCompletions, [this](const HttpRequestComponents& request_components, tensorflow::serving::net_http::ServerRequestInterface* req) -> Status {
+    registerHandlerEx(OAI_ChatCompletions, [this](const HttpRequestComponents& request_components, tensorflow::serving::net_http::ServerRequestInterface* req, const std::string& body) -> Status {
         // SPDLOG_ERROR("HERE: {}", request_components.model_name);
         // return StatusCode::REST_NOT_FOUND;
-        return processOAIChatCompletion(request_components, req);
+        return processOAIChatCompletion(request_components, req, body);
     });
 
     registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
@@ -197,9 +197,80 @@ void HttpRestApiHandler::registerAll() {
     });
 }
 
+class FakeServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> {
+    tensorflow::serving::net_http::ServerRequestInterface* req;
+    std::string body, model_name;
+    bool deserialized{false};
+public:
+    FakeServerReaderWriter(tensorflow::serving::net_http::ServerRequestInterface* req,
+        std::string body, std::string model_name) : req(req), body(body), model_name(model_name) {}
+
+    bool Write(const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) override {
+        std::string template_ = R"({
+        "id": "chatcmpl-123",
+        "object":"chat.completion.chunk",
+        "created":1694268190,
+        "model":"<MODEL>",
+        "system_fingerprint": "fp_44709d6fcb",
+        "choices":[{
+            "index\":0,
+            "delta\":{
+                "role\":"assistant\",
+                "content":"<INS>\"},
+            "logprobs":null,
+            "finish_reason":null
+        }]})";
+
+        std::string temp_copy = template_;
+
+        size_t start_pos = temp_copy.find("<INS>");
+        temp_copy.replace(start_pos, 5, msg.infer_response().raw_output_contents(0));
+
+        //req->WriteResponseString(msg.infer_response().raw_output_contents(0));
+        req->WriteResponseString(temp_copy);
+        req->PartialReply();
+        return true;
+    }
+
+    bool Read(::inference::ModelInferRequest* req) override {
+        if (deserialized) {
+            SPDLOG_ERROR("FINISH! ------------");
+            //std::this_thread::sleep_for(std::chrono::seconds(10));
+            return false;
+        }
+        deserialized = true;
+
+        Document doc;
+        doc.Parse(body.c_str());
+
+        std::string question = doc["messages"].GetArray()[0].GetObject()["content"].GetString();
+        SPDLOG_ERROR("Question: ------------- {} ---------------", question);
+        *req->mutable_model_name() = model_name;
+        auto inp = req->add_inputs();
+        inp->set_name("pre_prompt");
+        inp->set_datatype("BYTES");
+        inp->add_shape(question.size());
+        req->add_raw_input_contents()->assign(question);
+        return true;
+    }
+
+    bool NextMessageSize(uint32_t* size) override {
+        return false;
+    }
+
+    void SendInitialMetadata() override {
+    }
+};
+
+
 Status HttpRestApiHandler::processOAIChatCompletion(
         const HttpRequestComponents& request_components,
-        tensorflow::serving::net_http::ServerRequestInterface* req) {
+        tensorflow::serving::net_http::ServerRequestInterface* req,
+        const std::string& body) {
+
+    FakeServerReaderWriter stream(req, body, request_components.model_name);
+
+
     std::vector<std::string> partial_payloads{
         "Here",
         " is",
@@ -223,20 +294,34 @@ Status HttpRestApiHandler::processOAIChatCompletion(
             "finish_reason":null
         }]})";
 
-    // Imitate workload
-    for (std::string chunk : partial_payloads) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        std::string temp_copy = template_;
-
-        size_t start_pos = temp_copy.find("<INS>");
-        temp_copy.replace(start_pos, 5, chunk);
-
-        start_pos = temp_copy.find("<MODEL>");
-        temp_copy.replace(start_pos, 7, request_components.model_name);
-
-        req->WriteResponseString(temp_copy);
-        req->PartialReply();
+    // Real workload
+    std::string modelName(request_components.model_name);
+    std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
+    SPDLOG_ERROR("Processing REST OAI request for model: {}; version: {}", modelName, modelVersionLog);
+    //::KFSRequest grpc_request;
+    //timer.start(PREPARE_GRPC_REQUEST);
+    //using std::chrono::microseconds;
+    //auto status = prepareGrpcRequest(modelName, request_components.model_version, request_body, grpc_request, request_components.inferenceHeaderContentLength);
+    ::KFSResponse grpc_response;
+    const Status gstatus = kfsGrpcImpl.ModelStreamInferImpl(nullptr, &stream);
+    if (!gstatus.ok()) {
+        return gstatus;
     }
+
+    // Imitate workload
+    // for (std::string chunk : partial_payloads) {
+    //     std::this_thread::sleep_for(std::chrono::seconds(1));
+    //     std::string temp_copy = template_;
+
+    //     size_t start_pos = temp_copy.find("<INS>");
+    //     temp_copy.replace(start_pos, 5, chunk);
+
+    //     start_pos = temp_copy.find("<MODEL>");
+    //     temp_copy.replace(start_pos, 7, request_components.model_name);
+
+    //     req->WriteResponseString(temp_copy);
+    //     req->PartialReply();
+    // }
 
     return StatusCode::PARTIAL_END;
 }
@@ -488,7 +573,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
     } else {
         auto handler_ex = handlers_ex.find(request_components.type);
         if (handler_ex != handlers_ex.end()) {
-            return handler_ex->second(request_components, req);
+            return handler_ex->second(request_components, req, request_body);
         } else {
             return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
         }
