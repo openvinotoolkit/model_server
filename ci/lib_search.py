@@ -130,7 +130,9 @@ def check_dir(start_dir):
         "build_dependencies.sh",
         "iris_tracking.pbtxt",
         "graph_two_inputs_model.pbtxt",
-        "aipc.txt"
+        "test.log",
+        "aipc.txt",
+        "internal_tests"
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
@@ -215,6 +217,7 @@ def check_func(start_dir):
         'graph.pbtxt',
         "build_dependencies.sh",
         "iris_tracking.pbtxt",
+        "internal_tests"
     ]
 
     exclude_directories = ['/dist/']
