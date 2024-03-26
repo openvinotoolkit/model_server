@@ -197,6 +197,46 @@ void HttpRestApiHandler::registerAll() {
     });
 }
 
+std::string escape_json(const std::string& input) {
+    std::string output;
+    output.reserve(input.size()); // Reserve space to avoid reallocations
+
+    for (char ch : input) {
+        switch (ch) {
+            case '"':
+                output += "\\\"";
+                break;
+            case '\\':
+                output += "\\\\";
+                break;
+            case '/':
+                output += "\\/";
+                break;
+            case '\b':
+                output += "\\b";
+                break;
+            case '\f':
+                output += "\\f";
+                break;
+            case '\n':
+                output += "\\n";
+                break;
+            case '\r':
+                output += "\\r";
+                break;
+            case '\t':
+                output += "\\t";
+                break;
+            // Add additional cases for other special characters if necessary
+            default:
+                output += ch;
+                break;
+        }
+    }
+
+    return output;
+}
+
 class FakeServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> {
     tensorflow::serving::net_http::ServerRequestInterface* req;
     std::string body, model_name;
@@ -206,27 +246,38 @@ public:
         std::string body, std::string model_name) : req(req), body(body), model_name(model_name) {}
 
     bool Write(const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) override {
-        std::string template_ = R"({
-        "id": "chatcmpl-123",
-        "object":"chat.completion.chunk",
-        "created":1694268190,
-        "model":"<MODEL>",
-        "system_fingerprint": "fp_44709d6fcb",
-        "choices":[{
-            "index\":0,
-            "delta\":{
-                "role\":"assistant\",
-                "content":"<INS>\"},
-            "logprobs":null,
-            "finish_reason":null
-        }]})";
+//         std::string template_ = R"({
+//         "id": "chatcmpl-123",
+//         "object":"chat.completion.chunk",
+//         "created":1694268190,
+//         "model":"<MODEL>",
+//         "system_fingerprint": "fp_44709d6fcb",
+//         "choices":[{
+//             "index\":0,
+//             "delta\":{
+//                 "role\":"assistant\",
+//                 "content":"<INS>\"},
+//             "logprobs":null,
+//             "finish_reason":null
+//         }]}
+
+// )";
+
+        std::string template_ = R"(data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"<MODEL>", "system_fingerprint": "fp_44709d6fcb", "choices":[{"index":0,"delta":{"role":"assistant","content":"<INS>"},"logprobs":null,"finish_reason":null}]}
+
+)";
 
         std::string temp_copy = template_;
 
         size_t start_pos = temp_copy.find("<INS>");
-        temp_copy.replace(start_pos, 5, msg.infer_response().raw_output_contents(0));
+        auto escaped = escape_json(msg.infer_response().raw_output_contents(0));
+        // temp_copy.replace(start_pos, 5, msg.infer_response().raw_output_contents(0));
+        temp_copy.replace(start_pos, 5, escaped);
+        start_pos = temp_copy.find("<MODEL>");
+        temp_copy.replace(start_pos, 7, msg.infer_response().model_name());
 
         //req->WriteResponseString(msg.infer_response().raw_output_contents(0));
+        SPDLOG_ERROR("Sending: [{}]", temp_copy);
         req->WriteResponseString(temp_copy);
         req->PartialReply();
         return true;
@@ -240,6 +291,8 @@ public:
         }
         deserialized = true;
 
+        SPDLOG_ERROR("-------------\n{}\n--------------", body);
+
         Document doc;
         doc.Parse(body.c_str());
 
@@ -249,7 +302,7 @@ public:
         auto inp = req->add_inputs();
         inp->set_name("pre_prompt");
         inp->set_datatype("BYTES");
-        inp->add_shape(question.size());
+        inp->add_shape(1);
         req->add_raw_input_contents()->assign(question);
         return true;
     }
