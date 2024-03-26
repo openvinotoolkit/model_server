@@ -94,7 +94,9 @@ list this information by specifying the `--list_models` switch (also a short
 form `-l` is available):
 ```bash
 docker run --network host benchmark_client -a localhost -r 30002 --list_models
+```
 
+```
 Client 2.6
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 30002 --list_models
 XI worker: try to send request to endpoint: http://localhost:30002/v1/config
@@ -110,7 +112,9 @@ line. The option `-i` is used only to add a prefix to the standard output with a
 of an application instance. For example:
 ```bash
 docker run --network host benchmark_client -a localhost -r 30002 -l -m resnet50-binary-0001 -p 30001 -i id
+```
 
+```
 Client 2.6
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 30002 -l -m resnet50-binary-0001 -p 30001 -i id
 XW id: Finished execution. If you want to run inference remove --list_models.
@@ -146,7 +150,8 @@ The workload can be generated only if its length is specified by iteration numbe
 will be generated as follows (remember to add `--print_all` to show metrics in stdout):
 ```bash
 docker run --network host benchmark_client -a localhost -r 30002 -m resnet50-binary-0001 -p 30001 -n 8 --report_warmup --print_all
-
+```
+```
 Client 2.6
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 30002 -m resnet50-binary-0001 -p 30001 -n 8 --report_warmup --print_all
 XI worker: request for metadata of model resnet50-binary-0001...
