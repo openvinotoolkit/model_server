@@ -52,7 +52,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
 RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
     cd pugixml && \
     cmake -DBUILD_SHARED_LIBS=ON && \
-    make all && \
+    VERBOSE=1 make all && \
     cp -P libpugixml.so* /usr/lib64/
 
 ####### Azure SDK needs new boost:
@@ -63,7 +63,7 @@ RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_6
 	./b2 -j ${JOBS} cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
 		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
 		--with-random --with-thread --with-atomic --with-regex \
-		--with-log --with-locale \
+		--with-log --with-locale -d+2 \
 		install
 
 COPY third_party /ovms/third_party/
@@ -84,7 +84,7 @@ RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_
 
 ####### Build OpenCV
 WORKDIR /ovms/third_party/opencv
-RUN ./install_opencv.sh
+RUN export VERBOSE=1 && ./install_opencv.sh
 ####### End of OpenCV
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -170,7 +170,7 @@ WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; dnf install -y http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && dnf clean all
 RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; VERBOSE=1 make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino/extras && \
@@ -204,7 +204,7 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 # SENTENCEPIECE_EXTENSION
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
 WORKDIR /openvino_contrib/modules/custom_operations/user_ie_extensions
-RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="tokenizer" && cmake --build . --parallel $JOBS
+RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="tokenizer" && VERBOSE=1 cmake --build . --parallel $JOBS
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
@@ -282,7 +282,7 @@ WORKDIR /ovms/src/custom_nodes/tokenizer/build
 RUN cp /ovms/src/custom_node_interface.h /ovms/src/custom_nodes/tokenizer/ && \
     cp -r /ovms/src/custom_nodes/common /ovms/src/custom_nodes/tokenizer/ && \
     cmake -DWITH_TESTS=1 .. && \
-    make -j${JOBS} && \
+    VERBOSE=1 make -j${JOBS} && \
     ./test/detokenization_test && \
     ./test/tokenization_test
 
