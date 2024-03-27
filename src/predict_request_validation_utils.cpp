@@ -617,7 +617,8 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
 
     } else {
         // Remove this when other buffer types are supported
-        if (bufType != OVMS_BUFFERTYPE_CPU) {
+        if (bufType != OVMS_BUFFERTYPE_CPU &&
+            bufType != OVMS_BUFFERTYPE_OPENCL) {
             std::stringstream ss;
             ss << "Required input ";
             const std::string details = ss.str();
