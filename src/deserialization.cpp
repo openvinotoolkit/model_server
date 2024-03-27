@@ -43,7 +43,7 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
     return status;
 }
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo, cl_context* context) {
     OVMS_PROFILE_FUNCTION();
     OV_LOGGER("ov::Shape()");
     ov::Shape shape;
@@ -57,7 +57,13 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
         return ov::Tensor(precision, shape);
     }
     OV_LOGGER("ov::Tensor({}, shape, data)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
-    return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
+    if (requestInput.getBuffer()->getBufferType() == OVMS_BUFFERTYPE_CPU) {
+       return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
+    } else {
+        // TODO instead of context pass in factory of tensors
+        auto remote_context = ov::intel_gpu::ocl::ClContext(core, context , 0); // TODO 0? how to get core?
+        return  gpu_context.create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
+    }
 }
 
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,

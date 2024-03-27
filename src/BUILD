@@ -1070,6 +1070,7 @@ cc_test(
         "test/modelmanager_test.cpp",
         "test/modelversionstatus_test.cpp",
         "test/nodesessionmetadata_test.cpp",
+        "test/openvino_tests.cpp",
         "test/ovmsconfig_test.cpp",
         "test/ovinferrequestqueue_test.cpp",
         "test/ov_utils_test.cpp",

@@ -38,6 +38,10 @@
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
+// TODO
+#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#include "openvino/runtime/remote_tensor.hpp"
+
 namespace ovms {
 class MetricRegistry;
 class ModelInstanceUnloadGuard;
@@ -98,6 +102,7 @@ protected:
          */
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
+    cl_context ocl_context;
     /**
          * @brief Model name
          */

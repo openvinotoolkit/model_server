@@ -729,6 +729,7 @@ static cl_context getOCLContext() {
         std::cerr << "Error getting number of platforms\n";
         throw 1;
     }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Detected {} openCL platforms.", numPlatforms);
 
     cl_platform_id platform;
     clGetPlatformIDs(1, &platform, nullptr);
@@ -740,6 +741,7 @@ static cl_context getOCLContext() {
         std::cerr << "Error getting number of devices\n";
         throw 1;
     }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Detected {} openCL GPU devices.", numDevices);
 
     cl_device_id device;
     err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, nullptr);
@@ -760,6 +762,7 @@ static cl_context getOCLContext() {
 void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
     OV_LOGGER("ov::Core: {}, ov::Model: {}, targetDevice: {}, ieCore.compile_model(model, targetDevice, pluginConfig", reinterpret_cast<void*>(&ieCore), reinterpret_cast<void*>(this->model.get()), this->targetDevice);
     auto ocl_context = getOCLContext(); // TODO use params from config, use device from config
+    this->ocl_context = ocl_context;
  //   auto ov_context = compiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
     ov::intel_gpu::ocl::ClContext ov_context(ieCore, ocl_context);
     //compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
@@ -1294,7 +1297,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, &this->ocl_context);
     timer.stop(DESERIALIZE);
     if (!status.ok())
         return status;
