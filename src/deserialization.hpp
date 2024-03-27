@@ -38,6 +38,9 @@
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
+// TODO
+#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#include "openvino/runtime/remote_tensor.hpp"
 namespace ovms {
 
 #define RETURN_IF_ERR(X)   \
@@ -57,7 +60,7 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo);
 
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo);
+    const std::shared_ptr<const TensorInfo>& tensorInfo, cl_context* context=nullptr);
 
 class ConcreteTensorProtoDeserializator {
 public:
@@ -227,7 +230,7 @@ public:
 
     static ov::Tensor deserializeTensorProto(
         const InferenceTensor& requestInput,
-        const std::shared_ptr<const TensorInfo>& tensorInfo) {
+        const std::shared_ptr<const TensorInfo>& tensorInfo, cl_context* context = nullptr) {
         OVMS_PROFILE_FUNCTION();
         switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP64:
@@ -243,7 +246,7 @@ public:
         case ovms::Precision::BOOL:
         case ovms::Precision::U1:
         case ovms::Precision::U8: {
-            return makeTensor(requestInput, tensorInfo);
+            return makeTensor(requestInput, tensorInfo, context);
         }
         case ovms::Precision::CUSTOM:
         case ovms::Precision::UNDEFINED:
@@ -328,8 +331,8 @@ ov::Tensor deserializeTensorProto(
 template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo) {
-    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
+    const std::shared_ptr<const TensorInfo>& tensorInfo, cl_context* context = nullptr) {
+    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, context);
 }
 
 template <class Requester>
@@ -346,7 +349,7 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline) {
+    Sink& inputSink, bool isPipeline, cl_context* context = nullptr) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     for (const auto& pair : inputMap) {
@@ -417,7 +420,7 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const ::KFSRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline) {
+    Sink& inputSink, bool isPipeline, cl_context* context = nullptr) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     bool deserializeFromSharedInputContents = request.raw_input_contents().size() > 0;
@@ -488,7 +491,7 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const InferenceRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline) {
+    Sink& inputSink, bool isPipeline, cl_context* context = nullptr) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     for (const auto& [name, tensorInfo] : inputMap) {
@@ -505,7 +508,7 @@ Status deserializePredictRequest(
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
                 return StatusCode::NOT_IMPLEMENTED;
             } else { */
-            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputPtr, tensorInfo);
+            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputPtr, tensorInfo, context);
             if (!tensor) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());

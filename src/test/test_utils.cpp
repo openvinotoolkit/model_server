@@ -172,7 +172,6 @@ std::string readableSetError(std::unordered_set<std::string> actual, std::unorde
             }
         }
     }
-
     return ss.str();
 }
 
@@ -193,8 +192,7 @@ void checkDummyResponse(const std::string outputName,
     float* actual_output = (float*)output_proto.tensor_content().data();
     float* expected_output = responseData.data();
     const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
+    checkBuffers(actual_output, expected_output, dataLengthToCheck);
 }
 
 void checkScalarResponse(const std::string outputName,
@@ -287,9 +285,7 @@ void checkAddResponse(const std::string outputName,
     const float* actual_output = (const float*)content.data();
     float* expected_output = responseData.data();
     const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
-    EXPECT_EQ(actual_output[0], expected_output[0]);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
+    checkBuffers(actual_output, expected_output, dataLengthToCheck);
 }
 
 void checkIncrement4DimShape(const std::string outputName,
