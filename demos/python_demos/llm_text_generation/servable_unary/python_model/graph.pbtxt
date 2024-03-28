@@ -26,7 +26,7 @@ node {
   output_stream: "TOKEN_COUNT:token_count"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-      handler_path: "/workspace/model.py"
+      handler_path: "model.py"
     }
   }
 }
