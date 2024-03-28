@@ -384,6 +384,7 @@ void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, 
 template <>
 inline void prepareKFSInferInputTensor<bool>(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
     const std::vector<bool>& data, bool putBufferInInputTensorContent) {
+// TODO: Implement for putBufferInInputTensorContent == 0
     auto it = request.mutable_inputs()->begin();
     size_t bufferId = 0;
     while (it != request.mutable_inputs()->end()) {
@@ -784,6 +785,7 @@ static const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS{
     ovms::Precision::U8,
     ovms::Precision::I8,
     ovms::Precision::U16,
+    ovms::Precision::U32,
     ovms::Precision::I32,
     ovms::Precision::I64,
     // ovms::Precision::BIN,
@@ -969,7 +971,6 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
 
 void randomizePort(std::string& port);
 void randomizePorts(std::string& port1, std::string& port2);
-std::string getRandomizedPort(std::string port);
 
 extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
 
