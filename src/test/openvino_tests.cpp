@@ -151,7 +151,7 @@ TEST(OpenVINO, LoadModelWithPrecreatedContext) {
     // wrap in and out buffers into RemoteTensor and set them to infer request
     auto shared_in_blob = remote_context.create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
     auto shared_out_blob = remote_context.create_tensor(output->get_element_type(), output->get_shape(), openCLCppOutputBuffer);
-    ov::Tensor A = shared_in_blob;
+    SPDLOG_ERROR("ER");
     // we will put data into input buffer
     std::vector<float> in(10, 0.1);
     void *inputBufferData = in.data();
@@ -208,7 +208,8 @@ TEST(CAPINonCopy, Flow) {
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
     auto bareOpenCLCMemory = openCLCppInputBuffer.get();
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(bareOpenCLCMemory), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1)); // device id ?? TODO
+    //ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(bareOpenCLCMemory), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1)); // device id ?? TODO
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1)); // device id ?? TODO
     // verify response
     OVMS_InferenceResponse* response = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
