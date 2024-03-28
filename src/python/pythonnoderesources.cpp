@@ -81,7 +81,7 @@ py::dict PythonNodeResources::preparePythonNodeInitializeArguments(const ::media
     kwargsParam["input_names"] = inputStreams;
     kwargsParam["output_names"] = outputStreams;
     kwargsParam["node_name"] = nodeName;
-    kwargsParam["base_path"] = py::str();
+    kwargsParam["base_path"] = py::str(basePath);
 
     return kwargsParam;
 }
