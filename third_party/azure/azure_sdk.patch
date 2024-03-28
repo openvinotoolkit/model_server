@@ -7,7 +7,7 @@ index ac9e65d..fd2aca4 100644
    set(WARNINGS "${WARNINGS} ${LINUX_SUPPRESSIONS}")
  
 -  set(LD_FLAGS "${LD_FLAGS} -Wl,-z,defs")
-+  set(LD_FLAGS "${LD_FLAGS} -Wl,-z,defs,--exclude-libs,ALL")
++  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs,--exclude-libs,ALL")
  
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-strict-aliasing")
  
