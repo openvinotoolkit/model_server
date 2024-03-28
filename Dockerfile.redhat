@@ -205,6 +205,7 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
 
 ARG ov_tokenizers_branch=2024.0.0.0
+# hadolint ignore=DL3003
 RUN if [[ "$tokenizers" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 WORKDIR /openvino_tokenizers/build
 RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release && cmake --build . --parallel $JOBS
