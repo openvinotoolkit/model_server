@@ -2315,7 +2315,7 @@ TEST_F(PythonFlowTest, FinalizePassTest) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend()), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), ""), StatusCode::OK);
     nodeResources->finalize();
 }
 
@@ -2340,7 +2340,7 @@ TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend()), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), ""), StatusCode::OK);
     nodeResources->finalize();
 }
 
@@ -2367,7 +2367,7 @@ TEST_F(PythonFlowTest, FinalizeDestructorRemoveFileTest) {
     std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
     {
         std::shared_ptr<PythonNodeResources> nodeResouce = nullptr;
-        ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResouce, config.node(0), getPythonBackend()), StatusCode::OK);
+        ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResouce, config.node(0), getPythonBackend(), ""), StatusCode::OK);
 
         ASSERT_TRUE(std::filesystem::exists(path));
         // nodeResources destructor calls finalize and removes the file
@@ -2397,7 +2397,7 @@ TEST_F(PythonFlowTest, FinalizeException) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend()), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), ""), StatusCode::OK);
     nodeResources->finalize();
 }
 
