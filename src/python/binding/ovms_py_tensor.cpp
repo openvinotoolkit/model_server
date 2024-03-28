@@ -41,10 +41,10 @@ PYBIND11_MODULE(pyovms, m) {
             py::arg("buffer"),
             py::arg("shape") = std::nullopt,
             py::arg("datatype") = std::nullopt)
-        .def_static("create_from_data", [](const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copy) {
+        .def_static("_create_from_data", [](const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copy) {
             return std::make_unique<OvmsPyTensor>(name, ptr, shape, datatype, size, copy);
         })
-        .def_static("create_with_buffer_allocation", [](const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size) {
+        .def_static("_create_with_buffer_allocation", [](const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size) {
             return std::make_unique<OvmsPyTensor>(name, shape, datatype, size);
         })
         .def_readonly("name", &OvmsPyTensor::name)

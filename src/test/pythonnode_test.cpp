@@ -2675,6 +2675,34 @@ TEST_F(PythonFlowTest, Negative_ExpectedBytesAmountOverflow) {
     ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
 }
 
+TEST_F(PythonFlowTest, Negative_ExpectedBytesAmountOverflowTensorContent) {
+    PythonFlowSymmetricIncrementFixture fixture;
+    KFSRequest req;
+    KFSResponse res;
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const std::string>{{1, 4}, "FP32"}, std::vector<float>{}, true);
+
+    ServableMetricReporter* defaultReporter{nullptr};
+    auto& inputMeta = *req.mutable_inputs()->begin();
+    // Shape way over acceptable values
+    inputMeta.clear_shape();
+    inputMeta.add_shape(10000000);
+    inputMeta.add_shape(10000000);
+    inputMeta.add_shape(10000000);
+    inputMeta.add_shape(10000000);
+    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
+    // Shape just above the size_t limit
+    inputMeta.clear_shape();
+    inputMeta.add_shape(std::numeric_limits<size_t>::max() / 5 + 1);
+    inputMeta.add_shape(5);
+    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
+    // Shape below size_t limit, but when multiplied by itemsize it overflows
+    inputMeta.clear_shape();
+    inputMeta.add_shape(std::numeric_limits<size_t>::max() / 4 + 1);
+    inputMeta.add_shape(1);
+    ASSERT_EQ(fixture.getPipeline()->infer(&req, &res, this->defaultExecutionContext, defaultReporter), StatusCode::INVALID_CONTENT_SIZE);
+}
+
 TEST_F(PythonFlowTest, Negative_NodeProducesUnexpectedTensor) {
     ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(

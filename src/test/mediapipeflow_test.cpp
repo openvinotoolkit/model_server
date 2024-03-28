@@ -2893,7 +2893,7 @@ protected:
     const std::string modelPathToReplace{"XYZ"};
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
-    std::string port = getRandomizedPort("9000");
+    std::string port = "9000";
     const std::string servableName{"mediapipeDummy"};
     bool maxValue = false;
     bool putDataInInputContents = true;
@@ -2910,6 +2910,7 @@ protected:
 
     void SetUp() override {
         TestWithTempDir::SetUp();
+        randomizePort(port);
         request.Clear();
         request.mutable_model_name()->assign(servableName);
     }
@@ -2920,7 +2921,7 @@ protected:
         t->join();
     }
 
-    void PerformInference(ovms::StatusCode expectedStatus) {
+    void performInference(ovms::StatusCode expectedStatus) {
         response.Clear();
         auto start = std::chrono::high_resolution_clock::now();
         while (!isMpReady(servableName) &&
@@ -3019,7 +3020,7 @@ protected:
         }
         const std::string servableName{"mediapipeDummy"};
         this->request.mutable_model_name()->assign(servableName);
-        this->PerformInference(expectedStatus);
+        this->performInference(expectedStatus);
     }
 };
 
@@ -3068,7 +3069,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
         data, this->putDataInInputContents);
     const std::string servableName{"mediapipeDummy"};
     this->request.mutable_model_name()->assign(servableName);
-    this->PerformInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
+    this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
 }
 
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
@@ -3100,7 +3101,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
         data, this->putDataInInputContents);
     const std::string servableName{"mediapipeDummy"};
     this->request.mutable_model_name()->assign(servableName);
-    this->PerformInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
+    this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
 }
 
 std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>> TYPE_TO_OVMS_PRECISION_TO_STATUS_TF_TENSOR{
@@ -3146,7 +3147,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorCheckExpectedStatusCode) {
         data, this->putDataInInputContents);
     const std::string servableName{"mediapipeDummy"};
     this->request.mutable_model_name()->assign(servableName);
-    this->PerformInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_TF_TENSOR[typeid(TypeParam)].second);
+    this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_TF_TENSOR[typeid(TypeParam)].second);
 }
 
 std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>> TYPE_TO_OVMS_PRECISION_TO_STATUS_MP_TENSOR{
@@ -3192,7 +3193,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, MPTensorCheckExpectedStatusCode) {
         data, this->putDataInInputContents);
     const std::string servableName{"mediapipeDummy"};
     this->request.mutable_model_name()->assign(servableName);
-    this->PerformInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_MP_TENSOR[typeid(TypeParam)].second);
+    this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_MP_TENSOR[typeid(TypeParam)].second);
 }
 
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, IMAGETensorCheckExpectedStatusCode) {
@@ -3224,7 +3225,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, IMAGETensorCheckExpectedStatusCode) 
         data, this->putDataInInputContents);
     const std::string servableName{"mediapipeDummy"};
     this->request.mutable_model_name()->assign(servableName);
-    this->PerformInference(ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    this->performInference(ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorInvalidContentSize) {
