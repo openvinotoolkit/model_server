@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include "deserialization.hpp"
-
+#include "itensorfactory.hpp"
 #include "capi_frontend/buffer.hpp"
 #include "logging.hpp"
 
@@ -39,11 +39,10 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
         SPDLOG_DEBUG("{}: {}", status.string(), e.what());
         return status;
     }
-
     return status;
 }
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo, cl_context* context) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo, IOVTensorFactory* factory) {
     OVMS_PROFILE_FUNCTION();
     OV_LOGGER("ov::Shape()");
     ov::Shape shape;
@@ -60,9 +59,13 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
     if (requestInput.getBuffer()->getBufferType() == OVMS_BUFFERTYPE_CPU) {
        return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
     } else {
+        // TODO FIXME check ptr
+            SPDLOG_ERROR("ER");
+ //       return factory->create(precision, shape, requestInput.getBuffer()->data());
+            auto t = factory->create(precision, shape, requestInput.getBuffer()->data());
+            SPDLOG_ERROR("ER");
+            return t;
         // TODO instead of context pass in factory of tensors
-        auto remote_context = ov::intel_gpu::ocl::ClContext(core, context , 0); // TODO 0? how to get core?
-        return  gpu_context.create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
     }
 }
 
