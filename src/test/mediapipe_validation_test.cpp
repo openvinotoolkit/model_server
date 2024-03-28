@@ -136,7 +136,7 @@ TEST_F(MediapipeValidationTest, DataInNonRawField) {
     request.mutable_raw_input_contents()->Clear();
     for (int i = 0; i < 10; i++)
         request.mutable_inputs(0)->mutable_contents()->mutable_fp32_contents()->Add();
-    ASSERT_EQ(impl->ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
+    ASSERT_EQ(impl->ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
 }
 
 TEST_F(MediapipeValidationTest, NoDataInRawField) {

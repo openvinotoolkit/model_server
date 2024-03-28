@@ -121,6 +121,9 @@ public:
     // Construct object from request contents
     OvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copy);
 
+    // Construct object with buffer allocation with given size
+    OvmsPyTensor(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size);
+
     // Construct object from buffer info. By default shape and datatype are infered from the buffer, but can be set directly if needed.
     OvmsPyTensor(const std::string& name, const py::buffer& buffer, const std::optional<std::vector<py::ssize_t>>& shape, const std::optional<std::string>& datatype);
 };

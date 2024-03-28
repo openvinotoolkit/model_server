@@ -148,18 +148,7 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
 
 template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>::validateRequestCoherency() const {
-    if (!request.raw_input_contents().empty()) {
-        for (auto& input : request.inputs()) {
-            if (input.has_contents()) {
-                std::stringstream ss;
-                ss << "Passing buffers both in InferInputTensor contents and in raw_input_contents is not allowed. Detected buffer in InferInputTensor contents for input: " << input.name();
-                const std::string details = ss.str();
-                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid request message - {}", servableName, servableVersion, details);
-                return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
-            }
-        }
-    }
-    return StatusCode::OK;
+    return validateRequestCoherencyKFS(this->request, this->servableName, this->servableVersion);
 }
 
 template <>
@@ -713,7 +702,7 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
     return StatusCode::OK;
 }
 
-static size_t getElementsCount(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision) {
+size_t getElementsCount(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision) {
     switch (expectedPrecision) {
     case ovms::Precision::BOOL: {
         return proto.contents().bool_contents().size();

@@ -262,6 +262,7 @@ public:
         OVMS_PROFILE_FUNCTION();
         switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP32:
+        case ovms::Precision::U32:
         case ovms::Precision::I32:
         case ovms::Precision::FP64:
         case ovms::Precision::I64:
@@ -302,7 +303,6 @@ public:
             }
             return tensor;
         }
-        case ovms::Precision::U32:
         case ovms::Precision::U64:
         default:
             return ov::Tensor();
