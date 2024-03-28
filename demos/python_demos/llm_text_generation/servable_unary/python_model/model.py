@@ -173,7 +173,7 @@ class OvmsPythonModel:
         token_count: List[int]= []
         def generate():
             result = ov_model_exec.generate(**tokens, **generate_kwargs)
-            token_count.append(len([1 for x in result.numpy().flatten() if x not in self.tokenizer.convert_tokens_to_ids(self.tokenizer.all_special_tokens)]) - (np.ndarray(prompts).flatten()))
+            token_count.append(len([1 for x in result.numpy().flatten() if x not in self.tokenizer.convert_tokens_to_ids(self.tokenizer.all_special_tokens)]))
 
 
         t1 = threading.Thread(target=generate)
