@@ -175,7 +175,7 @@ make release_image GPU=1
 Building minimalistic OVMS docker image requires disabling all optional features:
 
 ```bash
-make release_image GPU=0 MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1 SENTENCEPIECE=0
+make release_image GPU=0 MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1 TOKENIZERS=0
 ```
 
 ## Building Binary Package

@@ -70,11 +70,12 @@ FUZZER_BUILD ?= 0
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= f8d071002b6fe0bca2617558221850e01fe202ad  # 2024.1
 OV_CONTRIB_BRANCH ?= b36781b43e0fbcbbb386619b853d842c67728f3f  # 2024.0
+OV_TOKENIZERS_BRANCH ?= 2024.0.0.0
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
 
-SENTENCEPIECE ?= 1
+TOKENIZERS ?= 1
 
 OV_USE_BINARY ?= 0
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -212,7 +213,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg ov_source_org=$(OV_SOURCE_ORG)\
 	--build-arg ov_contrib_org=$(OV_CONTRIB_ORG)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\
-	--build-arg sentencepiece=$(SENTENCEPIECE)\
+	--build-arg tokenizers=$(TOKENIZERS)\
 	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
 	--build-arg RUN_TESTS=$(RUN_TESTS)\
@@ -224,6 +225,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
 	--build-arg NVIDIA=$(NVIDIA)\
 	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
+	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
 	--build-arg INSTALL_DRIVER_VERSION=$(INSTALL_DRIVER_VERSION)\
 	--build-arg GPU=$(GPU)\
