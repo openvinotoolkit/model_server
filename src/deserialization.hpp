@@ -50,6 +50,8 @@ namespace ovms {
             return status; \
     }
 
+class IOVTensorFactory;
+
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo);
 
@@ -60,7 +62,7 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo);
 
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo, cl_context* context=nullptr);
+    const std::shared_ptr<const TensorInfo>& tensorInfo, IOVTensorFactory* factory);
 
 class ConcreteTensorProtoDeserializator {
 public:
@@ -230,7 +232,7 @@ public:
 
     static ov::Tensor deserializeTensorProto(
         const InferenceTensor& requestInput,
-        const std::shared_ptr<const TensorInfo>& tensorInfo, cl_context* context = nullptr) {
+        const std::shared_ptr<const TensorInfo>& tensorInfo, IOVTensorFactory* factory = nullptr) {
         OVMS_PROFILE_FUNCTION();
         switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP64:
@@ -246,7 +248,8 @@ public:
         case ovms::Precision::BOOL:
         case ovms::Precision::U1:
         case ovms::Precision::U8: {
-            return makeTensor(requestInput, tensorInfo, context);
+            SPDLOG_ERROR("ER");
+            return makeTensor(requestInput, tensorInfo, factory);
         }
         case ovms::Precision::CUSTOM:
         case ovms::Precision::UNDEFINED:
@@ -331,8 +334,9 @@ ov::Tensor deserializeTensorProto(
 template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo, cl_context* context = nullptr) {
-    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, context);
+    const std::shared_ptr<const TensorInfo>& tensorInfo, IOVTensorFactory* factory = nullptr) {
+            SPDLOG_ERROR("ER");
+    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, factory);
 }
 
 template <class Requester>
@@ -349,7 +353,7 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline, cl_context* context = nullptr) {
+    Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     for (const auto& pair : inputMap) {
@@ -420,7 +424,7 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const ::KFSRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline, cl_context* context = nullptr) {
+    Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     bool deserializeFromSharedInputContents = request.raw_input_contents().size() > 0;
@@ -491,7 +495,7 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const InferenceRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline, cl_context* context = nullptr) {
+    Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     for (const auto& [name, tensorInfo] : inputMap) {
@@ -508,7 +512,9 @@ Status deserializePredictRequest(
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
                 return StatusCode::NOT_IMPLEMENTED;
             } else { */
-            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputPtr, tensorInfo, context);
+            SPDLOG_ERROR("ER");
+            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputPtr, tensorInfo, factory);
+            SPDLOG_ERROR("ER");
             if (!tensor) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());

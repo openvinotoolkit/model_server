@@ -56,6 +56,8 @@
 #include "tensorinfo.hpp"
 #include "timer.hpp"
 
+#include "opencltensorfactory.hpp"
+
 namespace {
 enum : unsigned int {
     GET_INFER_REQUEST,
@@ -1297,7 +1299,10 @@ Status ModelInstance::infer(const RequestType* requestProto,
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, &this->ocl_context);
+    ov::intel_gpu::ocl::ClContext ovOclContext(this->ieCore, this->ocl_context);
+    OpenCLTensorFactory factory(ovOclContext);
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, &factory);
+            SPDLOG_ERROR("ER");
     timer.stop(DESERIALIZE);
     if (!status.ok())
         return status;

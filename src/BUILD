@@ -377,6 +377,7 @@ cc_library(
             "libovmsstring_utils",
             "libovmsazurefilesystem",
             "libovmsmodelversioning",
+            "libovmstensorfactory",
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
         ] + select({
@@ -860,6 +861,19 @@ cc_library( # make ovms_lib dependent, use share doptions
         "libovmsmodelversioning",
         "libovmsstatus",
     ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+# TODO
+cc_library( # make ovms_lib dependent, use share doptions
+    name = "libovmstensorfactory",
+    hdrs = ["itensorfactory.hpp",
+            "opencltensorfactory.hpp",],
+    srcs = [
+    ],
+    deps = ["@linux_openvino//:openvino",],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
