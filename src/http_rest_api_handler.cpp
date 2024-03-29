@@ -463,11 +463,17 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
     std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
 
-    Status status = kfsGrpcImpl.ModelReadyImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelReady});
-    if (!status.ok()) {
-        return status;
+    Status gstatus = kfsGrpcImpl.ModelReadyImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelReady});
+    if (!gstatus.ok()) {
+        return gstatus;
     }
-
+    std::string output;
+    google::protobuf::util::JsonPrintOptions opts;
+    google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    if (!status.ok()) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+    response = output;
     if (grpc_response.ready()) {
         return StatusCode::OK;
     }
