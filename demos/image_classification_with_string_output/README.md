@@ -6,13 +6,14 @@ This demo demonstrates example deployment of a model with output precision `ov::
 ### Download and prepare Image Net model using Keras and TensorFlow
 
 ```bash
+pip install json shutil requests numpy tensorflow keras matplotlib
 python3 download_model.py
 ```
 
 ### Start the OVMS container:
 ```bash
 docker run -d -u $(id -u):$(id -g) -v $(pwd):/workspace -p 9178:9178 openvino/model_server:latest \
---model_path /model --model_name text --rest_port 9178
+--model_path /workspace/model --model_name image_net --rest_port 9178
 ```
 
 ## Send request
