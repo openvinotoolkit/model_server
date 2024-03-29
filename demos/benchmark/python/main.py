@@ -50,7 +50,7 @@ def get_client(xargs):
 
 
 # Version used for print only...
-INTERNAL_VERSION="2.6"
+INTERNAL_VERSION="2.7"
 
 # client engine - used for single and multiple client configuration
 def run_single_client(xargs, worker_name_or_client, index, json_flag=None):
@@ -262,6 +262,8 @@ if __name__ == "__main__":
                         help="database metadata configuration. default: None")
     parser.add_argument("--print_all", required=False, action="store_true",
                         help="flag to print all output")
+    parser.add_argument("--print_summary", required=False, action="store_true",
+                        help="flag to print results summary")
     parser.add_argument("--print_time", required=False, action="store_true",
                         help="flag to print datetime next to each output line")
     parser.add_argument("--report_warmup", required=False, action="store_true",
@@ -336,4 +338,19 @@ if __name__ == "__main__":
     if xargs["print_all"]:
         for key, value in common_results.items():
             sys.stdout.write(f"{worker_id}: {key}: {value}\n")
+    if xargs["print_summary"] is not None:
+        sys.stdout.write("\n### Benchmark Summary ###\n")
+        if 'submetrics' in common_results:
+            total_clients = common_results["submetrics"]
+        else:
+            total_clients = 1
+
+        sys.stdout.write(f" Request concurrecny: {total_clients}\n")
+        if total_clients:
+            sys.stdout.write(f" Throughput: {common_results['window_netto_frame_rate']:.2f} FPS \n")
+            sys.stdout.write(" Latency: \n")
+            sys.stdout.write(f"    Min: {common_results['window_mean_latency2']*1000:.2f} ms\n")
+            sys.stdout.write(f"    Max: {common_results['window_mean_latency']*1000:.2f} ms\n")
+            sys.stdout.write(f"    stdev: {common_results['window_stdev_latency']*1000:.2f} ms\n")
+
     sys.exit(return_code)
