@@ -6,7 +6,7 @@ This demo demonstrates example deployment of a model with output precision `ov::
 ### Download and prepare Image Net model using Keras and TensorFlow
 
 ```bash
-pip install json shutil requests numpy tensorflow keras matplotlib
+pip install -r requirements.txt
 python3 download_model.py
 ```
 
@@ -39,7 +39,7 @@ echo -n -e '\x21\x1c\x00\x00' >> request.json
 cat ../common/static/images/bee.jpeg >> request.json
 curl --data-binary "@./request.json" -X POST http://localhost:9022/v2/models/image_net/versions/0/infer -H "Inference-Header-Content-Length: 143" --output response.json
 ```
-Request may be sent also using other APIs (KServ GRPC, TFS). In this section you can find short code samples how to do this:
+Request may be sent also using other APIs (KServ GRPC, TFS). In this sections you can find short code samples how to do this:
 - [TensorFlow Serving API](./clients_tfs.md)
 - [KServe API](./clients_kfs.md)
 
