@@ -17,7 +17,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd):/workspace -p 9178:9178 openvino/mo
 ```
 
 ## Send request
-Example below presents how to send request using KServ API with binary data extension with output returned inside of the JSON:
+Example below presents how to send request using KServ API with binary data extension with output returned inside of JSON:
 ```bash
 echo -n '{"inputs" : [{"name" : "image", "shape" : [1], "datatype" : "BYTES"}]}' > request.json
 stat --format=%s request.json
@@ -31,13 +31,21 @@ curl --data-binary "@./request.json" -X POST http://localhost:9022/v2/models/ima
 There is also a way to force OVMS to return output in binary data extension by adding binary_data parameter to the request:
 ```bash
 echo -n '{"inputs" : [{"name" : "image", "shape" : [1], "datatype" : "BYTES"}], "outputs" : [{"name" : "label", "parameters" : {"binary_data" : true}}]}' > request.json
+stat --format=%s request.json
+143
+printf "%x\n" `stat -c "%s" ../common/static/images/bee.jpeg`
+1c21
+echo -n -e '\x21\x1c\x00\x00' >> request.json
+cat ../common/static/images/bee.jpeg >> request.json
+curl --data-binary "@./request.json" -X POST http://localhost:9022/v2/models/image_net/versions/0/infer -H "Inference-Header-Content-Length: 143" --output response.json
 ```
-Request may be send also using other APIs (KServ GRPC, TFS). In this section you can find short code samples how to do this:
+Request may be sent also using other APIs (KServ GRPC, TFS). In this section you can find short code samples how to do this:
 - [TensorFlow Serving API](./clients_tfs.md)
 - [KServe API](./clients_kfs.md)
 
 
 ## Expected output
+With output inside of JSON:
 ```bash
 {
     "model_name": "image_net",
@@ -49,4 +57,18 @@ Request may be send also using other APIs (KServ GRPC, TFS). In this section you
             "data": ["bee"]
         }]
 }
+```
+With output in binary extension:
+```bash
+{
+    "model_name": "image_net",
+    "model_version": "1",
+    "outputs": [{
+            "name": "label",
+            "shape": [1],
+            "datatype": "BYTES",
+            "parameters": {
+                "binary_data_size": 7 }
+        }]
+}<0x03000000> bee
 ```
