@@ -474,10 +474,7 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
         return StatusCode::INTERNAL_ERROR;
     }
     response = output;
-    if (grpc_response.ready()) {
-        return StatusCode::OK;
-    }
-    return StatusCode::MODEL_VERSION_NOT_LOADED_YET;
+    return StatusCode::OK;
 }
 
 void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
