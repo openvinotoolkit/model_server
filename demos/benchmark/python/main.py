@@ -351,7 +351,7 @@ if __name__ == "__main__":
         if total_clients:
             sys.stdout.write(f" Throughput: {common_results['window_netto_frame_rate']:.2f} FPS \n")
             sys.stdout.write(" Latency: \n")
-            sys.stdout.write(f"    Mean: {common_results['window_mean_latency2']*1000:.2f} ms\n")
+            sys.stdout.write(f"    Mean: {common_results['window_mean_latency']*1000:.2f} ms\n")
             sys.stdout.write(f"    Max: {common_results['window_pass_max_latency']*1000:.2f} ms\n")
             sys.stdout.write(f"    stdev: {common_results['window_stdev_latency']*1000:.2f} ms\n")
 
