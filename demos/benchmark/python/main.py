@@ -345,7 +345,7 @@ if __name__ == "__main__":
         else:
             total_clients = 1
 
-        sys.stdout.write(f" Request concurrecny: {total_clients}\n")
+        sys.stdout.write(f" Request concurrency: {total_clients}\n")
         if total_clients:
             sys.stdout.write(f" Throughput: {common_results['window_netto_frame_rate']:.2f} FPS \n")
             sys.stdout.write(" Latency: \n")
