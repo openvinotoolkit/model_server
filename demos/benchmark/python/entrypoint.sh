@@ -16,7 +16,7 @@
 #! /bin/bash
 
 # version is set in VERSION file
-XCLIENT_VERSION=2.6
+XCLIENT_VERSION=2.7
 echo "Client $XCLIENT_VERSION"
 
 PROXY="no"

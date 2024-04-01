@@ -189,7 +189,7 @@ Status GetModelMetadataImpl::buildResponse(
     return StatusCode::OK;
 }
 
-Status GetModelMetadataImpl::createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request) {
+Status GetModelMetadataImpl::createGrpcRequest(const std::string& model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request) {
     request->mutable_model_spec()->set_name(model_name);
     if (model_version.has_value()) {
         request->mutable_model_spec()->mutable_version()->set_value(model_version.value());

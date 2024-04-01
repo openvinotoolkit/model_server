@@ -21,6 +21,7 @@
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -37,12 +38,16 @@ class Status;
 class MediapipeGraphConfig;
 class MediapipeGraphDefinition;
 class MediapipeGraphExecutor;
+class PythonBackend;
 
 class MediapipeFactory {
     std::map<std::string, std::shared_ptr<MediapipeGraphDefinition>> definitions;
     mutable std::shared_mutex definitionsMtx;
+    PythonBackend* pythonBackend{nullptr};
 
 public:
+    MediapipeFactory() = delete;
+    MediapipeFactory(PythonBackend* pythonBackend = nullptr);
     Status createDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
         ModelManager& manager);

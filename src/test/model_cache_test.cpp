@@ -243,7 +243,7 @@ TEST_F(ModelCacheTest, PluginConfigChangeDoesNotImpactCache) {
     size_t currentCacheFileCount = this->getCachedFileCount();
 
     ModelConfig config = imageModelConfigWithCache;
-    config.setPluginConfig({{"CPU_THROUGHPUT_STREAMS", "21"}});
+    config.setPluginConfig({{"NUM_STREAMS", "21"}});
 
     auto manager = std::make_unique<ConstructorEnabledModelManager>(modelCacheDirectory);
     ASSERT_EQ(manager->reloadModelWithVersions(config), StatusCode::OK_RELOADED);

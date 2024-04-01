@@ -69,7 +69,7 @@ ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   
 > **NOTE**: Video source is cropped to 704x704 resolution to match model input size.
 
 ## Recognize Detected Text with OCR Pipeline
-Optical Character Recognition (OCR) pipeline based on [horizontal text detection](https://docs.openvino.ai/2022.1/omz_models_model_horizontal_text_detection_0001.html) model, [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) 
+Optical Character Recognition (OCR) pipeline based on [horizontal text detection](https://docs.openvino.ai/2023.0/omz_models_model_horizontal_text_detection_0001.html) model, [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014)
 combined with a custom node implementation can be used with the same python script used before. OCR pipeline provides location of detected text boxes on the image and additionally recognized text for each box.
 
 ![horizontal text detection using OCR pipeline](horizontal-text-detection-ocr.gif)
@@ -77,7 +77,7 @@ combined with a custom node implementation can be used with the same python scri
 ### Prepare workspace to run the demo
 
 To successfully deploy OCR pipeline you need to have a workspace that contains:
-- [horizontal text detection](https://docs.openvino.ai/2022.1/omz_models_model_horizontal_text_detection_0001.html) and [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) models
+- [horizontal text detection](https://docs.openvino.ai/2023.0/omz_models_model_horizontal_text_detection_0001.html) and [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) models
 - Custom node for image processing
 - Configuration file
 
@@ -181,4 +181,86 @@ ThreadID:   1; Current FPS:    31.23; Average FPS:    25.67; Average latency:   
 ThreadID:   2; Current FPS:    29.41; Average FPS:    25.70; Average latency:   130.88ms
 ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   135.65ms
 ...
+```
+
+## RTSP Client
+
+Build docker image containing rtsp client along with its dependencies
+The rtsp client app needs to have access to RTSP stream to read from and write to.
+
+Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
+
+```bash
+docker run --rm -d -p 8080:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
+```
+
+Then write to the server using ffmpeg, example using video or camera
+
+```bash
+ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```
+
+
+```
+ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```
+
+Build the docker image with the python client for video stream reading an remote analysis:
+```bash
+docker build ../../common/stream_client/ -t rtsp_client
+```
+
+### Start the client
+
+- Command
+
+```bash
+docker run -v $(pwd):/workspace rtsp_client --help
+usage: client.py [-h] [--grpc_address GRPC_ADDRESS]
+                 [--input_stream INPUT_STREAM] [--output_stream OUTPUT_STREAM]
+                 [--model_name MODEL_NAME] [--width WIDTH] [--height HEIGHT]
+                 [--input_name INPUT_NAME] [--verbose] [--benchmark]
+                 [--limit_stream_duration LIMIT_STREAM_DURATION]
+                 [--limit_frames LIMIT_FRAMES]
+
+options:
+  -h, --help            show this help message and exit
+  --grpc_address GRPC_ADDRESS
+                        Specify url to grpc service
+  --input_stream INPUT_STREAM
+                        Url of input rtsp stream
+  --output_stream OUTPUT_STREAM
+                        Url of output rtsp stream
+  --model_name MODEL_NAME
+                        Name of the model
+  --width WIDTH         Width of model's input image
+  --height HEIGHT       Height of model's input image
+  --input_name INPUT_NAME
+                        Name of the model's input
+  --verbose             Should client dump debug information
+  --benchmark           Should client collect processing times
+  --limit_stream_duration LIMIT_STREAM_DURATION
+                        Limit how long client should run
+  --limit_frames LIMIT_FRAMES
+                        Limit how many frames should be processed
+```
+
+- Usage example
+
+```bash
+docker run --network="host" -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
+```
+
+Then read rtsp stream using ffplay
+
+```bash
+ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
+```
+
+
+One might as well use prerecorded video and schedule it for inference.
+Replace horizontal_text.mp4 with your video file.
+
+```bash
+docker run --network="host" -v $(pwd):/workspace rtsp_client --grpc_address localhost:9000 --input_stream 'workspace/horizontal_text.mp4' --output_stream 'workspace/output.mp4'
 ```

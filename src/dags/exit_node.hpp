@@ -17,11 +17,7 @@
 #include <memory>
 #include <set>
 #include <string>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
+#include <utility>
 
 #include "../tensorinfo.hpp"
 #include "node.hpp"
@@ -40,7 +36,7 @@ class ExitNode : public Node {
 
 public:
     ExitNode(ResponseType* response, const tensor_map_t& outputsInfo, std::set<std::string> gatherFromNode = {}, bool useSharedOutputContent = true, const std::string& pipelineName = DEFAULT_PIPELINE_NAME) :
-        Node(EXIT_NODE_NAME, std::nullopt, gatherFromNode),
+        Node(EXIT_NODE_NAME, std::nullopt, std::move(gatherFromNode)),
         response(response),
         outputsInfo(outputsInfo),
         useSharedOutputContent(useSharedOutputContent),

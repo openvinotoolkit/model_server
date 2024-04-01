@@ -61,7 +61,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
 
 void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, const model_version_t version, const PipelineDefinitionStatus& pipeline_status) {
     auto [state, error_code] = pipeline_status.convertToModelStatus();
-    SPDLOG_DEBUG("add_status_to_response state={} error_code", state, error_code);
+    SPDLOG_DEBUG("add_status_to_response state={} error_code={}", state, error_code);
     auto status_to_fill = response->add_model_version_status();
     status_to_fill->set_state(static_cast<tensorflow::serving::ModelVersionStatus_State>(static_cast<int>(state)));
     status_to_fill->set_version(version);
@@ -76,7 +76,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
     return grpc(GetModelStatusImpl::getModelStatus(request, response, modelManager, ExecutionContext(ExecutionContext::Interface::GRPC, ExecutionContext::Method::GetModelStatus)));
 }
 
-Status GetModelStatusImpl::createGrpcRequest(std::string model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request) {
+Status GetModelStatusImpl::createGrpcRequest(const std::string& model_name, const std::optional<int64_t> model_version, tensorflow::serving::GetModelStatusRequest* request) {
     request->mutable_model_spec()->set_name(model_name);
     if (model_version.has_value()) {
         request->mutable_model_spec()->mutable_version()->set_value(model_version.value());

@@ -20,6 +20,19 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
+    urls = [
+        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+    ],
+)
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+bazel_skylib_workspace()
+load("@bazel_skylib//lib:versions.bzl", "versions")
+versions.check(minimum_bazel_version = "6.0.0")
+
 # overriding tensorflow serving bazel dependency
 # alternative would be to use cmake build of grpc and flag
 # to use system ssl instead
@@ -61,7 +74,7 @@ cc_library(
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.6.5",
+    tag = "2.13.0",
     patch_args = ["-p1"],
     patches = ["net_http.patch", "listen.patch"]
     #                             ^^^^^^^^^^^^
@@ -84,12 +97,12 @@ http_archive(
     #],
 )
 
-################################### Official mediapipe repository #########
+################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "8c8c7bb4678caac381bfb176ec9e05ab7d47805e", # Update calculators from ovms repo
+    commit = "0d5cbdbbee501b796217c7520ac0f2fd94920657", # Working log_level and validate (#69)
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -132,15 +145,15 @@ http_archive(
     urls = ["https://github.com/protocolbuffers/protobuf-javascript/archive/refs/tags/v3.21.2.tar.gz"],
 )
 
-http_archive(
-   name = "rules_foreign_cc",
-   strip_prefix = "rules_foreign_cc-0.1.0",
-   url = "https://github.com/bazelbuild/rules_foreign_cc/archive/0.1.0.zip",
+git_repository( # Using commit past 0.9.0 that adds cmake 3.26.2 for model api. Be sure to update to 0.10.0 when available.
+    name = "rules_foreign_cc",
+    remote = "https://github.com/bazelbuild/rules_foreign_cc.git",
+    commit = "1fb8a1e",
 )
 
-load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
+load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 
-rules_foreign_cc_dependencies()
+rules_foreign_cc_dependencies(cmake_version="3.26.2")
 
 # gflags needed by glog
 http_archive(
@@ -173,6 +186,56 @@ new_local_repository(
 
 ########################################################### Mediapipe end
 
+########################################################### Python support start
+
+load("@//third_party/python:python_repo.bzl", "python_repository")
+python_repository(name = "_python3-linux")
+
+new_local_repository(
+    name = "python3_linux",
+    path = "/usr",
+    build_file = "@_python3-linux//:BUILD"
+)
+
+http_archive(
+  name = "pybind11_bazel",
+  strip_prefix = "pybind11_bazel-b162c7c88a253e3f6b673df0c621aca27596ce6b",
+  urls = ["https://github.com/pybind/pybind11_bazel/archive/b162c7c88a253e3f6b673df0c621aca27596ce6b.zip"],
+)
+# We still require the pybind library.
+http_archive(
+  name = "pybind11",
+  build_file = "@pybind11_bazel//:pybind11.BUILD",
+  strip_prefix = "pybind11-2.11.1",
+  urls = ["https://github.com/pybind/pybind11/archive/v2.11.1.tar.gz"],
+)
+load("@pybind11_bazel//:python_configure.bzl", "python_configure")
+python_configure(name = "local_config_python")
+
+http_archive(
+    name = "rules_python",
+    sha256 = "29a801171f7ca190c543406f9894abf2d483c206e14d6acbd695623662320097",
+    strip_prefix = "rules_python-0.18.1",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.18.1/rules_python-0.18.1.tar.gz",
+)
+
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
+
+load("@rules_python//python:pip.bzl", "pip_parse")
+
+pip_parse(
+    name = "pip_deps",
+    requirements_lock = "//src/python/binding:tests/requirements.txt",
+)
+
+load("@pip_deps//:requirements.bzl", "install_deps")
+
+install_deps()
+
+########################################################### Python support end
+
 # minitrace
 new_git_repository(
     name = "minitrace",
@@ -190,24 +253,32 @@ cc_library(
 """,
 )
 
-load("@tensorflow_serving//tensorflow_serving:repo.bzl", "tensorflow_http_archive")
-tensorflow_http_archive(
+# TensorFlow repo should always go after the other external dependencies.
+# TF on 2023-06-13.
+_TENSORFLOW_GIT_COMMIT = "491681a5620e41bf079a582ac39c585cc86878b9"
+_TENSORFLOW_SHA256 = "9f76389af7a2835e68413322c1eaabfadc912f02a76d71dc16be507f9ca3d3ac"
+http_archive(
     name = "org_tensorflow",
-    sha256 = "fd687f8e26833cb917ae0bd8e434c9bd30c92042361c8ae69679983d3c66a440",
-    git_commit = "15198b1818bd2bf1b5b55bf5b02bf42398d222fc",
-    patch = "tf.patch",
+    urls = [
+      "https://github.com/tensorflow/tensorflow/archive/%s.tar.gz" % _TENSORFLOW_GIT_COMMIT,
+    ],
+    patches = [
+        "@mediapipe//third_party:org_tensorflow_compatibility_fixes.diff",
+        # Diff is generated with a script, don't update it manually.
+        "@mediapipe//third_party:org_tensorflow_custom_ops.diff",
+        "tf.patch",
+        "tf_graph_info_multilinecomment.patch",
+    ],
+    patch_args = [
+        "-p1",
+    ],
+    strip_prefix = "tensorflow-%s" % _TENSORFLOW_GIT_COMMIT,
+    sha256 = _TENSORFLOW_SHA256,
     repo_mapping = {"@curl" : "@curl"}
 )
 
 load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
 tf_serving_workspace()
-
-# Check bazel version requirement, which is stricter than TensorFlow's.
-load(
-    "@org_tensorflow//tensorflow:version_check.bzl",
-    "check_bazel_version_at_least"
-)
-check_bazel_version_at_least("5.3.1")
 
 # Initialize TensorFlow's external dependencies.
 load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
@@ -223,12 +294,8 @@ workspace()
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 rules_pkg_dependencies()
 
-# AWS S3 SDK
-new_local_repository(
-    name = "awssdk",
-    build_file = "@//third_party/aws:BUILD",
-    path = "/awssdk",
-)
+load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
+aws_sdk_cpp()
 
 # Azure Storage SDK
 new_local_repository(
@@ -276,16 +343,20 @@ google_cloud_cpp_common_deps()
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
-
-load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
-grpc_extra_deps()
+http_archive( # 1.60.0
+    name = "com_github_grpc_grpc",
+    urls = [
+        "https://github.com/grpc/grpc/archive/0ef13a7555dbaadd4633399242524129eef5e231.tar.gz",
+    ],
+    strip_prefix = "grpc-0ef13a7555dbaadd4633399242524129eef5e231",
+)
 
 # cxxopts
 http_archive(
     name = "com_github_jarro2783_cxxopts",
-    url = "https://github.com/jarro2783/cxxopts/archive/v2.2.0.zip",
-    sha256 = "f9640c00d9938bedb291a21f9287902a3a8cee38db6910b905f8eba4a6416204",
-    strip_prefix = "cxxopts-2.2.0",
+    url = "https://github.com/jarro2783/cxxopts/archive/v3.1.1.zip",
+    sha256 = "25b644a2bfa9c6704d723be51b026bc02420dfdee1277a49bfe5df3f19b0eaa4",
+    strip_prefix = "cxxopts-3.1.1",
     build_file = "@//third_party/cxxopts:BUILD",
 )
 
@@ -334,31 +405,24 @@ http_archive(
 load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cpp_repositories")
 prometheus_cpp_repositories()
 
+load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
+load("@mediapipe//third_party/model_api:model_api.bzl", "model_api_repository")
+model_api_repository(name="_model-api")
 new_git_repository(
     name = "model_api",
     remote = "https:///github.com/openvinotoolkit/model_api/",
-    build_file_content = """
-cc_library(
-    name = "adapter_api",
-    hdrs = ["model_api/cpp/adapters/include/adapters/inference_adapter.h",],
-    includes = ["model_api/cpp/adapters/include"],
-    deps = ["@linux_openvino//:openvino"],
-    visibility = ["//visibility:public"],
-)
-    """,
-    commit = "7e163416c60ba9ccdf440c6c049d6c7e7137e144"
-)
-
-git_repository(
-    name = "oneTBB",
-    branch = "v2021.8.0",
-    remote = "https://github.com/oneapi-src/oneTBB/",
-    patch_args = ["-p1"],
-    patches = ["mwaitpkg.patch",]
+    build_file = "@_model-api//:BUILD",
+    commit = "03a6cee5d486ee9eabb625e4388e69fe9c50ef20"
 )
 
 new_local_repository(
     name = "mediapipe_calculators",
     build_file = "@//third_party/mediapipe_calculators:BUILD",
     path = "/ovms/third_party/mediapipe_calculators",
+)
+
+git_repository(
+    name = "nlohmann_json",
+    remote = "https://github.com/nlohmann/json/",
+    tag = "v3.11.3",
 )

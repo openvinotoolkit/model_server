@@ -302,7 +302,7 @@ template <typename RequestType, typename InputTensorType, typename InputTensorIt
 Status RequestValidator<RequestType, InputTensorType, InputTensorIteratorType, ShapeType>::checkIfShapeValuesNegative(const InputTensorType& proto) const {
     RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
     for (size_t i = 0; i < rsi.getShapeSize(); i++) {
-        if (rsi.getDim(i) <= 0) {
+        if (rsi.getDim(i) < 0) {
             std::stringstream ss;
             ss << "Negative or zero dimension size is not acceptable: " << tensorShapeToString(rsi.getShape()) << "; input name: " << getCurrentlyValidatedInputName();
             const std::string details = ss.str();
@@ -405,7 +405,7 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
     }
     RequestShapeInfo<TFSInputTensorType, TFSShapeType> rsi(proto);
-    if (inputBatchSize <= 0) {
+    if (inputBatchSize < 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
@@ -441,7 +441,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
     }
     RequestShapeInfo<KFSTensorInputProto, KFSShapeType> rsi(proto);
-    if (inputBatchSize <= 0) {
+    if (inputBatchSize < 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
@@ -477,7 +477,7 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
         return Status(StatusCode::INVALID_BATCH_SIZE, details);
     }
     RequestShapeInfo<InferenceTensor, signed_shape_t> rsi(tensor);
-    if (rsi.getDim(0) <= 0) {
+    if (rsi.getDim(0) < 0) {
         std::stringstream ss;
         ss << "Batch size must be positive; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
@@ -667,13 +667,22 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIterat
     https://github.com/tensorflow/tensorflow/blob/903a6399aab19b549fefd0ead836af644f3d00f8/tensorflow/python/framework/tensor_util.py#L237
 */
 
+    // For POD types
     size_t expectedValueCount = 1;
     for (int i = 0; i < proto.tensor_shape().dim_size(); i++) {
         expectedValueCount *= proto.tensor_shape().dim(i).size();
     }
 
     // Network expects tensor content size or value count
-    if (proto.dtype() == tensorflow::DataType::DT_UINT16) {
+    if (proto.dtype() == tensorflow::DataType::DT_STRING) {
+        if (proto.string_val_size() < 0 || proto.string_val_size() != proto.tensor_shape().dim(0).size()) {
+            std::stringstream ss;
+            ss << "Expected: " << proto.tensor_shape().dim(0).size() << "; Actual: " << proto.string_val_size() << "; input name: " << getCurrentlyValidatedInputName();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of values in tensor proto string container - {}", servableName, servableVersion, details);
+            return Status(StatusCode::INVALID_VALUE_COUNT, details);
+        }
+    } else if (proto.dtype() == tensorflow::DataType::DT_UINT16) {
         if (proto.int_val_size() < 0 ||
             expectedValueCount != static_cast<size_t>(proto.int_val_size())) {
             std::stringstream ss;
@@ -737,6 +746,9 @@ static size_t getElementsCount(const KFSTensorInputProto& proto, ovms::Precision
     case ovms::Precision::FP64: {
         return proto.contents().fp64_contents().size();
     }
+    case ovms::Precision::STRING: {
+        return proto.contents().bytes_contents().size();
+    }
     case ovms::Precision::FP16:
     case ovms::Precision::U1:
     case ovms::Precision::CUSTOM:
@@ -757,13 +769,46 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorT
         expectedValueCount *= proto.shape()[i];
     }
     if (request.raw_input_contents().size()) {
-        size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
-        if (expectedContentSize != request.raw_input_contents()[bufferId].size()) {
-            std::stringstream ss;
-            ss << "Expected: " << expectedContentSize << " bytes; Actual: " << request.raw_input_contents()[bufferId].size() << " bytes; input name: " << getCurrentlyValidatedInputName();
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
-            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+        if (proto.datatype() == "BYTES") {
+            // Special content validation - 4 byte length metadata
+            size_t processedBytes = 0;
+            size_t batchSize = 0;
+            while (request.raw_input_contents(bufferId).size() >= processedBytes + sizeof(uint32_t)) {
+                uint32_t size = *reinterpret_cast<const uint32_t*>(request.raw_input_contents(bufferId).data() + processedBytes);
+                if (processedBytes + size + sizeof(uint32_t) > request.raw_input_contents(bufferId).size()) {
+                    std::stringstream ss;
+                    ss << "Batch length metadata exceeded buffer size, buffer size: " << request.raw_input_contents(bufferId).size() << ", batch length: " << size << "; input name: " << getCurrentlyValidatedInputName();
+                    const std::string details = ss.str();
+                    SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
+                    return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+                }
+                processedBytes += size + sizeof(uint32_t);
+                batchSize++;
+            }
+            if (request.raw_input_contents(bufferId).size() != processedBytes) {
+                std::stringstream ss;
+                ss << "Processed bytes: " << processedBytes << " do not equal to buffer size: " << request.raw_input_contents(bufferId).size() << "; input name: " << getCurrentlyValidatedInputName();
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
+                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+            }
+            if (batchSize != expectedValueCount) {
+                std::stringstream ss;
+                ss << "Expected: " << expectedValueCount << " values; Actual: " << batchSize << " values; input name: " << getCurrentlyValidatedInputName();
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid value count of tensor proto - {}", servableName, servableVersion, details);
+                return Status(StatusCode::INVALID_VALUE_COUNT, details);
+            }
+        } else {
+            // Plain old data
+            size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+            if (expectedContentSize != request.raw_input_contents()[bufferId].size()) {
+                std::stringstream ss;
+                ss << "Expected: " << expectedContentSize << " bytes; Actual: " << request.raw_input_contents()[bufferId].size() << " bytes; input name: " << getCurrentlyValidatedInputName();
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
+                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+            }
         }
     } else {  // buffers placed in InputTensor content
         // here we should check that the elements count is equal since for some precisions there is padding
@@ -888,11 +933,14 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
     if (tensor.getDataType() != getPrecisionAsOVMSDataType(inputInfo.getPrecision())) {
         std::stringstream ss;
         ss << "Expected: " << inputInfo.getPrecisionAsString()
-           << "; Actual: " << tensor.getDataType()
+           << "; Actual: " << toString(getOVMSDataTypeAsPrecision(tensor.getDataType()))
            << "; input name: " << getCurrentlyValidatedInputName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid precision - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_PRECISION, details);
+    }
+    if (tensor.getDataType() == OVMS_DATATYPE_STRING) {
+        return Status(StatusCode::INVALID_PRECISION, "Inference on models using string precision input via C-API is unsupported");
     }
     return StatusCode::OK;
 }
@@ -982,11 +1030,8 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 inputBatchSize = getStringBatchSize(proto);
                 inputWidth = getStringInputWidth(proto);
             }
-            if (processingHint == TensorInfo::ProcessingHint::STRING_1D_U8) {
-                SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 1D string input: name: {}",
-                    servableName, servableVersion, name);
-                RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(proto));
-                continue;
+            if (processingHint == TensorInfo::ProcessingHint::STRING_NATIVE) {
+                // Pass through to normal validation
             } else if (processingHint == TensorInfo::ProcessingHint::STRING_2D_U8) {
                 SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 2D string input: name: {}",
                     servableName, servableVersion, name);

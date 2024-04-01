@@ -15,12 +15,14 @@
 //*****************************************************************************
 #include "mediapipefactory.hpp"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <set>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -32,9 +34,26 @@
 #include "../logging.hpp"
 #include "../modelmanager.hpp"
 #include "../status.hpp"
+#include "../stringutils.hpp"
+#include "mediapipe/framework/deps/registration.h"
 #include "mediapipegraphdefinition.hpp"
 
 namespace ovms {
+
+static void logRegisteredNames(std::unordered_set<std::string> registrySet, std::string registryName) {
+    std::vector<std::string> names(registrySet.begin(), registrySet.end());
+    std::sort(names.begin(), names.end());
+    auto result = joins(names, ", ");
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Registered {}: {}\n", registryName, result);
+}
+
+MediapipeFactory::MediapipeFactory(PythonBackend* pythonBackend) {
+    this->pythonBackend = pythonBackend;
+    logRegisteredNames(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), "Calculators");
+    logRegisteredNames(mediapipe::SubgraphRegistry::GetRegisteredNames(), "Subgraphs");
+    logRegisteredNames(mediapipe::InputStreamHandlerRegistry::GetRegisteredNames(), "InputStreamHandlers");
+    logRegisteredNames(mediapipe::OutputStreamHandlerRegistry::GetRegisteredNames(), "OutputStreamHandlers");
+}
 
 Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     const MediapipeGraphConfig& config,
@@ -43,10 +62,13 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph definition: {} is already created", pipelineName);
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
-    std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(pipelineName, config, manager.getMetricRegistry(), &manager.getMetricConfig());
+    std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(pipelineName, config, manager.getMetricRegistry(), &manager.getMetricConfig(), pythonBackend);
     auto stat = graphDefinition->validate(manager);
+    if (stat.getCode() == StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED) {
+        return stat;
+    }
     std::unique_lock lock(definitionsMtx);
-    definitions.insert({pipelineName, std::move(graphDefinition)});  // TODO check if inserted
+    definitions.insert({pipelineName, std::move(graphDefinition)});
     return stat;
 }
 
@@ -103,7 +125,6 @@ void MediapipeFactory::retireOtherThan(std::set<std::string>&& graphsInConfigFil
 }
 
 Status MediapipeFactory::revalidatePipelines(ModelManager&) {
-    // TODO potentially not needed if we do not validate presence of models required in pbtxt
     SPDLOG_LOGGER_WARN(modelmanager_logger, "revalidation of mediapipe graphs not implemented yet");
     return StatusCode::OK;
 }

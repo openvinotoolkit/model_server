@@ -468,7 +468,7 @@ TEST_P(NativeFileInputConversionTFSValidPrecisionTest, Valid) {
         ovms::Shape{1, 1, 1, 3},
         Layout{"NHWC"});
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(stringVal, tensor, tensorInfo, nullptr), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_shape(), (ov::Shape{1, 1, 1, 3}));
     ASSERT_EQ(tensor.get_size(), 3);
@@ -483,7 +483,7 @@ TEST_P(NativeFileInputConversionTFSInvalidPrecisionTest, Invalid) {
         ovms::Shape{1, 1, 1, 3},
         Layout{"NHWC"});
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(stringVal, tensor, tensorInfo, nullptr), ovms::StatusCode::INVALID_PRECISION);
 }
 
@@ -562,7 +562,7 @@ TEST_P(NativeFileInputConversionKFSValidPrecisionTest, Valid) {
         ovms::Shape{1, 1, 1, 3},
         Layout{"NHWC"});
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(inferTensorContent, tensor, tensorInfo, nullptr), ovms::StatusCode::OK);
     ASSERT_EQ(tensor.get_shape(), (ov::Shape{1, 1, 1, 3}));
     ASSERT_EQ(tensor.get_size(), 3);
@@ -577,7 +577,7 @@ TEST_P(NativeFileInputConversionKFSInvalidPrecisionTest, Invalid) {
         ovms::Shape{1, 1, 1, 3},
         Layout{"NHWC"});
 
-    ov::runtime::Tensor tensor;
+    ov::Tensor tensor;
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(inferTensorContent, tensor, tensorInfo, nullptr), ovms::StatusCode::INVALID_PRECISION);
 }
 
@@ -787,49 +787,35 @@ TYPED_TEST(StringInputsConversionTest, rawInputContents_positive_empty_inputs) {
     assertOutputTensorMatchExpectations(tensor, expectedStrings);
 }
 
-TYPED_TEST(StringInputsConversionTest, u8_1d) {
+TYPED_TEST(StringInputsConversionTest, native_ov_string) {
     std::vector<std::string> expectedStrings = {"ala", "", "ma", "kota"};
     this->prepareStringTensor(this->requestTensor, expectedStrings);
     ov::Tensor tensor;
-    ASSERT_EQ(convertStringRequestToOVTensor1D(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
-    ASSERT_EQ(tensor.get_element_type(), ov::element::u8);
-    ASSERT_EQ(tensor.get_size(), 33);
-    std::vector<uint8_t> expectedData = {
-        4, 0, 0, 0,  // batch size
-        0, 0, 0, 0,  // first string start offset
-        3, 0, 0, 0,  // end of "ala" in condensed content
-        3, 0, 0, 0,  // end of "" in condensed content
-        5, 0, 0, 0,  // end of "ma" in condensed content
-        9, 0, 0, 0,  // end of "kota" in condensed content
-        'a', 'l', 'a',
-        'm', 'a',
-        'k', 'o', 't', 'a'};
-    ASSERT_EQ(std::memcmp(reinterpret_cast<uint8_t*>(tensor.data()), expectedData.data(), expectedData.size()), 0)
-        << readableError(reinterpret_cast<uint8_t*>(tensor.data()), expectedData.data(), expectedData.size());
+    ASSERT_EQ(convertStringRequestToOVTensor(this->requestTensor, tensor, nullptr), ovms::StatusCode::OK);
+    ASSERT_EQ(tensor.get_element_type(), ov::element::string);
+    ASSERT_EQ(tensor.get_shape().size(), 1);
+    ASSERT_THAT(tensor.get_shape(), ::testing::ElementsAre(expectedStrings.size()));
+    std::string* data = tensor.data<std::string>();
+    for (size_t i = 0; i < expectedStrings.size(); i++) {
+        ASSERT_EQ(data[i], expectedStrings[i]) << " at batch " << i;
+    }
 }
 
-TYPED_TEST(StringInputsConversionTest, rawInputContents_u8_1d) {
+TYPED_TEST(StringInputsConversionTest, rawInputContents_native_ov_string) {
     if (typeid(TypeParam) == typeid(TFSInputTensorType))
         GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
     std::vector<std::string> expectedStrings = {"ala", "", "ma", "kota"};
     std::string rawInputContents;
     this->prepareStringTensorWithRawInputContents(this->requestTensor, expectedStrings, rawInputContents);
     ov::Tensor tensor;
-    ASSERT_EQ(convertStringRequestToOVTensor1D(this->requestTensor, tensor, &rawInputContents), ovms::StatusCode::OK);
-    ASSERT_EQ(tensor.get_element_type(), ov::element::u8);
-    ASSERT_EQ(tensor.get_size(), 33);
-    std::vector<uint8_t> expectedData = {
-        4, 0, 0, 0,  // batch size
-        0, 0, 0, 0,  // first string start offset
-        3, 0, 0, 0,  // end of "ala" in condensed content
-        3, 0, 0, 0,  // end of "" in condensed content
-        5, 0, 0, 0,  // end of "ma" in condensed content
-        9, 0, 0, 0,  // end of "kota" in condensed content
-        'a', 'l', 'a',
-        'm', 'a',
-        'k', 'o', 't', 'a'};
-    ASSERT_EQ(std::memcmp(reinterpret_cast<uint8_t*>(tensor.data()), expectedData.data(), expectedData.size()), 0)
-        << readableError(reinterpret_cast<uint8_t*>(tensor.data()), expectedData.data(), expectedData.size());
+    ASSERT_EQ(convertStringRequestToOVTensor(this->requestTensor, tensor, &rawInputContents), ovms::StatusCode::OK);
+    ASSERT_EQ(tensor.get_element_type(), ov::element::string);
+    ASSERT_EQ(tensor.get_shape().size(), 1);
+    ASSERT_THAT(tensor.get_shape(), ::testing::ElementsAre(expectedStrings.size()));
+    std::string* data = tensor.data<std::string>();
+    for (size_t i = 0; i < expectedStrings.size(); i++) {
+        ASSERT_EQ(data[i], expectedStrings[i]) << " at batch " << i;
+    }
 }
 
 template <typename TensorType>

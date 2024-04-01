@@ -1,17 +1,16 @@
 # Advanced Features {#ovms_docs_advanced}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_sample_cpu_extension
-   ovms_docs_model_cache
-   ovms_docs_custom_loader
-   ovms_extras_nginx-mtls-auth-readme
-
-@endsphinxdirective
+ovms_sample_cpu_extension
+ovms_docs_model_cache
+ovms_docs_custom_loader
+ovms_extras_nginx-mtls-auth-readme
+```
 
 ## CPU Extensions
 Implement any CPU layer, that is not support by OpenVINO yet, as a shared library.
@@ -19,7 +18,7 @@ Implement any CPU layer, that is not support by OpenVINO yet, as a shared librar
 [Learn more](../src/example/SampleCpuExtension/README.md)
 
 ## Model Cache
-Leverage the OpenVINO [model caching](https://docs.openvino.ai/2023.0/openvino_docs_OV_UG_Model_caching_overview.html) feature to speed up subsequent model loading on a target device.
+Leverage the OpenVINO [model caching](https://docs.openvino.ai/2024/openvino-workflow/running-inference/optimize-inference/optimizing-latency/model-caching-overview.html) feature to speed up subsequent model loading on a target device.
 
 [Learn more](model_cache.md)
 

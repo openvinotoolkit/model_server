@@ -36,12 +36,12 @@ CustomNode::CustomNode(
     std::optional<int32_t> demultiplyCount,
     std::set<std::string> gatherFromNode,
     std::shared_ptr<CNLIMWrapper> customNodeLibraryInternalManager) :
-    Node(nodeName, demultiplyCount, gatherFromNode),
+    Node(nodeName, demultiplyCount, std::move(gatherFromNode)),
     library(library),
     parameters(parameters),
     nodeOutputNameAlias(nodeOutputNameAlias),
     libraryParameters(createCustomNodeParamArray(this->parameters)),
-    customNodeLibraryInternalManager(customNodeLibraryInternalManager) {
+    customNodeLibraryInternalManager(std::move(customNodeLibraryInternalManager)) {
 }
 
 Status CustomNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) {

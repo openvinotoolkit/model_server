@@ -26,6 +26,7 @@
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
+#include "opencv2/opencv.hpp"
 
 namespace ovms {
 Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
@@ -41,7 +42,7 @@ Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
         {"UINT64", Precision::U64},
         {"UINT32", Precision::U32},
         {"UINT16", Precision::U16},
-        // {"BYTES", Precision::??},
+        {"BYTES", Precision::STRING},
         {"UINT8", Precision::U8}};
     auto it = precisionMap.find(datatype);
     if (it == precisionMap.end()) {
@@ -85,6 +86,7 @@ const KFSDataType& ovmsPrecisionToKFSPrecision(Precision precision) {
         {Precision::U32, "UINT32"},
         {Precision::U16, "UINT16"},
         {Precision::U8, "UINT8"},
+        {Precision::STRING, "BYTES"},
         {Precision::BOOL, "BOOL"}};
     // {Precision::BF16, ""},
     // {Precision::U4, ""},
@@ -187,8 +189,11 @@ Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& 
         offset += (sizeof(uint32_t) + inputSize);
         tmpBatchSize++;
     }
-    if (offset != buffer.size()) {
-        SPDLOG_DEBUG("Raw input contents invalid format. Every input need to be preceded by four bytes of its size.");
+    if (offset > buffer.size()) {
+        SPDLOG_DEBUG("Raw input contents invalid format. Every input need to be preceded by four bytes of its size. Buffer exceeded by {} bytes", offset - buffer.size());
+        return StatusCode::INVALID_INPUT_FORMAT;
+    } else if (offset < buffer.size()) {
+        SPDLOG_DEBUG("Raw input contents invalid format. Every input need to be preceded by four bytes of its size. Unprocessed {} bytes", buffer.size() - offset);
         return StatusCode::INVALID_INPUT_FORMAT;
     }
     batchSize = tmpBatchSize;

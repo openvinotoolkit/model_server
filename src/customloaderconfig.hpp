@@ -23,6 +23,7 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
+#include "filesystem.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
 

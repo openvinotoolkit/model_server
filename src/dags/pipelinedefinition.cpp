@@ -68,12 +68,16 @@ PipelineDefinition::PipelineDefinition(const std::string& pipelineName,
 Status PipelineDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of pipeline: {}", getName());
     ValidationResultNotifier notifier(status, loadedNotify);
-    auto& models = manager.getModels();
-    if (std::find_if(models.begin(), models.end(), [this](auto pair) { return this->pipelineName == pair.first; }) != models.end()) {
+    if (manager.modelExists(this->pipelineName)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by model.", pipelineName);
         return StatusCode::PIPELINE_NAME_OCCUPIED;
     }
-
+#if (MEDIAPIPE_DISABLE == 0)
+    if (manager.getMediapipeFactory().definitionExists(this->pipelineName)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Pipeline name: {} is already occupied by mediapipe graph.", pipelineName);
+        return StatusCode::PIPELINE_NAME_OCCUPIED;
+    }
+#endif
     Status validationResult = initializeNodeResources(manager);
     if (!validationResult.ok()) {
         return validationResult;
@@ -441,6 +445,19 @@ public:
         return StatusCode::OK;
     }
 
+    Status checkForForbiddenStringDemultiplicator() {
+        if (!dependantNodeInfo.demultiplyCount.has_value()) {
+            return StatusCode::OK;
+        }
+        for (const auto& [_, inputInfo] : this->inputsInfo) {
+            if (inputInfo->getPrecision() == Precision::STRING) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiplication of strings in unsupported. Node name: {}", pipelineName, dependantNodeInfo.nodeName);
+                return StatusCode::PIPELINE_STRING_DEMUILTIPLICATION_UNSUPPORTED;
+            }
+        }
+        return StatusCode::OK;
+    }
+
     Status validateGatherNode(const NodeInfo& dependantNodeInfo) const {
         for (const auto& gather : dependantNodeInfo.gatherFromNode) {
             auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(), [gather](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == gather; });
@@ -608,6 +625,17 @@ public:
                 tensorOutput->getPrecisionAsString());
             return StatusCode::INVALID_PRECISION;
         }
+        if (tensorInput->getPrecision() == Precision::STRING) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Connecting models with string precision is unsupported: dependant node: {}; input: {}; precision: {} vs dependency node: {}; output: {}; precision: {}",
+                pipelineName,
+                dependantNodeInfo.nodeName,
+                modelInputName,
+                tensorInput->getPrecisionAsString(),
+                dependencyNodeInfo.nodeName,
+                modelOutputName,
+                tensorOutput->getPrecisionAsString());
+            return StatusCode::NOT_IMPLEMENTED;
+        }
         return StatusCode::OK;
     }
 
@@ -702,6 +730,11 @@ public:
                 return result;
             }
 
+            if (dependencyNodeInfo.kind == NodeKind::ENTRY && dependencyNodeInfo.demultiplyCount.has_value() && this->inputsInfo.at(realName)->getPrecision() == Precision::STRING) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiplication of strings in unsupported. Node name: {}", pipelineName, dependantNodeInfo.nodeName);
+                return StatusCode::PIPELINE_STRING_DEMUILTIPLICATION_UNSUPPORTED;
+            }
+
             if (
                 (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) &&
                 (dependencyNodeInfo.kind == NodeKind::DL || dependencyNodeInfo.kind == NodeKind::CUSTOM)) {
@@ -783,6 +816,11 @@ public:
             }
 
             result = checkForForbiddenDynamicParameters();
+            if (!result.ok()) {
+                return result;
+            }
+
+            result = checkForForbiddenStringDemultiplicator();
             if (!result.ok()) {
                 return result;
             }

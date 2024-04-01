@@ -1,16 +1,14 @@
 # Directed Acyclic Graph (DAG) Scheduler {#ovms_docs_dag}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_docs_demultiplexing
-   ovms_docs_custom_node_development
-
-
-@endsphinxdirective
+ovms_docs_demultiplexing
+ovms_docs_custom_node_development
+```
 
 ## Introduction
 The Directed Acyclic Graph (DAG) Scheduler makes it possible to create a pipeline of models for execution in a single client request. 
@@ -46,7 +44,7 @@ There are two special kinds of nodes - Request and Response node. Both of them a
 ### Custom node type
 
 * custom - that node can be used to implement all operations on the data which can not be handled by the neural network model. It is represented by
-a C++ dynamic library implementing OVMS API defined in [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/releases/2023/0/src/custom_node_interface.h). Custom nodes can run the data
+a C++ dynamic library implementing OVMS API defined in [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_node_interface.h). Custom nodes can run the data
 processing using OpenCV, which is included in OVMS, or include other third-party components. Custom node libraries are loaded into OVMS
  by adding their definition to the pipeline configuration. The configuration includes a path to the compiled binary with the `.so` extension. 
 Custom nodes are not versioned, meaning one custom node library is bound to one name. To load another version, another name needs to be used.

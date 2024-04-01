@@ -1,13 +1,15 @@
+# Segmentation Example with a PaddlePaddle Model {#ovms_demo_using_paddlepaddle_model}
+
 ## Overview
 
 This guide demonstrates how to run inference requests for PaddlePaddle model with OpenVINO Model Server.
-As an example, we will use [ocrnet-hrnet-w48-paddle](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/public/ocrnet-hrnet-w48-paddle) to perform segmentation on an image.
+As an example, we will use [ocrnet-hrnet-w48-paddle](https://github.com/openvinotoolkit/open_model_zoo/tree/releases/2023/3/models/public/ocrnet-hrnet-w48-paddle) to perform segmentation on an image.
 
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/engine/install/) installed
 
-- Python 3.6 or newer installed
+- Python 3.7 or newer installed
 
 ## Preparing to Run
 

@@ -25,50 +25,47 @@ To enable Performance Hints for your application, use the following command:
 
 CPU
 
-   ```bash
-         docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-               --model_path /opt/model --model_name resnet --port 9001 \
-               --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
-               --target_device CPU
-   ```
+```bash
+docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+      --model_path /opt/model --model_name resnet --port 9001 \
+      --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+      --target_device CPU
+```
 
 GPU
 
-@sphinxdirective
-.. code-block:: sh
-
-         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-               -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
-               --model_path /opt/model --model_name resnet --port 9001 \
-               --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
-               --target_device GPU
-
-@endsphinxdirective
+```bash
+docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+      -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+      --model_path /opt/model --model_name resnet --port 9001 \
+      --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+      --target_device GPU
+```
 
 #### LATENCY
 This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
-Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/2023.0/openvino_docs_OV_UG_Performance_Hints.html#performance-hints-how-it-works).
+Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/2024/openvino-workflow/running-inference/optimize-inference/high-level-performance-hints.html#performance-hints-how-it-works).
 
 To enable Performance Hints for your application, use the following command:
 
 CPU
 
-   ```bash
-         docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
-               --model_path /opt/model --model_name resnet --port 9001 \
-               --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
-               --target_device CPU
-   ```
+```bash
+docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
+      --model_path /opt/model --model_name resnet --port 9001 \
+      --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+      --target_device CPU
+```
 
 GPU
    
-   ```bash
-         docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-               -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
-               --model_path /opt/model --model_name resnet --port 9001 \
-               --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
-               --target_device GPU
-   ```
+```bash
+docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+      -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+      --model_path /opt/model --model_name resnet --port 9001 \
+      --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+      --target_device GPU
+```
 
 > **NOTE**: NUM_STREAMS and PERFORMANCE_HINT should not be used together.
 
@@ -94,6 +91,12 @@ For example, with ~50 clients sending the requests to the server with 48 cores, 
 
 `--plugin_config '{"NUM_STREAMS": "24"}'`
 
+## Disabling CPU pinning
+
+By default, OpenVINO Model Server will enable CPU threads pinning for better performance. User also can use plugin config to switch it off. Disable threads pinning might be beneficial in complex applications with several workloads executed in parallel.
+
+`--plugin_config '{"ENABLE_CPU_PINNING": false}'`
+
 ## Input data in REST API calls
 
 While using REST API, you can adjust the data format to optimize the communication and deserialization from json format. Here are some tips to effectively use REST interface when working with OpenVINO Model Server:
@@ -118,10 +121,11 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 | :---        |    :----   |
 | INFERENCE_NUM_THREADS       | Specifies the number of threads that CPU plugin should use for inference.     |
 | AFFINITY   |   Binds inference threads to CPU cores.      |
-| NUM_STREAMS | Specifies number of execution streams for the throughput mode |
+| NUM_STREAMS | Specifies number of execution streams for the throughput mode. |
+| ENABLE_CPU_PINNING | This property allows CPU threads pinning during inference. |
 
 
-> **NOTE:** For additional information about all parameters read about [OpenVINO device properties](https://docs.openvino.ai/2023.0/groupov_runtime_cpp_prop_api.html?#detailed-documentation).
+> **NOTE:** For additional information about all parameters read about [OpenVINO device properties](https://docs.openvino.ai/2024/api/c_cpp_api/group__ov__runtime__cpp__prop__api.html).
 
 - Example:
 Following docker command will set `NUM_STREAMS` parameter to a value `1`:
@@ -164,26 +168,34 @@ The default value is 1 second which ensures prompt response to creating new mode
 
 Depending on the device employed to run the inference operation, you can tune the execution behavior with a set of parameters. Each device is handled by its OpenVINO plugin.
 
-> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/2023.0/groupov_runtime_cpp_prop_api.html?#detailed-documentation).
+> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/2024/api/c_cpp_api/group__ov__runtime__cpp__prop__api.html).
 
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter. 
 
-Following docker command sets a parameter `NUM_STREAMS` to a value `32` and `AFFINITY` to `NUMA`.
+Following docker command sets a parameter `NUM_STREAMS` to a value `32`, `AFFINITY` to `NUMA` and disables CPU pinning.
 
 ```bash
 docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 --grpc_workers 8  --nireq 32 \
---plugin_config '{"NUM_STREAMS": "32", "AFFINITY": "NUMA"}'
+--plugin_config '{"NUM_STREAMS": 32, "AFFINITY": "NUMA", "ENABLE_CPU_PINNING": false}'
 ```
 
 ## Analyzing performance issues
 
 Recommended steps to investigate achievable performance and discover bottlenecks:
-1. [Launch OV benchmark app](https://docs.openvino.ai/2023.0/openvino_inference_engine_tools_benchmark_tool_README.html?highlight=benchmark)
+1. [Launch OV benchmark app](https://docs.openvino.ai/2024/learn-openvino/openvino-samples/benchmark-tool.html)
 
       **Note:** It is useful to drop plugin configuration from benchmark app using `-dump_config` and then use the same plugin configuration in model loaded into OVMS
 
       **Note:** When launching benchmark app use `-inference_only=false`. Otherwise OV avoids setting input tensor of inference each time which is not comparable flow to OVMS.
-2. [Launch OVMS benchmark client](https://docs.openvino.ai/2023.0/ovms_demo_benchmark_client.html) on the same machine as OVMS
-3. [Launch OVMS benchmark client](https://docs.openvino.ai/2023.0/ovms_demo_benchmark_client.html) from remote machine
+2. [Launch OVMS benchmark client](https://docs.openvino.ai/2024/ovms_demo_benchmark_client.html) on the same machine as OVMS
+3. [Launch OVMS benchmark client](https://docs.openvino.ai/2024/ovms_demo_benchmark_client.html) from remote machine
 4. Measure achievable network bandwidth with tools such as [iperf](https://github.com/esnet/iperf)
+
+## Analyzing accuracy issues
+
+Please note that the target devices GPU and NVIDIA usually change the default model execution precision from FP32 to FP16.  
+It is recommended to compare accuracy results versus OpenVINO benchmark app.
+
+It is possible to enforce a specific runtime precision by using a plugin config parameter `INFERENCE_PRECISION_HINT`. For example:  
+ `--plugin_config '{"INFERENCE_PRECISION_HINT": "f32"}'`.

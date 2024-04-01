@@ -13,13 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
 #include "precision.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
 
+#include <typeinfo>
 #include <unordered_map>
 
 namespace ovms {
@@ -46,6 +42,7 @@ const std::string& toString(Precision precision) {
         {Precision::BIN, "BIN"},
         {Precision::BOOL, "BOOL"},
         {Precision::UNDEFINED, "UNDEFINED"},
+        {Precision::STRING, "STRING"},
         {Precision::CUSTOM, "CUSTOM"}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
@@ -77,6 +74,7 @@ Precision fromString(const std::string& s) {
         {"BIN", Precision::BIN},
         {"BOOL", Precision::BOOL},
         {"UNDEFINED", Precision::UNDEFINED},
+        {"STRING", Precision::STRING},
         {"CUSTOM", Precision::CUSTOM}};
     auto it = precisionMap.find(s);
     if (it == precisionMap.end()) {
@@ -104,7 +102,8 @@ ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
         {Precision::BOOL, ov::element::Type_t::boolean},
         {Precision::BF16, ov::element::Type_t::bf16},
         {Precision::UNDEFINED, ov::element::Type_t::undefined},
-        {Precision::DYNAMIC, ov::element::Type_t::dynamic}
+        {Precision::DYNAMIC, ov::element::Type_t::dynamic},
+        {Precision::STRING, ov::element::Type_t::string}
         //    {Precision::MIXED, ov::element::Type_t::MIXED},
         //    {Precision::Q78, ov::element::Type_t::Q78},
         //    {Precision::BIN, ov::element::Type_t::BIN},
@@ -134,6 +133,7 @@ Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type) {
         {ov::element::Type_t::u8, Precision::U8},
         {ov::element::Type_t::u4, Precision::U4},
         {ov::element::Type_t::u1, Precision::U1},
+        {ov::element::Type_t::string, Precision::STRING},
         {ov::element::Type_t::undefined, Precision::UNDEFINED},
         {ov::element::Type_t::dynamic, Precision::DYNAMIC},
         //    {ov::element::Type_t::???, Precision::MIXED},

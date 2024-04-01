@@ -1,0 +1,46 @@
+{
+    "model_config_list" : [
+        { "config": {
+                "name":"face_landmark",
+                "base_path":"/models/face_landmark",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        },
+        { "config": {
+                "name":"hand_landmark_full",
+                "base_path":"/models/hand_landmark_full",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        },
+        { "config": {
+                "name":"hand_recrop",
+                "base_path":"/models/hand_recrop",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        },
+        { "config": {
+                "name":"pose_detection",
+                "base_path":"/models/pose_detection",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        },
+        { "config": {
+                "name":"face_detection",
+                "base_path":"/models/face_detection_short_range",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        },
+        { "config": {
+                "name":"pose_landmark_full",
+                "base_path":"/models/pose_landmark_full",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+        {
+            "name":"holisticTracking",
+            "graph_path":"/models/holistic_tracking.pbtxt"
+        }
+    ]
+}

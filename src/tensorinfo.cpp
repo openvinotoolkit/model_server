@@ -69,10 +69,10 @@ TensorInfo::ProcessingHint TensorInfo::getPostProcessingHint() const {
 void TensorInfo::createProcessingHints() {
     // Pre
     size_t expectedDimsForImage = this->influencedByDemultiplexer ? 5 : 4;
-    if (this->shape.size() == 2 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
+    if (this->precision == ovms::Precision::STRING) {
+        this->preProcessingHint = TensorInfo::ProcessingHint::STRING_NATIVE;
+    } else if (this->shape.size() == 2 && this->precision == ovms::Precision::U8 && !this->influencedByDemultiplexer) {
         this->preProcessingHint = TensorInfo::ProcessingHint::STRING_2D_U8;
-    } else if (this->shape.size() == 1 && this->precision == ovms::Precision::U8 && this->shape.at(0).isDynamic() && !this->influencedByDemultiplexer) {
-        this->preProcessingHint = TensorInfo::ProcessingHint::STRING_1D_U8;
     } else if (this->shape.size() == expectedDimsForImage) {
         this->preProcessingHint = TensorInfo::ProcessingHint::IMAGE;
     } else {
@@ -80,7 +80,9 @@ void TensorInfo::createProcessingHints() {
     }
 
     // Post
-    if (this->precision == ovms::Precision::U8 && this->shape.size() == 2 && endsWith(this->getMappedName(), STRING_SERIALIZATION_HINT_NAME_SUFFIX)) {
+    if (this->precision == ovms::Precision::STRING) {
+        this->postProcessingHint = TensorInfo::ProcessingHint::STRING_NATIVE;
+    } else if (this->precision == ovms::Precision::U8 && this->shape.size() == 2 && endsWith(this->getMappedName(), STRING_SERIALIZATION_HINT_NAME_SUFFIX)) {
         this->postProcessingHint = TensorInfo::ProcessingHint::STRING_2D_U8;
     } else {
         this->postProcessingHint = TensorInfo::ProcessingHint::NO_PROCESSING;

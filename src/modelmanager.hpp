@@ -55,6 +55,7 @@ class FileSystem;
 class MediapipeGraphExecutor;
 struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
+class PythonBackend;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
@@ -63,7 +64,7 @@ public:
     /**
      * @brief A default constructor is private
      */
-    ModelManager(const std::string& modelCacheDirectory = "", MetricRegistry* registry = nullptr);
+    ModelManager(const std::string& modelCacheDirectory = "", MetricRegistry* registry = nullptr, PythonBackend* pythonBackend = nullptr);
 
 protected:
     void logPluginConfiguration();
@@ -84,33 +85,25 @@ protected:
     MediapipeFactory mediapipeFactory;
 #endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
-
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
-
     GlobalSequencesViewer globalSequencesViewer;
-
     uint32_t waitForModelLoadedTimeoutMs;
 
 private:
     bool watcherStarted = false;
     bool cleanerStarted = false;
 
-    /**
-     * @brief 
-     * 
-     */
     ModelManager(const ModelManager&) = delete;
 
     Status lastLoadConfigStatus = StatusCode::OK;
 
-    std::string getConfigFileMD5();
     Status cleanupModelTmpFiles(ModelConfig& config);
-    Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t> versionsFailed);
-    Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t> versionsFailed);
+    Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t>& versionsFailed);
+    Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t>& versionsFailed);
     Status loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath);
 #if (MEDIAPIPE_DISABLE == 0)
-    Status processMediapipeConfig(rapidjson::Document& configJson, const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory);
-    Status loadMediapipeGraphsConfig(rapidjson::Document& configJson, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
+    Status processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory);
+    Status loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<ovms::MediapipeGraphConfig>& mediapipesInConfigFile);
 #else
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
@@ -222,6 +215,8 @@ private:
     std::string modelCacheDirectory;
 
     MetricRegistry* metricRegistry;
+
+    PythonBackend* pythonBackend;
 
     /**
      * @brief Json config directory path
@@ -486,6 +481,8 @@ public:
      * @brief Check if configuration file reload is needed.
      */
     Status configFileReloadNeeded(bool& isNeeded);
+
+    Status parseConfig(const std::string& jsonFilename, rapidjson::Document& configJson);
 
     /**
      * @brief Reads models from configuration file

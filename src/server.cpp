@@ -53,15 +53,13 @@
 #include "stringutils.hpp"
 #include "version.hpp"
 
+#if (PYTHON_DISABLE == 0)
+#include "python/pythoninterpretermodule.hpp"
+#endif
+
 using grpc::ServerBuilder;
 
 namespace ovms {
-const std::string PROFILER_MODULE_NAME = "ProfilerModule";
-const std::string GRPC_SERVER_MODULE_NAME = "GRPCServerModule";
-const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
-const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
-const std::string METRICS_MODULE_NAME = "MetricsModule";
-
 namespace {
 volatile sig_atomic_t shutdown_request = 0;
 }
@@ -201,6 +199,10 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<HTTPServerModule>(*this);
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
+#if (PYTHON_DISABLE == 0)
+    if (name == PYTHON_INTERPRETER_MODULE_NAME)
+        return std::make_unique<PythonInterpreterModule>();
+#endif
     if (name == METRICS_MODULE_NAME)
         return std::make_unique<MetricModule>();
     return nullptr;
@@ -218,7 +220,16 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
 #define START_MODULE(IT_NAME)                \
     status = IT_NAME->second->start(config); \
     if (!status.ok())                        \
-    return status
+        return status;
+
+#define GET_MODULE(MODULE_NAME, IT_NAME)                                                              \
+    {                                                                                                 \
+        std::shared_lock lock(modulesMtx);                                                            \
+        IT_NAME = modules.find(MODULE_NAME);                                                          \
+        if (IT_NAME == modules.end()) {                                                               \
+            return Status(StatusCode::INTERNAL_ERROR, std::string("Could not find: ") + MODULE_NAME); \
+        }                                                                                             \
+    }
 
 Status Server::startModules(ovms::Config& config) {
     // The order of starting modules is slightly different from inserting modules
@@ -227,13 +238,19 @@ Status Server::startModules(ovms::Config& config) {
     // of modules creation than start
     // HTTP depends on GRPC, SERVABLE, METRICS
     // GRPC depends on SERVABLE
-    // SERVABLE depends on metrics
+    // SERVABLE depends on metrics, python
     // while we want to start the server as quickly as possible to respond with liveness probe
     // thats why we delay starting the servable until the very end while we need to create it before
     // GRPC & REST
     Status status;
     bool inserted = false;
     auto it = modules.end();
+#if (PYTHON_DISABLE == 0)
+    if (config.getServerSettings().withPython) {
+        INSERT_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
+        START_MODULE(it);
+    }
+#endif
 #if MTR_ENABLED
     INSERT_MODULE(PROFILER_MODULE_NAME, it);
     START_MODULE(it);
@@ -244,22 +261,28 @@ Status Server::startModules(ovms::Config& config) {
 
     // we need servable module during GRPC/HTTP requests so create it here
     // but start it later to quickly respond with liveness probe
-    auto itServable = modules.end();
-    INSERT_MODULE(SERVABLE_MANAGER_MODULE_NAME, itServable);
-    auto itGrpc = modules.end();
-    INSERT_MODULE(GRPC_SERVER_MODULE_NAME, itGrpc);
-    START_MODULE(itGrpc);
+    INSERT_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
+    INSERT_MODULE(GRPC_SERVER_MODULE_NAME, it);
+    START_MODULE(it);
     // if we ever decide not to start GRPC module then we need to implement HTTP responses without using grpc implementations
-    auto itHttp = modules.end();
     if (config.restPort() != 0) {
-        INSERT_MODULE(HTTP_SERVER_MODULE_NAME, itHttp);
-        START_MODULE(itHttp);
+        INSERT_MODULE(HTTP_SERVER_MODULE_NAME, it);
+        START_MODULE(it);
     }
-    START_MODULE(itServable);
+    GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
+    START_MODULE(it);
+#if (PYTHON_DISABLE == 0)
+    if (config.getServerSettings().withPython) {
+        GET_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
+        auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
+        pythonModule->releaseGILFromThisThread();
+    }
+#endif
     return status;
 }
 
 void Server::ensureModuleShutdown(const std::string& name) {
+    std::shared_lock lock(modulesMtx);
     auto it = modules.find(name);
     if (it != modules.end())
         it->second->shutdown();
@@ -283,6 +306,11 @@ void Server::shutdownModules() {
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
+#if (PYTHON_DISABLE == 0)
+    if (ovms::Config::instance().getServerSettings().withPython) {
+        ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
+    }
+#endif
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     modules.clear();
@@ -308,7 +336,6 @@ int Server::start(int argc, char** argv) {
     Status ret = start(&serverSettings, &modelsSettings);
     ModulesShutdownGuard shutdownGuard(*this);
     if (!ret.ok()) {
-        // Handle OVMS main() return code
         return statusToExitCode(ret);
     }
     while (!shutdown_request) {
@@ -324,6 +351,12 @@ int Server::start(int argc, char** argv) {
 // C-API Start
 Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     try {
+        std::unique_lock lock{this->startMtx, std::defer_lock};
+        auto locked = lock.try_lock();
+        if (!locked) {
+            SPDLOG_ERROR("Cannot start OVMS - server is already starting");
+            return StatusCode::SERVER_ALREADY_STARTING;
+        }
         if (this->isLive()) {
             SPDLOG_ERROR("Cannot start OVMS - server is already live");
             return StatusCode::SERVER_ALREADY_STARTED;

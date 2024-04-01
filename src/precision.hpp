@@ -44,6 +44,7 @@ enum class Precision {
     MIXED,
     Q78,
     BIN,
+    STRING,
     PRECISION_END
 };
 

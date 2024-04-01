@@ -49,17 +49,17 @@ long_description = (this_directory / "docs/pypi_overview.md").read_text()
 
 setuptools.setup(
      name="ovmsclient",
-     version="2023.0",
+     version="2023.3",
      license="Apache License 2.0",
      author="Intel Corporation",
      author_email="ovms.engineering@intel.com",
      description="Python client for OpenVINO Model Server",
      long_description=long_description,
      long_description_content_type="text/markdown",
-     url="https://github.com/openvinotoolkit/model_server/tree/releases/2023/0/client/python/ovmsclient/lib",
+     url="https://github.com/openvinotoolkit/model_server/tree/releases/2023/1/client/python/ovmsclient/lib",
      cmdclass={
         "build_apis": BuildApis,
      },
      packages=setuptools.find_namespace_packages(include=["ovmsclient*"]),
-     install_requires=["grpcio>=1.47.0", "protobuf>=3.19.4", "numpy>=1.16.6", "requests>=2.27.1"],
+     install_requires=["grpcio>=1.47.0", "protobuf>=3.19.4,<4.0", "numpy>=1.16.6", "requests>=2.27.1"],
  )

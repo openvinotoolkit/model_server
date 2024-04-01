@@ -14,26 +14,21 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.7
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.9
+ARG BUILD_IMAGE=build
+ARG PKG_IMAGE=pkg
+ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.9
+
 FROM $BASE_IMAGE as base_build
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.9
 
 LABEL version="1.0.0"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG JOBS
-COPY entitlement /etc/pki/entitlement
-COPY rhsm-ca /etc/rhsm/ca
-RUN rm -f /etc/rhsm-host
+ARG JOBS=8
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
-            boost169-atomic \
-            boost169-chrono \
-            boost169-filesystem \
-            boost169-program-options \
-            boost169-thread \
-            boost169-system \
-            boost169-date-time \
             libuuid-devel \
             bc \
             cmake \
@@ -58,13 +53,13 @@ RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
     cd pugixml && \
     cmake -DBUILD_SHARED_LIBS=ON && \
     make all && \
-    cp libpugixml.so* /usr/lib64/
+    cp -P libpugixml.so* /usr/lib64/
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 # hadolint ignore=DL3003
 RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
-	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
+	tar xf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
 	./b2 -j ${JOBS} cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
 		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
 		--with-random --with-thread --with-atomic --with-regex \
@@ -85,65 +80,53 @@ RUN cmake .. -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD
 
 WORKDIR /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release
 RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=ON && make --jobs=$JOBS && make --jobs=$JOBS install
-
 ####### End of Azure SDK
-
-# Build AWS S3 SDK
-RUN git clone https://github.com/aws/aws-sdk-cpp.git --branch 1.7.129 --single-branch --depth 1 /awssdk
-WORKDIR /awssdk/build
-RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY=s3 -DENABLE_TESTING=OFF -DBUILD_SHARED_LIBS=OFF -DMINIMIZE_SIZE=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFORCE_SHARED_CRT=OFF -DSIMPLE_INSTALL=OFF -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 " .. && make --jobs=$JOBS
-RUN mv .deps/install/lib64 .deps/install/lib
-
-####### End of AWS S3 SDK
 
 ####### Build OpenCV
 WORKDIR /ovms/third_party/opencv
 RUN ./install_opencv.sh
 ####### End of OpenCV
 
-################### BASE BUILD ##########################
-FROM base_build as final_build
-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+FROM base_build as build
+ARG BASE_IMAGE
 LABEL version="1.0.0"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG ov_source_branch=releases/2021/2
-
-ARG JOBS
+ARG JOBS=40
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
             gdb \
             java-11-openjdk-devel \
+            tzdata-java \
             libgusb.x86_64 \
             libusbx \
             libtool \
             openssl-devel \
-            python3 \
-            python3-pip \
-            python3-devel \
-            python3-setuptools \
-            python3-virtualenv \
-            python3-numpy \
             which \
             yum-utils \
             unzip \
             vim \
             xz \
+            python39-devel \
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm \
             http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/libusb-devel-0.1.5-12.el8.x86_64.rpm \
             http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/libusb-0.1.5-12.el8.x86_64.rpm \
             http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/libusbx-devel-1.0.23-4.el8.x86_64.rpm && \
             yum clean all
 
+RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
+
 ARG NVIDIA=0
 # Add Nvidia dev tool if needed
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms && \
+    yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms ; \
     yum -y module disable python36 && \
+    yum -y install libzstd-devel ; \
     yum install -y  \
-        libzstd-devel \
+        cuda-nvcc-11-8 libcublas-11-8 libcublas-devel-11-8 \
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcudnn8-devel-8.6.0.163-1.cuda11.8 \
         libcutensor1-1.6.1.5-1 \
@@ -158,24 +141,22 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 && \
     curl -L https://github.com/ccache/ccache/releases/download/v4.3/ccache-4.3.tar.xz | tar xJv && \
     mkdir -p ccache-4.3/build && cd ccache-4.3/build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -G Ninja .. && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DZSTD_FROM_INTERNET=ON -G Ninja .. && \
     ninja -v install && \
     rm -rf /var/cache/yum
 
-# build_type=[ opt, dbg ]
-ARG build_type=dbg
-ARG minitrace_flags
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 ARG ov_source_branch=master
 ARG ov_contrib_branch=master
-ARG sentencepiece=0
+ARG sentencepiece=1
 ARG ov_source_org=openvinotoolkit
 ARG ov_contrib_org=openvinotoolkit
-ARG ov_use_binary=1
+ARG ov_use_binary=0
 ARG DLDT_PACKAGE_URL
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG CMAKE_BUILD_TYPE=Release
+ARG debug_bazel_flags=--strip=never
 
 # hadolint ignore=DL3003
 RUN if [[ "$sentencepiece" == "1" || "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
@@ -184,8 +165,10 @@ RUN if [[ "$sentencepiece" == "1" || "$NVIDIA" == "1" ]] ; then true ; else exit
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; pip3 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; dnf install -y http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && dnf clean all
+RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
@@ -196,6 +179,8 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
     ln -s /opt/intel/openvino /opt/intel/openvino_2023
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/Release/python /opt/intel/openvino/
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
 ################## END OF OPENVINO SOURCE BUILD ######################
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
@@ -219,7 +204,7 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 # SENTENCEPIECE_EXTENSION
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
 WORKDIR /openvino_contrib/modules/custom_operations/user_ie_extensions
-RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="sentence_piece" && cmake --build . --parallel $JOBS
+RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="tokenizer" && cmake --build . --parallel $JOBS
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
@@ -239,7 +224,9 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     -DWHEEL_VERSION=2022.1.0 \
     -DVERBOSE_BUILD=ON \
     -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" && \
-    cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j "$JOBS"
+    cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j "$JOBS" && \
+    cp /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /opt/intel/openvino/runtime/lib/intel64 && \
+    echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /opt/intel/openvino/runtime/lib/intel64/plugins.xml
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
@@ -249,11 +236,13 @@ COPY .bazelrc WORKSPACE /ovms/
 RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
 COPY external /ovms/external/
 COPY third_party /ovms/third_party/
-
-RUN alternatives --set python /usr/bin/python3
+# This path is required for namespace to setup Python dependencies for testing the binding
+COPY src/BUILD /ovms/src/BUILD
+COPY src/python/binding/BUILD /ovms/src/python/binding/BUILD
+COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/requirements.txt
 
 # Set up Bazel
-ENV BAZEL_VERSION 5.3.1
+ENV BAZEL_VERSION 6.0.0
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
@@ -267,20 +256,11 @@ WORKDIR /ovms
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
-ARG debug_bazel_flags=--strip=never\ --copt="-g"\ -c\ dbg
-RUN if [[ $debug_bazel_flags == *"MEDIAPIPE_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
-    sed -i -e 's|3.19.1|3.9.2|g' WORKSPACE && \
-    sed -i -e 's|87407cd28e7a9c95d9f61a098a53cf031109d451a7763e7dd1253abf8b4df422|1fbf1c2962af287607232b2eddeaec9b4f4a7a6f5934e1a9276e9af76952f7e0|g' WORKSPACE
-
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
-
-# Patch apple build scripts
-# hadolint ignore=SC2046
-RUN patch -d $(bazel info output_base)/external/build_bazel_rules_apple/ -p1 < /ovms/third_party/build_bazel_rules_apple/bazel_rules_apple.patch
 
 # Mediapipe
 COPY BUILD.bazel /ovms/
+COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
@@ -297,41 +277,61 @@ COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classi
 
 COPY src/ /ovms/src/
 
+# Compile tokenizer custom node
+WORKDIR /ovms/src/custom_nodes/tokenizer/build
+RUN cp /ovms/src/custom_node_interface.h /ovms/src/custom_nodes/tokenizer/ && \
+    cp -r /ovms/src/custom_nodes/common /ovms/src/custom_nodes/tokenizer/ && \
+    cmake -DWITH_TESTS=1 .. && \
+    make -j${JOBS} && \
+    ./test/detokenization_test && \
+    ./test/tokenization_test
+
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
+RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
+    mkdir -p /opt/intel/openvino/python/openvino-2024.0.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.0' > /opt/intel/openvino/python/openvino-2024.0.dist-info/METADATA
+ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
+
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2023.0"
+ARG PROJECT_VERSION="2024.0"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
-
-# Set OVMS version strings
-RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp"
-RUN if [ "$build_type" = "dbg" ] ; then bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}-debug|g' /ovms/src/version.hpp" ; else bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" ; fi ;
-RUN if [ "$ov_use_binary" = "1" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp
+ARG minitrace_flags
 
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
-
 ARG RUN_TESTS=1
-RUN if [ "$RUN_TESTS" == "1" ] ; then if [ "$CHECK_COVERAGE" = "1" ] ; then bazel coverage --combined_report=lcov --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:ovms_test > ${TEST_LOG} 2>&1 || { cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; } && genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat" ; fi ; \
-    bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src:ovms_test > ${TEST_LOG} 2>&1 || (cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1 ; ) && tail -n 100 ${TEST_LOG} && rm -rf ${TEST_LOG} ; fi ;
+COPY rununittest.sh /ovms/
+RUN ./rununittest.sh
+
+# Set OVMS version strings
+RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp" && \
+    bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" && \
+    if [ "$ov_use_binary" = "1" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp ; fi && \
+    if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
+    bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
 # C api shared library
-RUN bazel build --jobs $JOBS ${debug_bazel_flags} //src:ovms_shared
+ARG CAPI_FLAGS=--strip=always --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1
+RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
 
 # C api app with bazel
 # hadolint ignore=DL3059
-RUN bazel build --jobs $JOBS ${debug_bazel_flags} //src:capi_cpp_example
+RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
 
 # C-API benchmark app
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
+RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"
+
+# Custom Nodes
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 
 # OVMS
+# hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
 
 # hadolint ignore=DL3059
@@ -339,16 +339,164 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
 
 # C-api C/C++ app with gcc
 COPY MakefileCapi /ovms/
-RUN make -f MakefileCapi cpp debug_bazel_flags="${debug_bazel_flags}" && \
-    make -f MakefileCapi c debug_bazel_flags="${debug_bazel_flags}"
+RUN make -f MakefileCapi cpp CAPI_FLAGS="${CAPI_FLAGS}" && \
+    make -f MakefileCapi c CAPI_FLAGSs="${CAPI_FLAGS}"
 
 ARG ovms_metadata_file
-COPY ${ovms_metadata_file} metadata.json
 
 RUN /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms
 
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 COPY client /client
-COPY demos /demos
+RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
+    'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}}','BASE_IMAGE':'${BASE_IMAGE}' }; \
+    print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
+
 RUN rm -Rf /etc/entitlement /etc/rhsm/ca
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+FROM $BUILD_IMAGE as pkg
+
+RUN mkdir /patchelf 
+WORKDIR /patchelf
+# hadolint ignore=DL3003
+RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
+    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
+    ./bootstrap.sh && ./configure && make && make install
+
+WORKDIR /
+ARG BASE_OS=redhat
+ARG ov_use_binary=0
+ARG FUZZER_BUILD=0
+COPY create_package.sh /
+RUN ./create_package.sh
+
+RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
+    chown -R ovms:ovms /ovms_release
+RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
+# Remove capi library
+RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; else exit 0 ; fi ;
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+
+FROM $RELEASE_BASE_IMAGE as release
+LABEL "name"="OVMS"
+LABEL "vendor"="Intel Corporation"
+LABEL "version"="2024.0"
+LABEL "release"="2024"
+LABEL "summary"="OpenVINO(TM) Model Server"
+LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
+ARG INSTALL_RPMS_FROM_URL=
+ARG INSTALL_DRIVER_VERSION="23.22.26516"
+ARG NVIDIA=0
+ARG GPU=0
+ARG debug_bazel_flags=
+LABEL bazel-build-flags=${debug_bazel_flags}
+LABEL supported-devices="CPU=1 GPU=${GPU} NVIDIA=${NVIDIA}"
+ARG RELEASE_BASE_IMAGE
+LABEL base-image=${RELEASE_BASE_IMAGE}
+
+ENV PYTHONPATH=/ovms/lib/python
+
+WORKDIR /
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# hadolint ignore=DL3003,DL3041,SC2164
+RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
+        $DNF_TOOL upgrade --setopt=install_weak_deps=0 -y ; \
+        $DNF_TOOL install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+        if [ "$GPU" == "1" ] ; then \
+                case $INSTALL_DRIVER_VERSION in \
+                "21.38.21026") \
+                        mkdir /tmp/gpu_deps ; \
+                        curl -L --output /tmp/gpu_deps/intel-igc-core-1.0.8708-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02870435-intel-igc/intel-igc-core-1.0.8708-1.el8.x86_64.rpm ; \
+                        curl -L --output /tmp/gpu_deps/intel-opencl-21.38.21026-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02871549-intel-opencl/intel-opencl-21.38.21026-1.el8.x86_64.rpm ; \
+                        curl -L --output /tmp/gpu_deps/intel-igc-opencl-devel-1.0.8708-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02870435-intel-igc/intel-igc-opencl-devel-1.0.8708-1.el8.x86_64.rpm ; \
+                        curl -L --output /tmp/gpu_deps/intel-igc-opencl-1.0.8708-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02870435-intel-igc/intel-igc-opencl-1.0.8708-1.el8.x86_64.rpm ; \
+                        curl -L --output /tmp/gpu_deps/intel-gmmlib-21.2.1-1.el7.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02320646-intel-gmmlib/intel-gmmlib-21.2.1-1.el8.x86_64.rpm ; \
+                        curl -L --output /tmp/gpu_deps/intel-gmmlib-devel-21.2.1-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02320646-intel-gmmlib/intel-gmmlib-devel-21.2.1-1.el8.x86_64.rpm ; \
+                        cd /tmp/gpu_deps && rpm -iv *.rpm && rm -Rf /tmp/gpu_deps ; \
+                ;; \
+                "22.10.22597") \
+                        $DNF_TOOL install -y libedit ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.0.3-i699.3.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.10409-i699.3.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/level-zero-1.7.9-i699.3.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-opencl-1.0.10409-i699.3.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-ocloc-22.10.22597-i699.3.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-opencl-22.10.22597-i699.3.el8.x86_64.rpm ; \
+                ;; \
+                "22.28.23726") \
+                        $DNF_TOOL install -y libedit ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.1.7-i419.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.11485-i419.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-opencl-1.0.11485-i419.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-opencl-22.28.23726.1-i419.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5-devel/intel-level-zero-gpu-1.3.23453-i392.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5-devel/level-zero-1.8.1-i392.el8.x86_64.rpm ; \
+                ;; \
+                "22.43.24595") \
+                        $DNF_TOOL install -y libedit ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-gmmlib-22.3.1-i529.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-igc-core-1.0.12504.6-i537.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-igc-opencl-1.0.12504.6-i537.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-opencl-22.43.24595.35-i538.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-level-zero-gpu-1.3.24595.35-i538.el8.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/level-zero-1.8.8-i524.el8.x86_64.rpm ; \
+                ;; \
+                "23.22.26516") \
+                        $DNF_TOOL install -y libedit ; \
+                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-gmmlib-22.3.7-i678.el8_6.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-core-1.0.14062.14-682.el8_6.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-opencl-1.0.14062.14-682.el8_6.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-opencl-23.22.26516.25-682.el8_6.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-level-zero-gpu-1.3.26516.25-682.el8_6.x86_64.rpm ; \
+                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/l/level-zero-1.11.0-674.el8_6.x86_64.rpm ; \
+                ;; \
+
+                        *) \
+                        echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
+                        exit 1 ; \
+                esac ; \
+                echo "Installed opencl driver version:" ;\
+                echo `rpm -qa | grep intel-opencl` ; \
+        fi ; \
+        if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
+                rpm -ivh http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/numactl-libs-2.0.12-11.el8.x86_64.rpm; \
+                rpm -ivh http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/numactl-2.0.12-11.el8.x86_64.rpm; \
+                rpm -ivh http://mirror.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
+        else  \
+                $DNF_TOOL install -y tar gzip; \
+                mkdir /tmp_ovms ; \
+                cd /tmp_ovms ; \
+                curl -L --fail -o deps.tar.xz "$INSTALL_RPMS_FROM_URL" ; \
+                tar -xf deps.tar.xz ; \
+                ls -Rahl . ; \
+                rpm -vi pkg/bin/*.rpm ; \
+                cd / ; \
+                rm -rf /tmp_ovms ; \
+                $DNF_TOOL remove -y tar gzip; \
+        fi ; \
+        # For image with Python enabled install Python library
+        if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
+            $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0; \
+            mkdir -p /ovms/lib/openvino-2024.0.dist-info && \
+            echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.0' > /ovms/lib/openvino-2024.0.dist-info/METADATA ; \
+        fi ; \
+        $DNF_TOOL install -y shadow-utils; \
+        cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
+        groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
+        useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
+
+# for NVIDIA
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda yum package"; \
+    dnf install -y  \
+        libcudnn8-8.6.0.163-1.cuda11.8 \
+        libcutensor1-1.6.1.5-1 && \
+        dnf clean all
+
+ENV LD_LIBRARY_PATH=/ovms/lib
+
+COPY --from=pkg /ovms_release /ovms
+COPY --from=pkg /licenses /licenses
+USER ovms
+ENTRYPOINT ["/ovms/bin/ovms"]

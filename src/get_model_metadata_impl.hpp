@@ -21,6 +21,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
@@ -67,7 +68,7 @@ public:
         tensorflow::serving::GetModelMetadataResponse* response,
         ModelManager& manager,
         ExecutionContext context);
-    static Status createGrpcRequest(std::string model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request);
+    static Status createGrpcRequest(const std::string& model_name, std::optional<int64_t> model_version, tensorflow::serving::GetModelMetadataRequest* request);
     static Status serializeResponse2Json(const tensorflow::serving::GetModelMetadataResponse* response, std::string* output);
 };
 

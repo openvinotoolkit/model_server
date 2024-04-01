@@ -1,0 +1,10 @@
+{
+    "model_config_list": [
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"graph_exception_during_close",
+        "graph_path":"./graph_exception_during_close.pbtxt"
+    }
+    ]
+}

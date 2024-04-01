@@ -91,6 +91,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     // Predict request validation
     {StatusCode::INVALID_NO_OF_INPUTS, "Invalid number of inputs"},
     {StatusCode::INVALID_MISSING_INPUT, "Missing input with specific name"},
+    {StatusCode::INVALID_UNEXPECTED_INPUT, "Unexpected input"},
     {StatusCode::INVALID_MISSING_OUTPUT, "Missing output with specific name"},
     {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, "Invalid number of shape dimensions"},
     {StatusCode::INVALID_BATCH_SIZE, "Invalid input batch size"},
@@ -148,7 +149,6 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::REST_UNSUPPORTED_PRECISION, "Could not parse input content. Unsupported data precision detected"},
     {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, "Size of data in tensor_content does not match declared tensor shape"},
     {StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE, "Number of elements in xxx_val field does not match declared tensor shape"},
-    {StatusCode::REST_SERIALIZE_NO_DATA, "No data found in tensor_content or xxx_val field matching tensor dtype"},
     {StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID, "binary_data_size parameter is invalid and cannot be parsed"},
     {StatusCode::REST_BINARY_BUFFER_EXCEEDED, "Received buffer size is smaller than binary_data_size parameter indicates"},
     {StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID, "Inference-Header-Content-Length header is invalid and couldn't be parsed"},
@@ -190,24 +190,39 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER, "Demultiplexer and gather nodes are not in LIFO order"},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, "Pipeline execution aborted due to no content from custom node"},
     {StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA, "Multiple nodes connected to the same pipeline input require different tensor metadata"},
+    {StatusCode::PIPELINE_STRING_DEMUILTIPLICATION_UNSUPPORTED, "Demultiplication is not supported for string precision"},
 
     // Mediapipe
+    {StatusCode::MEDIAPIPE_DESERIALIZATION_ERROR, "Failed to deserialize tensor for mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_START_ERROR, "Failed to start mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, "Failed to read protobuf graph configuration file"},
     {StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, "Failed to initalize mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, "Failed to add mediapipe graph output stream"},
     {StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, "Failed to close mediapipe graph input stream"},
-    {StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Failed to add packet to mediapipe graph input stream"},  // TODO add http/gRPC conversions for retCodes of Mediapipe
+    {StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Failed to add packet to mediapipe graph input stream"},
     {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, "Model with requested name is not found"},
     {StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Mediapipe execution failed. MP status"},
     {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE, "Mediapipe is retired"},
     {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET, "Mediapipe is not loaded yet"},
     {StatusCode::MEDIAPIPE_KFS_PASS_WRONG_INPUT_STREAM_COUNT, "Mediapipe unexpected input stream packets count"},
     {StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME, "Mediapipe unexpected input stream packets name"},
+    {StatusCode::MEDIAPIPE_WRONG_INPUT_SIDE_PACKET_STREAM_PACKET_NAME, "Mediapipe unexpected input side packet stream name"},
     {StatusCode::MEDIAPIPE_KFS_PASS_WRONG_OUTPUT_STREAM_COUNT, "Mediapipe unexpected output stream packets count"},
     {StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME, "Mediapipe unexpected output stream packets name"},
     {StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_OUTPUT_RESPONSE_TAG, "Mediapipe KFS pass through graph is missing RESPONSE: string in the output name"},
     {StatusCode::MEDIAPIPE_KFS_PASSTHROUGH_MISSING_INPUT_REQUEST_TAG, "Mediapipe KFS pass through graph is missing REQUEST: string in the input name"},
+    {StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED, "Given mediapipe graph name is already occupied"},
+    {StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Malformed packet timestamp"},
+    {StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE, "Client disconnected during reading first streaming request"},
+    {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME, "Subsequent request with incorrect servable name"},
+    {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION, "Subsequent request with incorrect servable version"},
+
+    // Python Nodes
+    {StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS, "The Python Node name is already present in nodes list"},
+    {StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST, "The Python Node file path does not exist"},
+    {StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED, "The Python Node state initialization failed"},
+    {StatusCode::PYTHON_NODE_MISSING_OPTIONS, "The Python Node is missing options definition"},
+    {StatusCode::PYTHON_NODE_MISSING_NAME, "The Python Node is missing name definition"},
 
     // Storage errors
     // S3
@@ -303,6 +318,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::FAILED_TO_START_GRPC_SERVER, "Failed to start gRPC server"},
     {StatusCode::FAILED_TO_START_REST_SERVER, "Failed to start REST server"},
     {StatusCode::SERVER_ALREADY_STARTED, "Server has already started"},
+    {StatusCode::SERVER_ALREADY_STARTING, "Server is already starting"},
     {StatusCode::MODULE_ALREADY_INSERTED, "Module already inserted"},
 };
 }  // namespace ovms

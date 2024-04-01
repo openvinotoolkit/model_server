@@ -16,14 +16,15 @@
 #pragma once
 
 #include <filesystem>
+#include <fstream>
 #include <regex>
 #include <set>
 #include <string>
 #include <vector>
 
-#include <spdlog/spdlog.h>
-
+#include "logging.hpp"
 #include "model_version_policy.hpp"
+#include "openssl/md5.h"
 #include "status.hpp"
 
 namespace ovms {
@@ -131,7 +132,7 @@ public:
         std::string file_template = "/tmp/fileXXXXXX";
         char* tmp_folder = mkdtemp(const_cast<char*>(file_template.c_str()));
         if (tmp_folder == nullptr) {
-            SPDLOG_ERROR("Failed to create local temp folder: {} {}", file_template, strerror(errno));
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create local temp folder: {} {}", file_template, strerror(errno));
             return StatusCode::FILESYSTEM_ERROR;
         }
         fs::permissions(tmp_folder,
@@ -235,11 +236,32 @@ public:
         return joined;
     }
 
+    static std::string getFileMD5(const std::string& filename) {
+        std::ifstream ifs;
+        ifs.open(filename);
+        std::stringstream strStream;
+        strStream << ifs.rdbuf();
+        std::string str = strStream.str();
+        ifs.close();
+        return getStringMD5(str);
+    }
+
+    static std::string getStringMD5(const std::string& str) {
+        unsigned char result[MD5_DIGEST_LENGTH];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        MD5((unsigned char*)str.c_str(), str.size(), result);
+#pragma GCC diagnostic pop
+
+        std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
+        return (md5sum);
+    }
+
     StatusCode CreateLocalDir(const std::string& path) {
         int status =
             mkdir(const_cast<char*>(path.c_str()), S_IRUSR | S_IWUSR | S_IXUSR);
         if (status == -1) {
-            SPDLOG_ERROR("Failed to create local folder: {} {} ", path, strerror(errno));
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create local folder: {} {} ", path, strerror(errno));
             return StatusCode::PATH_INVALID;
         }
         return StatusCode::OK;

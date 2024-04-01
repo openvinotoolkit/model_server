@@ -20,6 +20,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "modelversion.hpp"
 #include "sequence.hpp"
@@ -57,7 +58,7 @@ public:
     SequenceManager() = default;
     SequenceManager(uint32_t maxSequenceNumber, std::string modelName, model_version_t modelVersion) :
         maxSequenceNumber(maxSequenceNumber),
-        modelName(modelName),
+        modelName(std::move(modelName)),
         modelVersion(modelVersion),
         sequenceIdCounter(1) {}
 

@@ -78,11 +78,14 @@ bool Dimension::isStatic() const {
 
 ov::Dimension Dimension::createPartialDimension() const {
     if (this->isStatic()) {
+        OV_LOGGER("ov::Dimension({})", this->getStaticValue());
         return ov::Dimension(this->getStaticValue());
     }
     if (this->minimum == DYNAMIC_DIMENSION) {
+        OV_LOGGER("ov::Dimension::dynamic()");
         return ov::Dimension::dynamic();
     }
+    OV_LOGGER("ov::Dimension({},{})", this->minimum, this->maximum);
     return ov::Dimension(this->minimum, this->maximum);
 }
 
@@ -176,7 +179,7 @@ Status Dimension::fromString(const std::string& str, Dimension& dimOut) {
             int dimNumber = std::stoi(strCopy);
             if (dimNumber == DYNAMIC_DIMENSION) {
                 dim = Dimension::any();
-            } else if (dimNumber > 0) {
+            } else if (dimNumber >= 0) {
                 dim = Dimension(dimNumber);
             } else {
                 SPDLOG_ERROR("Parsing dimension string out of range: {}", strCopy);
@@ -306,12 +309,18 @@ Status Shape::fromFlatShape(const shape_t& shapeIn, Shape& shapeOut) {
 
 Shape::Shape(const ov::PartialShape& shape) {
     this->reserve(shape.size());
+    OV_LOGGER("const ov::Dimension& dim : shape");
     for (const ov::Dimension& dim : shape) {
+        OV_LOGGER("dim.is_static()");
         if (dim.is_static()) {
+            OV_LOGGER("dim.get_length()");
             this->emplace_back(Dimension{dim.get_length()});
         } else if (!dim.get_interval().has_upper_bound()) {
+            OV_LOGGER("dim.get_interval().has_upper_bound()");
             this->emplace_back(Dimension::any());
         } else {
+            OV_LOGGER("dim.get_min_length()");
+            OV_LOGGER("dim.get_max_length()");
             this->emplace_back(Dimension{dim.get_min_length(), dim.get_max_length()});
         }
     }
@@ -326,19 +335,22 @@ Shape& Shape::add(const Dimension& dim, size_t pos) {
 }
 
 ov::PartialShape Shape::createPartialShape() const {
+    OV_LOGGER("shape = ov::PartialShape()");
     ov::PartialShape shape;
-
+    OV_LOGGER("shape.reserve({})", this->size());
     shape.reserve(this->size());
     for (const Dimension& dim : *this) {
         if (dim.isStatic()) {
+            OV_LOGGER("shape.push_back(ov::Dimension({}))", dim.getStaticValue());
             shape.push_back(ov::Dimension(dim.getStaticValue()));
         } else if (dim.isAny()) {
+            OV_LOGGER("shape.push_back(ov::Dimension::dynamic())");
             shape.push_back(ov::Dimension::dynamic());
         } else {
+            OV_LOGGER("shape.push_back(ov::Dimension({}, {}))", dim.getMinValue(), dim.getMaxValue());
             shape.push_back(ov::Dimension{dim.getMinValue(), dim.getMaxValue()});
         }
     }
-
     return shape;
 }
 
@@ -359,6 +371,9 @@ bool Shape::operator!=(const Shape& rhs) const {
 }
 
 bool Shape::match(const ov::Shape& ovShape) const {
+    if (this->size() != ovShape.size()) {
+        return false;
+    }
     for (size_t i = 0; i < this->size(); i++) {
         if (!(*this)[i].match(ovShape[i])) {
             return false;
@@ -460,10 +475,10 @@ Status Shape::fromString(const std::string& strIn, Shape& shapeOut) {
         try {
             if (count == 0) {
                 int dimValue = std::stoi(token);
-                if (dimValue == DYNAMIC_DIMENSION || dimValue > 0) {
+                if (dimValue == DYNAMIC_DIMENSION || dimValue >= 0) {
                     shape.add(Dimension(dimValue));
                 } else {
-                    SPDLOG_ERROR("Parsing model shape string: {}; must be {} (any) or higher than 0", token, DYNAMIC_DIMENSION);
+                    SPDLOG_ERROR("Parsing model shape string: {}; must be {} (any) or >= 0", token, DYNAMIC_DIMENSION);
                     return StatusCode::SHAPE_WRONG_FORMAT;
                 }
             } else {
@@ -474,8 +489,8 @@ Status Shape::fromString(const std::string& strIn, Shape& shapeOut) {
                 }
                 int dimMin = std::stoi(subTokens[0]);
                 int dimMax = std::stoi(subTokens[1]);
-                if (dimMin <= 0 || dimMax <= 0) {
-                    SPDLOG_ERROR("Parsing model shape string: {}; range must be higher than 0", token);
+                if (dimMin < 0 || dimMax < 0) {
+                    SPDLOG_ERROR("Parsing model shape string: {}; range must be higher than or equal 0", token);
                     return StatusCode::SHAPE_WRONG_FORMAT;
                 }
                 if (dimMin >= dimMax) {

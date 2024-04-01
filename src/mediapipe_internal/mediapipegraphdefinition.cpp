@@ -26,10 +26,14 @@
 
 #include "../deserialization.hpp"
 #include "../execution_context.hpp"
+#include "../filesystem.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "../python/pythonnoderesources.hpp"
+#endif
 #include "../serialization.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
@@ -38,12 +42,16 @@
 #include "../version.hpp"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
+#include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
+const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonExecutorCalculator"};
+
+MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
 const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
     std::shared_lock lock(metadataMtx);
@@ -65,9 +73,10 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     ifs.seekg(0, std::ios::end);
     this->chosenConfig.reserve(ifs.tellg());
     ifs.seekg(0, std::ios::beg);
-
-    this->chosenConfig.assign((std::istreambuf_iterator<char>(ifs)),
-        std::istreambuf_iterator<char>());
+    std::stringstream config;
+    config << ifs.rdbuf();
+    this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(config.str()));
+    this->chosenConfig.assign(config.str());
     return StatusCode::OK;
 }
 
@@ -85,9 +94,35 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
     return StatusCode::OK;
 }
 
+Status MediapipeGraphDefinition::dryInitializeTest() {
+    ::mediapipe::CalculatorGraph graph;
+    try {
+        auto absStatus = graph.Initialize(this->config);
+        if (!absStatus.ok()) {
+            const std::string absMessage = absStatus.ToString();
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} initialization failed with message: {}", this->getName(), absMessage);
+            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+        }
+    } catch (std::exception& e) {
+        SPDLOG_ERROR("Exception caught whilie trying to initialize MediaPipe graph: {}", e.what());
+        return StatusCode::UNKNOWN_ERROR;
+    } catch (...) {
+        SPDLOG_ERROR("Exception caught whilie trying to initialize MediaPipe graph.");
+        return StatusCode::UNKNOWN_ERROR;
+    }
+    return StatusCode::OK;
+}
 Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
+    if (!this->pythonNodeResourcesMap.empty()) {
+        SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
+        return StatusCode::INTERNAL_ERROR;
+    }
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
+    if (manager.modelExists(this->getName()) || manager.pipelineDefinitionExists(this->getName())) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph name: {} is already occupied by model or pipeline.", this->getName());
+        return StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED;
+    }
     Status validationResult = validateForConfigFileExistence();
     if (!validationResult.ok()) {
         return validationResult;
@@ -96,11 +131,6 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     if (!validationResult.ok()) {
         return validationResult;
     }
-    // TODO
-    // 3 validate 1<= outputs
-    // 4 validate 1<= inputs
-    // 5 validate no side_packets? push into executor check params vs expected side packets
-    ::mediapipe::CalculatorGraphConfig proto;
     std::unique_lock lock(metadataMtx);
     auto status = createInputsInfo();
     if (!status.ok()) {
@@ -112,11 +142,27 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
         return status;
     }
+    status = createInputSidePacketsInfo();
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create input side packets info for mediapipe graph definition: {}", getName());
+        return status;
+    }
     // Detect what deserialization needs to be performed
     status = this->setStreamTypes();
     if (!status.ok()) {
         return status;
     }
+    // here we will not be available if calculator does not exist in OVMS
+    status = this->dryInitializeTest();
+    if (!status.ok()) {
+        return status;
+    }
+
+    status = this->initializeNodes();
+    if (!status.ok()) {
+        return status;
+    }
+
     lock.unlock();
     notifier.passed = true;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
@@ -129,9 +175,11 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
 MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     const MediapipeGraphConfig& config,
     MetricRegistry* registry,
-    const MetricConfig* metricConfig) :
+    const MetricConfig* metricConfig,
+    PythonBackend* pythonBackend) :
     name(name),
-    status(SCHEDULER_CLASS_NAME, this->name) {
+    status(SCHEDULER_CLASS_NAME, this->name),
+    pythonBackend(pythonBackend) {
     mgconfig = config;
     passKfsRequestFlag = false;
 }
@@ -141,7 +189,7 @@ Status MediapipeGraphDefinition::createInputsInfo() {
     inputNames.clear();
     inputNames.reserve(this->config.input_stream().size());
     for (auto& name : config.input_stream()) {
-        std::string streamName = MediapipeGraphDefinition::getStreamName(name);
+        std::string streamName = getStreamName(name);
         if (streamName.empty()) {
             SPDLOG_ERROR("Creating Mediapipe graph inputs name failed for: {}", name);
             return StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME;
@@ -151,8 +199,20 @@ Status MediapipeGraphDefinition::createInputsInfo() {
             SPDLOG_ERROR("Creating Mediapipe graph inputs name failed for: {}. Input with the same name already exists.", name);
             return StatusCode::MEDIAPIPE_WRONG_INPUT_STREAM_PACKET_NAME;
         }
+        inputNames.emplace_back(std::move(streamName));
+    }
+    return StatusCode::OK;
+}
 
-        inputNames.push_back(streamName);
+Status MediapipeGraphDefinition::createInputSidePacketsInfo() {
+    inputSidePacketNames.clear();
+    for (auto& name : config.input_side_packet()) {
+        std::string streamName = getStreamName(name);
+        if (streamName.empty()) {
+            SPDLOG_ERROR("Creating Mediapipe graph input side packet name failed for: {}", name);
+            return StatusCode::MEDIAPIPE_WRONG_INPUT_SIDE_PACKET_STREAM_PACKET_NAME;
+        }
+        inputSidePacketNames.emplace_back(std::move(streamName));
     }
     return StatusCode::OK;
 }
@@ -162,7 +222,7 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
     outputNames.clear();
     outputNames.reserve(this->config.output_stream().size());
     for (auto& name : this->config.output_stream()) {
-        std::string streamName = MediapipeGraphDefinition::getStreamName(name);
+        std::string streamName = getStreamName(name);
         if (streamName.empty()) {
             SPDLOG_ERROR("Creating Mediapipe graph outputs name failed for: {}", name);
             return StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME;
@@ -172,8 +232,7 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
             SPDLOG_ERROR("Creating Mediapipe graph outputs name failed for: {}. Output with the same name already exists.", name);
             return StatusCode::MEDIAPIPE_WRONG_OUTPUT_STREAM_PACKET_NAME;
         }
-
-        outputNames.push_back(streamName);
+        outputNames.emplace_back(std::move(streamName));
     }
     return StatusCode::OK;
 }
@@ -188,15 +247,9 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResourcesMap, this->pythonBackend);
     return status;
 }
-
-const std::string KFS_REQUEST_PREFIX{"REQUEST"};
-const std::string KFS_RESPONSE_PREFIX{"RESPONSE"};
-const std::string TF_TENSOR_PREFIX{"TENSOR"};
-const std::string OV_TENSOR_PREFIX{"OVTENSOR"};
-const std::string MP_IMAGE_PREFIX{"IMAGE"};
 
 Status MediapipeGraphDefinition::setStreamTypes() {
     this->inputTypes.clear();
@@ -213,6 +266,18 @@ Status MediapipeGraphDefinition::setStreamTypes() {
     }
     for (auto& outputStreamName : this->config.output_stream()) {
         outputTypes.emplace(getStreamNamePair(outputStreamName));
+    }
+    bool anyInputTfLite = std::any_of(inputTypes.begin(), inputTypes.end(), [](const auto& p) {
+        const auto& [k, v] = p;
+        return v == mediapipe_packet_type_enum::TFLITETENSOR;
+    });
+    bool anyOutputTfLite = std::any_of(outputTypes.begin(), outputTypes.end(), [](const auto& p) {
+        const auto& [k, v] = p;
+        return v == mediapipe_packet_type_enum::TFLITETENSOR;
+    });
+    if (anyInputTfLite || anyOutputTfLite) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "There is no support for TfLiteTensor deserialization & serialization");
+        return StatusCode::NOT_IMPLEMENTED;
     }
     bool kfsRequestPass = std::any_of(inputTypes.begin(), inputTypes.end(), [](const auto& p) {
         const auto& [k, v] = p;
@@ -256,15 +321,24 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
     this->mgconfig = config;
+    this->pythonNodeResourcesMap.clear();
     return validate(manager);
 }
 
 void MediapipeGraphDefinition::retire(ModelManager& manager) {
+    this->pythonNodeResourcesMap.clear();
     this->status.handle(RetireEvent());
 }
 
+bool MediapipeGraphDefinition::isReloadRequired(const MediapipeGraphConfig& config) const {
+    if (getStateCode() == PipelineDefinitionStateCode::RETIRED) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading previously retired mediapipe definition: {}", getName());
+        return true;
+    }
+    return getMediapipeGraphConfig().isReloadRequired(config);
+}
+
 Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
-    // TODO possibly unify with DAG to share code
     unloadGuard = std::make_unique<MediapipeGraphDefinitionUnloadGuard>(*this);
 
     const uint waitLoadedTimestepMicroseconds = 1000;
@@ -310,43 +384,56 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
     return StatusCode::OK;
 }
 
-std::string MediapipeGraphDefinition::getStreamName(const std::string& streamFullName) {
-    std::vector<std::string> tokens = tokenize(streamFullName, ':');
-    if (tokens.size() == 2) {
-        return tokens[1];
-    } else if (tokens.size() == 1) {
-        return tokens[0];
+#if (PYTHON_DISABLE == 0)
+struct PythonResourcesCleaningGuard {
+    bool shouldCleanup{true};
+    std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>& resource;
+    PythonResourcesCleaningGuard(std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>& resource) :
+        resource(resource) {}
+    ~PythonResourcesCleaningGuard() {
+        if (shouldCleanup) {
+            resource.clear();
+        }
     }
-    static std::string empty = "";
-    return empty;
+    void disableCleaning() {
+        shouldCleanup = false;
+    }
+};
+#endif
+
+Status MediapipeGraphDefinition::initializeNodes() {
+#if (PYTHON_DISABLE == 0)
+    PythonResourcesCleaningGuard pythonResourcesCleaningGuard(this->pythonNodeResourcesMap);
+    SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
+    for (int i = 0; i < config.node().size(); i++) {
+        if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
+            if (!config.node(i).node_options().size()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node missing options in graph: {}. ", this->name);
+                return StatusCode::PYTHON_NODE_MISSING_OPTIONS;
+            }
+            if (config.node(i).name().empty()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node name is missing in graph: {}. ", this->name);
+                return StatusCode::PYTHON_NODE_MISSING_NAME;
+            }
+            std::string nodeName = config.node(i).name();
+            if (this->pythonNodeResourcesMap.find(nodeName) != this->pythonNodeResourcesMap.end()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node name: {} already used in graph: {}. ", nodeName, this->name);
+                return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
+            }
+
+            std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
+            Status status = PythonNodeResources::createPythonNodeResources(nodeResources, config.node(i), pythonBackend);
+            if (nodeResources == nullptr || !status.ok()) {
+                SPDLOG_ERROR("Failed to process python node graph {}", this->name);
+                return status;
+            }
+
+            this->pythonNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<PythonNodeResources>>(nodeName, std::move(nodeResources)));
+        }
+    }
+    pythonResourcesCleaningGuard.disableCleaning();
+#endif
+    return StatusCode::OK;
 }
 
-std::pair<std::string, mediapipe_packet_type_enum> MediapipeGraphDefinition::getStreamNamePair(const std::string& streamFullName) {
-    static std::unordered_map<std::string, mediapipe_packet_type_enum> prefix2enum{
-        {KFS_REQUEST_PREFIX, mediapipe_packet_type_enum::KFS_REQUEST},
-        {KFS_RESPONSE_PREFIX, mediapipe_packet_type_enum::KFS_RESPONSE},
-        {TF_TENSOR_PREFIX, mediapipe_packet_type_enum::TFTENSOR},
-        {OV_TENSOR_PREFIX, mediapipe_packet_type_enum::OVTENSOR},
-        {MP_IMAGE_PREFIX, mediapipe_packet_type_enum::MEDIAPIPE_IMAGE}};
-    std::vector<std::string> tokens = tokenize(streamFullName, ':');
-    if (tokens.size() == 2) {
-        auto it = std::find_if(prefix2enum.begin(), prefix2enum.end(), [tokens](const auto& p) {
-            const auto& [k, v] = p;
-            bool b = startsWith(tokens[0], k);
-            return b;
-        });
-        if (it != prefix2enum.end()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[1], it->first, streamFullName);
-            return {tokens[1], it->second};
-        } else {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[1], "UNKNOWN", streamFullName);
-            return {tokens[1], mediapipe_packet_type_enum::UNKNOWN};
-        }
-    } else if (tokens.size() == 1) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", tokens[0], "UNKNOWN", streamFullName);
-        return {tokens[0], mediapipe_packet_type_enum::UNKNOWN};
-    }
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "setting input stream: {} packet type: {} from: {}", "", "UNKNOWN", streamFullName);
-    return {"", mediapipe_packet_type_enum::UNKNOWN};
-}
 }  // namespace ovms

@@ -136,7 +136,7 @@ def infer_rest(img, input_tensor, rest_url,
 def get_model_metadata_response_rest(rest_url):
     _txt, _ = _get_output_json(rest_url, requests.get)
     metadata_pb = get_model_metadata_pb2.GetModelMetadataResponse()
-    response = Parse(_txt, metadata_pb, ignore_unknown_fields=False)
+    response = Parse(_txt, metadata_pb, ignore_unknown_fields=True)
     return response
 
 

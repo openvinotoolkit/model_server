@@ -226,6 +226,10 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     for (auto& [tensorName, tensorWithSource] : tensorMap) {
         auto& tensor = tensorWithSource.getActualTensor();
         OVMS_PROFILE_SCOPE("Demultiply Tensor");
+        if (tensor.get_element_type() == ov::element::Type_t::string) {
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "String demultiplication is unsupported");
+            return StatusCode::PIPELINE_STRING_DEMUILTIPLICATION_UNSUPPORTED;
+        }
         auto newDims = tensor.get_shape();
         if (newDims.size() < 3) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Wrong number of dimensions: {} to demultiply. Must be at least 3", newDims.size());
@@ -269,7 +273,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
 }
 
 Status Node::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName) {
-    dividedTensor = createSharedTensor(tensor.get_element_type(), shape, (char*)(tensor.data()) + i * step);
+    dividedTensor = createTensorWithNoDataOwnership(tensor.get_element_type(), shape, (char*)(tensor.data()) + i * step);
     return StatusCode::OK;
 }
 }  // namespace ovms

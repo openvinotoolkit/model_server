@@ -18,19 +18,19 @@
 
 #include <gtest/gtest.h>
 
-#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)   \
-    {                                         \
-        auto* err = C_API_CALL;               \
-        if (err != nullptr) {                 \
-            uint32_t code = 0;                \
-            const char* msg = nullptr;        \
-            OVMS_StatusGetCode(err, &code);   \
-            OVMS_StatusGetDetails(err, &msg); \
-            std::string smsg(msg);            \
-            OVMS_StatusDelete(err);           \
-            EXPECT_EQ(0, code) << smsg;       \
-            ASSERT_EQ(err, nullptr) << smsg;  \
-        }                                     \
+#define ASSERT_CAPI_STATUS_NULL(C_API_CALL)  \
+    {                                        \
+        auto* err = C_API_CALL;              \
+        if (err != nullptr) {                \
+            uint32_t code = 0;               \
+            const char* msg = nullptr;       \
+            OVMS_StatusCode(err, &code);     \
+            OVMS_StatusDetails(err, &msg);   \
+            std::string smsg(msg);           \
+            OVMS_StatusDelete(err);          \
+            EXPECT_EQ(0, code) << smsg;      \
+            ASSERT_EQ(err, nullptr) << smsg; \
+        }                                    \
     }
 
 #define ASSERT_CAPI_STATUS_NOT_NULL(C_API_CALL) \
@@ -49,8 +49,8 @@
         if (err != nullptr) {                                                                                  \
             uint32_t code = 0;                                                                                 \
             const char* details = nullptr;                                                                     \
-            ASSERT_EQ(OVMS_StatusGetCode(err, &code), nullptr);                                                \
-            ASSERT_EQ(OVMS_StatusGetDetails(err, &details), nullptr);                                          \
+            ASSERT_EQ(OVMS_StatusCode(err, &code), nullptr);                                                   \
+            ASSERT_EQ(OVMS_StatusDetails(err, &details), nullptr);                                             \
             ASSERT_NE(details, nullptr);                                                                       \
             ASSERT_EQ(code, static_cast<uint32_t>(EXPECTED_STATUS_CODE))                                       \
                 << std::string{"wrong code: "} + std::to_string(code) + std::string{"; details: "} << details; \

@@ -29,14 +29,19 @@ files_no_proxy_setting=(
     "./release_files/Dockerfile.redhat"
 )
 
-docker run --rm -i hadolint/hadolint:latest hadolint -v -V
+# install hadolint if missing
+~/bin/hadolint --version | grep 2.12 ; if [ $? != 0 ]; then \
+mkdir ~/bin && \
+curl -L https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64 -o ~/bin/hadolint && \
+chmod 755 ~/bin/hadolint; \
+fi
 
 has_issues=0
 while IFS= read -r -d '' dockerfile
     do
         if printf '%s\0' "${files_to_scan[@]}" | grep -Fxqz -- $dockerfile; then
             echo "Scanning $dockerfile with sha256: $(sha256sum $dockerfile | head -n1 | cut -d " " -f1)"
-            docker run --rm -i hadolint/hadolint:latest hadolint \
+            ~/bin/hadolint "$dockerfile" \
                   --ignore DL3006 \
                   --ignore DL3008 \
                   --ignore DL3013 \
@@ -45,7 +50,7 @@ while IFS= read -r -d '' dockerfile
                   --ignore DL3028 \
                   --ignore DL3033 \
                   --ignore DL4001 \
-                  - < "$dockerfile" || has_issues=1
+                  || has_issues=1
         else
             echo "Skipping $dockerfile"
         fi

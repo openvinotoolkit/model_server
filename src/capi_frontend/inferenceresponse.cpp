@@ -33,7 +33,7 @@ const std::string RESPONSE_SERVABLE_NAME_USED_ONLY_IN_PREDICTION_TESTS = "CONSTR
 // this constructor can be removed with prediction tests overhaul
 InferenceResponse::InferenceResponse() :
     InferenceResponse(RESPONSE_SERVABLE_NAME_USED_ONLY_IN_PREDICTION_TESTS, 42) {}
-InferenceResponse::InferenceResponse(const std::string& servableName, model_version_t servableVersion) :
+InferenceResponse::InferenceResponse(const std::string servableName, model_version_t servableVersion) :
     servableName(servableName),
     servableVersion(servableVersion) {}
 const std::string& InferenceResponse::getServableName() const {

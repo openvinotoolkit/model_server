@@ -23,19 +23,12 @@ exports_files([
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
+load("//:common_settings.bzl",
+     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
+     "create_config_settings")
+create_config_settings()
 
-config_setting(
-    name = "disable_mediapipe",
-    define_values = {
-        "MEDIAPIPE_DISABLE": "1",
-    },
-    visibility = ["//visibility:public"],
-)
-
-more_selects.config_setting_negation(
-    name = "not_disable_mediapipe",
-    negate = ":disable_mediapipe",
-)
+#To build without python use flags - bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
 
 cc_library(
   name = "ovms_dependencies",
@@ -48,9 +41,16 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
-        "@awssdk//:s3",
-        "@awssdk//:core",
-        "@awssdk//:deps",
+        ] + select({
+            "//:ubuntu_build": [
+                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
+                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_ubuntu",
+            ],
+            "//:redhat_build": [
+                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
+                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_redhat",
+            ],
+        }) + [
         "@azure//:storage",
         "@cpprest//:sdk",
         "@boost//:lib",
@@ -62,17 +62,30 @@ cc_library(
         "@linux_openvino//:openvino",
         "@linux_opencv//:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
-        "@oneTBB//:tbb",
         ] + select({
-            "//conditions:default": [
+            "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework:calculator_framework",
+                "@mediapipe//mediapipe/framework/stream_handler:barrier_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:default_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:early_close_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:fixed_size_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:immediate_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:in_order_output_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:mux_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",  # added directly for python yielding (cycle), add more if needed
+                "@mediapipe//mediapipe/framework/stream_handler:timestamp_align_input_stream_handler",
                 "@mediapipe//mediapipe/framework/port:logging",
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
                 "@mediapipe//mediapipe/framework/port:status",
-                "@mediapipe_calculators//:mediapipe_calculators",
-                "@model_api//:adapter_api",
-            ],
-            "//:disable_mediapipe" : [],
-        }),
+                "@model_api//:model_api",],
+            "//:disable_mediapipe": []
+            })
+         + select({
+            "//:not_disable_python": [
+                "@python3_linux//:python3-lib",
+                "@pybind11//:pybind11_embed",
+                ],
+            "//:disable_python": []
+            }),
   visibility = ["//visibility:public"],
 )

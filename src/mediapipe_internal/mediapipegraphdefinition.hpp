@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 #include <iostream>
+#include <map>
 #include <memory>
 #include <shared_mutex>
 #include <sstream>
@@ -30,9 +31,13 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
+#pragma GCC diagnostic pop
+
 #include "mediapipegraphconfig.hpp"
 #include "packettypes.hpp"
 
@@ -43,42 +48,51 @@ class MetricRegistry;
 class ModelManager;
 class MediapipeGraphExecutor;
 class Status;
+class PythonBackend;
+class PythonNodeResources;
+using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
 
 public:
+    virtual ~MediapipeGraphDefinition();
     MediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config = MGC,
         MetricRegistry* registry = nullptr,
-        const MetricConfig* metricConfig = nullptr);
+        const MetricConfig* metricConfig = nullptr,
+        PythonBackend* pythonBackend = nullptr);
 
     const std::string& getName() const { return name; }
     const PipelineDefinitionStatus& getStatus() const {
         return this->status;
     }
+
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     const model_version_t getVersion() const { return VERSION; }
     const tensor_map_t getInputsInfo() const;
     const tensor_map_t getOutputsInfo() const;
+    const MediapipeGraphConfig& getMediapipeGraphConfig() const { return this->mgconfig; }
 
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
-
-    static std::string getStreamName(const std::string& streamFullName);
-    static std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName);
 
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);
     void retire(ModelManager& manager);
+    Status initializeNodes();
+    bool isReloadRequired(const MediapipeGraphConfig& config) const;
 
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 500000;
     static const std::string SCHEDULER_CLASS_NAME;
+    static const std::string PYTHON_NODE_CALCULATOR_NAME;
     Status waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 
     // Pipelines are not versioned and any available definition has constant version equal 1.
     static constexpr model_version_t VERSION = 1;
 
 protected:
+    PythonNodeResourcesMap pythonNodeResourcesMap;
+
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
             status(status),
@@ -103,6 +117,7 @@ protected:
     Status validateForConfigLoadableness();
 
     Status setStreamTypes();
+    Status dryInitializeTest();
     std::string chosenConfig;
     static MediapipeGraphConfig MGC;
     const std::string name;
@@ -117,6 +132,7 @@ protected:
 
     Status createInputsInfo();
     Status createOutputsInfo();
+    Status createInputSidePacketsInfo();
 
     std::condition_variable loadedNotify;
     mutable std::shared_mutex metadataMtx;
@@ -135,8 +151,11 @@ private:
 
     std::vector<std::string> inputNames;
     std::vector<std::string> outputNames;
+    std::vector<std::string> inputSidePacketNames;
 
     std::atomic<uint64_t> requestsHandlesCounter = 0;
+
+    PythonBackend* pythonBackend;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

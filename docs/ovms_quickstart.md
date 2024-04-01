@@ -1,16 +1,20 @@
 # Quickstart Guide {#ovms_docs_quick_start_guide}
 
-OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2023.0/openvino_docs_MO_DG_IR_and_opsets.html#doxid-openvino-docs-m-o-d-g-i-r-and-opsets) 
+OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2024/documentation/openvino-ir-format/operation-sets.html) 
 , [ONNX](https://onnx.ai/), [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) or [TensorFlow](https://www.tensorflow.org/) format. You can get them by:
 
-- downloading models from [Open Model Zoo](https://storage.openvinotoolkit.org/repositories/open_model_zoo/public/2022.1/)
-- converting other formats using [Model Optimizer](https://docs.openvino.ai/2023.0/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html)
+- downloading models from [Open Model Zoo](https://storage.openvinotoolkit.org/repositories/open_model_zoo/)
+- generating the model in a training framework and saving it to a supported format: TensorFlow saved_model, ONNX or PaddlePaddle.
+- downloading the models from models hubs like [TensorFlowHub](https://www.tensorflow.org/hub) or [ONNX models zoo](https://github.com/onnx/models).
+- converting models from any formats using [conversion tool](https://docs.openvino.ai/2024/openvino-workflow/model-preparation/convert-model-to-ir.html)
 
-This guide uses a [face detection model](https://docs.openvino.ai/2023.0/omz_models_model_face_detection_retail_0004.html) in IR format.
+This guide uses a [Faster R-CNN with Resnet-50 V1 Object Detection model](https://tfhub.dev/tensorflow/faster_rcnn/resnet50_v1_640x640/1) in TensorFlow format.
+
+> **Note**: - OpenVINO Model Server can run on Linux and macOS. For use on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/) is required.
 
 To quickly start using OpenVINO™ Model Server follow these steps:
 1. Prepare Docker
-2. Download or build the OpenVINO™ Model server
+2. Download the OpenVINO™ Model server
 3. Provide a model
 4. Start the Model Server Container
 5. Prepare the Example Client Components
@@ -37,22 +41,25 @@ docker pull openvino/model_server:latest
 
 ### Step 3: Provide a Model
 
-Store components of the model in the `model/1` directory. Here is an example command using curl and a face detection model:
+Store components of the model in the `model/1` directory. Here are example commands pulling an object detection model from TensorFlow Hub:
 
 ```bash
-curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.bin
+mkdir -p model/1
+wget https://storage.googleapis.com/tfhub-modules/tensorflow/faster_rcnn/resnet50_v1_640x640/1.tar.gz
+tar xzf 1.tar.gz -C model/1
 ```
-
-> **NOTE**: For ONNX models additional steps are required. For a detailed description refer to our [ONNX format example](../demos/using_onnx_model/python/README.md).
 
 OpenVINO Model Server expects a particular folder structure for models - in this case `model` directory has the following content: 
 ```bash
-model/
+model
 └── 1
-    ├── face-detection-retail-0004.bin
-    └── face-detection-retail-0004.xml
-``` 
-Sub-folder 1 indicates the version of the model. If you want to upgrade the model, other versions can be added in separate subfolders (2,3...). 
+    ├── saved_model.pb
+    └── variables
+        ├── variables.data-00000-of-00001
+        └── variables.index
+```
+
+Sub-folder `1` indicates the version of the model. If you want to upgrade the model, other versions can be added in separate subfolders (2,3...). 
 For more information about the directory structure and how to deploy multiple models at a time, check out the following sections:
 - [Preparing models](models_repository.md)
 - [Serving models](starting_server.md)
@@ -63,32 +70,28 @@ For more information about the directory structure and how to deploy multiple mo
 Start the container:
 
 ```bash
-docker run -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/face-detection -p 9000:9000 openvino/model_server:latest \
---model_path /models/face-detection --model_name face-detection --port 9000 --shape auto
+docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/model_server:latest --model_name faster_rcnn --model_path /model --port 9000
 ```
-During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage from which the server will access models.
+During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage.
 
 ### Step 5: Prepare the Example Client Components
 
 Client scripts are available for quick access to the Model Server. Run an example command to download all required components:
 
 ```bash
-curl --fail https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/0/demos/common/python/client_utils.py -o client_utils.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/0/demos/face_detection/python/face_detection.py -o face_detection.py https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/0/demos/common/python/requirements.txt -o client_requirements.txt
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/object_detection.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/requirements.txt
+wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_91cl.txt
 ```
 
-For more information, check these links:
-- [Information on the face detection script](../demos/face_detection/python/README.md)
-- [More Model Server client scripts](../demos/README.md)
-- [Clients](./clients.md)
+Check more information about the [writing the client applications](./writing_app.md).
 
 ### Step 6: Download Data for Inference
 
-Put the files in a separate folder to provide inference data, as inference will be performed on all the files it contains.
-
-You can download [example images for inference](https://github.com/openvinotoolkit/model_server/tree/releases/2023/0/demos/common/static/images/people). This example uses the file [people1.jpeg](https://github.com/openvinotoolkit/model_server/tree/releases/2023/0/demos/common/static/images/people/people1.jpeg). Run the following command to download the image:
+This example uses the file [coco_bike.jpg](https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg). Run the following command to download the image:
 
 ```bash
-curl --fail --create-dirs https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2023/0/demos/common/static/images/people/people1.jpeg -o images/people1.jpeg
+wget https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg
 ```
 
 ### Step 7: Run Inference
@@ -97,35 +100,19 @@ Go to the folder with the client script and install dependencies. Create a folde
 
 ```bash
 pip install --upgrade pip
-pip install -r client_requirements.txt
+pip install -r requirements.txt
 
-mkdir results
-
-python face_detection.py --batch_size 1 --width 600 --height 400 --input_images_dir images --output_dir results --grpc_port 9000
+python3 object_detection.py --image coco_bike.jpg --output output.jpg --service_url localhost:9000
 ```
 
 ### Step 8: Review the Results
 
-You will see the inference output:
+In the current folder, you can find files containing inference results. 
+In our case, it will be a modified input image with bounding boxes indicating detected objects and their labels.
 
-```bash
-Start processing 1 iterations with batch size 1
-Request shape (1, 3, 400, 600)
-Response shape (1, 1, 200, 7)
-image in batch item 0 , output shape (3, 400, 600)
-detection 0 [[[0.         1.         1.         0.55241716 0.3024692  0.59122956
-   0.39170963]]]
-x_min 331
-y_min 120
-x_max 354
-y_max 156...
-```
+![Inference results](quickstart_result.jpeg)
 
-In the `results` folder, you can find files containing inference results. 
-In our case, it will be a modified input image with bounding boxes indicating detected faces.
-![Inference results](quickstart_result.jpg)
+> **Note**: Similar steps can be performed with other model formats. Check the [ONNX use case example](../demos/using_onnx_model/python/README.md), 
+[TensorFlow classification model demo](../demos/image_classification_using_tf_model/python/README.md ) or [PaddlePaddle model demo](../demos/segmentation_using_paddlepaddle_model/python/README.md).
 
-Note: Similar steps can be performed with an ONNX model. Check the inference [use case example](../demos/using_onnx_model/python/README.md) with a public ResNet model in ONNX format
-or [TensorFlow model demo](../demos/image_classification_using_tf_model/python/README.md ).
-
-Congratulations, you have completed the Quickstart guide. Try Model Server [demos](../demos/README.md) or explore more [features](features.md) to create your application.
+Congratulations, you have completed the QuickStart guide. Try other Model Server [demos](../demos/README.md) or explore more [features](features.md) to create your application.

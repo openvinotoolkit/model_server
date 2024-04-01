@@ -1,0 +1,8 @@
+{
+    "model_config_list": [
+        {"config": {
+                "name": "passthrough",
+                "base_path": "/ovms/src/test/passthrough_string",
+                "shape": "(-1)"}}
+    ]
+}

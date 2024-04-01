@@ -28,7 +28,7 @@ namespace ovms {
 class Status;
 
 class InferenceResponse {
-    const std::string& servableName;
+    const std::string servableName;
     const model_version_t servableVersion;
     std::vector<InferenceParameter> parameters;
     std::vector<std::pair<std::string, InferenceTensor>> outputs;
@@ -36,7 +36,7 @@ class InferenceResponse {
 public:
     // this constructor can be removed with prediction tests overhaul
     InferenceResponse();
-    InferenceResponse(const std::string& servableName, model_version_t servableVersion);
+    InferenceResponse(const std::string servableName, model_version_t servableVersion);
     Status addOutput(const std::string& name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
     Status getOutput(uint32_t id, const std::string** name, const InferenceTensor** tensor) const;
     Status getOutput(uint32_t id, const std::string** name, InferenceTensor** tensor);

@@ -1,0 +1,11 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":"mpTensorDummy",
+        "graph_path":"/ovms/src/test/mediapipe/graphdummy_mp.pbtxt",
+        "base_path":"/ovms/src/test/mediapipe/relative_paths/only_subconfig",
+        "subconfig":"subconfig.json"
+    }
+    ]
+}

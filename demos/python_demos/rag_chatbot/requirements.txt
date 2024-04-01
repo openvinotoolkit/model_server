@@ -1,0 +1,13 @@
+--extra-index-url https://download.pytorch.org/whl/cpu 
+git+https://github.com/huggingface/optimum-intel.git@6faf44562d762ca66bb1db93c9c2703e37cf5020
+# Optimum here is needed to download the model
+onnx==1.15.0
+openvino==2024.0.0
+nncf==2.8.1
+einops==0.7.0
+transformers_stream_generator==0.0.4
+tiktoken==0.5.2
+transformers==4.37.1
+bitsandbytes==0.43.0
+accelerate==0.27.2
+datasets==2.18.0

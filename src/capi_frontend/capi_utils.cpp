@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include "../logging.hpp"
@@ -27,6 +28,32 @@
 #include "inferenceresponse.hpp"
 
 namespace ovms {
+size_t DataTypeToByteSize(OVMS_DataType datatype) {
+    static std::unordered_map<OVMS_DataType, size_t> datatypeSizeMap{
+        {OVMS_DATATYPE_BOOL, 1},
+        {OVMS_DATATYPE_U1, 1},
+        {OVMS_DATATYPE_U4, 1},
+        {OVMS_DATATYPE_U8, 1},
+        {OVMS_DATATYPE_U16, 2},
+        {OVMS_DATATYPE_U32, 4},
+        {OVMS_DATATYPE_U64, 8},
+        {OVMS_DATATYPE_I4, 1},
+        {OVMS_DATATYPE_I8, 1},
+        {OVMS_DATATYPE_I16, 2},
+        {OVMS_DATATYPE_I32, 4},
+        {OVMS_DATATYPE_I64, 8},
+        {OVMS_DATATYPE_FP16, 2},
+        {OVMS_DATATYPE_FP32, 4},
+        {OVMS_DATATYPE_FP64, 8},
+        {OVMS_DATATYPE_BF16, 2},
+        // {"BYTES", },
+    };
+    auto it = datatypeSizeMap.find(datatype);
+    if (it == datatypeSizeMap.end()) {
+        return 0;
+    }
+    return it->second;
+}
 
 OVMS_ServableState convertToServableState(ovms::PipelineDefinitionStateCode code) {
     switch (code) {
@@ -94,6 +121,8 @@ OVMS_DataType getPrecisionAsOVMSDataType(Precision precision) {
         return OVMS_DATATYPE_MIXED;
     case Precision::Q78:
         return OVMS_DATATYPE_Q78;
+    case Precision::STRING:
+        return OVMS_DATATYPE_STRING;
     case Precision::BIN:
         return OVMS_DATATYPE_BIN;
     default:
@@ -132,6 +161,8 @@ Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype) {
         return Precision::U4;
     case OVMS_DATATYPE_U1:
         return Precision::U1;
+    case OVMS_DATATYPE_STRING:
+        return Precision::STRING;
     case OVMS_DATATYPE_BOOL:
         return Precision::BOOL;
     case OVMS_DATATYPE_CUSTOM:

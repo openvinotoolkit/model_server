@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <map>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -41,12 +42,16 @@
 #include "servablemanagermodule.hpp"
 #include "server.hpp"
 #include "stringutils.hpp"
+#include "systeminfo.hpp"
 #include "version.hpp"
 
 using grpc::ServerBuilder;
 
 namespace ovms {
 static const int GIGABYTE = 1024 * 1024 * 1024;
+// Default server shutdown deadline set to 5 seconds,
+// so it happens before docker container graceful stop.
+static const int SERVER_SHUTDOWN_DEADLINE_SECONDS = 5;
 
 static bool isPortAvailable(uint64_t port) {
     struct sockaddr_in addr;
@@ -67,14 +72,15 @@ static bool isPortAvailable(uint64_t port) {
     return true;
 }
 
-struct GrpcChannelArgument {
-    std::string key;
-    std::string value;
-};
+static Status setDefaultGrpcChannelArgs(std::map<std::string, std::string>& result) {
+    uint16_t cores = getCoreCount();
+    result["grpc.max_concurrent_streams"] = std::to_string(cores);  // concurrent streams from a single client set to #cores by default
+    return StatusCode::OK;
+}
 
 // Parses a comma separated list of gRPC channel arguments into list of
 // ChannelArgument.
-static Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::vector<GrpcChannelArgument>& result) {
+static Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std::map<std::string, std::string>& result) {
     const std::vector<std::string> channel_arguments = tokenize(channel_arguments_str, ',');
 
     for (const std::string& channel_argument : channel_arguments) {
@@ -84,7 +90,7 @@ static Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std
         }
         erase_spaces(key_val[0]);
         erase_spaces(key_val[1]);
-        result.push_back({key_val[0], key_val[1]});
+        result[key_val[0]] = key_val[1];
     }
 
     return StatusCode::OK;
@@ -114,8 +120,13 @@ GRPCServerModule::GRPCServerModule(Server& server) :
 Status GRPCServerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", GRPC_SERVER_MODULE_NAME);
-    std::vector<GrpcChannelArgument> channel_arguments;
-    auto status = parseGrpcChannelArgs(config.grpcChannelArguments(), channel_arguments);
+    std::map<std::string, std::string> channel_arguments;
+    auto status = setDefaultGrpcChannelArgs(channel_arguments);
+    if (!status.ok()) {
+        SPDLOG_ERROR(status.string());
+        return status;
+    }
+    status = parseGrpcChannelArgs(config.grpcChannelArguments(), channel_arguments);
     if (!status.ok()) {
         SPDLOG_ERROR(status.string());
         return status;
@@ -128,19 +139,31 @@ Status GRPCServerModule::start(const ovms::Config& config) {
     builder.RegisterService(&tfsPredictService);
     builder.RegisterService(&tfsModelService);
     builder.RegisterService(&kfsGrpcInferenceService);
-    for (const GrpcChannelArgument& channel_argument : channel_arguments) {
+    for (auto& [name, value] : channel_arguments) {
         // gRPC accept arguments of two types, int and string. We will attempt to
         // parse each arg as int and pass it on as such if successful. Otherwise we
         // will pass it as a string. gRPC will log arguments that were not accepted.
-        SPDLOG_DEBUG("setting grpc channel argument {}: {}", channel_argument.key, channel_argument.value);
+        SPDLOG_DEBUG("setting grpc channel argument {}: {}", name, value);
         try {
-            int i = std::stoi(channel_argument.value);
-            builder.AddChannelArgument(channel_argument.key, i);
+            int i = std::stoi(value);
+            builder.AddChannelArgument(name, i);
         } catch (std::invalid_argument const& e) {
-            builder.AddChannelArgument(channel_argument.key, channel_argument.value);
+            builder.AddChannelArgument(name, value);
         } catch (std::out_of_range const& e) {
-            SPDLOG_WARN("Out of range parameter {} : {}", channel_argument.key, channel_argument.value);
+            SPDLOG_WARN("Out of range parameter {} : {}", name, value);
         }
+    }
+    ::grpc::ResourceQuota resource_quota;
+    if (config.grpcMaxThreads() != 0) {
+        resource_quota.SetMaxThreads(config.grpcMaxThreads());
+        SPDLOG_DEBUG("setting grpc MaxThreads ResourceQuota {}", config.grpcMaxThreads());
+    }
+    if (config.grpcMemoryQuota() != 0) {
+        resource_quota.Resize(config.grpcMemoryQuota());
+        SPDLOG_DEBUG("setting grpc Memory ResourceQuota {}", config.grpcMemoryQuota());
+    }
+    if ((config.grpcMemoryQuota() != 0) || (config.grpcMaxThreads() != 0)) {
+        builder.SetResourceQuota(resource_quota);
     }
     uint grpcServersCount = getGRPCServersCount(config);
     servers.reserve(grpcServersCount);
@@ -175,8 +198,10 @@ void GRPCServerModule::shutdown() {
         return;
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", GRPC_SERVER_MODULE_NAME);
+    std::chrono::time_point serverDeadline = std::chrono::system_clock::now() +
+                                             std::chrono::seconds(SERVER_SHUTDOWN_DEADLINE_SECONDS);
     for (const auto& server : servers) {
-        server->Shutdown();
+        server->Shutdown(serverDeadline);
         SPDLOG_INFO("Shutdown gRPC server");
     }
     servers.clear();

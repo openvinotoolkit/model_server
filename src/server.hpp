@@ -21,6 +21,7 @@
 #include <unordered_map>
 
 #include "module.hpp"
+#include "module_names.hpp"
 
 namespace ovms {
 class Config;
@@ -29,14 +30,9 @@ class Status;
 class ServerSettingsImpl;
 class ModelsSettingsImpl;
 
-extern const std::string PROFILER_MODULE_NAME;
-extern const std::string GRPC_SERVER_MODULE_NAME;
-extern const std::string HTTP_SERVER_MODULE_NAME;
-extern const std::string SERVABLE_MANAGER_MODULE_NAME;
-extern const std::string METRICS_MODULE_NAME;
-
 class Server {
     mutable std::shared_mutex modulesMtx;
+    mutable std::mutex startMtx;
 
 protected:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
@@ -54,7 +50,6 @@ public:
 
     void setShutdownRequest(int i);
     virtual ~Server();
-
     Status startModules(ovms::Config& config);
     void shutdownModules();
 

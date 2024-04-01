@@ -103,6 +103,15 @@ TEST_F(TFSMakeJsonFromPredictResponseStringTest, PositiveColumn) {
     EXPECT_EQ(json, expected_json);
 }
 
+TEST_F(TFSMakeJsonFromPredictResponseStringTest, ScalarColumn) {
+    float data = 5.1f;
+    *output1->mutable_tensor_content() = std::string((char*)(&data), ((char*)(&data)) + sizeof(float));
+    output1->set_dtype(tensorflow::DataType::DT_FLOAT);
+    std::string expected_json = "{\n    \"outputs\": 5.1\n}";
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::OK);
+    EXPECT_EQ(json, expected_json);
+}
+
 TEST_F(TFSMakeJsonFromPredictResponseStringTest, PositiveColumnBatchSize2) {
     output1->add_string_val("Hello");
     output1->add_string_val("World");
@@ -293,10 +302,18 @@ static std::string toString(ovms::Order order) {
     }
 }
 
-TEST_P(TFSMakeJsonFromPredictResponseRawTest, EmptyTensorContentError) {
+TEST_P(TFSMakeJsonFromPredictResponseRawTest, TensorZeroDimPositive) {
     auto order = GetParam();
     output1->mutable_tensor_content()->clear();
-    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, order), StatusCode::REST_SERIALIZE_NO_DATA);
+    output1->mutable_tensor_shape()->add_dim()->set_size(1);
+    output1->mutable_tensor_shape()->add_dim()->set_size(0);
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, order), StatusCode::OK);
+}
+
+TEST_P(TFSMakeJsonFromPredictResponseRawTest, EmptyScalarTensorContentError) {
+    auto order = GetParam();
+    output1->mutable_tensor_content()->clear();
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, order), StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE);
 }
 
 TEST_P(TFSMakeJsonFromPredictResponseRawTest, InvalidTensorContentSizeError) {
@@ -331,6 +348,25 @@ protected:
         output->mutable_tensor_shape()->add_dim()->set_size(1);
     }
 };
+
+const char* noDataResponseRow = R"({
+    "predictions": [[]
+    ]
+})";
+
+const char* noDataResponseColumn = R"({
+    "outputs": [
+        []
+    ]
+})";
+
+TEST_P(TFSMakeJsonFromPredictResponsePrecisionTest, NoData) {
+    auto order = GetParam();
+    output->mutable_tensor_shape()->mutable_dim(1)->set_size(0);
+    output->set_dtype(tensorflow::DataType::DT_FLOAT);
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, order), StatusCode::OK);
+    EXPECT_EQ(json, getJsonResponseDependsOnOrder(order, noDataResponseRow, noDataResponseColumn));
+}
 
 const char* floatResponseRow = R"({
     "predictions": [[92.5]
@@ -755,7 +791,7 @@ TEST_F(KFSMakeJsonFromPredictResponseRawTest, Positive) {
 
 TEST_F(KFSMakeJsonFromPredictResponseRawTest, EmptyRawOutputContentsError) {
     proto.mutable_raw_output_contents()->Clear();
-    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::REST_SERIALIZE_NO_DATA);
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE);
     ASSERT_EQ(inferenceHeaderContentLength.has_value(), false);
 }
 
@@ -823,6 +859,42 @@ protected:
         assertBinaryOutput(data, json, expectedJson, inferenceHeaderContentLength);
     }
 };
+
+TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Scalar) {
+    float data = 92.5f;
+    output->mutable_shape()->Clear();
+    prepareData(data, "FP32");
+    EXPECT_EQ(json, R"({
+    "model_name": "model",
+    "id": "id",
+    "outputs": [{
+            "name": "output",
+            "shape": [],
+            "datatype": "FP32",
+            "data": [92.5]
+        }]
+})");
+}
+
+TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, PositiveZeroData) {
+    output->set_datatype("FP32");
+    output->mutable_shape()->Clear();
+    output->mutable_shape()->Add(1);
+    output->mutable_shape()->Add(0);
+    proto.add_raw_output_contents();
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::OK);
+    ASSERT_EQ(inferenceHeaderContentLength.has_value(), false);
+    EXPECT_EQ(json, R"({
+    "model_name": "model",
+    "id": "id",
+    "outputs": [{
+            "name": "output",
+            "shape": [1, 0],
+            "datatype": "FP32",
+            "data": []
+        }]
+})");
+}
 
 TEST_F(KFSMakeJsonFromPredictResponsePrecisionTest, Float) {
     float data = 92.5f;

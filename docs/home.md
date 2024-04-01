@@ -1,22 +1,20 @@
 # OpenVINO&trade; Model Server {#ovms_what_is_openvino_model_server}
 
-@sphinxdirective
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ovms_docs_quick_start_guide
-   ovms_docs_models_repository
-   ovms_docs_deploying_server
-   ovms_docs_serving_model
-   ovms_docs_server_app
-   ovms_docs_features
-   ovms_docs_performance_tuning
-   ovms_docs_demos
-   ovms_docs_troubleshooting
-
-@endsphinxdirective
+ovms_docs_quick_start_guide
+ovms_docs_serving_model
+ovms_docs_deploying_server
+ovms_docs_server_app
+ovms_docs_features
+ovms_docs_performance_tuning
+ovms_docs_demos
+ovms_docs_troubleshooting
+```
 
 Model Server hosts models and makes them accessible to software components over standard network protocols: a client sends a request to the model server, which performs model inference and sends a response back to the client. Model Server offers many advantages for efficient model deployment: 
 - Remote inference enables using lightweight clients with only the necessary functions to perform API calls to edge or cloud deployments.
@@ -38,10 +36,21 @@ OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving mod
 The models used by the server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Repository](./models_repository.md) documentation. Model server works inside [Docker containers](deploying_server.md), on [Bare Metal](deploying_server.md), and in [Kubernetes environment](deploying_server.md).
 Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md) or explore [Model Server features](features.md).
 
+### Key features:
+- **[NEW]** [Python code execution](python_support/reference.md)
+- **[NEW]** [gRPC streaming](streaming_endpoints.md)
+- [MediaPipe graphs serving](mediapipe.md) 
+- Model management - including [model versioning](model_version_policy.md) and [model updates in runtime](online_config_changes.md)
+- [Dynamic model inputs](shape_batch_size_and_layout.md)
+- [Directed Acyclic Graph Scheduler](dag_scheduler.md) along with [custom nodes in DAG pipelines](custom_node_development.md)
+- [Metrics](metrics.md) - metrics compatible with Prometheus standard
+- Support for multiple frameworks, such as TensorFlow, PaddlePaddle and ONNX
+- Support for [AI accelerators](https://docs.openvino.ai/2024/about-openvino/compatibility-and-support/supported-devices.html)
+
 ## Additional Resources
 
 * [Simplified Deployments with OpenVINO™ Model Server and TensorFlow Serving](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Simplified-Deployments-with-OpenVINO-Model-Server-and-TensorFlow/post/1353218) 
 * [Inference Scaling with OpenVINO™ Model Server in Kubernetes and OpenShift Clusters](https://www.intel.com/content/www/us/en/developer/articles/technical/deploy-openvino-in-openshift-and-kubernetes.html) 
-* [Benchmarking results](https://docs.openvino.ai/2023.0/openvino_docs_performance_benchmarks.html)
+* [Benchmarking results](https://docs.openvino.ai/2024/about-openvino/performance-benchmarks.html)
 * [Speed and Scale AI Inference Operations Across Multiple Architectures Demo Recording](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) 
 * [Release Notes](https://github.com/openvinotoolkit/model_server/releases) 

@@ -1,0 +1,6 @@
+git+https://github.com/huggingface/optimum-intel.git
+# Optimum here is needed to download the model
+onnx
+nncf
+openvino
+optimum[diffusers,openvino]

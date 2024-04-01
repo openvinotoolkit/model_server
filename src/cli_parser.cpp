@@ -56,6 +56,14 @@ void CLIParser::parse(int argc, char** argv) {
                 "Number of gRPC servers. Default 1. Increase for multi client, high throughput scenarios",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "GRPC_WORKERS")
+            ("grpc_max_threads",
+                "Maximum number of threads which can be used by the gRPC server. Default value depends on number of CPUs.",
+                cxxopts::value<uint32_t>(),
+                "GRPC_MAX_THREADS")
+            ("grpc_memory_quota",
+                "GRPC server buffer memory quota. Default value set to 2147483648 (2GB).",
+                cxxopts::value<size_t>(),
+                "GRPC_MEMORY_QUOTA")
             ("rest_workers",
                 "Number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
                 cxxopts::value<uint32_t>(),
@@ -72,14 +80,14 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(), "TRACE_PATH")
 #endif
             ("grpc_channel_arguments",
-                "A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000)",
+                "A comma separated list of arguments to be passed to the gRPC server. (e.g. grpc.max_connection_age_ms=2000)",
                 cxxopts::value<std::string>(), "GRPC_CHANNEL_ARGUMENTS")
             ("file_system_poll_wait_seconds",
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
             ("sequence_cleaner_poll_wait_minutes",
-                "Time interval between two consecutive sequence cleanup scans. Default is 5. Zero value disables sequence cleaner.",
+                "Time interval between two consecutive sequence cleanup scans. Default is 5. Zero value disables sequence cleaner. It also sets the schedule for releasing free memory from the heap.",
                 cxxopts::value<uint32_t>()->default_value("5"),
                 "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
             ("custom_node_resources_cleaner_interval_seconds",
@@ -164,11 +172,21 @@ void CLIParser::parse(int argc, char** argv) {
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
+        if (result->unmatched().size()) {
+            std::cerr << "error parsing options - unmatched arguments: ";
+            for (auto& argument : result->unmatched()) {
+                std::cerr << argument << ", ";
+            }
+            std::cerr << std::endl;
+            exit(EX_USAGE);
+        }
+
         if (result->count("version")) {
             std::string project_name(PROJECT_NAME);
             std::string project_version(PROJECT_VERSION);
             std::cout << project_name + " " + project_version << std::endl;
             std::cout << "OpenVINO backend " << OPENVINO_NAME << std::endl;
+            std::cout << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
             exit(EX_OK);
         }
 
@@ -176,7 +194,7 @@ void CLIParser::parse(int argc, char** argv) {
             std::cout << options->help({"", "multi model", "single model"}) << std::endl;
             exit(EX_OK);
         }
-    } catch (const cxxopts::OptionException& e) {
+    } catch (const std::exception& e) {
         std::cerr << "error parsing options: " << e.what() << std::endl;
         exit(EX_USAGE);
     }
@@ -208,6 +226,12 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         serverSettings->restBindAddress = result->operator[]("rest_bind_address").as<std::string>();
 
     serverSettings->grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
+
+    if (result->count("grpc_max_threads"))
+        serverSettings->grpcMaxThreads = result->operator[]("grpc_max_threads").as<uint32_t>();
+
+    if (result->count("grpc_memory_quota"))
+        serverSettings->grpcMemoryQuota = result->operator[]("grpc_memory_quota").as<size_t>();
 
     if (result->count("rest_workers"))
         serverSettings->restWorkers = result->operator[]("rest_workers").as<uint32_t>();
@@ -249,6 +273,9 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         serverSettings->logLevel = result->operator[]("log_level").as<std::string>();
     if (result->count("log_path"))
         serverSettings->logPath = result->operator[]("log_path").as<std::string>();
+    #if (PYTHON_DISABLE == 0)
+        serverSettings->withPython = true;
+    #endif
 
 #ifdef MTR_ENABLED
     if (result->count("trace_path"))

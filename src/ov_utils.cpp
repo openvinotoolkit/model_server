@@ -31,13 +31,14 @@
 
 namespace ovms {
 
-// This creates tensor without data ownership.
-ov::Tensor createSharedTensor(ov::element::Type_t precision, const shape_t& shape, void* data) {
+ov::Tensor createTensorWithNoDataOwnership(ov::element::Type_t precision, const shape_t& shape, void* data) {
+    OV_LOGGER("ov::Tensor(precision, shape, data)");
     auto tensor = ov::Tensor(precision, shape, data);
     return tensor;
 }
 
 Status createSharedTensor(ov::Tensor& destinationTensor, ov::element::Type_t precision, const ov::Shape& shape) {
+    OV_LOGGER("ov::Tensor(precision, shape)");
     destinationTensor = ov::Tensor(precision, shape);
     return StatusCode::OK;
 }
@@ -62,8 +63,17 @@ std::string getTensorMapString(const std::map<std::string, std::shared_ptr<const
 
 Status tensorClone(ov::Tensor& destinationTensor, const ov::Tensor& sourceTensor) {
     OVMS_PROFILE_FUNCTION();
+    if (sourceTensor.get_element_type() == ov::element::Type_t::string) {
+        destinationTensor = ov::Tensor(sourceTensor.get_element_type(), sourceTensor.get_shape());
+        std::string* srcData = sourceTensor.data<std::string>();
+        std::string* destData = destinationTensor.data<std::string>();
+        for (size_t i = 0; i < sourceTensor.get_shape()[0]; i++) {
+            destData[i].assign(srcData[i]);
+        }
+        return StatusCode::OK;
+    }
+    OV_LOGGER("ov::Tensor(ov::element::type, shape)");
     destinationTensor = ov::Tensor(sourceTensor.get_element_type(), sourceTensor.get_shape());
-
     if (destinationTensor.get_byte_size() != sourceTensor.get_byte_size()) {
         SPDLOG_ERROR("tensorClone byte size mismatch destination:{}; source:{}",
             destinationTensor.get_byte_size(),
@@ -75,8 +85,10 @@ Status tensorClone(ov::Tensor& destinationTensor, const ov::Tensor& sourceTensor
 }
 
 std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap) {
+    OV_LOGGER("const auto& [k, v] : ov::RTMap& rtMap");
     for (const auto& [k, v] : rtMap) {
         try {
+            OV_LOGGER("v.as<ov::LayoutAttribute>().value");
             return v.as<ov::LayoutAttribute>().value;
         } catch (ov::Exception& e) {
         }
@@ -88,6 +100,7 @@ static void insertSupportedKeys(std::set<std::string>& aggregatedPluginSupported
     auto prop = ov::supported_properties;
     try {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validating plugin: {}; configuration", pluginName);
+        OV_LOGGER("ov::Core: {}, ieCore->get_property({}, ov::supported_properties)", reinterpret_cast<const void*>(&ieCore), pluginName);
         std::vector<ov::PropertyName> pluginSupportedConfigKeys = ieCore.get_property(pluginName, prop);
         std::set<std::string> pluginSupportedConfigKeysSet(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end());
         aggregatedPluginSupportedConfigKeys.insert(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end());

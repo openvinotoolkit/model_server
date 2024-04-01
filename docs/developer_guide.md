@@ -39,7 +39,17 @@ In-case of problems, see <a href="#debug">Debugging</a>.
    ```
    make docker_build DLDT_PACKAGE_URL=<URL>
    ```
+
    > **Note**: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download)
+
+   `docker_build` target by default builds multiple docker images:
+   - `openvino/model_server:latest` - smallest release image containing only necessary files to run model server on CPU
+   - `openvino/model_server:latest-gpu` - release image containing support for Intel GPU and CPU
+   - `openvino/model_server:latest-nginx-mtls` - release image containing exemplary NGINX MTLS configuration
+   - `openvino/model_server-build:latest` - image with builder environment containing all the tools to build OVMS
+
+   > **Note**: docker_build target accepts the same set of parameters as release_image target described here: [build_from_source.md](./build_from_source.md)
+
 2. Mount the source code in the Docker container :
 	```bash
 	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest 
@@ -47,12 +57,12 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 
 3. In the docker container context compile the source code via :
 	```bash
-	bazel build //src:ovms
+	bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
 	```
 
 4. From the container, run a single unit test :
 	```bash
-	bazel test --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |
@@ -354,10 +364,13 @@ make docker_build MINITRACE=ON
 
 2. Run OVMS with minitrace enabled and `--trace_path` to specify where to save trace JSON file. Since the file is flushed and saved at container shutdown, mount the host directory with write access to persist the file after container stops.
 ```bash
-docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/trace.json 
+mkdir traces
+chmod -R 777 traces
+
+docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/traces/trace.json 
 ```
 
-3. During app exit, the trace info will be saved into `${PWD}/trace.json`.
+3. During app exit, the trace info will be saved into `${PWD}/traces/trace.json`.
 
 4. Use Chrome web browser `chrome://tracing` tool to display the graph, similarly to Option 1.
 

@@ -205,8 +205,9 @@ std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(st
     Mode batchingMode = FIXED;
     std::optional<Dimension> effectiveBatchSize = std::nullopt;
     if (configBatchSize == "auto") {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Batch size auto is deprecated. Use model dynamic shapes instead. Check (https://docs.openvino.ai/2023.3/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model)");
         batchingMode = AUTO;
-    } else if (configBatchSize == "0") {
+    } else if (configBatchSize == "") {
         // do nothing
     } else {
         Dimension dim;
@@ -252,6 +253,11 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
         }
         m = specific.FindMember("versions");
         if (m == specific.MemberEnd()) {
+            SPDLOG_WARN("Model policy is invalid. 'specific' policy should include 'versions' item with a list of numbers as a value");
+            return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
+        }
+        if (!m->value.IsArray()) {
+            SPDLOG_WARN("Model policy is invalid. 'versions' item should have a list of numbers as a value, for example [1,2]");
             return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
         }
         std::vector<model_version_t> versions;
@@ -330,6 +336,8 @@ Status ModelConfig::parsePluginConfig(const rapidjson::Value& node) {
             } else {
                 pluginConfig[it->name.GetString()] = std::to_string(it->value.GetDouble());
             }
+        } else if (it->value.IsBool()) {
+            pluginConfig[it->name.GetString()] = bool(it->value.GetBool());
         } else {
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
@@ -445,6 +453,7 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
 
 Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
     if (str == "auto") {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Shape auto is deprecated. Use model dynamic shapes instead. Check (https://docs.openvino.ai/2023.3/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model)");
         shapeInfo.shapeMode = AUTO;
         return StatusCode::OK;
     }

@@ -26,8 +26,9 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver.h"
-#include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 #include "tensorflow_serving/util/threadpool_executor.h"
 #pragma GCC diagnostic pop
@@ -87,8 +88,8 @@ static const net_http::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::MODEL_VERSION_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::MODEL_VERSION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::MODEL_VERSION_NOT_LOADED_YET, net_http::HTTPStatusCode::SERVICE_UNAV},
+        {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, net_http::HTTPStatusCode::SERVICE_UNAV},
         {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
@@ -109,6 +110,7 @@ static const net_http::HTTPStatusCode http(const ovms::Status& status) {
         // Predict request validation
         {StatusCode::INVALID_NO_OF_INPUTS, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_MISSING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_UNEXPECTED_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_BATCH_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
@@ -158,7 +160,7 @@ public:
     explicit RequestExecutor(int num_threads) :
         executor_(tensorflow::Env::Default(), "httprestserver", num_threads) {}
 
-    void Schedule(std::function<void()> fn) override { executor_.Schedule(fn); }
+    void Schedule(std::function<void()> fn) override { executor_.Schedule(std::move(fn)); }
 
 private:
     tensorflow::serving::ThreadPoolExecutor executor_;
@@ -249,7 +251,7 @@ std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address
     net_http::RequestHandlerOptions handler_options;
     server->RegisterRequestDispatcher(
         [dispatcher](net_http::ServerRequestInterface* req) {
-            return dispatcher->dispatch(req);
+            return dispatcher->dispatch(std::move(req));
         },
         handler_options);
 

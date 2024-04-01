@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "custom_node_output_allocator.hpp"
 
+#include <utility>
+
 #include "../custom_node_interface.h"  // NOLINT
 #include "../logging.hpp"
 
@@ -30,7 +32,7 @@ bool operator==(const CustomNodeTensor& t1, const CustomNodeTensor& t2) {
 }
 CustomNodeOutputAllocator::CustomNodeOutputAllocator(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager) :
     tensor(tensor),
-    nodeLibrary(nodeLibrary),
+    nodeLibrary(std::move(nodeLibrary)),
     customNodeLibraryInternalManager(customNodeLibraryInternalManager) {}
 void* CustomNodeOutputAllocator::allocate(const size_t bytes, const size_t alignment) {
     return (void*)tensor.data;
