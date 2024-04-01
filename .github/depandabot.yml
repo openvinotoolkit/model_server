@@ -1,0 +1,21 @@
+version: 2
+
+updates:
+  - directory: "/"
+    package-ecosystem: "docker"
+    schedule:
+      interval: "daily"
+    labels:
+      - "docker dependencies"
+    # Raise pull requests for version updates
+    # to pip against the `develop` branch
+    target-branch: "release"
+  - directory: "/"
+    package-ecosystem: "docker"
+    schedule:
+      interval: "daily"
+    labels:
+      - "docker dependencies"
+    # Raise pull requests for version updates
+    # to pip against the `develop` branch
+    target-branch: "new_release"
