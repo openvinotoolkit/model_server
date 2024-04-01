@@ -352,7 +352,22 @@ if __name__ == "__main__":
             sys.stdout.write(f" Throughput: {common_results['window_netto_frame_rate']:.2f} FPS \n")
             sys.stdout.write(" Latency: \n")
             sys.stdout.write(f"    Mean: {common_results['window_mean_latency']*1000:.2f} ms\n")
-            sys.stdout.write(f"    Max: {common_results['window_pass_max_latency']*1000:.2f} ms\n")
             sys.stdout.write(f"    stdev: {common_results['window_stdev_latency']*1000:.2f} ms\n")
+
+        if xargs["quantile_list"]:
+            for idx, v in enumerate(xargs["quantile_list"]):
+                # Convert string to float
+                try:
+                    quantile_value = float(v)
+                except ValueError:
+                    # case where the string cannot be converted to a float
+                    sys.stdout.write(f"Invalid quantile value: {v}")
+                    continue
+                # float to percentage
+                q = str(int(quantile_value * 100))
+                p = str("p") + q
+                qv = str("qos_latency_") + str(idx)
+
+                sys.stdout.write(f"    {p} latency: {common_results[qv]*1000:.2f} ms \n")
 
     sys.exit(return_code)
