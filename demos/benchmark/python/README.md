@@ -326,6 +326,29 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
 ...
 ```
 
+## Summarize benchmarking results
+
+Summary of the benchmark results can be viewed with command option ```-ps```
+```
+docker run --network host benchmark_client -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -s 2 3 300 300 -t 20 -ps
+```
+
+Sample ouptut log with results summary
+```
+Client 2.7
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -s 2 3 300 300 -t 20 -ps
+          XI worker: start workload...
+
+### Benchmark Summary ###
+ Request concurrency: 1
+ Throughput: 90.67 FPS 
+ Latency: 
+    Mean: 11.03 ms
+    stdev: 0.81 ms
+    p50: 12.69 ms 
+    p90: 15.24 ms 
+    p95: 15.56 ms
+```
 ## MediaPipe benchmarking
 
 Start OVMS container with `config.json` including mediapipe servable. OVMS should be built with MediaPipe enabled.
