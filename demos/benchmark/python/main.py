@@ -262,6 +262,8 @@ if __name__ == "__main__":
                         help="database metadata configuration. default: None")
     parser.add_argument("--print_all", required=False, action="store_true",
                         help="flag to print all output")
+    parser.add_argument("-ps", "--print_summary", required=False, action="store_true",
+                        help="flag to print results summary")
     parser.add_argument("--print_time", required=False, action="store_true",
                         help="flag to print datetime next to each output line")
     parser.add_argument("--report_warmup", required=False, action="store_true",
@@ -333,7 +335,43 @@ if __name__ == "__main__":
     if xargs["json"]:
         jout = json.dumps(common_results)
         print(f"{BaseClient.json_prefix}###{worker_id}###STATISTICS###{jout}")
+
     if xargs["print_all"]:
         for key, value in common_results.items():
             sys.stdout.write(f"{worker_id}: {key}: {value}\n")
+
+    if xargs["print_summary"]:
+        sys.stdout.write("\n### Benchmark Summary ###\n")
+        if 'submetrics' in common_results:
+            total_clients = common_results["submetrics"]
+        else:
+            total_clients = 1
+
+        sys.stdout.write(f" Request concurrency: {total_clients}\n")
+        if total_clients:
+            sys.stdout.write(f" Throughput: {common_results['window_netto_frame_rate']:.2f} FPS \n")
+            sys.stdout.write(" Latency: \n")
+            sys.stdout.write(f"    Mean: {common_results['window_mean_latency']*1000:.2f} ms\n")
+            sys.stdout.write(f"    stdev: {common_results['window_stdev_latency']*1000:.2f} ms\n")
+
+            base, factor = float(xargs["hist_base"]), float(xargs["hist_factor"])
+            xargs["quantile_list"] = [0.5, 0.9, 0.95]
+
+            common_results.recalculate_quantiles("window_", base, factor, xargs["quantile_list"])
+
+            for idx, v in enumerate(xargs["quantile_list"]):
+                # Convert string to float
+                try:
+                    quantile_value = float(v)
+                except ValueError:
+                    # case where the string cannot be converted to a float
+                    sys.stdout.write(f"Invalid quantile value: {v}")
+                    continue
+                # float to percentage
+                q = str(int(quantile_value * 100))
+                p = str("p") + q
+                qv = str("qos_latency_") + str(idx)
+
+                sys.stdout.write(f"    {p}: {common_results[qv]*1000:.2f} ms \n")
+
     sys.exit(return_code)
