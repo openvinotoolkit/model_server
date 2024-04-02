@@ -183,6 +183,7 @@ class OvmsPythonModel:
         for partial_result in streamer:
             yield serialize_completions(batch_size, partial_result)
         t1.join()
+        token_count[0] -= len(tokens["input_ids"].flatten())
         yield [Tensor("token_count", np.array([token_count[0]], dtype=np.int32))]
         yield [Tensor("end_signal", "".encode())]
         print('end', flush=True)
