@@ -203,7 +203,7 @@ TEST(OpenVINO, SetTensorTest) {
     };
     std::unordered_map<int, std::unordered_map<int, double>> times;
     for (auto tSize : sizeSet) {
-        SPDLOG_INFO("Performing tests for dummy shape (1,{}) ....", tSize);
+        SPDLOG_ERROR("Performing tests for dummy shape (1,{}) ....", tSize);
         auto sizeStart = std::chrono::high_resolution_clock::now();
         ov::element::Type_t dtype = ov::element::Type_t::f32;
         ov::Shape ovShape;
@@ -305,7 +305,7 @@ TEST(OpenVINO, SetTensorTest) {
         stop = std::chrono::high_resolution_clock::now();
         times[CPU_SET][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
         auto sizeStop = std::chrono::high_resolution_clock::now();
-        SPDLOG_INFO("Testing for size: {}, took {} seconds. Next step will take probably x10 longer ...", tSize, std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count()/1000000.0;
+        SPDLOG_ERROR("Testing for size: {}, took {} seconds. Next step will take probably x10 longer ...", tSize, std::chrono::duration_cast<std::chrono::microseconds>(sizeStop - sizeStart).count() / 1000000.0);
     }
     std::cout << std::right;
     for (auto s : {"CPU_COPY", "CPU_SET", "GPU_COPY", "GPU_OCL_COPY", "GPU_SET", "GPU_SET_OVTEN_OCL", "GPU_SET_OCL_OCL"}) {

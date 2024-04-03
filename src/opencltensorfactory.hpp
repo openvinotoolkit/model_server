@@ -16,12 +16,14 @@
 #pragma once
 
 #include <openvino/openvino.hpp>
+
 #include "itensorfactory.hpp"
 #include "logging.hpp"
 namespace ovms {
 
 class OpenCLTensorFactory : public IOVTensorFactory {
     ov::intel_gpu::ocl::ClContext& ovOclContext;
+
 public:
     OpenCLTensorFactory(ov::intel_gpu::ocl::ClContext& ovOclContext) :
         ovOclContext(ovOclContext) {
@@ -32,7 +34,7 @@ public:
      * factory type.
      */
     virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) override {
-            SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER");
         return ovOclContext.create_tensor(type, shape, *reinterpret_cast<const cl::Buffer*>(data));
     }
     virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) override {
@@ -40,4 +42,4 @@ public:
         return ov::Tensor(type, shape);
     }
 };
-}  // namespace
+}  // namespace ovms
