@@ -243,7 +243,7 @@ static Status validateInputContent(const KFSTensorInputProto& proto, const size_
     size_t elementsCount = getElementsCount(proto, precision);
     if (expectedBytes != KFSDataTypeSize(proto.datatype()) * elementsCount) {
         std::stringstream ss;
-        ss << "Expected: " << expectedBytes << " values; Actual: " << elementsCount << " values; input name: " << requestedName;
+        ss << "Expected: " << expectedBytes << " values; Actual: " << KFSDataTypeSize(proto.datatype()) * elementsCount << " values; input name: " << requestedName;
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid value size of tensor proto - {}", request.model_name(), request.model_version(), details);
         return Status(StatusCode::INVALID_VALUE_COUNT, details);
