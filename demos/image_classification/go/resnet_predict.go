@@ -45,7 +45,7 @@ func run_binary_input(servingAddress string, imgPath string) {
 	// Target model specification
 	const MODEL_NAME string = "resnet"
 	const INPUT_NAME string = "map/TensorArrayStack/TensorArrayGatherV3"
-	const OUTPUT_NAME string = "softmax_tensor"
+	const OUTPUT_NAME string = "softmax_tensor:0"
 
 	// Create Predict Request to OVMS
 	predictRequest := &pb.PredictRequest{
@@ -92,7 +92,10 @@ func run_binary_input(servingAddress string, imgPath string) {
 	log.Println("Request sent successfully")
 
 	// Read prediction results
-	responseProto := predictResponse.Outputs[OUTPUT_NAME]
+	responseProto, ok := predictResponse.Outputs[OUTPUT_NAME]
+	if !ok {
+		log.Fatalf("Expected output: %s does not exist in the response", OUTPUT_NAME)
+	}
 	responseContent := responseProto.GetTensorContent()
 
 	// Get details about output shape
@@ -157,7 +160,7 @@ func run_with_conversion(servingAddress string, imgPath string) {
 	// Target model specification
 	const MODEL_NAME string = "resnet"
 	const INPUT_NAME string = "map/TensorArrayStack/TensorArrayGatherV3"
-	const OUTPUT_NAME string = "softmax_tensor"
+	const OUTPUT_NAME string = "softmax_tensor:0"
 
 	// Create Predict Request to OVMS
 	predictRequest := &pb.PredictRequest{
@@ -212,7 +215,10 @@ func run_with_conversion(servingAddress string, imgPath string) {
 	log.Println("Request sent successfully")
 
 	// Read prediction results
-	responseProto := predictResponse.Outputs[OUTPUT_NAME]
+	responseProto, ok := predictResponse.Outputs[OUTPUT_NAME]
+	if !ok {
+		log.Fatalf("Expected output: %s does not exist in the response", OUTPUT_NAME)
+	}
 	responseContent := responseProto.GetTensorContent()
 
 	// Get details about output shape
