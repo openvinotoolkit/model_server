@@ -1010,7 +1010,7 @@ public:
 
 std::shared_ptr<const ovms::TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const ovms::TensorInfo> src, ovms::Precision precision);
 
-template<typename T>
+template <typename T>
 void checkBuffers(const T* expected, const T* actual, size_t bufferSize) {
     EXPECT_EQ(0, std::memcmp(actual, expected, bufferSize))
         << readableError(expected, actual, bufferSize / sizeof(T));

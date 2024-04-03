@@ -45,6 +45,7 @@
 #include "model_metric_reporter.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
+#include "opencltensorfactory.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "prediction_service_utils.hpp"
@@ -55,8 +56,6 @@
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
-
-#include "opencltensorfactory.hpp"
 
 namespace {
 enum : unsigned int {
@@ -714,11 +713,12 @@ Status ModelInstance::loadOVModelUsingCustomLoader() {
     }
     return StatusCode::OK;
 }
-}
+}  // namespace ovms
 //#include <CL/cl.h>
 //#include "openvino/runtime/intel_gpu/properties.hpp"
 //#include <openvino/runtime/intel_gpu/remote_properties.hpp>
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+
 #include "openvino/runtime/remote_tensor.hpp"
 namespace ovms {
 static cl_context getOCLContext() {
@@ -763,9 +763,9 @@ static cl_context getOCLContext() {
 
 void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
     OV_LOGGER("ov::Core: {}, ov::Model: {}, targetDevice: {}, ieCore.compile_model(model, targetDevice, pluginConfig", reinterpret_cast<void*>(&ieCore), reinterpret_cast<void*>(this->model.get()), this->targetDevice);
-    auto ocl_context = getOCLContext(); // TODO use params from config, use device from config
+    auto ocl_context = getOCLContext();  // TODO use params from config, use device from config
     this->ocl_context = ocl_context;
- //   auto ov_context = compiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
+    //   auto ov_context = compiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
     ov::intel_gpu::ocl::ClContext ov_context(ieCore, ocl_context);
     //compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
     compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, ov_context, pluginConfig));
@@ -1302,7 +1302,6 @@ Status ModelInstance::infer(const RequestType* requestProto,
     ov::intel_gpu::ocl::ClContext ovOclContext(this->ieCore, this->ocl_context);
     OpenCLTensorFactory factory(ovOclContext);
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, &factory);
-            SPDLOG_ERROR("ER");
     timer.stop(DESERIALIZE);
     if (!status.ok())
         return status;
