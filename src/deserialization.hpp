@@ -40,6 +40,7 @@
 
 // TODO
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+
 #include "openvino/runtime/remote_tensor.hpp"
 namespace ovms {
 
@@ -248,7 +249,6 @@ public:
         case ovms::Precision::BOOL:
         case ovms::Precision::U1:
         case ovms::Precision::U8: {
-            SPDLOG_ERROR("ER");
             return makeTensor(requestInput, tensorInfo, factory);
         }
         case ovms::Precision::CUSTOM:
@@ -335,7 +335,6 @@ template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const InferenceTensor& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo, IOVTensorFactory* factory = nullptr) {
-            SPDLOG_ERROR("ER");
     return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, factory);
 }
 
@@ -512,9 +511,7 @@ Status deserializePredictRequest(
                 SPDLOG_DEBUG("Request contains binary input: {}", name);
                 return StatusCode::NOT_IMPLEMENTED;
             } else { */
-            SPDLOG_ERROR("ER");
             tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputPtr, tensorInfo, factory);
-            SPDLOG_ERROR("ER");
             if (!tensor) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());

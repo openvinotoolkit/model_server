@@ -6,7 +6,6 @@
 
 #include <CL/cl.h>
 #include <CL/opencl.hpp>
-
 #include <openvino/openvino.hpp>
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
 #include <openvino/runtime/intel_gpu/remote_properties.hpp>
@@ -100,22 +99,22 @@ int main(int argc, char** argv) {
     auto shared_in_blob = remote_context.create_tensor(input->get_element_type(), input->get_shape(), shared_in_buffer);
     auto shared_out_blob = remote_context.create_tensor(output->get_element_type(), output->get_shape(), shared_out_buffer);
     std::vector<float> in(10, 0.1);
-    void *buffer_in = in.data();
+    void* buffer_in = in.data();
     LOG("A");
     // we want to read buffer so we need to eqnueere Read
     cl_command_queue_properties queue_properties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
     cl::Platform platform = cl::Platform(platform_id);
     cl::Device device(device_id);
     auto queue = cl::CommandQueue(cpp_cl_context, device, queue_properties);
-    queue.enqueueWriteBuffer(shared_in_buffer, /*blocking*/true, 0, input_size, buffer_in);
+    queue.enqueueWriteBuffer(shared_in_buffer, /*blocking*/ true, 0, input_size, buffer_in);
     inferRequest.set_tensor(input, shared_in_blob);
     inferRequest.set_tensor(output, shared_out_blob);
     // infer
     inferRequest.infer();
     LOG("A");
     std::vector<float> out(10);
-    void *buffer_out = out.data();
-    queue.enqueueReadBuffer(shared_out_buffer, /*blocking*/true, 0, output_size, buffer_out);
+    void* buffer_out = out.data();
+    queue.enqueueReadBuffer(shared_out_buffer, /*blocking*/ true, 0, output_size, buffer_out);
     LOG("A");
     LOG("A");
     float* val = (float*)buffer_in;
@@ -126,16 +125,16 @@ int main(int argc, char** argv) {
     }
     cout << endl;
     try {
-    LOG("A");
-    LOG("A");
-    val = (float*)buffer_out;
-    LOG("A");
-    std::cout << "out tensor:";
-    for (int i = 0; i < 10; ++i) {
-        std::cout << *(val++) << ", ";
-    }
-    cout << endl;
+        LOG("A");
+        LOG("A");
+        val = (float*)buffer_out;
+        LOG("A");
+        std::cout << "out tensor:";
+        for (int i = 0; i < 10; ++i) {
+            std::cout << *(val++) << ", ";
+        }
+        cout << endl;
     } catch (std::exception& e) {
-            cout << "BLAD:" << e.what() << endl;
+        cout << "BLAD:" << e.what() << endl;
     }
 }
