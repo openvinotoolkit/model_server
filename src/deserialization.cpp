@@ -14,8 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 #include "deserialization.hpp"
-#include "itensorfactory.hpp"
+
 #include "capi_frontend/buffer.hpp"
+#include "itensorfactory.hpp"
 #include "logging.hpp"
 
 namespace ovms {
@@ -57,14 +58,12 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
     }
     OV_LOGGER("ov::Tensor({}, shape, data)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
     if (requestInput.getBuffer()->getBufferType() == OVMS_BUFFERTYPE_CPU) {
-       return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
+        return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
     } else {
         // TODO FIXME check ptr
-            SPDLOG_ERROR("ER");
- //       return factory->create(precision, shape, requestInput.getBuffer()->data());
-            auto t = factory->create(precision, shape, requestInput.getBuffer()->data());
-            SPDLOG_ERROR("ER");
-            return t;
+        //       return factory->create(precision, shape, requestInput.getBuffer()->data());
+        auto t = factory->create(precision, shape, requestInput.getBuffer()->data());
+        return t;
         // TODO instead of context pass in factory of tensors
     }
 }
