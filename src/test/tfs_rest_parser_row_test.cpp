@@ -122,6 +122,16 @@ TEST(TFSRestParserRow, InvalidShape_1D) {
         {"i":[[12.0]]}, {"i":13.0}
     ]})"),
         StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":13.0}, {"i": {"b64": "Wi8VP4wNABwBTCexN6wAAAABJRU5ErkJggg=="}}
+    ]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
+
+    EXPECT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i": {"b64": "Wi8VP4wNABwBTCexN6wAAAABJRU5ErkJggg=="}}, {"i":13.0}
+    ]})"),
+        StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
 }
 
 TEST(TFSRestParserRow, ValidShape_2) {

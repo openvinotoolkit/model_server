@@ -29,6 +29,9 @@ extern const std::string OV_TENSOR_PREFIX;
 extern const std::string OVMS_PY_TENSOR_PREFIX;
 extern const std::string MP_IMAGE_PREFIX;
 
-std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName);
+enum MediaPipeStreamType { INPUT,
+    OUTPUT };
+
+std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName, const MediaPipeStreamType& streamType);
 std::string getStreamName(const std::string& streamFullName);
 }  // namespace ovms
