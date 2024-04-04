@@ -10,12 +10,12 @@ This is a very handy functionality because if allows us to export the model with
 ```bash
 pip install -r requirements.txt
 python3 download_model.py
+rm model/1/fingerprint.pb
 
 tree model
 model
 └── 1
     ├── assets
-    ├── fingerprint.pb
     ├── saved_model.pb
     └── variables
         ├── variables.data-00000-of-00001
@@ -25,7 +25,7 @@ model
 ### Start the OVMS container:
 ```bash
 docker run -d -u $(id -u):$(id -g) -v $(pwd):/workspace -p 8000:8000 openvino/model_server:latest \
---model_path /workspace/model --model_name image_net --rest_port 8000
+--model_path /workspace/model --model_name mobile_net --rest_port 8000
 ```
 
 ## Send request
@@ -41,34 +41,34 @@ Request may be sent also using other APIs (KServ GRPC, TFS). In this sections yo
 ## Expected output
 ```bash
 Start processing:
-        Model name: image_net
-../common/static/images/airliner.jpeg cassified as airliner
-Iteration 0; Processing time: 10.54 ms; speed 94.88 fps
+        Model name: mobile_net
+../common/static/images/airliner.jpeg classified  as airliner
+Iteration 0; Processing time: 31.09 ms; speed 32.16 fps
 
-../common/static/images/arctic-fox.jpeg cassified as Arctic fox
-Iteration 0; Processing time: 4.02 ms; speed 248.57 fps
+../common/static/images/arctic-fox.jpeg classified  as Arctic fox
+Iteration 0; Processing time: 5.27 ms; speed 189.75 fps
 
-../common/static/images/bee.jpeg cassified as bee
-Iteration 0; Processing time: 3.23 ms; speed 309.50 fps
+../common/static/images/bee.jpeg classified  as bee
+Iteration 0; Processing time: 3.02 ms; speed 331.46 fps
 
-../common/static/images/golden_retriever.jpeg cassified as clumber
-Iteration 0; Processing time: 3.83 ms; speed 261.03 fps
+../common/static/images/golden_retriever.jpeg classified  as clumber
+Iteration 0; Processing time: 3.12 ms; speed 320.82 fps
 
-../common/static/images/gorilla.jpeg cassified as gorilla
-Iteration 0; Processing time: 3.24 ms; speed 308.55 fps
+../common/static/images/gorilla.jpeg classified  as gorilla
+Iteration 0; Processing time: 3.04 ms; speed 329.06 fps
 
-../common/static/images/magnetic_compass.jpeg cassified as magnetic compass
-Iteration 0; Processing time: 3.30 ms; speed 303.49 fps
+../common/static/images/magnetic_compass.jpeg classified  as magnetic compass
+Iteration 0; Processing time: 3.10 ms; speed 323.00 fps
 
-../common/static/images/peacock.jpeg cassified as peacock
-Iteration 0; Processing time: 3.36 ms; speed 297.89 fps
+../common/static/images/peacock.jpeg classified  as peacock
+Iteration 0; Processing time: 3.24 ms; speed 308.17 fps
 
-../common/static/images/pelican.jpeg cassified as pelican
-Iteration 0; Processing time: 3.36 ms; speed 297.35 fps
+../common/static/images/pelican.jpeg classified  as pelican
+Iteration 0; Processing time: 3.17 ms; speed 315.36 fps
 
-../common/static/images/snail.jpeg cassified as snail
-Iteration 0; Processing time: 3.13 ms; speed 319.59 fps
+../common/static/images/snail.jpeg classified  as snail
+Iteration 0; Processing time: 3.06 ms; speed 327.33 fps
 
-../common/static/images/zebra.jpeg cassified as zebra
-Iteration 0; Processing time: 4.28 ms; speed 233.86 fps
+../common/static/images/zebra.jpeg classified  as zebra
+Iteration 0; Processing time: 4.19 ms; speed 238.72 fps
 ```

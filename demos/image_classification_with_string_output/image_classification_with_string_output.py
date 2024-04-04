@@ -31,7 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_name',required=False, default='image', help='Specify input tensor name. default: image')
     parser.add_argument('--output_name',required=False, default='label',
                         help='Specify output name. default: label')
-    parser.add_argument('--model_name', default='image_net', help='Define model name, must be same as is in service. default: image_net',
+    parser.add_argument('--model_name', default='mobile_net', help='Define model name, must be same as is in service. default: mobile_net',
                         dest='model_name')
 
     args = vars(parser.parse_args())
@@ -81,8 +81,7 @@ if __name__ == '__main__':
         outputs = []
         outputs.append(httpclient.InferRequestedOutput(output_name, binary_data=True))
         
-        nmpy = np.array(image_data , dtype=np.object_)
-        inputs[0].set_data_from_numpy(nmpy)
+        inputs[0].set_data_from_numpy(np.array(image_data , dtype=np.object_))
         start_time = datetime.datetime.now()
         results = triton_client.infer(model_name=model_name,
                                   inputs=inputs,
@@ -92,7 +91,7 @@ if __name__ == '__main__':
         processing_times = np.append(processing_times,np.array([int(duration)]))
         output = results.as_numpy(output_name)
         nu = np.array(output)
-        print('{} cassified as {}'.format(path, nu[0].decode("utf-8")))
+        print('{} classified  as {}'.format(path, nu[0].decode("utf-8")))
         print('Iteration {}; Processing time: {:.2f} ms; speed {:.2f} fps\n'.format(iteration,round(np.average(duration), 2),
                                                                                       round(1000  / np.average(duration), 2)
                                                                                       ))
