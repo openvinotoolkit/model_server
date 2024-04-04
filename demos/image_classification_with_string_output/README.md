@@ -34,14 +34,14 @@ Use example client to send requests containing images via KServ REST API:
 python3 image_classification_with_string_output.py 
 ```
 Request may be sent also using other APIs (KServ GRPC, TFS). In this sections you can find short code samples how to do this:
-- [TensorFlow Serving API](./clients_tfs.md)
-- [KServe API](./clients_kfs.md)
+- [TensorFlow Serving API](../../docs/clients_tfs.md)
+- [KServe API](../../docs/clients_kfs.md)
 
 
 ## Expected output
-Start processing:
 ```bash
-Model name: image_net
+Start processing:
+        Model name: image_net
 ../common/static/images/airliner.jpeg cassified as airliner
 Iteration 0; Processing time: 10.54 ms; speed 94.88 fps
 
