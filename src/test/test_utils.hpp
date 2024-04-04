@@ -385,7 +385,7 @@ template <>
 inline void prepareKFSInferInputTensor<bool>(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
     const std::vector<bool>& data, bool putBufferInInputTensorContent) {
     // TODO: Implement for putBufferInInputTensorContent == 0
-    if(putBufferInInputTensorContent == 0){
+    if (putBufferInInputTensorContent == 0) {
         throw std::string("Unsupported");
     }
     auto it = request.mutable_inputs()->begin();

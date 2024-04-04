@@ -91,6 +91,7 @@ const std::string RAW_BINARY_FORMAT = "B";
 struct OvmsPyTensor {
 private:
     std::unique_ptr<char[]> ownedDataPtr;
+
 public:
     OvmsPyTensor(const std::string& name, const py::buffer& buffer, const std::optional<std::vector<py::ssize_t>>& shape, const std::optional<std::string>& datatype);
     // Construct object from request contents

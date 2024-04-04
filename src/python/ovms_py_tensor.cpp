@@ -79,21 +79,21 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, const std::vector<py::ssize_
     }
 }
 
-std::unique_ptr<OvmsPyTensor> OvmsPyTensor::createOvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size){
+std::unique_ptr<OvmsPyTensor> OvmsPyTensor::createOvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size) {
     auto tensor = std::make_unique<OvmsPyTensor>(name, shape, datatype, size, false);
     tensor->setData(data, false);
     return tensor;
 }
-std::unique_ptr<OvmsPyTensor> OvmsPyTensor::createOvmsPyTensorWithDataCopy(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size){
+std::unique_ptr<OvmsPyTensor> OvmsPyTensor::createOvmsPyTensorWithDataCopy(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size) {
     auto tensor = std::make_unique<OvmsPyTensor>(name, shape, datatype, size, true);
     tensor->setData(data, true);
     return tensor;
 }
-std::unique_ptr<OvmsPyTensor> OvmsPyTensor::createOvmsPyTensorWithEmptyBuffer(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size){
+std::unique_ptr<OvmsPyTensor> OvmsPyTensor::createOvmsPyTensorWithEmptyBuffer(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size) {
     return std::make_unique<OvmsPyTensor>(name, shape, datatype, size, true);
 }
 
-void OvmsPyTensor::setData(void* data, bool copy){
+void OvmsPyTensor::setData(void* data, bool copy) {
     if (copy) {
         memcpy(this->ownedDataPtr.get(), data, size);
     } else {

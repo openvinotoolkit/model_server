@@ -704,7 +704,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 expectedBytes,
                 outTensor);
             void* data;
-            if(!pythonBackend->getOvmsPyTensorData(outTensor, &data)){
+            if (!pythonBackend->getOvmsPyTensorData(outTensor, &data)) {
                 return Status(StatusCode::INTERNAL_ERROR);
             }
             switch (precision) {
@@ -738,7 +738,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             case ov::element::Type_t::boolean: {
                 COPY_INPUT_VALUE_BY_VALUE(bool, bool);
             }
-            
+
             // the rest not supported by KFS
             case ov::element::Type_t::u1:
             case ov::element::Type_t::u4:
