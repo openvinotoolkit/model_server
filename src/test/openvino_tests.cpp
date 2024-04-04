@@ -170,7 +170,7 @@ TEST(OpenVINO, LoadModelWithPrecreatedContext) {
 
 TEST(OpenVINO, SetTensorTest) {
     size_t tSize = 10;
-    int iterations = 10000;
+    int iterations = 1000;
     std::vector<size_t> sizeSet{10, 10 * 10, 10 * 100, 10 * 1000, 10 * 10000, 10 * 100000, 10 * 1000000};
     // load model
     Core core;
@@ -195,6 +195,8 @@ TEST(OpenVINO, SetTensorTest) {
     enum {
         CPU_COPY,
         CPU_SET,
+        GPU_DIFF_CONTEXT,
+        GPU_CONTEXT_FROM_MODEL,
         GPU_COPY,
         GPU_OCL_COPY,
         GPU_SET,
@@ -229,16 +231,29 @@ TEST(OpenVINO, SetTensorTest) {
         inputByteSize *= sizeof(float);
         outputByteSize *= sizeof(float);
         cl_int err;
+        auto contextFromModel = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
+        cl_context ctxFromModel = contextFromModel.get();
+        cl::Context openCLCppContextFromModel(ctxFromModel);
+        cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
+        cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err);
         std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
         inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
         inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+        inputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+        inputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
         outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
         outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+        outputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+        outputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
         std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
         inputs.emplace_back(remote_context.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
         inputs.emplace_back(remote_context.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
+        inputs.emplace_back(remote_context.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[2]));
+        inputs.emplace_back(remote_context.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[3]));
         outputs.emplace_back(remote_context.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[0]));
         outputs.emplace_back(remote_context.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[1]));
+        outputs.emplace_back(remote_context.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[2]));
+        outputs.emplace_back(remote_context.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[3]));
         std::vector<float> outputData(tSize, 0);
         auto start = std::chrono::high_resolution_clock::now();
         for (auto i = 0; i < iterations; ++i) {
@@ -304,11 +319,27 @@ TEST(OpenVINO, SetTensorTest) {
         }
         stop = std::chrono::high_resolution_clock::now();
         times[CPU_SET][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+        start = std::chrono::high_resolution_clock::now();
+        for (auto i = 0; i < iterations; ++i) {
+            gpuInferRequest.set_tensor(input, inputs[i % 2]);
+            gpuInferRequest.set_tensor(output, outputs[i % 2]);
+            cpuInferRequest.infer();
+        }
+        stop = std::chrono::high_resolution_clock::now();
+        times[GPU_DIFF_CONTEXT][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+        start = std::chrono::high_resolution_clock::now();
+        for (auto i = 0; i < iterations; ++i) {
+            gpuInferRequest.set_tensor(input, inputs[2 + (i % 2)]);
+            gpuInferRequest.set_tensor(output, outputs[2 + (i % 2)]);
+            cpuInferRequest.infer();
+        }
+        stop = std::chrono::high_resolution_clock::now();
+        times[GPU_CONTEXT_FROM_MODEL][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
         auto sizeStop = std::chrono::high_resolution_clock::now();
         SPDLOG_ERROR("Testing for size: {}, took {} seconds. Next step will take probably x10 longer ...", tSize, std::chrono::duration_cast<std::chrono::microseconds>(sizeStop - sizeStart).count() / 1000000.0);
     }
     std::cout << std::right;
-    for (auto s : {"CPU_COPY", "CPU_SET", "GPU_COPY", "GPU_OCL_COPY", "GPU_SET", "GPU_SET_OVTEN_OCL", "GPU_SET_OCL_OCL"}) {
+    for (auto s : {"CPU_COPY", "CPU_SET", "GPU_COPY", "GPU_OCL_COPY", "GPU_SET", "GPU_SET_OVTEN_OCL", "GPU_SET_OCL_OCL", "GPU_DIFF_CONTEXT", "GPU_CONTEXT_FROM_MODEL"}) {
         std::cout << s << "[FPS]"
                   << "\t\t" << s << "[MePS]"
                   << "\t\t";
@@ -316,7 +347,7 @@ TEST(OpenVINO, SetTensorTest) {
     std::cout << std::endl;
     //std::cout << "CPU_COPY\t\t\t\t\t CPU_SET\t\t\t\t\t GPU_COPY\t\t\t\t\tGPU_OCL_COPY\t\t\t\t\tGPU_SET\t\t\t\tGPU_SET_OVTEN_OCL\t\t\t\t\t GPU_SET_OCL_OCL" << std::endl;
     for (auto s : sizeSet) {
-        for (auto t : {CPU_COPY, CPU_SET, GPU_COPY, GPU_OCL_COPY, GPU_SET, GPU_SET_OVTEN_OCL, GPU_SET_OCLTEN_OCL}) {
+        for (auto t : {CPU_COPY, CPU_SET, GPU_COPY, GPU_OCL_COPY, GPU_SET, GPU_SET_OVTEN_OCL, GPU_SET_OCLTEN_OCL, GPU_DIFF_CONTEXT, GPU_CONTEXT_FROM_MODEL}) {
             double fps = iterations / (times[t][s] / 1000.);
             std::cout << "" << fps << " \t ";
             std::cout << "" << fps * s << " \t\t ";
