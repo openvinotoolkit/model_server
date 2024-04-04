@@ -78,3 +78,11 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, const std::vector<py::ssize_
         ptr = this->ownedDataPtr.get();
     }
 }
+
+OvmsPyTensor::OvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copy) : OvmsPyTensor(name, shape, datatype, size, copy){
+    if (copy) {
+        memcpy(this->ownedDataPtr.get(), data, size);
+    } else {
+        ptr = data;
+    }
+}
