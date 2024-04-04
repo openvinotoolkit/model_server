@@ -73,7 +73,7 @@ bool PythonBackend::createOvmsPyTensor(const std::string& name, void* ptr, const
     return false;
 }
 
-bool PythonBackend::createOvmsPyTensor(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype,
+bool PythonBackend::createEmptyOvmsPyTensor(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype,
     py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor) {
     py::gil_scoped_acquire acquire;
     try {
@@ -81,13 +81,13 @@ bool PythonBackend::createOvmsPyTensor(const std::string& name, const std::vecto
         outTensor = std::make_unique<PyObjectWrapper<py::object>>(ovmsPyTensor);
         return true;
     } catch (const pybind11::error_already_set& e) {
-        SPDLOG_DEBUG("PythonBackend::createOvmsPyTensor - Py Error: {}", e.what());
+        SPDLOG_DEBUG("PythonBackend::createEmptyOvmsPyTensor - Py Error: {}", e.what());
         return false;
     } catch (std::exception& e) {
-        SPDLOG_DEBUG("PythonBackend::createOvmsPyTensor - Error: {}", e.what());
+        SPDLOG_DEBUG("PythonBackend::createEmptyOvmsPyTensor - Error: {}", e.what());
         return false;
     } catch (...) {
-        SPDLOG_DEBUG("PythonBackend::createOvmsPyTensor - Unknown Error");
+        SPDLOG_DEBUG("PythonBackend::createEmptyOvmsPyTensor - Unknown Error");
         return false;
     }
     return false;
@@ -97,5 +97,19 @@ void PythonBackend::validateOvmsPyTensor(const py::object& object) const {
     py::gil_scoped_acquire acquire;
     if (!py::isinstance(object, *tensorClass)) {
         throw UnexpectedPythonObjectError(object, tensorClass->attr("__name__").cast<std::string>());
+    }
+}
+
+bool PythonBackend::getOvmsPyTensorData(std::unique_ptr<PyObjectWrapper<py::object>>& outTensor, void** data) {
+    py::gil_scoped_acquire acquire;
+    try {
+        *data = outTensor->getProperty<void*>("ptr");
+        return true;
+    } catch (std::exception& e) {
+        SPDLOG_DEBUG("PythonBackend::getOvmsPyTensorData - Error: {}", e.what());
+        return false;
+    } catch (...) {
+        SPDLOG_DEBUG("PythonBackend::getOvmsPyTensorData - Unknown Error");
+        return false;
     }
 }

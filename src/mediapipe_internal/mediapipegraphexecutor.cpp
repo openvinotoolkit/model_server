@@ -697,14 +697,16 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 return Status(StatusCode::INVALID_CONTENT_SIZE, details);
             }
             OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
-            auto ok = pythonBackend->createOvmsPyTensor(
+            auto ok = pythonBackend->createEmptyOvmsPyTensor(
                 requestedName,
                 shape,
                 requestInputItr->datatype(),
                 expectedBytes,
                 outTensor);
-
-            void* data = outTensor->getProperty<void*>("ptr");
+            void* data;
+            if(!pythonBackend->getOvmsPyTensorData(outTensor, &data)){
+                return Status(StatusCode::INTERNAL_ERROR);
+            }
             switch (precision) {
             case ov::element::Type_t::f32: {
                 COPY_INPUT_VALUE_BY_VALUE(float, fp32);
@@ -736,6 +738,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             case ov::element::Type_t::boolean: {
                 COPY_INPUT_VALUE_BY_VALUE(bool, bool);
             }
+            
             // the rest not supported by KFS
             case ov::element::Type_t::u1:
             case ov::element::Type_t::u4:
