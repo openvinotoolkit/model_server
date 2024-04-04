@@ -93,12 +93,12 @@ private:
     std::unique_ptr<char[]> ownedDataPtr;
 
 public:
+    // Construct object from buffer info. By default shape and datatype are infered from the buffer, but can be set directly if needed.
     OvmsPyTensor(const std::string& name, const py::buffer& buffer, const std::optional<std::vector<py::ssize_t>>& shape, const std::optional<std::string>& datatype);
+    // Construct object with optional empty allocation
+    OvmsPyTensor(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool allocate=true);
     // Construct object from request contents
-    OvmsPyTensor(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool allocate);
-    static std::unique_ptr<OvmsPyTensor> createOvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size);
-    static std::unique_ptr<OvmsPyTensor> createOvmsPyTensorWithDataCopy(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size);
-    static std::unique_ptr<OvmsPyTensor> createOvmsPyTensorWithEmptyBuffer(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size);
+    OvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copy=true);
     std::string name;
     // Can be one of Kserve datatypes (like UINT8, FP32 etc.) or totally custom like numpy (for example "<U83")
     std::string datatype;
@@ -123,7 +123,5 @@ public:
 
     OvmsPyTensor(const OvmsPyTensor& other) = delete;
     OvmsPyTensor() = delete;
-
-    void setData(void* data, bool copy = true);
 };
 }  // namespace ovms
