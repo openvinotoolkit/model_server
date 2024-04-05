@@ -77,7 +77,7 @@ usage: main.py [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
                [--max_value MAX_VALUE] [--min_value MIN_VALUE] [--xrand XRAND]
                [--dump_png] [--step_timeout STEP_TIMEOUT]
                [--metadata_timeout METADATA_TIMEOUT] [-Y DB_ENDPOINT]
-               [-y [DB_METADATA ...]] [--print_all] [--print_time]
+               [-y [DB_METADATA ...]] [--print_all] [-ps PRINT_SUMMARY] [--print_time]
                [--report_warmup] [--certs_dir CERTS_DIR] [-q STATEFUL_LENGTH]
                [--stateful_id STATEFUL_ID] [--stateful_hop STATEFUL_HOP]
                [--sync_interval SYNC_INTERVAL]
@@ -330,24 +330,33 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
 
 Summary of the benchmark results can be viewed with command option ```-ps```
 ```
-docker run --network host benchmark_client -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -s 2 3 300 300 -t 20 -ps
+docker run --network host benchmark_client -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -s 2 3 300 300 -t 20 -u 2 -w 10 -ps
 ```
 
 Sample ouptut log with results summary
+
 ```
 Client 2.7
-NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -s 2 3 300 300 -t 20 -ps
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -s 2 3 300 300 -t 20 -u 2 -w 10 -ps
           XI worker: start workload...
 
-### Benchmark Summary ###
+### Benchmark Parameters ###
+ Model: face-detection-retail-0005
+ Input shape: ['2', '3', '300', '300']
  Request concurrency: 1
- Throughput: 90.67 FPS 
- Latency: 
-    Mean: 11.03 ms
-    stdev: 0.81 ms
-    p50: 12.69 ms 
-    p90: 15.24 ms 
-    p95: 15.56 ms
+ Test Duration (s): Total (t) : 20.00 | Warmup (u): 2.00 | Window (w): 10.00
+
+### Benchmark Summary ###
+ ## General Metrics ##
+ Duration(s): Total: 20.01 | Window: 10.01
+ Batches: Total: 1781 | Window: 891
+
+ ## Latency Metrics (ms) ##
+ Mean: 11.20 | stdev: 0.74 | p50: 12.78 | p90: 15.26 | p95: 15.56
+
+ ## Throughput Metrics (fps) ##
+ Frame Rate (FPS): Brutto : 89.01 | Netto: 89.24
+ Batch Rate (batches/s): Brutto: 89.01 | Netto: 89.24
 ```
 ## MediaPipe benchmarking
 
