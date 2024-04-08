@@ -5,13 +5,13 @@ Description
 
 ### 🧪 Test plan
 
-- [ ] Functionality was tested manually
-- [ ] Unit tests or integration tests are added
-- [ ] Has the documentation been updated to reflect the changes in the functionality.
+- [ ] Functionality tested manually.
+- [ ] Unit tests are added.
+- [ ] The documentation updated.
 
 ### 🏎 Quality check
 
-- [ ] Perform self review before sending out the changes.
+- [ ] Perform self review before.
 - [ ] Data type and buffer overflows checked.
 - [ ] Avoid TOCTOU race conditions.
 
