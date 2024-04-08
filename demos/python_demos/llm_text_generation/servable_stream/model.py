@@ -184,6 +184,6 @@ class OvmsPythonModel:
             yield serialize_completions(batch_size, partial_result)
         t1.join()
         token_count[0] -= len(tokens["input_ids"].flatten())
-        yield [Tensor("token_count", np.array(token_count, dtype=np.int32))]
+        yield [Tensor("token_count", token_count)]
         yield [Tensor("end_signal", "".encode())]
         print('end', flush=True)
