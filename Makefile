@@ -68,9 +68,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= ee2962a50ce8ac0583b5b0d40dd46ff04428c8aa  # 2024.1
-OV_CONTRIB_BRANCH ?= 8a7bf32f2e3e418ebb0b2aed31651342b7d135a0  # 2024.1
-OV_TOKENIZERS_BRANCH ?= 50535e4e79db455913cd8443fd6ddd743fe1814c  # 02.04.2024 master
+OV_SOURCE_BRANCH ?= c26745a5fcf21b5ea0dc1b1f714c928433217445  # 2024.1
+OV_CONTRIB_BRANCH ?= 8f238178616b47fb11fc3df0df99baf9e0df397d  # 2024.1
+OV_TOKENIZERS_BRANCH ?= 01f15a0f3a0b631bdbf2b3b91b8e0b88690545ff  # 04.04.2024 master
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -154,10 +154,10 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   endif
   ifeq ($(BASE_OS_TAG),20.04)
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.1.0.14951.ee2962a50ce_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.1.0.14985.c26745a5fcf_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
 	INSTALL_DRIVER_VERSION ?= "23.22.26516"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.1.0.14951.ee2962a50ce_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.1.0.14985.c26745a5fcf_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -172,7 +172,7 @@ ifeq ($(BASE_OS),redhat)
   endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.1.0.14951.ee2962a50ce_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.1.0.14985.c26745a5fcf_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
