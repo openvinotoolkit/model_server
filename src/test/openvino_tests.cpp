@@ -28,41 +28,40 @@
 
 using namespace ov;
 
-using testing::HasSubstr;
-using testing::Not;
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
-//#include "openvino/runtime/intel_gpu/properties.hpp"
-//#include "openvino/runtime/remote_tensor.hpp"
 
 cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
     cl_int err;
-
-    // Step 1: Querying Platforms
     cl_uint numPlatforms = 0;
     err = clGetPlatformIDs(0, nullptr, &numPlatforms);
     if (err != CL_SUCCESS) {
         std::cerr << "Error getting number of platforms\n";
         throw 1;
     }
+    // extract 1st platform from numPlatforms
     clGetPlatformIDs(1, &platformId, nullptr);
-    // Step 2: Querying Devices
     cl_uint numDevices = 0;
+    // query how many devices there are
     err = clGetDeviceIDs(platformId, CL_DEVICE_TYPE_GPU, 0, nullptr, &numDevices);
     if (err != CL_SUCCESS) {
         std::cerr << "Error getting number of devices\n";
         throw 1;
     }
-    err = clGetDeviceIDs(platformId, CL_DEVICE_TYPE_GPU, 1, &deviceId, nullptr);
+    if (0 == numDevices) {
+        std::cerr << "There is no available devices\n";
+        throw 1;
+    }
+    cl_uint numberOfDevicesInContext = 1;
+    err = clGetDeviceIDs(platformId, CL_DEVICE_TYPE_GPU, numberOfDevicesInContext, &deviceId, nullptr);
     if (err != CL_SUCCESS) {
         std::cerr << "Error getting GPU deviceId\n";
         throw 1;
     }
-    // Step 3: Creating a Context
-    cl_context openCLCContext = clCreateContext(nullptr, 1, &deviceId, nullptr, nullptr, &err);
+    // since we only use 1 device we can use address of deviceId
+    cl_context openCLCContext = clCreateContext(nullptr, numberOfDevicesInContext, &deviceId, nullptr, nullptr, &err);
     if (err != CL_SUCCESS) {
         std::cerr << "Error creating context\n";
         throw 1;
@@ -81,19 +80,13 @@ TEST(OpenVINO, ExtractContextFromModel) {
     outputByteSize *= sizeof(float);
     ov::AnyMap config = {ov::hint::performance_mode(ov::hint::PerformanceMode::THROUGHPUT),
         ov::auto_batch_timeout(0)};
-    ///
     cl_platform_id platformId;
     cl_device_id deviceId;
     auto nonused = get_cl_context(platformId, deviceId);
     auto compiledModel = core.compile_model(model, "GPU", config);
     auto gpu_context = compiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
-    //    auto inferRequest = compiledModel.create_infer_request();
-    //  auto some_context = compiledModel.get_context();
-    // auto gpu_context = some_context.as<ov::intel_gpu::ocl::ClContext>;
     cl_context ctxFromModel = gpu_context.get();
-    // TODO should all models share the same context?
-    // gpu_context.create_tensor() -> when it is deleted?
-    cl::Context openCLCppContext(ctxFromModel);  // Convert cl_context to cl::Context
+    cl::Context openCLCppContext(ctxFromModel);
     cl_int err;
     cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
     cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err);
@@ -104,11 +97,8 @@ TEST(OpenVINO, ExtractContextFromModel) {
     void* inputBufferData = in.data();
     cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
     cl::Device device(deviceId);
-    SPDLOG_ERROR("ER");
-    auto queue = cl::CommandQueue(openCLCppContext, device);  //, oclQueueProperties);
-    SPDLOG_ERROR("ER");
+    auto queue = cl::CommandQueue(openCLCppContext, device);
     queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
-    SPDLOG_ERROR("ER");
     auto inferRequest = compiledModel.create_infer_request();
     inferRequest.set_tensor(input, inputOVOCLBufferTensor);
     inferRequest.set_tensor(output, outputOVOCLBufferTensor);
@@ -140,7 +130,7 @@ TEST(OpenVINO, LoadModelWithPrecreatedContext) {
     auto remote_context = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
     auto compiledModel = core.compile_model(model, remote_context);
     // now we create buffers
-    cl::Context openCLCppContext(openCLCContext);  // Convert cl_context to cl::Context
+    cl::Context openCLCppContext(openCLCContext);
     cl_int err;
     cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
     cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err);
@@ -148,7 +138,6 @@ TEST(OpenVINO, LoadModelWithPrecreatedContext) {
     // wrap in and out buffers into RemoteTensor and set them to infer request
     auto inputOVOCLBufferTensor = remote_context.create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
     auto outputOVOCLBufferTensor = remote_context.create_tensor(output->get_element_type(), output->get_shape(), openCLCppOutputBuffer);
-    SPDLOG_ERROR("ER");
     // we will put data into input buffer
     std::vector<float> in(10, 0.1);
     void* inputBufferData = in.data();
@@ -186,22 +175,19 @@ TEST(OpenVINO, SetTensorTest) {
     cl_platform_id platformId;
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);
-    cl::Context openCLCppContext(openCLCContext);  // Convert cl_context to cl::Context
+    cl::Context openCLCppContext(openCLCContext);
     cl::Device device(deviceId);
     auto remote_context = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
-    // create
-    // reset input/output tensors
-    // copy output if needed
     enum {
-        CPU_COPY,
-        CPU_SET,
-        GPU_DIFF_CONTEXT,
-        GPU_CONTEXT_FROM_MODEL,
-        GPU_COPY,
-        GPU_OCL_COPY,
-        GPU_SET,
-        GPU_SET_OVTEN_OCL,
-        GPU_SET_OCLTEN_OCL
+        CPU_COPY, // regular OVMS scenario
+        CPU_SET, // set output tensors to avoid copy
+        GPU_COPY, // set output tensors to avoid copy
+        GPU_OCL_COPY, // use OCL tensors on input but still
+        GPU_SET, // set regular ov tensors and use gpu for inference
+        GPU_SET_OVTEN_OCL, // set regular ov tensors and use gpu with passed in context for inference
+        GPU_SET_OCLTEN_OCL, // set OCL tensors and use gpu with passed in context for inference
+        GPU_DIFF_CONTEXT, // set OCL tensors and use gpu for inference but model with default OV context
+        GPU_CONTEXT_FROM_MODEL, // set OCL tensors with the default OV context with gpu
     };
     std::unordered_map<int, std::unordered_map<int, double>> times;
     for (auto tSize : sizeSet) {
@@ -214,12 +200,14 @@ TEST(OpenVINO, SetTensorTest) {
         std::map<std::string, ov::PartialShape> inputShapes;
         inputShapes["b"] = ovShape;
         model->reshape(inputShapes);
+        auto compilationSizeStart = std::chrono::high_resolution_clock::now();
         auto oclCompiledModel = core.compile_model(model, remote_context);
         auto oclInferRequest = oclCompiledModel.create_infer_request();
         auto gpuCompiledModel = core.compile_model(model, "GPU");
         auto gpuInferRequest = gpuCompiledModel.create_infer_request();
         auto cpuCompiledModel = core.compile_model(model, "CPU");
         auto cpuInferRequest = cpuCompiledModel.create_infer_request();
+        auto compilationSizeStop = std::chrono::high_resolution_clock::now();
         // prepare data
         std::vector<ov::Tensor> inputOvTensors, outputOvTensors;
         inputOvTensors.emplace_back(dtype, ovShape);
@@ -336,7 +324,9 @@ TEST(OpenVINO, SetTensorTest) {
         stop = std::chrono::high_resolution_clock::now();
         times[GPU_CONTEXT_FROM_MODEL][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
         auto sizeStop = std::chrono::high_resolution_clock::now();
-        SPDLOG_ERROR("Testing for size: {}, took {} seconds. Next step will take probably x10 longer ...", tSize, std::chrono::duration_cast<std::chrono::microseconds>(sizeStop - sizeStart).count() / 1000000.0);
+        auto totalTime = std::chrono::duration_cast<std::chrono::microseconds>(sizeStop - sizeStart).count() / 1000000.0;
+        auto compilationTime = std::chrono::duration_cast<std::chrono::microseconds>(compilationSizeStop - compilationSizeStart).count() / 1000000.0;
+        SPDLOG_ERROR("For size: {:09d} compiling models took {:03.5f} seconds, inferences took {:03.5f} seconds, all took {:03.5f} seconds. Next inferences will take probably ~x10 longer ...", tSize, compilationTime, totalTime - compilationTime, totalTime);
     }
     std::cout << std::right;
     for (auto s : {"CPU_COPY", "CPU_SET", "GPU_COPY", "GPU_OCL_COPY", "GPU_SET", "GPU_SET_OVTEN_OCL", "GPU_SET_OCL_OCL", "GPU_DIFF_CONTEXT", "GPU_CONTEXT_FROM_MODEL"}) {
@@ -345,7 +335,6 @@ TEST(OpenVINO, SetTensorTest) {
                   << "\t\t";
     }
     std::cout << std::endl;
-    //std::cout << "CPU_COPY\t\t\t\t\t CPU_SET\t\t\t\t\t GPU_COPY\t\t\t\t\tGPU_OCL_COPY\t\t\t\t\tGPU_SET\t\t\t\tGPU_SET_OVTEN_OCL\t\t\t\t\t GPU_SET_OCL_OCL" << std::endl;
     for (auto s : sizeSet) {
         for (auto t : {CPU_COPY, CPU_SET, GPU_COPY, GPU_OCL_COPY, GPU_SET, GPU_SET_OVTEN_OCL, GPU_SET_OCLTEN_OCL, GPU_DIFF_CONTEXT, GPU_CONTEXT_FROM_MODEL}) {
             double fps = iterations / (times[t][s] / 1000.);
@@ -357,11 +346,10 @@ TEST(OpenVINO, SetTensorTest) {
 }
 
 TEST(CAPINonCopy, Flow) {
-    // create openCL context
     cl_platform_id platformId;
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);
-    cl::Context openCLCppContext(openCLCContext);  // Convert cl_context to cl::Context
+    cl::Context openCLCppContext(openCLCContext);
     cl::Device device(deviceId);
     cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
     auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties);
