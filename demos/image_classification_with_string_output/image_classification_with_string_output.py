@@ -31,7 +31,8 @@ if __name__ == '__main__':
     parser.add_argument('--input_name',required=False, default='image', help='Specify input tensor name. default: image')
     parser.add_argument('--output_name',required=False, default='label',
                         help='Specify output name. default: label')
-    parser.add_argument('--model_name', default='mobile_net', help='Define model name, must be same as is in service. default: mobile_net',
+    parser.add_argument('--model_name', default='mobile_net', help='Define model name, must be same as in the service. default: mobile_net',
+
                         dest='model_name')
 
     args = vars(parser.parse_args())
