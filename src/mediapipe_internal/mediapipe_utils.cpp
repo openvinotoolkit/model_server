@@ -40,7 +40,7 @@ const std::string MP_IMAGE_PREFIX{"IMAGE"};
 
 const std::string EMPTY_STREAM_NAME{""};
 
-std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName, const MediaPipeStreamType& streamType) {
+std::string streamTypeToString(MediaPipeStreamType streamType) {
     std::string streamTypeStr;
     switch (streamType) {
     case MediaPipeStreamType::INPUT:
@@ -50,6 +50,11 @@ std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::
         streamTypeStr = "output";
         break;
     }
+    return streamTypeStr;
+}
+
+std::pair<std::string, mediapipe_packet_type_enum> getStreamNamePair(const std::string& streamFullName, MediaPipeStreamType streamType) {
+    std::string streamTypeStr = streamTypeToString(streamType);
 
     static std::unordered_map<std::string, mediapipe_packet_type_enum> prefix2enum{
         {KFS_REQUEST_PREFIX, mediapipe_packet_type_enum::KFS_REQUEST},
