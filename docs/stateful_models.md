@@ -12,7 +12,7 @@ A stateful model recognizes dependencies between consecutive inference requests.
 
 ---
 
-**Note** that in the context of the Model Server, a model is considered stateful if it maintains state between **inference requests**. 
+**Note** that in the context of the Model Server, a model is considered stateful if it maintains state between **inference requests**.
 
 Some models might take the whole sequence of data as an input and iterate over the elements of that sequence internally, keeping the state between iterations. Such models are considered stateless since they perform inference on the whole sequence **in just one inference request**.
 
@@ -60,8 +60,8 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -v
 --port 9000 --config_path /models/config.json
 ```
 
- Optionally, you can also set additional parameters specific for stateful models. 
- 
+ Optionally, you can also set additional parameters specific for stateful models.
+
  ### Configuration Options for Stateful Models <a name="stateful_params"></a>
 
 **Model configuration**:
@@ -91,14 +91,14 @@ Stateful model works on consecutive inference requests that are associated with 
 
 Requests to stateful models must contain additional inputs besides the data for prediction:
 - `sequence_id` - which is a 64-bit unsigned integer identifying the sequence (unique in the scope of the model instance). Value 0 is equivalent to not providing this input at all.
-- `sequence_control_input` - which is 32-bit unsigned integer indicating sequence start and end. Accepted values are: 
+- `sequence_control_input` - which is 32-bit unsigned integer indicating sequence start and end. Accepted values are:
    - 0 - no control input (has no effect - equivalent to not providing this input at all)
    - 1 - indicates the beginning of the sequence
    - 2 - indicates the end of the sequence
 
 **Note**: Model server also appends `sequence_id` to every response - the name and format of `sequence_id` output is the same as in `sequence_id` input.
 
-**Both `sequence_id` and `sequence_control_input` shall be provided as tensors with 1 element array (shape:[1]) and appropriate precision.**  
+**Both `sequence_id` and `sequence_control_input` shall be provided as tensors with 1 element array (shape:[1]) and appropriate precision.**
 _See examples for gRPC and HTTP below_.
 
 In order to successfully infer the sequence, perform these actions:
@@ -106,9 +106,9 @@ In order to successfully infer the sequence, perform these actions:
 
    To start the sequence you need to add `sequence_control_input` with the value of 1 to your request's inputs. You can also:
       - add `sequence_id` with the value of your choice or
-      - add `sequence_id` with 0 or do not add `sequence_id` at all - in this case, the Model Server will provide a unique id for the sequence and since it will be appended to the outputs, you will be able to read it and use with the next requests. 
+      - add `sequence_id` with 0 or do not add `sequence_id` at all - in this case, the Model Server will provide a unique id for the sequence and since it will be appended to the outputs, you will be able to read it and use with the next requests.
 
-      If the provided `sequence_id` is already occupied, OVMS will return an [error](#error-codes) to avoid conflicts.
+      If the provided `sequence_id` is already occupied, OVMS will return an [error](#stateful_errors) to avoid conflicts.
 
 2. **Send remaining requests except the last one.**
 
@@ -157,7 +157,7 @@ stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 request = predict_pb2.PredictRequest()
 request.model_spec.name = "stateful_model"
 
-""" 
+"""
 Add inputs with data to infer
 """
 
@@ -206,7 +206,7 @@ sequence_id = response.outputs['sequence_id'].uint64_val[0]
 
 Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api_tfs.md) for reference_). The difference is that requests to stateful models must contain additional inputs with information necessary for proper sequence handling.
 
-`sequence_id` and `sequence_control_input` must be added to HTTP request by adding new `key:value` pair in `inputs` field of JSON body. 
+`sequence_id` and `sequence_control_input` must be added to HTTP request by adding new `key:value` pair in `inputs` field of JSON body.
 
 For both inputs, the value must be a single number in a 1-dimensional array.
 
@@ -225,7 +225,7 @@ sequence_id = 10
 
 inputs = {}
 
-""" 
+"""
 Add inputs with data to infer
 """
 
@@ -279,7 +279,7 @@ When a request is invalid or could not be processed, you can expect following er
 | Sequence with a provided ID does not exist. | NOT_FOUND | 404 NOT FOUND |
 | Sequence with a provided ID already exists.  | ALREADY_EXISTS | 409 CONFLICT |
 | Server received SEQUENCE START request with ID of the sequence that is set for termination, but the last request of that sequence is still being processed. | FAILED_PRECONDITION | 412 PRECONDITION FAILED |
-| Max sequence number has been reached. Could not create a new sequence. | UNAVAILABLE | 503 SERVICE UNAVAILABLE | 
+| Max sequence number has been reached. Could not create a new sequence. | UNAVAILABLE | 503 SERVICE UNAVAILABLE |
 | Sequence ID has not been provided in request inputs. | INVALID_ARGUMENT | 400 BAD REQUEST |
 | Unexpected value of sequence control input. | INVALID_ARGUMENT | 400 BAD REQUEST |
 | Could not find sequence id in expected tensor proto field uint64_val. | INVALID_ARGUMENT | N/A |
@@ -290,14 +290,14 @@ When a request is invalid or could not be processed, you can expect following er
 
 Once started sequence might get dropped for some reason like lost connection etc. In this case model server will not receive SEQUENCE_END signal and will not free sequence resources. To prevent keeping idle sequences indefinitely, the Model Server launches a sequence cleaner thread that periodically scans stateful models and checks if their sequences received any valid inference request recently. If not, such sequences are removed, their resources are freed and their ids can be reused.
 
-Two parameters regulate sequence cleanup. 
-One is `sequence_cleaner_poll_wait_minutes` which holds the value of the time interval between the next scans. If there has been not a single valid request with a particular sequence id between two consecutive checks, the sequence is considered idle and gets deleted. 
+Two parameters regulate sequence cleanup.
+One is `sequence_cleaner_poll_wait_minutes` which holds the value of the time interval between the next scans. If there has been not a single valid request with a particular sequence id between two consecutive checks, the sequence is considered idle and gets deleted.
 
 `sequence_cleaner_poll_wait_minutes` is a server parameter and is common for all models. By default, the time between two consecutive cleaner scans is set to 5 minutes. Setting this value to 0 disables sequence cleaner.
 
 
 Stateful models can either be subject to idle sequence cleanup or not.
-You can set this **per model** with `idle_sequence_cleanup` parameter. 
+You can set this **per model** with `idle_sequence_cleanup` parameter.
 If set to `true` sequence cleaner will check that model. Otherwise, sequence cleaner will skip that model, and its inactive sequences will not get removed. By default, this value is set to `true`.
 
 ## Known Limitations <a name="stateful_limitations"></a>

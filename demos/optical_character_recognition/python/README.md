@@ -4,11 +4,11 @@ This document demonstrates how to create and use an Optical Character Recognitio
 [text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) combined with a custom node implementation.
 
 Using such a pipeline, a single request to OVMS can perform a complex set of operations with a response containing
-recognized characters for all detected text boxes. 
+recognized characters for all detected text boxes.
 
 ## OCR Graph
 
-Below is depicted the graph implementing complete OCR pipelines. 
+Below is depicted the graph implementing complete OCR pipelines.
 
 ![OCR graph](east_ocr.png)
 
@@ -21,8 +21,8 @@ from the original image, resize them to the target resolution and combines into 
 boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/east_ocr)
 - demultiplexer - output from the Custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individual images with batch size 1 each.
 Such smaller requests can be submitted for inference in parallel to the next Model Node. Learn more about the [demultiplexing](../../../docs/demultiplexing.md)
-- Model text-recognition - this model recognizes characters included in the input image. 
-- Response - the output of the whole pipeline combines the recognized `image_texts` with their metadata. 
+- Model text-recognition - this model recognizes characters included in the input image.
+- Response - the output of the whole pipeline combines the recognized `image_texts` with their metadata.
 The metadata are the `text_coordinates` and the `confidence_level` outputs.
 
 ## Preparing the Models
@@ -33,8 +33,8 @@ The original pretrained model for east-resnet50 topology is stored on https://gi
 
 Clone GitHub repository:
 ```bash
-git clone https://github.com/argman/EAST 
-cd EAST 
+git clone https://github.com/argman/EAST
+cd EAST
 ```
 Download and unzip the file east_icdar2015_resnet_v1_50_rbox.zip as instructed in the Readme.md file to EAST folder with the GitHub repository.
 ```bash
@@ -101,7 +101,7 @@ text-recognition model will have the following interface:
 - Input name: `imgs`;  shape: `[1 1 32 128]` ; precision: `FP32`, layout: `N...`
 - Output name: `logits` ; shape: `[16 1 37]` ; precision: `FP32`
 
-## Building the Custom Node "east_ocr" Library 
+## Building the Custom Node "east_ocr" Library
 
 Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_node_interface.h).
 It can use OpenCV libraries included in OVMS or it could use other third party components.
@@ -131,7 +131,7 @@ cp -R EAST/IR/1 OCR/east_fp32/1
 
 ## OVMS Configuration File
 
-The configuration file for running the OCR demo is stored in [config.json](config.json)
+The configuration file for running the OCR demo is stored in [config.json](https://github.com/openvinotoolkit/model_server/blob/main/demos/optical_character_recognition/python/config.json)
 Copy this file along with the model files and the custom node library like presented below:
 ```bash
 cp model_server/demos/optical_character_recognition/python/config.json OCR
@@ -172,7 +172,7 @@ cd model_server/demos/optical_character_recognition/python
 Install python dependencies:
 ```bash
 pip3 install -r requirements.txt
-``` 
+```
 
 Now you can create a directory for text images and run the client:
 ```bash

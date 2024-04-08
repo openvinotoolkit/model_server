@@ -1,6 +1,6 @@
 # LLM text generation with python node {#ovms_demo_python_llm_text_generation}
 
-This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models. 
+This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models.
 The demo explains how to serve MediaPipe Graph using Python libraries. We use Hugging Face Optimum with OpenVINO Runtime as execution engine.
 Two use cases are possible:
 - with unary calls - when the client is sending prompts to the graph and receives a complete generated responses at the end of processing
@@ -21,7 +21,7 @@ export SELECTED_MODEL=tiny-llama-1b-chat
 ```
 
 ## Requirements
-A Linux host with Docker engine installed and sufficient available RAM to load the model and optionally equipped with an Intel GPU card. This demo was tested on a host with Intel® Xeon® Gold 6430 and an Intel® Data Center GPU Flex 170. 
+A Linux host with Docker engine installed and sufficient available RAM to load the model and optionally equipped with an Intel GPU card. This demo was tested on a host with Intel® Xeon® Gold 6430 and an Intel® Data Center GPU Flex 170.
 Running the demo with smaller models like `tiny-llama-1b-chat` requires approximately 4GB of available RAM.
 
 ## Build image
@@ -99,7 +99,7 @@ du -sh tiny*
 
 ### Deploy OpenVINO Model Server with Python Calculator
 
-Mount the `./model` directory with the model.  
+Mount the `./model` directory with the model.
 Mount the `./servable_unary` or `./servable_stream` which contains:
 - `model.py` and `config.py` - python scripts which are required for execution and use [Hugging Face](https://huggingface.co/) utilities with [optimum-intel](https://github.com/huggingface/optimum-intel) acceleration.
 - `config.json` - which defines which servables should be loaded
@@ -157,7 +157,7 @@ python3 client_unary.py --url localhost:9000 \
 ```
 
 Example output:
-```bash
+```
 ==== Prompt: What is the theory of relativity? ====
 The Theory of Relativity by Albert Einstein is considered to be one of the most significant discoveries in modern astronomy and physics. It describes the behavior of space-time in certain situations where there is "special" force between two objects with different masses. The theory was introduced by physicists Hermann Ayrton Minkowski and Ferdinand von Lindemann in the early years of the twentieth century. Einstein developed his own version of the theory that significantly changed our understanding of general relativity and our ability to model the behavior of the universe. This theory is one of the pillars of modern cosmology and has led scientists such as Stephen Hawking to find solutions for some of the biggest mysteries of the universe, including dark matter and dark energy.
 
@@ -173,7 +173,7 @@ Total time 18421 ms
 
 The model server can be deployed with the streaming example by mounting a different workspace location from `./servable_stream`.
 It contains a modified `model.py` script which provides intermediate results instead of returning the full result at the end of the `execute` method.
-The `graph.pbtxt` is also modified to include a cycle in order to make the Python Calculator run in a loop.  
+The `graph.pbtxt` is also modified to include a cycle in order to make the Python Calculator run in a loop.
 
 ```bash
 docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/model \

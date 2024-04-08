@@ -90,7 +90,7 @@ cd model_server/demos/horizontal_text_detection/python
 You can prepare the workspace that contains all the above by just running `make` command.
 Since custom node used in this demo is included in OpenVINO Model Server image you can either use the custom node from the image, or build one.
 
-If you just want to quickly run this demo and use already compiled custom node, run: 
+If you just want to quickly run this demo and use already compiled custom node, run:
 
 ```bash
 make
@@ -214,7 +214,7 @@ docker build ../../common/stream_client/ -t rtsp_client
 
 - Command
 
-```bash
+```
 docker run -v $(pwd):/workspace rtsp_client --help
 usage: client.py [-h] [--grpc_address GRPC_ADDRESS]
                  [--input_stream INPUT_STREAM] [--output_stream OUTPUT_STREAM]

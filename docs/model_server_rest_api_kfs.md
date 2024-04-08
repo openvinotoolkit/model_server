@@ -80,7 +80,7 @@ GET http://${REST_URL}:${REST_PORT}/v2
 
 If successful:
 
-```JSON
+```
 {
   "name" : $string,
   "version" : $string,
@@ -89,7 +89,7 @@ If successful:
 ```
 
 Else:
-```JSON
+```
 {
   "error": $string
 }
@@ -149,7 +149,7 @@ GET http://${REST_URL}:${REST_PORT}/v2/models/${MODEL_NAME}[/versions/${MODEL_VE
 **Response format**
 
 If successful:
-```JSON
+```
 {
   "name" : $string,
   "versions" : [ $string, ... ] #optional,
@@ -160,7 +160,7 @@ If successful:
 ```
 
 where:
-```JSON
+```
 $metadata_tensor =
 {
   "name" : $string,
@@ -170,7 +170,7 @@ $metadata_tensor =
 ```
 
 Else:
-```JSON
+```
 {
   "error": $string
 }
@@ -198,17 +198,17 @@ POST http://${REST_URL}:${REST_PORT}/v2/models/${MODEL_NAME}[/versions/${MODEL_V
 ```
 
 **Request Body Format**
-```JSON
+```
 {
   "id" : $string #optional,
   "parameters" : $parameters #optional,
   "inputs" : [ $request_input, ... ],
   "outputs" : [ $request_output, ... ] #optional
 }
-``` 
+```
 
 where:
-```JSON
+```
 $request_input =
 {
   "name" : $string,
@@ -229,9 +229,9 @@ $request_output =
 
 Besides numerical values, it is possible to pass encoded images using Binary Data extension:
 
-As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. Input is treated as encoded image when datatype is `BYTES` and model or pipeline have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. Every batch the BYTES input needs to be preceded by 4 bytes, litte endian, that contains its size. 
+As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. Input is treated as encoded image when datatype is `BYTES` and model or pipeline have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. Every batch the BYTES input needs to be preceded by 4 bytes, litte endian, that contains its size.
 
-```JSON
+```
 Content-Type: application/octet-stream
 Inference-Header-Content-Length: <xx>
 Content-Length: <xx+9472>
@@ -251,7 +251,7 @@ Content-Length: <xx+9472>
 
 As a raw data - it means it wont be preprocessed by OVMS. To send raw data using Binary Data extension use other data types than `BYTES`.
 
-```JSON
+```
 Content-Type: application/octet-stream
 Inference-Header-Content-Length: <xx>
 Content-Length: <xx+(3 x 1080000)>
@@ -278,7 +278,7 @@ Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) f
 
 If successful:
 
-```JSON
+```
 {
   "model_name" : $string,
   "model_version" : $string #optional,
@@ -289,7 +289,7 @@ If successful:
 ```
 
 where:
-```JSON
+```
 $response_output =
 {
   "name" : $string,
@@ -302,14 +302,14 @@ $response_output =
 
 Else:
 
-```JSON
+```
 {
   "error": <error message string>
 }
 ```
 
 Outputs of response can be send in binary format using Binary Data extension. To force a output to be sent in binary format you need to use "binary_data" : true parameter in request JSON. For example:
-```JSON
+```
 {
   "model_name" : "mymodel",
   "inputs" : [...],
@@ -326,7 +326,7 @@ Outputs of response can be send in binary format using Binary Data extension. To
 
 Assuming the output datatype is FP32 and shape is [ 2, 2 ] response to this request would be:
 
-```JSON
+```
 HTTP/1.1 200 OK
 Content-Type: application/octet-stream
 Inference-Header-Content-Length: <yy>
@@ -348,8 +348,8 @@ Content-Length: <yy+16>
 
 For detailed description of request and response contents see [KServe API docs](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference).
 
-> Note: More efficient way of running inference via REST is sending data in a binary format outside of the JSON object, by using [binary data extension](./binary_input_kfs.md). 
+> Note: More efficient way of running inference via REST is sending data in a binary format outside of the JSON object, by using [binary data extension](./binary_input_kfs.md).
 
-> Note: Using //.. at the end of request URI results in truncated path, which might result in different response than expected. 
+> Note: Using //.. at the end of request URI results in truncated path, which might result in different response than expected.
 
 See also [code samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples) for running inference with KServe API on HTTP Inference endpoint.

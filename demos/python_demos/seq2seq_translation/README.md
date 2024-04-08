@@ -28,7 +28,7 @@ docker run -it --rm -p 9000:9000 -v ${PWD}/servable:/workspace openvino/model_se
 Install client requirements
 
 ```bash
-pip3 install -r requirements.txt 
+pip3 install -r requirements.txt
 ```
 Run the client script
 ```bash
@@ -36,7 +36,7 @@ python3 client.py --url localhost:9000
 ```
 
 Expected output:
-```bash
+```
 Text:
 He never went out without a book under his arm, and he often came back with two.
 

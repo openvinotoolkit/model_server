@@ -18,13 +18,13 @@ When creating a Python-based client application, you can use Triton client libra
 ### Install the Package
 
 ```bash
-pip3 install tritonclient[all] 
+pip3 install tritonclient[all]
 ```
 
 ### Request Health Endpoints
 
 ::::{tab-set}
-:::{tab-item} python [GRPC] 
+:::{tab-item} python [GRPC]
 :sync: python-grpc
 ```{code} python
 import tritonclient.grpc as grpcclient
@@ -113,7 +113,7 @@ public static void main(String[] args) {
     ModelReadyResponse modelReadyResponse = grpc_stub.modelReady(modelReadyRequest.build());
 
     bool modelReady = modelReadyResponse.getReady();
-    
+
     channel.shutdownNow();
 }
 ```
@@ -130,7 +130,7 @@ func main() {
 
     serverReadyRequest := grpc_client.ServerReadyRequest{}
     serverReadyResponse, err := client.ServerReady(ctx, &serverReadyRequest)
-    
+
     modelReadyRequest := grpc_client.ModelReadyRequest{
             Name:    "modelName",
             Version: "modelVersion",
@@ -152,7 +152,7 @@ curl http://localhost:8000/v2/models/model_name/ready
 ### Request Server Metadata
 
 ::::{tab-set}
-:::{tab-item} python [GRPC] 
+:::{tab-item} python [GRPC]
 :sync: python-grpc
 ```{code} python
 import tritonclient.grpc as grpcclient
@@ -214,7 +214,7 @@ public static void main(String[] args) {
 
     ServerMetadataRequest.Builder request = ServerMetadataRequest.newBuilder();
     ServerMetadataResponse response = grpc_stub.serverMetadata(request.build());
-    
+
     channel.shutdownNow();
 }
 ```
@@ -240,7 +240,7 @@ curl http://localhost:8000/v2
 ### Request Model Metadata
 
 ::::{tab-set}
-:::{tab-item} python [GRPC] 
+:::{tab-item} python [GRPC]
 :sync: python-grpc
 ```{code} python
 import tritonclient.grpc as grpcclient
@@ -301,7 +301,7 @@ public static void main(String[] args) {
     request.setName("model_name");
     request.setVersion("model_version");
     ModelMetadataResponse response = grpc_stub.modelMetadata(request.build());
-    
+
     channel.shutdownNow();
 }
 ```
@@ -330,7 +330,7 @@ curl http://localhost:8000/v2/models/model_name
 ### Request Prediction on an Encoded Image
 
 ::::{tab-set}
-:::{tab-item} python [GRPC] 
+:::{tab-item} python [GRPC]
 :sync: python-grpc
 ```{code} python
 import tritonclient.grpc as grpcclient
@@ -476,7 +476,7 @@ public static void main(String[] args) {
     request.addInputs(0, input);
 
     ModelInferResponse response = grpc_stub.modelInfer(request.build());
-    
+
     channel.shutdownNow();
 }
 ```
@@ -491,7 +491,7 @@ ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 bytes, err := ioutil.ReadFile(fileName)
 contents := grpc_client.InferTensorContents{}
-contents.BytesContents = append(contents.BytesContents, bytes) 
+contents.BytesContents = append(contents.BytesContents, bytes)
 
 inferInput := grpc_client.ModelInferRequest_InferInputTensor{
     Name:     "0",
@@ -531,7 +531,7 @@ curl --data-binary "@./request.json" -X POST http://localhost:8000/v2/models/res
 ### Request Prediction on a Numpy Array
 
 ::::{tab-set}
-:::{tab-item} python [GRPC] 
+:::{tab-item} python [GRPC]
 :sync: python-grpc
 ```{code} python
 import numpy as np
@@ -644,7 +644,7 @@ public static void main(String[] args) {
     request.addInputs(0, input);
 
     ModelInferResponse response = grpc_stub.modelInfer(request.build());
-    
+
     channel.shutdownNow();
 }
 ```
@@ -695,7 +695,7 @@ curl -X POST http://localhost:8000/v2/models/model_name/infer
 ### Request Prediction on a string
 
 ::::{tab-set}
-:::{tab-item} python [GRPC] 
+:::{tab-item} python [GRPC]
 :sync: python-grpc
 ```{code} python
 import numpy as np
@@ -733,14 +733,14 @@ namespace tc = triton::client;
 int main(int argc, char** argv) {
     std::unique_ptr<tc::InferenceServerGrpcClient> client;
     tc::InferenceServerGrpcClient::Create(&client, "localhost:9000");
-    
+
     tc::InferInput* input;
     tc::InferInput::Create(&input, "input_name", {1}, "BYTES");
     std::shared_ptr<tc::InferInput> input_ptr;
     input_ptr.reset(input);
     input_ptr->AppendFromString({std::string("<string>")});
     std::vector<tc::InferInput*> inputs = {input_ptr.get()};
-    
+
     tc::InferOptions options("model_name");
     tc::InferResult* results;
     client->Infer(&results, options, inputs);
@@ -760,14 +760,14 @@ namespace tc = triton::client;
 int main(int argc, char** argv) {
     std::unique_ptr<tc::InferenceServerHttpClient> client;
     tc::InferenceServerHttpClient::Create(&client, "localhost:9000");
-    
+
     tc::InferInput* input;
     tc::InferInput::Create(&input, "input_name", {1}, "BYTES");
     std::shared_ptr<tc::InferInput> input_ptr;
     input_ptr.reset(input);
-    input_ptr->AppendFromString({std::string("<string>")});    
+    input_ptr->AppendFromString({std::string("<string>")});
     std::vector<tc::InferInput*> inputs = {input_ptr.get()};
-    
+
     tc::InferOptions options("model_name");
     tc::InferResult* results;
     client->Infer(&results, options, inputs);
@@ -779,7 +779,7 @@ int main(int argc, char** argv) {
 :::
 :::{tab-item} curl
 :sync: curl
-```{code} bash
+```{code}
 curl -X POST http://localhost:9000/v2/models/model_name/infer
 -H 'Content-Type: application/json'
 -d '{"inputs" : [ {"name" : "input_name", "shape" : [ 1 ], "datatype"  : "BYTES", "data" : ["<string>"]} ]}
@@ -790,7 +790,7 @@ curl -X POST http://localhost:9000/v2/models/model_name/infer
 ### Request Streaming Prediction
 
 ::::{tab-set}
-:::{tab-item} python [GRPC] 
+:::{tab-item} python [GRPC]
 :sync: python-grpc
 ```{code} python
 import numpy as np
