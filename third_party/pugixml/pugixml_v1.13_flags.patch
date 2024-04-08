@@ -1,0 +1,13 @@
+diff -urp pugixml.orig/CMakeLists.txt pugixml/CMakeLists.txt
+--- pugixml.orig/CMakeLists.txt	2024-03-28 11:42:34.762099584 -0400
++++ pugixml/CMakeLists.txt	2024-03-28 11:28:37.990715094 -0400
+@@ -91,6 +91,9 @@ if (CMAKE_VERSION VERSION_LESS 3.15)
+   set(msvc-rt-mt-static $<${msvc-rt-mt-static}:-MT>)
+ endif()
+ 
++set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
++set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
++
+ set(versioned-dir $<$<BOOL:${PUGIXML_USE_VERSIONED_LIBDIR}>:/pugixml-${PROJECT_VERSION}>)
+ 
+ set(libs)

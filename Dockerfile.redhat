@@ -47,14 +47,6 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
             yum clean all
 
-# Build and install pugixml
-# hadolint ignore=DL3003
-RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
-    cd pugixml && \
-    cmake -DBUILD_SHARED_LIBS=ON && \
-    make all && \
-    cp -P libpugixml.so* /usr/lib64/
-
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 # hadolint ignore=DL3003
@@ -67,6 +59,15 @@ RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_6
 		install
 
 COPY third_party /ovms/third_party/
+
+# Build and install pugixml
+# hadolint ignore=DL3003
+RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
+    cd pugixml && \
+    patch -p1 < /ovms/third_party/pugixml/pugixml_v1.13_flags.patch && \
+    cmake -DBUILD_SHARED_LIBS=ON && \
+    make all && \
+    cp -P libpugixml.so* /usr/lib64/
 
 ####### Azure SDK
 WORKDIR /azure

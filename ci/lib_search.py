@@ -132,7 +132,8 @@ def check_dir(start_dir):
         "graph_two_inputs_model.pbtxt",
         "test.log",
         "aipc.txt",
-        "internal_tests"
+        "internal_tests",
+        "pugixml_v1.13_flags.patch"
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
