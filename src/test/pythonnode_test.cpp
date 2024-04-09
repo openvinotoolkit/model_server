@@ -1124,7 +1124,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleThreeOut) {
     ASSERT_EQ(res.outputs_size(), 1);
     ASSERT_EQ(res.raw_output_contents_size(), 1);
     ASSERT_EQ(res.mutable_raw_output_contents(0)->size(), (data1.size() + data2.size() + data3.size()) * sizeof(float));
-    std::vector<float> expectedData{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f}; // concatenated vectors data1, data2, data3
+    std::vector<float> expectedData{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f};  // concatenated vectors data1, data2, data3
     ASSERT_EQ(std::memcmp(res.mutable_raw_output_contents(0)->data(), expectedData.data(), res.mutable_raw_output_contents(0)->size()), 0);
 }
 

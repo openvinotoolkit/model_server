@@ -107,7 +107,7 @@ bool PythonBackend::getOvmsPyTensorData(std::unique_ptr<PyObjectWrapper<py::obje
         return true;
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_DEBUG("PythonBackend::getOvmsPyTensorData - Py Error: {}", e.what());
-    return false;
+        return false;
     } catch (std::exception& e) {
         SPDLOG_DEBUG("PythonBackend::getOvmsPyTensorData - Error: {}", e.what());
         return false;
