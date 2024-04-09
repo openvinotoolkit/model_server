@@ -1073,6 +1073,61 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
     checkDummyResponse("output", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
 }
 
+TEST_F(PythonFlowTest, PythonCalculatorTestSingleThreeOut) {
+    ConstructorEnabledModelManager manager{"", getPythonBackend()};
+    std::string testPbtxt = R"(
+    input_stream: "OVMS_PY_TENSOR1:input_a"
+    input_stream: "OVMS_PY_TENSOR2:input_b"
+    input_stream: "OVMS_PY_TENSOR3:input_c"
+    output_stream: "OVMS_PY_TENSOR:output"
+        node {
+            name: "pythonNode"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "INPUT1:input_a"
+            input_stream: "INPUT2:input_b"
+            input_stream: "INPUT3:input_c"
+            output_stream: "OUTPUT:output"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/concatenate_input_arrays.py"
+                }
+            }
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+
+    std::shared_ptr<MediapipeGraphExecutor> pipeline;
+    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_NE(pipeline, nullptr);
+
+    KFSRequest req;
+    KFSResponse res;
+
+    const std::vector<float> data1{1.0f, 20.0f, 3.0f};
+    req.set_model_name("mediaDummy");
+    prepareKFSInferInputTensor(req, "input_a", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, 3}, ovms::Precision::FP32}, data1, true);
+
+    const std::vector<float> data2{1.0f, 20.0f, 3.0f, 1.0f};
+    prepareKFSInferInputTensor(req, "input_b", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, 4}, ovms::Precision::FP32}, data2, true);
+
+    const std::vector<float> data3{1.0f, 20.0f, 3.0f, 1.0f, 20.0f};
+    prepareKFSInferInputTensor(req, "input_c", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, 5}, ovms::Precision::FP32}, data3, true);
+
+    ServableMetricReporter* smr{nullptr};
+    ASSERT_EQ(pipeline->infer(&req, &res, this->defaultExecutionContext, smr), StatusCode::OK);
+
+    ASSERT_EQ(res.model_name(), "mediaDummy");
+    ASSERT_EQ(res.outputs_size(), 1);
+    ASSERT_EQ(res.raw_output_contents_size(), 1);
+    ASSERT_EQ(res.mutable_raw_output_contents(0)->size(), (data1.size() + data2.size() + data3.size()) * sizeof(float));
+    std::vector<float> expectedData{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f}; // concatenated vectors data1, data2, data3
+    ASSERT_EQ(std::memcmp(res.mutable_raw_output_contents(0)->data(), expectedData.data(), res.mutable_raw_output_contents(0)->size()), 0);
+}
+
 TEST_F(PythonFlowTest, PythonCalculatorTestReturnCustomDatatype) {
     ConstructorEnabledModelManager manager{"", getPythonBackend()};
     std::string testPbtxt = R"(

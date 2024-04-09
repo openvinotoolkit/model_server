@@ -1179,6 +1179,7 @@ cc_test(
         "test/mediapipe/python/scripts/bad_execute_read_more_than_one_input.py",
         "test/mediapipe/python/scripts/bad_execute_no_method.py",
         "test/mediapipe/python/scripts/bad_missing_class.py",
+        "test/mediapipe/python/scripts/concatenate_input_arrays.py",
         "test/mediapipe/python/scripts/symmetric_increment.py",
         "test/mediapipe/python/scripts/symmetric_increment_by_2.py",
         "test/mediapipe/python/scripts/single_io_increment.py",

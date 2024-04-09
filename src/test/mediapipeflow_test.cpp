@@ -2830,7 +2830,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     auto start = std::chrono::high_resolution_clock::now();
     while (!isMpReady(servableName) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
-        std::this_thread::sleep_for(std::chrono::microseconds(600));
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     if (!grpcModule) {
@@ -2862,7 +2862,7 @@ std::unordered_map<std::type_index, ovms::Precision> TYPE_TO_OVMS_PRECISION{
     {typeid(void), ovms::Precision::BIN}};
 
 template <typename T>
-std::vector<T> prepareData(size_t elemCount, T value, bool maxValue) {
+std::vector<T> prepareData(size_t elemCount, T value, bool maxValue = true) {
     if (maxValue) {
         return std::vector<T>(elemCount, std::numeric_limits<T>::max());
     }
@@ -3063,7 +3063,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     });
     // prepare data
     TypeParam value = 1.0;
-    std::vector<TypeParam> data = prepareData<TypeParam>(this->elemCount, value, this->maxValue);
+    std::vector<TypeParam> data = prepareData<TypeParam>(this->elemCount, value);
     preparePredictRequest(this->request,
         {{"in", {{1, 10}, TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].first}}},
         data, this->putDataInInputContents);
@@ -3095,7 +3095,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
     });
     // prepare data
     TypeParam value = 1.0;
-    std::vector<TypeParam> data = prepareData<TypeParam>(this->elemCount, value, this->maxValue);
+    std::vector<TypeParam> data = prepareData<TypeParam>(this->elemCount, value);
     preparePredictRequest(this->request,
         {{"in", {{1, 10}, TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].first}}},
         data, this->putDataInInputContents);
@@ -3141,7 +3141,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorCheckExpectedStatusCode) {
     });
     // prepare data
     TypeParam value = 1.0;
-    std::vector<TypeParam> data = prepareData<TypeParam>(this->elemCount, value, this->maxValue);
+    std::vector<TypeParam> data = prepareData<TypeParam>(this->elemCount, value);
     preparePredictRequest(this->request,
         {{"in", {{1, 10}, TYPE_TO_OVMS_PRECISION_TO_STATUS_TF_TENSOR[typeid(TypeParam)].first}}},
         data, this->putDataInInputContents);
@@ -3187,7 +3187,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, MPTensorCheckExpectedStatusCode) {
     });
     // prepare data
     TypeParam value = 1.0;
-    std::vector<TypeParam> data = prepareData<TypeParam>(this->elemCount, value, this->maxValue);
+    std::vector<TypeParam> data = prepareData<TypeParam>(this->elemCount, value);
     preparePredictRequest(this->request,
         {{"in", {{1, 10}, TYPE_TO_OVMS_PRECISION_TO_STATUS_MP_TENSOR[typeid(TypeParam)].first}}},
         data, this->putDataInInputContents);
@@ -3219,7 +3219,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, IMAGETensorCheckExpectedStatusCode) 
     });
     // prepare data
     TypeParam value = 1.0;
-    std::vector<TypeParam> data = prepareData<TypeParam>(this->elemCount, value, this->maxValue);
+    std::vector<TypeParam> data = prepareData<TypeParam>(this->elemCount, value);
     preparePredictRequest(this->request,
         {{"in", {{1, 10}, TYPE_TO_OVMS_PRECISION[typeid(TypeParam)]}}},
         data, this->putDataInInputContents);
