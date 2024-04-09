@@ -380,6 +380,48 @@ void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, 
         }
     }
 }
+
+template <>
+inline void prepareKFSInferInputTensor<bool>(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
+    const std::vector<bool>& data, bool putBufferInInputTensorContent) {
+    // TODO: Implement for putBufferInInputTensorContent == 0
+    if (putBufferInInputTensorContent == 0) {
+        throw std::string("Unsupported");
+    }
+    auto it = request.mutable_inputs()->begin();
+    size_t bufferId = 0;
+    while (it != request.mutable_inputs()->end()) {
+        if (it->name() == name)
+            break;
+        ++it;
+        ++bufferId;
+    }
+    KFSTensorInputProto* tensor;
+    if (it != request.mutable_inputs()->end()) {
+        tensor = &*it;
+    } else {
+        tensor = request.add_inputs();
+    }
+    auto [shape, datatype] = inputInfo;
+    tensor->set_name(name);
+    tensor->set_datatype(datatype);
+    size_t elementsCount = 1;
+    tensor->mutable_shape()->Clear();
+    bool isNegativeShape = false;
+    for (auto const& dim : shape) {
+        tensor->add_shape(dim);
+        if (dim < 0) {
+            isNegativeShape = true;
+        }
+        elementsCount *= dim;
+    }
+    size_t dataSize = isNegativeShape ? data.size() : elementsCount;
+    for (size_t i = 0; i < dataSize; ++i) {
+        auto ptr = tensor->mutable_contents()->mutable_bool_contents()->Add();
+        *ptr = (data.size() ? data[i] : 1);
+    }
+}
+
 template <typename T = float>
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<T>& data = std::vector<float>{}, bool putBufferInInputTensorContent = false) {
@@ -746,6 +788,7 @@ static const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS{
     ovms::Precision::U8,
     ovms::Precision::I8,
     ovms::Precision::U16,
+    ovms::Precision::U32,
     ovms::Precision::I32,
     ovms::Precision::I64,
     // ovms::Precision::BIN,
