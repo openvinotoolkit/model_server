@@ -40,7 +40,7 @@ const std::string MP_IMAGE_PREFIX{"IMAGE"};
 
 const std::string EMPTY_STREAM_NAME{""};
 
-std::string streamTypeToString(MediaPipeStreamType streamType) {
+static std::string streamTypeToString(MediaPipeStreamType streamType) {
     std::string streamTypeStr;
     switch (streamType) {
     case MediaPipeStreamType::INPUT:
