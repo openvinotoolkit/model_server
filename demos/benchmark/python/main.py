@@ -263,7 +263,7 @@ if __name__ == "__main__":
     parser.add_argument("--print_all", required=False, action="store_true",
                         help="flag to print all output")
     parser.add_argument("-ps", "--print_summary", required=False, action="store_true",
-                        help="flag to print results summary")
+                        help="flag to print output summary")
     parser.add_argument("--print_time", required=False, action="store_true",
                         help="flag to print datetime next to each output line")
     parser.add_argument("--report_warmup", required=False, action="store_true",
@@ -356,7 +356,7 @@ if __name__ == "__main__":
         sys.stdout.write(f" Request concurrency: {total_clients}\n")
         if xargs['duration']:
             total_t = float(xargs['duration'])
-            sys.stdout.write(f" Test Duration (s): Total (t) : {total_t:.2f}")
+            sys.stdout.write(f" Test Duration (s): Total (t): {total_t:.2f}")
         if xargs['warmup']:
             warm_up = float(xargs['warmup'])
             sys.stdout.write(f" | Warmup (u): {warm_up:.2f}")
@@ -405,7 +405,7 @@ if __name__ == "__main__":
             # It doesn't take into account any overhead or inefficiencies in the system
             # Netto: Effective or net frame rate, which is the frame rate adjusted for any overhead,
             # delays, or processing inefficiencies in the system
-            sys.stdout.write(f" Frame Rate (FPS): Brutto : {common_results['brutto_frame_rate']:.2f}")
+            sys.stdout.write(f" Frame Rate (FPS): Brutto: {common_results['brutto_frame_rate']:.2f}")
             sys.stdout.write(f" | Netto: {common_results['netto_frame_rate']:.2f} \n")
             sys.stdout.write(f" Batch Rate (batches/s): Brutto: {common_results['brutto_batch_rate']:.2f}")
             sys.stdout.write(f" | Netto: {common_results['netto_batch_rate']:.2f}\n")

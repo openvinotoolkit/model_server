@@ -344,7 +344,7 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
  Model: face-detection-retail-0005
  Input shape: ['2', '3', '300', '300']
  Request concurrency: 1
- Test Duration (s): Total (t) : 20.00 | Warmup (u): 2.00 | Window (w): 10.00
+ Test Duration (s): Total (t): 20.00 | Warmup (u): 2.00 | Window (w): 10.00
 
 ### Benchmark Summary ###
  ## General Metrics ##
@@ -355,7 +355,7 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
  Mean: 11.20 | stdev: 0.74 | p50: 12.78 | p90: 15.26 | p95: 15.56
 
  ## Throughput Metrics (fps) ##
- Frame Rate (FPS): Brutto : 89.01 | Netto: 89.24
+ Frame Rate (FPS): Brutto: 89.01 | Netto: 89.24
  Batch Rate (batches/s): Brutto: 89.01 | Netto: 89.24
 ```
 ## MediaPipe benchmarking
