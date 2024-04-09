@@ -262,10 +262,10 @@ Status MediapipeGraphDefinition::setStreamTypes() {
         return StatusCode::INTERNAL_ERROR;
     }
     for (auto& inputStreamName : this->config.input_stream()) {
-        inputTypes.emplace(getStreamNamePair(inputStreamName));
+        inputTypes.emplace(getStreamNamePair(inputStreamName, MediaPipeStreamType::INPUT));
     }
     for (auto& outputStreamName : this->config.output_stream()) {
-        outputTypes.emplace(getStreamNamePair(outputStreamName));
+        outputTypes.emplace(getStreamNamePair(outputStreamName, MediaPipeStreamType::OUTPUT));
     }
     bool anyInputTfLite = std::any_of(inputTypes.begin(), inputTypes.end(), [](const auto& p) {
         const auto& [k, v] = p;
