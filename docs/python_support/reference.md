@@ -601,9 +601,9 @@ For a graph client can:
 
 Learn more about how [MediaPipe flow works in OpenVINO Model Server](../mediapipe.md)
 
-For inference, if the format of graph input stream is [`OvmsPyTensor`](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#graph-input-and-output-streams), then the data in the KServe request must be encapsulated in either `ModelInferRequest`'s [InferTensorContents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L155) or [raw_input_contents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field. 
+For inference, if the format of graph input stream is [`OvmsPyTensor`](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#graph-input-and-output-streams), then the data in the KServe request must be encapsulated in either `ModelInferRequest`'s [InferTensorContents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L155) or [raw_input_contents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field (even if data in the request has been placed in `InferTensorContents`).
 
-The data passed in request is accessible in `execute` method of the node connected to graph input via `data` attribute of [`pyovms.Tensor`](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#python-tensor) object.
+The data passed in the request is accessible in `execute` method of the node connected to graph input via `data` attribute of [`pyovms.Tensor`](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#python-tensor) object.
 
 Inputs and outputs also define `shape` and `datatype` parameters. Those values are also accessible in `pyovms.Tensor`. However for outputs, you don't provide those values directly to the response. See [datatype considerations](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#datatype-considerations).
 
