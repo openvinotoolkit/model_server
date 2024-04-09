@@ -13,7 +13,7 @@ For simpler use case with single face analysis see [single_face_analysis_pipelin
 
 ## Pipeline Configuration Graph
 
-Below is depicted graph implementing faces analysis pipeline execution. 
+Below is depicted graph implementing faces analysis pipeline execution.
 
 ![Multi Faces Analysis Pipeline Graph](multi_faces_analysis_graph.svg)
 
@@ -25,12 +25,12 @@ boxes according to the configured criteria. All operations on the images employ 
 Such smaller requests can be submitted for inference in parallel to the next Model Nodes. Learn more about the [demultiplexing](../../../docs/demultiplexing.md).
 - Model `age-gender-recognition` - this model recognizes age and gender on given face image
 - Model `emotion-recognition` - this model outputs emotion probability for emotions: neutral, happy, sad, surprised and angry
-- Response - the output of the whole pipeline combines the recognized face images with their metadata: coordinates, age, gender, emotions and detection confidence level. 
+- Response - the output of the whole pipeline combines the recognized face images with their metadata: coordinates, age, gender, emotions and detection confidence level.
 
 ## Prepare workspace to run the demo
 
 To successfully deploy face analysis pipeline you need to have a workspace that contains:
-- [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/face-detection-retail-0004/README.md), 
+- [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/face-detection-retail-0004/README.md),
 [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/age-gender-recognition-retail-0013/README.md) and
 [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/emotions-recognition-retail-0003/README.md) models
 - Custom node for image processing
@@ -45,7 +45,7 @@ cd model_server/demos/multi_faces_analysis_pipeline/python
 You can prepare the workspace that contains all the above by just running `make` command.
 Since custom node used in this demo is included in OpenVINO Model Server image you can either use the custom node from the image, or build one.
 
-If you just want to quickly run this demo and use already compiled custom node, run: 
+If you just want to quickly run this demo and use already compiled custom node, run:
 
 ```bash
 make
@@ -111,11 +111,11 @@ docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server 
 
 ## Requesting the Service
 
-Exemplary client [multi_faces_analysis_pipeline.py](multi_faces_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
+Exemplary client [multi_faces_analysis_pipeline.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/multi_faces_analysis_pipeline/python/multi_faces_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
 
 ```bash
 pip3 install -r requirements.txt
-``` 
+```
 
 Now you can create a directory for text images and run the client:
 ```bash
