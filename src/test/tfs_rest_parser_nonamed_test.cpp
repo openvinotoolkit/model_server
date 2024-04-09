@@ -75,8 +75,8 @@ TEST(TFSRestParserNoNamed, RowOrderBinary_2) {
     EXPECT_EQ(my_input.dtype(), tensorflow::DataType::DT_STRING);
 
     char expectedBinary[] = {57, 28, 52};
-    EXPECT_EQ(my_input.string_val()[0], std::string(&expectedBinary[0], &expectedBinary[0] + 3));
-    EXPECT_EQ(my_input.string_val()[1], std::string(&expectedBinary[0], &expectedBinary[0] + 3));
+    EXPECT_EQ(my_input.string_val()[0], std::string(expectedBinary, expectedBinary + 3));
+    EXPECT_EQ(my_input.string_val()[1], std::string(expectedBinary, expectedBinary + 3));
 }
 
 TEST(TFSRestParserNoNamed, RowOrder_2x1x3x1x0) {
@@ -220,8 +220,8 @@ TEST(TFSRestParserNoNamed, ColumnOrderBinary_2) {
     EXPECT_EQ(my_input.dtype(), tensorflow::DataType::DT_STRING);
 
     char expectedBinary[] = {57, 28, 52};
-    EXPECT_EQ(my_input.string_val()[0], std::string(&expectedBinary[0], &expectedBinary[0] + 3));
-    EXPECT_EQ(my_input.string_val()[1], std::string(&expectedBinary[0], &expectedBinary[0] + 3));
+    EXPECT_EQ(my_input.string_val()[0], std::string(expectedBinary, expectedBinary + 3));
+    EXPECT_EQ(my_input.string_val()[1], std::string(expectedBinary, expectedBinary + 3));
 }
 
 TEST(TFSRestParserNoNamed, ColumnOrder_2x1x3x1x0) {

@@ -118,8 +118,8 @@ TEST(TFSRestParserRow, ParseValid2Inputs) {
                                                               14.0, 15.0, 16.0));
 
     char expectedBinary[] = {57, 28, 52};
-    EXPECT_EQ(inputC.string_val()[0], std::string(&expectedBinary[0], &expectedBinary[0] + 3));
-    EXPECT_EQ(inputC.string_val()[1], std::string(&expectedBinary[0], &expectedBinary[0] + 3));
+    EXPECT_EQ(inputC.string_val()[0], std::string(expectedBinary, expectedBinary + 3));
+    EXPECT_EQ(inputC.string_val()[1], std::string(expectedBinary, expectedBinary + 3));
 }
 
 TEST(TFSRestParserRow, InvalidShape_1D) {
