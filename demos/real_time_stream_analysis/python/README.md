@@ -30,7 +30,7 @@ In the demo will be used two gRPC communication patterns which might be advantag
 ## gRPC streaming with MediaPipe graphs
 
 gRPC stream connection is allowed for served [MediaPipe graphs](). It allows sending asynchronous calls to the endpoint all linked in a single session context. Responses are sent back via a stream and processed in the callback function.
-The helper class [StreamClient](https://github.com/openvinotoolkit/model_server/blob/main/demos/common/stream_client/stream_client.py) provides a mechanism for flow control and tracking the sequence of the requests and responses. In the StreamClient initialization the streaming mode is set via the parameter `streaming_api=True`.
+The helper class [StreamClient](../../common/stream_client/stream_client.py) provides a mechanism for flow control and tracking the sequence of the requests and responses. In the StreamClient initialization the streaming mode is set via the parameter `streaming_api=True`.
 
 Using the streaming API has the following advantages:
 - good performance thanks to asynchronous calls and sharing the graph execution for multiple calls
@@ -39,7 +39,7 @@ Using the streaming API has the following advantages:
 
 ### Preparing the model server for gRPC streaming with a Holistic graph
 
-The [holistic graph](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/holistic_tracking/holistic_tracking.pbtxt) is expecting and IMAGE object on the input and returns an IMAGE on the output.
+The [holistic graph](../../mediapipe/holistic_tracking/holistic_tracking.pbtxt) is expecting and IMAGE object on the input and returns an IMAGE on the output.
 As such it doesn't require any preprocessing and postprocessing. In this demo the returned stream will be just visualized or sent to the target sink.
 
 The model server with the holistic use case can be deployed with the following steps:
@@ -49,7 +49,7 @@ cd model_server/demos/mediapipe/holistic_tracking
 ./prepare_server.sh
 docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
 ```
-[Check more info about this use case](../../mediapipe/holistic_tracking/README.md)
+[Check more info about this use case](../../mediapipe/holistic_tracking/)
 
 > **Note** All the graphs with an image on input and output can be applied here without any changes on the client application.
 
@@ -69,7 +69,6 @@ docker build ../../common/stream_client/ -t rtsp_client
 ```
 
 Client parameters:
-
 ```
 python3 client.py --help
 usage: client.py [-h] [--grpc_address GRPC_ADDRESS]
@@ -156,7 +155,7 @@ The helper class `StreamClient` supports using unary gRPC calls. In that case it
 It sends the frames to the model server asynchronously but each of them is stateless and each request can be processed independently.
 The key advantage of that mode is easier load balancing and scalability, because each request could be routed to a different instance of the model server or a different compute node.
 
-Such use case with the unary calls with a horizontal text analysis can be followed based on [this document](../../horizontal_text_detection/python/README.md).
+Such use case with the unary calls with a horizontal text analysis can be followed based on [this document](../../horizontal_text_detection/python/).
 
 
 > **Note** Depending on the output format, there might be needed a custom postprocessing function implementation.

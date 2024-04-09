@@ -1,6 +1,6 @@
 # Quickstart Guide {#ovms_docs_quick_start_guide}
 
-OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2024/documentation/openvino-ir-format/operation-sets.html)
+OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2024/documentation/openvino-ir-format/operation-sets.html) 
 , [ONNX](https://onnx.ai/), [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) or [TensorFlow](https://www.tensorflow.org/) format. You can get them by:
 
 - downloading models from [Open Model Zoo](https://storage.openvinotoolkit.org/repositories/open_model_zoo/)
@@ -24,12 +24,12 @@ To quickly start using OpenVINO™ Model Server follow these steps:
 
 ### Step 1: Prepare Docker
 
-[Install Docker Engine](https://docs.docker.com/engine/install/), including its [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/), on your development system.
+[Install Docker Engine](https://docs.docker.com/engine/install/), including its [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/), on your development system. 
 To verify installation, test it using the following command. If it displays a test image and a message, it is ready.
 
 ``` bash
 $ docker run hello-world
-```
+``` 
 
 ### Step 2: Download the Model Server
 
@@ -49,7 +49,7 @@ wget https://storage.googleapis.com/tfhub-modules/tensorflow/faster_rcnn/resnet5
 tar xzf 1.tar.gz -C model/1
 ```
 
-OpenVINO Model Server expects a particular folder structure for models - in this case `model` directory has the following content:
+OpenVINO Model Server expects a particular folder structure for models - in this case `model` directory has the following content: 
 ```bash
 model
 └── 1
@@ -59,11 +59,11 @@ model
         └── variables.index
 ```
 
-Sub-folder `1` indicates the version of the model. If you want to upgrade the model, other versions can be added in separate subfolders (2,3...).
+Sub-folder `1` indicates the version of the model. If you want to upgrade the model, other versions can be added in separate subfolders (2,3...). 
 For more information about the directory structure and how to deploy multiple models at a time, check out the following sections:
 - [Preparing models](models_repository.md)
 - [Serving models](starting_server.md)
-- [Serving multiple model versions](model_version_policy.md)
+- [Serving multiple model versions](model_version_policy.md) 
 
 ### Step 4: Start the Model Server Container
 
@@ -107,12 +107,12 @@ python3 object_detection.py --image coco_bike.jpg --output output.jpg --service_
 
 ### Step 8: Review the Results
 
-In the current folder, you can find files containing inference results.
+In the current folder, you can find files containing inference results. 
 In our case, it will be a modified input image with bounding boxes indicating detected objects and their labels.
 
 ![Inference results](quickstart_result.jpeg)
 
-> **Note**: Similar steps can be performed with other model formats. Check the [ONNX use case example](../demos/using_onnx_model/python/README.md),
-[TensorFlow classification model demo](../demos/image_classification_using_tf_model/python/README.md) or [PaddlePaddle model demo](../demos/segmentation_using_paddlepaddle_model/python/README.md).
+> **Note**: Similar steps can be performed with other model formats. Check the [ONNX use case example](../demos/using_onnx_model/python/README.md), 
+[TensorFlow classification model demo](../demos/image_classification_using_tf_model/python/README.md ) or [PaddlePaddle model demo](../demos/segmentation_using_paddlepaddle_model/python/README.md).
 
 Congratulations, you have completed the QuickStart guide. Try other Model Server [demos](../demos/README.md) or explore more [features](features.md) to create your application.

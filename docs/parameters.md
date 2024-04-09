@@ -18,7 +18,7 @@
 | `"idle_sequence_cleanup"` | `bool` | If set to true, model will be subject to periodic sequence cleaner scans.  See [idle sequence cleanup](stateful_models.md). |
 | `"max_sequence_number"` | `uint32` | Determines how many sequences can be handled concurrently by a model instance. |
 | `"low_latency_transformation"` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvino.ai/2024/openvino-workflow/running-inference/stateful-models/obtaining-stateful-openvino-model.html#lowlatency2-transformation) on model load. |
-| `"metrics_enable"` | `bool` | Flag enabling [metrics](https://docs.openvino.ai/2024/ovms_docs_metrics.html) endpoint on rest_port. |
+| `"metrics_enable"` | `bool` | Flag enabling [metrics](https://docs.openvino.ai/2024/ovms_docs_metrics.html) endpoint on rest_port. |    
 | `"metrics_list"` | `string` | Comma separated list of [metrics](https://docs.openvino.ai/2024/ovms_docs_metrics.html). If unset, only default metrics will be enabled.|
 
 
@@ -31,7 +31,7 @@
 
 ## Server configuration options
 
-Configuration options for the server are defined only via command-line options and determine configuration common for all served models.
+Configuration options for the server are defined only via command-line options and determine configuration common for all served models. 
 
 | Option  | Value format  | Description  |
 |---|---|---|
