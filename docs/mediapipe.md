@@ -12,14 +12,14 @@ MediaPipe is an open-source framework for building pipelines to perform inferenc
 
 Thanks to the integration between MediaPipe and OpenVINO Model Server, the graphs can be exposed over the network and the complete load can be delegated to a remote host or a microservice.
 We support the following scenarios:
-- stateless execution via unary to unary gRPC calls 
+- stateless execution via unary to unary gRPC calls
 - stateful graph execution via [gRPC streaming sessions](./streaming_endpoints.md).
 
 With the introduction of OpenVINO calculator it is possible to optimize inference execution in the OpenVINO Runtime backend. This calculator can be applied both in the graphs deployed inside the Model Server but also in the standalone applications using the MediaPipe framework.
 
 ![mp_graph_modes](./mp_graph_modes.png)
 
-Check [our MediaPipe github fork](https://github.com/openvinotoolkit/mediapipe) to learn how to use the OpenVINO calculator inside standalone MediaPipe application. 
+Check [our MediaPipe github fork](https://github.com/openvinotoolkit/mediapipe) to learn how to use the OpenVINO calculator inside standalone MediaPipe application.
 
 This guide gives information about:
 
@@ -100,11 +100,11 @@ Note that with the gRPC stream connection, only the first request in the stream 
 client.async_stream_infer(
    model_name="model_name",
    inputs=[infer_input],
-   parameters={'SIDE_PACKET_NAME': 10}) 
+   parameters={'SIDE_PACKET_NAME': 10})
 ```
 
 ### List of default calculators
-Beside OpenVINO inference calculators, model server public docker image also includes all the calculators used in the enabled demos. 
+Beside OpenVINO inference calculators, model server public docker image also includes all the calculators used in the enabled demos.
 The list of all included calculators, subgraphs, input/output stream handler is reported in the model server is started with extra parameter `--log_level TRACE`.
 
 ### CPU and GPU execution
@@ -131,7 +131,7 @@ mediapipe_graph_name/
 └── subconfig.json
 ```
 
-The `graph.pbtxt` should include the definition of the mediapipe graph. 
+The `graph.pbtxt` should include the definition of the mediapipe graph.
 The `subconfig.json` is an extension to the main model server `config.json` configuration file. The subconfig should include the definition of the models used in the graph nodes. They will be loaded during the model server initialization and ready to use when the graph starts executing.
 Included OpenVINO inference session calculator should include the reference to the model name as configured in `subconfig.json`.
 Here is example of the `subconfig.json`:
@@ -149,10 +149,10 @@ Here is example of the `subconfig.json`:
 
 
 ### Starting OpenVINO Model Server with Mediapipe servables
-MediaPipe servables configuration is to be placed in the same json file like the 
+MediaPipe servables configuration is to be placed in the same json file like the
 [models config file](starting_server.md).
 While models are defined in section `model_config_list`, graphs are configured in
-the `mediapipe_config_list` section. 
+the `mediapipe_config_list` section.
 
 When the MediaPipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is very easy. Just a `config.json` needs to be prepared with a list of all the graphs to be deployed:
 ```json
@@ -202,18 +202,18 @@ Currently the graph tracing on the model server side is not supported. If you wo
 While you implemented and deployed the graph you have several options to test the performance.
 To validate the throughput for unary requests you can use the [benchmark client](../demos/benchmark/python#mediapipe-benchmarking).
 
-For streaming gRPC connections, there is available [rtps_client](../demos/mediapipe/holistic_tracking#rtsp-client).
+For streaming gRPC connections, there is available [rtsp_client](../demos/real_time_stream_analysis/python/README.md).
 It can generate the load to gRPC stream and the mediapipe graph based on the content from RTSP video stream, MPG4 file or from the local camera.
 
 ## Using MediaPipe graphs from the remote client <a name="client"></a>
 
-MediaPipe graphs can use the same gRPC KServe Inference API both for the unary calls and the streaming. 
-The same client libraries with KServe API support can be used in both cases. The client code for the unary and streaming is different. 
+MediaPipe graphs can use the same gRPC KServe Inference API both for the unary calls and the streaming.
+The same client libraries with KServe API support can be used in both cases. The client code for the unary and streaming is different.
 Check the [code snippets](https://docs.openvino.ai/2024/ovms_docs_clients_kfs.html)
 
 Review also the information about the [gRPC streaming feature](./streaming_endpoints.md)
 
-Graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_kfs.md), [REST Model Status](model_server_rest_api_kfs.md) 
+Graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_kfs.md), [REST Model Status](model_server_rest_api_kfs.md)
 and [GetModelMetadata](model_server_grpc_api_kfs.md) and [REST Model Metadata](model_server_rest_api_kfs.md).
 
 The difference in using the MediaPipe graphs and individual models is in version management. In all calls to the MediaPipe graphs,
@@ -223,8 +223,8 @@ the version parameter is ignored. MediaPipe graphs are not versioned. Though, th
 MediaPipe graphs can include only the calculators built-in the model server image.
 If you want to add your own mediapipe calculator to OpenVINO Model Server functionality you need to add it as a dependency and rebuild the OpenVINO Model Server binary.
 
-If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel [WORKSPACE](../WORKSPACE) file.
-Then you need to add the calculator target as a bazel dependency to the [src/BUILD](../src/BUILD) file. This should be done for:
+If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel [WORKSPACE](https://github.com/openvinotoolkit/model_server/blob/releases/2024/0/WORKSPACE) file.
+Then you need to add the calculator target as a bazel dependency to the [src/BUILD](https://github.com/openvinotoolkit/model_server/blob/releases/2024/0/src/BUILD) file. This should be done for:
 
 ```
 cc_library(
@@ -250,11 +250,11 @@ in the conditions:default section of the deps property:
 
 ## MediaPipe Graphs Examples <a name="graphs-examples"></a>
 
-[Holistic analysis](../demos/mediapipe/holistic_tracking)
+[Holistic analysis](../demos/mediapipe/holistic_tracking/README.md)
 
 [Image classification](../demos/mediapipe/image_classification/README.md)
 
-[Object detection](../demos/mediapipe/object_detection)
+[Object detection](../demos/mediapipe/object_detection/README.md)
 
 [Multi model](../demos/mediapipe/multi_model_graph/README.md)
 
@@ -267,7 +267,7 @@ in the conditions:default section of the deps property:
 
 - Binary inputs are not supported for MediaPipe graphs for the type IMAGE and OVTENSOR.
 
-- Updates in subconfig files and mediapipe graph files do not trigger model server config reloads. The reload of the full config, including subconfig and graphs, can be initiated by an updated in the main config json file or using the REST API `config/reload` endpoint. 
+- Updates in subconfig files and mediapipe graph files do not trigger model server config reloads. The reload of the full config, including subconfig and graphs, can be initiated by an updated in the main config json file or using the REST API `config/reload` endpoint.
 
 
 ## Known issues <a name="known-issues"></a>
