@@ -2,10 +2,10 @@
 ## Overview
 
 This demo demonstrates how to write an application running AI analysis using OpenVINO Model Server.
-In the video analysis we can deal with various form of the source content. Here, you will see how to 
+In the video analysis we can deal with various form of the source content. Here, you will see how to
 take the source of the video from a local USB camera, saved encoded video file and an encoded video stream.
 
-The client application is expected to read the video source and send for the analysis every frame to the OpenVINO Model Server via gRPC connection. The analysis can be fully delegated to the model server endpoint with the 
+The client application is expected to read the video source and send for the analysis every frame to the OpenVINO Model Server via gRPC connection. The analysis can be fully delegated to the model server endpoint with the
 complete processing pipeline arranged via a [MediaPipe graph](../../../docs/mediapipe.md) or [DAG](../../../docs/dag_scheduler.md). The remote analysis can be also reduced just to inference execution but in such case the video frame preprocessing and the postprocessing of the results must be implemented on the client side.
 
 In this demo, reading the video content from a local USB camera and encoded video file is straightforward using OpenCV library. The use case with encoded network stream might require more explanation.
@@ -29,12 +29,12 @@ In the demo will be used two gRPC communication patterns which might be advantag
 
 ## gRPC streaming with MediaPipe graphs
 
-gRPC stream connection is allowed for served [MediaPipe graphs](). It allows sending asynchronous calls to the endpoint all linked in a single session context. Responses are sent back via a stream and processed in the callback function.
-The helper class [StreamClient](../../common/stream_client/stream_client.py) provides a mechanism for flow control and tracking the sequence of the requests and responses. In the StreamClient initialization the streaming mode is set via the parameter `streaming_api=True`.
+gRPC stream connection is allowed for served [MediaPipe graphs](../../../docs/mediapipe.md). It allows sending asynchronous calls to the endpoint all linked in a single session context. Responses are sent back via a stream and processed in the callback function.
+The helper class [StreamClient](https://github.com/openvinotoolkit/model_server/blob/releases/2024/0/demos/common/stream_client/stream_client.py) provides a mechanism for flow control and tracking the sequence of the requests and responses. In the StreamClient initialization the streaming mode is set via the parameter `streaming_api=True`.
 
 Using the streaming API has the following advantages:
 - good performance thanks to asynchronous calls and sharing the graph execution for multiple calls
-- support for stateful pipelines like object tracking when the response is dependent on the sequence of requests 
+- support for stateful pipelines like object tracking when the response is dependent on the sequence of requests
 
 
 ### Preparing the model server for gRPC streaming with a Holistic graph
@@ -66,7 +66,7 @@ For the use case with RTSP client, install also FFMPEG component on the host.
 Alternatively build a docker image with the client with the following command:
 ```bash
 docker build ../../common/stream_client/ -t rtsp_client
-``` 
+```
 
 Client parameters:
 ```bash
@@ -136,7 +136,7 @@ ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localho
 ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
 ```
 
-While the RTSP stream is active, run the client to read it and send the output stream 
+While the RTSP stream is active, run the client to read it and send the output stream
 ```bash
 python3 client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
 ```
