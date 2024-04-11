@@ -29,7 +29,7 @@ In the demo will be used two gRPC communication patterns which might be advantag
 
 ## gRPC streaming with MediaPipe graphs
 
-gRPC stream connection is allowed for served [MediaPipe graphs](). It allows sending asynchronous calls to the endpoint all linked in a single session context. Responses are sent back via a stream and processed in the callback function.
+gRPC stream connection is allowed for served [MediaPipe graphs](../../../docs/mediapipe.md). It allows sending asynchronous calls to the endpoint all linked in a single session context. Responses are sent back via a stream and processed in the callback function.
 The helper class [StreamClient](https://github.com/openvinotoolkit/model_server/blob/main/demos/common/stream_client/stream_client.py) provides a mechanism for flow control and tracking the sequence of the requests and responses. In the StreamClient initialization the streaming mode is set via the parameter `streaming_api=True`.
 
 Using the streaming API has the following advantages:
