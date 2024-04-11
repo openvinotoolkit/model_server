@@ -165,6 +165,7 @@ TEST(OpenVINO, SetTensorTest) {
     // load model
     Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
+    const std::string inputName{"b"};
     auto input = model->get_parameters().at(0);
     auto output = model->get_results().at(0);
     auto inputByteSize = ov::shape_size(input->get_shape());
@@ -172,26 +173,19 @@ TEST(OpenVINO, SetTensorTest) {
     // we need byte size not no of elements
     inputByteSize *= sizeof(float);
     outputByteSize *= sizeof(float);
-
-    cl_platform_id platformId;
-    cl_device_id deviceId;
-    cl_context openCLCContext = get_cl_context(platformId, deviceId);
-    cl_context openCLCContext2 = get_cl_context(platformId, deviceId);
-    cl::Context openCLCppContext(openCLCContext);
-    cl::Device device(deviceId);
-    auto remote_context = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
-    auto remote_context2 = ov::intel_gpu::ocl::ClContext(core, openCLCContext2, 0);
     enum {
+        // DEV_CONTEXT_SCENARIO
         CPU_COPY, // regular OVMS scenario
         CPU_SET, // set output tensors to avoid copy
-        GPU_COPY, // set output tensors to avoid copy
-        GPU_OCL_COPY, // use OCL tensors on input but still
-        GPU_OCL_DIFF_CONTEXT_INPUT, // use OCL tensors on input but use different context wrapper
-        GPU_SET, // set regular ov tensors and use gpu for inference
-        GPU_SET_OVTEN_OCL, // set regular ov tensors and use gpu with passed in context for inference
-        GPU_SET_OCLTEN_OCL, // set OCL tensors and use gpu with passed in context for inference
-        GPU_DIFF_CONTEXT, // set OCL tensors and use gpu for inference but model with default OV context
-        GPU_CONTEXT_FROM_MODEL, // set OCL tensors with the default OV context with gpu
+        GPU_OV_COPY_OV, // regular GPU OVMS scenario
+        GPU_OV_SET_OV, // set regular ov tensors and use gpu for inference
+        GPU_OCL_COPY, // model loadded with OCL use OV tensors on input and still copy output
+        GPU_OCL_SET_OV, // set regular ov tensors and use gpu with passed in context for inference
+        GPU_OCL_SET_OCL_IN_AND_OV_OUT, // set ocl tensor on input and  ov tensors on output and use gpu with passed in context for inference
+        GPU_OCL_SET_OCL, // set OCL tensors and use gpu with passed in context for inference
+        GPU_OCL_DIFF_CONTEXT_INPUT_COPY, // use OCL tensors on input but use different context
+        GPU_OV_SET_OCL_DIFF_CONTEXT, // set OCL tensors and use gpu for inference but model with default OV context
+        GPU_OV_SET_OCL_SAME_CONTEXT, // set OCL tensors with the default OV context with gpu
     };
     std::unordered_map<int, std::unordered_map<int, double>> times;
     for (auto tSize : sizeSet) {
@@ -202,17 +196,13 @@ TEST(OpenVINO, SetTensorTest) {
         ovShape.emplace_back(1);
         ovShape.emplace_back(tSize);
         std::map<std::string, ov::PartialShape> inputShapes;
-        inputShapes["b"] = ovShape;
+        inputShapes[inputName] = ovShape;
         model->reshape(inputShapes);
-        auto compilationSizeStart = std::chrono::high_resolution_clock::now();
-        auto oclCompiledModel = core.compile_model(model, remote_context);
-        auto oclInferRequest = oclCompiledModel.create_infer_request();
         auto gpuCompiledModel = core.compile_model(model, "GPU");
         auto gpuInferRequest = gpuCompiledModel.create_infer_request();
         auto cpuCompiledModel = core.compile_model(model, "CPU");
         auto cpuInferRequest = cpuCompiledModel.create_infer_request();
-        auto compilationSizeStop = std::chrono::high_resolution_clock::now();
-        // prepare data
+        // prepare ov::Tensor data
         std::vector<ov::Tensor> inputOvTensors, outputOvTensors;
         inputOvTensors.emplace_back(dtype, ovShape);
         inputOvTensors.emplace_back(dtype, ovShape);
@@ -222,157 +212,249 @@ TEST(OpenVINO, SetTensorTest) {
         auto outputByteSize = tSize;
         inputByteSize *= sizeof(float);
         outputByteSize *= sizeof(float);
+
         cl_int err;
-        auto contextFromModel = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
-        cl_context ctxFromModel = contextFromModel.get();
-        cl::Context openCLCppContextFromModel(ctxFromModel);
-        cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-        cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err);
-        std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
-        inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-        inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-        inputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-        inputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-        outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
-        outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
-        outputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-        outputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-        std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
- //       TODO different context here causes errors in OV
-        //inputs.emplace_back(remote_context2.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
-        //inputs.emplace_back(remote_context2.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
-        inputs.emplace_back(remote_context.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
-        inputs.emplace_back(remote_context.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
-        inputs.emplace_back(remote_context.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[2]));
-        inputs.emplace_back(remote_context.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[3]));
-        //outputs.emplace_back(remote_context2.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[0]));
-        //outputs.emplace_back(remote_context2.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[1]));
-        outputs.emplace_back(remote_context.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[0]));
-        outputs.emplace_back(remote_context.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[1]));
-        outputs.emplace_back(remote_context.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[2]));
-        outputs.emplace_back(remote_context.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[3]));
         std::vector<float> outputData(tSize, 0);
-        SPDLOG_ERROR("ER");
-        auto start = std::chrono::high_resolution_clock::now();
-        for (auto i = 0; i < iterations; ++i) {
-            oclInferRequest.set_tensor(input, inputOvTensors[i % 2]);
-            oclInferRequest.infer();
-            const auto& outTensor = oclInferRequest.get_tensor(output);
-            std::memcpy(outputData.data(), outTensor.data(), outputByteSize);
+        {  // GPU_OCL_COPY model loaded with OCL context, using ov::Tensors on input & output (copy)
+            cl_platform_id platformId;
+            cl_device_id deviceId;
+            cl_context openCLCContext = get_cl_context(platformId, deviceId);
+            auto ovWrappedOCLContext = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
+            auto oclCompiledModel = core.compile_model(model, ovWrappedOCLContext);
+            auto oclInferRequest = oclCompiledModel.create_infer_request();
+            auto start = std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < iterations; ++i) {
+                oclInferRequest.set_tensor(input, inputOvTensors[i % 2]);
+                oclInferRequest.infer();
+                const auto& outTensor = oclInferRequest.get_tensor(output);
+                std::memcpy(outputData.data(), outTensor.data(), outputByteSize);
+            }
+            auto stop = std::chrono::high_resolution_clock::now();
+            SPDLOG_ERROR("finished GPU_OV_COPY_OV");
+            times[GPU_OCL_COPY][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
         }
-        SPDLOG_ERROR("ER");
-        auto stop = std::chrono::high_resolution_clock::now();
-        times[GPU_OCL_COPY][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
-        start = std::chrono::high_resolution_clock::now();
-        for (auto i = 0; i < iterations; ++i) {
-            oclInferRequest.set_tensor(input, inputs[i % 2]);
-            //oclInferRequest.infer();
-            const auto& outTensor = oclInferRequest.get_tensor(output);
-            std::memcpy(outputData.data(), outTensor.data(), outputByteSize);
+        if (false /*not working*/) {  // GPU_OCL_DIFF_CONTEXT_INPUT_COPY model loaded with OCL context using OCL tensors on input from different context, copying output
+            // illegal [GPU] trying to reinterpret buffer allocated by a different engine
+            cl_platform_id platformId;
+            cl_device_id deviceId;
+            cl_context openCLCContext = get_cl_context(platformId, deviceId);
+            cl_context openCLCContextDifferent = get_cl_context(platformId, deviceId);
+            cl::Context openCLCppContext(openCLCContext);
+            cl::Context openCLCppContextDifferent(openCLCContextDifferent);
+            auto ovWrappedOCLContext = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
+            auto ovWrappedOCLContextDifferent = ov::intel_gpu::ocl::ClContext(core, openCLCContextDifferent, 0);
+            auto oclCompiledModel = core.compile_model(model, ovWrappedOCLContext);
+            auto oclInferRequest = oclCompiledModel.create_infer_request();
+            // prepare tensors
+            std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextDifferent, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextDifferent, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+            std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
+            inputs.emplace_back(ovWrappedOCLContextDifferent.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
+            inputs.emplace_back(ovWrappedOCLContextDifferent.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
+
+            auto start =std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < iterations; ++i) {
+                oclInferRequest.set_tensor(input, inputs[i % 2]);
+                oclInferRequest.infer();
+                const auto& outTensor = oclInferRequest.get_tensor(output);
+                std::memcpy(outputData.data(), outTensor.data(), outputByteSize);
+            }
+            auto stop =std::chrono::high_resolution_clock::now();
+            times[GPU_OCL_DIFF_CONTEXT_INPUT_COPY][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+            SPDLOG_ERROR("finished GPU_OCL_DIFF_CONTEXT_INPUT_COPY");
         }
-        stop = std::chrono::high_resolution_clock::now();
-        times[GPU_OCL_DIFF_CONTEXT_INPUT][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
-        start = std::chrono::high_resolution_clock::now();
-        //GPU_SET_OCLTEN_OCL
-        for (auto i = 0; i < iterations; ++i) {
-            oclInferRequest.set_tensor(input, inputs[i % 2]);
-            oclInferRequest.set_tensor(output, outputs[i % 2]);
-            //oclInferRequest.infer();
+        {  // GPU_OCL_SET_OCL using model loaded with OCL & tensor from the same context on both input & output
+            cl_platform_id platformId;
+            cl_device_id deviceId;
+            cl_context openCLCContext = get_cl_context(platformId, deviceId);
+            cl::Context openCLCppContext(openCLCContext);
+            auto ovWrappedOCLContext = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
+            auto oclCompiledModel = core.compile_model(model, ovWrappedOCLContext);
+            auto oclInferRequest = oclCompiledModel.create_infer_request();
+            // prepare tensors
+            std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
+            inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
+            inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
+            outputs.emplace_back(ovWrappedOCLContext.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[0]));
+            outputs.emplace_back(ovWrappedOCLContext.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[1]));
+
+            auto start =std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < iterations; ++i) {
+                oclInferRequest.set_tensor(input, inputs[i % 2]);
+                oclInferRequest.set_tensor(output, outputs[i % 2]);
+                oclInferRequest.infer();
+            }
+            auto stop =std::chrono::high_resolution_clock::now();
+            times[GPU_OCL_SET_OCL][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+            SPDLOG_ERROR("finished GPU_OCL_SET_OCL");
         }
-        stop = std::chrono::high_resolution_clock::now();
-        times[GPU_SET_OCLTEN_OCL][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
-// EXPERIMENTAL DO NOT TOUCH
-// TO REMOVE
-        start = std::chrono::high_resolution_clock::now();
-        for (auto i = 0; i < iterations; ++i) {
-            oclInferRequest.set_tensor(input, inputs[i % 2]);
-            oclInferRequest.set_tensor(output, outputOvTensors[i % 2]);
-            //oclInferRequest.infer();
+        // TODO FIXME
+        {  // GPU_OCL_SET_OCL_IN_AND_OV_OUT using model loaded with OCL & tensor on input from the same context.Output using ov;:Tensor & copy
+            cl_platform_id platformId;
+            cl_device_id deviceId;
+            cl_context openCLCContext = get_cl_context(platformId, deviceId);
+            cl::Context openCLCppContext(openCLCContext);
+            auto ovWrappedOCLContext = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
+            auto oclCompiledModel = core.compile_model(model, ovWrappedOCLContext);
+            auto oclInferRequest = oclCompiledModel.create_infer_request();
+            // prepare tensors
+            std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
+            inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
+            inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
+            outputs.emplace_back(ovWrappedOCLContext.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[0]));
+            outputs.emplace_back(ovWrappedOCLContext.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[1]));
+            auto start =std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < iterations; ++i) {
+                oclInferRequest.set_tensor(input, inputs[i % 2]);
+                oclInferRequest.set_tensor(output, outputOvTensors[i % 2]);
+                oclInferRequest.infer();
+            }
+            auto stop =std::chrono::high_resolution_clock::now();
+            times[GPU_OCL_SET_OCL_IN_AND_OV_OUT][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+            SPDLOG_ERROR("finished GPU_OCL_SET_OCL_IN_AND_OV_OUT");
         }
-        stop = std::chrono::high_resolution_clock::now();
-        times[GPU_SET_OVTEN_OCL][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
-        SPDLOG_ERROR("ER");
-        //GPU_SET_OVTEN_OCL
-        start = std::chrono::high_resolution_clock::now();
-        for (auto i = 0; i < iterations; ++i) {
-            oclInferRequest.set_tensor(input, inputOvTensors[i % 2]);
-            oclInferRequest.set_tensor(output, outputOvTensors[i % 2]);
-            oclInferRequest.infer();
+        {  // GPU_OCL_SET_OV model loaded on gpu with both outpu & input being ov::Tensor
+            cl_platform_id platformId;
+            cl_device_id deviceId;
+            cl_context openCLCContext = get_cl_context(platformId, deviceId);
+            cl::Context openCLCppContext(openCLCContext);
+            auto ovWrappedOCLContext = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
+            auto oclCompiledModel = core.compile_model(model, ovWrappedOCLContext);
+            auto oclInferRequest = oclCompiledModel.create_infer_request();
+            auto start =std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < iterations; ++i) {
+                oclInferRequest.set_tensor(input, inputOvTensors[i % 2]);
+                oclInferRequest.set_tensor(output, outputOvTensors[i % 2]);
+                oclInferRequest.infer();
+            }
+            auto stop =std::chrono::high_resolution_clock::now();
+            times[GPU_OCL_SET_OV][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+            SPDLOG_ERROR("finished GPU_OCL_SET_OV");
         }
-        stop = std::chrono::high_resolution_clock::now();
-        times[GPU_SET_OVTEN_OCL][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
-        // GPU_COPY copy from output
-        start = std::chrono::high_resolution_clock::now();
-        for (auto i = 0; i < iterations; ++i) {
-            gpuInferRequest.set_tensor(input, inputOvTensors[i % 2]);
-            gpuInferRequest.infer();
-            const auto& outTensor = oclInferRequest.get_tensor(output);
-            std::memcpy(outputData.data(), outTensor.data(), outputByteSize);
+        {
+            auto start =std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < iterations; ++i) {
+                gpuInferRequest.set_tensor(input, inputOvTensors[i % 2]);
+                gpuInferRequest.infer();
+                const auto& outTensor = gpuInferRequest.get_tensor(output);
+                std::memcpy(outputData.data(), outTensor.data(), outputByteSize);
+            }
+            auto stop =std::chrono::high_resolution_clock::now();
+            times[GPU_OV_COPY_OV][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+            SPDLOG_ERROR("finished GPU_OV_COPY_OV");
+            // GPU set input & output
         }
-        stop = std::chrono::high_resolution_clock::now();
-        times[GPU_COPY][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
-        SPDLOG_ERROR("ER");
-        // GPU set input & output
-        start = std::chrono::high_resolution_clock::now();
-        for (auto i = 0; i < iterations; ++i) {
-            gpuInferRequest.set_tensor(input, inputOvTensors[i % 2]);
-            gpuInferRequest.set_tensor(output, outputOvTensors[i % 2]);
-            gpuInferRequest.infer();
+        { // GPU_OV_SET_OV inference with ov::Tensors but output is set as well
+            auto start =std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < iterations; ++i) {
+                gpuInferRequest.set_tensor(input, inputOvTensors[i % 2]);
+                gpuInferRequest.set_tensor(output, outputOvTensors[i % 2]);
+                gpuInferRequest.infer();
+            }
+            auto stop =std::chrono::high_resolution_clock::now();
+            times[GPU_OV_SET_OV][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+            SPDLOG_TRACE("finished GPU_OV_SET_OV");
         }
-        stop = std::chrono::high_resolution_clock::now();
-        times[GPU_SET][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
-        // CPU_COPY COPY
-        start = std::chrono::high_resolution_clock::now();
-        for (auto i = 0; i < iterations; ++i) {
-            cpuInferRequest.set_tensor(input, inputOvTensors[i % 2]);
-            cpuInferRequest.infer();
-            const auto& outTensor = cpuInferRequest.get_tensor(output);
-            std::memcpy(outputData.data(), outTensor.data(), outputByteSize);
+        { // CPU_COPY inference with ov::Tensors - current (2024.1) OVMS flow with cpu
+            auto start =std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < iterations; ++i) {
+                cpuInferRequest.set_tensor(input, inputOvTensors[i % 2]);
+                cpuInferRequest.infer();
+                const auto& outTensor = cpuInferRequest.get_tensor(output);
+                std::memcpy(outputData.data(), outTensor.data(), outputByteSize);
+            }
+            auto stop =std::chrono::high_resolution_clock::now();
+            times[CPU_COPY][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+            SPDLOG_ERROR("finished CPU_COPY");
         }
-        stop = std::chrono::high_resolution_clock::now();
-        times[CPU_COPY][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
-        start = std::chrono::high_resolution_clock::now();
-        for (auto i = 0; i < iterations; ++i) {
-            cpuInferRequest.set_tensor(input, inputOvTensors[i % 2]);
-            cpuInferRequest.set_tensor(output, outputOvTensors[i % 2]);
-            cpuInferRequest.infer();
+        { // CPU_SET inference with ov::Tensors but output is set as well
+            auto start =std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < iterations; ++i) {
+                cpuInferRequest.set_tensor(input, inputOvTensors[i % 2]);
+                cpuInferRequest.set_tensor(output, outputOvTensors[i % 2]);
+                cpuInferRequest.infer();
+            }
+            auto stop =std::chrono::high_resolution_clock::now();
+            times[CPU_SET][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+            SPDLOG_ERROR("finished CPU_SET");
         }
-        stop = std::chrono::high_resolution_clock::now();
-        times[CPU_SET][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
-        SPDLOG_ERROR("ER");
-        start = std::chrono::high_resolution_clock::now();
-        for (auto i = 0; i < iterations; ++i) {
-            gpuInferRequest.set_tensor(input, inputs[i % 2]);
-            gpuInferRequest.set_tensor(output, outputs[i % 2]);
-            //gpuInferRequest.infer();
+        if (false) {  // GPU_OV_SET_OCL_DIFF_CONTEXT model loaded with ov context and different ocl context used to create ocl tensors
+            // illegal [GPU] trying to reinterpret buffer allocated by a different engine
+            cl_platform_id platformId;
+            cl_device_id deviceId;
+            cl_context openCLCContext = get_cl_context(platformId, deviceId);
+            cl::Context openCLCppContext(openCLCContext);
+            auto ovWrappedOCLContext = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
+            // prepare tensors
+            std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
+            inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
+            inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
+            outputs.emplace_back(ovWrappedOCLContext.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[0]));
+            outputs.emplace_back(ovWrappedOCLContext.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[1]));
+            auto start =std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < iterations; ++i) {
+                gpuInferRequest.set_tensor(input, inputs[i % 2]);
+                gpuInferRequest.set_tensor(output, outputs[i % 2]);
+                gpuInferRequest.infer();
+            }
+            auto stop =std::chrono::high_resolution_clock::now();
+            times[GPU_OV_SET_OCL_DIFF_CONTEXT][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+            SPDLOG_ERROR("finished GPU_OV_SET_OCL_DIFF_CONTEXT");
         }
-        stop = std::chrono::high_resolution_clock::now();
-        times[GPU_DIFF_CONTEXT][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
-        SPDLOG_ERROR("ER");
-        start = std::chrono::high_resolution_clock::now();
-        for (auto i = 0; i < iterations; ++i) {
-            gpuInferRequest.set_tensor(input, inputs[2 + (i % 2)]);
-            gpuInferRequest.set_tensor(output, outputs[2 + (i % 2)]);
-            gpuInferRequest.infer();
+        {  // GPU_OV_SET_OCL_SAME_CONTEXT load model with target device and use context from model to create tensors
+            auto ovWrappedOCLContextFromModel = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
+            cl_context openCLCContextFromModel = ovWrappedOCLContextFromModel.get();
+            cl::Context openCLCppContextFromModel(openCLCContextFromModel);
+            // prepare tensors
+            std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
+            inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
+            inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
+            outputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[0]));
+            outputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[1]));
+            auto start =std::chrono::high_resolution_clock::now();
+            for (auto i = 0; i < iterations; ++i) {
+                gpuInferRequest.set_tensor(input, inputs[i % 2]);
+                gpuInferRequest.set_tensor(output, outputs[i % 2]);
+                gpuInferRequest.infer();
+            }
+            auto stop =std::chrono::high_resolution_clock::now();
+            times[GPU_OV_SET_OCL_SAME_CONTEXT][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+            SPDLOG_ERROR("finished GPU_OV_SET_OCL_SAME_CONTEXT");
         }
-        stop = std::chrono::high_resolution_clock::now();
-        times[GPU_CONTEXT_FROM_MODEL][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
         auto sizeStop = std::chrono::high_resolution_clock::now();
         auto totalTime = std::chrono::duration_cast<std::chrono::microseconds>(sizeStop - sizeStart).count() / 1000000.0;
-        auto compilationTime = std::chrono::duration_cast<std::chrono::microseconds>(compilationSizeStop - compilationSizeStart).count() / 1000000.0;
-        SPDLOG_ERROR("For size: {:09d} compiling models took {:03.5f} seconds, inferences took {:03.5f} seconds, all took {:03.5f} seconds. Next inferences will take probably ~x10 longer ...", tSize, compilationTime, totalTime - compilationTime, totalTime);
+        SPDLOG_ERROR("For size: {:8d} inferences all took {:03.5f} seconds. Next inferences will take probably ~x10 longer ...", tSize, totalTime);
     }
     std::cout << std::right;
-    for (auto s : {"CPU_COPY", "CPU_SET", "GPU_COPY", "GPU_OCL_COPY", "GPU_SET", "GPU_SET_OVTEN_OCL", "GPU_SET_OCL_OCL", "GPU_DIFF_CONTEXT", "GPU_CONTEXT_FROM_MODEL"}) {
-        std::cout << s << "[FPS]"
-                  << "\t\t" << s << "[MePS]"
-                  << "\t\t";
+    for (auto s : {"CPU_COPY", "CPU_SET", "GPU_OV_COPY_OV", "GPU_OV_SET_OV", "GPU_OCL_COPY", "GPU_OCL_SET_OV", "GPU_OCL_SET_OCL_IN_AND_OV_OUT", "GPU_OCL_SET_OCL", /*"GPU_OCL_DIFF_CONTEXT_INPUT_COPY", "GPU_OV_SET_OCL_DIFF_CONTEXT",*/ "GPU_OV_SET_OCL_SAME_CONTEXT"}) {
+        std::cout << s << "[MePS]"
+            << "\t\t";
     }
     std::cout << std::endl;
     for (auto s : sizeSet) {
-        for (auto t : {CPU_COPY, CPU_SET, GPU_COPY, GPU_OCL_COPY, GPU_SET, GPU_SET_OVTEN_OCL, GPU_SET_OCLTEN_OCL, GPU_DIFF_CONTEXT, GPU_CONTEXT_FROM_MODEL}) {
+        for (auto t : {CPU_COPY, CPU_SET, GPU_OV_COPY_OV, GPU_OV_SET_OV, GPU_OCL_COPY, GPU_OCL_SET_OV, GPU_OCL_SET_OCL_IN_AND_OV_OUT, GPU_OCL_SET_OCL, /*GPU_OCL_DIFF_CONTEXT_INPUT_COPY, GPU_OV_SET_OCL_DIFF_CONTEXT,*/ GPU_OV_SET_OCL_SAME_CONTEXT}) {
             double fps = iterations / (times[t][s] / 1000.);
-            std::cout << "" << fps << " \t ";
             std::cout << "" << fps * s << " \t\t ";
         }
         std::cout << std::endl;
@@ -420,7 +502,7 @@ TEST(CAPINonCopy, Flow) {
     //ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(bareOpenCLCMemory), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1)); // device id ?? TODO
     SPDLOG_ERROR("ERa addr:{}", (void*)&openCLCppInputBuffer);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));  // device id ?? TODO
-    // verify response
+                                                                                                                                                                                            // verify response
     OVMS_InferenceResponse* response = nullptr;
     //ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
     EXPECT_EQ(nullptr, OVMS_Inference(cserver, request, &response));
