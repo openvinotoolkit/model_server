@@ -211,11 +211,50 @@ static const KFSDataType& MPPrecisionToKFSPrecision(::mediapipe::Tensor::Element
         SPDLOG_DEBUG(details);                                                                              \
         return Status(StatusCode::UNKNOWN_ERROR, std::move(details));                                       \
     }
+
+#define COPY_INPUT_VALUE_BY_VALUE(TYPE, PROTO_PREFIX)                                                                                       \
+    TYPE* ptr = reinterpret_cast<TYPE*>(data);                                                                                              \
+    const auto& input = request.inputs(inputIndex);                                                                                         \
+    if (!input.has_contents()) {                                                                                                            \
+        return Status(StatusCode::INVALID_CONTENT_SIZE, "Input does not have input tensor contents field");                                 \
+    }                                                                                                                                       \
+    const auto& contents = input.contents();                                                                                                \
+    if (!contents.PROTO_PREFIX##_contents_size()) {                                                                                         \
+        return Status(StatusCode::INVALID_CONTENT_SIZE, "Input does not have proper size of input tensor " #PROTO_PREFIX "contents field"); \
+    }                                                                                                                                       \
+    for (auto& number : contents.PROTO_PREFIX##_contents()) {                                                                               \
+        *(ptr++) = number;                                                                                                                  \
+    }                                                                                                                                       \
+    break;
+
+static Status validateRawInputContent(const size_t expectedBytes, const std::string bufferLocation, const std::string& requestedName, const KFSRequest& request) {
+    if (expectedBytes != bufferLocation.size()) {
+        std::stringstream ss;
+        ss << "Expected: " << expectedBytes << " bytes; Actual: " << bufferLocation.size() << " bytes; input name: " << requestedName;
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", request.model_name(), request.model_version(), details);
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+    }
+    return StatusCode::OK;
+}
+
+static Status validateInputContent(const KFSTensorInputProto& proto, const size_t expectedBytes, const std::string& requestedName, const KFSRequest& request) {
+    auto precision = KFSPrecisionToOvmsPrecision(proto.datatype());
+    size_t elementsCount = getElementsCount(proto, precision);
+    if (expectedBytes != KFSDataTypeSize(proto.datatype()) * elementsCount) {
+        std::stringstream ss;
+        ss << "Expected: " << expectedBytes << " values; Actual: " << KFSDataTypeSize(proto.datatype()) * elementsCount << " values; input name: " << requestedName;
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid value size of tensor proto - {}", request.model_name(), request.model_version(), details);
+        return Status(StatusCode::INVALID_VALUE_COUNT, details);
+    }
+    return StatusCode::OK;
+}
+
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<mediapipe::Tensor>& outTensor, PythonBackend* pythonBackend) {
     auto requestInputItr = request.inputs().begin();
     OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, requestedName, request));
     auto inputIndex = requestInputItr - request.inputs().begin();
-    auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
         auto datatype = KFSPrecisionToMPPrecision(requestInputItr->datatype());
         if (datatype == mediapipe::Tensor::ElementType::kNone) {
@@ -240,7 +279,41 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         outTensor = std::make_unique<mediapipe::Tensor>(datatype, tensorShape);
         void* data;
         SET_DATA_FROM_MP_TENSOR(outTensor, GetCpuWriteView);
-        std::memcpy(data, bufferLocation.data(), bufferLocation.size());
+        ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
+        size_t expectedBytes = 1;
+        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<int>(rawShape, precision.size(), expectedBytes);
+        if (!expectedBufferSizeValid) {
+            const std::string details = "Provided shape and datatype declare too large buffer.";
+            SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+        }
+        if (request.raw_input_contents().size()) {
+            auto& bufferLocation = request.raw_input_contents().at(inputIndex);
+            OVMS_RETURN_ON_FAIL(validateRawInputContent(expectedBytes, bufferLocation, requestedName, request));
+            std::memcpy(data, bufferLocation.data(), bufferLocation.size());
+        } else {  // need to copy each value separately
+            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
+            switch (datatype) {
+            case mediapipe::Tensor::ElementType::kFloat32: {
+                COPY_INPUT_VALUE_BY_VALUE(float, fp32);
+            }
+            case mediapipe::Tensor::ElementType::kInt32: {
+                COPY_INPUT_VALUE_BY_VALUE(int32_t, int);
+            }
+            case mediapipe::Tensor::ElementType::kInt8: {
+                COPY_INPUT_VALUE_BY_VALUE(int8_t, int);
+            }
+            case mediapipe::Tensor::ElementType::kUInt8: {
+                COPY_INPUT_VALUE_BY_VALUE(uint8_t, uint);
+            }
+            case mediapipe::Tensor::ElementType::kBool: {
+                COPY_INPUT_VALUE_BY_VALUE(bool, bool);
+            }
+            case mediapipe::Tensor::ElementType::kFloat16:
+            default:
+                return ovms::Status(ovms::StatusCode::NOT_IMPLEMENTED, "There is no support for types different than fp32, i32, i8, u8, bool");
+            }
+        }
     }
     HANDLE_DESERIALIZATION_EXCEPTION("Mediapipe tensor")
     return StatusCode::OK;
@@ -252,7 +325,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto requestInputItr = request.inputs().begin();
     OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, requestedName, request));
     auto inputIndex = requestInputItr - request.inputs().begin();
-    auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
         auto datatype = getPrecisionAsDataType(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         if (datatype == TFSDataType::DT_INVALID) {
@@ -285,16 +357,65 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             auto stringViewAbslMessage = abslStatus.message();
             return Status(StatusCode::UNKNOWN_ERROR, std::string{stringViewAbslMessage});
         }
-        outTensor = std::make_unique<tensorflow::Tensor>(datatype, tensorShape);
-        if (outTensor->TotalBytes() != bufferLocation.size()) {
-            std::stringstream ss;
-            ss << "Mediapipe deserialization content size mismatch; allocated TF Tensor: " << outTensor->TotalBytes() << " bytes vs KServe buffer: " << bufferLocation.size() << " bytes";
-            const std::string details = ss.str();
+        size_t expectedBytes = 1;
+        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<int64_t>(rawShape, KFSDataTypeSize(requestInputItr->datatype()), expectedBytes);
+        if (!expectedBufferSizeValid) {
+            const std::string details = "Provided shape and datatype declare too large buffer.";
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
             return Status(StatusCode::INVALID_CONTENT_SIZE, details);
         }
-        void* tftensordata = outTensor->data();
-        std::memcpy(tftensordata, bufferLocation.data(), bufferLocation.size());
+        outTensor = std::make_unique<tensorflow::Tensor>(datatype, tensorShape);
+        if (request.raw_input_contents().size()) {
+            auto& bufferLocation = request.raw_input_contents().at(inputIndex);
+            if (outTensor->TotalBytes() != bufferLocation.size()) {
+                std::stringstream ss;
+                ss << "Mediapipe deserialization content size mismatch; allocated TF Tensor: " << outTensor->TotalBytes() << " bytes vs KServe buffer: " << bufferLocation.size() << " bytes";
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+            }
+            void* tfTensordata = outTensor->data();
+            std::memcpy(tfTensordata, bufferLocation.data(), bufferLocation.size());
+        } else {
+            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
+            void* data = outTensor->data();
+            switch (datatype) {
+            case TFSDataType::DT_FLOAT: {
+                COPY_INPUT_VALUE_BY_VALUE(float, fp32);
+            }
+            case TFSDataType::DT_INT64: {
+                COPY_INPUT_VALUE_BY_VALUE(int64_t, int64);
+            }
+            case TFSDataType::DT_INT32: {
+                COPY_INPUT_VALUE_BY_VALUE(int32_t, int);
+            }
+            case TFSDataType::DT_INT16: {
+                COPY_INPUT_VALUE_BY_VALUE(int16_t, int);
+            }
+            case TFSDataType::DT_INT8: {
+                COPY_INPUT_VALUE_BY_VALUE(int8_t, int);
+            }
+            case TFSDataType::DT_UINT64: {
+                COPY_INPUT_VALUE_BY_VALUE(uint64_t, uint64);
+            }
+            case TFSDataType::DT_UINT32: {
+                COPY_INPUT_VALUE_BY_VALUE(uint32_t, uint);
+            }
+            case TFSDataType::DT_UINT16: {
+                COPY_INPUT_VALUE_BY_VALUE(uint16_t, uint);
+            }
+            case TFSDataType::DT_UINT8: {
+                COPY_INPUT_VALUE_BY_VALUE(uint8_t, uint);
+            }
+            case TFSDataType::DT_BOOL: {
+                COPY_INPUT_VALUE_BY_VALUE(bool, bool);
+            }
+            case TFSDataType::DT_DOUBLE:
+            case TFSDataType::DT_HALF:
+            default:
+                return ovms::Status(ovms::StatusCode::NOT_IMPLEMENTED, "There is no support for types different than fp32, int64, int32, uint32, uint64, int8, uint8, bool");
+            }
+        }
     }
     HANDLE_DESERIALIZATION_EXCEPTION("Tensorflow tensor")
     return StatusCode::OK;
@@ -304,7 +425,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto requestInputItr = request.inputs().begin();
     OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, requestedName, request));
     auto inputIndex = requestInputItr - request.inputs().begin();
-    auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
         ov::Shape shape;
         for (int i = 0; i < requestInputItr->shape().size(); i++) {
@@ -318,20 +438,71 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             shape.push_back(requestInputItr->shape()[i]);
         }
         ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
-        size_t expectElementsCount = ov::shape_size(shape.begin(), shape.end());
-        size_t expectedBytes = precision.size() * expectElementsCount;
-
-        if (expectedBytes != bufferLocation.size()) {
-            std::stringstream ss;
-            ss << "Expected: " << expectedBytes << " bytes; Actual: " << bufferLocation.size() << " bytes; input name: " << requestedName;
-            const std::string details = ss.str();
-            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", request.model_name(), request.model_version(), details);
+        size_t expectedBytes = 1;
+        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<size_t>(shape, precision.size(), expectedBytes);
+        if (!expectedBufferSizeValid) {
+            const std::string details = "Provided shape and datatype declare too large buffer.";
+            SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
             return Status(StatusCode::INVALID_CONTENT_SIZE, details);
         }
-        if (expectedBytes == 0) {
-            outTensor = std::make_unique<ov::Tensor>(precision, shape);  // OpenVINO does not accept nullptr as data ptr
+        if (request.raw_input_contents().size()) {
+            auto& bufferLocation = request.raw_input_contents().at(inputIndex);
+            OVMS_RETURN_ON_FAIL(validateRawInputContent(expectedBytes, bufferLocation, requestedName, request));
+            if (expectedBytes == 0) {
+                outTensor = std::make_unique<ov::Tensor>(precision, shape);  // OpenVINO does not accept nullptr as data ptr
+            } else {
+                outTensor = std::make_unique<ov::Tensor>(precision, shape, const_cast<void*>((const void*)bufferLocation.data()));
+            }
         } else {
-            outTensor = std::make_unique<ov::Tensor>(precision, shape, const_cast<void*>((const void*)bufferLocation.data()));
+            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
+            outTensor = std::make_unique<ov::Tensor>(precision, shape);
+            if (expectedBytes == 0) {
+                return StatusCode::OK;
+            }
+            void* data = outTensor->data();
+            switch (precision) {
+            case ov::element::Type_t::f32: {
+                COPY_INPUT_VALUE_BY_VALUE(float, fp32);
+            }
+            case ov::element::Type_t::i64: {
+                COPY_INPUT_VALUE_BY_VALUE(int64_t, int64);
+            }
+            case ov::element::Type_t::i32: {
+                COPY_INPUT_VALUE_BY_VALUE(int32_t, int);
+            }
+            case ov::element::Type_t::i16: {
+                COPY_INPUT_VALUE_BY_VALUE(int16_t, int);
+            }
+            case ov::element::Type_t::i8: {
+                COPY_INPUT_VALUE_BY_VALUE(int8_t, int);
+            }
+            case ov::element::Type_t::u64: {
+                COPY_INPUT_VALUE_BY_VALUE(uint64_t, uint64);
+            }
+            case ov::element::Type_t::u32: {
+                COPY_INPUT_VALUE_BY_VALUE(uint32_t, uint);
+            }
+            case ov::element::Type_t::u16: {
+                COPY_INPUT_VALUE_BY_VALUE(uint16_t, uint);
+            }
+            case ov::element::Type_t::u8: {
+                COPY_INPUT_VALUE_BY_VALUE(uint8_t, uint);
+            }
+            case ov::element::Type_t::boolean: {
+                COPY_INPUT_VALUE_BY_VALUE(bool, bool);
+            }
+            // the rest not supported by KFS
+            case ov::element::Type_t::u1:
+            case ov::element::Type_t::u4:
+            case ov::element::Type_t::i4:
+            case ov::element::Type_t::f16:
+            case ov::element::Type_t::f64:
+            case ov::element::Type_t::bf16:
+            case ov::element::Type_t::undefined:
+            case ov::element::Type_t::dynamic:
+            default:
+                return ovms::Status(ovms::StatusCode::NOT_IMPLEMENTED, "There is no support for types different than fp32, i64, i32, i16, i8, u64, u32, u16, u8, bool");
+            }
         }
     }
     HANDLE_DESERIALIZATION_EXCEPTION("OpenVINO tensor")
@@ -390,6 +561,10 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     auto requestInputItr = request.inputs().begin();
     OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, requestedName, request));
     auto inputIndex = requestInputItr - request.inputs().begin();
+    if (request.raw_input_contents_size() <= inputIndex) {
+        SPDLOG_DEBUG("Data should be located in raw_input_contents if graph input tag is IMAGE");
+        return StatusCode::MEDIAPIPE_EXECUTION_ERROR;
+    }
     auto& bufferLocation = request.raw_input_contents().at(inputIndex);
 
     if (requestInputItr->shape().size() != 3) {
@@ -458,7 +633,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         return status;
     }
     auto inputIndex = requestInputItr - request.inputs().begin();
-    auto& bufferLocation = request.raw_input_contents().at(inputIndex);
     try {
         std::vector<py::ssize_t> shape;
         for (int i = 0; i < requestInputItr->shape().size(); i++) {
@@ -472,39 +646,116 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             shape.push_back(requestInputItr->shape()[i]);
         }
 
+        ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         auto formatIt = datatypeToBufferFormat.find(requestInputItr->datatype());
-        if (formatIt != datatypeToBufferFormat.end()) {
-            // If datatype is known, we check if a valid buffer can be created with provided data
-            size_t itemsize = bufferFormatToItemsize.at(formatIt->second);
-            size_t expectedBufferSize = 1;
+        if (request.raw_input_contents().size()) {
+            auto& bufferLocation = request.raw_input_contents().at(inputIndex);
+            if (formatIt != datatypeToBufferFormat.end()) {
+                // If datatype is known, we check if a valid buffer can be created with provided data
+                size_t itemsize = bufferFormatToItemsize.at(formatIt->second);
+                size_t expectedBufferSize = 1;
 
-            bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, itemsize, expectedBufferSize);
+                bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, itemsize, expectedBufferSize);
+                if (!expectedBufferSizeValid) {
+                    const std::string details = "Provided shape and datatype declare too large buffer.";
+                    SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+                    return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+                }
+
+                if (bufferLocation.size() != expectedBufferSize) {
+                    std::stringstream ss;
+                    ss << "Invalid Python tensor buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedBufferSize;
+                    const std::string details = ss.str();
+                    SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+                    return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+                }
+            }
+
+            auto ok = pythonBackend->createOvmsPyTensor(
+                requestedName,
+                const_cast<void*>((const void*)bufferLocation.data()),
+                shape,
+                requestInputItr->datatype(),
+                bufferLocation.size(),
+                outTensor);
+
+            if (!ok) {
+                SPDLOG_DEBUG("Error creating Python tensor from data");
+                return StatusCode::UNKNOWN_ERROR;
+            }
+        } else {
+            if (formatIt == datatypeToBufferFormat.end()) {
+                const std::string details = "Provided datatype is invalid, custom datatypes are allowed only when raw_input_contents is used.";
+                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+                return Status(StatusCode::INVALID_PRECISION, details);
+            }
+            size_t expectedBytes = 1;
+            bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, precision.size(), expectedBytes);
             if (!expectedBufferSizeValid) {
                 const std::string details = "Provided shape and datatype declare too large buffer.";
                 SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
                 return Status(StatusCode::INVALID_CONTENT_SIZE, details);
             }
-
-            if (bufferLocation.size() != expectedBufferSize) {
-                std::stringstream ss;
-                ss << "Invalid Python tensor buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedBufferSize;
-                const std::string details = ss.str();
-                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
-                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
+            auto ok = pythonBackend->createEmptyOvmsPyTensor(
+                requestedName,
+                shape,
+                requestInputItr->datatype(),
+                expectedBytes,
+                outTensor);
+            void* data;
+            if (!pythonBackend->getOvmsPyTensorData(outTensor, &data)) {
+                return Status(StatusCode::INTERNAL_ERROR);
             }
-        }
+            switch (precision) {
+            case ov::element::Type_t::f32: {
+                COPY_INPUT_VALUE_BY_VALUE(float, fp32);
+            }
+            case ov::element::Type_t::i64: {
+                COPY_INPUT_VALUE_BY_VALUE(int64_t, int64);
+            }
+            case ov::element::Type_t::i32: {
+                COPY_INPUT_VALUE_BY_VALUE(int32_t, int);
+            }
+            case ov::element::Type_t::i16: {
+                COPY_INPUT_VALUE_BY_VALUE(int16_t, int);
+            }
+            case ov::element::Type_t::i8: {
+                COPY_INPUT_VALUE_BY_VALUE(int8_t, int);
+            }
+            case ov::element::Type_t::u64: {
+                COPY_INPUT_VALUE_BY_VALUE(uint64_t, uint64);
+            }
+            case ov::element::Type_t::u32: {
+                COPY_INPUT_VALUE_BY_VALUE(uint32_t, uint);
+            }
+            case ov::element::Type_t::u16: {
+                COPY_INPUT_VALUE_BY_VALUE(uint16_t, uint);
+            }
+            case ov::element::Type_t::u8: {
+                COPY_INPUT_VALUE_BY_VALUE(uint8_t, uint);
+            }
+            case ov::element::Type_t::boolean: {
+                COPY_INPUT_VALUE_BY_VALUE(bool, bool);
+            }
 
-        auto ok = pythonBackend->createOvmsPyTensor(
-            requestedName,
-            const_cast<void*>((const void*)bufferLocation.data()),
-            shape,
-            requestInputItr->datatype(),
-            bufferLocation.size(),
-            outTensor);
+            // the rest not supported by KFS
+            case ov::element::Type_t::u1:
+            case ov::element::Type_t::u4:
+            case ov::element::Type_t::i4:
+            case ov::element::Type_t::f16:
+            case ov::element::Type_t::f64:
+            case ov::element::Type_t::bf16:
+            case ov::element::Type_t::undefined:
+            case ov::element::Type_t::dynamic:
+            default:
+                return ovms::Status(ovms::StatusCode::NOT_IMPLEMENTED, "There is no support for types different than fp32, i64, i32, i16, i8, u64, u32, u16, u8, bool");
+            }
 
-        if (!ok) {
-            SPDLOG_DEBUG("Error creating Python tensor from data");
-            return StatusCode::UNKNOWN_ERROR;
+            if (!ok) {
+                SPDLOG_DEBUG("Error creating Python tensor from data");
+                return StatusCode::UNKNOWN_ERROR;
+            }
         }
     }
     HANDLE_DESERIALIZATION_EXCEPTION("Ovms Python tensor")
@@ -579,12 +830,8 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
     }
     SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
-    if (request->raw_input_contents().size() == 0) {
-        const std::string details = "Invalid message structure - raw_input_content is empty";
-        SPDLOG_DEBUG("[servable name: {} version: {}] {}", request->model_name(), request->model_version(), details);
-        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
-    }
-    if (request->raw_input_contents().size() != request->inputs().size()) {
+    OVMS_RETURN_ON_FAIL(validateRequestCoherencyKFS(*request, request->model_name(), MediapipeGraphDefinition::VERSION));
+    if (!request->raw_input_contents().empty() && (request->raw_input_contents().size() != request->inputs().size())) {
         std::stringstream ss;
         ss << "Size of raw_input_contents: " << request->raw_input_contents().size() << " is different than number of inputs: " << request->inputs().size();
         const std::string details = ss.str();
@@ -951,6 +1198,7 @@ static inline Status checkTimestamp(const KFSRequest& request, const Timestamp& 
 Status MediapipeGraphExecutor::partialDeserialize(std::shared_ptr<const KFSRequest> request, ::mediapipe::CalculatorGraph& graph) {
     OVMS_RETURN_ON_FAIL(deserializeTimestampIfAvailable(*request, this->currentStreamTimestamp));
     OVMS_RETURN_ON_FAIL(checkTimestamp(*request, this->currentStreamTimestamp));
+    OVMS_RETURN_ON_FAIL(validateRequestCoherencyKFS(*request, request->model_name(), MediapipeGraphDefinition::VERSION));
     for (const auto& input : request->inputs()) {
         const auto& inputName = input.name();
         if (std::find_if(this->inputNames.begin(), this->inputNames.end(), [&inputName](auto streamName) { return streamName == inputName; }) == this->inputNames.end()) {

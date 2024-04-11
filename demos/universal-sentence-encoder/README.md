@@ -24,7 +24,7 @@ universal-sentence-encoder-multilingual/
 
 ## Use OpenVINO tokenizers library
 
-Model universal-sentence-encoder-multilingual includes a layer SentencepieceTokenizer which is not supported by core OpenVINO at the moment. It can be however implemented using a [CPU extension](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/custom_operations/user_ie_extensions/tokenizer), which is a dynamic library performing the execution of the model layer.
+Model universal-sentence-encoder-multilingual includes a layer SentencepieceTokenizer which is supported via [OpenVINO custom extension](https://github.com/openvinotoolkit/openvino_tokenizers). It is dynamic library performing the execution of the model layer, it extends original set of supported OpenVINO operations.
 
 The image `openvino/model_server:2023.3` and newer includes ready to use OpenVINO Model Server with the CPU extension.
 

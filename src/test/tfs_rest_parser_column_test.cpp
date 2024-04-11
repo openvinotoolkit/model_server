@@ -61,6 +61,10 @@ const char* predictRequestColumnNamedJson = R"({
                 [11.0, 12.0, 13.0],
                 [14.0, 15.0, 16.0]
             ]
+        ],
+        "inputC": [
+            {"b64": "ORw0"},
+            {"b64": "ORw0"}
         ]
     },
     "signature_name": "serving_default"
@@ -68,24 +72,29 @@ const char* predictRequestColumnNamedJson = R"({
 
 TEST(TFSRestParserColumn, ParseValid2Inputs) {
     TFSRestParser parser(prepareTensors({{"inputA", {2, 2, 3, 2}},
-        {"inputB", {2, 2, 3}}}));
+        {"inputB", {2, 2, 3}}, {"inputC", {2}}}));
 
     auto status = parser.parse(predictRequestColumnNamedJson);
 
     ASSERT_EQ(status, StatusCode::OK);
     EXPECT_EQ(parser.getOrder(), Order::COLUMN);
     EXPECT_EQ(parser.getFormat(), Format::NAMED);
-    ASSERT_EQ(parser.getProto().inputs_size(), 2);
+    ASSERT_EQ(parser.getProto().inputs_size(), 3);
     ASSERT_EQ(parser.getProto().inputs().count("inputA"), 1);
     ASSERT_EQ(parser.getProto().inputs().count("inputB"), 1);
+    ASSERT_EQ(parser.getProto().inputs().count("inputC"), 1);
     const auto& inputA = parser.getProto().inputs().at("inputA");
     const auto& inputB = parser.getProto().inputs().at("inputB");
+    const auto& inputC = parser.getProto().inputs().at("inputC");
     EXPECT_EQ(inputA.dtype(), tensorflow::DataType::DT_FLOAT);
     EXPECT_EQ(inputB.dtype(), tensorflow::DataType::DT_FLOAT);
+    EXPECT_EQ(inputC.dtype(), tensorflow::DataType::DT_STRING);
     EXPECT_THAT(asVector(inputA.tensor_shape()), ElementsAre(2, 2, 3, 2));
     EXPECT_THAT(asVector(inputB.tensor_shape()), ElementsAre(2, 2, 3));
+    EXPECT_THAT(asVector(inputC.tensor_shape()), ElementsAre(2));
     ASSERT_EQ(inputA.tensor_content().size(), 2 * 2 * 3 * 2 * DataTypeSize(tensorflow::DataType::DT_FLOAT));
     ASSERT_EQ(inputB.tensor_content().size(), 2 * 2 * 3 * DataTypeSize(tensorflow::DataType::DT_FLOAT));
+    ASSERT_EQ(inputC.string_val().size(), 2);
     EXPECT_THAT(asVector<float>(inputA.tensor_content()), ElementsAre(
                                                               1.0, 2.0,
                                                               3.0, 4.0,
@@ -108,6 +117,10 @@ TEST(TFSRestParserColumn, ParseValid2Inputs) {
                                                               //============
                                                               11.0, 12, 13.0,
                                                               14.0, 15.0, 16.0));
+
+    char expectedBinary[] = {57, 28, 52};
+    EXPECT_EQ(inputC.string_val()[0], std::string(expectedBinary, expectedBinary + 3));
+    EXPECT_EQ(inputC.string_val()[1], std::string(expectedBinary, expectedBinary + 3));
 }
 
 TEST(TFSRestParserColumn, ValidShape_1d_vector_1elem) {

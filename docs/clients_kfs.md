@@ -516,7 +516,7 @@ modelInferResponse, err := client.ModelInfer(ctx, &modelInferRequest)
 :::{tab-item} curl
 :sync: curl
 ```{code} bash
-echo -n '{"inputs” : [{"name" : "0", "shape" : [1], "datatype" : "BYTES"}]}' > request.json
+echo -n '{"inputs" : [{"name" : "0", "shape" : [1], "datatype" : "BYTES"}]}' > request.json
 stat --format=%s request.json
 66
 printf "%x\n" `stat -c "%s" ./image.jpeg`

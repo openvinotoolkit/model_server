@@ -1,0 +1,10 @@
+    ../common/static/images/airliner.jpeg
+    ../common/static/images/arctic-fox.jpeg
+    ../common/static/images/bee.jpeg
+    ../common/static/images/golden_retriever.jpeg
+    ../common/static/images/gorilla.jpeg
+    ../common/static/images/magnetic_compass.jpeg
+    ../common/static/images/peacock.jpeg
+    ../common/static/images/pelican.jpeg
+    ../common/static/images/snail.jpeg
+    ../common/static/images/zebra.jpeg

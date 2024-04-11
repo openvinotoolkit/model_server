@@ -55,8 +55,8 @@ pipeline {
         stage("Build docker image") {
           when { expression { image_build_needed == "true" } }
           steps {
-                sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
         }
 
@@ -65,7 +65,7 @@ pipeline {
           parallel {
             stage("Run unit tests") {
               steps {
-                  sh "make run_unit_tests OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                  sh "make run_unit_tests BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
             }
 
@@ -78,7 +78,7 @@ pipeline {
                     userRemoteConfigs: [[credentialsId: 'workflow-lab',
                     url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh 'pwd'
-                    sh "make create-venv && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
+                    sh "make create-venv && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_BASE_OS=redhat TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
                   }
                 }
               }            
