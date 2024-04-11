@@ -27,7 +27,7 @@ You can do that in one go:
 mkdir -p workspace/models/python_model && cd workspace
 ```
 
-Since changing all the letters in the string to uppercase is a very basic example, the basic Python-enabled model server image without extra Python packages is sufficient. If you need some external modules, you need to add them to the image manually. For that simple use case, let's use publically available `openvino/model_server:latest` image from Docker Hub.
+Since changing all the letters in the string to uppercase is a very basic example, the basic Python-enabled model server image without extra Python packages is sufficient. If you need some external modules, you need to add them to the image manually. For that simple use case, let's use publicly available `openvino/model_server:latest` image from Docker Hub.
 
 You will also need a client module, so in your environment install a required dependency:
 ```bash

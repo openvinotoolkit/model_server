@@ -44,16 +44,13 @@ enum class Precision {
     MIXED,
     Q78,
     BIN,
+    STRING,
     PRECISION_END
 };
 
 const std::string& toString(Precision precision);
 
 Precision fromString(const std::string& s);
-
-const std::string& toKfsString(Precision precision);
-
-Precision fromKfsString(const std::string& s);
 
 Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type);
 

@@ -96,3 +96,6 @@ build --experimental_cc_shared_library
 
 build --check_visibility=true
 
+build --cxxopt=-DOVMS_DUMP_TO_FILE=0
+coverage --cxxopt=-DOVMS_DUMP_TO_FILE=0
+test --cxxopt=-DOVMS_DUMP_TO_FILE=0

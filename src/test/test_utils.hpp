@@ -24,6 +24,7 @@
 #include <thread>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -64,6 +65,7 @@ const std::string dummy_fp64_model_location = std::filesystem::current_path().u8
 const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model";
 const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
 const std::string passthrough_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough";
+const std::string passthrough_string_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough_string";
 const std::string dummy_saved_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model";
 const std::string dummy_tflite_location = std::filesystem::current_path().u8string() + "/src/test/dummy_tflite";
 const std::string scalar_model_location = std::filesystem::current_path().u8string() + "/src/test/scalar";
@@ -143,6 +145,21 @@ const ovms::ModelConfig PASSTHROUGH_MODEL_CONFIG{
     passthrough_model_location,  // local path
 };
 
+const ovms::ModelConfig NATIVE_STRING_MODEL_CONFIG{
+    "passthrough_string",
+    passthrough_string_model_location,  // base path
+    "CPU",                              // target device
+    "",                                 // batchsize
+    1,                                  // NIREQ
+    false,                              // is stateful
+    true,                               // idle sequence cleanup enabled
+    false,                              // low latency transformation enabled
+    500,                                // stateful sequence max number
+    "",                                 // cache directory
+    1,                                  // model_version unused since version are read from path
+    passthrough_string_model_location,  // local path
+};
+
 const ovms::ModelConfig DUMMY_SAVED_MODEL_CONFIG{
     "dummy_saved_model",
     dummy_saved_model_location,  // base path
@@ -211,6 +228,9 @@ constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
 
 constexpr const char* PASSTHROUGH_MODEL_INPUT_NAME = "input";
 constexpr const char* PASSTHROUGH_MODEL_OUTPUT_NAME = "copy:0";
+
+constexpr const char* PASSTHROUGH_STRING_MODEL_INPUT_NAME = "my_name";
+constexpr const char* PASSTHROUGH_STRING_MODEL_OUTPUT_NAME = "my_name";
 
 constexpr const char* SCALAR_MODEL_INPUT_NAME = "model_scalar_input";
 constexpr const char* SCALAR_MODEL_OUTPUT_NAME = "model_scalar_output";
@@ -360,6 +380,48 @@ void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, 
         }
     }
 }
+
+template <>
+inline void prepareKFSInferInputTensor<bool>(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
+    const std::vector<bool>& data, bool putBufferInInputTensorContent) {
+    // TODO: Implement for putBufferInInputTensorContent == 0
+    if (putBufferInInputTensorContent == 0) {
+        throw std::string("Unsupported");
+    }
+    auto it = request.mutable_inputs()->begin();
+    size_t bufferId = 0;
+    while (it != request.mutable_inputs()->end()) {
+        if (it->name() == name)
+            break;
+        ++it;
+        ++bufferId;
+    }
+    KFSTensorInputProto* tensor;
+    if (it != request.mutable_inputs()->end()) {
+        tensor = &*it;
+    } else {
+        tensor = request.add_inputs();
+    }
+    auto [shape, datatype] = inputInfo;
+    tensor->set_name(name);
+    tensor->set_datatype(datatype);
+    size_t elementsCount = 1;
+    tensor->mutable_shape()->Clear();
+    bool isNegativeShape = false;
+    for (auto const& dim : shape) {
+        tensor->add_shape(dim);
+        if (dim < 0) {
+            isNegativeShape = true;
+        }
+        elementsCount *= dim;
+    }
+    size_t dataSize = isNegativeShape ? data.size() : elementsCount;
+    for (size_t i = 0; i < dataSize; ++i) {
+        auto ptr = tensor->mutable_contents()->mutable_bool_contents()->Add();
+        *ptr = (data.size() ? data[i] : 1);
+    }
+}
+
 template <typename T = float>
 void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<T>& data = std::vector<float>{}, bool putBufferInInputTensorContent = false) {
@@ -421,6 +483,8 @@ std::string readableError(const T* expected_output, const T* actual_output, cons
     }
     return ss.str();
 }
+
+std::string readableSetError(std::unordered_set<std::string> expected, std::unordered_set<std::string> actual);
 
 void checkDummyResponse(const std::string outputName,
     const std::vector<float>& requestData,
@@ -506,6 +570,12 @@ void checkScalarResponse(const std::string outputName,
 
 void checkScalarResponse(const std::string outputName,
     float inputScalar, ::KFSResponse& response, const std::string& servableName = "");
+
+void checkStringResponse(const std::string outputName,
+    const std::vector<std::string>& inputStrings, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");
+
+void checkStringResponse(const std::string outputName,
+    const std::vector<std::string>& inputStrings, ::KFSResponse& response, const std::string& servableName = "");
 
 void assertStringOutputProto(const tensorflow::TensorProto& proto, const std::vector<std::string>& expectedStrings);
 void assertStringOutputProto(const KFSTensorOutputProto& proto, const std::vector<std::string>& expectedStrings);
@@ -718,6 +788,7 @@ static const std::vector<ovms::Precision> SUPPORTED_INPUT_PRECISIONS{
     ovms::Precision::U8,
     ovms::Precision::I8,
     ovms::Precision::U16,
+    ovms::Precision::U32,
     ovms::Precision::I32,
     ovms::Precision::I64,
     // ovms::Precision::BIN,

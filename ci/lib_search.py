@@ -129,7 +129,11 @@ def check_dir(start_dir):
         "ssdlite_object_detection_labelmap.txt",
         "build_dependencies.sh",
         "iris_tracking.pbtxt",
-        "graph_two_inputs_model.pbtxt"
+        "graph_two_inputs_model.pbtxt",
+        "test.log",
+        "aipc.txt",
+        "internal_tests",
+        "pugixml_v1.13_flags.patch"
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
@@ -214,6 +218,7 @@ def check_func(start_dir):
         'graph.pbtxt',
         "build_dependencies.sh",
         "iris_tracking.pbtxt",
+        "internal_tests"
     ]
 
     exclude_directories = ['/dist/']

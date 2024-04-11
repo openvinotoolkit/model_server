@@ -41,8 +41,6 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
-
-
         ] + select({
             "//:ubuntu_build": [
                 "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",

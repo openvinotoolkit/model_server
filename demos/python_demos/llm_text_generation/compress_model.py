@@ -31,9 +31,7 @@ nncf.set_log_level(logging.ERROR)
 
 parser = argparse.ArgumentParser(description='Script to compress LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot')
 
-supported_models_list = []
-for model in SUPPORTED_LLM_MODELS :
-    supported_models_list.append(model)
+supported_models_list = [model_name for model in SUPPORTED_LLM_MODELS.values() for model_name in model]
 
 parser.add_argument('--model',
                     required=True,
@@ -42,8 +40,9 @@ parser.add_argument('--model',
 args = vars(parser.parse_args())
 
 SELECTED_MODEL = args['model']
+LANGUAGE = 'English'
 
-model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
+model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 MODEL_PATH = "./" + SELECTED_MODEL
 
 print(model_configuration)

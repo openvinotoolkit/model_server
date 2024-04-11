@@ -42,6 +42,7 @@ const std::string& toString(Precision precision) {
         {Precision::BIN, "BIN"},
         {Precision::BOOL, "BOOL"},
         {Precision::UNDEFINED, "UNDEFINED"},
+        {Precision::STRING, "STRING"},
         {Precision::CUSTOM, "CUSTOM"}};
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
@@ -73,54 +74,8 @@ Precision fromString(const std::string& s) {
         {"BIN", Precision::BIN},
         {"BOOL", Precision::BOOL},
         {"UNDEFINED", Precision::UNDEFINED},
+        {"STRING", Precision::STRING},
         {"CUSTOM", Precision::CUSTOM}};
-    auto it = precisionMap.find(s);
-    if (it == precisionMap.end()) {
-        return Precision::UNDEFINED;
-    }
-    return it->second;
-}
-
-const std::string& toKfsString(Precision precision) {
-    static std::unordered_map<Precision, std::string> precisionMap{
-        {Precision::BF16, "BF16"},
-        {Precision::FP64, "FP64"},
-        {Precision::FP32, "FP32"},
-        {Precision::FP16, "FP16"},
-        {Precision::I64, "INT64"},
-        {Precision::I32, "INT32"},
-        {Precision::I16, "INT16"},
-        {Precision::I8, "INT8"},
-        {Precision::U64, "UINT64"},
-        {Precision::U32, "UINT32"},
-        {Precision::U16, "UINT16"},
-        {Precision::U8, "UINT8"},
-        {Precision::BOOL, "BOOL"},
-        {Precision::UNDEFINED, "UNDEFINED"}};
-    auto it = precisionMap.find(precision);
-    if (it == precisionMap.end()) {
-        static const std::string UNDEFINED{"UNDEFINED"};
-        return UNDEFINED;
-    }
-    return it->second;
-}
-
-Precision fromKfsString(const std::string& s) {
-    static std::unordered_map<std::string, Precision> precisionMap{
-        {"BF16", Precision::BF16},
-        {"FP64", Precision::FP64},
-        {"FP32", Precision::FP32},
-        {"FP16", Precision::FP16},
-        {"INT64", Precision::I64},
-        {"INT32", Precision::I32},
-        {"INT16", Precision::I16},
-        {"INT8", Precision::I8},
-        {"UINT64", Precision::U64},
-        {"UINT32", Precision::U32},
-        {"UINT16", Precision::U16},
-        {"UINT8", Precision::U8},
-        {"BOOL", Precision::BOOL},
-        {"UNDEFINED", Precision::UNDEFINED}};
     auto it = precisionMap.find(s);
     if (it == precisionMap.end()) {
         return Precision::UNDEFINED;
@@ -147,7 +102,8 @@ ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
         {Precision::BOOL, ov::element::Type_t::boolean},
         {Precision::BF16, ov::element::Type_t::bf16},
         {Precision::UNDEFINED, ov::element::Type_t::undefined},
-        {Precision::DYNAMIC, ov::element::Type_t::dynamic}
+        {Precision::DYNAMIC, ov::element::Type_t::dynamic},
+        {Precision::STRING, ov::element::Type_t::string}
         //    {Precision::MIXED, ov::element::Type_t::MIXED},
         //    {Precision::Q78, ov::element::Type_t::Q78},
         //    {Precision::BIN, ov::element::Type_t::BIN},
@@ -177,6 +133,7 @@ Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type) {
         {ov::element::Type_t::u8, Precision::U8},
         {ov::element::Type_t::u4, Precision::U4},
         {ov::element::Type_t::u1, Precision::U1},
+        {ov::element::Type_t::string, Precision::STRING},
         {ov::element::Type_t::undefined, Precision::UNDEFINED},
         {ov::element::Type_t::dynamic, Precision::DYNAMIC},
         //    {ov::element::Type_t::???, Precision::MIXED},

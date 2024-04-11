@@ -39,7 +39,7 @@ public:
 
     std::unique_ptr<py::object> ovmsPythonModel;
     PythonBackend* pythonBackend;
-    std::string pythonNodeFilePath;
+    std::string handlerPath;
     std::unordered_map<std::string, std::string> outputsNameTagMapping;
 
     PythonNodeResources(PythonBackend* pythonBackend);

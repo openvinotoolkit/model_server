@@ -445,6 +445,19 @@ public:
         return StatusCode::OK;
     }
 
+    Status checkForForbiddenStringDemultiplicator() {
+        if (!dependantNodeInfo.demultiplyCount.has_value()) {
+            return StatusCode::OK;
+        }
+        for (const auto& [_, inputInfo] : this->inputsInfo) {
+            if (inputInfo->getPrecision() == Precision::STRING) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiplication of strings in unsupported. Node name: {}", pipelineName, dependantNodeInfo.nodeName);
+                return StatusCode::PIPELINE_STRING_DEMUILTIPLICATION_UNSUPPORTED;
+            }
+        }
+        return StatusCode::OK;
+    }
+
     Status validateGatherNode(const NodeInfo& dependantNodeInfo) const {
         for (const auto& gather : dependantNodeInfo.gatherFromNode) {
             auto it = std::find_if(nodeInfos.begin(), nodeInfos.end(), [gather](const NodeInfo& nodeInfo) { return nodeInfo.nodeName == gather; });
@@ -612,6 +625,17 @@ public:
                 tensorOutput->getPrecisionAsString());
             return StatusCode::INVALID_PRECISION;
         }
+        if (tensorInput->getPrecision() == Precision::STRING) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Connecting models with string precision is unsupported: dependant node: {}; input: {}; precision: {} vs dependency node: {}; output: {}; precision: {}",
+                pipelineName,
+                dependantNodeInfo.nodeName,
+                modelInputName,
+                tensorInput->getPrecisionAsString(),
+                dependencyNodeInfo.nodeName,
+                modelOutputName,
+                tensorOutput->getPrecisionAsString());
+            return StatusCode::NOT_IMPLEMENTED;
+        }
         return StatusCode::OK;
     }
 
@@ -706,6 +730,11 @@ public:
                 return result;
             }
 
+            if (dependencyNodeInfo.kind == NodeKind::ENTRY && dependencyNodeInfo.demultiplyCount.has_value() && this->inputsInfo.at(realName)->getPrecision() == Precision::STRING) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Demultiplication of strings in unsupported. Node name: {}", pipelineName, dependantNodeInfo.nodeName);
+                return StatusCode::PIPELINE_STRING_DEMUILTIPLICATION_UNSUPPORTED;
+            }
+
             if (
                 (dependantNodeInfo.kind == NodeKind::DL || dependantNodeInfo.kind == NodeKind::CUSTOM) &&
                 (dependencyNodeInfo.kind == NodeKind::DL || dependencyNodeInfo.kind == NodeKind::CUSTOM)) {
@@ -787,6 +816,11 @@ public:
             }
 
             result = checkForForbiddenDynamicParameters();
+            if (!result.ok()) {
+                return result;
+            }
+
+            result = checkForForbiddenStringDemultiplicator();
             if (!result.ok()) {
                 return result;
             }

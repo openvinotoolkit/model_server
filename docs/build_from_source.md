@@ -163,7 +163,7 @@ make release_image PYTHON_DISABLE=1
 
 ### `GPU`
 
-When set to `1`, OpenVINO&trade Model Server will be built with the drivers required by [GPU plugin](https://docs.openvino.ai/2023.3/openvino_docs_OV_UG_supported_plugins_GPU.html) support. Default value: `0`.
+When set to `1`, OpenVINO&trade Model Server will be built with the drivers required by [GPU plugin](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) support. Default value: `0`.
 
 Example:
 ```bash
@@ -175,7 +175,7 @@ make release_image GPU=1
 Building minimalistic OVMS docker image requires disabling all optional features:
 
 ```bash
-make release_image GPU=0 MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1 SENTENCEPIECE=0
+make release_image GPU=0 MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1 TOKENIZERS=0
 ```
 
 ## Building Binary Package

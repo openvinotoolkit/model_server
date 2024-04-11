@@ -41,7 +41,7 @@ CustomNode::CustomNode(
     parameters(parameters),
     nodeOutputNameAlias(nodeOutputNameAlias),
     libraryParameters(createCustomNodeParamArray(this->parameters)),
-    customNodeLibraryInternalManager(customNodeLibraryInternalManager) {
+    customNodeLibraryInternalManager(std::move(customNodeLibraryInternalManager)) {
 }
 
 Status CustomNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) {

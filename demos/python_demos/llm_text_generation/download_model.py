@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
-
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 from servable_stream.config import SUPPORTED_LLM_MODELS
@@ -22,9 +21,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Script to download LLM model based on https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot')
 
-supported_models_list = []
-for key, _ in SUPPORTED_LLM_MODELS.items() :
-    supported_models_list.append(key)
+supported_models_list = [model_name for model in SUPPORTED_LLM_MODELS.values() for model_name in model]
 
 parser.add_argument('--model',
                     required=True,
@@ -33,8 +30,9 @@ parser.add_argument('--model',
 args = vars(parser.parse_args())
 
 SELECTED_MODEL = args['model']
+LANGUAGE = 'English'
 
-model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
+model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 
 model_id = model_configuration["model_id"]
 
@@ -59,3 +57,6 @@ print(f'Saving tokenizer to {MODEL_PATH} ...')
 tok.save_pretrained(MODEL_PATH)
 print('Done.')
 
+if not ov_model.stateful:
+    print("WARNING: Saved model is not stateful")
+    exit(1)

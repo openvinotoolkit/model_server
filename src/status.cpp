@@ -190,6 +190,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_WRONG_DEMULTIPLEXER_GATHER_NODES_ORDER, "Demultiplexer and gather nodes are not in LIFO order"},
     {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, "Pipeline execution aborted due to no content from custom node"},
     {StatusCode::PIPELINE_INPUTS_AMBIGUOUS_METADATA, "Multiple nodes connected to the same pipeline input require different tensor metadata"},
+    {StatusCode::PIPELINE_STRING_DEMUILTIPLICATION_UNSUPPORTED, "Demultiplication is not supported for string precision"},
 
     // Mediapipe
     {StatusCode::MEDIAPIPE_DESERIALIZATION_ERROR, "Failed to deserialize tensor for mediapipe graph"},

@@ -1021,7 +1021,7 @@ Status ModelInstance::reloadModelIfRequired(
     const std::map<std::string, shape_t>& requestedShapes,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
     OVMS_PROFILE_FUNCTION();
-    Status status = validationStatus;
+    Status status = std::move(validationStatus);
     if (status.batchSizeChangeRequired()) {
         try {
             status = reloadModel(requestedBatchSize, {}, modelUnloadGuardPtr);

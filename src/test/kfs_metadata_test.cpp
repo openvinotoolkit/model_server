@@ -278,6 +278,28 @@ TEST_F(ModelMetadataResponseBuild, ScalarsValidResponse) {
     EXPECT_TRUE(isShapeTheSame(output.shape(), {}));
 }
 
+TEST_F(ModelMetadataResponseBuild, StringValidRespone) {
+    tensor_desc_map_t inputs = tensor_desc_map_t({{"SingleInput", {ovms::Precision::STRING, {}}}});
+    tensor_desc_map_t outputs = tensor_desc_map_t({{"SingleOutput", {ovms::Precision::STRING, {}}}});
+    prepare(inputs, outputs);
+
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
+
+    EXPECT_EQ(response.inputs_size(), 1);
+    auto input = response.inputs().at(0);
+    EXPECT_EQ(input.name(), "SingleInput");
+    EXPECT_EQ(input.datatype(), "BYTES");
+    EXPECT_EQ(input.shape_size(), 0);
+    EXPECT_TRUE(isShapeTheSame(input.shape(), {}));
+
+    EXPECT_EQ(response.outputs_size(), 1);
+    auto output = response.outputs().at(0);
+    EXPECT_EQ(output.name(), "SingleOutput");
+    EXPECT_EQ(output.datatype(), "BYTES");
+    EXPECT_EQ(output.shape_size(), 0);
+    EXPECT_TRUE(isShapeTheSame(output.shape(), {}));
+}
+
 class PipelineMetadataResponseBuild : public ::testing::Test {
 protected:
     class MockPipelineDefinitionGetInputsOutputsInfo : public ovms::PipelineDefinition {

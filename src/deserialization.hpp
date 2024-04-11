@@ -262,6 +262,7 @@ public:
         OVMS_PROFILE_FUNCTION();
         switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP32:
+        case ovms::Precision::U32:
         case ovms::Precision::I32:
         case ovms::Precision::FP64:
         case ovms::Precision::I64:
@@ -302,7 +303,6 @@ public:
             }
             return tensor;
         }
-        case ovms::Precision::U32:
         case ovms::Precision::U64:
         default:
             return ov::Tensor();
@@ -363,9 +363,9 @@ Status deserializePredictRequest(
 
             if (requiresPreProcessing(requestInput)) {
                 switch (tensorInfo->getPreProcessingHint()) {
-                case TensorInfo::ProcessingHint::STRING_1D_U8:
-                    SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
-                    RETURN_IF_ERR(convertStringRequestToOVTensor1D(requestInput, tensor, nullptr));
+                case TensorInfo::ProcessingHint::STRING_NATIVE:
+                    SPDLOG_DEBUG("Request contains input in native string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequestToOVTensor(requestInput, tensor, nullptr));
                     break;
                 case TensorInfo::ProcessingHint::STRING_2D_U8:
                     SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
@@ -437,9 +437,9 @@ Status deserializePredictRequest(
 
             if (requiresPreProcessing(*requestInputItr)) {
                 switch (tensorInfo->getPreProcessingHint()) {
-                case TensorInfo::ProcessingHint::STRING_1D_U8:
-                    SPDLOG_DEBUG("Request contains input in 1D string format: {}", name);
-                    RETURN_IF_ERR(convertStringRequestToOVTensor1D(*requestInputItr, tensor, bufferLocation));
+                case TensorInfo::ProcessingHint::STRING_NATIVE:
+                    SPDLOG_DEBUG("Request contains input in native string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequestToOVTensor(*requestInputItr, tensor, bufferLocation));
                     break;
                 case TensorInfo::ProcessingHint::STRING_2D_U8:
                     SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);

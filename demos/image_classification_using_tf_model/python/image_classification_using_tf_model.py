@@ -33,7 +33,7 @@ def load_img(path):
     scale = [127.5,127.5,127.5]
     img_f = (img_f - np.array(mean, dtype=np.float32))/np.array(scale, dtype=np.float32)
     img_f = img_f.reshape(1, img_f.shape[0], img_f.shape[1], 3)
-    return {"input": img_f}
+    return {"input:0": img_f}
 
 def build_parser():
     parser = argparse.ArgumentParser(description='Client for OCR pipeline')

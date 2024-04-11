@@ -240,6 +240,51 @@ public:
 
     void checkOutputShape(const ResponseType& response, const ovms::signed_shape_t& shape, const std::string& outputName = "a");
 
+    static void checkOutputValuesString(const TFSResponseType& response, const std::vector<std::string>& expectedValues, const std::string& outputName = PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, bool checkRaw = true) {
+        ASSERT_EQ(response.outputs().size(), 1);
+        ASSERT_EQ(response.outputs().count(outputName), 1);
+        const auto& proto = response.outputs().at(outputName);
+        ASSERT_EQ(proto.string_val().size(), expectedValues.size());
+        for (size_t i = 0; i < expectedValues.size(); i++) {
+            ASSERT_EQ(proto.string_val(i), expectedValues[i]);
+        }
+    }
+
+    static void checkOutputValuesString(const KFSResponse& response, const std::vector<std::string>& expectedValues, const std::string& outputName = PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, bool checkRaw = true) {
+        KFSOutputTensorIteratorType it;
+        size_t bufferId;
+        auto status = getOutput(response, outputName, it, bufferId);
+        ASSERT_TRUE(status.ok()) << "Couldn't find output:" << outputName;
+        auto& responseOutput = *it;
+        ASSERT_EQ(responseOutput.datatype(), "BYTES");
+        ASSERT_EQ(responseOutput.shape().size(), 1);
+        ASSERT_EQ(responseOutput.shape()[0], expectedValues.size());
+        if (checkRaw) {
+            const std::string& data = response.raw_output_contents(bufferId);
+            size_t offset = 0;
+            for (size_t i = 0; i < expectedValues.size(); i++) {
+                ASSERT_GE(data.size(), offset + 4);
+                uint32_t batchLength = *((uint32_t*)(data.data() + offset));
+                ASSERT_EQ(batchLength, expectedValues[i].size());
+                offset += 4;
+                ASSERT_GE(data.size(), offset + batchLength);
+                ASSERT_EQ(std::string(data.data() + offset, batchLength), expectedValues[i]);
+                offset += batchLength;
+            }
+            ASSERT_EQ(offset, data.size());
+        } else {
+            ASSERT_EQ(0, response.raw_output_contents().size());
+            ASSERT_EQ(responseOutput.contents().bytes_contents().size(), expectedValues.size());
+            for (size_t i = 0; i < expectedValues.size(); i++) {
+                ASSERT_EQ(responseOutput.contents().bytes_contents()[i], expectedValues[i]);
+            }
+        }
+    }
+
+    static void checkOutputValuesString(const ovms::InferenceResponse& res, const std::vector<std::string>& expectedValues, const std::string& outputName = PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, bool checkRaw = true) {
+        FAIL() << "not supported";
+    }
+
     static void checkOutputValuesU8(const TFSResponseType& response, const std::vector<uint8_t>& expectedValues, const std::string& outputName = INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME, bool checkRaw = true) {
         ASSERT_EQ(response.outputs().count(outputName), 1);
         const auto& output_tensor = response.outputs().at(outputName);
@@ -1926,6 +1971,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D_data_in_buffer) {
     this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
 }
 
+// Legacy, supported via Native OV String since 2024.0
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
         GTEST_SKIP() << "String inputs not supported for C-API";
@@ -1940,22 +1986,29 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
-    this->checkOutputShape(response, {1, 33}, PASSTHROUGH_MODEL_OUTPUT_NAME);
-    std::vector<uint8_t> expectedData = {
-        4, 0, 0, 0,  // batch size
-        0, 0, 0, 0,  // first string start offset
-        3, 0, 0, 0,  // end of "ala" in condensed content
-        3, 0, 0, 0,  // end of "" in condensed content
-        5, 0, 0, 0,  // end of "ma" in condensed content
-        9, 0, 0, 0,  // end of "kota" in condensed content
-        'a', 'l', 'a',
-        'm', 'a',
-        'k', 'o', 't', 'a'};
-    bool checkRaw = true;
-    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_NativeString) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "String inputs not supported for C-API";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {"ala", "", "ma", "kota"};
+    bool putBufferInInputTensorContent = true;
+    prepareInferStringRequest(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, inputStrings, putBufferInInputTensorContent);
+    ovms::ModelConfig config = NATIVE_STRING_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    bool checkRaw = true;
+    this->checkOutputValuesString(response, inputStrings, PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, checkRaw);
+}
+
+// Legacy, supported via Native OV String since 2024.0
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_1D) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
         GTEST_SKIP() << "String inputs not supported for C-API";
@@ -1970,15 +2023,28 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_1D) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
-    this->checkOutputShape(response, {1, 8}, PASSTHROUGH_MODEL_OUTPUT_NAME);
-    std::vector<uint8_t> expectedData = {
-        0, 0, 0, 0,
-        0, 0, 0, 0};
-    bool checkRaw = true;
-    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_NativeString) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
+        GTEST_SKIP() << "String inputs not supported for C-API";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {};
+    prepareInferStringRequest(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, inputStrings);
+    ovms::ModelConfig config = NATIVE_STRING_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    bool checkRaw = true;
+    this->checkOutputValuesString(response, inputStrings, PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, checkRaw);
+}
+
+// Legacy, supported via Native OV String since 2024.0
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D_data_in_buffer) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest) || typeid(typename TypeParam::first_type) == typeid(TFSRequestType))
         GTEST_SKIP() << "String inputs in buffer not supported for C-API and TFS api";
@@ -1993,20 +2059,26 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D_data_in_buffer) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
+    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
+}
+
+TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_NativeString_data_in_buffer) {
+    if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest) || typeid(typename TypeParam::first_type) == typeid(TFSRequestType))
+        GTEST_SKIP() << "String inputs in buffer not supported for C-API and TFS api";
+    typename TypeParam::first_type request;
+    std::vector<std::string> inputStrings = {"ala", "", "ma", "kota"};
+    bool putBufferInInputTensorContent = false;
+    prepareInferStringRequest(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, inputStrings, putBufferInInputTensorContent);
+    ovms::ModelConfig config = NATIVE_STRING_MODEL_CONFIG;
+    config.setBatchingParams("");
+    ASSERT_EQ(this->manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    typename TypeParam::second_type response;
     ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
-    this->checkOutputShape(response, {1, 33}, PASSTHROUGH_MODEL_OUTPUT_NAME);
-    std::vector<uint8_t> expectedData = {
-        4, 0, 0, 0,  // batch size
-        0, 0, 0, 0,  // first string start offset
-        3, 0, 0, 0,  // end of "ala" in condensed content
-        3, 0, 0, 0,  // end of "" in condensed content
-        5, 0, 0, 0,  // end of "ma" in condensed content
-        9, 0, 0, 0,  // end of "kota" in condensed content
-        'a', 'l', 'a',
-        'm', 'a',
-        'k', 'o', 't', 'a'};
     bool checkRaw = true;
-    this->checkOutputValuesU8(response, expectedData, PASSTHROUGH_MODEL_OUTPUT_NAME, checkRaw);
+    this->checkOutputValuesString(response, inputStrings, PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, checkRaw);
 }
 
 class TestPredictKFS : public TestPredict<KFSInterface> {};

@@ -178,17 +178,35 @@ bool TFSRestParser::parseInstance(rapidjson::Value& doc) {
         auto& proto = (*requestProto.mutable_inputs())[tensorName];
         increaseBatchSize(proto);
         if (itr.value.IsNumber() || itr.value.IsString()) {
-            // If previous iterations already increased number of dimensions
-            // it means we have incorrect json
+            // Expecting vector of scalars.
+            // If there are non-scalar elements (arrays, objects) in the batch already,
+            // it means we have incorrect json.
+
+            // More than one dimension indicates there's an array in the batch.
             if (proto.tensor_shape().dim_size() > 1) {
                 return false;
             }
             if (!addValue(proto, itr.value)) {
                 return false;
             }
+        } else if (isBinary(itr.value)) {
+            // Expecting vector of binary objects.
+            // If there are non-binary elements (scalars, arrays) in the batch already,
+            // it means we have incorrect json.
+
+            // More than one dimension indicates there's an array in the batch.
+            if (proto.tensor_shape().dim_size() > 1) {
+                return false;
+            }
+            if (!parseArray(itr.value, 1, proto, tensorName)) {
+                return false;
+            }
         } else {
-            // If previous iterations already added instances (batches)
-            // and those were non-arrays it means we have incorrect json
+            // Expecting array.
+            // If there are non-array elements (scalars, objects) in the batch already,
+            // it means we have incorrect json.
+
+            // Only one dimension and multiple elements indicates there's a scalar or object in the batch.
             if (proto.tensor_shape().dim(0).size() > 1 &&
                 proto.tensor_shape().dim_size() == 1) {
                 return false;

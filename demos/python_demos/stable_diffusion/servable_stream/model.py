@@ -27,21 +27,21 @@ OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        print("-------- Running initialize")
+        print("-------- Running initialize", flush=True)
         self.pipe = OVStableDiffusionPipeline.from_pretrained(MODEL_PATH, device="AUTO", ov_config=OV_CONFIG)
         self.pipe.scheduler = DDIMScheduler.from_config(self.pipe.scheduler.config)
-        print("-------- Model loaded")
+        print("-------- Model loaded", flush=True)
         return True
 
     def execute(self, inputs: list):
-        print("Running execute")
+        print("Running execute", flush=True)
         text = bytes(inputs[0]).decode()
 
         q = Queue()
         def generate():
             def callback_on_step_end_impl(step, timestep,
                     latents):
-                print('callback executed ----', step, timestep, latents.shape, type(latents), np.max(latents),np.min(latents) )
+                print('callback executed ----', step, timestep, latents.shape, type(latents), np.max(latents),np.min(latents), flush=True)
                 latents = 1 / 0.18215 * latents
                 image = np.concatenate(
                     [self.pipe.vae_decoder(latent_sample=latents[i : i + 1])[0] for i in range(latents.shape[0])]
@@ -51,9 +51,9 @@ class OvmsPythonModel:
                 output = io.BytesIO()
                 pil_image.save(output, format='PNG')
                 q.put((output.getvalue(),False))
-                print('end callback')
+                print('end callback', flush=True)
 
-            print('generating for prompt:', text)
+            print('generating for prompt:', text, flush=True)
             image = self.pipe(
                 text,
                 num_inference_steps=50,
@@ -69,9 +69,9 @@ class OvmsPythonModel:
         t1.start()
         pipeline_finished = False
         while not pipeline_finished:
-            print('waiting for data...')
+            print('waiting for data...', flush=True)
             image_data, pipeline_finished = q.get()
-            print('got it! will serialize...')
+            print('got it! will serialize...', flush=True)
             yield [Tensor("image", image_data)]
         yield [Tensor("end_signal", "".encode())]
 

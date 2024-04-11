@@ -140,6 +140,20 @@ protected:
     }
 };
 
+TEST_F(GetModelMetadataResponseBuild, StringValidRespone) {
+    servableInputs["SingleInput"] = std::make_shared<ovms::TensorInfo>("SingleInput", ovms::Precision::STRING, ovms::Shape());
+    servableOutputs["SingleOutput"] = std::make_shared<ovms::TensorInfo>("SingleOutput", ovms::Precision::STRING, ovms::Shape());
+    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
+
+    tensorflow::serving::SignatureDefMap def;
+    response.metadata().at("signature_def").UnpackTo(&def);
+
+    const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
+    const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
+    EXPECT_EQ(inputs.at("SingleInput").dtype(), tensorflow::DT_STRING);
+    EXPECT_EQ(outputs.at("SingleOutput").dtype(), tensorflow::DT_STRING);
+}
+
 TEST_F(GetModelMetadataResponseBuild, HasModelSpec) {
     EXPECT_TRUE(response.has_model_spec());
 }

@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <string>
 #include <unordered_map>
 
 #include <openvino/openvino.hpp>
@@ -34,6 +35,55 @@ using namespace py::literals;
 using namespace ovms;
 
 namespace mediapipe {
+
+const std::string& toKfsString(Precision precision) {
+    static std::unordered_map<Precision, std::string> precisionMap{
+        {Precision::BF16, "BF16"},
+        {Precision::FP64, "FP64"},
+        {Precision::FP32, "FP32"},
+        {Precision::FP16, "FP16"},
+        {Precision::I64, "INT64"},
+        {Precision::I32, "INT32"},
+        {Precision::I16, "INT16"},
+        {Precision::I8, "INT8"},
+        {Precision::U64, "UINT64"},
+        {Precision::U32, "UINT32"},
+        {Precision::U16, "UINT16"},
+        {Precision::U8, "UINT8"},
+        {Precision::BOOL, "BOOL"},
+        // {Precision::STRING, "???"},
+        {Precision::UNDEFINED, "UNDEFINED"}};
+    auto it = precisionMap.find(precision);
+    if (it == precisionMap.end()) {
+        static const std::string UNDEFINED{"UNDEFINED"};
+        return UNDEFINED;
+    }
+    return it->second;
+}
+
+Precision fromKfsString(const std::string& s) {
+    static std::unordered_map<std::string, Precision> precisionMap{
+        {"BF16", Precision::BF16},
+        {"FP64", Precision::FP64},
+        {"FP32", Precision::FP32},
+        {"FP16", Precision::FP16},
+        {"INT64", Precision::I64},
+        {"INT32", Precision::I32},
+        {"INT16", Precision::I16},
+        {"INT8", Precision::I8},
+        {"UINT64", Precision::U64},
+        {"UINT32", Precision::U32},
+        {"UINT16", Precision::U16},
+        {"UINT8", Precision::U8},
+        {"BOOL", Precision::BOOL},
+        // {"???", Precision::STRING},
+        {"UNDEFINED", Precision::UNDEFINED}};
+    auto it = precisionMap.find(s);
+    if (it == precisionMap.end()) {
+        return Precision::UNDEFINED;
+    }
+    return it->second;
+}
 
 class PyTensorOvTensorConverterCalculator : public CalculatorBase {
     mediapipe::Timestamp outputTimestamp;
@@ -146,19 +196,15 @@ public:
                     cc->Outputs().Tag(OV_TENSOR_TAG_NAME).Add(output.release(), cc->InputTimestamp());
                 }
             }
-        } catch (const UnexpectedPythonObjectError& e) {
-            // TODO: maybe some more descriptive information where to seek the issue.
-            LOG(INFO) << "Wrong object on node " << cc->NodeName() << " provided to converter: " << e.what();
-            return absl::Status(absl::StatusCode::kInternal, "Python converter received unexpected object");
         } catch (const pybind11::error_already_set& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
-            return absl::Status(absl::StatusCode::kInternal, "Error occurred during convertion");
+            return absl::Status(absl::StatusCode::kInternal, "Error occurred during graph execution");
         } catch (std::exception& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
-            return absl::Status(absl::StatusCode::kUnknown, "Unexpected error occurred");
+            return absl::Status(absl::StatusCode::kUnknown, "Error occurred during graph execution");
         } catch (...) {
             LOG(INFO) << "Unexpected error occurred during node " << cc->NodeName() << " execution";
-            return absl::Status(absl::StatusCode::kUnknown, "Unexpected error occurred");
+            return absl::Status(absl::StatusCode::kUnknown, "Error occurred during graph execution");
         }
 
         LOG(INFO) << "PyTensorOvTensorConverterCalculator [Node: " << cc->NodeName() << "] Process end";

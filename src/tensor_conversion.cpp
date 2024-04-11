@@ -563,11 +563,11 @@ Status convertStringRequestToOVTensor2D(
     return StatusCode::OK;
 }
 
-static Status convertStringRequestFromBufferToOVTensor1D(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
+static Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
     return StatusCode::NOT_IMPLEMENTED;
 }
 
-static Status convertStringRequestFromBufferToOVTensor1D(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
+static Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
     std::vector<uint32_t> stringSizes;
     uint32_t totalStringsLength = 0;
     while (totalStringsLength + stringSizes.size() * sizeof(uint32_t) + sizeof(uint32_t) <= buffer->size()) {
@@ -580,53 +580,27 @@ static Status convertStringRequestFromBufferToOVTensor1D(const ::KFSRequest::Inf
         SPDLOG_DEBUG("Input string format conversion failed");
         return StatusCode::INVALID_STRING_INPUT;
     }
-    size_t metadataLength = sizeof(uint32_t) * (batchSize + 2);
-    size_t width = totalStringsLength + metadataLength;
-    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{width});
-    uint32_t* data = reinterpret_cast<uint32_t*>(tensor.data<uint8_t>());
-    data[0] = static_cast<uint32_t>(batchSize);
-    data[1] = 0;  // first string start offset
-    unsigned char* condensedStringsStart = tensor.data<unsigned char>() + metadataLength;
+    tensor = ov::Tensor(ov::element::Type_t::string, ov::Shape{batchSize});
+    std::string* data = tensor.data<std::string>();
     size_t tensorStringsOffset = 0;
     for (size_t i = 0; i < stringSizes.size(); i++) {
-        data[i + 2] = data[i + 1] + stringSizes[i];
-        std::memcpy(condensedStringsStart + tensorStringsOffset, reinterpret_cast<const unsigned char*>(buffer->data() + (i + 1) * sizeof(uint32_t) + tensorStringsOffset), stringSizes[i]);
+        data[i].assign(reinterpret_cast<const char*>(buffer->data() + (i + 1) * sizeof(uint32_t) + tensorStringsOffset), stringSizes[i]);
         tensorStringsOffset += stringSizes[i];
     }
     return StatusCode::OK;
 }
 
 template <typename TensorType>
-Status convertStringRequestToOVTensor1D(const TensorType& src, ov::Tensor& tensor, const std::string* buffer) {
+Status convertStringRequestToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::string* buffer) {
+    OVMS_PROFILE_FUNCTION();
     if (buffer != nullptr) {
-        return convertStringRequestFromBufferToOVTensor1D(src, tensor, buffer);
+        return convertBinaryExtensionStringFromBufferToNativeOVTensor(src, tensor, buffer);
     }
     int batchSize = getBinaryInputsSize(src);
-    size_t totalStringsLength = 0;
+    tensor = ov::Tensor(ov::element::Type_t::string, ov::Shape{static_cast<size_t>(batchSize)});
+    std::string* data = tensor.data<std::string>();
     for (int i = 0; i < batchSize; i++) {
-        totalStringsLength += getBinaryInput(src, i).size();
-    }
-    // space for metadata:
-    // - batch size (uint32_t) x 1
-    // - first string start offset (uint32_t) x 1
-    // - end offsets for each batch of string (uint32_t) x batchSize
-    size_t metadataLength = sizeof(uint32_t) * (batchSize + 2);
-    size_t width = totalStringsLength + metadataLength;
-    tensor = ov::Tensor(ov::element::Type_t::u8, ov::Shape{static_cast<size_t>(width)});
-    uint32_t* data = reinterpret_cast<uint32_t*>(tensor.data<uint8_t>());
-    data[0] = static_cast<uint32_t>(batchSize);
-    data[1] = 0;  // first string start offset
-    unsigned char* condensedStringsStart = tensor.data<unsigned char>() + metadataLength;
-    for (int i = 0; i < batchSize; i++) {
-        // write end offset
-        data[i + 2] = data[i + 1] + getBinaryInput(src, i).size();
-        // write the bytes
-        if (getBinaryInput(src, i).size()) {
-            std::memcpy(
-                condensedStringsStart + data[i + 1],
-                reinterpret_cast<const unsigned char*>(getBinaryInput(src, i).c_str()),
-                getBinaryInput(src, i).size());
-        }
+        data[i].assign(getBinaryInput(src, i));
     }
     return StatusCode::OK;
 }
@@ -651,14 +625,14 @@ Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& d
     return StatusCode::OK;
 }
 
+template Status convertStringRequestToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
+template Status convertStringRequestToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+
 template Status convertNativeFileFormatRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer);
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer);
 
 template Status convertStringRequestToOVTensor2D<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
 template Status convertStringRequestToOVTensor2D<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
-
-template Status convertStringRequestToOVTensor1D<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
-template Status convertStringRequestToOVTensor1D<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
 
 template Status convertOVTensor2DToStringResponse<tensorflow::TensorProto>(const ov::Tensor& tensor, tensorflow::TensorProto& dst);
 template Status convertOVTensor2DToStringResponse<::KFSResponse::InferOutputTensor>(const ov::Tensor& tensor, ::KFSResponse::InferOutputTensor& dst);

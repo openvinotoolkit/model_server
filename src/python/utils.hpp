@@ -77,10 +77,14 @@ public:
 };
 
 class UnexpectedPythonObjectError : public std::exception {
+protected:
     std::string message;
 
 public:
     UnexpectedPythonObjectError() = delete;
+    UnexpectedPythonObjectError(const UnexpectedPythonObjectError& exception) {
+        this->message = std::string(exception.what());
+    }
     UnexpectedPythonObjectError(const py::object& obj, const std::string& expectedType) {
         py::gil_scoped_acquire acquire;
         std::string objectType = obj.attr("__class__").attr("__name__").cast<std::string>();
@@ -90,6 +94,19 @@ public:
     const char* what() const throw() override {
         return message.c_str();
     }
+};
+
+class UnexpectedInputPythonObjectError : UnexpectedPythonObjectError {
+public:
+    UnexpectedInputPythonObjectError(const UnexpectedPythonObjectError& exception) :
+        UnexpectedPythonObjectError(exception) {}
+    const char* what() const throw() override { return UnexpectedPythonObjectError::what(); }
+};
+class UnexpectedOutputPythonObjectError : UnexpectedPythonObjectError {
+public:
+    UnexpectedOutputPythonObjectError(const UnexpectedPythonObjectError& exception) :
+        UnexpectedPythonObjectError(exception) {}
+    const char* what() const throw() override { return UnexpectedPythonObjectError::what(); }
 };
 
 class BadPythonNodeConfigurationError : public std::exception {

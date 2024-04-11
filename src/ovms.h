@@ -33,7 +33,7 @@ typedef struct OVMS_ServableMetadata_ OVMS_ServableMetadata;
 typedef struct OVMS_Metadata_ OVMS_Metadata;
 
 #define OVMS_API_VERSION_MAJOR 1
-#define OVMS_API_VERSION_MINOR 0
+#define OVMS_API_VERSION_MINOR 1
 
 // Function to retrieve OVMS API version.
 //
@@ -68,6 +68,7 @@ typedef enum OVMS_DataType_enum {
     OVMS_DATATYPE_MIXED,
     OVMS_DATATYPE_Q78,
     OVMS_DATATYPE_BIN,
+    OVMS_DATATYPE_STRING,
     OVMS_DATATYPE_END
 } OVMS_DataType;
 

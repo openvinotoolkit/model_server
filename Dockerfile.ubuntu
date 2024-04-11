@@ -105,7 +105,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             libnuma-dev \
             libtbb-dev \
             libssl-dev \
-            nlohmann-json3-dev \
             python2 \
             python2-dev \
             python3-dev \
@@ -120,7 +119,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 
 ARG JOBS
 ARG ov_use_binary=0
-ARG sentencepiece=1
+ARG tokenizers=1
 ARG ov_source_org=openvinotoolkit
 ARG ov_contrib_org=openvinotoolkit
 ARG DLDT_PACKAGE_URL
@@ -134,7 +133,7 @@ ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 ARG NVIDIA=0
 # hadolint ignore=DL3003
-RUN if [[ "$sentencepiece" == "1" || "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
+RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
@@ -194,11 +193,14 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; 
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
 
-# SENTENCEPIECE_EXTENSION
+# OpenVINO Tokenizers extension
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
 
-WORKDIR /openvino_contrib/modules/custom_operations/user_ie_extensions
-RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="tokenizer" && cmake --build . --parallel $JOBS
+ARG ov_tokenizers_branch=2024.0.0.0
+# hadolint ignore=DL3003
+RUN if [[ "$tokenizers" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
+WORKDIR /openvino_tokenizers/build
+RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release && cmake --build . --parallel $JOBS
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
@@ -286,15 +288,7 @@ COPY src/ /ovms/src/
 ARG RUN_TESTS=1
 RUN if [ "$RUN_TESTS" == "1" ] ; then bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src/python/binding:test_python_binding; fi ;
 
-# Python <3.10 needed to build TFS in current version
-RUN if [ "$BASE_IMAGE" == "ubuntu:22.04" ] ; then \
-        apt-get update && apt-get install -y software-properties-common gpg gpg-agent --no-install-recommends && \
-        add-apt-repository ppa:deadsnakes/ppa && \
-        apt-get install -y python3.8 python3.8-dev python3.8-distutils --no-install-recommends && \
-        apt-get clean && rm -rf /var/lib/apt/lists/* && \
-        update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 ; \
-    fi ;
-
+# hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
 # Copy example clients into build image for static analysis
@@ -350,7 +344,7 @@ ARG FUZZER_BUILD=0
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${CAPI_FLAGS} --jobs $JOBS //src:capi_cpp_example; fi;
 
 # C-API benchmark app
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"; fi;
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;
 
 # Custom Nodes
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes; fi;

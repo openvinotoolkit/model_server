@@ -114,7 +114,10 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
 }
 Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
-    this->pythonNodeResourcesMap.clear();
+    if (!this->pythonNodeResourcesMap.empty()) {
+        SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
+        return StatusCode::INTERNAL_ERROR;
+    }
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
     if (manager.modelExists(this->getName()) || manager.pipelineDefinitionExists(this->getName())) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph name: {} is already occupied by model or pipeline.", this->getName());
@@ -259,10 +262,10 @@ Status MediapipeGraphDefinition::setStreamTypes() {
         return StatusCode::INTERNAL_ERROR;
     }
     for (auto& inputStreamName : this->config.input_stream()) {
-        inputTypes.emplace(getStreamNamePair(inputStreamName));
+        inputTypes.emplace(getStreamNamePair(inputStreamName, MediaPipeStreamType::INPUT));
     }
     for (auto& outputStreamName : this->config.output_stream()) {
-        outputTypes.emplace(getStreamNamePair(outputStreamName));
+        outputTypes.emplace(getStreamNamePair(outputStreamName, MediaPipeStreamType::OUTPUT));
     }
     bool anyInputTfLite = std::any_of(inputTypes.begin(), inputTypes.end(), [](const auto& p) {
         const auto& [k, v] = p;
@@ -318,10 +321,12 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
     this->mgconfig = config;
+    this->pythonNodeResourcesMap.clear();
     return validate(manager);
 }
 
 void MediapipeGraphDefinition::retire(ModelManager& manager) {
+    this->pythonNodeResourcesMap.clear();
     this->status.handle(RetireEvent());
 }
 

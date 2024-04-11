@@ -17,9 +17,11 @@
 import os
 import threading
 import numpy as np
+import torch
 
+from typing import Optional, List, Tuple
 from optimum.intel import OVModelForCausalLM
-from transformers import AutoTokenizer, AutoConfig, TextIteratorStreamer, StoppingCriteria, StoppingCriteriaList
+from transformers import AutoTokenizer, AutoConfig, TextIteratorStreamer, StoppingCriteria, StoppingCriteriaList, set_seed
 from tritonclient.utils import deserialize_bytes_tensor, serialize_byte_tensor
 
 from pyovms import Tensor
@@ -27,9 +29,11 @@ from pyovms import Tensor
 from config import SUPPORTED_LLM_MODELS, BatchTextIteratorStreamer
 
 SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
+LANGUAGE = os.environ.get("LANGUAGE", 'English')
+SEED = os.environ.get("SEED")
 
-print("SELECTED MODEL", SELECTED_MODEL)
-model_configuration = SUPPORTED_LLM_MODELS[SELECTED_MODEL]
+print("SELECTED MODEL", SELECTED_MODEL, flush=True)
+model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 
 MODEL_PATH = "/model"  # relative to container
 OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
@@ -61,6 +65,7 @@ start_message = model_configuration["start_message"]
 stop_tokens = model_configuration.get("stop_tokens")
 tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
+tokenizer.pad_token = tokenizer.eos_token  # For models with tokenizer with uninitialized pad token
 
 # HF class that is capable of stopping the generation
 # when given tokens appear in specific order
@@ -132,17 +137,17 @@ def serialize_completions(batch_size, result):
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        print("-------- Running initialize")
+        print("-------- Running initialize", flush=True)
         self.ov_model = OVModelForCausalLM.from_pretrained(
             MODEL_PATH,
             device="AUTO",
             ov_config=OV_CONFIG,
             config=AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True))
-        print("-------- Model loaded")
+        print("-------- Model loaded", flush=True)
         return True
 
     def execute(self, inputs: list):
-        print(f"-------- Running execute, shape: {inputs[0].shape}")
+        print(f"-------- Running execute, shape: {inputs[0].shape}", flush=True)
         batch_size = inputs[0].shape[0]
         prompts = deserialize_prompts(batch_size, inputs[0])
         messages = [convert_history_to_text([[prompt, ""]]) for prompt in prompts]
@@ -169,10 +174,11 @@ class OvmsPythonModel:
         def generate():
             ov_model_exec.generate(**tokens, **generate_kwargs)
 
+        if SEED is not None: set_seed(int(SEED))
         t1 = threading.Thread(target=generate)
         t1.start()
 
         for partial_result in streamer:
             yield serialize_completions(batch_size, partial_result)
         yield [Tensor("end_signal", "".encode())]
-        print('end')
+        print('end', flush=True)

@@ -51,7 +51,7 @@ BASE_OS ?= ubuntu22
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
-BASE_OS_TAG_UBUNTU ?= 20.04
+BASE_OS_TAG_UBUNTU ?= 22.04
 BASE_OS_TAG_REDHAT ?= 8.9
 
 INSTALL_RPMS_FROM_URL ?=
@@ -69,13 +69,14 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 34caeefd07800b59065345d651949efbe8ab6649  # 2024.0
-OV_CONTRIB_BRANCH ?= b36781b43e0fbcbbb386619b853d842c67728f3f  # 2024.0
+OV_SOURCE_BRANCH ?= c26745a5fcf21b5ea0dc1b1f714c928433217445  # 2024.1
+OV_CONTRIB_BRANCH ?= 8f238178616b47fb11fc3df0df99baf9e0df397d  # 2024.1
+OV_TOKENIZERS_BRANCH ?= 01f15a0f3a0b631bdbf2b3b91b8e0b88690545ff  # 04.04.2024 master
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
 
-SENTENCEPIECE ?= 1
+TOKENIZERS ?= 1
 
 OV_USE_BINARY ?= 0
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -154,10 +155,10 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   endif
   ifeq ($(BASE_OS_TAG),20.04)
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.0.0.14509.34caeefd078_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.1.0.14985.c26745a5fcf_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
 	INSTALL_DRIVER_VERSION ?= "23.22.26516"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.0.0.14509.34caeefd078_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.1.0.14985.c26745a5fcf_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -172,7 +173,7 @@ ifeq ($(BASE_OS),redhat)
   endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.0.0.14509.34caeefd078_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.1.0.14985.c26745a5fcf_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -188,7 +189,7 @@ endif
 OVMS_PYTHON_IMAGE_TAG ?= py
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2024.0"
+PRODUCT_VERSION ?= "2024.1"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
@@ -213,7 +214,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg ov_source_org=$(OV_SOURCE_ORG)\
 	--build-arg ov_contrib_org=$(OV_CONTRIB_ORG)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\
-	--build-arg sentencepiece=$(SENTENCEPIECE)\
+	--build-arg tokenizers=$(TOKENIZERS)\
 	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
 	--build-arg RUN_TESTS=$(RUN_TESTS)\
@@ -225,6 +226,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
 	--build-arg NVIDIA=$(NVIDIA)\
 	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
+	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
 	--build-arg INSTALL_DRIVER_VERSION=$(INSTALL_DRIVER_VERSION)\
 	--build-arg GPU=$(GPU)\
@@ -452,7 +454,7 @@ ifeq ($(BUILD_NGINX), 1)
 endif
 
 python_image:
-	@docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg IMAGE_NAME=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) demos/python_demos -t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_PYTHON_IMAGE_TAG)
+	@docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg IMAGE_NAME=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) -f demos/python_demos/Dockerfile.$(OS) demos/python_demos/ -t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_PYTHON_IMAGE_TAG)
 
 
 # Ci build expects index.html in genhtml directory
@@ -645,3 +647,8 @@ cpu_extension:
 		--build-arg BASE_IMAGE=${BASE_IMAGE} .
 	mkdir -p ./lib/${OS}
 	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${OS}
+
+run_unit_tests:
+	docker run -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh > test.log 2>&1 ; exit_status=$?
+	tail -200 test.log
+	exit $(exit_status)

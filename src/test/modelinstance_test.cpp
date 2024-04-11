@@ -564,6 +564,16 @@ TEST_F(TestLoadModel, CheckTFLiteModelHandling) {
     EXPECT_EQ(model_files.front(), directoryPath + "/test_tflite/1/my-model.tflite");
 }
 
+TEST_F(TestLoadModel, StringLoad) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    EXPECT_EQ(modelInstance.loadModel(NATIVE_STRING_MODEL_CONFIG), ovms::StatusCode::OK);
+    EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    ASSERT_EQ(modelInstance.getInputsInfo().size(), 1);
+    ASSERT_EQ(modelInstance.getInputsInfo().begin()->second->getPrecision(), ovms::Precision::STRING);
+    ASSERT_EQ(modelInstance.getOutputsInfo().size(), 1);
+    ASSERT_EQ(modelInstance.getOutputsInfo().begin()->second->getPrecision(), ovms::Precision::STRING);
+}
+
 TEST_F(TestLoadModel, SuccessfulLoad) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     EXPECT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
@@ -1110,8 +1120,8 @@ TEST(TensorMap, TestProcessingHintFromShape) {
             std::make_shared<ovms::TensorInfo>("Input_U8_1_3_NCHW", ovms::Precision::U8, ovms::shape_t{1, 3})},
         {"Input_U8_3_N",
             std::make_shared<ovms::TensorInfo>("Input_U8_3_N", ovms::Precision::U8, ovms::shape_t{3})},
-        {"Input_U8_-1_N",
-            std::make_shared<ovms::TensorInfo>("Input_U8_-1_N", ovms::Precision::U8, ovms::Shape{ovms::Dimension::any()})},
+        {"Input_Native_-1_N",
+            std::make_shared<ovms::TensorInfo>("Input_Native_-1_N", ovms::Precision::STRING, ovms::Shape{ovms::Dimension::any()})},
     });
     auto servableOutputs = ovms::tensor_map_t({{"Output_U8_-1_-1_N?",
                                                    std::make_shared<ovms::TensorInfo>("Output_U8_-1_-1_N?", ovms::Precision::U8, ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()})},
@@ -1123,7 +1133,7 @@ TEST(TensorMap, TestProcessingHintFromShape) {
     EXPECT_EQ(servableInputs["Input_FP32_1_224_224_3_NHWC"]->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::IMAGE);
     EXPECT_EQ(servableInputs["Input_U8_1_3_NCHW"]->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_2D_U8);
     EXPECT_EQ(servableInputs["Input_U8_3_N"]->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);  // due to static dimension
-    EXPECT_EQ(servableInputs["Input_U8_-1_N"]->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_1D_U8);
+    EXPECT_EQ(servableInputs["Input_Native_-1_N"]->getPreProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_NATIVE);
     EXPECT_EQ(servableOutputs["Output_U8_-1_-1_N?"]->getPostProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);           // due to no suffix
     EXPECT_EQ(servableOutputs["Output_U8_-1_-1_N?_string"]->getPostProcessingHint(), ovms::TensorInfo::ProcessingHint::STRING_2D_U8);     // due to suffix
     EXPECT_EQ(servableOutputs["Output_FP32_-1_-1_N?_string"]->getPostProcessingHint(), ovms::TensorInfo::ProcessingHint::NO_PROCESSING);  // no processing due to not being U8

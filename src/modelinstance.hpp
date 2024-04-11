@@ -581,7 +581,6 @@ public:
 
     template <class ArrayType>
     void fetchModelFiles(bool& found, ArrayType ext);
-    Status infer(float* data, float* output);
     virtual std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*);
     virtual std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> createRequestProcessor(const KFSRequest*, KFSResponse*);
     virtual std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> createRequestProcessor(const InferenceRequest*, InferenceResponse*);

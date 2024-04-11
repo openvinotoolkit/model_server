@@ -47,19 +47,11 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
             yum clean all
 
-# Build and install pugixml
-# hadolint ignore=DL3003
-RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
-    cd pugixml && \
-    cmake -DBUILD_SHARED_LIBS=ON && \
-    make all && \
-    cp -P libpugixml.so* /usr/lib64/
-
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 # hadolint ignore=DL3003
 RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
-	tar xvf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
+	tar xf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
 	./b2 -j ${JOBS} cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
 		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
 		--with-random --with-thread --with-atomic --with-regex \
@@ -67,6 +59,15 @@ RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_6
 		install
 
 COPY third_party /ovms/third_party/
+
+# Build and install pugixml
+# hadolint ignore=DL3003
+RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
+    cd pugixml && \
+    patch -p1 < /ovms/third_party/pugixml/pugixml_v1.13_flags.patch && \
+    cmake -DBUILD_SHARED_LIBS=ON && \
+    make all && \
+    cp -P libpugixml.so* /usr/lib64/
 
 ####### Azure SDK
 WORKDIR /azure
@@ -149,7 +150,7 @@ ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 ARG ov_source_branch=master
 ARG ov_contrib_branch=master
-ARG sentencepiece=1
+ARG tokenizers=1
 ARG ov_source_org=openvinotoolkit
 ARG ov_contrib_org=openvinotoolkit
 ARG ov_use_binary=0
@@ -159,7 +160,7 @@ ARG CMAKE_BUILD_TYPE=Release
 ARG debug_bazel_flags=--strip=never
 
 # hadolint ignore=DL3003
-RUN if [[ "$sentencepiece" == "1" || "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
+RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
@@ -201,10 +202,15 @@ RUN yum install -y http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
 
-# SENTENCEPIECE_EXTENSION
+# OpenVINO Tokenizers extension
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
-WORKDIR /openvino_contrib/modules/custom_operations/user_ie_extensions
-RUN if [ "$sentencepiece" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCUSTOM_OPERATIONS="tokenizer" && cmake --build . --parallel $JOBS
+
+ARG ov_tokenizers_branch=2024.0.0.0
+# hadolint ignore=DL3003
+RUN if [[ "$tokenizers" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
+WORKDIR /openvino_tokenizers/build
+RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release && cmake --build . --parallel $JOBS
+
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
@@ -325,7 +331,7 @@ RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
 RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
 
 # C-API benchmark app
-RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --threads_per_ireq 2 --nireq 1 --servable_name "dummy" --inputs_names "b" --shape "b[1,10]"
+RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"
 
 # Custom Nodes
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes

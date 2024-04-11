@@ -39,7 +39,7 @@ namespace ovms {
 PythonNodeResources::PythonNodeResources(PythonBackend* pythonBackend) {
     this->ovmsPythonModel = nullptr;
     this->pythonBackend = pythonBackend;
-    this->pythonNodeFilePath = "";
+    this->handlerPath = "";
 }
 
 void PythonNodeResources::finalize() {
@@ -47,16 +47,16 @@ void PythonNodeResources::finalize() {
         py::gil_scoped_acquire acquire;
         try {
             if (!py::hasattr(*ovmsPythonModel.get(), "finalize")) {
-                SPDLOG_DEBUG("Python node resource does not have a finalize method. Python node path {} ", this->pythonNodeFilePath);
+                SPDLOG_DEBUG("Python node resource does not have a finalize method. Python node handler_path: {} ", this->handlerPath);
                 return;
             }
 
             ovmsPythonModel.get()->attr("finalize")();
         } catch (const pybind11::error_already_set& e) {
-            SPDLOG_ERROR("Failed to process python node finalize method. {}  Python node path {} ", e.what(), this->pythonNodeFilePath);
+            SPDLOG_ERROR("Failed to process python node finalize method. {}  Python node handler_path: {} ", e.what(), this->handlerPath);
             return;
         } catch (...) {
-            SPDLOG_ERROR("Failed to process python node finalize method. Python node path {} ", this->pythonNodeFilePath);
+            SPDLOG_ERROR("Failed to process python node finalize method. Python node handler_path: {} ", this->handlerPath);
             return;
         }
     }
@@ -121,7 +121,7 @@ Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNode
     }
 
     nodeResources = std::make_shared<PythonNodeResources>(pythonBackend);
-    nodeResources->pythonNodeFilePath = nodeOptions.handler_path();
+    nodeResources->handlerPath = nodeOptions.handler_path();
     createOutputTagNameMapping(nodeResources, graphNodeConfig);
 
     auto fsHandlerPath = std::filesystem::path(nodeOptions.handler_path());
@@ -136,20 +136,29 @@ Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNode
         sys.attr("path").attr("append")(parentPath.c_str());
         py::module_ script = py::module_::import(filename.c_str());
 
-        py::object OvmsPythonModel = script.attr("OvmsPythonModel");
-        nodeResources->ovmsPythonModel = std::make_unique<py::object>(OvmsPythonModel());
+        if (!py::hasattr(script, "OvmsPythonModel")) {
+            SPDLOG_ERROR("Error during python node initialization. No OvmsPythonModel class found in {}", nodeOptions.handler_path());
+            return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
+        }
 
+        py::object OvmsPythonModel = script.attr("OvmsPythonModel");
+        if (!py::hasattr(OvmsPythonModel, "execute")) {
+            SPDLOG_ERROR("Error during python node initialization. OvmsPythonModel class defined in {} does not implement execute method.", nodeOptions.handler_path());
+            return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
+        }
+
+        nodeResources->ovmsPythonModel = std::make_unique<py::object>(OvmsPythonModel());
         if (py::hasattr(*nodeResources->ovmsPythonModel, "initialize")) {
             py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig);
             nodeResources->ovmsPythonModel->attr("initialize")(kwargsParam);
         } else {
-            SPDLOG_DEBUG("OvmsPythonModel class does not have an initialize method. Python node path {} ", nodeOptions.handler_path());
+            SPDLOG_DEBUG("OvmsPythonModel class defined in {} does not implement initialize method.", nodeOptions.handler_path());
         }
     } catch (const pybind11::error_already_set& e) {
-        SPDLOG_ERROR("Failed to process python node file {} : {}", nodeOptions.handler_path(), e.what());
+        SPDLOG_ERROR("Error during python node initialization for handler_path: {} - {}", nodeOptions.handler_path(), e.what());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
-        SPDLOG_ERROR("Failed to process python node file {}", nodeOptions.handler_path());
+        SPDLOG_ERROR("Error during python node initialization for handler_path: {}", nodeOptions.handler_path());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     }
     return StatusCode::OK;

@@ -5925,6 +5925,7 @@ TYPED_TEST(EnsembleFlowStringInput, positive_2d) {
     checkIncrement4DimResponse<uint8_t>(this->pipelineOutputName, expectedData, this->response, expectedShape, checkRaw);
 }
 
+// Legacy, supported via Native OV String since 2024.0
 TYPED_TEST(EnsembleFlowStringInput, positive_1d) {
     // Most basic configuration, just process single passthrough custom node pipeline request
     // input  passthrough  output
@@ -5955,18 +5956,5 @@ TYPED_TEST(EnsembleFlowStringInput, positive_1d) {
     pipeline.push(std::move(custom_node));
     pipeline.push(std::move(output_node));
 
-    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
-    std::vector<uint8_t> expectedData = {
-        4, 0, 0, 0,  // batch size
-        0, 0, 0, 0,  // first string start offset
-        3, 0, 0, 0,  // end of "ala" in condensed content
-        3, 0, 0, 0,  // end of "" in condensed content
-        5, 0, 0, 0,  // end of "ma" in condensed content
-        9, 0, 0, 0,  // end of "kota" in condensed content
-        'a', 'l', 'a',
-        'm', 'a',
-        'k', 'o', 't', 'a'};
-    std::vector<size_t> expectedShape = {33};
-    bool checkRaw = false;
-    checkIncrement4DimResponse<uint8_t>(this->pipelineOutputName, expectedData, this->response, expectedShape, checkRaw);
+    ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::NOT_IMPLEMENTED);
 }
