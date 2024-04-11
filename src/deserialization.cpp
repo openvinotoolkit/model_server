@@ -62,6 +62,7 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
     } else {
         // TODO FIXME check ptr
         //       return factory->create(precision, shape, requestInput.getBuffer()->data());
+
         auto t = factory->create(precision, shape, requestInput.getBuffer()->data());
         return t;
         // TODO instead of context pass in factory of tensors
