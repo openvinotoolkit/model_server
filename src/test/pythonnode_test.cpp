@@ -2319,6 +2319,135 @@ TEST_F(PythonFlowTest, FinalizePassTest) {
     nodeResources->finalize();
 }
 
+TEST_F(PythonFlowTest, RelativeBasePath) {
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "relative_base_path.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "/ovms/src/test/mediapipe/python/scripts"), StatusCode::OK);
+    nodeResources->finalize();
+}
+
+TEST_F(PythonFlowTest, RelativeBasePath2) {
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "python/scripts/relative_base_path.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "/ovms/src/test/mediapipe"), StatusCode::OK);
+    nodeResources->finalize();
+}
+
+TEST_F(PythonFlowTest, RelativeBasePath3) {
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "python/scripts/relative_base_path.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "/ovms/src/test/mediapipe/"), StatusCode::OK);
+    nodeResources->finalize();
+}
+
+TEST_F(PythonFlowTest, RelativeHandlerPath) {
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "good_finalize_pass.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "/ovms/src/test/mediapipe/python/scripts"), StatusCode::OK);
+
+    ASSERT_TRUE(nodeResources->handlerPath == "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py");
+    nodeResources->finalize();
+}
+
+TEST_F(PythonFlowTest, AbsoluteHandlerPath) {
+    const std::string pbTxt{R"(
+    input_stream: "in"
+    output_stream: "out"
+        node {
+            name: "pythonNode2"
+            calculator: "PythonBackendCalculator"
+            input_side_packet: "PYOBJECT:pyobject"
+            input_stream: "in"
+            output_stream: "out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
+                    handler_path: "/ovms/src/test/mediapipe/python/scripts/relative_base_path.py"
+                }
+            }
+        }
+    )"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "this_string_doesnt_matter_since_handler_path_is_absolute"), StatusCode::OK);
+
+    ASSERT_TRUE(nodeResources->handlerPath == "/ovms/src/test/mediapipe/python/scripts/relative_base_path.py");
+    nodeResources->finalize();
+}
+
 TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
     const std::string pbTxt{R"(
     input_stream: "in"

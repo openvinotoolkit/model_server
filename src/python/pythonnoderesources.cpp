@@ -113,33 +113,34 @@ void createOutputTagNameMapping(std::shared_ptr<PythonNodeResources>& nodeResour
     }
 }
 
-Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, PythonBackend* pythonBackend, std::string basePath) {
+Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, PythonBackend* pythonBackend, std::string graphPath) {
     mediapipe::PythonExecutorCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
 
     nodeResources = std::make_shared<PythonNodeResources>(pythonBackend);
-    nodeResources->handlerPath = nodeOptions.handler_path();
     createOutputTagNameMapping(nodeResources, graphNodeConfig);
 
     auto fsHandlerPath = std::filesystem::path(nodeOptions.handler_path());
 
-    std::string parentPath;
+    std::string basePath;
     std::string extension = fsHandlerPath.extension();
     fsHandlerPath.replace_extension();
     std::string filename = fsHandlerPath.filename();
     if (fsHandlerPath.is_relative()) {
-        parentPath = (basePath + fsHandlerPath.parent_path().string());
+        basePath = (std::filesystem::path(graphPath) / fsHandlerPath.parent_path()).string();
     } else {
-        parentPath = fsHandlerPath.parent_path();
+        basePath = fsHandlerPath.parent_path();
     }
-    if (!std::filesystem::exists(std::filesystem::path(parentPath) / std::filesystem::path(filename + extension))) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node handler_path: {} does not exist. ", (std::filesystem::path(parentPath) / std::filesystem::path(filename + extension)).string());
+    auto hpath = std::filesystem::path(basePath) / std::filesystem::path(filename + extension);
+    nodeResources->handlerPath = hpath.string();
+    if (!std::filesystem::exists(hpath)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node handler_path: {} does not exist. ", hpath.string());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
     }
     py::gil_scoped_acquire acquire;
     try {
         py::module_ sys = py::module_::import("sys");
-        sys.attr("path").attr("append")(parentPath.c_str());
+        sys.attr("path").attr("append")(basePath.c_str());
         py::module_ script = py::module_::import(filename.c_str());
 
         if (!py::hasattr(script, "OvmsPythonModel")) {
@@ -155,7 +156,7 @@ Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNode
 
         nodeResources->ovmsPythonModel = std::make_unique<py::object>(OvmsPythonModel());
         if (py::hasattr(*nodeResources->ovmsPythonModel, "initialize")) {
-            py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig, parentPath);
+            py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig, basePath);
             nodeResources->ovmsPythonModel->attr("initialize")(kwargsParam);
         } else {
             SPDLOG_DEBUG("OvmsPythonModel class defined in {} does not implement initialize method.", nodeOptions.handler_path());
