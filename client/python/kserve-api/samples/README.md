@@ -3,24 +3,24 @@
 OpenVINO Model Server 2022.2 release introduced support for [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2).
 
 This guide shows how to interact with KServe API endpoints on both gRPC and HTTP interfaces. It covers following topics:
-- <a href="#grpc-api">GRPC API Examples </a>
-  - <a href="#grpc-server-live">grpc_server_live.py</a>
-  - <a href="#grpc-server-ready">grpc_server_ready.py</a>
-  - <a href="#grpc-server-metadata">grpc_server_metadata.py</a>
-  - <a href="#grpc-model-ready">grpc_model_ready.py</a>
-  - <a href="#grpc-model-metadata">grpc_model_metadata.py</a>
-  - <a href="#grpc-model-infer">grpc_infer_resnet.py</a>
-  - <a href="#grpc-model-infer-binary">grpc_infer_binary_resnet.py</a>
-  - <a href="#grpc-model-async-infer">grpc_async_infer_resnet.py</a>
-- <a href="#http-api">HTTP API Example</a>
-  - <a href="#http-server-live">http_server_live.py</a>
-  - <a href="#http-server-ready">http_server_ready.py</a>
-  - <a href="#http-server-metadata">http_server_metadata.py</a>
-  - <a href="#http-model-ready">http_model_ready.py</a>
-  - <a href="#http-model-metadata">http_model_metadata.py</a>
-  - <a href="#http-model-infer">http_infer_resnet.py</a>
-  - <a href="#http-model-infer-binary">http_infer_binary_resnet.py</a>
-  - <a href="#http-model-async-infer">http_async_infer_resnet.py</a>
+- [GRPC API Examples](#grpc-examples)
+  - [grpc_server_live.py](#run-the-client-to-get-server-liveness)
+  - [grpc_server_ready.py](#run-the-client-to-get-server-readiness)
+  - [grpc_server_metadata.py](#run-the-client-to-get-server-metadata)
+  - [grpc_model_ready.py](#run-the-client-to-get-model-readiness)
+  - [grpc_model_metadata.py](#run-the-client-to-get-metadata)
+  - [grpc_infer_resnet.py](#run-the-client-to-perform-inference)
+  - [grpc_infer_binary_resnet.py](#run-the-client-to-perform-inference-with-binary-encoded-image)
+  - [grpc_async_infer_resnet.py](#run-the-client-to-perform-asynchronous-inference)
+- [HTTP API Example](#http-examples)
+  - [http_server_live.py](#run-the-client-to-get-server-liveness-1)
+  - [http_server_ready.py](#run-the-client-to-get-server-readiness-1)
+  - [http_server_metadata.py](#run-the-client-to-get-server-metadata-1)
+  - [http_model_ready.py](#run-the-client-to-get-model-readiness-1)
+  - [http_model_metadata.py](#run-the-client-to-get-model-metadata)
+  - [http_infer_resnet.py](#run-the-client-to-perform-inference-1)
+  - [http_infer_binary_resnet.py](#run-the-client-to-perform-inference-with-binary-encoded-image-1)
+  - [http_async_infer_resnet.py](#run-the-client-to-perform-asynchronous-inference-1)
 
 > **Note:** Some of the samples will use [ResNet50](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md).
 
@@ -58,15 +58,15 @@ Start the server container with the image pulled in the previous step and mount 
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC:NCHW
 ```
 
-> Note: The model default setting is to accept inputs in layout NCHW, but we change it to NHWC to make it work with samples using either regular, array-like input data or JPEG encoded images. 
+> Note: The model default setting is to accept inputs in layout NCHW, but we change it to NHWC to make it work with samples using either regular, array-like input data or JPEG encoded images.
 
 Once you finish above steps, you are ready to run the samples.
 
 ---
 
-## GRPC Examples <a name="grpc-api"></a>
+## GRPC Examples
 
-### Run the Client to get server liveness <a name="grpc-server-live"></a>
+### Run the Client to get server liveness
 
 - Command
 
@@ -85,14 +85,14 @@ optional arguments:
 
 ```
 
-- Usage Example 
+- Usage Example
 
 ```Bash
 python3 ./grpc_server_live.py --grpc_port 9000 --grpc_address localhost
 Server Live: True
 ```
 
-### Run the Client to get server readiness <a name="grpc-server-ready"></a>
+### Run the Client to get server readiness
 
 - Command
 
@@ -118,7 +118,7 @@ python3 ./grpc_server_ready.py --grpc_port 9000 --grpc_address localhost
 Server Ready: True
 ```
 
-### Run the Client to get server metadata <a name="grpc-server-metadata"></a>
+### Run the Client to get server metadata
 
 - Command
 
@@ -144,7 +144,7 @@ name: "OpenVINO Model Server"
 version: "2022.2.c290da85"
 ```
 
-### Run the Client to get model readiness <a name="grpc-model-ready"></a>
+### Run the Client to get model readiness
 
 - Command
 
@@ -173,7 +173,7 @@ python3 ./grpc_model_ready.py --grpc_port 9000 --grpc_address localhost --model_
 Model Ready: True
 ```
 
-### Run the Client to get metadata <a name="grpc-model-metadata"></a>
+### Run the Client to get metadata
 
 - Command
 
@@ -219,7 +219,7 @@ outputs {
 }
 ```
 
-### Run the Client to perform inference <a name="grpc-model-infer"></a>
+### Run the Client to perform inference
 
 - Command
 
@@ -324,7 +324,7 @@ Classification accuracy: 100.00
 ```
 
 
-### Run the Client to perform inference with binary encoded image <a name="grpc-model-infer-binary"></a>
+### Run the Client to perform inference with binary encoded image
 - Command
 
 ```Bash
@@ -405,7 +405,7 @@ Classification accuracy: 100.00
 ```
 
 
-### Run the Client to perform asynchronous inference <a name="grpc-model-async-infer"></a>
+### Run the Client to perform asynchronous inference
 
 - Command
 
@@ -491,9 +491,9 @@ Classification accuracy: 100.00
 
 ---
 
-## HTTP Examples <a name="http-api"></a>
+## HTTP Examples
 
-### Run the Client to get server liveness <a name="http-server-live"></a>
+### Run the Client to get server liveness
 
 - Command
 
@@ -518,7 +518,7 @@ python3 ./http_server_live.py --http_port 8000 --http_address localhost
 Server Live: True
 ```
 
-### Run the Client to get server readiness <a name="http-server-ready"></a>
+### Run the Client to get server readiness
 
 - Command
 
@@ -544,7 +544,7 @@ python3 ./http_server_ready.py --http_port 8000 --http_address localhost
 Server Ready: True
 ```
 
-### Run the Client to get server metadata <a name="http-server-metadata"></a>
+### Run the Client to get server metadata
 
 - Command
 
@@ -569,7 +569,7 @@ python3 ./http_server_metadata.py --http_port 8000 --http_address localhost
 {'name': 'OpenVINO Model Server', 'version': '2022.2.c290da85'}
 ```
 
-### Run the Client to get model readiness <a name="http-model-ready"></a>
+### Run the Client to get model readiness
 
 - Command
 
@@ -598,7 +598,7 @@ python3 ./http_model_ready.py --http_port 8000 --http_address localhost --model_
 Model Ready: True
 ```
 
-### Run the Client to get model metadata <a name="http-model-metadata"></a>
+### Run the Client to get model metadata
 
 - Command
 
@@ -627,7 +627,7 @@ python3 ./http_model_metadata.py --http_port 8000 --http_address localhost --mod
 {'name': 'resnet', 'versions': ['1'], 'platform': 'OpenVINO', 'inputs': [{'name': '0', 'datatype': 'FP32', 'shape': [1, 224, 224, 3]}], 'outputs': [{'name': '1463', 'datatype': 'FP32', 'shape': [1, 1000]}]}
 ```
 
-### Run the Client to perform inference <a name="http-model-infer"></a>
+### Run the Client to perform inference
 
 - Command
 
@@ -787,7 +787,7 @@ Classification accuracy: 100.00
 ```
 
 
-### Run the Client to perform inference with binary encoded image <a name="http-model-infer-binary"></a>
+### Run the Client to perform inference with binary encoded image
 - Command
 
 ```Bash
@@ -873,7 +873,7 @@ time variance: 29.96
 Classification accuracy: 100.00
 ```
 
-### Run the Client to perform asynchronous inference <a name="http-model-async-infer"></a>
+### Run the Client to perform asynchronous inference
 
 - Command
 

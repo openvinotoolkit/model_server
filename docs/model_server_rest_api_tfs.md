@@ -6,16 +6,16 @@ In addition to [gRPC APIs](./model_server_grpc_api_tfs.md) OpenVINO&trade; model
 > **Note** : Only numerical data type is supported.
 
 This document covers the following API:
-* <a href="#model-status">Model Status API</a>
-* <a href="#model-metadata">Model MetaData API </a>
-* <a href="#predict">Predict API </a>
-* <a href="#config-reload">Config Reload API </a>
-* <a href="#config-status">Config Status API </a>
+* [Model Status API](#model-status-api)
+* [Model MetaData API](#model-metadata-api)
+* [Predict API](#predict-api)
+* [Config Reload API](#config-reload-api)
+* [Config Status API](#config-status-api)
 
 
 > **NOTE** : The implementations for Predict, GetModelMetadata and GetModelStatus function calls are currently available. These are the most generic function calls and should address most of the usage scenarios.
 
-## Model Status API <a name="model-status"></a>
+## Model Status API
 **Description**
 
 Get information about the status of served models.
@@ -67,7 +67,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1
 ```
 Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-status-api-1)
 
-## Model Metadata API <a name="model-metadata"></a>
+## Model Metadata API
 **Description**
 
 Get the metadata of a model in the model server.
@@ -150,7 +150,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
 
 Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-metadata-api-1)
 
-## Predict API <a name="predict"></a>
+## Predict API
 **Description**
 
 Endpoint for running an inference with loaded models or [DAGs](./dag_scheduler.md).
@@ -214,7 +214,7 @@ Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) f
 
 Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#predict-api-1)
 
-## Config Reload API <a name="config-reload"></a>
+## Config Reload API
 **Description**
 
 Sends requests via RESTful API to trigger config reloading and gets models and [DAGs](./dag_scheduler.md) statuses as a response. This endpoint can be used with disabled automatic config reload to ensure configuration changes are applied in a specific time and also to get confirmation about reload operation status. Typically this option is to be used when OVMS is started with a parameter `--file_system_poll_wait_seconds 0`.
@@ -313,9 +313,9 @@ Possible messages returned on error:
 }
 ```
 
-Even if one of models reload failed other may be working properly. To check state of loaded models use [Config Status API](#config-status). To detect exact cause of errors described above analyzing sever logs may be necessary.
+Even if one of models reload failed other may be working properly. To check state of loaded models use [Config Status API](#config-status-api). To detect exact cause of errors described above analyzing sever logs may be necessary.
 
-## Config Status API <a name="config-status"></a>
+## Config Status API
 **Description**
 
 Sends requests via RESTful API to get a response that contains an aggregation of getModelStatus responses for all models and [DAGs](./dag_scheduler.md).

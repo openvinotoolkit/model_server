@@ -3,14 +3,14 @@
 OpenVINO Model Server introduced support for [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2), including [Triton](https://github.com/triton-inference-server)'s raw format extension.
 
 This guide shows how to interact with KServe API endpoints over gRPC. It covers following topics:
-- <a href="#grpc-api">GRPC API Examples </a>
-  - <a href="#grpc-server-live">grpc_server_live</a>
-  - <a href="#grpc-server-ready">grpc_server_ready</a>
-  - <a href="#grpc-server-metadata">grpc_server_metadata</a>
-  - <a href="#grpc-model-ready">grpc_model_ready</a>
-  - <a href="#grpc-model-metadata">grpc_model_metadata</a>
-  - <a href="#grpc-model-infer">grpc_infer_dummy</a>
-  - <a href="#grpc-model-infer-resnet">grpc_infer_resnet</a>
+- [GRPC API Examples](#grpc-examples)
+  - [grpc_server_live](#run-the-client-to-get-server-liveness)
+  - [grpc_server_ready](#run-the-client-to-get-server-readiness)
+  - [grpc_server_metadata](#run-the-client-to-get-server-metadata)
+  - [grpc_model_ready](#run-the-client-to-get-model-readiness)
+  - [grpc_model_metadata](#run-the-client-to-get-metadata)
+  - [grpc_infer_dummy](#run-the-client-to-perform-inference)
+  - [grpc_infer_resnet](#examples-with-resnet-model)
 
 ## Before you run the samples
 
@@ -22,7 +22,7 @@ cd model_server
 
 ### Start the Model Server Container with Dummy Model
 ```Bash
-docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 
+docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000
 ```
 
 ### Build client library and samples
@@ -32,13 +32,13 @@ bash build.sh
 cd build
 ```
 
-## GRPC Examples <a name="grpc-api"></a>
+## GRPC Examples
 
 ## GRPC Examples with Dummy Model
 
-This section demonstrates inference on a simple model, which increments each provided value. 
+This section demonstrates inference on a simple model, which increments each provided value.
 
-### Run the Client to get server liveness <a name="grpc-server-live"></a>
+### Run the Client to get server liveness
 
 - Command
 
@@ -49,14 +49,14 @@ Usage of ./grpc_server_live:
         Inference Server URL.  (default "localhost:9000")
 ```
 
-- Usage Example 
+- Usage Example
 
 ```Bash
 ./grpc_server_live -u localhost:9000
 Server Live: true
 ```
 
-### Run the Client to get server readiness <a name="grpc-server-ready"></a>
+### Run the Client to get server readiness
 
 - Command
 
@@ -74,7 +74,7 @@ Usage of ./grpc_server_ready:
 Server Ready: true
 ```
 
-### Run the Client to get server metadata <a name="grpc-server-metadata"></a>
+### Run the Client to get server metadata
 
 - Command
 
@@ -92,7 +92,7 @@ Usage of ./grpc_server_metadata:
 name:"OpenVINO Model Server" version:"2022.3.8fb11b33"
 ```
 
-### Run the Client to get model readiness <a name="grpc-model-ready"></a>
+### Run the Client to get model readiness
 
 - Command
 
@@ -104,7 +104,7 @@ Usage of ./grpc_model_ready:
   -u string
         Inference Server URL.  (default "localhost:9000")
   -v string
-        Version of model. 
+        Version of model.
 ```
 
 - Usage Example
@@ -114,7 +114,7 @@ Usage of ./grpc_model_ready:
 Model Ready: true
 ```
 
-### Run the Client to get metadata <a name="grpc-model-metadata"></a>
+### Run the Client to get metadata
 
 - Command
 
@@ -126,7 +126,7 @@ Usage of ./grpc_model_metadata:
   -u string
         Inference Server URL.  (default "localhost:9000")
   -v string
-        Version of model. 
+        Version of model.
 ```
 
 - Usage Example
@@ -135,6 +135,9 @@ Usage of ./grpc_model_metadata:
 ./grpc_model_metadata -u localhost:9000
 name:"dummy" versions:"1" platform:"OpenVINO" inputs:{name:"b" datatype:"FP32" shape:1 shape:10} outputs:{name:"a" datatype:"FP32" shape:1 shape:10}
 ```
+
+### Run the Client to perform inference
+
 - Command
 
 ```Bash
@@ -148,7 +151,7 @@ Usage of ./grpc_infer_dummy:
         Version of model.
 ```
 
-- Usage Example 
+- Usage Example
 
 ```Bash
 ./grpc_infer_dummy -u localhost:9000
@@ -167,7 +170,7 @@ Checking Inference Outputs
 9.000000 => 10.000000
 ```
 
-## Examples with Resnet Model<a name="grpc-model-infer-resnet"></a>
+## Examples with Resnet Model
 
 ### Download the Pretrained Model
 Download the model files and store them in the `models` directory
@@ -196,13 +199,13 @@ Usage of ./grpc_infer_resnet:
   -u string
         Inference Server URL.  (default "localhost:9000")
   -v string
-        Version of model. 
+        Version of model.
 ```
 
 - Usage Example
 
 ```Bash
-./grpc_infer_resnet -i ../../../common/resnet_input_images.txt -l ../../../common/resnet_labels.txt -u localhost:9000 
+./grpc_infer_resnet -i ../../../common/resnet_input_images.txt -l ../../../common/resnet_labels.txt -u localhost:9000
 ../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner
 ../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra
 ../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus

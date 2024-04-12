@@ -1,6 +1,6 @@
 # Serving Stateful Models {#ovms_docs_stateful_models}
 
-## Stateless vs Stateful Models <a name="stateful_models"></a>
+## Stateless vs Stateful Models
 
 ### Stateless model
 
@@ -16,9 +16,9 @@ A stateful model recognizes dependencies between consecutive inference requests.
 
 Some models might take the whole sequence of data as an input and iterate over the elements of that sequence internally, keeping the state between iterations. Such models are considered stateless since they perform inference on the whole sequence **in just one inference request**.
 
-## Load and Serve Stateful Model <a name="stateful_serve"></a>
+## Load and Serve Stateful Model
 
-### Run Model Server with Stateful Model <a name="stateful_run"></a>
+### Run Model Server with Stateful Model
 
 Serving stateful model in OpenVINO Model Server is very similar to serving stateless models. The only difference is that for stateful models you need to set `stateful` flag in the model configuration.
 
@@ -62,7 +62,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -v
 
  Optionally, you can also set additional parameters specific for stateful models.
 
- ### Configuration Options for Stateful Models <a name="stateful_params"></a>
+ ### Configuration Options for Stateful Models
 
 **Model configuration**:
 
@@ -83,9 +83,9 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/rm_lstm4f:/models/stateful_model -v
 
 See also [all server and model configuration options](parameters.md) to have a complete setup.
 
-## Run Inference on Stateful Model <a name="stateful_inference"></a>
+## Run Inference on Stateful Model
 
-### Special Inputs for Sequence Handling <a name="stateful_inputs"></a>
+### Special Inputs for Sequence Handling
 
 Stateful model works on consecutive inference requests that are associated with each other and form a **sequence** of requests. A single stateful model can handle multiple independent sequences at a time. When the model server receives requests for the stateful model, it maps each request to the proper sequence and its memory state. OVMS also tracks the beginning and the end of the sequence to properly manage system resources.
 
@@ -121,7 +121,7 @@ In order to successfully infer the sequence, perform these actions:
    To end the sequence you need to add `sequence_control_input` with the value of 2 to your request's inputs. You also need to add `sequence_id` of your sequence. In this case, `sequence_id` is mandatory and not providing this input or setting its value to 0 is not allowed.
 
 
-### Inference via gRPC <a name="stateful_grpc"></a>
+### Inference via gRPC
 
 Inference on stateful models via gRPC is very similar to inference on stateless models (_see [gRPC API](model_server_grpc_api_tfs.md) for reference_). The difference is that requests to stateful models must contain additional inputs with information necessary for proper sequence handling.
 
@@ -202,7 +202,7 @@ sequence_id = response.outputs['sequence_id'].uint64_val[0]
 
 ```
 
-### Inference via HTTP <a name="stateful_http"></a>
+### Inference via HTTP
 
 Inference on stateful models via HTTP is very similar to inference on stateless models (_see [REST API](model_server_rest_api_tfs.md) for reference_). The difference is that requests to stateful models must contain additional inputs with information necessary for proper sequence handling.
 
@@ -300,7 +300,7 @@ Stateful models can either be subject to idle sequence cleanup or not.
 You can set this **per model** with `idle_sequence_cleanup` parameter.
 If set to `true` sequence cleaner will check that model. Otherwise, sequence cleaner will skip that model, and its inactive sequences will not get removed. By default, this value is set to `true`.
 
-## Known Limitations <a name="stateful_limitations"></a>
+## Known Limitations
 
 There are limitations for using stateful models with OVMS:
 

@@ -11,42 +11,42 @@ ovms_docs_custom_node_development
 ```
 
 ## Introduction
-The Directed Acyclic Graph (DAG) Scheduler makes it possible to create a pipeline of models for execution in a single client request. 
-The pipeline is a Directed Acyclic Graph with different nodes which define how to process each step of predict request. 
-By using a pipeline, there is no need to return intermediate results of every model to the client. This allows avoiding the network overhead by minimizing the number of requests sent to the Model Server. 
+The Directed Acyclic Graph (DAG) Scheduler makes it possible to create a pipeline of models for execution in a single client request.
+The pipeline is a Directed Acyclic Graph with different nodes which define how to process each step of predict request.
+By using a pipeline, there is no need to return intermediate results of every model to the client. This allows avoiding the network overhead by minimizing the number of requests sent to the Model Server.
 Each model output can be mapped to another model input. Since intermediate results are kept in the server's RAM these can be reused by subsequent inferences which reduce overall latency.
 
 This guide gives information about:
 
-* <a href="#node-type">Node Types</a>
-* <a href="#configuration-file">Configuration file</a>
-* <a href="#using-pipelines">Using the pipelines</a>
-* <a href="#pipeline-examples">Pipelines examples </a>
-* <a href="#current-limitations">Current Limitations</a>
+* [Node Types](#node-types)
+* [Configuration file](#configuration-file)
+* [Using the pipelines](#using-pipelines)
+* [Pipelines examples](#pipelines-examples)
+* [Current Limitations](#current-limitations)
 
 
 
-## Node Types <a name="node-type"></a>
+## Node Types
 ### Auxiliary Node Types
 There are two special kinds of nodes - Request and Response node. Both of them are predefined and included in every pipeline definition you create:
 *  Request node
     - This node defines which inputs are required to be sent via gRPC/REST request for pipeline usage. You can refer to it by node name: `request`.
 * Response node
-    - This node defines which outputs will be fetched from the final pipeline state and packed into gRPC/REST response. 
-    You cannot refer to it in your pipeline configuration since it is the pipeline final stage. To define final outputs fill `outputs` field. 
+    - This node defines which outputs will be fetched from the final pipeline state and packed into gRPC/REST response.
+    You cannot refer to it in your pipeline configuration since it is the pipeline final stage. To define final outputs fill `outputs` field.
 
 ### Deep Learning node type
 
-* DL model - this node contains underlying OpenVINO&trade; model and performs inference on the selected target device. This can be defined in the configuration file. 
-    Each model input needs to be mapped to some node's `data_item` - input from gRPC/REST `request` or another `DL model` output. 
-    Outputs of the node may be mapped to another node's inputs or the `response` node, meaning it will be exposed in gRPC/REST response. 
+* DL model - this node contains underlying OpenVINO&trade; model and performs inference on the selected target device. This can be defined in the configuration file.
+    Each model input needs to be mapped to some node's `data_item` - input from gRPC/REST `request` or another `DL model` output.
+    Outputs of the node may be mapped to another node's inputs or the `response` node, meaning it will be exposed in gRPC/REST response.
 
 ### Custom node type
 
 * custom - that node can be used to implement all operations on the data which can not be handled by the neural network model. It is represented by
 a C++ dynamic library implementing OVMS API defined in [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_node_interface.h). Custom nodes can run the data
 processing using OpenCV, which is included in OVMS, or include other third-party components. Custom node libraries are loaded into OVMS
- by adding their definition to the pipeline configuration. The configuration includes a path to the compiled binary with the `.so` extension. 
+ by adding their definition to the pipeline configuration. The configuration includes a path to the compiled binary with the `.so` extension.
 Custom nodes are not versioned, meaning one custom node library is bound to one name. To load another version, another name needs to be used.
 
     OpenVINO Model Server docker image comes with prebuilt custom nodes that you can use out-of-the-box in your pipeline. See the list of built-in custom nodes and
@@ -56,23 +56,23 @@ Custom nodes are not versioned, meaning one custom node library is bound to one 
 
 During the pipeline execution, it is possible to split a request with multiple batches into a set of branches with a single batch.
 That way a model configured with a batch size 1, can process requests with arbitrary batch size. Internally, OVMS demultiplexer will
-divide the data, process them in parallel and combine the results. 
+divide the data, process them in parallel and combine the results.
 
-De-multiplication of the node output is enabled in the configuration file by adding `demultiply_count`. 
+De-multiplication of the node output is enabled in the configuration file by adding `demultiply_count`.
 It assumes the batches are combined on the first dimension which is dropped after splitting. For example:
 - a node returns output with shape `[8,1,3,224,224]`
 - demultiplexer creates 8 requests with shape `[1,3,224,224]`
 - next model processes in parallel 8 requests with output shape `[1,1001]` each.
 - results are combined into a single output with shape `[8,1,1001]`
 
-[Learn more about demultiplexing](demultiplexing.md) 
+[Learn more about demultiplexing](demultiplexing.md)
 
-## Configuration file <a name="configuration-file"></a>
+## Configuration file
 
-Pipelines configuration is to be placed in the same json file like the 
+Pipelines configuration is to be placed in the same json file like the
 [models config file](starting_server.md).
 While models are defined in section `model_config_list`, pipelines are configured in
-the `pipeline_config_list` section. 
+the `pipeline_config_list` section.
 Nodes in the pipelines can reference only the models configured in model_config_list section.
 
 Basic pipeline section template is depicted below:
@@ -99,11 +99,11 @@ Basic pipeline section template is depicted below:
                     "inputs": [
                         {"input": {"node_name": "request",  # reference to pipeline input
                                    "data_item": "<input1>"}}  # input name from the request
-                    ], 
+                    ],
                     "outputs": [  # mapping the model output name to node output name
                         {"data_item": "<model output>",
                          "alias": "<node output name>"}
-                    ] 
+                    ]
                 },
                 {
                     "name": "custom_node_name",
@@ -116,7 +116,7 @@ Basic pipeline section template is depicted below:
                     "inputs": [
                         {"input": {"node_name": "request",  # reference to pipeline input
                                    "data_item": "<input1>"}}  # input name from the request
-                    ], 
+                    ],
                     "outputs": [
                         {"data_item": "<library_output>",
                             "alias": "<node_output>"},
@@ -180,7 +180,7 @@ section. It includes:
 |`"name"`|string|The name of the custom node library - it will be used as a reference in the custom node pipeline definition |Yes|
 |`"base_path"`|string|Path the dynamic library with the custom node implementation|Yes|
 
-Custom node definition in a pipeline configuration is similar to a model node. Node inputs and outputs are configurable in 
+Custom node definition in a pipeline configuration is similar to a model node. Node inputs and outputs are configurable in
 the same way. Custom node functions are just like a standard node in that respect. The differences are in the extra parameters:
 
 |Option|Type|Description|Required|
@@ -189,23 +189,23 @@ the same way. Custom node functions are just like a standard node in that respec
 |`"type"`|string|Must be set to `custom`|Yes|
 |`"params"`| json object with string values| a list of parameters and their values which could be used in the custom node implementation|No|
 
-## Using Pipelines <a name="using-pipelines"></a>
+## Using Pipelines
 
-Pipelines can use the same API as the models. There are exactly the same calls for running 
+Pipelines can use the same API as the models. There are exactly the same calls for running
 the predictions. The request format must match the pipeline definition inputs.
 
 
 The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api_tfs.md) calls and
 [REST Metadata](model_server_rest_api_tfs.md).
-It returns the definition of the pipelines inputs and outputs. 
+It returns the definition of the pipelines inputs and outputs.
 
 Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_tfs.md)
 and [REST Model Status](model_server_rest_api_tfs.md)
 
-The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines, 
+The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines,
 the version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
 
-## Pipelines Examples <a name="pipeline-examples"></a>
+## Pipelines Examples
 
 [Single face analysis with combined models](../demos/single_face_analysis_pipeline/python/README.md)
 
@@ -215,10 +215,10 @@ the version parameter is ignored. Pipelines are not versioned. Though, they can 
 
 [Horizontal Text Detection pipeline with horizontal_ocr example custom node](../demos/horizontal_text_detection/python/README.md)
 
-## Current limitations <a name="current-limitations"></a>
+## Current limitations
 
 - Models with "auto" [batch size](dynamic_bs_auto_reload.md) or [shape](dynamic_shape_auto_reload.md) cannot be referenced in pipeline
-- Connected inputs and output for subsequent node models need to match each other in terms of data shape, precision and layout - 
+- Connected inputs and output for subsequent node models need to match each other in terms of data shape, precision and layout -
 there is no automatic conversion between input/output model precisions or layouts. This limitation can be addressed with `--shape` and `--layout` model configuration or with a custom node to transform the data as required to match the expected data format.
 - REST requests with no named format (JSON body with one unnamed input) are not supported
 

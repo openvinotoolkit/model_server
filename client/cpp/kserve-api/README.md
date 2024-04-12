@@ -3,24 +3,24 @@
 OpenVINO Model Server introduced support for [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2), including [Triton](https://github.com/triton-inference-server)'s raw format extension.
 
 This guide shows how to interact with KServe API endpoints on both gRPC and HTTP interfaces using [Triton](https://github.com/triton-inference-server)'s client library. It covers following topics:
-- <a href="#grpc-api">GRPC API Examples </a>
-  - <a href="#grpc-server-live">grpc_server_live</a>
-  - <a href="#grpc-server-ready">grpc_server_ready</a>
-  - <a href="#grpc-server-metadata">grpc_server_metadata</a>
-  - <a href="#grpc-model-ready">grpc_model_ready</a>
-  - <a href="#grpc-model-metadata">grpc_model_metadata</a>
-  - <a href="#grpc-model-infer">grpc_infer_dummy</a>
-  - <a href="#grpc-model-infer-resnet">grpc_infer_resnet</a>
-  - <a href="#grpc-model-async-infer-resnet">grpc_async_infer_resnet</a>
-- <a href="#http-api">HTTP API Example</a>
-  - <a href="#http-server-live">http_server_live</a>
-  - <a href="#http-server-ready">http_server_ready</a>
-  - <a href="#http-server-metadata">http_server_metadata</a>
-  - <a href="#http-model-ready">http_model_ready</a>
-  - <a href="#http-model-metadata">http_model_metadata</a>
-  - <a href="#http-model-infer">http_infer_dummy</a>
-  - <a href="#http-model-infer-resnet">http_infer_resnet</a>
-  - <a href="#http-model-async-infer-resnet">http_async_infer_resnet</a>
+- [GRPC API Examples](#grpc-examples)
+  - [grpc_server_live](#run-the-client-to-get-server-liveness)
+  - [grpc_server_ready](#run-the-client-to-get-server-readiness)
+  - [grpc_server_metadata](#run-the-client-to-get-server-metadata)
+  - [grpc_model_ready](#run-the-client-to-get-model-readiness)
+  - [grpc_model_metadata](#run-the-client-to-get-metadata)
+  - [grpc_infer_dummy](#run-the-client-to-perform-inference)
+  - [grpc_infer_resnet](#run-the-client-to-perform-inference-using-grpc-api)
+  - [grpc_async_infer_resnet](#run-the-client-to-perform-asynchronous-inference-using-grpc-api)
+- [HTTP API Example](#http-examples)
+  - [http_server_live](#run-the-client-to-get-server-liveness-1)
+  - [http_server_ready](#run-the-client-to-get-server-readiness-1)
+  - [http_server_metadata](#run-the-client-to-get-server-metadata-1)
+  - [http_model_ready](#run-the-client-to-get-model-readiness-1)
+  - [http_model_metadata](#run-the-client-to-get-model-metadata)
+  - [http_infer_dummy](#run-the-client-to-perform-inference-1)
+  - [http_infer_resnet](#run-the-client-to-perform-inference-using-rest-api)
+  - [http_async_infer_resnet](#run-the-client-to-perform-asynchronous-inference-using-rest-api)
 
 ## Before you run the samples
 
@@ -37,7 +37,7 @@ cd model_server
 
 ### Start the Model Server Container with Dummy Model
 ```Bash
-docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 --rest_port 8000 
+docker run --rm -d -v $(pwd)/src/test/dummy:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_name dummy --model_path /models --port 9000 --rest_port 8000
 ```
 
 ### Build client library and samples
@@ -47,14 +47,14 @@ cmake . && make
 cd samples
 ```
 
-## GRPC Examples <a name="grpc-api"></a>
+## GRPC Examples
 
 
 ## GRPC Examples with Dummy Model
 
-This section demonstrates inference on a simple model, which increments each provided value. 
+This section demonstrates inference on a simple model, which increments each provided value.
 
-### Run the Client to get server liveness <a name="grpc-server-live"></a>
+### Run the Client to get server liveness
 
 - Command
 
@@ -66,21 +66,21 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --grpc_address GRPC_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to grpc service.  (default:
                                 localhost)
-      --grpc_port PORT          Specify port to grpc service.  (default: 
+      --grpc_port PORT          Specify port to grpc service.  (default:
                                 9000)
       --timeout TIMEOUT         Request timeout. (default: 0)
 ```
 
-- Usage Example 
+- Usage Example
 
 ```Bash
 ./grpc_server_live --grpc_port 9000 --grpc_address localhost
 Server Live: True
 ```
 
-### Run the Client to get server readiness <a name="grpc-server-ready"></a>
+### Run the Client to get server readiness
 
 - Command
 
@@ -92,9 +92,9 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --grpc_address GRPC_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to grpc service.  (default:
                                 localhost)
-      --grpc_port PORT          Specify port to grpc service.  (default: 
+      --grpc_port PORT          Specify port to grpc service.  (default:
                                 9000)
       --timeout TIMEOUT         Request timeout. (default: 0)
 ```
@@ -106,7 +106,7 @@ Usage:
 Server Ready: True
 ```
 
-### Run the Client to get server metadata <a name="grpc-server-metadata"></a>
+### Run the Client to get server metadata
 
 - Command
 
@@ -118,9 +118,9 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --grpc_address GRPC_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to grpc service.  (default:
                                 localhost)
-      --grpc_port PORT          Specify port to grpc service.  (default: 
+      --grpc_port PORT          Specify port to grpc service.  (default:
                                 9000)
       --timeout TIMEOUT         Request timeout. (default: 0)
 ```
@@ -133,7 +133,7 @@ Name: OpenVINO Model Server
 Version: 2022.2.c290da85
 ```
 
-### Run the Client to get model readiness <a name="grpc-model-ready"></a>
+### Run the Client to get model readiness
 
 - Command
 
@@ -145,11 +145,11 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --grpc_address GRPC_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to grpc service.  (default:
                                 localhost)
-      --grpc_port PORT          Specify port to grpc service.  (default: 
+      --grpc_port PORT          Specify port to grpc service.  (default:
                                 9000)
-      --model_name MODEL_NAME   Define model name, must be same as is in 
+      --model_name MODEL_NAME   Define model name, must be same as is in
                                 service.  (default: dummy)
       --model_version MODEL_VERSION
                                 Define model version. (default: "")
@@ -163,7 +163,7 @@ Usage:
 Model Ready: True
 ```
 
-### Run the Client to get metadata <a name="grpc-model-metadata"></a>
+### Run the Client to get metadata
 
 - Command
 
@@ -175,11 +175,11 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --grpc_address GRPC_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to grpc service.  (default:
                                 localhost)
-      --grpc_port PORT          Specify port to grpc service.  (default: 
+      --grpc_port PORT          Specify port to grpc service.  (default:
                                 9000)
-      --model_name MODEL_NAME   Define model name, must be same as is in 
+      --model_name MODEL_NAME   Define model name, must be same as is in
                                 service.  (default: dummy)
       --model_version MODEL_VERSION
                                 Define model version. (default: "")
@@ -206,7 +206,7 @@ outputs {
   shape: 10
 }
 ```
-### Run the Client to perform inference <a name="grpc-model-infer"></a>
+### Run the Client to perform inference
 
 ```Bash
 ./grpc_infer_dummy --help
@@ -216,14 +216,14 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --grpc_address GRPC_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to grpc service.  (default:
                                 localhost)
-      --grpc_port PORT          Specify port to grpc service.  (default: 
+      --grpc_port PORT          Specify port to grpc service.  (default:
                                 9000)
       --input_name INPUT_NAME   Specify input tensor name.  (default: b)
       --output_name OUTPUT_NAME
                                 Specify input tensor name.  (default: a)
-      --model_name MODEL_NAME   Define model name, must be same as is in 
+      --model_name MODEL_NAME   Define model name, must be same as is in
                                 service.  (default: dummy)
       --model_version MODEL_VERSION
                                 Define model version.
@@ -251,9 +251,9 @@ Latency: 5.28986 ms
 Requests per second: 189.041
 ```
 
-## HTTP Examples <a name="http-api"></a>
+## HTTP Examples
 
-### Run the Client to get server liveness <a name="http-server-live"></a>
+### Run the Client to get server liveness
 
 - Command
 
@@ -265,9 +265,9 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to REST service.  (default: 
+                                Specify url to REST service.  (default:
                                 localhost)
-      --http_port PORT          Specify port to REST service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default:
                                 8000)
       --timeout TIMEOUT         Request timeout. (default: 0)
 ```
@@ -279,7 +279,7 @@ Usage:
 Server Live: True
 ```
 
-### Run the Client to get server readiness <a name="http-server-ready"></a>
+### Run the Client to get server readiness
 
 - Command
 
@@ -291,9 +291,9 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to REST service.  (default: 
+                                Specify url to REST service.  (default:
                                 localhost)
-      --http_port PORT          Specify port to REST service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default:
                                 8000)
       --timeout TIMEOUT         Request timeout. (default: 0)
 ```
@@ -305,7 +305,7 @@ Usage:
 Server Ready: True
 ```
 
-### Run the Client to get server metadata <a name="http-server-metadata"></a>
+### Run the Client to get server metadata
 
 - Command
 
@@ -317,9 +317,9 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to REST service.  (default: 
+                                Specify url to REST service.  (default:
                                 localhost)
-      --http_port PORT          Specify port to REST service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default:
                                 8000)
       --timeout TIMEOUT         Request timeout. (default: 0)
 ```
@@ -331,7 +331,7 @@ Usage:
 {"name":"OpenVINO Model Server","version":"2022.2.c290da85"}
 ```
 
-### Run the Client to get model readiness <a name="http-model-ready"></a>
+### Run the Client to get model readiness
 
 - Command
 
@@ -343,11 +343,11 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to REST service.  (default: 
+                                Specify url to REST service.  (default:
                                 localhost)
-      --http_port PORT          Specify port to REST service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default:
                                 8000)
-      --model_name MODEL_NAME   Define model name, must be same as is in 
+      --model_name MODEL_NAME   Define model name, must be same as is in
                                 service.  (default: dummy)
       --model_version MODEL_VERSION
                                 Define model version. (default: "")
@@ -361,7 +361,7 @@ Usage:
 Model Ready: True
 ```
 
-### Run the Client to get model metadata <a name="http-model-metadata"></a>
+### Run the Client to get model metadata
 
 - Command
 
@@ -373,11 +373,11 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to REST service.  (default: 
+                                Specify url to REST service.  (default:
                                 localhost)
-      --http_port PORT          Specify port to REST service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default:
                                 8000)
-      --model_name MODEL_NAME   Define model name, must be same as is in 
+      --model_name MODEL_NAME   Define model name, must be same as is in
                                 service.  (default: dummy)
       --model_version MODEL_VERSION
                                 Define model version. (default: "")
@@ -390,7 +390,7 @@ Usage:
 ./http_model_metadata --http_port 8000 --http_address localhost
 {"name":"dummy","versions":["1"],"platform":"OpenVINO","inputs":[{"name":"b","datatype":"FP32","shape":[1,10]}],"outputs":[{"name":"a","datatype":"FP32","shape":[1,10]}]}
 ```
-### Run the Client to perform inference <a name="http-model-infer"></a>
+### Run the Client to perform inference
 
 - Command
 
@@ -402,14 +402,14 @@ Usage:
 
   -h, --help                    Show this help message and exit
       --http_address HTTP_ADDRESS
-                                Specify url to REST service.  (default: 
+                                Specify url to REST service.  (default:
                                 localhost)
-      --http_port PORT          Specify port to REST service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default:
                                 8000)
       --input_name INPUT_NAME   Specify input tensor name.  (default: b)
       --output_name OUTPUT_NAME
                                 Specify input tensor name.  (default: a)
-      --model_name MODEL_NAME   Define model name, must be same as is in 
+      --model_name MODEL_NAME   Define model name, must be same as is in
                                 service.  (default: dummy)
       --model_version MODEL_VERSION
                                 Define model version.
@@ -453,7 +453,7 @@ docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/m
 
 Once you finish above steps, you are ready to run the samples.
 
-### Run the Client to perform inference using gRPC API <a name="grpc-model-infer-resnet"></a>
+### Run the Client to perform inference using gRPC API
 ```Bash
 ./grpc_infer_resnet --help
 Sends requests via KServe gRPC API.
@@ -461,18 +461,18 @@ Usage:
   grpc_infer_resnet [OPTION...]
 
   -h, --help                    Show this help message and exit
-      --images_list IMAGES      Path to a file with a list of labeled 
-                                images. 
-      --labels_list LABELS      Path to a file with a list of labels. 
+      --images_list IMAGES      Path to a file with a list of labeled
+                                images.
+      --labels_list LABELS      Path to a file with a list of labels.
       --grpc_address GRPC_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to grpc service.  (default:
                                 localhost)
-      --grpc_port PORT          Specify port to grpc service.  (default: 
+      --grpc_port PORT          Specify port to grpc service.  (default:
                                 9000)
       --input_name INPUT_NAME   Specify input tensor name.  (default: 0)
       --output_name OUTPUT_NAME
                                 Specify input tensor name.  (default: 1463)
-      --model_name MODEL_NAME   Define model name, must be same as is in 
+      --model_name MODEL_NAME   Define model name, must be same as is in
                                 service.  (default: resnet)
       --model_version MODEL_VERSION
                                 Define model version.
@@ -482,17 +482,17 @@ Usage:
 - Usage Example
 
 ```Bash
-./grpc_infer_resnet --images_list ../../../common/resnet_input_images.txt --labels_list ../../../common/resnet_labels.txt --grpc_port 9000  
-../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
-../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
-../../../../demos/common/static/images/bee.jpeg classified as 309 bee 
-../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever 
-../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla 
-../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass 
-../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock 
-../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican 
-../../../../demos/common/static/images/snail.jpeg classified as 113 snail 
-../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
+./grpc_infer_resnet --images_list ../../../common/resnet_input_images.txt --labels_list ../../../common/resnet_labels.txt --grpc_port 9000
+../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner
+../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus
+../../../../demos/common/static/images/bee.jpeg classified as 309 bee
+../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever
+../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla
+../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass
+../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock
+../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican
+../../../../demos/common/static/images/snail.jpeg classified as 113 snail
+../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra
 Accuracy 100%
 ======Client Statistics======
 Number of requests: 10
@@ -501,7 +501,7 @@ Latency: 9.6651 ms
 Requests per second: 103.465
 ```
 
-### Run the Client to perform asynchronous inference using gRPC API <a name="grpc-model-async-infer-resnet"></a>
+### Run the Client to perform asynchronous inference using gRPC API
 ```Bash
 ./grpc_async_infer_resnet --help
 Sends requests via KServe gRPC API.
@@ -509,18 +509,18 @@ Usage:
   grpc_async_infer_resnet [OPTION...]
 
   -h, --help                    Show this help message and exit
-      --images_list IMAGES      Path to a file with a list of labeled 
-                                images. 
-      --labels_list LABELS      Path to a file with a list of labels. 
+      --images_list IMAGES      Path to a file with a list of labeled
+                                images.
+      --labels_list LABELS      Path to a file with a list of labels.
       --grpc_address GRPC_ADDRESS
-                                Specify url to grpc service.  (default: 
+                                Specify url to grpc service.  (default:
                                 localhost)
-      --grpc_port PORT          Specify port to grpc service.  (default: 
+      --grpc_port PORT          Specify port to grpc service.  (default:
                                 9000)
       --input_name INPUT_NAME   Specify input tensor name.  (default: 0)
       --output_name OUTPUT_NAME
                                 Specify input tensor name.  (default: 1463)
-      --model_name MODEL_NAME   Define model name, must be same as is in 
+      --model_name MODEL_NAME   Define model name, must be same as is in
                                 service.  (default: resnet)
       --model_version MODEL_VERSION
                                 Define model version.
@@ -531,16 +531,16 @@ Usage:
 
 ```Bash
 ./grpc_async_infer_resnet --images_list ../../../common/resnet_input_images.txt --labels_list ../../../common/resnet_labels.txt --grpc_port 9000
-../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
-../../../../demos/common/static/images/bee.jpeg classified as 309 bee 
-../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla 
-../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass 
-../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock 
-../../../../demos/common/static/images/snail.jpeg classified as 113 snail 
-../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
-../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever 
-../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
-../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican 
+../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner
+../../../../demos/common/static/images/bee.jpeg classified as 309 bee
+../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla
+../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass
+../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock
+../../../../demos/common/static/images/snail.jpeg classified as 113 snail
+../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus
+../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever
+../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra
+../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican
 Accuracy 100%
 ======Client Statistics======
 Number of requests: 10
@@ -549,7 +549,7 @@ Latency: 28.9219 ms
 Requests per second: 34.5759
 ```
 
-### Run the Client to perform inference using REST API <a name="http-model-infer-resnet"></a>
+### Run the Client to perform inference using REST API
 ```Bash
 ./http_infer_resnet --help
 Sends requests via KServe REST API.
@@ -557,18 +557,18 @@ Usage:
   http_infer_resnet [OPTION...]
 
   -h, --help                    Show this help message and exit
-      --images_list IMAGES      Path to a file with a list of labeled 
-                                images. 
-      --labels_list LABELS      Path to a file with a list of labels. 
+      --images_list IMAGES      Path to a file with a list of labeled
+                                images.
+      --labels_list LABELS      Path to a file with a list of labels.
       --http_address HTTP_ADDRESS
-                                Specify url to REST service.  (default: 
+                                Specify url to REST service.  (default:
                                 localhost)
-      --http_port PORT          Specify port to REST service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default:
                                 9000)
       --input_name INPUT_NAME   Specify input tensor name.  (default: 0)
       --output_name OUTPUT_NAME
                                 Specify input tensor name.  (default: 1463)
-      --model_name MODEL_NAME   Define model name, must be same as is in 
+      --model_name MODEL_NAME   Define model name, must be same as is in
                                 service.  (default: resnet)
       --model_version MODEL_VERSION
                                 Define model version.
@@ -580,16 +580,16 @@ Usage:
 
 ```Bash
  ./http_infer_resnet --images_list ../../../common/resnet_input_images.txt --labels_list ../../../common/resnet_labels.txt --http_port 8000
-../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
-../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
-../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
-../../../../demos/common/static/images/bee.jpeg classified as 309 bee 
-../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever 
-../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla 
-../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass 
-../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock 
-../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican 
-../../../../demos/common/static/images/snail.jpeg classified as 113 snail 
+../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner
+../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra
+../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus
+../../../../demos/common/static/images/bee.jpeg classified as 309 bee
+../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever
+../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla
+../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass
+../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock
+../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican
+../../../../demos/common/static/images/snail.jpeg classified as 113 snail
 Accuracy 100%
 ======Client Statistics======
 Number of requests: 10
@@ -598,7 +598,7 @@ Latency: 11.5804 ms
 Requests per second: 86.3526
 ```
 
-### Run the Client to perform asynchronous inference using REST API <a name="grpc-model-async-infer-resnet"></a>
+### Run the Client to perform asynchronous inference using REST API
 ```Bash
 ./http_async_infer_resnet --help
 Sends requests via KServe REST API.
@@ -606,18 +606,18 @@ Usage:
   http_async_infer_resnet [OPTION...]
 
   -h, --help                    Show this help message and exit
-      --images_list IMAGES      Path to a file with a list of labeled 
-                                images. 
-      --labels_list LABELS      Path to a file with a list of labels. 
+      --images_list IMAGES      Path to a file with a list of labeled
+                                images.
+      --labels_list LABELS      Path to a file with a list of labels.
       --http_address HTTP_ADDRESS
-                                Specify url to REST service.  (default: 
+                                Specify url to REST service.  (default:
                                 localhost)
-      --http_port PORT          Specify port to REST service.  (default: 
+      --http_port PORT          Specify port to REST service.  (default:
                                 8000)
       --input_name INPUT_NAME   Specify input tensor name.  (default: 0)
       --output_name OUTPUT_NAME
                                 Specify input tensor name.  (default: 1463)
-      --model_name MODEL_NAME   Define model name, must be same as is in 
+      --model_name MODEL_NAME   Define model name, must be same as is in
                                 service.  (default: resnet)
       --model_version MODEL_VERSION
                                 Define model version.
@@ -628,16 +628,16 @@ Usage:
 
 ```Bash
 ./http_async_infer_resnet --images_list ../../../common/resnet_input_images.txt --labels_list ../../../common/resnet_labels.txt --http_port 8000
-../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner 
-../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra 
-../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus 
-../../../../demos/common/static/images/bee.jpeg classified as 309 bee 
-../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever 
-../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla 
-../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass 
-../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock 
-../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican 
-../../../../demos/common/static/images/snail.jpeg classified as 113 snail 
+../../../../demos/common/static/images/airliner.jpeg classified as 404 airliner
+../../../../demos/common/static/images/zebra.jpeg classified as 340 zebra
+../../../../demos/common/static/images/arctic-fox.jpeg classified as 279 Arctic fox, white fox, Alopex lagopus
+../../../../demos/common/static/images/bee.jpeg classified as 309 bee
+../../../../demos/common/static/images/golden_retriever.jpeg classified as 207 golden retriever
+../../../../demos/common/static/images/gorilla.jpeg classified as 366 gorilla, Gorilla gorilla
+../../../../demos/common/static/images/magnetic_compass.jpeg classified as 635 magnetic compass
+../../../../demos/common/static/images/peacock.jpeg classified as 84 peacock
+../../../../demos/common/static/images/pelican.jpeg classified as 144 pelican
+../../../../demos/common/static/images/snail.jpeg classified as 113 snail
 Accuracy 100%
 ======Client Statistics======
 Number of requests: 10
