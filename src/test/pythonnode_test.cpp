@@ -2417,7 +2417,7 @@ TEST_F(PythonFlowTest, RelativeHandlerPath) {
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
     ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "/ovms/src/test/mediapipe/python/scripts"), StatusCode::OK);
 
-    ASSERT_TRUE(nodeResources->handlerPath == "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py");
+    ASSERT_EQ(nodeResources->handlerPath, "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py");
     nodeResources->finalize();
 }
 
@@ -2444,7 +2444,7 @@ TEST_F(PythonFlowTest, AbsoluteHandlerPath) {
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
     ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "this_string_doesnt_matter_since_handler_path_is_absolute"), StatusCode::OK);
 
-    ASSERT_TRUE(nodeResources->handlerPath == "/ovms/src/test/mediapipe/python/scripts/relative_base_path.py");
+    ASSERT_EQ(nodeResources->handlerPath, "/ovms/src/test/mediapipe/python/scripts/relative_base_path.py");
     nodeResources->finalize();
 }
 
