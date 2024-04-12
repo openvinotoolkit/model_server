@@ -1,4 +1,4 @@
-#
+#*****************************************************************************
 # Copyright 2023 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-input_stream: "OVMS_PY_TENSOR:pre_prompt"
-output_stream: "OVMS_PY_TENSOR:completion"
+#*****************************************************************************
+class OvmsPythonModel:
+    def initialize(self, kwargs: dict):
+        base_path = kwargs['base_path']
+        assert base_path == '/ovms/src/test/mediapipe/python/scripts'
+        return
 
-node {
-  name: "pythonNode"
-  calculator: "PythonExecutorCalculator"
-  input_side_packet: "PYTHON_NODE_RESOURCES:py"
-  input_stream: "INPUT:pre_prompt"
-  output_stream: "OUTPUT:completion"
-  node_options: {
-    [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-      handler_path: "/workspace/model.py"
-    }
-  }
-}
+    def execute(self, inputs: dict) -> bool:
+        return None
+    
+    def finalize(self, kwargs: dict):
+        return

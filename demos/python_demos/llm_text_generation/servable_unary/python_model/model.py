@@ -35,7 +35,7 @@ SEED = os.environ.get("SEED")
 print("SELECTED MODEL", SELECTED_MODEL, flush=True)
 model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 
-MODEL_PATH = "/model"  # relative to container
+MODEL_RELATIVE_PATH = "../../model"  # relative to python module
 OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
 
 
@@ -62,10 +62,7 @@ model_name = model_configuration["model_id"]
 history_template = model_configuration["history_template"]
 current_message_template = model_configuration["current_message_template"]
 start_message = model_configuration["start_message"]
-stop_tokens = model_configuration.get("stop_tokens")
 tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
-tokenizer.pad_token = tokenizer.eos_token  # For models with tokenizer with uninitialized pad token
 
 # HF class that is capable of stopping the generation
 # when given tokens appear in specific order
@@ -79,11 +76,6 @@ class StopOnTokens(StoppingCriteria):
         return False
 
 
-if stop_tokens is not None:
-    if isinstance(stop_tokens[0], str):
-        stop_tokens = tokenizer.convert_tokens_to_ids(stop_tokens)
-
-    stop_tokens = [StopOnTokens(stop_tokens)]
 
 
 # For multi Q&A use cases
@@ -128,21 +120,30 @@ def deserialize_prompts(batch_size, input_tensor):
     return [arr.decode() for arr in np_arr]
 
 
-def serialize_completions(batch_size, result):
+def serialize_completions(batch_size, result, token_count):
     if batch_size == 1:
-        return [Tensor("completion", result[0].encode())]
+        return [Tensor("completion", result[0].encode()), Tensor("token_count", np.array(token_count, dtype=np.int32))]
     return [Tensor("completion", serialize_byte_tensor(
-        np.array(result, dtype=np.object_)).item())]
+        np.array(result, dtype=np.object_)).item()), Tensor("token_count", token_count)]
 
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
         print("-------- Running initialize", flush=True)
+        model_absolute_path = os.path.join(kwargs['base_path'], MODEL_RELATIVE_PATH)
+        self.stop_tokens = model_configuration.get("stop_tokens")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_absolute_path, trust_remote_code=True)
+        self.tokenizer.pad_token = self.tokenizer.eos_token  # For models with tokenizer with uninitialized pad token
+        if self.stop_tokens is not None:
+            if isinstance(self.stop_tokens[0], str):
+                self.stop_tokens = self.tokenizer.convert_tokens_to_ids(self.stop_tokens)
+
+            self.stop_tokens = [StopOnTokens(self.stop_tokens)]
         self.ov_model = OVModelForCausalLM.from_pretrained(
-            MODEL_PATH,
+            model_absolute_path,
             device="AUTO",
             ov_config=OV_CONFIG,
-            config=AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True))
+            config=AutoConfig.from_pretrained(model_absolute_path, trust_remote_code=True))
         print("-------- Model loaded", flush=True)
         return True
 
@@ -151,12 +152,12 @@ class OvmsPythonModel:
         batch_size = inputs[0].shape[0]
         prompts = deserialize_prompts(batch_size, inputs[0])
         messages = [convert_history_to_text([[prompt, ""]]) for prompt in prompts]
-        tokens = tokenizer(messages, return_tensors="pt", **tokenizer_kwargs, padding=True)
+        tokens = self.tokenizer(messages, return_tensors="pt", **tokenizer_kwargs, padding=True)
 
         if batch_size == 1:
-            streamer = TextIteratorStreamer(tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
+            streamer = TextIteratorStreamer(self.tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
         else:
-            streamer = BatchTextIteratorStreamer(batch_size=batch_size, tokenizer=tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
+            streamer = BatchTextIteratorStreamer(batch_size=batch_size, tokenizer=self.tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
 
         generate_kwargs = dict(
             max_new_tokens=1024,
@@ -167,12 +168,15 @@ class OvmsPythonModel:
             repetition_penalty=1.1,
             streamer=streamer,
         )
-        if stop_tokens is not None:
-            generate_kwargs["stopping_criteria"] = StoppingCriteriaList(stop_tokens)
+        if self.stop_tokens is not None:
+            generate_kwargs["stopping_criteria"] = StoppingCriteriaList(self.stop_tokens)
 
         ov_model_exec = self.ov_model.clone()
+        token_count: List[int]= []
         def generate():
-            ov_model_exec.generate(**tokens, **generate_kwargs)
+            result = ov_model_exec.generate(**tokens, **generate_kwargs)
+            token_count.append(len([1 for x in result.numpy().flatten() if x not in self.tokenizer.convert_tokens_to_ids(self.tokenizer.all_special_tokens)]) - len(tokens["input_ids"].flatten()))
+
 
         if SEED is not None: set_seed(int(SEED))
         t1 = threading.Thread(target=generate)
@@ -186,5 +190,5 @@ class OvmsPythonModel:
             else:
                 completions = [a + b for a, b in zip(completions, partial_result)]
         print('end', flush=True)
-
-        return serialize_completions(batch_size, completions)
+        t1.join()
+        return serialize_completions(batch_size, completions, token_count)

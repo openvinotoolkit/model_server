@@ -131,6 +131,7 @@ All keys are strings. Available keys and values:
 | node_name     | string | Name of the node in the graph. `<NODE_NAME>` in the sample above |
 | input_names   | list of strings | List of `<INPUT_NAME>` from all input streams in the sample above |
 | outputs_names | list of strings | List of `<OUTPUT_NAME>` from all output streams in the sample above |
+| base_path     | string | Path to the folder containing handler script |
 
 `initialize` is not expected to return any value.
 
