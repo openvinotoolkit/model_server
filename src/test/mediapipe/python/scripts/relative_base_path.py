@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
+import os
+
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
         base_path = kwargs['base_path']
-        assert base_path == '/ovms/src/test/mediapipe/python/scripts'
+        assert os.path.normpath(base_path) == '/ovms/src/test/mediapipe/python/scripts'
         return
 
     def execute(self, inputs: dict) -> bool:
