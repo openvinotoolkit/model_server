@@ -328,12 +328,12 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
 
 ## Summarize benchmarking results
 
-Summary of the benchmark results can be viewed with command option ```-ps```
+Summary of the benchmark results can be viewed with command option ```-ps```.
 ```
 docker run --network host benchmark_client -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -s 2 3 300 300 -t 20 -u 2 -w 10 -ps
 ```
 
-Sample ouptut log with results summary
+Sample output log with results summary:
 
 ```
 Client 2.7
