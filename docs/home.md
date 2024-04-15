@@ -7,6 +7,7 @@ hidden:
 ---
 
 ovms_docs_quick_start_guide
+ovms_docs_cloud_native_quick_start_guide
 ovms_docs_serving_model
 ovms_docs_deploying_server
 ovms_docs_server_app
