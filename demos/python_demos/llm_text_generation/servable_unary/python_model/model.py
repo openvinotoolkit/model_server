@@ -175,7 +175,7 @@ class OvmsPythonModel:
         token_count: List[int]= []
         def generate():
             result = ov_model_exec.generate(**tokens, **generate_kwargs)
-            token_count.append(len([1 for x in result.numpy().flatten() if x not in tokenizer.convert_tokens_to_ids(tokenizer.all_special_tokens)]) - len(tokens["input_ids"].flatten()))
+            token_count.append(len([1 for x in result.numpy().flatten() if x not in self.tokenizer.convert_tokens_to_ids(self.tokenizer.all_special_tokens)]) - len(tokens["input_ids"].flatten()))
 
 
         if SEED is not None: set_seed(int(SEED))
