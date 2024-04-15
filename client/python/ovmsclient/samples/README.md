@@ -1,21 +1,21 @@
 # OpenVINO&trade; Model Server Client Library Samples
 
 This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API.
-Samples are based on [ovmsclient](https://pypi.org/project/ovmsclient/) package. 
+Samples are based on [ovmsclient](https://pypi.org/project/ovmsclient/) package.
 
 It covers following topics:
-- <a href="#grpc-api">gRPC API Example Clients </a>
-  - <a href="#grpc-model-status">grpc_get_model_status.py</a>
-  - <a href="#grpc-model-metadata">grpc_get_model_metadata.py</a>
-  - <a href="#grpc-predict-numeric">grpc_predict_resnet.py</a>
-  - <a href="#grpc-predict-binary">grpc_predict_binary_resnet.py</a>
-  - <a href="#grpc-detect-vehicle">grpc_predict_binary_vehicle_detection.py</a>
-- <a href="#http-api">HTTP API Example Clients </a>
-  - <a href="#http-model-status">http_get_model_status.py</a>
-  - <a href="#http-model-metadata">http_get_model_metadata.py</a>
-  - <a href="#http-predict-numeric">http_predict_resnet.py</a>
-  - <a href="#http-predict-binary">http_predict_binary_resnet.py</a>
-  - <a href="#http-detect-vehicle">http_predict_binary_vehicle_detection.py</a>
+- [gRPC API Example Clients](#grpc-client-examples)
+  - [grpc_get_model_status.py](#model-status)
+  - [grpc_get_model_metadata.py](#model-metadata)
+  - [grpc_predict_resnet.py](#predict-numeric-format)
+  - [grpc_predict_binary_resnet.py](#predict-binary-format)
+  - [grpc_predict_binary_vehicle_detection.py](#vehicle-detection-model)
+- [HTTP API Example Clients](#http-client-examples)
+  - [http_get_model_status.py](#model-status-1)
+  - [http_get_model_metadata.py](#model-metadata-1)
+  - [http_predict_resnet.py](#predict-numeric-format-1)
+  - [http_predict_binary_resnet.py](#predict-binary-format-1)
+  - [http_predict_binary_vehicle_detection.py](#vehicle-detection-model-1)
 
 ## Requirement
 
@@ -45,9 +45,9 @@ docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50
 ```
 
 
-## gRPC Client Examples <a name="grpc-api"></a>
+## gRPC Client Examples
 
-### Model Status <a name="grpc-model-status">
+### Model Status
 
 #### **Get information about the status of served models over gRPC interface:**
 
@@ -81,7 +81,7 @@ python grpc_get_model_status.py --model_name resnet --service_url localhost:9000
 ```
 
 
-### Model Metadata <a name="grpc-model-metadata">
+### Model Metadata
 
 #### **Get information about the status of served models over gRPC interface:**
 
@@ -115,7 +115,7 @@ python grpc_get_model_metadata.py --model_name resnet --model_version 1 --servic
 ```
 
 
-### Predict numeric format <a name="grpc-predict-numeric">
+### Predict numeric format
 
 #### **Make prediction using images in numerical format:**
 
@@ -163,7 +163,7 @@ Image #8 has been classified as snail
 Image #9 has been classified as zebra
 ```
 
-### Predict binary format<a name="grpc-predict-binary">
+### Predict binary format
 
 #### **Make prediction using images in binary format:**
 
@@ -222,7 +222,7 @@ docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection 
 ```
 
 
-### Detect vehicle  <a name="grpc-detect-vehicle">
+### Detect vehicle
 
 
 #### **Make vehicle detection prediction using images in binary format:**
@@ -263,14 +263,14 @@ Making directory for output: ./output
 Detection results in file:  ./output/road1.jpg
 ```
 
-## HTTP Client Examples <a name="http-api"></a>
+## HTTP Client Examples
 
 OVMS can be started using a command:
 ```bash
-docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 
+docker run -d --rm -v ${PWD}/models/public/resnet-50-tf:/models/public/resnet-50-tf -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000
 ```
 
-### Model Status <a name="http-model-status">
+### Model Status
 
 #### **Get information about the status of served models over HTTP interface:**
 
@@ -304,7 +304,7 @@ python http_get_model_status.py --model_name resnet --service_url localhost:8000
 ```
 
 
-### Model Metadata <a name="http-model-metadata">
+### Model Metadata
 
 #### **Get information about the status of served models over HTTP interface:**
 
@@ -338,7 +338,7 @@ python http_get_model_metadata.py --model_name resnet --model_version 1 --servic
 ```
 
 
-### Predict numeric format <a name="http-predict-numeric">
+### Predict numeric format
 
 #### **Make prediction using images in numerical format:**
 
@@ -385,7 +385,7 @@ Image #8 has been classified as snail
 Image #9 has been classified as zebra
 ```
 
-### Predict binary format<a name="http-predict-binary">
+### Predict binary format
 
 #### **Make prediction using images in binary format:**
 
@@ -439,7 +439,7 @@ docker run -d --rm -v ${PWD}/models/vehicle-detection:/models/vehicle-detection 
 ```
 
 
-### Detect vehicle  <a name="http-detect-vehicle">
+### Detect vehicle
 
 
 #### **Make vehicle detection prediction using images in binary format:**

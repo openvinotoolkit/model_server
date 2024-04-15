@@ -2,9 +2,9 @@
 
 This guide shows how to implement a model ensemble using the [DAG Scheduler](../../../docs/dag_scheduler.md).
 
-- Let's consider you develop an application to perform image classification. There are many different models that can be used for this task. The goal is to combine results from inferences executed on two different models and calculate argmax to pick the most probable classification label. 
-- For this task, select two models: [googlenet-v2](https://docs.openvino.ai/2024/omz_models_model_googlenet_v2_tf.html) and [resnet-50](https://docs.openvino.ai/2024/omz_models_model_resnet_50_tf.html#doxid-omz-models-model-resnet-50-tf). Additionally, create own model **argmax** to combine and select top result. The aim is to perform this task on the server side with no intermediate results passed over the network. The server should take care of feeding inputs/outputs in subsequent models. Both - googlenet and resnet predictions should run in parallel. 
-- Diagram for this pipeline would look like this: 
+- Let's consider you develop an application to perform image classification. There are many different models that can be used for this task. The goal is to combine results from inferences executed on two different models and calculate argmax to pick the most probable classification label.
+- For this task, select two models: [googlenet-v2](https://docs.openvino.ai/2024/omz_models_model_googlenet_v2_tf.html) and [resnet-50](https://docs.openvino.ai/2024/omz_models_model_resnet_50_tf.html#doxid-omz-models-model-resnet-50-tf). Additionally, create own model **argmax** to combine and select top result. The aim is to perform this task on the server side with no intermediate results passed over the network. The server should take care of feeding inputs/outputs in subsequent models. Both - googlenet and resnet predictions should run in parallel.
+- Diagram for this pipeline would look like this:
 
 ![diagram](model_ensemble_diagram.svg)
 
@@ -51,7 +51,7 @@ models
 6 directories, 10 files
 ```
 
-## Step 2: Define required models and pipeline <a name="define-models"></a>
+## Step 2: Define required models and pipeline
 Pipelines need to be defined in the configuration file to use them. The same configuration file is used to define served models and served pipelines.
 
 Use the [config.json located here](https://github.com/openvinotoolkit/model_server/blob/main/demos/model_ensemble/python/config.json), the content is as follows:
@@ -90,11 +90,11 @@ cat config.json
                     "inputs": [
                         {"input": {"node_name": "request",
                                    "data_item": "image"}}
-                    ], 
+                    ],
                     "outputs": [
                         {"data_item": "InceptionV2/Predictions/Softmax",
                          "alias": "probability"}
-                    ] 
+                    ]
                 },
                 {
                     "name": "resnet_node",
@@ -103,11 +103,11 @@ cat config.json
                     "inputs": [
                         {"map/TensorArrayStack/TensorArrayGatherV3": {"node_name": "request",
                                                                       "data_item": "image"}}
-                    ], 
+                    ],
                     "outputs": [
                         {"data_item": "softmax_tensor",
                          "alias": "probability"}
-                    ] 
+                    ]
                 },
                 {
                     "name": "argmax_node",
@@ -118,11 +118,11 @@ cat config.json
                                     "data_item": "probability"}},
                         {"input2": {"node_name": "resnet_node",
                                     "data_item": "probability"}}
-                    ], 
+                    ],
                     "outputs": [
                         {"data_item": "argmax:0",
                          "alias": "most_probable_label"}
-                    ] 
+                    ]
                 }
             ],
             "outputs": [

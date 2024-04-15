@@ -23,20 +23,20 @@ Check [our MediaPipe github fork](https://github.com/openvinotoolkit/mediapipe) 
 
 This guide gives information about:
 
-* <a href="#ovms-calculators">OpenVINO Model Server Calculators</a>
-* <a href="#create-graph">How to create the graph for deployment in OpenVINO Model Server</a>
-* <a href="#graph-deploy">Graph deployment</a>
-* <a href="#testing">Deployment testing</a>
-* <a href="#client">Using MediaPipe graphs from the remote client </a>
+* [OpenVINO Model Server Calculators](#openvino-calculators)
+* [How to create the graph for deployment in OpenVINO Model Server](#how-to-create-the-graph-for-deployment-in-openvino-model-server)
+* [Graph deployment](#graph-deployment)
+* [Deployment testing](#deployment-testing)
+* [Using MediaPipe graphs from the remote client](#using-mediapipe-graphs-from-the-remote-client)
 * [How to update existing graphs to use OV for inference](mediapipe_conversion.md)
-* <a href="#adding-calculator">Adding your own MediaPipe calculator to OpenVINO Model Server </a>
-* <a href="#graph-examples">Demos and examples</a>
-* <a href="#current-limitations">Current Limitations</a>
-* <a href="#known-issues">Known Issues</a>
+* [Adding your own MediaPipe calculator to OpenVINO Model Server](#adding-your-own-mediapipe-calculator-to-openvino-model-server)
+* [Demos and examples](#mediapipe-graphs-examples)
+* [Current Limitations](#current-limitations)
+* [Known Issues](#known-issues)
 
 
 
-## OpenVINO calculators <a name="ovms-calculators"></a>
+## OpenVINO calculators
 
 We are introducing a set of calculators which can bring to the graphs execution advantages of OpenVINO Runtime.
 
@@ -50,9 +50,9 @@ Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/ma
 
 `PyTensorOvTensorConverterCalculator` enables conversion between nodes that are run by `PythonExecutorCalculator` and nodes that receive and/or produce [OV Tensors](https://docs.openvino.ai/2024/api/c_cpp_api/classov_1_1_tensor.html)
 
-## How to create the graph for deployment in OpenVINO Model Server <a name="create-graph"></a>
+## How to create the graph for deployment in OpenVINO Model Server
 
-### Supported graph input/output streams packet types <a name="ovms_graph_supported_packet_types"></a>
+### Supported graph input/output streams packet types
 OpenVINO Model Server supports processing several packet types at the inputs and outputs of the graph.
 Following table lists supported tag and packet types in pbtxt graph definition:
 
@@ -113,7 +113,7 @@ The input data and the response will be automatically exchanges between GPU and 
 
 Full pipeline execution on the GPU is expected to be added in future releases.
 
-## Graph deployment <a name="graph-deploy"></a>
+## Graph deployment
 ### How to package the graph and models
 In order to simplify distribution of the graph artifacts and the deployment process in various environments,
 it is recommended to create a specific folders structure:
@@ -183,7 +183,7 @@ Nodes in the MediaPipe graphs can reference both the models configured in model_
 Subconfig file may only contain *model_config_list* section  - in the same format as in [models config file](starting_server.md).
 
 
-## Deployment testing <a name="testing"></a>
+## Deployment testing
 ### Debug logs
 The simplest method to validate the graph execution is to set the Model Server `log_level` to `DEBUG`.
 `docker run --rm -it -v $(pwd):/config openvino/model_server:latest --config_path /config/config.json --log_level DEBUG`
@@ -200,12 +200,12 @@ Currently the graph tracing on the model server side is not supported. If you wo
 
 ### Benchmarking
 While you implemented and deployed the graph you have several options to test the performance.
-To validate the throughput for unary requests you can use the [benchmark client](../demos/benchmark/python/README.md#mediapipe-benchmarking).
+To validate the throughput for unary requests you can use the [benchmark client](../demos/benchmark/python/README.md#mediapipe-benchmarking) .
 
 For streaming gRPC connections, there is available [rtsp_client](../demos/real_time_stream_analysis/python/README.md).
 It can generate the load to gRPC stream and the mediapipe graph based on the content from RTSP video stream, MPG4 file or from the local camera.
 
-## Using MediaPipe graphs from the remote client <a name="client"></a>
+## Using MediaPipe graphs from the remote client
 
 MediaPipe graphs can use the same gRPC KServe Inference API both for the unary calls and the streaming.
 The same client libraries with KServe API support can be used in both cases. The client code for the unary and streaming is different.
@@ -219,7 +219,7 @@ and [GetModelMetadata](model_server_grpc_api_kfs.md) and [REST Model Metadata](m
 The difference in using the MediaPipe graphs and individual models is in version management. In all calls to the MediaPipe graphs,
 the version parameter is ignored. MediaPipe graphs are not versioned. Though, they can reference a particular version of the models in the graph.
 
-## Adding your own mediapipe calculator to OpenVINO Model Server <a name="adding-calculator"></a>
+## Adding your own mediapipe calculator to OpenVINO Model Server
 MediaPipe graphs can include only the calculators built-in the model server image.
 If you want to add your own mediapipe calculator to OpenVINO Model Server functionality you need to add it as a dependency and rebuild the OpenVINO Model Server binary.
 
@@ -248,7 +248,7 @@ in the conditions:default section of the deps property:
  Make sure the REGISTER_CALCULATOR(your_calculator); macro is present in the calculator file that you have added.
 
 
-## MediaPipe Graphs Examples <a name="graphs-examples"></a>
+## MediaPipe Graphs Examples
 
 [Holistic analysis](../demos/mediapipe/holistic_tracking/README.md)
 
@@ -260,7 +260,7 @@ in the conditions:default section of the deps property:
 
 
 
-## Current limitations <a name="current-limitations"></a>
+## Current limitations
 - MediaPipe graphs are supported only for gRPC KServe API.
 
 - KServe ModelMetadata call response contains only input and output names. In the response, shapes will be empty and datatypes will be `"INVALID"`.
@@ -270,7 +270,7 @@ in the conditions:default section of the deps property:
 - Updates in subconfig files and mediapipe graph files do not trigger model server config reloads. The reload of the full config, including subconfig and graphs, can be initiated by an updated in the main config json file or using the REST API `config/reload` endpoint.
 
 
-## Known issues <a name="known-issues"></a>
+## Known issues
 - MediaPipe `SyncSetInputStreamHandler` options are not validated during graph validation, but graph creation:
 ```
 input_stream: "INPUT:input"

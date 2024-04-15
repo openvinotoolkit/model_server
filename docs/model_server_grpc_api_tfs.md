@@ -1,18 +1,18 @@
 # TensorFlow Serving compatible gRPC API {#ovms_docs_grpc_api_tfs}
 
-## Introduction 
-This document gives information about OpenVINO&trade; Model Server gRPC API compatible with TensorFlow Serving. It is documented in the proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r2.9/tensorflow_serving/apis). 
-Using the gRPC interface is recommended for optimal performance due to its faster implementation of input data deserialization. gRPC achieves lower latency, especially with larger input messages like images. 
+## Introduction
+This document gives information about OpenVINO&trade; Model Server gRPC API compatible with TensorFlow Serving. It is documented in the proto buffer files in [tensorflow_serving_api](https://github.com/tensorflow/serving/tree/r2.9/tensorflow_serving/apis).
+Using the gRPC interface is recommended for optimal performance due to its faster implementation of input data deserialization. gRPC achieves lower latency, especially with larger input messages like images.
 
 This document covers following API's endpoints coming from Tensorflow Serving gRPC API:
-* <a href="#model-status">Model Status API</a>
-* <a href="#model-metadata">Model Metadata API </a>
-* <a href="#predict">Predict API </a>
+* [Model Status API](#model-status-api)
+* [Model Metadata API ](#model-metadata-api)
+* [Predict API](#predict-api)
 
-> **NOTE**: The implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available. 
+> **NOTE**: The implementations for *Predict*, *GetModelMetadata* and *GetModelStatus* function calls are currently available.
 These are the most generic function calls and should address most of the usage scenarios.
 
-## Model Status API <a name="model-status"></a>
+## Model Status API
 
 Gets information about the status of served models including Model Version
 
@@ -21,21 +21,21 @@ Gets information about the status of served models including Model Version
  Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-status-api).
 
 
-## Model Metadata API <a name="model-metadata"></a>
+## Model Metadata API
 
 Gets information about the served models. A function called GetModelMetadata accepts model spec information as input and returns Signature Definition content in a format similar to TensorFlow Serving.
- 
-[Get Model Metadata proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_metadata.proto) has three message definitions: *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*. 
+
+[Get Model Metadata proto](https://github.com/tensorflow/serving/blob/master/tensorflow_serving/apis/get_model_metadata.proto) has three message definitions: *SignatureDefMap*, *GetModelMetadataRequest*, *GetModelMetadataResponse*.
 
 Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-metadata-api).
 
 
-## Predict API <a name="predict"></a>
+## Predict API
 
 Endpoint for running an inference with loaded models or [DAGs](./dag_scheduler.md).
 
 [Predict proto](https://github.com/tensorflow/serving/blob/r2.9/tensorflow_serving/apis/predict.proto) has two message definitions: *PredictRequest* and  *PredictResponse*.
- * *PredictRequest* specifies information about the model spec, a map of input data serialized via 
+ * *PredictRequest* specifies information about the model spec, a map of input data serialized via
 [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) to a string format.
  * *PredictResponse* includes a map of outputs serialized by
 [TensorProto](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) and information about the used model spec.

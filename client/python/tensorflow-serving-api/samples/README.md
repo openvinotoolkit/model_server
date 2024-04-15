@@ -1,13 +1,13 @@
 # Samples based on tensorflow-serving-api package
 
 This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API and REST API.
-Samples are based on [tensorflow-serving-api](https://pypi.org/project/tensorflow-serving-api/) package. 
+Samples are based on [tensorflow-serving-api](https://pypi.org/project/tensorflow-serving-api/) package.
 
 > **Note** : _tensorflow-serving-api_ package is heavy as it includes _tensorflow_ as its dependency. For a lightweight alternative, see [ovmsclient](https://pypi.org/project/ovmsclient/) package (along with the [samples](../../ovmsclient/samples))
 
 It covers following topics:
-* <a href="#grpc-api">gRPC API Client Examples </a>
-* <a href="#rest-api">REST API Client Examples  </a>
+* [gRPC API Client Examples](#grpc-api-client-examples)
+* [REST API Client Examples](#rest-api-client-examples)
 
 ## Requirement
 
@@ -31,9 +31,9 @@ wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/m
 docker run -d -u $(id -u) -v $(pwd)/models:/models -p 8000:8000 -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet50 --port 9000 --rest_port 8000
 ```
 
-## gRPC API Client Examples <a name="grpc-api"></a>
+## gRPC API Client Examples
 
-### Model Status API 
+### Model Status API
 
 - Command
 
@@ -53,7 +53,7 @@ usage: grpc_get_model_status.py [-h] [--grpc_address GRPC_ADDRESS]
 | -h, --help       | Show help message and exit       |
 | --grpc_address GRPC_ADDRESS   |   Specify url to grpc service. Default: localhost      |
 | --grpc_port GRPC_PORT | Specify port to grpc service. Default: 9000 |
-| --model_name MODEL_NAME | Model name to query. Default: resnet | 
+| --model_name MODEL_NAME | Model name to query. Default: resnet |
 | --model_version MODEL_VERSION | Model version to query. Lists all versions if not specified |
 
 
@@ -92,7 +92,7 @@ usage: grpc_get_model_metadata.py [-h] [--grpc_address GRPC_ADDRESS]
 | -h, --help       | Show this help message and exit       |
 | --grpc_address GRPC_ADDRESS   |   Specify url to grpc service. Default:localhost      |
 | --grpc_port GRPC_PORT | Specify port to grpc service. Default: 9000 |
-| --model_name MODEL_NAME | Define model name, must be same as is in service. Default: resnet | 
+| --model_name MODEL_NAME | Define model name, must be same as is in service. Default: resnet |
 | --model_version MODEL_VERSION | Define model version - must be numerical |
 
 
@@ -108,7 +108,7 @@ Outputs metadata:
 	Output name: 1463; shape: [1, 1000]; dtype: DT_FLOAT
 ```
 
-### Predict API 
+### Predict API
 
 #### **Submitting gRPC requests based on a dataset from numpy files:**
 
@@ -127,7 +127,7 @@ usage: grpc_predict_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
                               [--iterations ITERATIONS]
                               [--batchsize BATCHSIZE]
                               [--model_name MODEL_NAME]
-                              [--pipeline_name PIPELINE_NAME] 
+                              [--pipeline_name PIPELINE_NAME]
                               [--dag-batch-size-auto] [--tls]
                               [--server_cert SERVER_CERT]
                               [--client_cert CLIENT_CERT]
@@ -141,7 +141,7 @@ usage: grpc_predict_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 | -h,--help       | Show help message and exit       |
 | --images_numpy_path   |   Numpy in shape [n,w,h,c] or [n,c,h,w]      |
 | --labels_numpy_path | Numpy in shape [n,1] - can be used to check model accuracy |
-| --grpc_address GRPC_ADDRESS | Specify url to grpc service. Default:localhost | 
+| --grpc_address GRPC_ADDRESS | Specify url to grpc service. Default:localhost |
 | --grpc_port GRPC_PORT | Specify port to grpc service. Default: 9000 |
 | --input_name | Specify input tensor name. Default: input |
 | --output_name | Specify output name. Default: resnet_v1_50/predictions/Reshape_1 |
@@ -277,7 +277,7 @@ Average latency= 28.2 ms
 ```
 
 
-## REST API Client Examples<a name="rest-api"></a>
+## REST API Client Examples
 
 Access to Google Cloud Storage might require proper configuration of https_proxy in the docker engine or in the docker container.
 In the examples listed below, OVMS can be started using a command:
@@ -288,7 +288,7 @@ docker run -d -u $(id -u) -v $(pwd)/models:/models -p 8000:8000 -p 9000:9000 ope
 
 ### Model Status API
 - Command
-```bash 
+```bash
 python rest_get_model_status.py --help
 usage: rest_get_model_status.py [-h] [--rest_url REST_URL]
                                 [--rest_port REST_PORT]
@@ -299,7 +299,7 @@ usage: rest_get_model_status.py [-h] [--rest_url REST_URL]
                                 [--ignore_server_verification]
                                 [--server_cert SERVER_CERT]
 ```
-- Arguments 
+- Arguments
 
 | Argument      | Description |
 | :---        |    :----   |
@@ -313,7 +313,7 @@ usage: rest_get_model_status.py [-h] [--rest_url REST_URL]
 | --ignore_server_verification | Skip TLS host verification. Do not use in production. Default: False. |
 | --server_cert SERVER_CERT | Path to a custom directory containing trusted CA certificates, server certificate, or a CA_BUNDLE file. Default: None, will use default system CA cert store. |
 
-- Usage Example 
+- Usage Example
 ```bash
 python rest_get_model_status.py --rest_port 8000 --model_version 1
 {
@@ -343,7 +343,7 @@ usage: rest_get_model_metadata.py [-h] [--rest_url REST_URL]
                                   [--ignore_server_verification]
                                   [--server_cert SERVER_CERT]
 ```
-- Arguments 
+- Arguments
 
 | Argument      | Description |
 | :---        |    :----   |
@@ -456,7 +456,7 @@ usage: rest_predict_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH
 | -h, --help       | Show help message and exit       |
 | --images_numpy_path IMAGES_NUMPY_PATH |   Numpy in shape [n,w,h,c] or [n,c,h,w]      |
 | --labels_numpy_path LABELS_NUMPY_PATH| Numpy in shape [n,1] - can be used to check model accuracy |
-| --rest_url REST_URL| Specify url to REST API service. Default: http://localhost | 
+| --rest_url REST_URL| Specify url to REST API service. Default: http://localhost |
 | --rest_port REST_PORT| Specify port to REST API service. Default: 8000 |
 | --input_name INPUT_NAME| Specify input tensor name. Default: input |
 | --output_name OUTPUT_NAME| Specify output name. Default: resnet_v1_50/predictions/Reshape_1 |
