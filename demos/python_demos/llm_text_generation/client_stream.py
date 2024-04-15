@@ -89,7 +89,7 @@ print('\nEND')
 
 print("\n\nNumber of tokens ", token_count[0])
 print("Generated tokens per second ", round(token_count[0] / (np.sum(processing_times) / 1000), 2))
-print("Time per generated token", round((np.sum(processing_times) / 1000) / token_count[0], 2), "s")
+print("Time per generated token", round((np.sum(processing_times) / 1000) / token_count[0] * 1000, 2), "ms")
 print("Total time", np.sum(processing_times), "ms")
 print("Number of responses", processing_times.size)
 print("First response time", processing_times[0], "ms")
