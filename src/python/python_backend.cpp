@@ -81,6 +81,7 @@ bool PythonBackend::createEmptyOvmsPyTensor(const std::string& name, const std::
         outTensor = std::make_unique<PyObjectWrapper<py::object>>(ovmsPyTensor);
         return true;
     } catch (const pybind11::error_already_set& e) {
+        SPDLOG_ERROR("TENSOR {}", size);
         SPDLOG_DEBUG("PythonBackend::createEmptyOvmsPyTensor - Py Error: {}", e.what());
         return false;
     } catch (std::exception& e) {

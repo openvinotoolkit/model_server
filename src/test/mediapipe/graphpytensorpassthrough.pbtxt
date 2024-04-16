@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-input_stream: "OVTENSOR:in"
-output_stream: "OVTENSOR:out"
+input_stream: "OVMS_PY_TENSOR:in"
+output_stream: "OVMS_PY_TENSOR:out"
 node {
   calculator: "PassThroughCalculator"
-  input_stream: "OVTENSOR:in"
-  output_stream: "OVTENSOR:out"
+  input_stream: "OVMS_PY_TENSOR:in"
+  output_stream: "OVMS_PY_TENSOR:out"
 }

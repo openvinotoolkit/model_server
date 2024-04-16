@@ -160,12 +160,12 @@ protected:
     }
 };
 
-// class HttpRestApiHandlerWithMediapipePassthrough : public HttpRestApiHandlerWithMediapipe {
-// protected:
-//     void SetUp() {
-//         SetUpServer("/ovms/src/test/mediapipe/config_mp_ov_passthrough.json");
-//     }
-// };
+class HttpRestApiHandlerWithMediapipePassthrough : public HttpRestApiHandlerWithMediapipe {
+protected:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mp_pytensor_passthrough.json");
+    }
+};
 
 class HttpRestApiHandlerWithDynamicModelTest : public HttpRestApiHandlerTest {
 public:
@@ -283,7 +283,7 @@ TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP64) {
     std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
     int headerLength = request_body.length();
 
-    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::NOT_IMPLEMENTED);
+    testInference(headerLength, request_body, handler);
 }
 
 TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32) {
@@ -437,29 +437,29 @@ TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32BinaryExtension) {
     testInference(headerLength, request_body, handler);
 }
 
-// TEST_F(HttpRestApiHandlerWithMediapipePassthrough, inferRequestBYTES) {
-//     std::string request = "/v2/models/mpOvPassthrough/versions/1/infer";
-//      std::string request_body = "{\"inputs\":[{\"name\":\"in\",\"shape\":[3],\"datatype\":\"BYTES\", \"data\": [\"abc\", \"def\", \"ghi\"]}]}";
-//     ovms::HttpRequestComponents comp;
+TEST_F(HttpRestApiHandlerWithMediapipePassthrough, inferRequestBYTES) {
+    std::string request = "/v2/models/mpPytensorPassthrough/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"in\",\"shape\":[3],\"datatype\":\"BYTES\", \"data\": [\"abc\", \"def\", \"ghi\"]}]}";
+    ovms::HttpRequestComponents comp;
 
-//     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
-//     std::string response;
-//     ovms::HttpResponseComponents responseComponents;
-//     ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
 
-//     rapidjson::Document doc;
-//     doc.Parse(response.c_str());
-//     ASSERT_FALSE(doc.HasParseError());
-//     ASSERT_TRUE(doc["outputs"][0].GetObject().HasMember("data"));
-//     ASSERT_TRUE(doc["outputs"][0].GetObject()["data"].IsArray());
-//     auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
-//     std::vector<std::string> expectedStrings{"Hello", "World"};
-//     ASSERT_EQ(output.Size(), expectedStrings.size());
-//     for (size_t i = 0; i < expectedStrings.size(); i++) {
-//         ASSERT_TRUE(output[i].IsString());
-//         ASSERT_EQ(output[i].GetString(), expectedStrings[i]);
-//     }
-// }
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    ASSERT_TRUE(doc["outputs"][0].GetObject().HasMember("data"));
+    ASSERT_TRUE(doc["outputs"][0].GetObject()["data"].IsArray());
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    std::vector<std::string> expectedStrings{"abc", "def", "ghi"};
+    ASSERT_EQ(output.Size(), expectedStrings.size());
+    for (size_t i = 0; i < expectedStrings.size(); i++) {
+        ASSERT_TRUE(output[i].IsString());
+        ASSERT_EQ(output[i].GetString(), expectedStrings[i]);
+    }
+}
 
 #pragma GCC diagnostic pop
 

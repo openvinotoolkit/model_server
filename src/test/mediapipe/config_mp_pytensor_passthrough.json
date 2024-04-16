@@ -1,0 +1,9 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":"mpPytensorPassthrough",
+        "graph_path":"/ovms/src/test/mediapipe/graphpytensorpassthrough.pbtxt"
+    }
+    ]
+}

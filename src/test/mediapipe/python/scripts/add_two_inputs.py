@@ -28,6 +28,8 @@ class OvmsPythonModel:
         dataFormat = ''
         if inputs[0].datatype == "FP32":
             dataFormat = '{}f'.format(inputs[0].shape[1])
+        if inputs[0].datatype == "FP64":
+            dataFormat = '{}d'.format(inputs[0].shape[1])
         elif inputs[0].datatype == "INT32":
             dataFormat = '{}i'.format(inputs[0].shape[1])
         elif inputs[0].datatype == "UINT32":
@@ -46,7 +48,6 @@ class OvmsPythonModel:
             dataFormat = '{}h'.format(inputs[0].shape[1])
         elif inputs[0].datatype == "UINT16":
             dataFormat = '{}H'.format(inputs[0].shape[1])
-            
         input_1 = struct.unpack(dataFormat, bytes(inputs[0]))
         input_2 = struct.unpack(dataFormat, bytes(inputs[1]))
         output_array = list(map(sum, zip(input_1, input_2))) 
