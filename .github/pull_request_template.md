@@ -1,7 +1,7 @@
 ### 🛠 Changes being made
 
 JIRA/Issue if applicable
-Description
+Describe the changes
 
 ### 🧪 Checklist
 
