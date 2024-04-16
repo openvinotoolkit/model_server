@@ -25,7 +25,7 @@ pipeline {
                 if (matched){
                   image_build_needed = "true"
               }
-              matched = (git_diff =~ /(\n^)client/)
+              matched = (git_diff =~ /(\n|^)client/)
                 if (matched){
                   client_test_needed = "true"
               }
