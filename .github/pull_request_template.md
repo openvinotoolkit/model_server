@@ -10,6 +10,6 @@ Describe the changes
 - [ ] The documentation updated.
 
 
-- [ ] Data type and buffer overflows checked.
+- [ ] Does this change follow security best practices
 - [ ] Avoid TOCTOU race conditions.
 
