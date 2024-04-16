@@ -3,7 +3,7 @@
 JIRA/Issue if applicable
 Description
 
-### 🧪 Test plan
+### 🧪 Checklist
 
 - [ ] Functionality tested manually.
 - [ ] Unit tests are added.
