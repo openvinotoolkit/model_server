@@ -257,7 +257,7 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
     }
 }
 
-static void testInferenceNegative(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler, ovms::Status status) {
+static void testInferenceNegative(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler, ovms::Status processorStatus) {
     std::string request = "/v2/models/mediapipeAdd/versions/1/infer";
 
     std::vector<std::pair<std::string, std::string>> headers;
@@ -270,7 +270,7 @@ static void testInferenceNegative(int headerLength, std::string& request_body, s
 
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), status);
+    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), processorStatus);
 }
 
 #pragma GCC diagnostic push
