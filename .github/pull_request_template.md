@@ -10,7 +10,6 @@ Describe the changes
 - [ ] The documentation updated.
 
 
-- [ ] Perform self review before.
 - [ ] Data type and buffer overflows checked.
 - [ ] Avoid TOCTOU race conditions.
 
