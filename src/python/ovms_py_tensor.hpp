@@ -46,7 +46,6 @@ const std::unordered_map<std::string, std::string> datatypeToBufferFormat{
     {"FP16", "e"},
     {"FP32", "f"},
     {"FP64", "d"},
-    {"BYTES", "s"},
     // {"BF16", X} to be considered, for now it shall be treated as a custom datatype
 };
 
@@ -65,7 +64,6 @@ const std::unordered_map<std::string, std::string> bufferFormatToDatatype{
     {"e", "FP16"},
     {"f", "FP32"},
     {"d", "FP64"},
-    {"s", "BYTES"},
     // {X, "BF16"} to be considered, for now it shall be treated as a custom datatype
 };
 
@@ -85,7 +83,6 @@ const std::unordered_map<std::string, py::ssize_t> bufferFormatToItemsize{
     {"e", 2},
     {"f", 4},
     {"d", 8},
-    {"s", 1},
     // {"BF16", X} to be considered, for now it shall be treated as a custom datatype
 };
 

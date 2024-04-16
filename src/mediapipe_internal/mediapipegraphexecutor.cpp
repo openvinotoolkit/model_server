@@ -688,7 +688,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 return StatusCode::UNKNOWN_ERROR;
             }
         } else {
-            if (formatIt == datatypeToBufferFormat.end()) {
+            if ((precision != ov::element::Type_t::string) && formatIt == datatypeToBufferFormat.end()) {
                 const std::string details = "Provided datatype is invalid, custom datatypes are allowed only when raw_input_contents is used.";
                 SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
                 return Status(StatusCode::INVALID_PRECISION, details);
@@ -697,7 +697,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             if (precision == ov::element::Type_t::string) {
                 expectedBytes = 0;
                 for (auto contents : request.inputs(inputIndex).contents().bytes_contents()) {
-                    expectedBytes = expectedBytes + contents.size() + sizeof(uint32_t);
+                    expectedBytes += contents.size() + sizeof(uint32_t);
                 }
             } else {
                 expectedBytes = 1;
@@ -763,8 +763,8 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                     uint32_t size = contents.size();
                     std::memcpy(reinterpret_cast<char*>(data) + offset, &size, sizeof(uint32_t));
                     offset += sizeof(uint32_t);
-                    std::memcpy(reinterpret_cast<char*>(data) + offset, contents.data(), contents.size());
-                    offset += contents.size();
+                    std::memcpy(reinterpret_cast<char*>(data) + offset, contents.data(), size);
+                    offset += size;
                 }
                 return StatusCode::OK;
             }

@@ -276,19 +276,10 @@ static void testInferenceNegative(int headerLength, std::string& request_body, s
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnarrowing"
 
-TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP64) {
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    testInference(headerLength, request_body, handler);
-}
-
-TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32) {
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+TEST_P(HttpRestApiHandlerWithMediapipe, inferRequestWithSupportedPrecision) {
+    std::string datatype = GetParam();
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"" + datatype + "\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"" + datatype + "\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
 
     std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
     int headerLength = request_body.length();
@@ -316,86 +307,6 @@ TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestBF16) {
     testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
-TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestINT64) {
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"INT64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"INT64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    testInference(headerLength, request_body, handler);
-}
-
-TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestINT32) {
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"INT32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"INT32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    testInference(headerLength, request_body, handler);
-}
-
-TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestINT16) {
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"INT16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"INT16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    testInference(headerLength, request_body, handler);
-}
-
-TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestINT8) {
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"INT8\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"INT8\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    testInference(headerLength, request_body, handler);
-}
-
-TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestUINT64) {
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"UINT64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"UINT64\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    testInference(headerLength, request_body, handler);
-}
-
-TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestUINT32) {
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"UINT32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"UINT32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    testInference(headerLength, request_body, handler);
-}
-
-TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestUINT16) {
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"UINT16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"UINT16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    testInference(headerLength, request_body, handler);
-}
-
-TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestUINT8) {
-    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"UINT8\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"UINT8\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
-
-    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
-    int headerLength = request_body.length();
-
-    testInference(headerLength, request_body, handler);
-}
-
 TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestBOOL) {
     std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"BOOL\", \"data\": [true,true,true,true,true,true,true,true,true,true]}";
     std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"BOOL\", \"data\": [true,true,true,true,true,true,true,true,true,true]}";
@@ -405,6 +316,16 @@ TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestBOOL) {
 
     testInference(headerLength, request_body, handler);
 }
+
+std::vector<std::string> supportedDatatypes = {"FP32", "FP64", "INT8", "UINT8", "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64"};
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDeserialize,
+    HttpRestApiHandlerWithMediapipe,
+    ::testing::ValuesIn(supportedDatatypes),
+    [](const ::testing::TestParamInfo<HttpRestApiHandlerWithMediapipe::ParamType>& info) {
+        return info.param;
+    });
 
 TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32DataInJsonAndBinaryExtension) {
     // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
