@@ -64,7 +64,7 @@ ifeq ($(TEST_TYPE), FULL)
 endif
 
 clean:
-	@rm -rf tf/ tfs/ compiled_protos/ build/ dist/ ovmsclient/tfs_compat/protos
+	@rm -rf tf/ tfs/ compiled_protos/ build/ dist/ ovmsclient/tfs_compat/protos ovmsclient.egg-info
 
 style: venv
 	@. $(ACTIVATE); pip3 install flake8==5.0.1

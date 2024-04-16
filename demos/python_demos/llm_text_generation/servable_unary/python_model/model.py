@@ -124,7 +124,7 @@ def serialize_completions(batch_size, result, token_count):
     if batch_size == 1:
         return [Tensor("completion", result[0].encode()), Tensor("token_count", np.array(token_count, dtype=np.int32))]
     return [Tensor("completion", serialize_byte_tensor(
-        np.array(result, dtype=np.object_)).item()), Tensor("token_count", token_count)]
+        np.array(result, dtype=np.object_)).item()), Tensor("token_count", np.array(token_count, dtype=np.int32))]
 
 
 class OvmsPythonModel:

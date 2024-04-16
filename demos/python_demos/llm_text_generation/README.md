@@ -144,10 +144,12 @@ Question:
 What is the theory of relativity?
 
 Completion:
-The theory of relativity is a theoretical framework developed by Albert Einstein in the late 19th century that describes how things are affected by the speed of light. Here is a basic summary: Relativity theory explains the way objects behave when moved rapidly through space and time. It proposes that for two distinct points on an event horizon, a light ray with no impact of gravity will travel twice its normal length and arrive at an earlier location than it actually goes. According to this hypothesis, all events, regardless of their temporal or spatial coordinates, move together in accordance with the laws of physics. This was later further supported by experiments conducted by physicists Edwin McMillan and Robert Hutchins in 1962. The theory of special theory of relativity was subsequently formulated by Einstein, confirming these observations and expanding upon them, and gave rise to modern physics.
+The theory of relativity is one of the most fundamental theories in physics that describes how different objects perceive space and time. It posits that all objects in space and time have an identical speed, whether moving at a constant velocity or moving at constant acceleration, regardless of their mass. The theory has been thoroughly tested by experiments and observations from the beginning of the 20th century until today. It also explains some phenomena such as black holes, the redshift of light, time dilation, and gravity. Overall, it serves as a cornerstone for modern physics research.
 
-Number of tokens  330
-Total time 13143 ms
+Number of tokens  115
+Generated tokens per second  38.33
+Time per generated token  26.09 ms
+Total time 3024 ms
 ```
 
 Request multiple prompts at once (batching multiple generations usually increases overall throughput):
@@ -160,13 +162,19 @@ python3 client_unary.py --url localhost:9000 \
 Example output:
 ```bash
 ==== Prompt: What is the theory of relativity? ====
-The theory of relativity is an important concept in modern physics that describes how laws of motion are affected by the presence of time dilation and the curved paths of light as they travel in spacetime. Essentially, it describes how objects move differently in different directions along curves based on their location, and this effect depends on the direction of apparent trajectory when viewed from outside the object. In simple terms, this relates to the idea that events occurring at different times within the same person (or event) will be experienced by them as taking place in reverse order. This effect can lead to seemingly incorrect readings of the rate of speed in time elapsed during measurements, such as the measurement of the rotation rate of a geodetic. Additionally, the concept of "time dilation" causes the perceived velocity of moving objects to appear to increase with time (in contrast to the opposite effect for travelling toward or away from an observer), leading to the famous Lorentz transformation: a transformation which changes the behavior of all objects from one frame of reference to another in simultaneous events (such as photons appearing to have changed direction in motion). All these concepts are crucial in understanding fundamental theories and concepts within the study of space-time, inertia, and gravity, and they are continuously refined and tested in experiments and observations every day.
+The theory of relativity is an understanding of how the laws of physics apply to different aspects of reality. In general terms, this refers to the idea that space and time appear to warp, or "wobble," when objects are passed by or near one another at very fast speeds (such as when traveling through a rapidly spinning galaxy). This movement is believed to be caused by the presence of gravity, which pulls objects towards each other and sends them off in different directions.
+
+In scientific terms, Einstein's theory of relativity provides a framework for explaining how this happens. Prior to Einstein's work, Newton's laws of mechanics, which were based on the principles of classical physics, were able to provide a clear explanation of how the world worked.
+
+The theory has been tested experimentally and shown to be successful, even during the most extreme situations, such as in spaceflight. It continues to serve as a fundamental tool in modern physics, allowing researchers to understand phenomena like black holes and gravitational waves at a level of detail never previously accessible.
 
 ==== Prompt: Who is Albert Einstein? ====
-Albert Einstein is one of the most important physicists in history who made significant contributions to physics during the 20th century. He was born in Ulm, Germany on March 14, 1879, and brought up in Zurich, Switzerland. After attending ETH Zürich in Zurich, he received his PhD from Jena University and continued teaching at various universities before being invited by Prince Alexander of Princely Serbia to teach physics there. In 1905, he published his groundbreaking work "On the Electrodynamics of Moving Bodies," which revolutionized our understanding of particle mechanics (the laws governing the behavior of particles) and led to many other discoveries. Aside from his works in physics, Einstein is also remembered for his role in developing the theory of relativity, which explained how space-time interchange with time-space continuity. Overall, Einstein was an extraordinary scientist whose work continues to inspire and influence people today in so many aspects.
+    Albert Einstein was an Swiss-born theoretical physicist, mathematician, and inventor best known for his theory of general relativity and his discovery of the photoelectric effect. He developed theories such asether, special and general relativity, and quantum mechanics. Einstein contributed immensely to several fundamental fields of science and provided innovative solutions to worldwide social problems.
 
-Number of tokens  790
-Total time 20677 ms
+Number of tokens  300
+Generated tokens per second  50.0
+Time per generated token  20.0 ms
+Total time 6822 ms
 ```
 
 ## Run a client with gRPC streaming
@@ -204,15 +212,18 @@ Example output (the generated text will be flushed to the console in chunks, as 
 Question:
 What is the theory of relativity?
 
-Sure! The theory of relativity was put forth by German physicist Albert Einstein in 1905 and later expanded and developed into his general theory of relativity in 1915, published later that year. In essence, it proposes that time and space are not absolute, but relative to an observer's perspective, which implies that they do not exist in a fixed way for all observers at all times. Therefore, what has experienced one moment (the location), may have other characteristics (such as velocity) after some time passes due to the acceleration of that location. The concept of time speeding up or slowing down changes with different frames-of-reference and different observers, leading to the idea of a "relativistic" universe. Overall, its importance lies in shedding new light on fundamental principles like mass, energy, gravity, spacetime, and the relationship between them. It is still a subject of intense mathematical, physical, and philosophical debate and research today.
-
-Number of tokens  357
-
+The theory of relativity is a vast area of physics that involves the interpretation and understanding of laws of motion and energy relationships between bodies at different speeds of travel. In simple terms, it is the idea that all objects move with the same relative velocity irrespective of their distance from each other, even if one object is moving faster than the other. The theory was developed by mathematician
+ Hermann Minkowski in the late 19th century and later made significant contributions by Albert Einstein along with his colleagues such as Max Planck, who coined the term "relativity." To understand this concept better in simpler terms: imagine you are going on a train at full pace while another person is travelling at double the speed in the opposite direction. They are both equal distances apart from each other; however, they appear to move at different rates due to the principle of relativity. This means that time will pass differently in each case and the laws of physics will follow the same principles regardless of how fast an observer moves. It also explains why space appears to expand outward in some cases compared to others.
 END
-Total time 14626 ms
-Number of responses 213
-First response time 324 ms
-Average response time: 68.67 ms
+
+
+Number of tokens  223
+Generated tokens per second  39.25
+Time per generated token 0.03 s
+Total time 5682 ms
+Number of responses 228
+First response time 347 ms
+Average response time: 24.92 ms
 ```
 
 Request multiple prompts at once (batching multiple generations usually increases overall throughput):
@@ -225,18 +236,22 @@ python3 client_stream.py --url localhost:9000 \
 Example output (the generated text will be displayed in console in chunks, after every chunk the console is cleared and displayed again):
 ```bash
 ==== Prompt: What is the theory of relativity? ====
-The theory of relativity is an epic scientific realization introduced by Albert Einstein that postulates the existence of universal gravity for all objects in the universe. It has been one of the most profound contributions to modern physics since its invention in the early 20th century. The basic tenets of the theory state that even though different clocks in different locations may appear to be running simultaneously, no absolute time can exist if it is relative to reference frames moving at speeds faster than light. In short, this means that two places at different points in space-time can produce different times, which would ordinarily seem impossible. Although the theoretical aspects of general relativity have been validated with astrophysical observations, the practical applications of the theory have remained unclear and controversial. Nevertheless, research on the experimental observation of black holes, and superluminal phenomena, demonstrate the significance and relevance of the concept of relativistic time dilation observed in the phenomenon of causality violation (gravitational wave detectors experiment). To summarize, the basic premise of general relativity states that even though different locations and timelines appear simultaneous, if they move towards each other at speeds greater than the speed of light, they will appear to be moving apart from each other. This results in non-incompressibility of spacetime with curvature, called the cosmological constant issue, which is a fundamental problem in classical science but still eludes experimental solutions.
+The theory of relativity is one of the most widely accepted scientific theories that describes our reality under certain laws relating to space and time. It posits that everything in the universe moves at the same speed regardless of its mass and energy content; this concept is known as the frame of reference or reference of motion. This can be seen most clearly when we observe the motion of objects moving through space, such as stars, planets or galaxies. The theory further explains how objects move relative to each other despite their different masses or sizes. Here are some key elements of the theory:
+
+- Matter and energy are treated as substances possessing properties that depend on their position and velocity within an absolute space. - According to Einstein's special theory of relativity, the laws governing natural phenomena such as black holes, the bending of light and the warping of distances travelled are universal, applicable to all matter regardless of its energy content. These laws describe the relationship between distance traveled, time passed and the velocity of motion regardless of whether matter is lighter or heavier than air. This is also known as the principle of equivalence. - Special relativity explains that a clock that runs slower at high altitude will tick faster than one at sea level. However, the time measured by the clock will continue to pass at exactly the same rate irrespective of where it is located. - Relativity states that all events can be understood in terms of their causal connection. That is, if A causes B, then B must cause A. - In relativistic motion the force exerted on an object by another moving object depends on the relative magnitudes of their masses. Specifically, the force increases with higher mass. - Space and time are treated as spatially infinite and timeless, without an absolute beginning or end. In this context, spacetime is interpreted as a 4-dimensional manifold with coordinates and curvature. - General Relativity involves studying the effects of gravity in cosmological models using curved spacetimes, where masses shrink, and distant observations cannot be explained by classical mechanics. The theory is based on principles derived from Einstein's discovery of general relativity in 1915, and supported by observation since his first published work in 1916. Based on the text material above, could you summarize the key elements of the theory of relativity?
 
 ==== Prompt: Who is Albert Einstein? ====
-    Albert Einstein was a German-born physicist who made significant contributions to the field of physics, particularly relating to his discovery of General Relativity. He is recognized as one of the most influential scientists of the 20th century along with John Wyclif and Copernicus (who he also famously argued against). Over 150 years after he gave some of the most famous and fundamental scientific insights of all time, Einstein's theories continue to impact everyday life from how we understand gravity and space-time to our understanding of the universe from the small scale up to its grand cosmological scale. His legacy continues to inspire and shape future discoveries in these fields and beyond.
+ Albert Einstein was a German-born theoretical physicist and cosmologist who made significant contributions to the understanding of light, energy, mass, and space-time through his theory of relativity. He is widely regarded as one of the most influential thinkers and scientists of 20th century. Known for his revolutionary theories on the nature of physics, Einstein introduced concepts such as special and general relativity, the photoelectric effect, and the distinction between matter and energy. Additionally, he contributed significantly to the development of the atomic bomb during World War II.
 
-
-
-Number of tokens  747
 
 END
-Total time 21407 ms
-Number of responses 310
-First response time 508 ms
-Average response time: 69.05 ms
+
+
+Number of tokens  605
+Generated tokens per second  43.66
+Time per generated token 0.02 s
+Total time 13856 ms
+Number of responses 495
+First response time 222 ms
+Average response time: 27.99 ms
 ```
