@@ -9,7 +9,6 @@ Describe the changes
 - [ ] Unit tests are added.
 - [ ] The documentation updated.
 
-### 🏎 Quality check
 
 - [ ] Perform self review before.
 - [ ] Data type and buffer overflows checked.
