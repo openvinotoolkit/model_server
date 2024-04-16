@@ -17,9 +17,11 @@
 ########### Workaround: https://docs.trychroma.com/troubleshooting#sqlite
 __import__('pysqlite3')
 import sys
+import time
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 ############
 import os
+import requests
 
 from pyovms import Tensor
 
@@ -45,6 +47,8 @@ from transformers import (
 from config import SUPPORTED_EMBEDDING_MODELS, SUPPORTED_LLM_MODELS
 from ov_embedding_model import OVEmbeddings
 
+FILE = "docs.txt"
+TARGET_FOLDER = "/tmp/documents"
 
 SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
 LANGUAGE = os.environ.get('LANGUAGE', 'English')
@@ -53,14 +57,6 @@ llm_model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 
 EMBEDDING_MODEL = 'all-mpnet-base-v2'
 embedding_model_configuration = SUPPORTED_EMBEDDING_MODELS[EMBEDDING_MODEL]
-
-llm_model_dir = "/llm_model"
-model_name = llm_model_configuration["model_id"]
-stop_tokens = llm_model_configuration.get("stop_tokens")
-class_key = SELECTED_MODEL.split("-")[0]
-tok = AutoTokenizer.from_pretrained(llm_model_dir, trust_remote_code=True)
-
-embedding_model_dir = "/embed_model"
 
 class StopOnTokens(StoppingCriteria):
     def __init__(self, token_ids):
@@ -73,21 +69,6 @@ class StopOnTokens(StoppingCriteria):
             if input_ids[0][-1] == stop_id:
                 return True
         return False
-
-if stop_tokens is not None:
-    if isinstance(stop_tokens[0], str):
-        stop_tokens = tok.convert_tokens_to_ids(stop_tokens)
-    stop_tokens = [StopOnTokens(stop_tokens)]
-
-from ov_llm_model import model_classes
-model_class = (
-    OVModelForCausalLM
-    if not llm_model_configuration["remote"]
-    else model_classes[class_key]
-)
-
-ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
-
 
 # Document Splitter
 from typing import List
@@ -204,26 +185,89 @@ def serialize_completions(batch_size, result):
     return [Tensor("completion", serialize_byte_tensor(
         np.array(result, dtype=np.object_)).item())]
 
+def download_documents(file, target_folder):
+    if not os.path.exists(target_folder):
+        os.makedirs(target_folder)
+    print("file", file, "target_folder", target_folder)
+    file = open(file, "r")
+    for url in file.readlines():
+        url = url.strip()
+        if url.find('/'):
+            filename = url.rsplit('/', 1)[1]
+        else:
+            filename = url
+        print("downloading url", url, "filename", filename, "to", os.path.join(target_folder, filename),"#")
+        r = requests.get(url, allow_redirects=True, verify=False, proxies={"https": "http://proxy-igk.intel.com:911"})
+        if r.status_code == 200:
+            open(os.path.join(target_folder, filename), 'wb').write(r.content)
+            print("saved", filename)
+        else:
+            print("failed to download", url, "status code", r.status_code)
 
+def clean_target_folder(target_folder):
+    for file_path in os.listdir(target_folder):
+        print("removing", file_path)
+        os.remove(os.path.join(target_folder,file_path))
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        print(f"Loading LLM model {SELECTED_MODEL}...", flush=True)
+
+        device = os.environ.get("DEVICE", "CPU")   
+        llm_model_dir = os.environ.get("LLM_MODEL_DIR", SELECTED_MODEL)
+        llm_model_dir = os.path.join(kwargs["base_path"], llm_model_dir)  # use absolute path
+        print("llm model dir", llm_model_dir, flush=True)
+        model_name = llm_model_configuration["model_id"]
+        if os.path.isdir(llm_model_dir):
+            llm_model_2_load = llm_model_dir
+            export = False
+        else:
+            llm_model_2_load = model_name
+            export = True
+
+        print("llm model to load", llm_model_2_load, flush=True)
+        self.stop_tokens = llm_model_configuration.get("stop_tokens")
+        class_key = SELECTED_MODEL.split("-")[0]
+        self.tok = AutoTokenizer.from_pretrained(llm_model_2_load, trust_remote_code=True)
+
+        if self.stop_tokens is not None:
+            if isinstance(self.stop_tokens[0], str):
+                self.stop_tokens = self.tok.convert_tokens_to_ids(self.stop_tokens)
+            self.stop_tokens = [StopOnTokens(self.stop_tokens)]
+
+        from ov_llm_model import model_classes
+        model_class = (
+            OVModelForCausalLM
+            if not llm_model_configuration["remote"]
+            else model_classes[class_key]
+        )
+        ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
+        print(f"Loading LLM model {llm_model_2_load}...class {model_class}", flush=True)
+        self.last_refreshDB = 0
+        self.base_path = kwargs["base_path"]
+        self.active_refresh = True
         self.ov_model = model_class.from_pretrained(
-            llm_model_dir,
-            device="AUTO",
+            llm_model_2_load,
+            device=device,
             ov_config=ov_config,
             compile=True,
-            config=AutoConfig.from_pretrained(llm_model_dir, trust_remote_code=True),
+            export=export,
+            config=AutoConfig.from_pretrained(llm_model_2_load, trust_remote_code=True),
             trust_remote_code=True)
         print("LLM model loaded", flush=True)
-        print(f"Loading embedding model {EMBEDDING_MODEL}...", flush=True)
+
+        embedding_model_dir = os.environ.get("EMBEDDING_MODEL_DIR", 'all-mpnet-base-v2')
+        embedding_model_dir = os.path.join(kwargs["base_path"], embedding_model_dir)  # use absolute path
+        if os.path.isdir(embedding_model_dir):
+            embedding_model_2_load = embedding_model_dir
+        else:
+            embedding_model_2_load = EMBEDDING_MODEL
+        print(f"Loading embedding model {embedding_model_2_load}...", flush=True)
         self.embedding = OVEmbeddings.from_model_id(
-            embedding_model_dir,
+            embedding_model_2_load,
             do_norm=embedding_model_configuration["do_norm"],
             ov_config={
-                "device_name": "CPU",
-                "config": {"PERFORMANCE_HINT": "THROUGHPUT"},
+                "device_name": device,
+                "config": {"PERFORMANCE_HINT": "LATENCY"},
             },
             model_kwargs={
                 "model_max_length": 512,
@@ -231,22 +275,47 @@ class OvmsPythonModel:
         )
         print("Embedding model loaded", flush=True)
         print("Building document database...", flush=True)
+        file = os.path.join(self.base_path, FILE)
+        if os.path.exists(file):
+            self.last_refreshDB = os.stat(file).st_mtime
+            download_documents(file, TARGET_FOLDER)
+            self.scan_documents(TARGET_FOLDER)
 
+        def refreshDB_if_needed(file, target_folder):
+            while self.active_refresh:
+                print("Checking file changes", file, target_folder)
+                if os.path.exists(file):
+                    if (self.last_refreshDB < os.stat(file).st_mtime):
+                        print("Refreshing DB", flush=True)
+                        clean_target_folder(target_folder)
+                        download_documents(file, target_folder)
+                        self.scan_documents(target_folder)
+                        self.last_refreshDB = os.stat(file).st_mtime
+                time.sleep(10)
+        
+        self.t_refresh = Thread(target=refreshDB_if_needed, args=(file, TARGET_FOLDER,))
+        self.t_refresh.start()
+
+        print("Refresh thread started", flush=True)
+
+    def scan_documents(self, target_folder):
         documents = []
-        for file_path in os.listdir("/documents"):
-            abs_path = f"/documents/{file_path}"
+        for file_path in os.listdir(target_folder):
+            abs_path = os.path.join(target_folder, file_path)
             print(f"Reading document {abs_path}...", flush=True)
             documents.extend(load_single_document(abs_path))
-
+        print("Documents loaded", flush=True)
         spliter_name = "RecursiveCharacter"  # TODO: Param?
         chunk_size=1000  # TODO: Param?
         chunk_overlap=200  # TODO: Param?
         text_splitter = TEXT_SPLITERS[spliter_name](chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+        print("Splitting documents...", flush=True)
         self.texts = text_splitter.split_documents(documents)
+        print("Documents splitted", self.texts, flush=True)
         self.db = Chroma.from_documents(self.texts, self.embedding)
+        print("Document database built", flush=True)
         vector_search_top_k = 4  # TODO: Param?
         self.retriever = self.db.as_retriever(search_kwargs={"k": vector_search_top_k})
-
         print("Document database loaded", flush=True)
 
     def execute(self, inputs: list):
@@ -259,10 +328,10 @@ class OvmsPythonModel:
 
         ov_model_exec = self.ov_model.clone()
         streamer = TextIteratorStreamer(
-            tok, timeout=60.0, skip_prompt=True, skip_special_tokens=True)
+            self.tok, timeout=60.0, skip_prompt=True, skip_special_tokens=True)
         generate_kwargs = dict(
             model=ov_model_exec,
-            tokenizer=tok,
+            tokenizer=self.tok,
             max_new_tokens=256,
             temperature=0.1,
             do_sample=True,
@@ -271,8 +340,8 @@ class OvmsPythonModel:
             repetition_penalty=1.1,
             streamer=streamer,
         )
-        if stop_tokens is not None:
-            generate_kwargs["stopping_criteria"] = StoppingCriteriaList(stop_tokens)
+        if self.stop_tokens is not None:
+            generate_kwargs["stopping_criteria"] = StoppingCriteriaList(self.stop_tokens)
           
         pipe = pipeline("text-generation", **generate_kwargs)
         llm = HuggingFacePipeline(pipeline=pipe)
@@ -299,3 +368,7 @@ class OvmsPythonModel:
             yield [Tensor("completion", new_text.encode())]
 
         yield [Tensor("end_signal", "".encode())]
+    def finalize(self):
+        self.active_refresh = False
+        if self.t_refresh:
+            self.t_refresh.join()
