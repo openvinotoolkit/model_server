@@ -46,7 +46,15 @@ Status validate(
 template <typename T>
 static bool computeExpectedBufferSizeReturnFalseIfOverflow(const std::vector<T>& shape, const size_t& itemsize, size_t& expectedBufferSize) {
     expectedBufferSize = 1;
+    if (itemsize == 0) {
+        expectedBufferSize = 0;
+        return true;
+    }
     for (const T& dim : shape) {
+        if (dim == 0) {
+            expectedBufferSize = 0;
+            return true;
+        }
         if (expectedBufferSize > std::numeric_limits<size_t>::max() / dim)
             return false;
         expectedBufferSize *= dim;
