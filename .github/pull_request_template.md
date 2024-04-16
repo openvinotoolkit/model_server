@@ -5,7 +5,7 @@ Describe the changes
 
 ### 🧪 Checklist
 
-- [ ] Functionality tested manually.
+- [ ] Functional tests done.
 - [ ] Unit tests are added.
 - [ ] The documentation updated.
 
