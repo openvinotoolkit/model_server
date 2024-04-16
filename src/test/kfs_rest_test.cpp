@@ -317,16 +317,6 @@ TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestBOOL) {
     testInference(headerLength, request_body, handler);
 }
 
-std::vector<std::string> supportedDatatypes = {"FP32", "FP64", "INT8", "UINT8", "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64"};
-
-INSTANTIATE_TEST_SUITE_P(
-    TestDeserialize,
-    HttpRestApiHandlerWithMediapipe,
-    ::testing::ValuesIn(supportedDatatypes),
-    [](const ::testing::TestParamInfo<HttpRestApiHandlerWithMediapipe::ParamType>& info) {
-        return info.param;
-    });
-
 TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32DataInJsonAndBinaryExtension) {
     // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
     std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
@@ -357,6 +347,16 @@ TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32BinaryExtension) {
 
     testInference(headerLength, request_body, handler);
 }
+
+std::vector<std::string> supportedDatatypes = {"FP32", "FP64", "INT8", "UINT8", "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64"};
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDeserialize,
+    HttpRestApiHandlerWithMediapipe,
+    ::testing::ValuesIn(supportedDatatypes),
+    [](const ::testing::TestParamInfo<HttpRestApiHandlerWithMediapipe::ParamType>& info) {
+        return info.param;
+    });
 
 TEST_F(HttpRestApiHandlerWithMediapipePassthrough, inferRequestBYTES) {
     std::string request = "/v2/models/mpPytensorPassthrough/versions/1/infer";
