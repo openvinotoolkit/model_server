@@ -760,7 +760,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             case ov::element::Type_t::string: {
                 uint32_t offset = 0;
                 for (auto contents : request.inputs(inputIndex).contents().bytes_contents()) {
-                    uint32_t size = contents.size();
+                    const uint32_t size = contents.size();
                     std::memcpy(reinterpret_cast<char*>(data) + offset, &size, sizeof(uint32_t));
                     offset += sizeof(uint32_t);
                     std::memcpy(reinterpret_cast<char*>(data) + offset, contents.data(), size);
