@@ -76,11 +76,13 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, const std::vector<py::ssize_
     if (allocate) {
         ownedDataPtr = std::make_unique<char[]>(size);
         ptr = this->ownedDataPtr.get();
+    } else {
+        ptr = nullptr;
     }
 }
 
 OvmsPyTensor::OvmsPyTensor(const std::string& name, void* data, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool copy) :
-    OvmsPyTensor(name, shape, datatype, size, copy) {
+    OvmsPyTensor(name, shape, datatype, size, /*allocate=*/copy) {
     if (copy) {
         memcpy(this->ownedDataPtr.get(), data, size);
     } else {

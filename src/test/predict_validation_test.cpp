@@ -2111,4 +2111,25 @@ TYPED_TEST(PredictValidationStringNativeTest, string_not_allowed_with_demultiple
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
+#define VERIFY_COMPUTE_BUFFER_SIZE(SHAPE, ELEMENT_SIZE, WILL_NOT_OVERFLOW, EXPECTED_BYTES)                                                       \
+    {                                                                                                                                            \
+        size_t elementSize = ELEMENT_SIZE;                                                                                                       \
+        std::vector<int> rawShape SHAPE;                                                                                                         \
+        size_t expectedBytes = 12412412;                                                                                                         \
+        bool result = ovms::request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow<int>(rawShape, elementSize, expectedBytes); \
+        EXPECT_EQ(WILL_NOT_OVERFLOW, result);                                                                                                    \
+        if (WILL_NOT_OVERFLOW) {                                                                                                                 \
+            EXPECT_EQ(EXPECTED_BYTES, expectedBytes);                                                                                            \
+        }                                                                                                                                        \
+    }
+
+TEST(PredictRequestUtilsTest, ComputeExpectedBufferSize) {
+    VERIFY_COMPUTE_BUFFER_SIZE(({1, 3, 4}), 1, true, 12);
+    VERIFY_COMPUTE_BUFFER_SIZE(({1, 3, 4, 0}), 1, true, 0);
+    VERIFY_COMPUTE_BUFFER_SIZE(({1, 3, 4, 1}), 0, true, 0);
+    SPDLOG_INFO("int numeric limit:{}", std::numeric_limits<int>::max());
+    SPDLOG_INFO("size_t numeric limit:{}", std::numeric_limits<size_t>::max());
+    VERIFY_COMPUTE_BUFFER_SIZE(({1, 9, std::numeric_limits<int>::max(), std::numeric_limits<size_t>::max() / std::numeric_limits<int>::max() / 8}), 1, false, 0);
+}
+
 #pragma GCC diagnostic pop
