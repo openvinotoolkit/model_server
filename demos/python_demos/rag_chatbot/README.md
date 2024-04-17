@@ -44,7 +44,7 @@ It's a simple deployment option because it doesn't require models preparation wh
 What needs to be prepared is a list of documents, which should give context of RAG analysis. It is provided in a format of text file containing URLs of the documents sources:
 
 ```bash
-echo "https://gist.githubusercontent.com/ryanloney/42b8ebe29f95ebd4382ee0b2bb50bea2/raw/cfbb679fefb6babec675c7806254a5fff29a5e6b/aipc.txt" > demos/python_demos_rag_chatbot/servable_stream/docs.txt
+echo "https://gist.githubusercontent.com/ryanloney/42b8ebe29f95ebd4382ee0b2bb50bea2/raw/cfbb679fefb6babec675c7806254a5fff29a5e6b/aipc.txt" > demos/python_demos/rag_chatbot/servable_stream/docs.txt
 ```
 Now the model server can be started:
 ```bash
@@ -55,8 +55,11 @@ registry.connect.redhat.com/intel/openvino-model-server:py --config_path /config
 
 Wait for the models to be loaded. It can be verified in the container logs or using the REST API:
 ```bash
-curl http://localhost:8000/v2/models/python_model/ready
-
+curl -i http://localhost:8000/v2/models/python_model/ready
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Wed, 17 Apr 2024 12:27:27 GMT
+Content-Length: 0
 ```
 
 ## OpenVINO Model Server deployment with locally attached models
@@ -160,7 +163,8 @@ registry.connect.redhat.com/intel/openvino-model-server:py --config_path /worksp
 > **NOTE** Check the Docker container logs to confirm that the model is loaded before sending requests from a client. Depending on the model and hardware it might take a few seconds or several minutes.
 
 > **Note** If order to run the inference load on Intel GPU instead of CPU, just pass the extra parameters to the docker run `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*)`.
-```bash
+
+```
 docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/llm_model \
 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) \
 -e SELECTED_MODEL=${SELECTED_MODEL} -e LLM_MODEL_DIR=${SELECTED_MODEL}_INT8_compressed_weights -e DEVICE=gpu \
@@ -178,6 +182,8 @@ pip install -r client_requirements.txt
 Start the gradio web server:
 ```bash
 python3 app.py --web_url localhost:9001 --ovms_url localhost:9000
+
+
 ```
 
 Visit the website localhost:9001
@@ -190,14 +196,12 @@ Started container is not only responding to the queries related to initial docum
 Thanks to that, it is possible to change the scope of documents without restarting the container or even reloading the model. All that is needed is updating docs.txt with the list of URLs pointing to the documents.
 
 ```bash
-echo https://gist.githubusercontent.com/dtrawins/2956a7a77aa6732b52b8ae6eab0be205/raw/e05f2ab8fea9c8631ac5f20b8dd640074ae429c7/genai.txt > 
+echo https://gist.githubusercontent.com/dtrawins/2956a7a77aa6732b52b8ae6eab0be205/raw/e05f2ab8fea9c8631ac5f20b8dd640074ae429c7/genai.txt > servable_stream/docs.txt
 ```
 
 When a file modification is detected, documents will be downloaded and indexed from scratch. 
 
 After few moments, new queries can be sent with the new context.
 
-The query can be made from the gradio interface or from a python client:
-```bash
-python3 ../llm_text_generation/client_stream.py -p "What is Gaudi3?"
-```
+![result2](result2.png)
+
