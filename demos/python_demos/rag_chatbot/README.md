@@ -140,7 +140,7 @@ The model will appear in `./servable_stream/all-mpnet-base-v2` directory.
 
 
 
-## Deploy OpenVINO Model Server with Python Calculator
+### Deploy OpenVINO Model Server
 
 Mount the servable directory which contains:
 - python scripts which are required for execution and use [Hugging Face](https://huggingface.co/) utilities with [optimum-intel](https://github.com/huggingface/optimum-intel) acceleration.
