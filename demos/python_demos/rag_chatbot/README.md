@@ -203,5 +203,5 @@ When a file modification is detected, documents will be downloaded and indexed f
 
 After few moments, new queries can be sent with the new context.
 
-![result2](result2.png)
+![result2](results2.png)
 
