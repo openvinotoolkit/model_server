@@ -117,7 +117,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             rm -rf /var/lib/apt/lists/* && \
     python3 -m pip install numpy==1.21.0 --no-cache-dir
 
-ARG JOBS
+ARG JOBS=8
 ARG ov_use_binary=0
 ARG tokenizers=1
 ARG ov_source_org=openvinotoolkit
