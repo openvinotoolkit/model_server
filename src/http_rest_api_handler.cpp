@@ -265,6 +265,8 @@ static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
         return input.contents().fp64_contents_size() == 0;
     if (input.datatype() == "BYTES")
         return input.contents().bytes_contents_size() == 0;
+    if (input.datatype() == "BOOL")
+        return input.contents().bool_contents_size() == 0;
     return true;
 }
 
@@ -317,7 +319,6 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
                 binary_input_size = calculateBinaryDataSize(*input);
             }
         }
-
         auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs_buffer, *input, grpc_request.add_raw_input_contents());
         if (!status.ok())
             return status;

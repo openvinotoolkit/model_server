@@ -383,6 +383,9 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             case TFSDataType::DT_FLOAT: {
                 COPY_INPUT_VALUE_BY_VALUE(float, fp32);
             }
+            case TFSDataType::DT_DOUBLE: {
+                COPY_INPUT_VALUE_BY_VALUE(double, fp64);
+            }
             case TFSDataType::DT_INT64: {
                 COPY_INPUT_VALUE_BY_VALUE(int64_t, int64);
             }
@@ -410,7 +413,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             case TFSDataType::DT_BOOL: {
                 COPY_INPUT_VALUE_BY_VALUE(bool, bool);
             }
-            case TFSDataType::DT_DOUBLE:
             case TFSDataType::DT_HALF:
             default:
                 return ovms::Status(ovms::StatusCode::NOT_IMPLEMENTED, "There is no support for types different than fp32, int64, int32, uint32, uint64, int8, uint8, bool");
@@ -455,10 +457,10 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             }
         } else {
             OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
-            outTensor = std::make_unique<ov::Tensor>(precision, shape);
             if (expectedBytes == 0) {
                 return StatusCode::OK;
             }
+            outTensor = std::make_unique<ov::Tensor>(precision, shape);
             void* data = outTensor->data();
             switch (precision) {
             case ov::element::Type_t::f32: {
@@ -491,12 +493,14 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             case ov::element::Type_t::boolean: {
                 COPY_INPUT_VALUE_BY_VALUE(bool, bool);
             }
+            case ov::element::Type_t::f64: {
+                COPY_INPUT_VALUE_BY_VALUE(double, fp64);
+            }
             // the rest not supported by KFS
             case ov::element::Type_t::u1:
             case ov::element::Type_t::u4:
             case ov::element::Type_t::i4:
             case ov::element::Type_t::f16:
-            case ov::element::Type_t::f64:
             case ov::element::Type_t::bf16:
             case ov::element::Type_t::undefined:
             case ov::element::Type_t::dynamic:
@@ -684,25 +688,37 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 return StatusCode::UNKNOWN_ERROR;
             }
         } else {
-            if (formatIt == datatypeToBufferFormat.end()) {
+            if ((precision != ov::element::Type_t::string) && formatIt == datatypeToBufferFormat.end()) {
                 const std::string details = "Provided datatype is invalid, custom datatypes are allowed only when raw_input_contents is used.";
                 SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
                 return Status(StatusCode::INVALID_PRECISION, details);
             }
-            size_t expectedBytes = 1;
-            bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, precision.size(), expectedBytes);
-            if (!expectedBufferSizeValid) {
-                const std::string details = "Provided shape and datatype declare too large buffer.";
-                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
-                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+            size_t expectedBytes;
+            if (precision == ov::element::Type_t::string) {
+                expectedBytes = 0;
+                for (auto contents : request.inputs(inputIndex).contents().bytes_contents()) {
+                    expectedBytes += contents.size() + sizeof(uint32_t);
+                }
+            } else {
+                expectedBytes = 1;
+                bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, precision.size(), expectedBytes);
+                if (!expectedBufferSizeValid) {
+                    const std::string details = "Provided shape and datatype declare too large buffer.";
+                    SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+                    return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+                }
+                OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
             }
-            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
             auto ok = pythonBackend->createEmptyOvmsPyTensor(
                 requestedName,
                 shape,
                 requestInputItr->datatype(),
                 expectedBytes,
                 outTensor);
+            if (!ok) {
+                SPDLOG_DEBUG("Error creating empty Python tensor");
+                return StatusCode::UNKNOWN_ERROR;
+            }
             void* data;
             if (!pythonBackend->getOvmsPyTensorData(outTensor, &data)) {
                 return Status(StatusCode::INTERNAL_ERROR);
@@ -710,6 +726,9 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             switch (precision) {
             case ov::element::Type_t::f32: {
                 COPY_INPUT_VALUE_BY_VALUE(float, fp32);
+            }
+            case ov::element::Type_t::f64: {
+                COPY_INPUT_VALUE_BY_VALUE(double, fp64);
             }
             case ov::element::Type_t::i64: {
                 COPY_INPUT_VALUE_BY_VALUE(int64_t, int64);
@@ -738,13 +757,23 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             case ov::element::Type_t::boolean: {
                 COPY_INPUT_VALUE_BY_VALUE(bool, bool);
             }
+            case ov::element::Type_t::string: {
+                uint32_t offset = 0;
+                for (auto contents : request.inputs(inputIndex).contents().bytes_contents()) {
+                    const uint32_t size = contents.size();
+                    std::memcpy(reinterpret_cast<char*>(data) + offset, &size, sizeof(uint32_t));
+                    offset += sizeof(uint32_t);
+                    std::memcpy(reinterpret_cast<char*>(data) + offset, contents.data(), size);
+                    offset += size;
+                }
+                return StatusCode::OK;
+            }
 
             // the rest not supported by KFS
             case ov::element::Type_t::u1:
             case ov::element::Type_t::u4:
             case ov::element::Type_t::i4:
             case ov::element::Type_t::f16:
-            case ov::element::Type_t::f64:
             case ov::element::Type_t::bf16:
             case ov::element::Type_t::undefined:
             case ov::element::Type_t::dynamic:

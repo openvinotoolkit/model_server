@@ -3032,7 +3032,7 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
     {typeid(int16_t), {ovms::Precision::I16, ovms::StatusCode::OK}},
     {typeid(int8_t), {ovms::Precision::I8, ovms::StatusCode::OK}},
     {typeid(bool), {ovms::Precision::BOOL, ovms::StatusCode::OK}},
-    {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::NOT_IMPLEMENTED}},
+    {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::OK}},
     {typeid(void), {ovms::Precision::BIN, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}}};
 
 typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t, bool> InferInputTensorContentsTypesToTest;  // TODO add all kfs relevant bool
@@ -3110,7 +3110,7 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
     {typeid(int16_t), {ovms::Precision::I16, ovms::StatusCode::OK}},
     {typeid(int8_t), {ovms::Precision::I8, ovms::StatusCode::OK}},
     {typeid(bool), {ovms::Precision::BOOL, ovms::StatusCode::OK}},
-    {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::NOT_IMPLEMENTED}},
+    {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::OK}},
     {typeid(void), {ovms::Precision::BIN, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}}};
 
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorCheckExpectedStatusCode) {
