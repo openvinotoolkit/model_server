@@ -38,6 +38,7 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
+#include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
@@ -2394,10 +2395,6 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
 class MediapipeSerialization : public ::testing::Test {
     class MockedMediapipeGraphExecutor : public ovms::MediapipeGraphExecutor {
     public:
-        Status serializePacket(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const {
-            return ovms::MediapipeGraphExecutor::serializePacket(name, response, packet);
-        }
-
         MockedMediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
             stream_types_mapping_t inputTypes,
             stream_types_mapping_t outputTypes,
@@ -2434,7 +2431,7 @@ TEST_F(MediapipeSerialization, KFSResponse) {
     std::vector<float> data = {1.0f};
     response.add_raw_output_contents()->assign(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<KFSResponse>(response);
-    ASSERT_EQ(executor->serializePacket("kfs_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(onPacketReadySerializeImpl("1", "name", "1", "name", mediapipe_packet_type_enum::KFS_RESPONSE, packet, mp_response), StatusCode::OK);
     ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2450,7 +2447,7 @@ TEST_F(MediapipeSerialization, TFTensor) {
     tensorflow::Tensor response(TFSDataType::DT_FLOAT, {1});
     response.flat<float>()(0) = 1.0f;
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<tensorflow::Tensor>(response);
-    ASSERT_EQ(executor->serializePacket("tf_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(onPacketReadySerializeImpl("1", "tf_response", "1", "tf_response", mediapipe_packet_type_enum::TFTENSOR, packet, mp_response), StatusCode::OK);
     ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2466,7 +2463,7 @@ TEST_F(MediapipeSerialization, OVTensor) {
     ov::element::Type type(ov::element::Type_t::f32);
     ov::Tensor response(type, {1}, data.data());
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<ov::Tensor>(response);
-    ASSERT_EQ(executor->serializePacket("ov_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(onPacketReadySerializeImpl("1", "ov_response", "1", "ov_response", mediapipe_packet_type_enum::OVTENSOR, packet, mp_response), StatusCode::OK);
     ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2481,7 +2478,7 @@ TEST_F(MediapipeSerialization, MPTensor) {
     mediapipe::Tensor response(mediapipe::Tensor::ElementType::kFloat32, {1});
     response.GetCpuWriteView().buffer<float>()[0] = 1.0f;
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<mediapipe::Tensor>(std::move(response));
-    ASSERT_EQ(executor->serializePacket("mp_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(onPacketReadySerializeImpl("1", "mp_response", "1", "mp_response", mediapipe_packet_type_enum::MPTENSOR, packet, mp_response), StatusCode::OK);
     ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2498,7 +2495,7 @@ TEST_F(MediapipeSerialization, MPImageTensor) {
     response.MutablePixelData()[1] = (char)1;
     response.MutablePixelData()[2] = (char)1;
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<mediapipe::ImageFrame>(std::move(response));
-    ASSERT_EQ(executor->serializePacket("mp_img_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(onPacketReadySerializeImpl("1", "mp_img_response", "1", "mp_img_response", mediapipe_packet_type_enum::MEDIAPIPE_IMAGE, packet, mp_response), StatusCode::OK);
     ASSERT_EQ(mp_response.outputs(0).datatype(), "UINT8");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
