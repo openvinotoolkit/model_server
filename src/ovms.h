@@ -445,6 +445,27 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* request, const char* inputName, const void* data, size_t byteSize, OVMS_BufferType bufferType, uint32_t deviceId);
 
+// Set the data of the input buffer. Ownership of data needs to be maintained during inference.
+//
+// \param request The request object
+// \param inputName The name of the input
+// \param datatype The data type of the input
+// \param shape The shape of the input (ignored for scalars)
+// \param dimCount The number of dimensions of the shape
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_InferenceRequestAddOutput(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
+
+// Set the data of the input buffer. Ownership of data needs to be maintained during inference.
+//
+// \param request The request object
+// \param inputName The name of the input with data to be set
+// \param data The data of the input
+// \param byteSize The byte size of the data
+// \param bufferType The buffer type of the data
+// \param deviceId The device id of the data memory buffer
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_InferenceRequestOutputSetData(OVMS_InferenceRequest* request, const char* outputName, const void* data, size_t byteSize, OVMS_BufferType bufferType, uint32_t deviceId);
+
 // Remove the data of the input.
 //
 // \param request The request object

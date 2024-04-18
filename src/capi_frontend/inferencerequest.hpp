@@ -25,7 +25,7 @@
 #include "inferencetensor.hpp"
 
 namespace ovms {
-
+class Buffer;
 class Status;
 
 class InferenceRequest {
@@ -33,18 +33,23 @@ class InferenceRequest {
     const model_version_t servableVersion;
     std::unordered_map<std::string, InferenceParameter> parameters;
     std::unordered_map<std::string, InferenceTensor> inputs;
+    std::unordered_map<std::string, InferenceTensor> outputs;
 
 public:
     // this constructor can be removed with prediction tests overhaul
     InferenceRequest();
     InferenceRequest(const char* modelName, model_version_t modelVersion);
     Status addInput(const char* name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
+    Status addOutput(const char* name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
     Status getInput(const char* name, const InferenceTensor** tensor) const;
+    Status getOutput(const char* name, const InferenceTensor** tensor) const;
     uint64_t getInputsSize() const;
     Status removeInput(const char* name);
     Status removeAllInputs();
 
     Status setInputBuffer(const char* name, const void* addr, size_t byteSize, OVMS_BufferType, std::optional<uint32_t> deviceId);
+    Status setOutputBuffer(const char* name, const void* addr, size_t byteSize, OVMS_BufferType, std::optional<uint32_t> deviceId);
+    // TODO TBD add equivalent for outputs?
     Status removeInputBuffer(const char* name);
     Status addParameter(const char* parameterName, OVMS_DataType datatype, const void* data);
     Status removeParameter(const char* parameterName);
