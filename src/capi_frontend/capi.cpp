@@ -572,6 +572,70 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest*
     return nullptr;
 }
 
+DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestAddOutput(OVMS_InferenceRequest* req, const char* inputName, OVMS_DataType datatype, const int64_t* shape, size_t dimCount) {
+    if (req == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
+    }
+    if (inputName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
+    }
+    if (shape == nullptr && dimCount > 0) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "shape"));
+    }
+    InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
+    auto status = request->addOutput(inputName, datatype, shape, dimCount);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        std::stringstream ss;
+        ss << "C-API adding request output for servable: " << request->getServableName()
+           << " version: " << request->getServableVersion()
+           << " name: " << inputName
+           << " datatype: " << toString(ovms::getOVMSDataTypeAsPrecision(datatype))
+           << " shape: [";
+        size_t i = 0;
+        if (dimCount > 0) {
+            for (i = 0; i < dimCount - 1; ++i) {
+                ss << shape[i] << ", ";
+            }
+            ss << shape[i];
+        }
+        ss << "]";
+        SPDLOG_TRACE(ss.str());
+    }
+    return nullptr;
+}
+
+DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestOutputSetData(OVMS_InferenceRequest* req, const char* outputName, const void* data, size_t bufferSize, OVMS_BufferType bufferType, uint32_t deviceId) {
+    if (req == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
+    }
+    if (outputName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
+    }
+    if (data == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data"));
+    }
+    InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
+    auto status = request->setOutputBuffer(outputName, data, bufferSize, bufferType, deviceId);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        std::stringstream ss;
+        ss << "C-API setting request output data for servable: " << request->getServableName()
+           << " version: " << request->getServableVersion()
+           << " name: " << outputName
+           << " data: " << data
+           << " bufferSize: " << bufferSize
+           << " bufferType: " << bufferType
+           << " deviceId: " << deviceId;
+        SPDLOG_TRACE(ss.str());
+    }
+    return nullptr;
+}
+
 DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestAddParameter(OVMS_InferenceRequest* req, const char* parameterName, OVMS_DataType datatype, const void* data, size_t byteSize) {
     if (req == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));

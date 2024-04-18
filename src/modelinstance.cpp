@@ -1266,9 +1266,10 @@ Status ModelInstance::infer(const RequestType* requestProto,
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
     ov::intel_gpu::ocl::ClContext ovOclContext(this->ieCore, this->ocl_context);
-    //OpenCLTensorFactory factory(ovOclContext);
     OpenCLTensorFactory factory(*this->ocl_context_cpp);
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, &factory);
+    isPipeline = true;
+    status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getOutputsInfo(), inputSink, isPipeline, &factory);
     timer.stop(DESERIALIZE);
     if (!status.ok())
         return status;
@@ -1285,7 +1286,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));
+    //status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));
     timer.stop(SERIALIZE);
     if (!status.ok())
         return status;

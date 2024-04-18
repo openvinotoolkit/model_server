@@ -120,4 +120,37 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     ov::Tensor tensor(precision, shape);
     return tensor;
 }
+
+template <>
+bool specifiesOutputs(const InferenceRequest& request) {
+    return true;  // TODO FIXME
+}
+
+template <>
+Status getTensor(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
+    return request.getInput(name.c_str(), tensor);
+}
+
+template <>
+class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, true> {
+public:
+    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor);
+};
+// TODO why we need this defined outside class? Linking issues otherwise
+Status RequestTensorExtractor<InferenceRequest, const InferenceTensor**, true>::extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
+    SPDLOG_TRACE("Extracting output: {}", name);
+    return request.getOutput(name.c_str(), tensor);
+}
+
+template <>
+class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, false> {
+public:
+    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
+        SPDLOG_TRACE("Extracting input", name);
+        return request.getInput(name.c_str(), tensor);
+    };
+};
+
+template class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, false>;
+template class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, true>;
 }  // namespace ovms
