@@ -16,6 +16,7 @@
 #include "inferencerequest.hpp"
 
 #include "../status.hpp"
+#include "buffer.hpp"
 
 namespace ovms {
 // this constructor can be removed with prediction tests overhaul
@@ -36,9 +37,20 @@ Status InferenceRequest::addInput(const char* name, OVMS_DataType datatype, cons
     auto [it, emplaced] = inputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
 }
+Status InferenceRequest::addOutput(const char* name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount) {
+    auto [it, emplaced] = outputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
+    return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
+}
 Status InferenceRequest::setInputBuffer(const char* name, const void* addr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto it = inputs.find(name);
     if (it == inputs.end()) {
+        return StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER;
+    }
+    return it->second.setBuffer(addr, byteSize, bufferType, deviceId);
+}
+Status InferenceRequest::setOutputBuffer(const char* name, const void* addr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
+    auto it = outputs.find(name);
+    if (it == outputs.end()) {
         return StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER;
     }
     return it->second.setBuffer(addr, byteSize, bufferType, deviceId);
@@ -57,6 +69,15 @@ Status InferenceRequest::removeAllInputs() {
 Status InferenceRequest::getInput(const char* name, const InferenceTensor** tensor) const {
     auto it = inputs.find(name);
     if (it == inputs.end()) {
+        *tensor = nullptr;
+        return StatusCode::NONEXISTENT_TENSOR;
+    }
+    *tensor = &it->second;
+    return StatusCode::OK;
+}
+Status InferenceRequest::getOutput(const char* name, const InferenceTensor** tensor) const {
+    auto it = outputs.find(name);
+    if (it == outputs.end()) {
         *tensor = nullptr;
         return StatusCode::NONEXISTENT_TENSOR;
     }
