@@ -3068,6 +3068,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
 }
 
+#if (PYTHON_DISABLE == 0)
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentPytensor = R"(
         input_stream: "OVMS_PY_TENSOR:in"
@@ -3098,6 +3099,20 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
     this->request.mutable_model_name()->assign(servableName);
     this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
 }
+
+TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorInvalidContentSize) {
+    const std::string pbtxtContentPyTensor = R"(
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        }
+    )";
+    this->performInvalidContentSizeTest(pbtxtContentPyTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+#endif
 
 std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>> TYPE_TO_OVMS_PRECISION_TO_STATUS_TF_TENSOR{
     {typeid(float), {ovms::Precision::FP32, ovms::StatusCode::OK}},
@@ -3271,19 +3286,6 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorInvalidContentSize) {
         }
     )";
     this->performInvalidContentSizeTest(pbtxtContentTFTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
-}
-
-TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorInvalidContentSize) {
-    const std::string pbtxtContentPyTensor = R"(
-        input_stream: "OVMS_PY_TENSOR:in"
-        output_stream: "OVMS_PY_TENSOR:out"
-        node {
-        calculator: "PassThroughCalculator"
-        input_stream: "OVMS_PY_TENSOR:in"
-        output_stream: "OVMS_PY_TENSOR:out"
-        }
-    )";
-    this->performInvalidContentSizeTest(pbtxtContentPyTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
 INSTANTIATE_TEST_SUITE_P(
