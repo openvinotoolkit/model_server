@@ -226,6 +226,7 @@ class OvmsPythonModel:
 
         print("llm model to load", llm_model_2_load, flush=True)
         self.stop_tokens = llm_model_configuration.get("stop_tokens")
+        self.db = None
         class_key = SELECTED_MODEL.split("-")[0]
         self.tok = AutoTokenizer.from_pretrained(llm_model_2_load, trust_remote_code=True)
 
@@ -312,6 +313,8 @@ class OvmsPythonModel:
         print("Splitting documents...", flush=True)
         self.texts = text_splitter.split_documents(documents)
         print("Documents splitted", self.texts, flush=True)
+        if self.db is not None:
+            self.db.delete_collection()
         self.db = Chroma.from_documents(self.texts, self.embedding)
         print("Document database built", flush=True)
         vector_search_top_k = 4  # TODO: Param?
@@ -347,6 +350,7 @@ class OvmsPythonModel:
         llm = HuggingFacePipeline(pipeline=pipe)
 
         prompt = PromptTemplate.from_template(llm_model_configuration["rag_prompt_template"])
+        print("Prompt", prompt, flush=True)
         chain_type_kwargs = {"prompt": prompt}
         rag_chain = RetrievalQA.from_chain_type(
             llm=llm,
