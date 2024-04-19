@@ -130,43 +130,6 @@ public:
     }
 };
 
-class HttpRestApiHandlerWithMediapipe : public ::testing::TestWithParam<std::string> {
-protected:
-    ovms::Server& server = ovms::Server::instance();
-    std::unique_ptr<HttpRestApiHandler> handler;
-
-    std::unique_ptr<std::thread> t;
-    std::string port = "9173";
-
-    void SetUpServer(const char* configPath) {
-        ::SetUpServer(this->t, this->server, this->port, configPath);
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
-
-        handler = std::make_unique<HttpRestApiHandler>(server, 5);
-    }
-
-    void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_python_summator.json");
-    }
-
-    void TearDown() {
-        handler.reset();
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
-    }
-};
-
-class HttpRestApiHandlerWithMediapipePassthrough : public HttpRestApiHandlerWithMediapipe {
-protected:
-    void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mp_pytensor_passthrough.json");
-    }
-};
-
 class HttpRestApiHandlerWithDynamicModelTest : public HttpRestApiHandlerTest {
 public:
     static void SetUpTestSuite() {
@@ -228,6 +191,10 @@ public:
 std::unique_ptr<MockedServer> HttpRestApiHandlerTest::server = nullptr;
 std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
 
+#if (PYTHON_DISABLE == 0)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnarrowing"
+
 static void testInference(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler, const std::string endpoint = "/v2/models/mediapipeAdd/versions/1/infer") {
     std::vector<std::pair<std::string, std::string>> headers;
     std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", std::to_string(headerLength)};
@@ -273,8 +240,42 @@ static void testInferenceNegative(int headerLength, std::string& request_body, s
     ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), processorStatus);
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wnarrowing"
+class HttpRestApiHandlerWithMediapipe : public ::testing::TestWithParam<std::string> {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<HttpRestApiHandler> handler;
+
+    std::unique_ptr<std::thread> t;
+    std::string port = "9173";
+
+    void SetUpServer(const char* configPath) {
+        ::SetUpServer(this->t, this->server, this->port, configPath);
+        auto start = std::chrono::high_resolution_clock::now();
+        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+        }
+
+        handler = std::make_unique<HttpRestApiHandler>(server, 5);
+    }
+
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_python_summator.json");
+    }
+
+    void TearDown() {
+        handler.reset();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
+class HttpRestApiHandlerWithMediapipePassthrough : public HttpRestApiHandlerWithMediapipe {
+protected:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mp_pytensor_passthrough.json");
+    }
+};
 
 TEST_P(HttpRestApiHandlerWithMediapipe, inferRequestWithSupportedPrecision) {
     std::string datatype = GetParam();
@@ -383,6 +384,7 @@ TEST_F(HttpRestApiHandlerWithMediapipePassthrough, inferRequestBYTES) {
 }
 
 #pragma GCC diagnostic pop
+#endif
 
 TEST_F(HttpRestApiHandlerTest, MetricsParameters) {
     std::string request = "/metrics?test=test";
