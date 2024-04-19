@@ -16,7 +16,7 @@
 import tritonclient.grpc as grpcclient
 
 client = grpcclient.InferenceServerClient("localhost:9000")
-prompt = "Hello, this is prompt"
+prompt = "What is OpenVINO?"
 infer_input = grpcclient.InferInput("prompt", [1], "BYTES")
 infer_input._raw_content = prompt.encode("ascii")
 results = client.infer("llm_graph", [infer_input])

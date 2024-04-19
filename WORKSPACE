@@ -302,7 +302,8 @@ aws_sdk_cpp()
 new_git_repository(
     name = "llm_engine",
     remote = "https://github.com/mzegla/openvino.genai.git",
-    branch = "lib-like",
+    commit = "5644b5bc6bbea0b2cdc515206eec8615fbd75a68",
+    # branch = "lib-like",
     init_submodules = True,
     recursive_init_submodules = True,
     build_file_content = """
@@ -327,23 +328,27 @@ cmake(
         "VERBOSE=1",
         "-j 4",
     ],
-    #cache_entries = {{
-    #    "CMAKE_BUILD_TYPE": "Release",
-    #    "BUILD_ONLY": "s3", # core builds always
-    #    "ENABLE_TESTING": "OFF",
-    #    "AUTORUN_UNIT_TESTS": "OFF",
-    #    "BUILD_SHARED_LIBS": "OFF",
-    #    "MINIMIZE_SIZE": "ON",
-    #    "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-    #    "FORCE_SHARED_CRT": "OFF",
-    #    "SIMPLE_INSTALL": "OFF",
-    #    "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
-    #}},
+    cache_entries = {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ENABLE_TESTING": "OFF",
+        "AUTORUN_UNIT_TESTS": "OFF",
+        "BUILD_SHARED_LIBS": "OFF",
+        "MINIMIZE_SIZE": "ON",
+        "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
+        "FORCE_SHARED_CRT": "OFF",
+        "SIMPLE_INSTALL": "OFF",
+        "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
+        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib"
+    },
+    env = {
+        "HTTP_PROXY": "http://proxy-chain.intel.com:911",
+        "HTTPS_PROXY": "http://proxy-chain.intel.com:912",
+    },
     lib_source = ":all_srcs",
     out_lib_dir = "lib",
     # linking order
     out_static_libs = [
-            "libcasual_lm.a",
+            "libcausal_lm.a",
         ],
     tags = ["requires-network"],
     alwayslink = False,
@@ -354,6 +359,7 @@ cc_library(
     name = "llm_engine_ubuntu",
     deps = [
         ":llm_engine_cmake_ubuntu",
+        "@linux_openvino//:openvino"
     ],
     visibility = ["//visibility:public"],
     alwayslink = False,
