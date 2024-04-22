@@ -23,6 +23,7 @@
 
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../logging.hpp"
+#include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "../status.hpp"
@@ -59,24 +60,6 @@ namespace ovms {
 using namespace request_validation_utils;
 
 const std::string TIMESTAMP_PARAMETER_NAME = "OVMS_MP_TIMESTAMP";
-
-#define MP_RETURN_ON_FAIL(code, message, errorCode)              \
-    {                                                            \
-        auto absStatus = code;                                   \
-        if (!absStatus.ok()) {                                   \
-            const std::string absMessage = absStatus.ToString(); \
-            SPDLOG_DEBUG("{} {}", message, absMessage);          \
-            return Status(errorCode, std::move(absMessage));     \
-        }                                                        \
-    }
-
-#define OVMS_RETURN_ON_FAIL(code) \
-    {                             \
-        auto status = code;       \
-        if (!status.ok()) {       \
-            return status;        \
-        }                         \
-    }
 
 static mediapipe::Tensor::ElementType KFSPrecisionToMPPrecision(const KFSDataType& kfsDatatype) {
     static std::unordered_map<KFSDataType, mediapipe::Tensor::ElementType> precisionMap{

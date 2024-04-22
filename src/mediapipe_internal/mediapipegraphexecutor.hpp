@@ -31,38 +31,12 @@
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
+#include "mediapipe_utils.hpp"
 #include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
 #include "packettypes.hpp"
 
 namespace ovms {
 class PythonBackend;
-
-#define MP_RETURN_ON_FAIL(code, message, errorCode)              \
-    {                                                            \
-        auto absStatus = code;                                   \
-        if (!absStatus.ok()) {                                   \
-            const std::string absMessage = absStatus.ToString(); \
-            SPDLOG_DEBUG("{} {}", message, absMessage);          \
-            return Status(errorCode, std::move(absMessage));     \
-        }                                                        \
-    }
-
-#define OVMS_RETURN_ON_FAIL(code) \
-    {                             \
-        auto status = code;       \
-        if (!status.ok()) {       \
-            return status;        \
-        }                         \
-    }
-
-#define OVMS_RETURN_MP_ERROR_ON_FAIL(code, message)                     \
-    {                                                                   \
-        auto status = code;                                             \
-        if (!status.ok()) {                                             \
-            SPDLOG_DEBUG("{} {}", message, status.string());            \
-            return absl::Status(absl::StatusCode::kCancelled, message); \
-        }                                                               \
-    }
 
 #define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)             \
     {                                                                    \
@@ -206,7 +180,6 @@ public:
             for (const auto& outputName : this->outputNames) {
                 MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&res, &sendMutex, &outputName, this](const ::mediapipe::Packet& packet) -> absl::Status {
                     try {
-                        // API
                         std::lock_guard<std::mutex> lock(sendMutex);
                         OVMS_RETURN_MP_ERROR_ON_FAIL(onPacketReadySerializeAndSendImpl(
                                                          "" /*no ids for streaming*/,
@@ -225,9 +198,8 @@ public:
                     "output stream observer installation", StatusCode::INTERNAL_ERROR);  // Should never happen for validated graphs
             }
 
-            // API
             std::map<std::string, mediapipe::Packet> inputSidePackets;
-            OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, req));  // API
+            OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, req));
 #if (PYTHON_DISABLE == 0)
             inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap)
                                                                    .At(STARTING_TIMESTAMP);
@@ -235,7 +207,6 @@ public:
             MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
             // Deserialize first request
-            // API
             size_t numberOfPacketsCreated = 0;
             OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(
                 createAndPushPacketsImpl(
@@ -257,7 +228,6 @@ public:
             // lifetime is extended to lifetime of deserialized Packets.
             auto newReq = std::make_shared<RequestType>();
             while (waitForNewRequest(res, *newReq)) {
-                // API
                 auto pstatus = validateSubsequentRequestImpl(
                     *newReq,
                     this->name,

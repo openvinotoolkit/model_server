@@ -29,6 +29,33 @@ extern const std::string OV_TENSOR_PREFIX;
 extern const std::string OVMS_PY_TENSOR_PREFIX;
 extern const std::string MP_IMAGE_PREFIX;
 
+#define MP_RETURN_ON_FAIL(code, message, errorCode)              \
+    {                                                            \
+        auto absStatus = code;                                   \
+        if (!absStatus.ok()) {                                   \
+            const std::string absMessage = absStatus.ToString(); \
+            SPDLOG_DEBUG("{} {}", message, absMessage);          \
+            return Status(errorCode, std::move(absMessage));     \
+        }                                                        \
+    }
+
+#define OVMS_RETURN_ON_FAIL(code) \
+    {                             \
+        auto status = code;       \
+        if (!status.ok()) {       \
+            return status;        \
+        }                         \
+    }
+
+#define OVMS_RETURN_MP_ERROR_ON_FAIL(code, message)                     \
+    {                                                                   \
+        auto status = code;                                             \
+        if (!status.ok()) {                                             \
+            SPDLOG_DEBUG("{} {}", message, status.string());            \
+            return absl::Status(absl::StatusCode::kCancelled, message); \
+        }                                                               \
+    }
+
 enum class MediaPipeStreamType { INPUT,
     OUTPUT };
 

@@ -97,7 +97,7 @@ Status createAndPushPacketsImpl(
     size_t& numberOfPacketsCreated);
 
 // This is called before subsequent createAndPushPacketsImpl in inferStream scenario.
-// At this ponit we may reject requests with invalid data.
+// At this point we may reject requests with invalid data.
 Status validateSubsequentRequestImpl(
     const KFSRequest& request,
     const std::string& endpointName,
