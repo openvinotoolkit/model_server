@@ -48,7 +48,7 @@ echo "https://gist.githubusercontent.com/ryanloney/42b8ebe29f95ebd4382ee0b2bb50b
 ```
 Now the model server can be started:
 ```bash
-docker run -d -v $(pwd)/demos/python_demos_rag_chatbot/servable_stream:/config -p 9000:9000 -p 8000:8000 \
+docker run -d -v ${PWD}/demos/python_demos/rag_chatbot/servable_stream:/config -p 9000:9000 -p 8000:8000 \
 -e SELECTED_MODEL=${SELECTED_MODEL} \
 registry.connect.redhat.com/intel/openvino-model-server:py --config_path /config/config.json --port 9000 --rest_port 8000
 ```
