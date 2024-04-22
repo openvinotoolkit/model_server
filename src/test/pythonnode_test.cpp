@@ -29,6 +29,7 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
+#include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
@@ -951,10 +952,6 @@ public:
 
 class MockedMediapipeGraphExecutorPy : public ovms::MediapipeGraphExecutor {
 public:
-    Status serializePacket(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const {
-        return ovms::MediapipeGraphExecutor::serializePacket(name, response, packet);
-    }
-
     MockedMediapipeGraphExecutorPy(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
         stream_types_mapping_t inputTypes,
         stream_types_mapping_t outputTypes,
@@ -982,7 +979,7 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
     ::inference::ModelInferResponse response;
 
     ::mediapipe::Packet packet = ::mediapipe::Adopt<PyObjectWrapper<py::object>>(tensor.pyTensor.release());
-    ASSERT_EQ(executor.serializePacket(name, response, packet), StatusCode::OK);
+    ASSERT_EQ(onPacketReadySerializeImpl("id", name, "1", name, mediapipe_packet_type_enum::OVMS_PY_TENSOR, packet, response), StatusCode::OK);
     ASSERT_EQ(response.outputs_size(), 1);
     auto output = response.outputs(0);
     ASSERT_EQ(output.datatype(), "FP32");

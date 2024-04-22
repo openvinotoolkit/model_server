@@ -346,6 +346,8 @@ cc_library(
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_internal/packettypes.hpp",
+                "kfs_frontend/kfs_graph_executor_impl.cpp",
+                "kfs_frontend/kfs_graph_executor_impl.hpp",
             ],
             "//:disable_mediapipe" : [],
         }),

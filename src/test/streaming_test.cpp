@@ -19,6 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
@@ -84,18 +85,20 @@ public:
 };
 #endif
 
+static const std::string TIMESTAMP_PARAMETER_NAME{"OVMS_MP_TIMESTAMP"};
+
 static void setRequestTimestamp(KFSRequest& request, const std::string& value) {
     request.clear_parameters();
     auto intOpt = ovms::stoi64(value);
     if (intOpt.has_value()) {
-        request.mutable_parameters()->operator[](MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).set_int64_param(intOpt.value());
+        request.mutable_parameters()->operator[](TIMESTAMP_PARAMETER_NAME).set_int64_param(intOpt.value());
     } else {
-        request.mutable_parameters()->operator[](MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).set_string_param(value);
+        request.mutable_parameters()->operator[](TIMESTAMP_PARAMETER_NAME).set_string_param(value);
     }
 }
 // TODO what to do if several inputs have different timestamp
 static int64_t getResponseTimestamp(const KFSResponse& response) {
-    return response.parameters().at(MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).int64_param();
+    return response.parameters().at(TIMESTAMP_PARAMETER_NAME).int64_param();
 }
 
 static void prepareRequest(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content, std::optional<int64_t> timestamp = std::nullopt, const std::string& servableName = "", const std::string& servableVersion = "") {
