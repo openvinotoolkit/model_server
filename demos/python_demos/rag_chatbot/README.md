@@ -88,7 +88,7 @@ options:
 python download_model.py --model ${SELECTED_MODEL}
 
 ```
-The model will appear in `./tiny-llama-1b-chat` directory.
+The model will appear in `../servable_stream/tiny-llama-1b-chat` directory.
 
 > **NOTE** Llama model requires license agreement, therefore it is required agree and log in to HuggingFace account via `huggingface-cli` before loading the model. [Read more](https://huggingface.co/docs/huggingface_hub/guides/cli) how to.
 
@@ -116,7 +116,7 @@ Running this script will create new directories with compressed versions of the 
 The compressed models can be used in place of the original as they have compatible inputs and outputs.
 
 ```bash
-du -sh tiny*
+du -sh ./servable_stream/tiny*
 4.2G    tiny-llama-1b-chat
 2.1G    tiny-llama-1b-chat_FP16
 702M    tiny-llama-1b-chat_INT4_compressed_weights
