@@ -37,6 +37,4 @@ There is a built-in [Tokenizer](https://github.com/openvinotoolkit/model_server/
 
 Similarly, a custom node can perform string detokenization and return a string to the model server client.
 
-Check the [end-to-end demonstration](../demos/gptj_causal_lm/python/README.md) of such use case with GPT based text generation.
-
 The client API snippets with string data format are included in [KServe API](./clients_kfs.md) and [TFS API](./clients_tfs.md).
