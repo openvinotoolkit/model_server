@@ -297,75 +297,8 @@ rules_pkg_dependencies()
 load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
 
-# Initialize LLM 
-# minitrace
-new_git_repository(
-    name = "llm_engine",
-    remote = "https://github.com/mzegla/openvino.genai.git",
-    commit = "5644b5bc6bbea0b2cdc515206eec8615fbd75a68",
-    # branch = "lib-like",
-    init_submodules = True,
-    recursive_init_submodules = True,
-    build_file_content = """
-load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-
-visibility = ["//visibility:public"]
-
-filegroup(
-    name = "all_srcs",
-    srcs = glob(["text_generation/causal_lm/cpp/llm_engine/lib/**"]),
-    visibility = ["//visibility:public"],
-)
-
-cmake(
-    name = "llm_engine_cmake_ubuntu",
-    build_args = [
-        "--verbose",
-        "--",  # <- Pass remaining options to the native tool.
-        # https://github.com/bazelbuild/rules_foreign_cc/issues/329
-        # there is no elegant paralell compilation support
-        "VERBOSE=1",
-        "-j 4",
-    ],
-    cache_entries = {
-        "CMAKE_BUILD_TYPE": "Release",
-        "ENABLE_TESTING": "OFF",
-        "AUTORUN_UNIT_TESTS": "OFF",
-        "BUILD_SHARED_LIBS": "OFF",
-        "MINIMIZE_SIZE": "ON",
-        "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-        "FORCE_SHARED_CRT": "OFF",
-        "SIMPLE_INSTALL": "OFF",
-        "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
-        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib"
-    },
-    env = {
-        "HTTP_PROXY": "http://proxy-chain.intel.com:911",
-        "HTTPS_PROXY": "http://proxy-chain.intel.com:912",
-    },
-    lib_source = ":all_srcs",
-    out_lib_dir = "lib",
-    # linking order
-    out_static_libs = [
-            "libcausal_lm.a",
-        ],
-    tags = ["requires-network"],
-    alwayslink = False,
-    visibility = ["//visibility:public"],
-)
-
-cc_library(
-    name = "llm_engine_ubuntu",
-    deps = [
-        ":llm_engine_cmake_ubuntu",
-        "@linux_openvino//:openvino"
-    ],
-    visibility = ["//visibility:public"],
-    alwayslink = False,
-)
-""",
-)
+load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
+llm_engine()
 
 # Azure Storage SDK
 new_local_repository(
