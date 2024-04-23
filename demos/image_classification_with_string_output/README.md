@@ -8,6 +8,8 @@ The script below is downloading a public MobileNet model trained on the ImageNet
 This is a very handy functionality because it allows us to export the model with the included pre/post processing functions as the model layers. The client just receives the string data with the label name for the classified image.
 
 ```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/image_classification_with_string_output
 pip install -r requirements.txt
 python3 download_model.py
 rm model/1/fingerprint.pb
