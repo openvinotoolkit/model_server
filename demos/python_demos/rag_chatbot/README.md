@@ -117,10 +117,10 @@ The compressed models can be used in place of the original as they have compatib
 
 ```bash
 du -sh ./servable_stream/tiny*
-4.2G    tiny-llama-1b-chat
-2.1G    tiny-llama-1b-chat_FP16
-702M    tiny-llama-1b-chat_INT4_compressed_weights
-1.1G    tiny-llama-1b-chat_INT8_compressed_weights
+4.2G    ./servable_stream/tiny-llama-1b-chat
+2.1G    ./servable_stream/tiny-llama-1b-chat_FP16
+702M    ./servable_stream/tiny-llama-1b-chat_INT4_compressed_weights
+1.1G    ./servable_stream/tiny-llama-1b-chat_INT8_compressed_weights
 ```
 
 > **NOTE** Applying quantization to model weights may impact the model accuracy. Please test and verify that the results are of acceptable quality for your use case.
@@ -149,14 +149,14 @@ Mount the servable directory which contains:
 - LLM and embedding models
 
 ```bash
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/llm_model \
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace \
 -e SELECTED_MODEL=${SELECTED_MODEL} -e LLM_MODEL_DIR=${SELECTED_MODEL} \
 registry.connect.redhat.com/intel/openvino-model-server:py --config_path /workspace/config.json --port 9000 --rest_port 8000
 ```
 
 You may deploy the compressed model(s) by simply changing the model path mounted to the container. For example, to deploy the 8-bit weight compressed model:
 ```bash
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/llm_model \
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace \
 -e SELECTED_MODEL=${SELECTED_MODEL} -e LLM_MODEL_DIR=${SELECTED_MODEL}_INT8_compressed_weights \
 registry.connect.redhat.com/intel/openvino-model-server:py --config_path /workspace/config.json --port 9000 --rest_port 8000
 ```
@@ -165,7 +165,7 @@ registry.connect.redhat.com/intel/openvino-model-server:py --config_path /worksp
 > **Note** If order to run the inference load on Intel GPU instead of CPU, just pass the extra parameters to the docker run `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*)`.
 
 ```
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace -v ${PWD}/${SELECTED_MODEL}:/llm_model \
+docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace \
 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) \
 -e SELECTED_MODEL=${SELECTED_MODEL} -e LLM_MODEL_DIR=${SELECTED_MODEL}_INT8_compressed_weights -e DEVICE=gpu \
 registry.connect.redhat.com/intel/openvino-model-server:py --config_path /workspace/config.json --port 9000 --rest_port 8000
