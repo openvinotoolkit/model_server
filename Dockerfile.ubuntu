@@ -296,15 +296,6 @@ WORKDIR /example_cpp_client
 COPY demos/common/cpp /example_cpp_client/cpp
 COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
 
-# Compile tokenizer custom node
-WORKDIR /ovms/src/custom_nodes/tokenizer/build
-RUN cp /ovms/src/custom_node_interface.h /ovms/src/custom_nodes/tokenizer/ && \
-    cp -r /ovms/src/custom_nodes/common /ovms/src/custom_nodes/tokenizer/ && \
-    cmake -DWITH_TESTS=1 .. && \
-    make -j${JOBS} && \
-    ./test/detokenization_test && \
-    ./test/tokenization_test
-
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make

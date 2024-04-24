@@ -281,15 +281,6 @@ COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classi
 
 COPY src/ /ovms/src/
 
-# Compile tokenizer custom node
-WORKDIR /ovms/src/custom_nodes/tokenizer/build
-RUN cp /ovms/src/custom_node_interface.h /ovms/src/custom_nodes/tokenizer/ && \
-    cp -r /ovms/src/custom_nodes/common /ovms/src/custom_nodes/tokenizer/ && \
-    cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DWITH_TESTS=1 .. && \
-    make -j${JOBS} && \
-    ./test/detokenization_test && \
-    ./test/tokenization_test
-
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
