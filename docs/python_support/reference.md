@@ -100,7 +100,7 @@ class OvmsPythonModel:
 
 `initialize` is called when model server loads graph definition. It allows to initialize and maintain state between subsequent `execute` calls and even graph instances.
 
-For gRPC/REST unary, graphs are recreated per request.
+For unary endpoint, graphs are recreated per request.
 
 For gRPC streaming, there can be multiple graph instances existing at the same time.
 
@@ -340,6 +340,15 @@ The same mapping is applied the other way around when creating `Tensor` from ano
 `Tensor` object always holds both values in `Tensor.datatype` and `Tensor.data.format` attributes so they can be used in deserialization and serialization, but also in another node in the graph.
 
 In some cases, users may work with more complex types that are not listed above and model server also allows that.
+
+#### BYTES datatype
+If `datatype` "BYTES" is specified and data is located in bytes_contents field of input(for gRPC) or in JSON body(for REST) OVMS converts it to `pyovms.Tensor` buffer according to the format where every input is preceeded by four bytes of its size.
+
+For example this gRPC request:
+ bytes_content: [<240 byte element>, <1024 byte element>, <567 byte element>]
+ 
+would be converted to this pyovms.Tensor.data contents:
+| 240 |   < first element>  | 1024 |   <second element> | 567 | <third element> |
 
 #### Custom types
 
@@ -607,7 +616,7 @@ For inference, data can be send both via [gRPC API](https://github.com/kserve/ks
 The data passed in the request is accessible in `execute` method of the node connected to graph input via `data` attribute of [`pyovms.Tensor`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#python-tensor) object.
 For data of type BYTES send in bytes_contents field of input(for gRPC) or in JSON body(for REST) OVMS converts it to `pyovms.Tensor` buffer according to the format where every input is preceeded by four bytes of its size.
 
-Inputs and outputs also define `shape` and `datatype` parameters. Those values are also accessible in `pyovms.Tensor`. However for outputs, you don't provide those values directly to the response. See [datatype considerations](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#datatype-considerations).
+Inputs and outputs also define `shape` and `datatype` parameters. Those values are also accessible in `pyovms.Tensor`. For outputs, `datatype` and `shape` are by default read from the underlying buffer, but it is possible to overwrite them (see [`pyovms.Tensor constructor`](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#creating-output-tensors). If you specify `datatype` as `BYTES` in your requests, make sure to review [datatype considerations](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#datatype-considerations), since this type is treated differently than the others.
 
 Let's see it on an example:
 
