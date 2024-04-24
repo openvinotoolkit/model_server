@@ -149,7 +149,7 @@ Mount the servable directory which contains:
 - LLM and embedding models
 
 ```bash
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace \
+docker run -d --rm -p 9000:9000 -p 8000:8000 -v ${PWD}/servable_stream:/workspace \
 -e SELECTED_MODEL=${SELECTED_MODEL} -e LLM_MODEL_DIR=${SELECTED_MODEL} \
 registry.connect.redhat.com/intel/openvino-model-server:py --config_path /workspace/config.json --port 9000 --rest_port 8000
 ```
@@ -165,7 +165,7 @@ registry.connect.redhat.com/intel/openvino-model-server:py --config_path /worksp
 > **Note** If order to run the inference load on Intel GPU instead of CPU, just pass the extra parameters to the docker run `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*)`.
 
 ```
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace \
+docker run -d --rm -p 9000:9000 -p 8000:8000 -v ${PWD}/servable_stream:/workspace \
 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) \
 -e SELECTED_MODEL=${SELECTED_MODEL} -e LLM_MODEL_DIR=${SELECTED_MODEL}_INT8_compressed_weights -e DEVICE=gpu \
 registry.connect.redhat.com/intel/openvino-model-server:py --config_path /workspace/config.json --port 9000 --rest_port 8000
