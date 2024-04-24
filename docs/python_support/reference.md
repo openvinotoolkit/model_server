@@ -602,7 +602,7 @@ For a graph client can:
 
 Learn more about how [MediaPipe flow works in OpenVINO Model Server](../mediapipe.md)
 
-For inference, data can be send both via [gRPC API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#grpc) and [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#httprest)(Only for unary calls). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field (even if data in the request has been placed in `InferTensorContents`).
+For inference, data can be send both via [gRPC API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#grpc) and [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#httprest)(only for unary calls). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field (even if data in the request has been placed in `InferTensorContents`).
 
 The data passed in the request is accessible in `execute` method of the node connected to graph input via `data` attribute of [`pyovms.Tensor`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#python-tensor) object.
 
