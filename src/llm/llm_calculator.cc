@@ -23,11 +23,11 @@
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #include "src/kfserving_api/grpc_predict_v2.pb.h"
 
-#include <openvino/openvino.hpp>
 #include <continuous_batching_pipeline.hpp>
+#include <generation_config.hpp>
+#include <openvino/openvino.hpp>
 #include <scheduler_config.hpp>
 #include <tokenizer.hpp>
-#include <generation_config.hpp>
 
 using KFSRequest = inference::ModelInferRequest;
 using KFSResponse = inference::ModelInferResponse;
@@ -52,7 +52,6 @@ std::string detokenize(ov::InferRequest& detokenizer, ov::Tensor tokens) {
     detokenizer.infer();
     return detokenizer.get_output_tensor().data<std::string>()[0];
 }
-
 
 namespace mediapipe {
 
@@ -80,7 +79,6 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process start";
-       
         return absl::OkStatus();
     }
 };
