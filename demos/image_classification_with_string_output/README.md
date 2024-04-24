@@ -33,7 +33,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd):/workspace -p 8000:8000 openvino/mo
 ## Send request
 Use example client to send requests containing images via KServ REST API:
 ```bash
-python3 image_classification_with_string_output.py 
+python3 image_classification_with_string_output.py --http_port 8000
 ```
 Request may be sent also using other APIs (KServ GRPC, TFS). In this sections you can find short code samples how to do this:
 - [TensorFlow Serving API](../../docs/clients_tfs.md)
