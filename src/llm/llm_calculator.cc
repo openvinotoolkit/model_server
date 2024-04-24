@@ -18,16 +18,16 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #pragma GCC diagnostic pop
-#include <memory>
-
-#include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
-#include "src/kfserving_api/grpc_predict_v2.pb.h"
 
 #include <continuous_batching_pipeline.hpp>
 #include <generation_config.hpp>
+#include <memory>
 #include <openvino/openvino.hpp>
 #include <scheduler_config.hpp>
 #include <tokenizer.hpp>
+
+#include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
+#include "src/kfserving_api/grpc_predict_v2.pb.h"
 
 using KFSRequest = inference::ModelInferRequest;
 using KFSResponse = inference::ModelInferResponse;
