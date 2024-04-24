@@ -50,8 +50,11 @@ Now the model server can be started:
 ```bash
 docker run -d -v ${PWD}/demos/python_demos/rag_chatbot/servable_stream:/config -p 9000:9000 -p 8000:8000 \
 -e SELECTED_MODEL=${SELECTED_MODEL} \
+${HOME}/.cache:/hf-cache -e HF_HOME=/hf-cache/huggingface \
 registry.connect.redhat.com/intel/openvino-model-server:py --config_path /config/config.json --port 9000 --rest_port 8000
 ```
+In the command above, mounting the HuggingFaces cache is optional and can speed up loading time on the sequential attempts.
+
 
 Wait for the models to be loaded. It can be verified in the container logs or using the REST API:
 ```bash
