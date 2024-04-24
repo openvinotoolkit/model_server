@@ -44,7 +44,6 @@ for i, arr in enumerate(results.as_numpy("completion")):
         print(f"==== Prompt: {args['prompt'][i]} ====")
         print(arr.decode())
     print()
-print("Number of token")
 print("Number of tokens ", results.as_numpy("token_count")[0])
 print("Generated tokens per second ", round(results.as_numpy("token_count")[0] / int((endtime - start_time).total_seconds()), 2))
 print("Time per generated token ", round(int((endtime - start_time).total_seconds()) / results.as_numpy("token_count")[0] * 1000, 2), "ms")

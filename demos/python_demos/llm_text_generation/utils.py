@@ -21,5 +21,5 @@ import numpy as np
 def serialize_prompts(prompts):
     infer_input = grpcclient.InferInput("pre_prompt", [len(prompts)], "BYTES")
     infer_input._raw_content = serialize_byte_tensor(
-        np.array(prompts, dtype=np.bytes_)).item()
+        np.array(prompts, dtype=np.object_)).item()
     return infer_input

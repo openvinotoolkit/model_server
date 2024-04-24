@@ -61,7 +61,7 @@ def callback(result, error):
     elif result.as_numpy('token_count') is not None:
         token_count[0] = result.as_numpy('token_count')[0]
     elif result.as_numpy('completion') is not None:
-        os.system('clear')
+        os.system('cls' if os.name=='nt' else 'clear')
         for i, completion in enumerate(deserialize_bytes_tensor(result._result.raw_output_contents[0])):
             completions[i] += completion.decode()
             print(completions[i])

@@ -100,7 +100,7 @@ class OvmsPythonModel:
 
 `initialize` is called when model server loads graph definition. It allows to initialize and maintain state between subsequent `execute` calls and even graph instances.
 
-For gRPC unary, graphs are recreated per request.
+For gRPC/REST unary, graphs are recreated per request.
 
 For gRPC streaming, there can be multiple graph instances existing at the same time.
 
@@ -199,7 +199,7 @@ Signaling that something went wrong should be done by throwing an exception.
 The exception is caught by the `PythonExecutorCalculator` which logs it and returns non-OK status.
 Model Server then reads that status and sets graph in an error state. Then it closes all graph's input streams and waits until in-progress actions are finished. Once it's done the graph gets removed.
 
-This behavior has different effect on the client depending on the kind of gRPC endpoint used - unary or streaming:
+This behavior has different effect on the client depending on the kind of endpoint used - unary or streaming:
 
 - **Unary**
 
@@ -314,7 +314,7 @@ There are two places where `pyovms.Tensor` objects are created and accessed:
 - in `execute` method of `OvmsPythonModel` class
 - in model server core during serialization and deserialization if Python node inputs or outputs as also graph inputs or outputs
 
-Model Server receives requests and sends responses on gRPC interface via KServe API which defines [expected data types for tensors](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#tensor-data-types).
+Model Server receives requests and sends responses on interface via KServe API which defines [expected data types for tensors](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#tensor-data-types).
 On the other hand Python [Buffer Protocol](https://docs.python.org/3/c-api/buffer.html#buffer-protocol) requires `format` to be specified as [struct format characters](https://docs.python.org/3/library/struct.html#format-characters).
 
 In order to let users work with KServe types without enforcing the usage of struct format characters on the client side, model server attempts to do the mapping as follows when creating `Tensor` objects from the request:
@@ -598,11 +598,11 @@ For a graph client can:
 
 - request status (gRPC and REST)
 - request metadata (gRPC and REST)
-- request inference (gRPC)
+- request inference (gRPC and REST)
 
 Learn more about how [MediaPipe flow works in OpenVINO Model Server](../mediapipe.md)
 
-For inference, if the format of graph input stream is [`OvmsPyTensor`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#graph-input-and-output-streams), then the data in the KServe request must be encapsulated in either `ModelInferRequest`'s [InferTensorContents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L155) or [raw_input_contents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field (even if data in the request has been placed in `InferTensorContents`).
+For inference, data can be send both via [gRPC API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#grpc) and [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#httprest)(Only for unary calls). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field (even if data in the request has been placed in `InferTensorContents`).
 
 The data passed in the request is accessible in `execute` method of the node connected to graph input via `data` attribute of [`pyovms.Tensor`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#python-tensor) object.
 
@@ -701,7 +701,7 @@ timestamp = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
 
 Python nodes can be configured to run in two execution modes - regular and generative.
 
-In regular execution mode the node produces one set of outputs per one set of inputs. It works via both gRPC unary and streaming endpoints and is a common mode for use cases like computer vision.
+In regular execution mode the node produces one set of outputs per one set of inputs. It works via both gRPC/REST unary and gRPC streaming endpoints and is a common mode for use cases like computer vision.
 
 In generative execution mode the node produces multiple sets of outputs over time per single set of inputs. It works only via gRPC streaming endpoints and is useful for use cases where total processing time is big and you want to return some intermediate results before the execution is completed. That mode is well suited to Large Language Models to serve them in a more interactive manner.
 
