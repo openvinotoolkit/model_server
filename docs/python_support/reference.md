@@ -590,21 +590,22 @@ Where `name` defines the name of the graph and `graph_path` contains the path to
 
 ### Inference API and available endpoints
 
-Since Python execution is supported via MediaPipe serving flow, it inherits it's enhancements and limitations. First thing to note is that MediaPipe graphs are available **only via KServe API**.
+Since Python execution is supported via MediaPipe serving flow, it inherits it's enhancements and limitations. First thing to note is that MediaPipe graphs are available [**only via KServe API**](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md)
 
 From the client perspective model server serves a graph and user interacts with a graph. Single node in the graph cannot be accessed from the outside.
 
 For a graph client can:
 
-- request status (gRPC and REST)
-- request metadata (gRPC and REST)
-- request inference (gRPC and REST)
+- request status
+- request metadata
+- request inference
 
 Learn more about how [MediaPipe flow works in OpenVINO Model Server](../mediapipe.md)
 
 For inference, data can be send both via [gRPC API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#grpc) and [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#httprest)(only for unary calls). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field (even if data in the request has been placed in `InferTensorContents`).
 
 The data passed in the request is accessible in `execute` method of the node connected to graph input via `data` attribute of [`pyovms.Tensor`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#python-tensor) object.
+For data of type BYTES send in bytes_contents field of input(for gRPC) or in JSON body(for REST) OVMS converts it to `pyovms.Tensor` buffer according to the format where every input is preceeded by four bytes of its size.
 
 Inputs and outputs also define `shape` and `datatype` parameters. Those values are also accessible in `pyovms.Tensor`. However for outputs, you don't provide those values directly to the response. See [datatype considerations](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#datatype-considerations).
 
