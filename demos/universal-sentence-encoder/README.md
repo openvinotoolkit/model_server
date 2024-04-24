@@ -3,10 +3,11 @@
 
 ## Download the model
 
-In this experiment we are going to use a TensorFlow model from [tfhub.dev ](https://tfhub.dev/google/universal-sentence-encoder-multilingual/3).
+In this experiment we are going to use a TensorFlow model from [Kaggle](https://www.kaggle.com/models/google/universal-sentence-encoder/tensorFlow2/multilingual/2).
 
 ```bash
-curl --create-dir  https://storage.googleapis.com/tfhub-modules/google/universal-sentence-encoder-multilingual/3.tar.gz -o universal-sentence-encoder-multilingual/1/3.tar.gz
+mkdir -p universal-sentence-encoder-multilingual/1/
+curl -L -o universal-sentence-encoder-multilingual/1/3.tar.gz https://www.kaggle.com/api/v1/models/google/universal-sentence-encoder/tensorFlow2/multilingual/2/download
 tar -xzf universal-sentence-encoder-multilingual/1/3.tar.gz -C universal-sentence-encoder-multilingual/1/
 rm universal-sentence-encoder-multilingual/1/3.tar.gz
 chmod -R 755 universal-sentence-encoder-multilingual

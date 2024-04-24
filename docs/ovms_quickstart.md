@@ -5,10 +5,10 @@ OpenVINO Model Server can perform inference using pre-trained models in either [
 
 - downloading models from [Open Model Zoo](https://storage.openvinotoolkit.org/repositories/open_model_zoo/)
 - generating the model in a training framework and saving it to a supported format: TensorFlow saved_model, ONNX or PaddlePaddle.
-- downloading the models from models hubs like [TensorFlowHub](https://www.tensorflow.org/hub) or [ONNX models zoo](https://github.com/onnx/models).
+- downloading the models from models hubs like [Kaggle](https://www.kaggle.com/models) or [ONNX models zoo](https://github.com/onnx/models).
 - converting models from any formats using [conversion tool](https://docs.openvino.ai/2024/openvino-workflow/model-preparation/convert-model-to-ir.html)
 
-This guide uses a [Faster R-CNN with Resnet-50 V1 Object Detection model](https://tfhub.dev/tensorflow/faster_rcnn/resnet50_v1_640x640/1) in TensorFlow format.
+This guide uses a [Faster R-CNN with Resnet-50 V1 Object Detection model](https://www.kaggle.com/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1) in TensorFlow format.
 
 > **Note**: - OpenVINO Model Server can run on Linux and macOS. For use on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/) is required.
 
@@ -41,11 +41,11 @@ docker pull openvino/model_server:latest
 
 ### Step 3: Provide a Model
 
-Store components of the model in the `model/1` directory. Here are example commands pulling an object detection model from TensorFlow Hub:
+Store components of the model in the `model/1` directory. Here are example commands pulling an object detection model from Kaggle:
 
 ```bash
 mkdir -p model/1
-wget https://storage.googleapis.com/tfhub-modules/tensorflow/faster_rcnn/resnet50_v1_640x640/1.tar.gz
+wget https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -O 1.tar.gz
 tar xzf 1.tar.gz -C model/1
 ```
 
@@ -79,8 +79,8 @@ During this step, the `model` folder is mounted to the Docker container.  This f
 Client scripts are available for quick access to the Model Server. Run an example command to download all required components:
 
 ```bash
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/object_detection.py
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/requirements.txt
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2024/1/demos/object_detection/python/object_detection.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2024/1/demos/object_detection/python/requirements.txt
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_91cl.txt
 ```
 
