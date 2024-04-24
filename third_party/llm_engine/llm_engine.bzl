@@ -16,15 +16,22 @@
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 def llm_engine():
     llm_engine_repository(name="_llm_engine")
-    new_git_repository(
+    #new_git_repository(
+    #    name = "llm_engine",
+    #    remote = "https://github.com/rasapala/openvino.genai.git",
+    #    commit = "464f3c4",
+    #    # branch = "lib-like",
+    #    build_file = "@_llm_engine//:BUILD",
+    #    init_submodules = True,
+    #    recursive_init_submodules = True,
+    #)
+    native.new_local_repository(
         name = "llm_engine",
-        remote = "https://github.com/mzegla/openvino.genai.git",
-        commit = "5644b5bc6bbea0b2cdc515206eec8615fbd75a68",
-        # branch = "lib-like",
+        path = "/openvino.genai",
         build_file = "@_llm_engine//:BUILD",
-        init_submodules = True,
-        recursive_init_submodules = True,
     )
+
+    
 
 
 def _impl(repository_ctx):
@@ -50,7 +57,7 @@ config_setting(
 
 filegroup(
     name = "all_srcs",
-    srcs = glob(["text_generation/causal_lm/cpp/llm_engine/lib/**"]),
+    srcs = glob(["text_generation/causal_lm/cpp/continuous_batching/library/**"]),
     visibility = ["//visibility:public"],
 )
 
@@ -66,13 +73,8 @@ cmake(
     ],
     cache_entries = {{
         "CMAKE_BUILD_TYPE": "Release",
-        "ENABLE_TESTING": "OFF",
-        "AUTORUN_UNIT_TESTS": "OFF",
         "BUILD_SHARED_LIBS": "OFF",
-        "MINIMIZE_SIZE": "ON",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-        "FORCE_SHARED_CRT": "OFF",
-        "SIMPLE_INSTALL": "OFF",
         "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib"
     }},
@@ -85,7 +87,7 @@ cmake(
     out_lib_dir = "lib",
     # linking order
     out_static_libs = [
-            "libcausal_lm.a",
+            "libopenvino_continuous_batching.a",
         ],
     tags = ["requires-network"],
     alwayslink = False,
