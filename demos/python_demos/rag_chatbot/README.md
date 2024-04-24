@@ -156,7 +156,7 @@ registry.connect.redhat.com/intel/openvino-model-server:py --config_path /worksp
 
 You may deploy the compressed model(s) by simply changing the model path mounted to the container. For example, to deploy the 8-bit weight compressed model:
 ```bash
-docker run -d --rm -p 9000:9000 -v ${PWD}/servable_stream:/workspace \
+docker run -d --rm -p 9000:9000 -p 8000:8000 -v ${PWD}/servable_stream:/workspace \
 -e SELECTED_MODEL=${SELECTED_MODEL} -e LLM_MODEL_DIR=${SELECTED_MODEL}_INT8_compressed_weights \
 registry.connect.redhat.com/intel/openvino-model-server:py --config_path /workspace/config.json --port 9000 --rest_port 8000
 ```
