@@ -495,17 +495,15 @@ Status deserializePredictRequest(
 template <typename Request, typename Tensor>
 Status getTensor(const Request& request, const std::string& name, const Tensor tensor);
 
-
-template<typename Request>
+template <typename Request>
 bool specifiesOutputs(const Request& request) {
     return false;
 }
 
-
 template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const InferenceRequest& request,
-    const tensor_map_t& inputMap, // add another entry for outputs
+    const tensor_map_t& inputMap,  // add another entry for outputs
     Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
     OVMS_PROFILE_FUNCTION();
     Status status;
@@ -513,14 +511,14 @@ Status deserializePredictRequest(
         try {
             const InferenceTensor* requestInputPtr{nullptr};
             ovms::Status status;
-            if(!isPipeline) {
-                SPDLOG_ERROR("getting input:{}",name);
+            if (!isPipeline) {
+                SPDLOG_ERROR("getting input:{}", name);
                 status = request.getInput(name.c_str(), &requestInputPtr);
             } else {
-                SPDLOG_ERROR("getting output:{}",name);
+                SPDLOG_ERROR("getting output:{}", name);
                 status = request.getOutput(name.c_str(), &requestInputPtr);
             }
-// TODO impose limits on what can be processed in deserialization on output eg. no binary handling
+            // TODO impose limits on what can be processed in deserialization on output eg. no binary handling
             if (!status.ok() || requestInputPtr == nullptr) {
                 SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
@@ -557,8 +555,8 @@ Status deserializePredictRequest(
 
 template <typename Request, typename Tensor, bool IsInput>
 class RequestTensorExtractor {
-    public:
-static Status extract(const Request& request, const std::string& name, const Tensor tensor);
+public:
+    static Status extract(const Request& request, const std::string& name, const Tensor tensor);
 };
 
 /*template<>
@@ -580,21 +578,21 @@ static Status getTensor(const InferenceRequest& request, const std::string& name
 template <class TensorProtoDeserializator, class Sink, bool isOkToSkip>
 static Status deserializePredictRequest2(
     const KFSRequest& request,
-    const tensor_map_t& inputMap, // add another entry for outputs
+    const tensor_map_t& inputMap,  // add another entry for outputs
     Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
     return StatusCode::OK;
 }
 template <class TensorProtoDeserializator, class Sink, bool isOkToSkip>
 static Status deserializePredictRequest2(
     const tensorflow::serving::PredictRequest& request,
-    const tensor_map_t& inputMap, // add another entry for outputs
+    const tensor_map_t& inputMap,  // add another entry for outputs
     Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
     return StatusCode::OK;
 }
 template <class TensorProtoDeserializator, class Sink, bool isOkToSkip>  // isOkToSkip - is input or output
 static Status deserializePredictRequest2(
     const InferenceRequest& request,
-    const tensor_map_t& inputMap, // add another entry for outputs
+    const tensor_map_t& inputMap,  // add another entry for outputs
     Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
     OVMS_PROFILE_FUNCTION();
     Status status;
@@ -602,12 +600,12 @@ static Status deserializePredictRequest2(
         try {
             const InferenceTensor* requestInputPtr{nullptr};
             ovms::Status status = RequestTensorExtractor<InferenceRequest, const InferenceTensor**, isOkToSkip>::extract(request, name, &requestInputPtr);
-// TODO impose limits on what can be processed in deserialization on output eg. no binary handling
+            // TODO impose limits on what can be processed in deserialization on output eg. no binary handling
             if ((!status.ok() || requestInputPtr == nullptr)) {
-                if(isOkToSkip) {
+                if (isOkToSkip) {
                     SPDLOG_TRACE("Skipping output name:{}", name);
                     // TODO we should have passed here filtered output map
-                                                                   // instead of searching for each output and skipping
+                    // instead of searching for each output and skipping
                     continue;
                 } else {
                     SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");

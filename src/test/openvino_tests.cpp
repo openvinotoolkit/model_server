@@ -158,6 +158,27 @@ TEST(OpenVINO, LoadModelWithPrecreatedContext) {
     }
 }
 
+TEST(OpenVINO, CallbacksTest) {
+    Core core;
+    auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
+    const std::string inputName{"b"};
+    auto input = model->get_parameters().at(0);
+    ov::element::Type_t dtype = ov::element::Type_t::f32;
+    ov::Shape ovShape;
+    ovShape.emplace_back(1);
+    ovShape.emplace_back(10000);
+    std::map<std::string, ov::PartialShape> inputShapes;
+    inputShapes[inputName] = ovShape;
+    model->reshape(inputShapes);
+    auto cpuCompiledModel = core.compile_model(model, "CPU");
+    auto cpuInferRequest = cpuCompiledModel.create_infer_request();
+    // prepare ov::Tensor data
+    std::vector<ov::Tensor> inputOvTensors, outputOvTensors;
+    inputOvTensors.emplace_back(dtype, ovShape);
+    outputOvTensors.emplace_back(dtype, ovShape);
+
+}
+
 TEST(OpenVINO, SetTensorTest) {
     size_t tSize = 10;
     int iterations = 1000;
@@ -451,7 +472,7 @@ TEST(OpenVINO, SetTensorTest) {
         {  // GPU_OV_SET_OCL_SAME_CONTEXT load model with target device and use context from model to create tensors
             auto ovWrappedOCLContextFromModel = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
             cl_context openCLCContextFromModel = ovWrappedOCLContextFromModel.get();
-            bool retainObject = true; // we need to retain here since its OV that will clean up
+            bool retainObject = true;  // we need to retain here since its OV that will clean up
             cl::Context openCLCppContextFromModel(openCLCContextFromModel, retainObject);
             // prepare tensors
             std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
@@ -502,7 +523,7 @@ TEST(OpenVINO, SetTensorTest) {
                 gpuInferRequest.infer();
             }
             auto stop = std::chrono::high_resolution_clock::now();
-            times[GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
+            times[GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;  // ms
             SPDLOG_ERROR("finished GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL");
         }
         auto sizeStop = std::chrono::high_resolution_clock::now();
@@ -517,7 +538,8 @@ TEST(OpenVINO, SetTensorTest) {
     std::cout << std::endl;
     for (auto s : sizeSet) {
         for (auto t : {CPU_COPY, CPU_SET, GPU_OV_COPY_OV, GPU_OV_SET_OV, GPU_OCL_COPY, GPU_OCL_SET_OV, GPU_OCL_SET_OCL_IN_AND_OV_OUT, GPU_OCL_SET_OCL, /*GPU_OCL_DIFF_CONTEXT_INPUT_COPY, GPU_OV_SET_OCL_DIFF_CONTEXT,*/ GPU_OV_SET_OCL_SAME_CONTEXT, GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME, GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL}) {
-            double fps = iterations / (times[t][s] / 1000.);
+            // times[ms] so we diide by 1000 to have per second
+            double fps = iterations / (times[t][s] / 1000.);  //FPS[Frame/second]
             std::cout << "" << fps * s << " \t\t ";
         }
         std::cout << std::endl;
@@ -668,6 +690,72 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     }
     // TODO cleanup settings
     OVMS_ServerDelete(cserver);
+}
+static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
+TEST(CAPIAsync, DummyCallback) {
+    cl_platform_id platformId;
+    cl_device_id deviceId;
+    cl_context openCLCContext = get_cl_context(platformId, deviceId);
+    cl::Context openCLCppContext(openCLCContext);
+    cl::Device device(deviceId);
+    cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
+    auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties);
+    // create OpenCL buffers
+    std::vector<float> in(10, 42);
+    void* inputBufferData = in.data();
+    std::vector<float> out(10, 13.1);
+    void* outputBufferData = out.data();
+    size_t inputByteSize = sizeof(float) * in.size();
+    cl_int err;  // TODO not ignore
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
+    queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    // start CAPI server
+    // TODO load model with passed in context
+    std::string port = "9000";
+    randomizePort(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_gpu_dummy.json"));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    // prepare request
+    OVMS_InferenceRequest* request{nullptr};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddOutput(request, DUMMY_MODEL_OUTPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+    std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    uint32_t notUsedNum = 0;
+    auto bareOpenCLCMemory = openCLCppInputBuffer.get();
+    SPDLOG_ERROR("ERa addr:{}", (void*)&openCLCppInputBuffer);
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));     // device id ?? TODO
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputSetData(request, DUMMY_MODEL_OUTPUT_NAME, reinterpret_cast<void*>(&openCLCppOutputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));  // device id ?? TODO
+    OVMS_InferenceResponse* response = nullptr;
+    // set callback
+    uint32_t callbackUsed = 31;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompleteCallback(request, callbackMarkingItWasUsedWith42, reinterpret_cast<void*>(&callbackUsed)));
+    // infer
+    ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
+    // check
+    queue.enqueueReadBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData);
+    const float* outputData = reinterpret_cast<const float*>(outputBufferData);
+    for (size_t i = 0; i < data.size(); ++i) {
+        EXPECT_EQ(in[i] + 1, outputData[i]) << "Different at:" << i << " place.";
+    }
+    ASSERT_EQ(42, callbackUsed);
+    // TODO cleanup settings
+    OVMS_ServerDelete(cserver);
+}
+static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
+    SPDLOG_TRACE("Using callback!");
+    std::cout << "Teraz dziala?" << std::endl;
+    uint32_t* usedFlag = reinterpret_cast<uint32_t*>(userStruct);
+    *usedFlag = 42;
+    OVMS_InferenceResponseDelete(response);
 }
 #pragma GCC diagnostic pop
 #pragma GCC diagnostic pop
