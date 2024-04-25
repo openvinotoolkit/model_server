@@ -508,6 +508,15 @@ DLL_PUBLIC void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* request) {
     delete reinterpret_cast<InferenceRequest*>(request);
 }
 
+DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestSetCompleteCallback(OVMS_InferenceRequest* req, OVMS_InferenceResponseCompleteCallback_t completeCallback, void* userStruct) {
+    if (req == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
+    }
+    InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
+    request->setCompleteCallback(completeCallback, userStruct);
+    return nullptr;
+}
+
 DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req, const char* inputName, OVMS_DataType datatype, const int64_t* shape, size_t dimCount) {
     if (req == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
@@ -947,6 +956,15 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
     }
     SPDLOG_DEBUG("Total C-API req processing time: {} ms", reqTotal / 1000);
     *response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
+    OVMS_InferenceResponseCompleteCallback_t callback = nullptr;
+    callback = req->getResponseCompleteCallback();
+    // TODO cleanup all paths
+    if (callback) {
+        auto completeCallbackData = req->getResponseCompleteCallbackData();
+        SPDLOG_DEBUG("Calling response complete callback");
+        callback(*response, 0, completeCallbackData);
+        SPDLOG_DEBUG("Called response complete callback");
+    }
     return nullptr;
 }
 

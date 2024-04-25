@@ -550,6 +550,19 @@ void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
 
+// Type of function called when response is completed and set with OVMS_InferenceRequestSetCompleteCallback. Callback function takes ownership of OVMS_InferenceResponse object.
+// Flag specifies if the response is final coming from inference request.
+// // TODO how to use that in MP
+//
+// \param response resp
+// \param flag Flag specyfying if the response is final response for request
+// \param userStruct Data provided to callback, set in OVMS_InferenceRequestSetCompleteCallback
+typedef void (* OVMS_InferenceResponseCompleteCallback_t)(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
+
+// TODO description
+// TODO consider allocators
+OVMS_Status* OVMS_InferenceRequestSetCompleteCallback(OVMS_InferenceRequest*, OVMS_InferenceResponseCompleteCallback_t completeCallback, void* userStruct);
+
 // Get OVMS_ServableMetadata object
 //
 // Creates OVMS_ServableMetadata object describing inputs and outputs.
