@@ -59,7 +59,7 @@ def infer(img, input_tensor, grpc_stub, model_spec_name,
     return data
 
 
-def get_model_metadata(model_name, metadata_field: str = "signature_def",
+def get_model_metadata_request(model_name, metadata_field: str = "signature_def",
                        version=None):
     request = get_model_metadata_pb2.GetModelMetadataRequest()
     request.model_spec.name = model_name
@@ -67,6 +67,16 @@ def get_model_metadata(model_name, metadata_field: str = "signature_def",
         request.model_spec.version.value = version
     request.metadata_field.append(metadata_field)
     return request
+
+
+# def get_model_metadata_request(model_name, metadata_field: str = "signature_def",
+#                        version=None):
+#     request = get_model_metadata_pb2.GetModelMetadataRequest()
+#     request.model_spec.name = model_name
+#     if version is not None:
+#         request.model_spec.version.value = version
+#     request.metadata_field.append(metadata_field)
+#     return request
 
 
 def model_metadata_response(response):

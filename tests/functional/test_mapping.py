@@ -20,7 +20,7 @@ from constants import ERROR_SHAPE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_S
 from config import skip_nginx_test
 from conftest import devices_not_supported_for_test
 from model.models_information import AgeGender
-from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
+from utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, model_metadata_response
 import logging
 from utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_metadata_response_rest
 
@@ -62,7 +62,7 @@ class TestSingleModelMappingInference:
             logger.info("Output shape: {}".format(output[output_name].shape))
             assert output[output_name].shape == shape, ERROR_SHAPE
 
-    def test_get_model_metadata(self, start_server_with_mapping):
+    def test_get_model_metadata_request(self, start_server_with_mapping):
 
         _, ports = start_server_with_mapping
 
@@ -72,8 +72,8 @@ class TestSingleModelMappingInference:
         expected_output_metadata = {}
         for output_name, shape in AgeGender.output_shape.items():
             expected_output_metadata[output_name] = {'dtype': 1, 'shape': list(shape)}
-        request = get_model_metadata(model_name=AgeGender.name)
-        response = stub.GetModelMetadata(request, 20)
+        request = get_model_metadata_request(model_name=AgeGender.name)
+        response = get_model_metadata(stub, request)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         logger.info("Input metadata: {}".format(input_metadata))

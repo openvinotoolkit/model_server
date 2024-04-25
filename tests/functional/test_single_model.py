@@ -22,7 +22,7 @@ from constants import MODEL_SERVICE, ERROR_SHAPE, NOT_TO_BE_REPORTED_IF_SKIPPED,
 from config import skip_nginx_test
 from conftest import devices_not_supported_for_test
 from model.models_information import Resnet
-from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
+from utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, model_metadata_response, \
     get_model_status
 import logging
 from utils.models_utils import ModelVersionState, ErrorCode, \
@@ -68,7 +68,7 @@ class TestSingleModelInference:
         logger.info("Output shape: {}".format(output[Resnet.output_name].shape))
         assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
 
-    def test_get_model_metadata(self, start_server_single_model):
+    def test_get_model_metadata_request(self, start_server_single_model):
 
         _, ports = start_server_single_model
 
@@ -76,8 +76,8 @@ class TestSingleModelInference:
 
         expected_input_metadata = {Resnet.input_name: {'dtype': 1, 'shape': list(Resnet.input_shape)}}
         expected_output_metadata = {Resnet.output_name: {'dtype': 1, 'shape': list(Resnet.output_shape)}}
-        request = get_model_metadata(model_name=Resnet.name)
-        response = stub.GetModelMetadata(request, 20)
+        request = get_model_metadata_request(model_name=Resnet.name)
+        response = get_model_metadata(stub, request)
         input_metadata, output_metadata = model_metadata_response(response=response)
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))

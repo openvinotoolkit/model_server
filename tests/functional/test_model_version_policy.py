@@ -24,7 +24,7 @@ from constants import MODEL_SERVICE, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA, N
 from config import target_device, skip_nginx_test
 from conftest import devices_not_supported_for_test
 from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
-from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
+from utils.grpc import create_channel, get_model_metadata_request, get_model_metadata, model_metadata_response, \
     get_model_status
 import logging
 from utils.models_utils import ModelVersionState, ErrorCode, \
@@ -42,7 +42,7 @@ class TestModelVerPolicy:
         ('specific', [False, True, False]),
         ('latest', [True, False, False]),
     ])
-    def test_get_model_metadata(self, model_version_policy_models,
+    def test_get_model_metadata_request(self, model_version_policy_models,
                                 start_server_model_ver_policy,
                                 model_name, throw_error):
 
@@ -69,10 +69,10 @@ class TestModelVerPolicy:
             logger.info("Getting info about model version: {}".format(versions[x]))
             expected_input_metadata = expected_inputs_metadata[x]
             expected_output_metadata = expected_outputs_metadata[x]
-            request = get_model_metadata(model_name=model_name,
+            request = get_model_metadata_request(model_name=model_name,
                                          version=versions[x])
             if not throw_error[x]:
-                response = stub.GetModelMetadata(request, 20)
+                response = get_model_metadata(stub, request)
                 input_metadata, output_metadata = model_metadata_response(
                     response=response)
 
@@ -84,7 +84,7 @@ class TestModelVerPolicy:
                 assert expected_output_metadata == output_metadata
             else:
                 with pytest.raises(Exception) as e:
-                    stub.GetModelMetadata(request, 20)
+                    get_model_metadata(stub, request)
                 assert "Model with requested version is not found" in str(e.value)
 
     @pytest.mark.parametrize("model_name, throw_error", [

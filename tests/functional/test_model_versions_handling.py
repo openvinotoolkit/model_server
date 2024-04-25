@@ -22,7 +22,7 @@ from constants import MODEL_SERVICE, TARGET_DEVICE_GPU, TARGET_DEVICE_HDDL, TARG
     NOT_TO_BE_REPORTED_IF_SKIPPED
 from conftest import devices_not_supported_for_test
 from model.models_information import PVBFaceDetectionV2, PVBFaceDetection
-from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
+from utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, model_metadata_response, \
     get_model_status
 import logging
 from utils.models_utils import ModelVersionState, ErrorCode, \
@@ -57,7 +57,7 @@ class TestModelVersionHandling:
             '{} with version 1 has invalid output'.format(self.model_name)
 
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
-    def test_get_model_metadata(self, start_server_multi_model, version):
+    def test_get_model_metadata_request(self, start_server_multi_model, version):
 
         _, ports = start_server_multi_model
 
@@ -70,9 +70,9 @@ class TestModelVersionHandling:
         expected_input_metadata = {model_info.input_name: {'dtype': 1, 'shape': list(model_info.input_shape)}}
         expected_output_metadata = {model_info.output_name: {'dtype': 1, 'shape': list(model_info.output_shape)}}
 
-        request = get_model_metadata(model_name=self.model_name,
+        request = get_model_metadata_request(model_name=self.model_name,
                                      version=version)
-        response = stub.GetModelMetadata(request, 20)
+        response = get_model_metadata(stub, request)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         logger.info("Input metadata: {}".format(input_metadata))

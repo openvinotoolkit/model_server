@@ -22,7 +22,7 @@ from constants import MODEL_SERVICE, ERROR_SHAPE, NOT_TO_BE_REPORTED_IF_SKIPPED,
 from config import skip_nginx_test
 from conftest import devices_not_supported_for_test
 from model.models_information import Resnet, ResnetGS
-from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response, \
+from utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, model_metadata_response, \
     get_model_status
 import logging
 from utils.models_utils import ModelVersionState, ErrorCode, ERROR_MESSAGE
@@ -68,7 +68,7 @@ class TestSingleModelInferenceGc:
         assert output[out_name].shape == ResnetGS.output_shape, ERROR_SHAPE
 
     @pytest.mark.skip(reason=NOT_TO_BE_REPORTED_IF_SKIPPED) 
-    def test_get_model_metadata(self, start_server_single_model_from_gc):
+    def test_get_model_metadata_request(self, start_server_single_model_from_gc):
 
         _, ports = start_server_single_model_from_gc
         stub = create_channel(port=ports["grpc_port"])
@@ -76,8 +76,8 @@ class TestSingleModelInferenceGc:
         out_name = '1463'
         expected_input_metadata = {'0': {'dtype': 1, 'shape': list(ResnetGS.input_shape)}}
         expected_output_metadata = {out_name: {'dtype': 1, 'shape': list(ResnetGS.output_shape)}}
-        request = get_model_metadata(model_name=Resnet.name)
-        response = stub.GetModelMetadata(request, 20)
+        request = get_model_metadata_request(model_name=Resnet.name)
+        response = get_model_metadata(stub, request)
         input_metadata, output_metadata = model_metadata_response(
             response=response)
         logger.info("Input metadata: {}".format(input_metadata))
