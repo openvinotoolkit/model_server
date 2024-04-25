@@ -3325,6 +3325,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "CalculatorRunnerSourceCalculator",
         "PyTensorOvTensorConverterCalculator",
         "PythonExecutorCalculator",
+        "LLMCalculator",
 #endif
         "AddHeaderCalculator",
         "AddNumbersMultiInputsOutputsTestCalculator",

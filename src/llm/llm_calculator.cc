@@ -31,7 +31,7 @@ namespace mediapipe {
 class LLMCalculator : public CalculatorBase {
     ov::Core core;
     ov::InferRequest tokenizer, detokenizer, llm;
-    std::shared<ContinuousBatchingPipeline> cbPipe = nullptr;
+    std::shared_ptr<ContinuousBatchingPipeline> cbPipe = nullptr;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
