@@ -54,7 +54,7 @@ registry.connect.redhat.com/intel/openvino-model-server:py --config_path /config
 ```
 > **NOTE** The model loading time for the sequential attempts can be improved by mounting the Hugging Faces cache in the docker command:
 `-v ${HOME}/.cache:/hf-cache -e HF_HOME=/hf-cache/huggingface`.
-> **NOTE** For model llama-2-chat-7b, which require autorization in Hugging Faces hub, it might be needed to pass also HF_TOKEN environment variable.
+> **NOTE** For model llama-2-chat-7b, which require authorization in Hugging Faces hub, it might be needed to pass also HF_TOKEN environment variable.
 `-e HF_TOKEN=<token>`.
 
 

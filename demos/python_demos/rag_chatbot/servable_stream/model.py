@@ -202,7 +202,7 @@ def download_documents(file, target_folder):
             open(os.path.join(target_folder, filename), 'wb').write(r.content)
             print("saved", filename)
         else:
-            print("failed to download", url, "status code", r.status_code)
+            print(f"Failed to download: {url}, status code: {r.status_code}", flush=True)
 
 def clean_target_folder(target_folder):
     for file_path in os.listdir(target_folder):
