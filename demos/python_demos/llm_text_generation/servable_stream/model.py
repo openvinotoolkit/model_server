@@ -122,17 +122,13 @@ def convert_history_to_text(history):
 
 
 def deserialize_prompts(batch_size, input_tensor):
-    if batch_size == 1:
-        return [bytes(input_tensor).decode()]
     np_arr = deserialize_bytes_tensor(bytes(input_tensor))
     return [arr.decode() for arr in np_arr]
 
 
 def serialize_completions(batch_size, result):
-    if batch_size == 1:
-        return [Tensor("completion", result.encode())]
     return [Tensor("completion", serialize_byte_tensor(
-        np.array(result, dtype=np.object_)).item())]
+        np.array(result, dtype=np.object_)).item(), shape=[batch_size], datatype="BYTES")]
 
 
 class OvmsPythonModel:
