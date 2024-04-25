@@ -100,7 +100,7 @@ class OvmsPythonModel:
 
 `initialize` is called when model server loads graph definition. It allows to initialize and maintain state between subsequent `execute` calls and even graph instances.
 
-For gRPC unary, graphs are recreated per request.
+For unary endpoint, graphs are recreated per request.
 
 For gRPC streaming, there can be multiple graph instances existing at the same time.
 
@@ -199,7 +199,7 @@ Signaling that something went wrong should be done by throwing an exception.
 The exception is caught by the `PythonExecutorCalculator` which logs it and returns non-OK status.
 Model Server then reads that status and sets graph in an error state. Then it closes all graph's input streams and waits until in-progress actions are finished. Once it's done the graph gets removed.
 
-This behavior has different effect on the client depending on the kind of gRPC endpoint used - unary or streaming:
+This behavior has different effect on the client depending on the kind of endpoint used - unary or streaming:
 
 - **Unary**
 
@@ -314,7 +314,7 @@ There are two places where `pyovms.Tensor` objects are created and accessed:
 - in `execute` method of `OvmsPythonModel` class
 - in model server core during serialization and deserialization if Python node inputs or outputs as also graph inputs or outputs
 
-Model Server receives requests and sends responses on gRPC interface via KServe API which defines [expected data types for tensors](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#tensor-data-types).
+Model Server receives requests and sends responses on interface via KServe API which defines [expected data types for tensors](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#tensor-data-types).
 On the other hand Python [Buffer Protocol](https://docs.python.org/3/c-api/buffer.html#buffer-protocol) requires `format` to be specified as [struct format characters](https://docs.python.org/3/library/struct.html#format-characters).
 
 In order to let users work with KServe types without enforcing the usage of struct format characters on the client side, model server attempts to do the mapping as follows when creating `Tensor` objects from the request:
@@ -340,6 +340,15 @@ The same mapping is applied the other way around when creating `Tensor` from ano
 `Tensor` object always holds both values in `Tensor.datatype` and `Tensor.data.format` attributes so they can be used in deserialization and serialization, but also in another node in the graph.
 
 In some cases, users may work with more complex types that are not listed above and model server also allows that.
+
+#### BYTES datatype
+If `datatype` "BYTES" is specified and data is located in bytes_contents field of input(for gRPC) or in JSON body(for REST) OVMS converts it to `pyovms.Tensor` buffer according to the format where every input is preceeded by four bytes of its size.
+
+For example this gRPC request:
+ bytes_content: [<240 byte element>, <1024 byte element>, <567 byte element>]
+ 
+would be converted to this pyovms.Tensor.data contents:
+| 240 |   < first element>  | 1024 |   <second element> | 567 | <third element> |
 
 #### Custom types
 
@@ -590,23 +599,24 @@ Where `name` defines the name of the graph and `graph_path` contains the path to
 
 ### Inference API and available endpoints
 
-Since Python execution is supported via MediaPipe serving flow, it inherits it's enhancements and limitations. First thing to note is that MediaPipe graphs are available **only via KServe API**.
+Since Python execution is supported via MediaPipe serving flow, it inherits it's enhancements and limitations. First thing to note is that MediaPipe graphs are available [**only via KServe API**](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md)
 
 From the client perspective model server serves a graph and user interacts with a graph. Single node in the graph cannot be accessed from the outside.
 
 For a graph client can:
 
-- request status (gRPC and REST)
-- request metadata (gRPC and REST)
-- request inference (gRPC)
+- request status
+- request metadata
+- request inference
 
 Learn more about how [MediaPipe flow works in OpenVINO Model Server](../mediapipe.md)
 
-For inference, if the format of graph input stream is [`OvmsPyTensor`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#graph-input-and-output-streams), then the data in the KServe request must be encapsulated in either `ModelInferRequest`'s [InferTensorContents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L155) or [raw_input_contents](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field (even if data in the request has been placed in `InferTensorContents`).
+For inference, data can be send both via [gRPC API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#grpc) and [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#httprest)(only for unary calls). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field (even if data in the request has been placed in `InferTensorContents`).
 
 The data passed in the request is accessible in `execute` method of the node connected to graph input via `data` attribute of [`pyovms.Tensor`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#python-tensor) object.
+For data of type BYTES send in bytes_contents field of input(for gRPC) or in JSON body(for REST) OVMS converts it to `pyovms.Tensor` buffer according to the format where every input is preceeded by four bytes of its size.
 
-Inputs and outputs also define `shape` and `datatype` parameters. Those values are also accessible in `pyovms.Tensor`. However for outputs, you don't provide those values directly to the response. See [datatype considerations](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#datatype-considerations).
+Inputs and outputs also define `shape` and `datatype` parameters. Those values are also accessible in `pyovms.Tensor`. For outputs, `datatype` and `shape` are by default read from the underlying buffer, but it is possible to overwrite them (see [`pyovms.Tensor constructor`](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#creating-output-tensors). If you specify `datatype` as `BYTES` in your requests, make sure to review [datatype considerations](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#datatype-considerations), since this type is treated differently than the others.
 
 Let's see it on an example:
 
@@ -701,7 +711,7 @@ timestamp = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
 
 Python nodes can be configured to run in two execution modes - regular and generative.
 
-In regular execution mode the node produces one set of outputs per one set of inputs. It works via both gRPC unary and streaming endpoints and is a common mode for use cases like computer vision.
+In regular execution mode the node produces one set of outputs per one set of inputs. It works via both gRPC/REST unary and gRPC streaming endpoints and is a common mode for use cases like computer vision.
 
 In generative execution mode the node produces multiple sets of outputs over time per single set of inputs. It works only via gRPC streaming endpoints and is useful for use cases where total processing time is big and you want to return some intermediate results before the execution is completed. That mode is well suited to Large Language Models to serve them in a more interactive manner.
 
