@@ -19,45 +19,19 @@
 #include "mediapipe/framework/calculator_framework.h"
 #pragma GCC diagnostic pop
 
-#include <continuous_batching_pipeline.hpp>
-#include <generation_config.hpp>
 #include <memory>
+
+#include <continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
-#include <scheduler_config.hpp>
-#include <tokenizer.hpp>
-
-#include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
-#include "src/kfserving_api/grpc_predict_v2.pb.h"
-
-using KFSRequest = inference::ModelInferRequest;
-using KFSResponse = inference::ModelInferResponse;
 
 constexpr size_t BATCH_SIZE = 1;
-
-std::pair<ov::Tensor, ov::Tensor> tokenize(ov::InferRequest& tokenizer, std::string prompt) {
-    tokenizer.set_input_tensor(ov::Tensor{ov::element::string, {BATCH_SIZE}, &prompt});
-    tokenizer.infer();
-    return {tokenizer.get_tensor("input_ids"), tokenizer.get_tensor("attention_mask")};
-}
-
-std::string detokenize(ov::InferRequest& detokenizer, std::vector<int64_t> tokens) {
-    constexpr size_t BATCH_SIZE = 1;
-    detokenizer.set_input_tensor(ov::Tensor{ov::element::i64, {BATCH_SIZE, tokens.size()}, tokens.data()});
-    detokenizer.infer();
-    return detokenizer.get_output_tensor().data<std::string>()[0];
-}
-
-std::string detokenize(ov::InferRequest& detokenizer, ov::Tensor tokens) {
-    detokenizer.set_input_tensor(tokens);
-    detokenizer.infer();
-    return detokenizer.get_output_tensor().data<std::string>()[0];
-}
 
 namespace mediapipe {
 
 class LLMCalculator : public CalculatorBase {
     ov::Core core;
     ov::InferRequest tokenizer, detokenizer, llm;
+    std::shared<ContinuousBatchingPipeline> cbPipe = nullptr;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -73,9 +47,6 @@ public:
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Open start";
         return absl::OkStatus();
     }
-
-#define RETURN_EXECUTION_FAILED_STATUS() \
-    return absl::Status(absl::StatusCode::kInternal, "Error occurred during graph execution")
 
     absl::Status Process(CalculatorContext* cc) final {
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process start";
