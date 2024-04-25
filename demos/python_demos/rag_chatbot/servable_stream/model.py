@@ -188,7 +188,6 @@ def serialize_completions(batch_size, result):
 def download_documents(file, target_folder):
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
-    print("file", file, "target_folder", target_folder)
     file = open(file, "r")
     for url in file.readlines():
         url = url.strip()
@@ -196,17 +195,15 @@ def download_documents(file, target_folder):
             filename = url.rsplit('/', 1)[1]
         else:
             filename = url
-        print("downloading url", url, "filename", filename, "to", os.path.join(target_folder, filename),"#")
-        r = requests.get(url, allow_redirects=True, verify=False, proxies={"https": "http://proxy-igk.intel.com:911"})
+        r = requests.get(url, allow_redirects=True, verify=False)
         if r.status_code == 200:
             open(os.path.join(target_folder, filename), 'wb').write(r.content)
-            print("saved", filename)
+            print("Saved", filename, flush=True)
         else:
             print(f"Failed to download: {url}, status code: {r.status_code}", flush=True)
 
 def clean_target_folder(target_folder):
     for file_path in os.listdir(target_folder):
-        print("removing", file_path)
         os.remove(os.path.join(target_folder,file_path))
 
 class OvmsPythonModel:
@@ -215,7 +212,6 @@ class OvmsPythonModel:
         device = os.environ.get("DEVICE", "CPU")   
         llm_model_dir = os.environ.get("LLM_MODEL_DIR", SELECTED_MODEL)
         llm_model_dir = os.path.join(kwargs["base_path"], llm_model_dir)  # use absolute path
-        print("llm model dir", llm_model_dir, flush=True)
         model_name = llm_model_configuration["model_id"]
         if os.path.isdir(llm_model_dir):
             llm_model_2_load = llm_model_dir
@@ -284,7 +280,6 @@ class OvmsPythonModel:
 
         def refreshDB_if_needed(file, target_folder):
             while self.active_refresh:
-                print("Checking file changes", file, target_folder)
                 if os.path.exists(file):
                     if (self.last_refreshDB < os.stat(file).st_mtime):
                         print("Refreshing DB", flush=True)
