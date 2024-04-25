@@ -34,6 +34,8 @@ class InferenceRequest {
     std::unordered_map<std::string, InferenceParameter> parameters;
     std::unordered_map<std::string, InferenceTensor> inputs;
     std::unordered_map<std::string, InferenceTensor> outputs;
+    OVMS_InferenceResponseCompleteCallback_t responseCompleteCallback;
+    void* responseCompleteCallbackData = nullptr;
 
 public:
     // this constructor can be removed with prediction tests overhaul
@@ -51,9 +53,18 @@ public:
     Status setOutputBuffer(const char* name, const void* addr, size_t byteSize, OVMS_BufferType, std::optional<uint32_t> deviceId);
     // TODO TBD add equivalent for outputs?
     Status removeInputBuffer(const char* name);
+
     Status addParameter(const char* parameterName, OVMS_DataType datatype, const void* data);
     Status removeParameter(const char* parameterName);
     const InferenceParameter* getParameter(const char* name) const;
+
+    void setCompleteCallback(OVMS_InferenceResponseCompleteCallback_t callback, void* callbackData);
+    OVMS_InferenceResponseCompleteCallback_t getResponseCompleteCallback() {
+        return this->responseCompleteCallback;
+    }
+    void* getResponseCompleteCallbackData() {
+        return this->responseCompleteCallbackData;
+    }
 
     const std::string& getServableName() const;
     model_version_t getServableVersion() const;

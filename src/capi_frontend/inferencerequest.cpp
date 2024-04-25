@@ -139,4 +139,10 @@ std::map<std::string, shape_t> InferenceRequest::getRequestShapes() const {
     }
     return result;
 }
+
+void InferenceRequest::setCompleteCallback(OVMS_InferenceResponseCompleteCallback_t callback, void* callbackData) {
+    this->responseCompleteCallback = callback;
+    this->responseCompleteCallbackData = callbackData;
+}
+
 }  // namespace ovms
