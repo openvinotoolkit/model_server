@@ -21,8 +21,14 @@
 
 #include <memory>
 
+#include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
+#include "src/kfserving_api/grpc_predict_v2.pb.h"
+
 #include <continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
+
+using KFSRequest = inference::ModelInferRequest;
+using KFSResponse = inference::ModelInferResponse;
 
 constexpr size_t BATCH_SIZE = 1;
 
@@ -35,6 +41,14 @@ class LLMCalculator : public CalculatorBase {
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
+        LOG(INFO) << "LLMCalculator [Node: " << cc->GetNodeName() << "] GetContract start";
+        RET_CHECK(!cc->Inputs().GetTags().empty());
+        RET_CHECK(!cc->Outputs().GetTags().empty());
+
+        cc->Inputs().Tag("REQUEST").Set<const KFSRequest*>();
+        cc->Outputs().Tag("RESPONSE").Set<KFSResponse>();
+
+        LOG(INFO) << "LLMCalculator [Node: " << cc->GetNodeName() << "] GetContract end";
         return absl::OkStatus();
     }
 
