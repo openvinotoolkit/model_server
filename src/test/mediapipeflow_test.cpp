@@ -3323,9 +3323,9 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         // Expected when building with python
         "CalculatorRunnerSinkCalculator",
         "CalculatorRunnerSourceCalculator",
+        "LLMCalculator",
         "PyTensorOvTensorConverterCalculator",
         "PythonExecutorCalculator",
-        "LLMCalculator",
 #endif
         "AddHeaderCalculator",
         "AddNumbersMultiInputsOutputsTestCalculator",
