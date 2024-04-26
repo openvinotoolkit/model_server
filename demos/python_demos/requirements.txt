@@ -17,3 +17,7 @@ langchain-community==0.0.28
 scikit-learn==1.4.1.post1
 chromadb==0.4.24
 pysqlite3-binary==0.5.2.post3  # Workaround: https://docs.trychroma.com/troubleshooting#sqlite
+unstructured==0.13.2
+markdown==3.6
+nncf==2.9.0
+
