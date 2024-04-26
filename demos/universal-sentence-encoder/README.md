@@ -15,7 +15,6 @@ tree universal-sentence-encoder-multilingual/
 
 universal-sentence-encoder-multilingual/
 └── 1
-    ├── assets
     ├── saved_model.pb
     └── variables
         ├── variables.data-00000-of-00001
@@ -89,7 +88,6 @@ Start TFS container:
 docker run -it -p 8500:8500 -p 9500:9500 -v $(pwd)/universal-sentence-encoder-multilingual:/models/usem -e MODEL_NAME=usem tensorflow/serving --port=9500 --rest_api_port=8500
 ```
 
-
 Run the client
 ```bash
 python model_server/demos/universal-sentence-encoder/send_strings.py --grpc_port 9500 --input_name inputs --output_name outputs --string "I enjoy taking long walks along the beach with my dog."
@@ -104,4 +102,3 @@ Output subset [-0.00552387  0.00599531 -0.0148055   0.01098951 -0.09355522 -0.08
 ```
 
 > NOTE: Do not use this model with `--cache_dir`, the model does not support caching.
-
