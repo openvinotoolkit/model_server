@@ -69,7 +69,7 @@ To check available options use `-h`, `--help` switches:
   docker run benchmark_client --help
 
 Client 2.7
-NO_PROXY= no_proxy= python3 /ovms_benchmark_client/main.py --help
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py --help
 usage: main.py [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
                [-p GRPC_PORT] [-r REST_PORT] [-l] [-b [BS ...]]
                [-s [SHAPE ...]] [-d [DATA ...]] [-j] [-m MODEL_NAME]
@@ -96,7 +96,7 @@ The version can be checked by using `--internal_version` switch as follows:
   docker run benchmark_client --internal_version
 
   Client 2.7
-  NO_PROXY= no_proxy= python3 /ovms_benchmark_client/main.py --internal_version
+  NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py --internal_version
   2.7
 ```
 
