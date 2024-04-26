@@ -29,14 +29,30 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 })
 
 cc_library(
+    name = "llm_engine",
+    srcs = [],
+    deps = select({
+            "//:ubuntu_build": [
+                "@llm_engine//:llm_engine_ubuntu",
+            ],
+            "//:redhat_build": [
+                "@llm_engine//:llm_engine_redhat",
+            ],
+        }),
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
     name = "llmcalculator",
     srcs = ["llm_calculator.cc",],
     deps = [
         "@linux_openvino//:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src/kfserving_api:kfserving_api_cpp",
-        "@llm_engine//:llm_engine"
-
+        ":llm_engine"
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,

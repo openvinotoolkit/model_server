@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 def llm_engine():
     llm_engine_repository(name="_llm_engine")
@@ -39,7 +40,6 @@ def _impl(repository_ctx):
     build_file_content = """
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-
 visibility = ["//visibility:public"]
 
 config_setting(
@@ -59,7 +59,7 @@ filegroup(
 )
 
 cmake(
-    name = "llm_engine_cmake",
+    name = "llm_engine_cmake_ubuntu",
     build_args = [
         "--verbose",
         "--",  # <- Pass remaining options to the native tool.
@@ -82,6 +82,7 @@ cmake(
     }},
     lib_source = ":all_srcs",
     out_lib_dir = "lib",
+   
     # linking order
     out_static_libs = [
             "libopenvino_continuous_batching.a",
@@ -92,9 +93,52 @@ cmake(
 )
 
 cc_library(
-    name = "llm_engine",
+    name = "llm_engine_ubuntu",
     deps = [
-        ":llm_engine_cmake",
+        ":llm_engine_cmake_ubuntu",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = False,
+)
+
+cmake(
+    name = "llm_engine_cmake_redhat",
+    build_args = [
+        "--verbose",
+        "--",  # <- Pass remaining options to the native tool.
+        # https://github.com/bazelbuild/rules_foreign_cc/issues/329
+        # there is no elegant paralell compilation support
+        "VERBOSE=1",
+        "-j 4",
+    ],
+    cache_entries = {{
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_SHARED_LIBS": "OFF",
+        "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
+        "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
+        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib"
+    }},
+    env = {{
+        "OpenVINO_DIR": "{OpenVINO_DIR}",
+        "HTTP_PROXY": "{http_proxy}",
+        "HTTPS_PROXY": "{https_proxy}",
+    }},
+    lib_source = ":all_srcs",
+    out_lib_dir = "lib64",
+   
+    # linking order
+    out_static_libs = [
+            "libopenvino_continuous_batching.a",
+        ],
+    tags = ["requires-network"],
+    alwayslink = False,
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "llm_engine_redhat",
+    deps = [
+        ":llm_engine_cmake_redhat",
     ],
     visibility = ["//visibility:public"],
     alwayslink = False,
