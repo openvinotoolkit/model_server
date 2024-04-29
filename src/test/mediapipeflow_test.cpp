@@ -3323,10 +3323,10 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         // Expected when building with python
         "CalculatorRunnerSinkCalculator",
         "CalculatorRunnerSourceCalculator",
-        "LLMCalculator",
-        "PyTensorOvTensorConverterCalculator",
-        "PythonExecutorCalculator",
+        "PyTensorOvTensorConverterCalculator", // integral OVMS calculator
+        "PythonExecutorCalculator", // integral OVMS calculator
 #endif
+        "LLMCalculator",    // integral OVMS calculator
         "AddHeaderCalculator",
         "AddNumbersMultiInputsOutputsTestCalculator",
         "AddOne3CycleIterationsTestCalculator",
