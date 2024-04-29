@@ -29,10 +29,6 @@
 #include "mediapipe/framework/packet.h"
 #pragma GCC diagnostic pop
 
-#if (PYTHON_DISABLE == 0)
-#include "../python/python_backend.hpp"
-#endif
-
 namespace ovms {
 
 class PythonBackend;
