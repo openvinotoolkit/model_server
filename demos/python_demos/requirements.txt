@@ -20,4 +20,5 @@ pysqlite3-binary==0.5.2.post3  # Workaround: https://docs.trychroma.com/troubles
 unstructured==0.13.2
 markdown==3.6
 nncf==2.9.0
+nltk==3.8.1
 

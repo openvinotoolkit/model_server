@@ -296,25 +296,28 @@ class OvmsPythonModel:
 
     def scan_documents(self, target_folder):
         documents = []
-        for file_path in os.listdir(target_folder):
-            abs_path = os.path.join(target_folder, file_path)
-            print(f"Reading document {abs_path}...", flush=True)
-            documents.extend(load_single_document(abs_path))
-        print("Documents loaded", flush=True)
-        spliter_name = "RecursiveCharacter"  # TODO: Param?
-        chunk_size=1000  # TODO: Param?
-        chunk_overlap=200  # TODO: Param?
-        text_splitter = TEXT_SPLITERS[spliter_name](chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-        print("Splitting documents...", flush=True)
-        self.texts = text_splitter.split_documents(documents)
-        print("Documents splitted", self.texts, flush=True)
-        if self.db is not None:
-            self.db.delete_collection()
-        self.db = Chroma.from_documents(self.texts, self.embedding)
-        print("Document database built", flush=True)
-        vector_search_top_k = 4  # TODO: Param?
-        self.retriever = self.db.as_retriever(search_kwargs={"k": vector_search_top_k})
-        print("Document database loaded", flush=True)
+        try:
+            for file_path in os.listdir(target_folder):
+                abs_path = os.path.join(target_folder, file_path)
+                print(f"Reading document {abs_path}...", flush=True)
+                documents.extend(load_single_document(abs_path))
+            print("Documents loaded", flush=True)
+            spliter_name = "RecursiveCharacter"  # TODO: Param?
+            chunk_size=1000  # TODO: Param?
+            chunk_overlap=200  # TODO: Param?
+            text_splitter = TEXT_SPLITERS[spliter_name](chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+            print("Splitting documents...", flush=True)
+            self.texts = text_splitter.split_documents(documents)
+            print("Documents splitted", self.texts, flush=True)
+            if self.db is not None:
+                self.db.delete_collection()
+            self.db = Chroma.from_documents(self.texts, self.embedding)
+            print("Document database built", flush=True)
+            vector_search_top_k = 4  # TODO: Param?
+            self.retriever = self.db.as_retriever(search_kwargs={"k": vector_search_top_k})
+            print("Document database loaded", flush=True)
+        except Exception as e:
+            print(f"Error occurred while scanning documents: {str(e)}", flush=True)
 
     def execute(self, inputs: list):
         print("Executing", flush=True)
@@ -330,7 +333,7 @@ class OvmsPythonModel:
         generate_kwargs = dict(
             model=ov_model_exec,
             tokenizer=self.tok,
-            max_new_tokens=256,
+            max_new_tokens=1000,
             temperature=0.1,
             do_sample=True,
             top_p=1.0,
