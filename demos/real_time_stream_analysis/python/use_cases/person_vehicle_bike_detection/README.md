@@ -10,6 +10,21 @@ wget -P workspace/person-vehicle-bike-detection-2002/1 https://storage.openvinot
 wget -P workspace/person-vehicle-bike-detection-2002/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-2002/FP32/person-vehicle-bike-detection-2002.xml
 ```
 
+## Install the Python packages
+Create and activate a Python virtual environment 
+```commandline
+sudo apt install python3-pip
+# for Python 3.12 only
+sudo apt install python3.12-venv && \
+mkdir py-venv && \
+python3 -m venv py-venv && \
+. py-venv/bin/activate
+```
+In the Python virtual environment, Install [requirements.txt](..%2F..%2Frequirements.txt)
+```commandline
+(py-venv)$ pip3 install -r model_server/demos/real_time_stream_analysis/python/requirements.txt
+```
+
 ## Run OpenVINO Model Server
 
 Once you have the model, launch OpenVINO Model Sever and mount model catalog to the container:
