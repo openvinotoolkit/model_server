@@ -1,5 +1,5 @@
 #*****************************************************************************
-# Copyright 2024 Intel Corporation
+# Copyright 2023 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,172 +8,45 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
+# printtributed under the License is printtributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #*****************************************************************************
 
-########### Workaround: https://docs.trychroma.com/troubleshooting#sqlite
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-############
 import os
+import threading
+import numpy as np
+import torch
+
+from typing import Optional, List, Tuple
+from optimum.intel import OVModelForCausalLM
+from transformers import AutoTokenizer, AutoConfig, TextIteratorStreamer, StoppingCriteria, StoppingCriteriaList, set_seed
+from tritonclient.utils import deserialize_bytes_tensor, serialize_byte_tensor
 
 from pyovms import Tensor
 
-from threading import Thread
+from config import SUPPORTED_LLM_MODELS, BatchTextIteratorStreamer
 
-from tritonclient.utils import deserialize_bytes_tensor, serialize_byte_tensor
-from langchain_community.llms import HuggingFacePipeline
-from optimum.intel.openvino import OVModelForCausalLM
-import torch
-from langchain.chains import RetrievalQA
-from transformers import (
-    AutoModelForCausalLM,
-    AutoModel,
-    AutoTokenizer,
-    AutoConfig,
-    TextIteratorStreamer,
-    pipeline,
-    StoppingCriteria,
-    StoppingCriteriaList,
-    set_seed
-)
+from utils import config_reader as reader
+from utils import prompt_handler as ph
+from vector_stores import db
 
-from config import SUPPORTED_EMBEDDING_MODELS, SUPPORTED_LLM_MODELS
-from ov_embedding_model import OVEmbeddings
+config = reader.read_config('config.yaml')
 
+SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'llama-2-chat-7b')
+LANGUAGE = os.environ.get("LANGUAGE", 'English')
+SEED = os.environ.get("SEED")
 
-SELECTED_MODEL = os.environ.get('SELECTED_MODEL', 'tiny-llama-1b-chat')
-LANGUAGE = os.environ.get('LANGUAGE', 'English')
-SEED = os.environ.get('SEED')
-llm_model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
+print("SELECTED MODEL", SELECTED_MODEL, flush=True)
+model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 
-EMBEDDING_MODEL = 'all-mpnet-base-v2'
-embedding_model_configuration = SUPPORTED_EMBEDDING_MODELS[EMBEDDING_MODEL]
-
-llm_model_dir = "/llm_model"
-model_name = llm_model_configuration["model_id"]
-stop_tokens = llm_model_configuration.get("stop_tokens")
-class_key = SELECTED_MODEL.split("-")[0]
-tok = AutoTokenizer.from_pretrained(llm_model_dir, trust_remote_code=True)
-
-embedding_model_dir = "/embed_model"
-
-class StopOnTokens(StoppingCriteria):
-    def __init__(self, token_ids):
-        self.token_ids = token_ids
-
-    def __call__(
-        self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
-    ) -> bool:
-        for stop_id in self.token_ids:
-            if input_ids[0][-1] == stop_id:
-                return True
-        return False
-
-if stop_tokens is not None:
-    if isinstance(stop_tokens[0], str):
-        stop_tokens = tok.convert_tokens_to_ids(stop_tokens)
-    stop_tokens = [StopOnTokens(stop_tokens)]
-
-from ov_llm_model import model_classes
-model_class = (
-    OVModelForCausalLM
-    if not llm_model_configuration["remote"]
-    else model_classes[class_key]
-)
-
-ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
-
-
-# Document Splitter
-from typing import List
-from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter, MarkdownTextSplitter
-from langchain_community.document_loaders import (
-    CSVLoader,
-    EverNoteLoader,
-    PDFMinerLoader,
-    TextLoader,
-    UnstructuredEPubLoader,
-    UnstructuredHTMLLoader,
-    UnstructuredMarkdownLoader,
-    UnstructuredODTLoader,
-    UnstructuredPowerPointLoader,
-    UnstructuredWordDocumentLoader, )
-from langchain.prompts import PromptTemplate
-from langchain_community.vectorstores import Chroma
-from langchain.chains import RetrievalQA
-from langchain.docstore.document import Document
-
-class ChineseTextSplitter(CharacterTextSplitter):
-    def __init__(self, pdf: bool = False, **kwargs):
-        super().__init__(**kwargs)
-        self.pdf = pdf
-
-    def split_text(self, text: str) -> List[str]:
-        if self.pdf:
-            text = re.sub(r"\n{3,}", "\n", text)
-            text = text.replace("\n\n", "")
-        sent_sep_pattern = re.compile(
-            '([﹒﹔﹖﹗．。！？]["’”」』]{0,2}|(?=["‘“「『]{1,2}|$))')
-        sent_list = []
-        for ele in sent_sep_pattern.split(text):
-            if sent_sep_pattern.match(ele) and sent_list:
-                sent_list[-1] += ele
-            elif ele:
-                sent_list.append(ele)
-        return sent_list
-
-
-TEXT_SPLITERS = {
-    "Character": CharacterTextSplitter,
-    "RecursiveCharacter": RecursiveCharacterTextSplitter,
-    "Markdown": MarkdownTextSplitter,
-    "Chinese": ChineseTextSplitter,
-}
-
-
-LOADERS = {
-    ".csv": (CSVLoader, {}),
-    ".doc": (UnstructuredWordDocumentLoader, {}),
-    ".docx": (UnstructuredWordDocumentLoader, {}),
-    ".enex": (EverNoteLoader, {}),
-    ".epub": (UnstructuredEPubLoader, {}),
-    ".html": (UnstructuredHTMLLoader, {}),
-    ".md": (UnstructuredMarkdownLoader, {}),
-    ".odt": (UnstructuredODTLoader, {}),
-    ".pdf": (PDFMinerLoader, {}),
-    ".ppt": (UnstructuredPowerPointLoader, {}),
-    ".pptx": (UnstructuredPowerPointLoader, {}),
-    ".txt": (TextLoader, {"encoding": "utf8"}),
-}
-
-
-def load_single_document(file_path: str) -> List[Document]:
-    """
-    helper for loading a single document
-
-    Params:
-      file_path: document path
-    Returns:
-      documents loaded
-
-    """
-    ext = "." + file_path.rsplit(".", 1)[-1]
-    if ext in LOADERS:
-        loader_class, loader_args = LOADERS[ext]
-        loader = loader_class(file_path, **loader_args)
-        return loader.load()
-
-    raise ValueError(f"File does not exist '{ext}'")
-
+MODEL_PATH = config['model_path'] # relative to container
+OV_CONFIG = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1'}
 
 def default_partial_text_processor(partial_text: str, new_text: str):
     """
-    helper for updating partially generated answer, used by default
+    helper for updating partially generated answer, used by de
 
     Params:
       partial_text: text buffer for storing previosly generated text
@@ -185,10 +58,72 @@ def default_partial_text_processor(partial_text: str, new_text: str):
     partial_text += new_text
     return partial_text
 
-
-text_processor = llm_model_configuration.get(
+text_processor = model_configuration.get(
     "partial_text_processor", default_partial_text_processor
 )
+
+# Model specific configuration
+model_name = model_configuration["model_id"]
+history_template = model_configuration["history_template"]
+current_message_template = model_configuration["current_message_template"]
+start_message = model_configuration["start_message"]
+stop_tokens = model_configuration.get("stop_tokens")
+tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
+tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
+tokenizer.pad_token = tokenizer.eos_token  # For models with tokenizer with uninitialized pad token
+
+# HF class that is capable of stopping the generation
+# when given tokens appear in specific order
+class StopOnTokens(StoppingCriteria):
+    def __init__(self, token_ids):
+        self.token_ids = token_ids
+    def __call__(self, input_ids, scores, **kwargs) -> bool:
+        for stop_id in self.token_ids:
+            if input_ids[0][-1] == stop_id:
+                return True
+        return False
+
+
+if stop_tokens is not None:
+    if isinstance(stop_tokens[0], str):
+        stop_tokens = tokenizer.convert_tokens_to_ids(stop_tokens)
+
+    stop_tokens = [StopOnTokens(stop_tokens)]
+
+
+# For multi Q&A use cases
+# Taken from notebook:
+# https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/254-llm-chatbot/
+def convert_history_to_text(history):
+    """
+    function for conversion history stored as list pairs of user and assistant messages to string according to model expected conversation template
+    Params:
+      history: dialogue history
+    Returns:
+      history in text format
+    """
+    text = start_message + "".join(
+        [
+            "".join(
+                [history_template.format(num=round, user=item[0], assistant=item[1])]
+            )
+            for round, item in enumerate(history[:-1])
+        ]
+    )
+    text += "".join(
+        [
+            "".join(
+                [
+                    current_message_template.format(
+                        num=len(history) + 1,
+                        user=history[-1][0],
+                        assistant=history[-1][1],
+                    )
+                ]
+            )
+        ]
+    )
+    return text
 
 
 def deserialize_prompts(batch_size, input_tensor):
@@ -204,67 +139,83 @@ def serialize_completions(batch_size, result):
     return [Tensor("completion", serialize_byte_tensor(
         np.array(result, dtype=np.object_)).item())]
 
+# RAG variables
+host = config['vector_db']['host']
+port = int(config['vector_db']['port'])
+selected_db = config['vector_db']['choice_of_db']
+vs = db.VS(host, port, selected_db)
+qcnt = 0
 
+def get_top_doc(results, qcnt):
+    hit_score = {}
+    for r in results:
+        try:
+            video_name = r.metadata['video']
+            if video_name not in hit_score.keys(): hit_score[video_name] = 0
+            hit_score[video_name] += 1
+        except:
+            pass
+
+    x = dict(sorted(hit_score.items(), key=lambda item: -item[1]))
+    
+    if qcnt >= len(x):
+        return None
+    print (f'top docs = {x}', flush=True)
+    return {'video': list(x)[qcnt]}
+
+def get_description(vn):
+    content = None
+    des_path = os.path.join(config['description'], vn + '.txt')
+    with open(des_path, 'r') as file:
+        content = file.read()
+    return content
+
+def RAG(prompt):
+    
+    results = vs.MultiModalRetrieval(prompt, n_texts = 1, n_images = 3)
+    print (f'promt={prompt}\n')
+                
+    top_doc = get_top_doc(results, qcnt)
+    print ('TOP DOC = ', top_doc)
+    if top_doc == None:
+        return None, None
+    video_name = top_doc['video']
+    
+    return video_name, top_doc
+
+import random
+def setup_seeds(seed):    
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        print(f"Loading LLM model {SELECTED_MODEL}...", flush=True)
-        self.ov_model = model_class.from_pretrained(
-            llm_model_dir,
+        print("-------- Running initialize")
+        self.ov_model = OVModelForCausalLM.from_pretrained(
+            MODEL_PATH,
             device="AUTO",
-            ov_config=ov_config,
-            compile=True,
-            config=AutoConfig.from_pretrained(llm_model_dir, trust_remote_code=True),
-            trust_remote_code=True)
-        print("LLM model loaded", flush=True)
-        print(f"Loading embedding model {EMBEDDING_MODEL}...", flush=True)
-        self.embedding = OVEmbeddings.from_model_id(
-            embedding_model_dir,
-            do_norm=embedding_model_configuration["do_norm"],
-            ov_config={
-                "device_name": "CPU",
-                "config": {"PERFORMANCE_HINT": "THROUGHPUT"},
-            },
-            model_kwargs={
-                "model_max_length": 512,
-            },
-        )
-        print("Embedding model loaded", flush=True)
-        print("Building document database...", flush=True)
-
-        documents = []
-        for file_path in os.listdir("/documents"):
-            abs_path = f"/documents/{file_path}"
-            print(f"Reading document {abs_path}...", flush=True)
-            documents.extend(load_single_document(abs_path))
-
-        spliter_name = "RecursiveCharacter"  # TODO: Param?
-        chunk_size=1000  # TODO: Param?
-        chunk_overlap=200  # TODO: Param?
-        text_splitter = TEXT_SPLITERS[spliter_name](chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-        self.texts = text_splitter.split_documents(documents)
-        self.db = Chroma.from_documents(self.texts, self.embedding)
-        vector_search_top_k = 4  # TODO: Param?
-        self.retriever = self.db.as_retriever(search_kwargs={"k": vector_search_top_k})
-
-        print("Document database loaded", flush=True)
+            ov_config=OV_CONFIG,
+            config=AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True))
+        print("-------- Model loaded")
+        return True
 
     def execute(self, inputs: list):
-        print("Executing", flush=True)
-
+        if SEED is not None: set_seed(int(SEED))
+        print(f"-------- Running execute, shape: {inputs[0].shape}")
         batch_size = inputs[0].shape[0]
-        if batch_size != 1:
-            raise ValueError("Batch size must be 1")
         prompts = deserialize_prompts(batch_size, inputs[0])
+        messages = [convert_history_to_text([[prompt, ""]]) for prompt in prompts]
+        tokens = tokenizer(messages, return_tensors="pt", **tokenizer_kwargs, padding=True)
 
-        ov_model_exec = self.ov_model.clone()
-        streamer = TextIteratorStreamer(
-            tok, timeout=60.0, skip_prompt=True, skip_special_tokens=True)
+        if batch_size == 1:
+            streamer = TextIteratorStreamer(tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
+        else:
+            streamer = BatchTextIteratorStreamer(batch_size=batch_size, tokenizer=tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
+
         generate_kwargs = dict(
-            model=ov_model_exec,
-            tokenizer=tok,
-            max_new_tokens=256,
-            temperature=0.1,
+            max_new_tokens=1024,
+            temperature=1.0,
             do_sample=True,
             top_p=1.0,
             top_k=50,
@@ -273,29 +224,50 @@ class OvmsPythonModel:
         )
         if stop_tokens is not None:
             generate_kwargs["stopping_criteria"] = StoppingCriteriaList(stop_tokens)
-          
-        pipe = pipeline("text-generation", **generate_kwargs)
-        llm = HuggingFacePipeline(pipeline=pipe)
 
-        prompt = PromptTemplate.from_template(llm_model_configuration["rag_prompt_template"])
-        chain_type_kwargs = {"prompt": prompt}
-        rag_chain = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",
-            retriever=self.retriever,
-            chain_type_kwargs=chain_type_kwargs,
-        )
+        ov_model_exec = self.ov_model.clone()
+        
+        def generate():
+            result = ov_model_exec.generate(**tokens, **generate_kwargs)
 
+        # Retrieval part
         question = prompts[0]
-        def infer(q):
-            rag_chain.invoke(q)
-
-        if SEED is not None: set_seed(int(SEED))
-        t1 = Thread(target=infer, args=(question,))
+        video_name, top_doc = RAG(question)
+        scene_des = get_description(video_name)
+        yield serialize_completions(batch_size, 'Retrieval is complete, Preparing answer ...\n')
+        print (video_name)
+        print (scene_des)
+        formatted_prompt = ph.get_formatted_prompt(scene=scene_des, prompt=question)
+        
+        tokens = tokenizer(formatted_prompt, return_tensors="pt", padding=True)
+        
+        t1 = threading.Thread(target=generate)
         t1.start()
 
-        for new_text in streamer:
-            print(new_text, flush=True, end='')
-            yield [Tensor("completion", new_text.encode())]
-
+        for partial_result in streamer:
+            yield serialize_completions(batch_size, partial_result)
+        t1.join()
+        
+        yield serialize_completions(batch_size, ' **Top Retrieved Video:** ')
+        yield serialize_completions(batch_size, video_name)
         yield [Tensor("end_signal", "".encode())]
+        print('end')
+        
+if __name__ == "__main__":
+    ovmsObj = OvmsPythonModel()
+    ovmsObj.initialize({'1':'2'}) 
+    inputs=[["man holding red basket?"]]    
+    ovmsObj.execute(inputs)
+    # #inputs=[["Describe in detail the video and its contents"]]    
+    # #ovmsObj.execute(inputs)    
+    # inputs=[["man wearing glasses"]]
+    # ovmsObj.execute(inputs)    
+    # inputs=[["which video shows three men"]]
+    # ovmsObj.execute(inputs)    
+    # inputs=[["person holding green object"]]
+    # ovmsObj.execute(inputs)    
+    # inputs=[["what is color of shopping basket"]]
+    # ovmsObj.execute(inputs)    
+    # inputs=[["man bending to pick an object"]]
+    # ovmsObj.execute(inputs)    
+    # print("Done executon")

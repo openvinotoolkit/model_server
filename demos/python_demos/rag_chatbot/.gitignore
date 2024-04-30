@@ -6,3 +6,14 @@ neural-chat*
 notus-7b*
 .venv*
 all-mpnet*
+
+
+**/__pycache__
+
+
+servable_stream/files/frames/
+servable_stream/files/frame_metadata/
+servable_stream/files/frame_emb_storage/
+servable_stream/files/text_emb_storage/
+servable_stream/vdms-visual-rag.ipynb
+servable_stream/test.py
