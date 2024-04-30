@@ -5,7 +5,7 @@ generate-embeddigns:
 	python3 generate_store_embeddings.py
 
 run-image-retrieval-ui:
-	streamlit run image_retrieval_ui.py --server.address 0.0.0.0 --server.port 50055
+	streamlit run image_retrieval_ui.py --server.address 0.0.0.0 --server.port 50022
 
 run-visual-rag:
 	streamlit run visual-rag-ui.py --server.address 0.0.0.0 --server.port 50055
