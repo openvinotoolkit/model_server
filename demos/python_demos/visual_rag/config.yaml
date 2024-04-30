@@ -16,7 +16,7 @@ number_of_frames_per_second: 2
 
 vector_db:
   choice_of_db: 'chroma' # Supported databases [vdms, chroma]
-  host: 10.190.167.193
+  host: 127.0.0.1
   port: 8000
 
 # LLM path
