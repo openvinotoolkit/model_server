@@ -190,17 +190,20 @@ def download_documents(file, target_folder):
         os.makedirs(target_folder)
     file = open(file, "r")
     for url in file.readlines():
-        url = url.strip()
-        if url.find('/'):
-            filename = url.rsplit('/', 1)[1]
-        else:
-            filename = url
-        r = requests.get(url, allow_redirects=True, verify=False)
-        if r.status_code == 200:
-            open(os.path.join(target_folder, filename), 'wb').write(r.content)
-            print("Saved", filename, flush=True)
-        else:
-            print(f"Failed to download: {url}, status code: {r.status_code}", flush=True)
+        try:
+            url = url.strip()
+            if url.find('/'):
+                filename = url.rsplit('/', 1)[1]
+            else:
+                filename = url
+            r = requests.get(url, allow_redirects=True, verify=False)
+            if r.status_code == 200:
+                open(os.path.join(target_folder, filename), 'wb').write(r.content)
+                print("Saved", filename, flush=True)
+            else:
+                print(f"Failed to download: {url}, status code: {r.status_code}", flush=True)
+        except Exception as e:
+            print(f"Failed to download: {url}, error: {str(e)}", flush=True)
 
 def clean_target_folder(target_folder):
     for file_path in os.listdir(target_folder):
