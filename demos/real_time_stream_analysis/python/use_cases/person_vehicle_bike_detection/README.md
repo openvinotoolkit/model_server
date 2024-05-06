@@ -51,8 +51,9 @@ Refer to `run.sh` for configuring a Python virtual environment to install the re
 As this use case implements only visualization in post processing, run with visualizer:
 
 ```
-python3 real_time_stream_analysis.py --stream_url <rtsp_stream_url> --ovms_url localhost:9000 --model_name person-vehicle-bike-detection --visualizer_port 5000
+python3 real_time_stream_analysis.py --stream_url <rtsp_stream_url> --ovms_url localhost:9000 --model_name person-vehicle-bike-detection --visualizer_port 9001
 ```
+View the predicted video stream at http://localhost:9001
 
 ## Example Browser Preview
 
@@ -73,7 +74,7 @@ Default is 3 seconds.
 
 ## Optional Google Cloud logging and storage integration
 
-Refer to run.sh for the lines that set the following environment variables:
+Refer to `run.sh` for the lines that set the following environment variables:
 - export GOOGLE_APPLICATION_CREDENTIALS=/file/path/to/service-account.json
 - export PERSON_DETECTION_GCS_BUCKET=create-a-bucket-and-grant-SA-storage-object-creator-role
 - export PERSON_DETECTION_GCS_FOLDER=a-string-of-the-folder-name
@@ -81,6 +82,36 @@ Refer to run.sh for the lines that set the following environment variables:
 
 When the variables are set, log messages are written to Google Cloud logging. Pictures of Person detected are uploaded
 to the cloud storage bucket. Make sure the service account has `storage object creator` IAM role for write to succeed.
-The local file is
-**gs://create-a-bucket-and-grant-SA-storage-object-creator-role/a-string-of-the-folder-name/detected-person_{formatted_datetime}.png**
+The file format is
+**gs://$GCS_BUCKET/us-amcrest-cam-0/detected-person_{formatted_datetime}.png**
 where formatted_datetime is `"%Y-%m-%d_%H-%M-%S.%f"` ;
+
+## Deploy to production
+Deploy the following BASH script partially from `run.sh` to /usr/local/bin/person-detection.sh for execution.
+You can also configure the person-vehicle-bike-detection docker container to
+[auto restart](https://docs.docker.com/config/containers/start-containers-automatically/).
+
+0. If GOOGLE_APPLICATION_CREDENTIALS exists, logging to Google Cloud is enabled with
+`PERSON_DETECTION_GCP_LOG_NAME` environment variable. Ensure the service account has logs writer IAM role.
+1. If PERSON_DETECTION_GCS_BUCKET, PERSON_DETECTION_GCS_FOLDER environment variables exist, files saved to `PERSON_DETECTION_LOCAL_FOLDER` is uploaded to Google Cloud storage bucket. Ensure the service account has `storage object creator` IAM role in the bucket.
+2. Executing the script and leave it to run. To top it, Ctrl+C may not terminate properly. Try Ctrl+Z, `ps` to see which process is python3. Kill it with `kill -9 [PID_of_Python3]`.
+
+Replace the environment variables such as PROJECT_ID in the following script.
+```commandline
+export GOOGLE_APPLICATION_CREDENTIALS=/home/hil/Encfs/confidential/secrets/person-detection-logger@$PROJECT_ID.iam.gserviceaccount.com
+export PERSON_DETECTION_CAMERA_ID=us-amcrest-cam-0
+export PERSON_DETECTION_CONFIDENCE_THRESHOLD=0.9
+export PERSON_DETECTION_DEBUG=1
+export PERSON_DETECTION_GCP_LOG_NAME=person-detection
+export PERSON_DETECTION_GCS_BUCKET=$GCS_BUCKET
+export PERSON_DETECTION_GCS_FOLDER=us-amcrest-cam-0
+export PERSON_DETECTION_LOCAL_FOLDER=/mnt/1tb/ftp/ipcam/autodelete/person-detection
+export PERSON_DETECTION_MIN_LOG_INTERVAL_SECONDS=10
+
+mkdir -p -v $PERSON_DETECTION_LOCAL_FOLDER
+
+/home/hil/git/model_server/py-venv/bin/python3 \
+/home/hil/git/model_server/demos/real_time_stream_analysis/python/real_time_stream_analysis.py \
+--stream_url rtsp://$IPCAM_USERNAME:$IPCAM_PASSWORD@192.168.1.42:554  --ovms_url localhost:9000 --model_name person-vehicle-bike-detection  --visualizer_port 9001
+```
+Be careful that analyzed video stream at http://localhost:9001 is not password protected.

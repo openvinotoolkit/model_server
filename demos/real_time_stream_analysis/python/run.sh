@@ -32,4 +32,6 @@ export PERSON_DETECTION_GCS_FOLDER=
 export PERSON_DETECTION_LOCAL_FOLDER=
 export PERSON_DETECTION_CAMERA_ID=
 
+mkdir -p -v $PERSON_DETECTION_LOCAL_FOLDER
+
 python3 model_server/demos/real_time_stream_analysis/python/real_time_stream_analysis.py --stream_url rtsp://$USERNAME:$PASSWORD@192.168.1.42:554  --ovms_url localhost:9000 --model_name person-vehicle-bike-detection  --visualizer_port 9001
