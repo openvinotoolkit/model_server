@@ -8,8 +8,6 @@ Describe the changes
 - [ ] Functional tests done.
 - [ ] Unit tests added.
 - [ ] The documentation updated.
-
-
-- [ ] Does this change follow security best practices
+- [ ] Change follows security best practices
 ``
 
