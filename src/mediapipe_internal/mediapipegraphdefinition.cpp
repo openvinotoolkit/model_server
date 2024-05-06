@@ -28,6 +28,7 @@
 #include "../execution_context.hpp"
 #include "../filesystem.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#include "../llm/llmnoderesources.hpp"
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
@@ -50,6 +51,7 @@ MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
 const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonExecutorCalculator"};
+const std::string MediapipeGraphDefinition::LLM_NODE_CALCULATOR_NAME{"LLMCalculator"};
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
@@ -402,11 +404,11 @@ struct PythonResourcesCleaningGuard {
 #endif
 
 Status MediapipeGraphDefinition::initializeNodes() {
-#if (PYTHON_DISABLE == 0)
-    PythonResourcesCleaningGuard pythonResourcesCleaningGuard(this->pythonNodeResourcesMap);
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {
+        #if (PYTHON_DISABLE == 0)
         if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
+            PythonResourcesCleaningGuard pythonResourcesCleaningGuard(this->pythonNodeResourcesMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node missing options in graph: {}. ", this->name);
                 return StatusCode::PYTHON_NODE_MISSING_OPTIONS;
@@ -429,10 +431,36 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
 
             this->pythonNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<PythonNodeResources>>(nodeName, std::move(nodeResources)));
+            pythonResourcesCleaningGuard.disableCleaning();
+        }
+        #endif
+        if (config.node(i).calculator() == LLM_NODE_CALCULATOR_NAME) {
+            if (!config.node(i).node_options().size()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node missing options in graph: {}. ", this->name);
+                return StatusCode::PYTHON_NODE_MISSING_OPTIONS;
+            }
+            if (config.node(i).name().empty()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name is missing in graph: {}. ", this->name);
+                return StatusCode::PYTHON_NODE_MISSING_NAME;
+            }
+            std::string nodeName = config.node(i).name();
+            if (this->llmNodeResourcesMap.find(nodeName) != this->llmNodeResourcesMap.end()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name: {} already used in graph: {}. ", nodeName, this->name);
+                return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
+            }
+
+            std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
+            Status status = LLMNodeResources::createLLMNodeResources(nodeResources, config.node(i), mgconfig.getBasePath());
+            if (nodeResources == nullptr || !status.ok()) {
+                SPDLOG_ERROR("Failed to process LLM node graph {}", this->name);
+                return status;
+            }
+
+            this->llmNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<LLMNodeResources>>(nodeName, std::move(nodeResources)));
         }
     }
-    pythonResourcesCleaningGuard.disableCleaning();
-#endif
+    
+
     return StatusCode::OK;
 }
 

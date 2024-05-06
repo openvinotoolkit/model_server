@@ -224,6 +224,13 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PYTHON_NODE_MISSING_OPTIONS, "The Python Node is missing options definition"},
     {StatusCode::PYTHON_NODE_MISSING_NAME, "The Python Node is missing name definition"},
 
+    // LLM Nodes
+    {StatusCode::LLM_NODE_NAME_ALREADY_EXISTS, "The LLM Node name is already present in nodes list"},
+    {StatusCode::LLM_NODE_FILE_DOES_NOT_EXIST, "The LLM Node file path does not exist"},
+    {StatusCode::LLM_NODE_FILE_STATE_INITIALIZATION_FAILED, "The LLM Node state initialization failed"},
+    {StatusCode::LLM_NODE_MISSING_OPTIONS, "The LLM Node is missing options definition"},
+    {StatusCode::LLM_NODE_MISSING_NAME, "The LLM Node is missing name definition"},
+
     // Storage errors
     // S3
     {StatusCode::S3_BUCKET_NOT_FOUND, "S3 Bucket not found"},
