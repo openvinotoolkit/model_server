@@ -95,7 +95,7 @@ class PersonVehicleBikeDetection(UseCase):
                     else:
                         gs_path = None
 
-                    sampled_log(
+                    log_sampled(
                         {
                             'confidence': float(conf),
                             'picture': local_file,
@@ -120,7 +120,7 @@ else:
     gcp_logger = None
 
 
-def sampled_log(log_dict: dict):
+def log_sampled(log_dict: dict):
     """Write logs to cloud logging and optionally the terminal
 
     :param log_dict: the dict must be serializable
@@ -135,6 +135,8 @@ def sampled_log(log_dict: dict):
 
     if time_difference.total_seconds() > min_log_interval_seconds:
         log_dict['sample-interval-seconds'] = min_log_interval_seconds
+        if log_dict['uploaded_destination'] and log_dict['uploaded_destination'].startswith("gs://"):
+            log_dict['uploaded_destination_http'] = gcs_path_to_http_url(log_dict['uploaded_destination'])
         if 'PERSON_DETECTION_DEBUG' in os.environ:
             print(str(log_dict))
         if gcp_logger:
@@ -170,3 +172,33 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
         print(f"File {source_file_name} uploaded to {gs_path} ;")
 
     return gs_path
+
+
+def gcs_path_to_http_url(gcs_path):
+    """Converts a Google Cloud Storage path to a publicly accessible HTTP URL.
+
+    Args:
+        gcs_path: The Google Cloud Storage path (e.g., gs://bucket/path/to/file.txt)
+
+    Returns:
+        A publicly accessible HTTP URL for the GCS object,
+        or None if the path is not valid.
+
+    Raises:
+        ValueError: If the GCS path is not formatted correctly.
+    """
+
+    # Check if the path starts with "gs://"
+    if not gcs_path.startswith("gs://"):
+        raise ValueError("Invalid GCS path. Must start with 'gs://'")
+
+    # Extract bucket and object names
+    parts = gcs_path.split("/", 3)
+    if len(parts) < 4:
+        raise ValueError("Invalid GCS path format")
+
+    bucket_name = parts[2]
+    object_name = "/".join(parts[3:])
+
+    # Publicly accessible objects don't require additional configuration
+    return f"https://storage.cloud.google.com/{bucket_name}/{object_name}"
