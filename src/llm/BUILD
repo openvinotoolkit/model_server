@@ -61,8 +61,8 @@ cc_library(
 )
 
 mediapipe_proto_library(
-    name = "llmcalculator_cc_proto", # llmcalculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-    srcs = ["llmcalculator.proto"],
+    name = "llmcalculator_proto", # llmcalculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["llm_calculator.proto"],
     visibility = ["//visibility:private"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
@@ -74,7 +74,7 @@ cc_library(
     name = "llmnoderesources",
     hdrs = ["llmnoderesources.hpp",],
     srcs = ["llmnoderesources.cpp",],
-    deps = P[
+    deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -82,7 +82,7 @@ cc_library(
         "llmcalculator_cc_proto",
         ":llm_engine",
     ],
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,

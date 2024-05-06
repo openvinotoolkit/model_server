@@ -31,7 +31,7 @@
 #pragma GCC diagnostic pop
 
 #include "../mediapipe_internal/mediapipe_utils.hpp"
-#include "src/python/llm_calculator.pb.h"
+#include "src/llm/llm_calculator.pb.h"
 
 namespace ovms {
 
@@ -47,7 +47,7 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
 
-    nodeResources = std::make_shared<PythonNodeResources>(pythonBackend);
+    nodeResources = std::make_shared<LLMNodeResources>();
     return StatusCode::OK;
 }
 

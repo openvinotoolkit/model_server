@@ -25,6 +25,9 @@
 #include <vector>
 
 #include "../dags/pipelinedefinitionstatus.hpp"
+#include "../llm/llmnoderesources.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
@@ -49,6 +52,7 @@ class Status;
 class PythonBackend;
 class PythonNodeResources;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
+using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -91,6 +95,7 @@ public:
 
 protected:
     PythonNodeResourcesMap pythonNodeResourcesMap;
+    LLMNodeResourcesMap llmNodeResourcesMap;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :

@@ -387,6 +387,7 @@ cc_library(
                 "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
                 "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
                 "//src/llm:llmcalculator",
+                "//src/llm:llmnoderesources",
             ],
             "//:disable_mediapipe" : [],
         }),

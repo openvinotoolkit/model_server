@@ -437,16 +437,16 @@ Status MediapipeGraphDefinition::initializeNodes() {
         if (config.node(i).calculator() == LLM_NODE_CALCULATOR_NAME) {
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node missing options in graph: {}. ", this->name);
-                return StatusCode::PYTHON_NODE_MISSING_OPTIONS;
+                return StatusCode::LLM_NODE_MISSING_OPTIONS;
             }
             if (config.node(i).name().empty()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name is missing in graph: {}. ", this->name);
-                return StatusCode::PYTHON_NODE_MISSING_NAME;
+                return StatusCode::LLM_NODE_MISSING_NAME;
             }
             std::string nodeName = config.node(i).name();
             if (this->llmNodeResourcesMap.find(nodeName) != this->llmNodeResourcesMap.end()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name: {} already used in graph: {}. ", nodeName, this->name);
-                return StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS;
+                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
 
             std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
