@@ -64,12 +64,14 @@ class MediapipeGraphExecutor {
     const std::vector<std::string> outputNames;
 
     PythonNodeResourcesMap pythonNodeResourcesMap;
+    LLMNodeResourcesMap llmNodeResourcesMap;
     PythonBackend* pythonBackend;
 
     ::mediapipe::Timestamp currentStreamTimestamp;
 
 public:
     static const std::string PYTHON_SESSION_SIDE_PACKET_TAG;
+    static const std::string LLM_SESSION_SIDE_PACKET_TAG;
     static const ::mediapipe::Timestamp STARTING_TIMESTAMP;
 
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
@@ -77,6 +79,7 @@ public:
         stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
+        const LLMNodeResourcesMap& llmNodeResourcesMap,
         PythonBackend* pythonBackend);
 
     template <typename RequestType, typename ResponseType>
@@ -103,6 +106,7 @@ public:
 #if (PYTHON_DISABLE == 0)
         sideInputPackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
+        sideInputPackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
         MP_RETURN_ON_FAIL(graph.StartRun(sideInputPackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         ::mediapipe::Packet packet;
@@ -205,6 +209,7 @@ public:
             inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap)
                                                                    .At(STARTING_TIMESTAMP);
 #endif
+            inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
             MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
             // Deserialize first request

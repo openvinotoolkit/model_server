@@ -120,6 +120,10 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
+    if (!this->llmNodeResourcesMap.empty()) {
+        SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
+        return StatusCode::INTERNAL_ERROR;
+    }
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
     if (manager.modelExists(this->getName()) || manager.pipelineDefinitionExists(this->getName())) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph name: {} is already occupied by model or pipeline.", this->getName());
@@ -249,7 +253,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResourcesMap, this->pythonBackend);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend);
     return status;
 }
 
@@ -324,11 +328,13 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
     }
     this->mgconfig = config;
     this->pythonNodeResourcesMap.clear();
+    this->llmNodeResourcesMap.clear();
     return validate(manager);
 }
 
 void MediapipeGraphDefinition::retire(ModelManager& manager) {
     this->pythonNodeResourcesMap.clear();
+    this->llmNodeResourcesMap.clear();
     this->status.handle(RetireEvent());
 }
 

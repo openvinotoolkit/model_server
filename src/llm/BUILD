@@ -52,7 +52,8 @@ cc_library(
         "@linux_openvino//:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src/kfserving_api:kfserving_api_cpp",
-        ":llm_engine"
+        ":llm_engine",
+        ":llmnoderesources",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
