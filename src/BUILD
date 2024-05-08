@@ -1092,6 +1092,7 @@ cc_test(
             "//:not_disable_mediapipe": [
                 "test/http_openai_handler_test.cpp",
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
+                "test/llmnode_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/mediapipeflow_test.cpp",
                 "test/mediapipe_framework_test.cpp",
@@ -1234,6 +1235,7 @@ cc_test(
         "@com_google_googletest//:gtest",
         ] + select({
             "//conditions:default": [
+                "//src/llm:llmnoderesources",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",

@@ -19,6 +19,10 @@
 #include <string>
 #include <unordered_map>
 
+#include <continuous_batching_pipeline.hpp>
+#include <scheduler_config.hpp>
+#include <openvino/openvino.hpp>
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -34,6 +38,9 @@ public:
 
     LLMNodeResources();
     static Status createLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
+
+    std::shared_ptr<ContinuousBatchingPipeline> cbPipe = nullptr;
+    std::string workspacePath;
 
 private:
     static std::unordered_map<std::string, std::string> prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath);

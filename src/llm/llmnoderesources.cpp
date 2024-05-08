@@ -20,6 +20,8 @@
 #include <string>
 #include <vector>
 
+#include <continuous_batching_pipeline.hpp>
+#include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
 #include "../logging.hpp"
@@ -46,8 +48,42 @@ std::unordered_map<std::string, std::string> LLMNodeResources::prepareLLMNodeIni
 Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
-
     nodeResources = std::make_shared<LLMNodeResources>();
+    auto fsWorkspacePath = std::filesystem::path(nodeOptions.workspace_path());
+
+    std::string basePath;
+    if (fsWorkspacePath.is_relative()) {
+        basePath = (std::filesystem::path(graphPath) / fsWorkspacePath).string();
+    } else {
+        basePath = fsWorkspacePath.string();
+    }
+
+    nodeResources->workspacePath = basePath;
+    if (basePath.empty()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node workspace_path: {} is empty. ", basePath);
+        return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
+    }
+    if (!std::filesystem::exists(basePath)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node workspace_path: {} does not exist. ", basePath);
+        return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
+    }
+    if (!std::filesystem::is_directory(basePath)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node workspace_path: {} is not a directory. ", basePath);
+        return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
+    }
+
+    size_t NUM_BLOCKS = 36400;
+    // Currently harrdcoded, will parametrize in future
+    SchedulerConfig default_config {
+        .max_num_batched_tokens = 256,
+        .num_kv_blocks = NUM_BLOCKS,
+        .dynamic_split_fuse = false,
+        .max_num_seqs = 256, // not used if dynamic_split_fuse=True
+        .max_paddings = 256, // not used if dynamic_split_fuse=True
+    };
+  
+    nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, default_config);
+
     return StatusCode::OK;
 }
 

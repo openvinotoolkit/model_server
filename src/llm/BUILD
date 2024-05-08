@@ -76,6 +76,7 @@ cc_library(
     hdrs = ["llmnoderesources.hpp",],
     srcs = ["llmnoderesources.cpp",],
     deps = [
+        "@linux_openvino//:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmslogging",
         "//src:libovmsstatus",

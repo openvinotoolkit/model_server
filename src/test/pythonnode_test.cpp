@@ -40,6 +40,7 @@
 #include "../precision.hpp"
 #include "../python/pythoninterpretermodule.hpp"
 #include "../python/pythonnoderesources.hpp"
+#include "../llm/llmnoderesources.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
@@ -958,7 +959,10 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
         PythonBackend* pythonBackend) :
-        MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, pythonBackend) {}
+        MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, emptyLLMNodeResourcesMap, pythonBackend) {}
+
+    
+    LLMNodeResourcesMap emptyLLMNodeResourcesMap;
 };
 
 TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {

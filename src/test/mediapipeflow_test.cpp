@@ -2394,6 +2394,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 0);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
 }
+
 class MediapipeSerialization : public ::testing::Test {
     class MockedMediapipeGraphExecutor : public ovms::MediapipeGraphExecutor {
     public:
@@ -2403,7 +2404,9 @@ class MediapipeSerialization : public ::testing::Test {
             std::vector<std::string> inputNames, std::vector<std::string> outputNames,
             const PythonNodeResourcesMap& pythonNodeResourcesMap,
             PythonBackend* pythonBackend) :
-            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, pythonBackend) {}
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, emptyLLMNodeResourcesMap, pythonBackend) {}
+
+        LLMNodeResourcesMap emptyLLMNodeResourcesMap;
     };
 
 protected:
