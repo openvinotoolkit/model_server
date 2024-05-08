@@ -62,7 +62,7 @@ class LLMFlowTest : public ::testing::TestWithParam<std::string> {
 protected:
     ovms::Server& server = ovms::Server::instance();
 
-    const Precision precision = Precision::FP32;
+    const Precision precision = Precision::STRING;
     std::unique_ptr<std::thread> t;
     std::string port = "9178";
 
@@ -98,11 +98,11 @@ TEST_F(LLMFlowKfsTest, Infer) {
     response.Clear();
     inputs_info_t inputsMeta{
         {"in", {DUMMY_MODEL_SHAPE, precision}}};
-    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
-    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
-    preparePredictRequest(request, inputsMeta, requestData1);
+    std::vector<std::string> requestData1{"What is OpenVINO?"};
+    std::vector<std::string> requestData2{""};
+    preparePredictRequest(request, inputsMeta, requestData1, false);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
-    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+    //checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }

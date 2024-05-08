@@ -382,6 +382,10 @@ void prepareKFSInferInputTensor(::KFSRequest& request, const std::string& name, 
 }
 
 template <>
+void prepareKFSInferInputTensor<std::string>(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
+    const std::vector<std::string>& data, bool putBufferInInputTensorContent);
+
+template <>
 inline void prepareKFSInferInputTensor<bool>(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
     const std::vector<bool>& data, bool putBufferInInputTensorContent) {
     // TODO: Implement for putBufferInInputTensorContent == 0

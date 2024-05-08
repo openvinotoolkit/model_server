@@ -23,7 +23,7 @@ message LLMCalculatorOptions {
   extend mediapipe.CalculatorOptions {
     // https://github.com/google/mediapipe/issues/634 have to be unique in app
     // no rule to obtain this
-    optional LLMCalculatorOptions ext = 113473748;
+    optional LLMCalculatorOptions ext = 113473750;
     }
     required string workspace_path = 1;
 }
