@@ -87,7 +87,8 @@ public:
 };
 
 // --------------------------------------- OVMS LLM nodes tests
-
+// Test disabled by default - needs LLM models to work in /workspace directory:
+// openvino_detokenizer.bin  openvino_detokenizer.xml  openvino_model.bin  openvino_model.xml  openvino_tokenizer.bin  openvino_tokenizer.xml
 TEST_F(LLMFlowKfsTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -97,15 +98,11 @@ TEST_F(LLMFlowKfsTest, Infer) {
     request.Clear();
     response.Clear();
     std::vector<std::string> requestData1{"What is OpenVINO?"};
-    inputs_info_t inputsMeta{
-        {"in", {{(int)requestData1[0].length()}, precision}}};
-    // preparePredictRequest(request, inputsMeta, requestData1, false);
+    std::string expectedResponse = "\n\nOpenVINO is an open-source software library for deep learning inference that is designed to optimize and run deep learning models on a variety";
 
-    KFSTensorInputProto* tensor = request.add_inputs();
-    prepareInferStringTensor(tensor, "in", requestData1, false, &buffer);
+    prepareInferStringRequest(request, "in", requestData1, false);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
     const std::string& content = response.raw_output_contents(0);
-    std::cout << "RESPONSE: " << content << std::endl;
+    ASSERT_EQ(expectedResponse, content);
 }

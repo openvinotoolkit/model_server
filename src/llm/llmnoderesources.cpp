@@ -78,10 +78,10 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         .max_num_batched_tokens = 256,
         .num_kv_blocks = NUM_BLOCKS,
         .dynamic_split_fuse = false,
-        .max_num_seqs = 256, // not used if dynamic_split_fuse=True
-        .max_paddings = 256, // not used if dynamic_split_fuse=True
+        .max_num_seqs = 256,
+        .max_paddings = 256,
     };
-  
+
     nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, default_config);
 
     return StatusCode::OK;

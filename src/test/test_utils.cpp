@@ -48,65 +48,6 @@ void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t reques
     }
 }
 
-template <>
-void prepareKFSInferInputTensor<std::string>(::KFSRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const std::string>& inputInfo,
-    const std::vector<std::string>& data, bool putBufferInInputTensorContent) {
-    if (putBufferInInputTensorContent == 1) {
-        throw std::string("Unsupported");
-    }
-    auto it = request.mutable_inputs()->begin();
-    size_t bufferId = 0;
-    while (it != request.mutable_inputs()->end()) {
-        if (it->name() == name)
-            break;
-        ++it;
-        ++bufferId;
-    }
-    KFSTensorInputProto* tensor;
-    std::string* content = nullptr;
-    if (it != request.mutable_inputs()->end()) {
-        tensor = &*it;
-        if (!putBufferInInputTensorContent) {
-            content = request.mutable_raw_input_contents()->Mutable(bufferId);
-        }
-    } else {
-        tensor = request.add_inputs();
-        if (!putBufferInInputTensorContent) {
-            content = request.add_raw_input_contents();
-        }
-    }
-    auto [shape, datatype] = inputInfo;
-    tensor->set_name(name);
-    tensor->set_datatype(datatype);
-    size_t elementsCount = 1;
-    tensor->mutable_shape()->Clear();
-    bool isNegativeShape = false;
-    for (auto const& dim : shape) {
-        tensor->add_shape(dim);
-        if (dim < 0) {
-            isNegativeShape = true;
-        }
-        elementsCount *= dim;
-    }
-    size_t dataSize = isNegativeShape ? data.size() : elementsCount;
-    if (!putBufferInInputTensorContent) {
-        if (data.size() == 0) {
-            content->assign(dataSize * ovms::KFSDataTypeSize(datatype), '1');
-        } else {
-            content->resize(dataSize * ovms::KFSDataTypeSize(datatype));
-            std::memcpy(content->data(), data.data(), content->size());
-        }
-    }
-
-    std::cout << std::endl << "TEST dataSize: " << dataSize << std::endl;
-    std::cout << std::endl << "TEST content: " << content->data() << "END" << std::endl;
-
-    auto stringData = request.raw_input_contents().Get(0);  
-    std::string prompt = std::string(stringData.begin(), stringData.end());
-    std::cout << std::endl << "TEST data: " << prompt << std::endl;
-    std::cout << std::endl << "TEST data in: " << data[0] << std::endl;
-}
-
 void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data) {
     request.mutable_inputs()->clear();
     for (auto const& it : requestInputs) {

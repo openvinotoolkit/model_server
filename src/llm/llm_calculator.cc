@@ -84,41 +84,32 @@ public:
             const KFSRequest *request = cc->Inputs().Tag("REQUEST").Get<const KFSRequest*>();
             // Hardcoded single input for data
             auto data = request->raw_input_contents().Get(0);
-            
             std::string prompt = std::string(data.begin(), data.end());
-            LOG(INFO) << "Received prompt: " << prompt;
+            LOG(INFO) << "Received prompt: " << prompt << std::endl;
             std::vector<std::string> prompts = {prompt};
             std::string resultStr;
 
             // GenerationConfig::greedy(), GenerationConfig::multinomial(), GenerationConfig::beam_search()
             std::vector<GenerationConfig> sampling_params = {GenerationConfig::greedy()};
-
             std::vector<GenerationResult> generation_results = nodeResources->cbPipe->generate(prompts, sampling_params);
-
             for (size_t request_id = 0; request_id < generation_results.size(); ++request_id) {
                 const GenerationResult & generation_result = generation_results[request_id];
-
                 for (size_t output_id = 0; output_id < generation_result.m_generation_ids.size(); ++output_id) {
                     resultStr += generation_result.m_generation_ids[output_id];
                 }
             }
 
+            LOG(INFO) << "Received response: " << resultStr << std::endl;
             //--------------------------------------------
-            
-            std::string outputStr = resultStr;
-
-            std::cout << "CALC RESPONSE: " << resultStr <<   std::endl;
-
             auto response = std::make_unique<KFSResponse>();
             auto* responseOutput = response->add_outputs();
             responseOutput->set_name("output");
             responseOutput->set_datatype("BYTES");
             responseOutput->clear_shape();
-            responseOutput->add_shape(outputStr.size());
-            response->add_raw_output_contents()->assign(reinterpret_cast<char*>(outputStr.data()), outputStr.size());
+            responseOutput->add_shape(resultStr.size());
+            response->add_raw_output_contents()->assign(reinterpret_cast<char*>(resultStr.data()), resultStr.size());
 
             cc->Outputs().Tag("RESPONSE").AddPacket(MakePacket<KFSResponse>(*response).At(cc->InputTimestamp()));
-
         } catch (std::exception& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();
             return absl::Status(absl::StatusCode::kInternal, "Error occurred during graph execution");

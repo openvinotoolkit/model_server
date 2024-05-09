@@ -961,7 +961,6 @@ public:
         PythonBackend* pythonBackend) :
         MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, emptyLLMNodeResourcesMap, pythonBackend) {}
 
-    
     LLMNodeResourcesMap emptyLLMNodeResourcesMap;
 };
 
