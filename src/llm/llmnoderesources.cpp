@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2023 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
 
     size_t NUM_BLOCKS = 364;
     // Currently harrdcoded, will parametrize in future
-    SchedulerConfig default_config {
+    SchedulerConfig default_config{
         .max_num_batched_tokens = 256,
         .num_kv_blocks = NUM_BLOCKS,
         .dynamic_split_fuse = false,

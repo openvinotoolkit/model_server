@@ -24,7 +24,6 @@
 #include <vector>
 
 #include "../execution_context.hpp"
-#include "../metric.hpp"
 #include "../status.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

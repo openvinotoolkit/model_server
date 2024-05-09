@@ -25,13 +25,10 @@
 #include <vector>
 
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../llm/llmnoderesources.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../tensorinfo.hpp"
-#include "../timer.hpp"
-#include "../version.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -51,6 +48,7 @@ class MediapipeGraphExecutor;
 class Status;
 class PythonBackend;
 class PythonNodeResources;
+class LLMNodeResources;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;
 

@@ -412,7 +412,7 @@ struct PythonResourcesCleaningGuard {
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {
-        #if (PYTHON_DISABLE == 0)
+#if (PYTHON_DISABLE == 0)
         if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
             PythonResourcesCleaningGuard pythonResourcesCleaningGuard(this->pythonNodeResourcesMap);
             if (!config.node(i).node_options().size()) {
@@ -439,7 +439,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             this->pythonNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<PythonNodeResources>>(nodeName, std::move(nodeResources)));
             pythonResourcesCleaningGuard.disableCleaning();
         }
-        #endif
+#endif
         if (config.node(i).calculator() == LLM_NODE_CALCULATOR_NAME) {
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node missing options in graph: {}. ", this->name);
@@ -465,7 +465,6 @@ Status MediapipeGraphDefinition::initializeNodes() {
             this->llmNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<LLMNodeResources>>(nodeName, std::move(nodeResources)));
         }
     }
-    
 
     return StatusCode::OK;
 }

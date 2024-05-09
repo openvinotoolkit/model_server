@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2023 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@
 #include <unordered_map>
 
 #include <continuous_batching_pipeline.hpp>
-#include <scheduler_config.hpp>
 #include <openvino/openvino.hpp>
+#include <scheduler_config.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
