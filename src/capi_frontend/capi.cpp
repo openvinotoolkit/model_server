@@ -968,6 +968,63 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
     return nullptr;
 }
 
+DLL_PUBLIC OVMS_Status* OVMS_InferenceAsync(OVMS_Server* serverPtr, OVMS_InferenceRequest* request) {
+    OVMS_PROFILE_FUNCTION();
+    using std::chrono::microseconds;
+    Timer<TIMER_END> timer;
+    timer.start(TOTAL);
+    if (serverPtr == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
+    }
+    if (request == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
+    }
+    auto req = reinterpret_cast<ovms::InferenceRequest*>(request);
+    ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
+
+    SPDLOG_DEBUG("Processing C-API inference request for servable: {}; version: {}",
+        req->getServableName(),
+        req->getServableVersion());
+
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::Pipeline> pipelinePtr;
+
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    auto status = getModelInstance(server, req->getServableName(), req->getServableVersion(), modelInstance, modelInstanceUnloadGuard);
+
+    if (status == StatusCode::MODEL_NAME_MISSING) {
+        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", req->getServableName());
+        // TODO FIXME status DAG not working
+    }
+    if (!status.ok()) {
+        if (modelInstance) {
+            //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
+        }
+        SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+    // fix execution context and metrics
+    ExecutionContext executionContext{
+        ExecutionContext::Interface::GRPC,
+        ExecutionContext::Method::ModelInfer};
+    if (pipelinePtr) {
+        //status = pipelinePtr->execute(executionContext);
+        // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
+    } else {
+        status = modelInstance->inferAsync<InferenceRequest, InferenceResponse>(req, modelInstanceUnloadGuard);
+        //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
+    }
+
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(status));
+    }
+
+    timer.stop(TOTAL);
+    double reqTotal = timer.elapsed<microseconds>(TOTAL);
+    SPDLOG_DEBUG("Total C-API req processing time: {} ms", reqTotal / 1000);
+    return nullptr;
+}
+
 DLL_PUBLIC OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, OVMS_ServableState* state) {
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));

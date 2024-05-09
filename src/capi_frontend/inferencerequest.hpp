@@ -59,10 +59,10 @@ public:
     const InferenceParameter* getParameter(const char* name) const;
 
     void setCompleteCallback(OVMS_InferenceResponseCompleteCallback_t callback, void* callbackData);
-    OVMS_InferenceResponseCompleteCallback_t getResponseCompleteCallback() {
+    OVMS_InferenceResponseCompleteCallback_t getResponseCompleteCallback() const {
         return this->responseCompleteCallback;
     }
-    void* getResponseCompleteCallbackData() {
+    void* getResponseCompleteCallbackData() const {
         return this->responseCompleteCallbackData;
     }
 

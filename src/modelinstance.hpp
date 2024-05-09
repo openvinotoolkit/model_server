@@ -581,6 +581,9 @@ public:
     Status infer(const RequestType* requestProto,
         ResponseType* responseProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+    template <typename RequestType, typename ResponseType>
+    Status inferAsync(const RequestType* requestProto,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
 

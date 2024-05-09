@@ -549,6 +549,7 @@ void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 // \param response The respons object. In case of success, caller takes the ownership of the response
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
+OVMS_Status* OVMS_InferenceAsync(OVMS_Server* server, OVMS_InferenceRequest* request);
 
 // Type of function called when response is completed and set with OVMS_InferenceRequestSetCompleteCallback. Callback function takes ownership of OVMS_InferenceResponse object.
 // Flag specifies if the response is final coming from inference request.
