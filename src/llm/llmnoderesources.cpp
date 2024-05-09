@@ -82,7 +82,12 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         .max_paddings = 256,
     };
 
-    nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, default_config);
+    try {
+        nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, default_config);
+    } catch (...) {
+        SPDLOG_ERROR("Error during llm node initialization for workspace_path: {}", basePath);
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    }
 
     return StatusCode::OK;
 }

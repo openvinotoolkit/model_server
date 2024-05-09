@@ -89,7 +89,7 @@ public:
 // --------------------------------------- OVMS LLM nodes tests
 // Test disabled by default - needs LLM models to work in /workspace directory:
 // openvino_detokenizer.bin  openvino_detokenizer.xml  openvino_model.bin  openvino_model.xml  openvino_tokenizer.bin  openvino_tokenizer.xml
-TEST_F(DISABLED_LLMFlowKfsTest, Infer) {
+TEST_F(LLMFlowKfsTest, DISABLED_Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -105,4 +105,135 @@ TEST_F(DISABLED_LLMFlowKfsTest, Infer) {
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     const std::string& content = response.raw_output_contents(0);
     ASSERT_EQ(expectedResponse, content);
+}
+
+TEST_F(LLMFlowKfsTest, LLMNodeNameMissing) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "RESPONSE:out"
+        node {
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    workspace_path: "/workspace/"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_MISSING_NAME);
+}
+
+TEST_F(LLMFlowKfsTest, LLMNodeOptionsMissing) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "RESPONSE:out"
+        node {
+            name: "llmNode2"
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out2"
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_MISSING_OPTIONS);
+}
+
+TEST_F(LLMFlowKfsTest, LLMNodeNameExists) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "RESPONSE:out"
+        node {
+            name: "llmNode"
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out1"
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    workspace_path: "/workspace/"
+                }
+            }
+        }
+        node {
+            name: "llmNode"
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out"
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    workspace_path: "/workspace/"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_NAME_ALREADY_EXISTS);
+}
+
+TEST_F(LLMFlowKfsTest, LLMNodeBadWorkspacePath) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "RESPONSE:out"
+        node {
+            name: "llmNode"
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    workspace_path: "/bad_path_to_workspace/"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
+}
+
+TEST_F(LLMFlowKfsTest, LLMNodeResourceInitFailed) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "RESPONSE:out"
+        node {
+            name: "llmNode"
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    workspace_path: "/"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
 }
