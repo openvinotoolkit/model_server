@@ -89,7 +89,7 @@ public:
 // --------------------------------------- OVMS LLM nodes tests
 // Test disabled by default - needs LLM models to work in /workspace directory:
 // openvino_detokenizer.bin  openvino_detokenizer.xml  openvino_model.bin  openvino_model.xml  openvino_tokenizer.bin  openvino_tokenizer.xml
-TEST_F(LLMFlowKfsTest, Infer) {
+TEST_F(DISABLED_LLMFlowKfsTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
