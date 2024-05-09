@@ -16,7 +16,7 @@ input_stream: "REQUEST:in"
 output_stream: "RESPONSE:out"
 node {
     name: "llmNode1"
-    calculator: "LLMExecutorCalculator"
+    calculator: "LLMCalculator"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
     input_stream: "REQUEST:in"
     output_stream: "RESPONSE:out"

@@ -90,8 +90,8 @@ public:
             std::vector<std::string> prompts = {prompt};
             std::string resultStr;
 
-            // GenerationConfig::greedy(), GenerationConfig::multinomial(),
-            std::vector<GenerationConfig> sampling_params = {GenerationConfig::beam_search()};
+            // GenerationConfig::greedy(), GenerationConfig::multinomial(), GenerationConfig::beam_search()
+            std::vector<GenerationConfig> sampling_params = {GenerationConfig::greedy()};
 
             std::vector<GenerationResult> generation_results = nodeResources->cbPipe->generate(prompts, sampling_params);
 
@@ -101,12 +101,13 @@ public:
                 for (size_t output_id = 0; output_id < generation_result.m_generation_ids.size(); ++output_id) {
                     resultStr += generation_result.m_generation_ids[output_id];
                 }
-                std::cout << std::endl;
             }
 
             //--------------------------------------------
             
             std::string outputStr = resultStr;
+
+            std::cout << "CALC RESPONSE: " << resultStr <<   std::endl;
 
             auto response = std::make_unique<KFSResponse>();
             auto* responseOutput = response->add_outputs();

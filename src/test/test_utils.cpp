@@ -97,6 +97,14 @@ void prepareKFSInferInputTensor<std::string>(::KFSRequest& request, const std::s
             std::memcpy(content->data(), data.data(), content->size());
         }
     }
+
+    std::cout << std::endl << "TEST dataSize: " << dataSize << std::endl;
+    std::cout << std::endl << "TEST content: " << content->data() << "END" << std::endl;
+
+    auto stringData = request.raw_input_contents().Get(0);  
+    std::string prompt = std::string(stringData.begin(), stringData.end());
+    std::cout << std::endl << "TEST data: " << prompt << std::endl;
+    std::cout << std::endl << "TEST data in: " << data[0] << std::endl;
 }
 
 void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data) {

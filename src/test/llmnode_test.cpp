@@ -96,13 +96,16 @@ TEST_F(LLMFlowKfsTest, Infer) {
     const std::string modelName = "llmDummyKFS";
     request.Clear();
     response.Clear();
-    inputs_info_t inputsMeta{
-        {"in", {DUMMY_MODEL_SHAPE, precision}}};
     std::vector<std::string> requestData1{"What is OpenVINO?"};
-    std::vector<std::string> requestData2{""};
-    preparePredictRequest(request, inputsMeta, requestData1, false);
+    inputs_info_t inputsMeta{
+        {"in", {{(int)requestData1[0].length()}, precision}}};
+    // preparePredictRequest(request, inputsMeta, requestData1, false);
+
+    KFSTensorInputProto* tensor = request.add_inputs();
+    prepareInferStringTensor(tensor, "in", requestData1, false, &buffer);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
-    //checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+    const std::string& content = response.raw_output_contents(0);
+    std::cout << "RESPONSE: " << content << std::endl;
 }
