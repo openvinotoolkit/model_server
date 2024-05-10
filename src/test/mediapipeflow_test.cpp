@@ -2905,6 +2905,7 @@ protected:
     void CreateConfigAndPbtxt(std::string pbtxtContent) {
         std::string graphFilePath = this->directoryPath + "/graph.pbtxt";
         this->configContent.replace(this->configContent.find(this->modelPathToReplace), this->modelPathToReplace.size(), graphFilePath);
+        this->configFilePath = this->directoryPath + this->configFilePath;
         createConfigFileWithContent(this->configContent, this->configFilePath);
         createConfigFileWithContent(pbtxtContent, graphFilePath);
     }

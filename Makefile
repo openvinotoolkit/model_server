@@ -68,8 +68,8 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 4ef40f0f0e70abf04f13310f3e7a8f6784667dbf  # 2024.1
-OV_CONTRIB_BRANCH ?= 8f238178616b47fb11fc3df0df99baf9e0df397d  # 2024.1
+OV_SOURCE_BRANCH ?= efa2debea2d0b1ea7013d8a070b714f73629bba8  # nightly / 2024.2.0-15270-efa2debea2d
+OV_CONTRIB_BRANCH ?= bb43dc16b69eeb809c203c626c2187241864f360  # master / May 7th Use separate states for infer requests
 OV_TOKENIZERS_BRANCH ?= 01f15a0f3a0b631bdbf2b3b91b8e0b88690545ff  # 04.04.2024 master
 
 OV_SOURCE_ORG ?= openvinotoolkit

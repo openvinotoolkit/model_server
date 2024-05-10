@@ -213,6 +213,56 @@ TEST_F(LLMFlowKfsTest, LLMNodeBadWorkspacePath) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
 }
 
+TEST_F(LLMFlowKfsTest, LLMNodeBadWorkspacePathEmpty) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "RESPONSE:out"
+        node {
+            name: "llmNode"
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    workspace_path: ""
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
+}
+
+TEST_F(LLMFlowKfsTest, LLMNodeBadWorkspacePathFile) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "RESPONSE:out"
+        node {
+            name: "llmNode"
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out2"
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    workspace_path: "/ovms/src/test/llm/config_llm_dummy_kfs.json"
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
+}
+
 TEST_F(LLMFlowKfsTest, LLMNodeResourceInitFailed) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
