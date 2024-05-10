@@ -826,7 +826,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_SyncSet_Missing) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     GTEST_SKIP() << "Cycle found, the graph will wait for data forever as expected";
@@ -883,7 +883,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_Correct) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1054,7 +1054,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1098,7 +1098,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleThreeOut) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1149,7 +1149,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestReturnCustomDatatype) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1191,7 +1191,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestReturnNotListOrIteratorObject) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1229,7 +1229,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestReturnListWithNonTensorObject) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1279,7 +1279,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiNodeNoTags) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1343,7 +1343,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiNodeOnlyTags) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1407,7 +1407,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiNodeTagsAndInde
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1467,7 +1467,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOu
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1527,7 +1527,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestConvertersUnsupportedTypeInPythonTens
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1597,7 +1597,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersInTheMi
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1650,7 +1650,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInTwoOutTwoParallelExecutors) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1730,7 +1730,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInTwoOutTwoParallelExecutorsWit
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1952,7 +1952,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -1995,7 +1995,7 @@ static void setupTestPipeline(std::shared_ptr<MediapipeGraphExecutor>& pipeline)
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 }
 
@@ -2263,7 +2263,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -2552,7 +2552,7 @@ TEST_F(PythonFlowTest, ReloadWithDifferentScriptName) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -2590,7 +2590,7 @@ TEST_F(PythonFlowTest, ReloadWithDifferentScriptName) {
     ASSERT_EQ(mediapipeDummy.reload(manager, mgc), StatusCode::OK);
 
     pipeline = nullptr;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     req.Clear();
@@ -2684,7 +2684,7 @@ public:
         mediapipeDummy->inputConfig = firstTestPbtxt;
         ASSERT_EQ(mediapipeDummy->validate(manager), StatusCode::OK);
 
-        ASSERT_EQ(mediapipeDummy->create(pipeline, nullptr, nullptr), StatusCode::OK);
+        ASSERT_EQ(mediapipeDummy->create(pipeline), StatusCode::OK);
         ASSERT_NE(pipeline, nullptr);
     }
     std::shared_ptr<MediapipeGraphExecutor> getPipeline() {
@@ -2920,7 +2920,7 @@ TEST_F(PythonFlowTest, Negative_NodeProducesUnexpectedTensor) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -2974,7 +2974,7 @@ TEST_F(PythonFlowTest, Negative_NodeFiresProcessWithoutAllInputs) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -3027,7 +3027,7 @@ TEST_F(PythonFlowTest, Positive_NodeFiresProcessWithoutAllInputs) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     KFSRequest req;
@@ -3085,7 +3085,7 @@ void setUpConverterPrecisionTest(std::shared_ptr<MediapipeGraphExecutor>& pipeli
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 }
 

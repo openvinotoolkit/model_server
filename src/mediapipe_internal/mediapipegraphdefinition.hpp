@@ -25,8 +25,6 @@
 #include <vector>
 
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
@@ -74,7 +72,7 @@ public:
     const tensor_map_t getOutputsInfo() const;
     const MediapipeGraphConfig& getMediapipeGraphConfig() const { return this->mgconfig; }
 
-    Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response);
+    Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline);
 
     Status reload(ModelManager& manager, const MediapipeGraphConfig& config);
     Status validate(ModelManager& manager);

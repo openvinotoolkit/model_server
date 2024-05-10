@@ -28,6 +28,12 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
+#pragma GCC diagnostic pop
+
 #include "config.hpp"
 #include "dags/pipeline.hpp"
 #include "dags/pipelinedefinition.hpp"
@@ -53,6 +59,11 @@
 #include "status.hpp"
 #include "stringutils.hpp"
 #include "timer.hpp"
+
+#if (MEDIAPIPE_DISABLE == 0)
+#include "http_frontend/http_graph_executor_impl.hpp"
+#include "mediapipe_internal/mediapipegraphexecutor.hpp"
+#endif
 
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
@@ -92,6 +103,9 @@ const std::string HttpRestApiHandler::kfs_serverliveRegexExp =
 const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
     R"(/v2)";
 
+const std::string HttpRestApiHandler::oai_chatCompletionRegexExp =
+    R"(/v3/chat/completions)";
+
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics(\?(.*))?)";
 
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
@@ -105,6 +119,7 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     kfs_serverreadyRegex(kfs_serverreadyRegexExp),
     kfs_serverliveRegex(kfs_serverliveRegexExp),
     kfs_servermetadataRegex(kfs_servermetadataRegexExp),
+    oai_chatCompletionRegex(oai_chatCompletionRegexExp),
     metricsRegex(metricsRegexExp),
     timeout_in_ms(timeout_in_ms),
     ovmsServer(ovmsServer),
@@ -133,12 +148,12 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
     return StatusCode::OK;
 }
 
-void HttpRestApiHandler::registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)> f) {
+void HttpRestApiHandler::registerHandler(RequestType type, HandlerCallbackFn f) {
     handlers[type] = std::move(f);
 }
 
 void HttpRestApiHandler::registerAll() {
-    registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+    registerHandler(Predict, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
                 request_components.model_version_label, request_body, &response);
@@ -148,39 +163,43 @@ void HttpRestApiHandler::registerAll() {
         }
     });
 
-    registerHandler(GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) {
+    registerHandler(GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) {
         return processModelMetadataRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(GetModelStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) {
+    registerHandler(GetModelStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) {
         return processModelStatusRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(ConfigReload, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+    registerHandler(ConfigReload, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
         return processConfigReloadRequest(response, this->modelManager);
     });
-    registerHandler(ConfigStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+    registerHandler(ConfigStatus, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
         return processConfigStatusRequest(response, this->modelManager);
     });
-    registerHandler(KFS_GetModelReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+    registerHandler(KFS_GetModelReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
         return processModelReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+    registerHandler(KFS_GetModelMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
         return processModelMetadataKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_Infer, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+    registerHandler(KFS_Infer, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
         return processInferKFSRequest(request_components, response, request_body, response_components.inferenceHeaderContentLength);
     });
-    registerHandler(KFS_GetServerReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+    registerHandler(KFS_GetServerReady, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
         return processServerReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerLive, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+    registerHandler(KFS_GetServerLive, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
         return processServerLiveKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+    registerHandler(KFS_GetServerMetadata, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
         return processServerMetadataKFSRequest(request_components, response, request_body);
     });
-    registerHandler(Metrics, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components) -> Status {
+
+    registerHandler(OAI_ChatCompletion, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface* writer) -> Status {
+        return processOAIChatCompletionsRequest(request_components, response, request_body, writer);
+    });
+    registerHandler(Metrics, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
         return processMetrics(request_components, response, request_body);
     });
 }
@@ -424,15 +443,72 @@ Status HttpRestApiHandler::dispatchToProcessor(
     const std::string& request_body,
     std::string* response,
     const HttpRequestComponents& request_components,
-    HttpResponseComponents& response_components) {
+    HttpResponseComponents& response_components,
+    tensorflow::serving::net_http::ServerRequestInterface* writer) {
 
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
-        return handler->second(request_components, *response, request_body, response_components);
+        return handler->second(request_components, *response, request_body, response_components, writer);
     } else {
         return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
     }
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
+}
+
+Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* writer) {
+#if (MEDIAPIPE_DISABLE == 0)
+    Document doc;
+    doc.Parse(request_body.c_str());
+    if (doc.HasParseError()) {
+        return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
+    }
+
+    if (!doc.IsObject()) {
+        return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
+    }
+
+    auto modelNameIt = doc.FindMember("model");  // llama3-loraVer5
+    if (modelNameIt == doc.MemberEnd()) {
+        return Status(StatusCode::JSON_INVALID, "\"model\" field is missing in JSON body");
+    }
+
+    if (!modelNameIt->value.IsString()) {
+        return Status(StatusCode::JSON_INVALID, "\"model\" field is not a string");
+    }
+
+    const std::string model_name = modelNameIt->value.GetString();
+
+    bool stream = true;
+    auto streamIt = doc.FindMember("stream");
+    if (streamIt != doc.MemberEnd()) {
+        if (!streamIt->value.IsBool()) {
+            return Status(StatusCode::JSON_INVALID, "\"stream\" field is not a boolean");
+        }
+        stream = streamIt->value.GetBool();
+    }
+
+    std::shared_ptr<MediapipeGraphExecutor> executor;
+    auto status = this->modelManager.createPipeline(executor, model_name);
+    if (!status.ok()) {
+        return status;
+    }
+
+    if (stream == false) {
+        ServableMetricReporter* smr = nullptr;                                                         // Unused
+        ExecutionContext ec{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};  // Unused
+        return executor->infer(&request_body, &response, ec, smr);
+    } else {
+        status = executor->inferStream(request_body, *writer);
+        if (!status.ok()) {
+            sendErrorImpl(status.string(), *writer);
+        }
+        writer->PartialReplyEnd();
+        return StatusCode::PARTIAL_END;
+    }
+#else
+    SPDLOG_DEBUG("Mediapipe support was disabled during build process...");
+    return StatusCode::NOT_IMPLEMENTED;
+#endif
 }
 
 Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
@@ -583,6 +659,13 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
                 return status;
             return StatusCode::OK;
         }
+        if (std::regex_match(request_path, sm, oai_chatCompletionRegex)) {
+            requestComponents.type = OAI_ChatCompletion;
+            auto status = parseInferenceHeaderContentLength(requestComponents, headers);
+            if (!status.ok())
+                return status;
+            return StatusCode::OK;
+        }
         if (std::regex_match(request_path, sm, configReloadRegex)) {
             requestComponents.type = ConfigReload;
             return StatusCode::OK;
@@ -678,7 +761,8 @@ Status HttpRestApiHandler::processRequest(
     const std::string& request_body,
     std::vector<std::pair<std::string, std::string>>* headers,
     std::string* response,
-    HttpResponseComponents& responseComponents) {
+    HttpResponseComponents& responseComponents,
+    tensorflow::serving::net_http::ServerRequestInterface* writer) {
 
     std::smatch sm;
     std::string request_path_str(request_path);
@@ -696,7 +780,7 @@ Status HttpRestApiHandler::processRequest(
 
     if (!status.ok())
         return status;
-    return dispatchToProcessor(request_body, response, requestComponents, responseComponents);
+    return dispatchToProcessor(request_body, response, requestComponents, responseComponents, writer);
 }
 
 Status HttpRestApiHandler::processPredictRequest(

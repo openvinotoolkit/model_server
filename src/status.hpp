@@ -332,6 +332,8 @@ enum class StatusCode {
     SERVER_ALREADY_STARTING,
     MODULE_ALREADY_INSERTED,
 
+    PARTIAL_END,
+
     STATUS_CODE_END
 };
 

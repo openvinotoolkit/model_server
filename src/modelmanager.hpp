@@ -366,9 +366,7 @@ public:
         return pipelineFactory.create(pipeline, name, request, response, *this);
     }
     Status createPipeline(std::shared_ptr<MediapipeGraphExecutor>& graph,
-        const std::string& name,
-        const KFSRequest* request,
-        KFSResponse* response);
+        const std::string& name);
 
     const bool pipelineDefinitionExists(const std::string& name) const {
         return pipelineFactory.definitionExists(name);

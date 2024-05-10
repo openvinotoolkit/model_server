@@ -1121,10 +1121,12 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     std::vector<float> requestData1{0., 0., 0., 0., 0., 0., 0, 0., 0., 0};
     std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0, 0., 0., 0};
     preparePredictRequest(request, inputsMeta, requestData1);
+    request.set_id("my_id");
     request.mutable_model_name()->assign(modelName);
     auto status = impl.ModelInfer(nullptr, &request, &response);
     ASSERT_EQ(status.error_code(), grpc::StatusCode::OK) << status.error_message();
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+    ASSERT_EQ(response.id(), "my_id");
 }
 
 const std::vector<std::string> mediaGraphsDummy{"mediaDummy",
@@ -2163,7 +2165,7 @@ public:
         std::shared_ptr<MediapipeGraphExecutor> executor;
         Request request;
         Response response;
-        auto status = manager.createPipeline(executor, mgdName, &request, &response);
+        auto status = manager.createPipeline(executor, mgdName);
         EXPECT_EQ(status, code) << status.string();
     }
 };
@@ -2448,6 +2450,7 @@ TEST_F(MediapipeSerialization, TFTensor) {
     response.flat<float>()(0) = 1.0f;
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<tensorflow::Tensor>(response);
     ASSERT_EQ(onPacketReadySerializeImpl("1", "tf_response", "1", "tf_response", mediapipe_packet_type_enum::TFTENSOR, packet, mp_response), StatusCode::OK);
+    ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2464,6 +2467,7 @@ TEST_F(MediapipeSerialization, OVTensor) {
     ov::Tensor response(type, {1}, data.data());
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<ov::Tensor>(response);
     ASSERT_EQ(onPacketReadySerializeImpl("1", "ov_response", "1", "ov_response", mediapipe_packet_type_enum::OVTENSOR, packet, mp_response), StatusCode::OK);
+    ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2479,6 +2483,7 @@ TEST_F(MediapipeSerialization, MPTensor) {
     response.GetCpuWriteView().buffer<float>()[0] = 1.0f;
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<mediapipe::Tensor>(std::move(response));
     ASSERT_EQ(onPacketReadySerializeImpl("1", "mp_response", "1", "mp_response", mediapipe_packet_type_enum::MPTENSOR, packet, mp_response), StatusCode::OK);
+    ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2496,6 +2501,7 @@ TEST_F(MediapipeSerialization, MPImageTensor) {
     response.MutablePixelData()[2] = (char)1;
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<mediapipe::ImageFrame>(std::move(response));
     ASSERT_EQ(onPacketReadySerializeImpl("1", "mp_img_response", "1", "mp_img_response", mediapipe_packet_type_enum::MEDIAPIPE_IMAGE, packet, mp_response), StatusCode::OK);
+    ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs(0).datatype(), "UINT8");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2929,7 +2935,7 @@ protected:
         const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(this->server.getModule(SERVABLE_MANAGER_MODULE_NAME));
         ModelManager& modelManager = smm->getServableManager();
         std::shared_ptr<MediapipeGraphExecutor> executor;
-        ASSERT_EQ(modelManager.createPipeline(executor, this->request.model_name(), &this->request, &response), ovms::StatusCode::OK);
+        ASSERT_EQ(modelManager.createPipeline(executor, this->request.model_name()), ovms::StatusCode::OK);
         using ovms::ExecutionContext;
         ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer};
         ServableMetricReporter* reporter = nullptr;
@@ -3327,6 +3333,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "PythonExecutorCalculator",  // integral OVMS calculator
 #endif
         "LLMCalculator",  // integral OVMS calculator
+        "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
         "AddHeaderCalculator",
         "AddNumbersMultiInputsOutputsTestCalculator",
         "AddOne3CycleIterationsTestCalculator",

@@ -37,6 +37,7 @@
 
 namespace ovms {
 class PythonBackend;
+class ServableMetricReporter;
 
 #define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)             \
     {                                                                    \
@@ -143,7 +144,7 @@ public:
                 try {
                     OVMS_RETURN_ON_FAIL(
                         onPacketReadySerializeImpl(
-                            request->id(),
+                            getRequestId(*request),
                             this->name,
                             this->version,
                             outputStreamName,

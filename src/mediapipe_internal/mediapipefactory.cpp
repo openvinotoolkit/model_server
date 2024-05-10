@@ -101,8 +101,6 @@ Status MediapipeFactory::reloadDefinition(const std::string& name,
 
 Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline,
     const std::string& name,
-    const KFSRequest* request,
-    KFSResponse* response,
     ModelManager& manager) const {
     std::shared_lock lock(definitionsMtx);
     if (!definitionExists(name)) {
@@ -110,8 +108,7 @@ Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipelin
         return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
     }
     auto& definition = *definitions.at(name);
-    auto status = definition.create(pipeline, request, response);
-    return status;
+    return definition.create(pipeline);
 }
 
 void MediapipeFactory::retireOtherThan(std::set<std::string>&& graphsInConfigFile, ModelManager& manager) {
