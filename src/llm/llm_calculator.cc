@@ -39,10 +39,6 @@ const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 
 class LLMCalculator : public CalculatorBase {
     std::shared_ptr<ovms::LLMNodeResources> nodeResources;
-    // The calculator manages timestamp for outputs to work independently of inputs
-    // this way we can support timestamp continuity for more than one request in streaming scenario.
-    mediapipe::Timestamp outputTimestamp;
-    bool hasLoopback{false};
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -73,7 +69,6 @@ public:
         }
 
         nodeResources = it->second;
-        outputTimestamp = mediapipe::Timestamp(mediapipe::Timestamp::Unset());
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Open end";
         return absl::OkStatus();
     }

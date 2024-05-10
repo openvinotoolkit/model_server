@@ -959,9 +959,7 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
         PythonBackend* pythonBackend) :
-        MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, emptyLLMNodeResourcesMap, pythonBackend) {}
-
-    LLMNodeResourcesMap emptyLLMNodeResourcesMap;
+        MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, pythonBackend) {}
 };
 
 TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {

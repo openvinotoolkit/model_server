@@ -84,6 +84,9 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
 
     try {
         nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, default_config);
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Error during llm node initialization for workspace_path: {} exception: {}", basePath, e.what());
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
         SPDLOG_ERROR("Error during llm node initialization for workspace_path: {}", basePath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;

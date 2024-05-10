@@ -236,4 +236,5 @@ TEST_F(LLMFlowKfsTest, LLMNodeResourceInitFailed) {
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    ASSERT_EQ(mediapipeDummy.getLLMNodeResources("llmNode"), nullptr);
 }
