@@ -20,7 +20,6 @@
 #include <string>
 
 #include "../mediapipe_internal/packettypes.hpp"
-#include "../status.hpp"
 #include "kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -32,6 +31,7 @@
 namespace ovms {
 
 class PythonBackend;
+class Status;
 
 // Deserialization of parameters inside KServe gRPC request
 // into mediapipe Packets.

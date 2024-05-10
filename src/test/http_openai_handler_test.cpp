@@ -33,63 +33,6 @@
 
 #include "test_utils.hpp"
 
-class HttpOpenAIHandlerTest : public ::testing::Test {
-protected:
-    ovms::Server& server = ovms::Server::instance();
-    std::unique_ptr<ovms::HttpRestApiHandler> handler;
-
-    std::unique_ptr<std::thread> t;
-    std::string port = "9173";
-
-    void SetUpServer(const char* configPath) {
-        ::SetUpServer(this->t, this->server, this->port, configPath);
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
-
-        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
-    }
-
-    void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock.json");
-    }
-
-    void TearDown() {
-        handler.reset();
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
-    }
-};
-
-TEST_F(HttpOpenAIHandlerTest, Unary) {
-    ASSERT_EQ(1, 1);
-
-    std::vector<std::pair<std::string, std::string>> headers;
-    ovms::HttpRequestComponents comp;
-
-    const std::string endpoint = "/v3/chat/completions";
-    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
-
-    std::string response;
-    ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
-    std::string requestBody = R"(
-        {
-            "model": "gpt",
-            "stream": false,
-            "messages": []
-        }
-    )";
-    ASSERT_EQ(handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
-
-    // The calculator produces X packets, each appending timestamp starting from 0.
-    // This test has stream=false, meaning only first packet will be serialized.
-    std::string expectedResponse = requestBody + std::string{"0"};
-    ASSERT_EQ(response, expectedResponse);
-}
-
 class MockedServerRequestInterface final : public tensorflow::serving::net_http::ServerRequestInterface {
 public:
     MOCK_METHOD(absl::string_view, uri_path, (), (const, override));
@@ -112,16 +55,61 @@ public:
     MOCK_METHOD(void, PartialReplyEnd, (), (override));
 };
 
-TEST_F(HttpOpenAIHandlerTest, Stream) {
+class HttpOpenAIHandlerTest : public ::testing::Test {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
+
+    std::unique_ptr<std::thread> t;
+    std::string port = "9173";
+
     std::vector<std::pair<std::string, std::string>> headers;
     ovms::HttpRequestComponents comp;
-
     const std::string endpoint = "/v3/chat/completions";
-    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
-
+    MockedServerRequestInterface writer;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    MockedServerRequestInterface writer;
+
+    void SetUpServer(const char* configPath) {
+        ::SetUpServer(this->t, this->server, this->port, configPath);
+        auto start = std::chrono::high_resolution_clock::now();
+        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+        }
+
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+    }
+
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock.json");
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
+    }
+
+    void TearDown() {
+        handler.reset();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
+TEST_F(HttpOpenAIHandlerTest, Unary) {
+    std::string requestBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+
+    ASSERT_EQ(response, requestBody + std::string{"0"});
+}
+
+TEST_F(HttpOpenAIHandlerTest, Stream) {
     std::string requestBody = R"(
         {
             "model": "gpt",
@@ -130,17 +118,118 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);                  // libevent call to end the response
-    EXPECT_CALL(writer, PartialReply()).Times(9);                     // libevent calls to send the buffered data (calculator has 9 loop iterations)
-    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(9);  // writing chunk of response to buffer
-    // TODO: Assert actual responses once we have HttpPayload defined
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply()).Times(9);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(9);
 
     ASSERT_EQ(
         handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::PARTIAL_END);  // indicating that processor should not write response back
-    // writer was responsible for sending the response
+        ovms::StatusCode::PARTIAL_END);
 
-    // The calculator produces X packets, but the responses are returned via writer
-    std::string expectedResponse{""};
-    ASSERT_EQ(response, expectedResponse);
+    ASSERT_EQ(response, "");
 }
+
+TEST_F(HttpOpenAIHandlerTest, BodyNotAJson) {
+    std::string requestBody = "not a json";
+
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
+    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - Cannot parse JSON body");
+}
+
+TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
+    std::string requestBody = "[1, 2, 3]";
+
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
+    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - JSON body must be an object");
+}
+
+TEST_F(HttpOpenAIHandlerTest, ModelFieldMissing) {
+    std::string requestBody = R"(
+        {
+            "stream": true,
+            "messages": []
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
+    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - \"model\" field is missing in JSON body");
+}
+
+TEST_F(HttpOpenAIHandlerTest, ModelFieldNotAString) {
+    std::string requestBody = R"(
+        {
+            "model": 2,
+            "stream": true,
+            "messages": []
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
+    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - \"model\" field is not a string");
+}
+
+TEST_F(HttpOpenAIHandlerTest, StreamFieldNotABoolean) {
+    std::string requestBody = R"(
+        {
+            "model": "gpt",
+            "stream": 2,
+            "messages": []
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
+    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status.string(), "The file is not valid json - \"stream\" field is not a boolean");
+}
+
+TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
+    std::string requestBody = R"(
+        {
+            "model": "not_exist",
+            "stream": false,
+            "messages": []
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
+    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
+}
+
+// TODO (negative paths):
+// - test that /v3/chat/completions endpoint is not reachable for builds without MediaPipe
+// - test negative path for accessing /v3/chat/completions graph via KFS API
+// - test negative path for accessing regular graph via /v3/chat/completions endpoint
+
+// TODO (positive paths):
+// - partial error is sent via "req" object
+
+// TODO(mkulakow)
+// Test actual flow once the type is changed from std::string to HttpPayload
