@@ -1390,20 +1390,16 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     // TODO unload model guard
     inferRequest.set_callback([this, requestProto, &inferRequest, userCallback, userCallbackData](std::exception_ptr exception) {
         SPDLOG_INFO("Entry of ov::InferRequest callback call");
-        std::cout << __LINE__ << " start_OV_callback" << std::endl;
         if (exception) {
             try {
                 std::rethrow_exception(exception);
             } catch (const std::exception& e) {
                 SPDLOG_DEBUG("got exception in ov::InferRequest callback: {}", e.what());
-                std::cout << "Caught exception: '" << e.what() << "'\n";
             } catch (...) {
                 SPDLOG_DEBUG("got exception in ov::InferRequest callback");
-                std::cout << "Caught unknown exception'\n";
                 return;
             }
         }
-        std::cout << __LINE__ << " no exception  OV_callback" << std::endl;
         SPDLOG_INFO("Using OV callback");
         // here use OVMS response serialization
         // here call user set callback
@@ -1423,10 +1419,8 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
         }
         OVMS_InferenceResponse* response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
         SPDLOG_DEBUG("Calling user provided callback");  // TODO check if this shows
-        std::cout << __LINE__ << " calling user provided callback" << std::endl;
         userCallback(response, 1, userCallbackData);
-        SPDLOG_DEBUG("Called user provided callback");  // TODO check if this shows
-        std::cout << __LINE__ << " called user provided callback" << std::endl;
+        SPDLOG_DEBUG("Called user provided callback");                       // TODO check if this shows
         inferRequest.set_callback([](std::exception_ptr exception_ptr) {});  // reset callback on infer request
     });
     OV_LOGGER("ov::InferRequest: {}, inferRequest.start_async()", reinterpret_cast<void*>(&inferRequest));

@@ -512,10 +512,8 @@ Status deserializePredictRequest(
             const InferenceTensor* requestInputPtr{nullptr};
             ovms::Status status;
             if (!isPipeline) {
-                SPDLOG_ERROR("getting input:{}", name);
                 status = request.getInput(name.c_str(), &requestInputPtr);
             } else {
-                SPDLOG_ERROR("getting output:{}", name);
                 status = request.getOutput(name.c_str(), &requestInputPtr);
             }
             // TODO impose limits on what can be processed in deserialization on output eg. no binary handling
