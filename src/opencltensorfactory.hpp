@@ -34,12 +34,11 @@ public:
      * factory type.
      */
     virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) override {
-        SPDLOG_ERROR("ERa addr:{}", data);
+        SPDLOG_TRACE("create ov::Tensor from context with buffer: {}", data);  // TODO OVTRACING
         return ovOclContext.create_tensor(type, shape, *(reinterpret_cast<const cl::Buffer*>(data)));
     }
     virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) override {
         // FIXME TODO
-        SPDLOG_ERROR("ERXXXYXYXYXYYX");
         return ov::Tensor(type, shape);
     }
 };
