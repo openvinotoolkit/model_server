@@ -388,7 +388,7 @@ targz_package:
 		--target=pkg && \
 	rm -vrf dist/$(OS) && mkdir -p dist/$(OS) && \
 	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)) && \
-	docker cp $$ID:/ovms_pkg/$(OS) dist/ && \
+	docker cp $$ID:/ovms_pkg/$(BASE_OS_TYPE) dist/ && \
 	docker rm $$ID
 	cd dist/$(OS) && sha256sum --check ovms.tar.gz.sha256
 	cd dist/$(OS) && sha256sum --check ovms.tar.xz.sha256
