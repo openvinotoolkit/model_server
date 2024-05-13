@@ -367,23 +367,29 @@ Status serializePredictResponse(
         }
         const InferenceTensor* outputTensorFromRequest{nullptr};
         status = request->getOutput(outputInfo->getMappedName().c_str(), &outputTensorFromRequest);
-        if (!status.ok()) {  // TODO here casual serialization
+        if (!status.ok()) {
             outputTensor->setBuffer(
                 tensor.data(),
                 tensor.get_byte_size(),
                 OVMS_BUFFERTYPE_CPU,
                 std::nullopt,
                 true);
-            SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find inserted output",
+            SPDLOG_TRACE("Will serialize output with name:{} for servable name:{}; version:{} with buffer copy",
                 outputName, response->getServableName(), response->getServableVersion());
             return StatusCode::OK;
         }
-        const Buffer* requestOutputBuffer = outputTensorFromRequest->getBuffer();  // TODO check nullptr
+        SPDLOG_TRACE("Will serialize output with name:{} for servable name:{}; version:{} with buffer from request",
+            outputName, response->getServableName(), response->getServableVersion());
+        const Buffer* requestOutputBuffer = outputTensorFromRequest->getBuffer();
+        if (!requestOutputBuffer) {  // this should be rejected in validation
+            SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find inserted output",
+                outputName, response->getServableName(), response->getServableVersion());
+            return Status(StatusCode::INTERNAL_ERROR, "tried to use tensor with no buffer!");
+        }
         if (!requestOutputBuffer) {
             SPDLOG_ERROR("Request output set but not buffer. We shouldn't allow such requests");
             return StatusCode::INTERNAL_ERROR;
         }
-        SPDLOG_ERROR("Serialization buffer addr:{}", (void*)requestOutputBuffer->data());
         bool copyBuffer = false;
         outputTensorFromResponse->setBuffer(
             requestOutputBuffer->data(),
