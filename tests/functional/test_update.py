@@ -77,14 +77,14 @@ class TestSingleModelInference:
         assert expected_output_metadata_v1 == output_metadata
 
         request_latest = get_model_metadata_request(model_name=Resnet.name)
-        response_latest = stub.GetModelMetadata(request_latest, 10)
+        response_latest = get_model_metadata(stub, request_latest)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
         logger.info("Input metadata: {}".format(input_metadata_latest))
         logger.info("Output metadata: {}".format(output_metadata_latest))
 
         request_v4 = get_model_metadata_request(model_name=Resnet.name, version=4)
-        response_v4 = stub.GetModelMetadata(request_v4, 10)
+        response_v4 = get_model_metadata(stub, request_v4)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_latest)
         logger.info("Input metadata: {}".format(input_metadata_v4))
@@ -114,14 +114,14 @@ class TestSingleModelInference:
         # Available versions: 1, 3
 
         request_latest = get_model_metadata_request(model_name=Resnet.name)
-        response_latest = stub.GetModelMetadata(request_latest, 10)
+        response_latest = get_model_metadata(stub, request_latest)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
         logger.info("Input metadata: {}".format(input_metadata_latest))
         logger.info("Output metadata: {}".format(output_metadata_latest))
 
         request_v3 = get_model_metadata_request(model_name=Resnet.name, version=3)
-        response_v3 = stub.GetModelMetadata(request_v3, 10)
+        response_v3 = get_model_metadata(stub, request_v3)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
             response=response_v3)
         logger.info("Input metadata: {}".format(input_metadata_v3))
@@ -156,7 +156,7 @@ class TestSingleModelInference:
         time.sleep(10)
 
         request_v1 = get_model_metadata_request(model_name=Resnet.name, version=1)
-        response_v1 = stub.GetModelMetadata(request_v1, 10)
+        response_v1 = get_model_metadata(stub, request_v1)
         input_metadata_v1, output_metadata_v1 = model_metadata_response(
             response=response_v1)
 
@@ -168,7 +168,7 @@ class TestSingleModelInference:
         expected_output_metadata_v3 = {Resnet.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
 
         request_v3 = get_model_metadata_request(model_name=Resnet.name, version=3)
-        response_v3 = stub.GetModelMetadata(request_v3, 10)
+        response_v3 = get_model_metadata(stub, request_v3)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
             response=response_v3)
 
@@ -179,7 +179,7 @@ class TestSingleModelInference:
         expected_input_metadata_v4 = {Resnet.input_name: {'dtype': 1, 'shape': list(ResnetBS4.input_shape)}}
         expected_output_metadata_v4 = {Resnet.output_name: {'dtype': 1, 'shape': list(ResnetBS4.output_shape)}}
         request_v4 = get_model_metadata_request(model_name=Resnet.name)
-        response_v4 = stub.GetModelMetadata(request_v4, 10)
+        response_v4 = get_model_metadata(stub, request_v4)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_v4)
 
@@ -557,7 +557,7 @@ class TestSingleModelInference:
         logger.info("Output metadata: {}".format(output_metadata_latest))
 
         request_v4 = get_model_metadata_request(model_name=Resnet.name, version=4)
-        response_v4 = stub.GetModelMetadata(request_v4, 10)
+        response_v4 = get_model_metadata(stub, request_v4)
         input_metadata_v4, output_metadata_v4 = model_metadata_response(
             response=response_latest)
         logger.info("Input metadata: {}".format(input_metadata_v4))
@@ -574,7 +574,7 @@ class TestSingleModelInference:
         # Available versions: 1, 3
 
         request_latest = get_model_metadata_request(model_name=Resnet.name)
-        response_latest = stub.GetModelMetadata(request_latest, 10)
+        response_latest = get_model_metadata(stub, request_latest)
         input_metadata_latest, output_metadata_latest = \
             model_metadata_response(response=response_latest)
         logger.info("Input metadata: {}".format(input_metadata_latest))
@@ -609,7 +609,7 @@ class TestSingleModelInference:
         expected_output_metadata_v3 = {Resnet.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
 
         request_v3 = get_model_metadata_request(model_name=Resnet.name, version=3)
-        response_v3 = stub.GetModelMetadata(request_v3, 10)
+        response_v3 = get_model_metadata(stub, request_v3)
         input_metadata_v3, output_metadata_v3 = model_metadata_response(
             response=response_v3)
 
