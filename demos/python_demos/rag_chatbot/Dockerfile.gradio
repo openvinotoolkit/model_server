@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,14 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-ARG  IMAGE_NAME=openvino/model_server:latest
-FROM ${IMAGE_NAME}
-USER root
-ENV LD_LIBRARY_PATH=/ovms/lib
-ENV PYTHONPATH=/ovms/lib/python
-RUN apt update && apt install -y python3-pip git
-COPY requirements.txt .
-RUN pip3 install -r requirements.txt
-RUN python3 -c "import nltk; nltk.download('averaged_perceptron_tagger'); nltk.download('punkt')"
-USER ovms
-ENTRYPOINT [ "/ovms/bin/ovms" ]
+
+FROM python:3.8-slim
+
+WORKDIR /usr/src/app
+COPY app.py streamer.py client_requirements.txt ./
+RUN pip install --no-cache-dir -r client_requirements.txt
+EXPOSE 7860
+ENV GRADIO_SERVER_NAME="0.0.0.0"
+
+CMD ["python", "app.py"]
