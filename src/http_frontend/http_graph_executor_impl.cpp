@@ -38,16 +38,16 @@
 
 namespace ovms {
 
+static const std::string UNUSED_REQUEST_ID = "";
+
 Status deserializeInputSidePacketsFromFirstRequestImpl(
     std::map<std::string, mediapipe::Packet>& inputSidePackets,  // out
     const std::string& request) {                                // in
     return StatusCode::OK;
 }
 
-const std::string& getRequestId(
-    const std::string& request) {
-    static const std::string _default{""};
-    return _default;
+const std::string& getRequestId(const std::string& request) {
+    return UNUSED_REQUEST_ID;
 }
 
 Status onPacketReadySerializeAndSendImpl(
