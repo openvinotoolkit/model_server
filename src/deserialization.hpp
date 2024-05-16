@@ -510,12 +510,7 @@ Status deserializePredictRequest(
     for (const auto& [name, tensorInfo] : inputMap) {
         try {
             const InferenceTensor* requestInputPtr{nullptr};
-            ovms::Status status;
-            if (!isPipeline) {
-                status = request.getInput(name.c_str(), &requestInputPtr);
-            } else {
-                status = request.getOutput(name.c_str(), &requestInputPtr);
-            }
+            auto status = request.getInput(name.c_str(), &requestInputPtr);
             // TODO impose limits on what can be processed in deserialization on output eg. no binary handling
             if (!status.ok() || requestInputPtr == nullptr) {
                 SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
@@ -528,7 +523,6 @@ Status deserializePredictRequest(
                 SPDLOG_DEBUG(status.string());
                 return status;
             }
-
             const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();
             status = inputSink.give(ovTensorName, tensor);
             if (!status.ok()) {
