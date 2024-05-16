@@ -1287,9 +1287,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));
-    // TODO FIXME we want to use serialziation below but we need to have implementations for all frontends
-    //status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), requestProto, responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));  // TODO FIXME handle status
+    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), requestProto, responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));
     timer.stop(SERIALIZE);
     if (!status.ok())
         return status;
@@ -1376,18 +1374,24 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     ov::intel_gpu::ocl::ClContext ovOclContext(this->ieCore, this->ocl_context);
     OpenCLTensorFactory factory(*this->ocl_context_cpp);
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, &factory);
-    isPipeline = true;  // TODO check for status
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Deserialization of inputs failed for model {}, version {}",
+            getName(), getVersion());
+        return status;
+    }
     status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getOutputsInfo(), inputSink, isPipeline, &factory);
     timer.stop(DESERIALIZE);
-    if (!status.ok())
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Deserialization of outputs failed for model {}, version {}", getName(), getVersion());
         return status;
+    }
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
     // set callback
     OVMS_InferenceResponseCompleteCallback_t userCallback = requestProto->getResponseCompleteCallback();
     void* userCallbackData = requestProto->getResponseCompleteCallbackData();
     // here pass by copy into callback
-    // TODO unload model guard
+    // TODO unload model guard & test
     inferRequest.set_callback([this, requestProto, &inferRequest, userCallback, userCallbackData](std::exception_ptr exception) {
         SPDLOG_INFO("Entry of ov::InferRequest callback call");
         if (exception) {

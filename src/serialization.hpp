@@ -93,6 +93,19 @@ Status serializePredictResponse(
     const std::string& servableName,
     model_version_t servableVersion,
     const tensor_map_t& outputMap,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent = true) {  // does not apply for TFS frontend
+return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
+}
+
+template <typename T>
+Status serializePredictResponse(
+    OutputGetter<T>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
     tensorflow::serving::PredictResponse* response,
     outputNameChooser_t outputNameChooser,
     bool useSharedOutputContent = true) {  // does not apply for TFS frontend
@@ -112,6 +125,19 @@ Status serializePredictResponse(
         }
     }
     return status;
+}
+
+template <typename T>
+Status serializePredictResponse(
+    OutputGetter<T>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const ::KFSRequest* request,
+    ::KFSResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent = true) {
+    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
 }
 
 template <typename T>
@@ -234,7 +260,6 @@ Status serializePredictResponse(
             return status;
         }
         }
-        InferenceTensor* outputTensor{nullptr};
         // Mapped name for single model result serialization: possible mapping_config.json setting
         // For DAG: setting in pipeline output configuration
         status = response->addOutput(
@@ -244,37 +269,30 @@ Status serializePredictResponse(
             tensor.get_shape().size());
         if (status == StatusCode::DOUBLE_TENSOR_INSERT) {
             // DAG demultiplexer CAPI handling
-            status = response->addOutput(
-                outputInfo->getMappedName(),
-                getPrecisionAsOVMSDataType(actualPrecision),
-                reinterpret_cast<const int64_t*>(tensor.get_shape().data()),
-                tensor.get_shape().size());
-            if (status == StatusCode::DOUBLE_TENSOR_INSERT) {
-                // DAG demultiplexer CAPI handling
-                // there is performance optimization so that during gather stage we do not double copy nodes
-                // outputs first to intermediate shard tensors and then to gathered tensor in response
-                return StatusCode::OK;
-            }
-            if (!status.ok()) {
-                SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: duplicate output name",
-                    outputName, response->getServableName(), response->getServableVersion());
-                return StatusCode::INTERNAL_ERROR;
-            }
-            const std::string* outputNameFromCapiTensor = nullptr;
-            status = response->getOutput(outputId, &outputNameFromCapiTensor, &outputTensor);
-            ++outputId;
-            if (!status.ok()) {
-                SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find inserted input",
-                    outputName, response->getServableName(), response->getServableVersion());
-                return StatusCode::INTERNAL_ERROR;
-            }
-            outputTensor->setBuffer(
-                tensor.data(),
-                tensor.get_byte_size(),
-                OVMS_BUFFERTYPE_CPU,
-                std::nullopt,
-                true);
+            // there is performance optimization so that during gather stage we do not double copy nodes
+            // outputs first to intermediate shard tensors and then to gathered tensor in response
+            return StatusCode::OK;
         }
+        if (!status.ok()) {
+            SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: duplicate output name",
+                outputName, response->getServableName(), response->getServableVersion());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        const std::string* outputNameFromCapiTensor = nullptr;
+        InferenceTensor* outputTensorFromResponse{nullptr};
+        status = response->getOutput(outputId, &outputNameFromCapiTensor, &outputTensorFromResponse);
+        ++outputId;
+        if (!status.ok()) {
+            SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find inserted input",
+                outputName, response->getServableName(), response->getServableVersion());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        outputTensorFromResponse->setBuffer(
+            tensor.data(),
+            tensor.get_byte_size(),
+            OVMS_BUFFERTYPE_CPU,
+            std::nullopt,
+            true);
     }
     return StatusCode::OK;
 }
@@ -336,7 +354,6 @@ Status serializePredictResponse(
             return status;
         }
         }
-        InferenceTensor* outputTensor{nullptr};
         // Mapped name for single model result serialization: possible mapping_config.json setting
         // For DAG: setting in pipeline output configuration
         status = response->addOutput(
@@ -355,8 +372,6 @@ Status serializePredictResponse(
                 outputName, response->getServableName(), response->getServableVersion());
             return StatusCode::INTERNAL_ERROR;
         }
-
-        // buffer serialization
         const std::string* outputNameFromCapiTensor = nullptr;
         InferenceTensor* outputTensorFromResponse{nullptr};
         status = response->getOutput(outputId, &outputNameFromCapiTensor, &outputTensorFromResponse);
@@ -368,7 +383,7 @@ Status serializePredictResponse(
         const InferenceTensor* outputTensorFromRequest{nullptr};
         status = request->getOutput(outputInfo->getMappedName().c_str(), &outputTensorFromRequest);
         if (!status.ok()) {
-            outputTensor->setBuffer(
+            outputTensorFromResponse->setBuffer(
                 tensor.data(),
                 tensor.get_byte_size(),
                 OVMS_BUFFERTYPE_CPU,

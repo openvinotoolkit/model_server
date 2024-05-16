@@ -34,7 +34,7 @@ class InferenceRequest {
     std::unordered_map<std::string, InferenceParameter> parameters;
     std::unordered_map<std::string, InferenceTensor> inputs;
     std::unordered_map<std::string, InferenceTensor> outputs;
-    OVMS_InferenceResponseCompleteCallback_t responseCompleteCallback;
+    OVMS_InferenceResponseCompleteCallback_t responseCompleteCallback{nullptr};
     void* responseCompleteCallbackData = nullptr;
 
 public:
