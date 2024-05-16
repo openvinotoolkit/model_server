@@ -57,7 +57,7 @@ Status onPacketReadySerializeAndSendImpl(
     const std::string& packetName,
     const mediapipe_packet_type_enum packetType,
     const ::mediapipe::Packet& packet,
-    HttpWriter& writer) {
+    HttpReaderWriter& serverReaderWriter) {
     std::string out;
     OVMS_RETURN_ON_FAIL(
         onPacketReadySerializeImpl(
@@ -68,8 +68,8 @@ Status onPacketReadySerializeAndSendImpl(
             packetType,
             packet,
             out));
-    writer.WriteResponseString(out);
-    writer.PartialReply();
+    serverReaderWriter.WriteResponseString(out);
+    serverReaderWriter.PartialReply();
     return StatusCode::OK;
 }
 
@@ -111,14 +111,14 @@ Status validateSubsequentRequestImpl(
 
 Status sendErrorImpl(
     const std::string& message,
-    HttpWriter& serverReaderWriter) {
+    HttpReaderWriter& serverReaderWriter) {
     serverReaderWriter.WriteResponseString("{\"error\": \"" + message + "\"}");
     serverReaderWriter.PartialReply();
     return StatusCode::OK;
 }
 
 bool waitForNewRequest(
-    HttpWriter& serverReaderWriter,
+    HttpReaderWriter& serverReaderWriter,
     std::string& newRequest) {
     return false;
 }

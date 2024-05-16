@@ -196,8 +196,8 @@ void HttpRestApiHandler::registerAll() {
         return processServerMetadataKFSRequest(request_components, response, request_body);
     });
 
-    registerHandler(OAI_ChatCompletion, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface* writer) -> Status {
-        return processOAIChatCompletionsRequest(request_components, response, request_body, writer);
+    registerHandler(OAI_ChatCompletion, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) -> Status {
+        return processOAIChatCompletionsRequest(request_components, response, request_body, serverReaderWriter);
     });
     registerHandler(Metrics, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
         return processMetrics(request_components, response, request_body);
@@ -444,18 +444,18 @@ Status HttpRestApiHandler::dispatchToProcessor(
     std::string* response,
     const HttpRequestComponents& request_components,
     HttpResponseComponents& response_components,
-    tensorflow::serving::net_http::ServerRequestInterface* writer) {
+    tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
 
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
-        return handler->second(request_components, *response, request_body, response_components, writer);
+        return handler->second(request_components, *response, request_body, response_components, serverReaderWriter);
     } else {
         return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
     }
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
-Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* writer) {
+Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
 #if (MEDIAPIPE_DISABLE == 0)
     Document doc;
     doc.Parse(request_body.c_str());
@@ -478,13 +478,13 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
 
     const std::string model_name = modelNameIt->value.GetString();
 
-    bool stream = false;
+    bool streamFieldVal = false;
     auto streamIt = doc.FindMember("stream");
     if (streamIt != doc.MemberEnd()) {
         if (!streamIt->value.IsBool()) {
             return Status(StatusCode::JSON_INVALID, "\"stream\" field is not a boolean");
         }
-        stream = streamIt->value.GetBool();
+        streamFieldVal = streamIt->value.GetBool();
     }
 
     std::shared_ptr<MediapipeGraphExecutor> executor;
@@ -493,16 +493,16 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
         return status;
     }
 
-    if (stream == false) {
+    if (streamFieldVal == false) {
         ServableMetricReporter* smr = nullptr;                                                         // Unused
         ExecutionContext ec{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};  // Unused
         return executor->infer(&request_body, &response, ec, smr);
     } else {
-        status = executor->inferStream(request_body, *writer);
+        status = executor->inferStream(request_body, *serverReaderWriter);
         if (!status.ok()) {
-            sendErrorImpl(status.string(), *writer);
+            sendErrorImpl(status.string(), *serverReaderWriter);
         }
-        writer->PartialReplyEnd();
+        serverReaderWriter->PartialReplyEnd();
         return StatusCode::PARTIAL_END;
     }
 #else
@@ -762,7 +762,7 @@ Status HttpRestApiHandler::processRequest(
     std::vector<std::pair<std::string, std::string>>* headers,
     std::string* response,
     HttpResponseComponents& responseComponents,
-    tensorflow::serving::net_http::ServerRequestInterface* writer) {
+    tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
 
     std::smatch sm;
     std::string request_path_str(request_path);
@@ -780,7 +780,7 @@ Status HttpRestApiHandler::processRequest(
 
     if (!status.ok())
         return status;
-    return dispatchToProcessor(request_body, response, requestComponents, responseComponents, writer);
+    return dispatchToProcessor(request_body, response, requestComponents, responseComponents, serverReaderWriter);
 }
 
 Status HttpRestApiHandler::processPredictRequest(

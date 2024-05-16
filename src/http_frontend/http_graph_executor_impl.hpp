@@ -40,7 +40,7 @@ namespace ovms {
 
 class PythonBackend;
 
-using HttpWriter = tensorflow::serving::net_http::ServerRequestInterface;
+using HttpReaderWriter = tensorflow::serving::net_http::ServerRequestInterface;
 
 // Deserialization of parameters inside KServe gRPC request
 // into mediapipe Packets.
@@ -66,7 +66,7 @@ Status onPacketReadySerializeAndSendImpl(
     const std::string& packetName,
     const mediapipe_packet_type_enum packetType,
     const ::mediapipe::Packet& packet,
-    HttpWriter& serverReaderWriter);
+    HttpReaderWriter& serverReaderWriter);
 
 // Used by infer only.
 // infer produces single response and lets the caller send the response back on its own.
@@ -121,12 +121,12 @@ Status validateSubsequentRequestImpl(
 // which prevents writes at the same time.
 Status sendErrorImpl(
     const std::string& message,
-    HttpWriter& serverReaderWriter);
+    HttpReaderWriter& serverReaderWriter);
 
 // Imitation of stream.Read(...) in gRPC stream API
 // Required for inferStream only.
 bool waitForNewRequest(
-    HttpWriter& serverReaderWriter,
+    HttpReaderWriter& serverReaderWriter,
     std::string& newRequest);
 
 }  // namespace ovms
