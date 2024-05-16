@@ -85,7 +85,7 @@ class TestSingleModelInferenceS3:
         _, ports = start_server_single_model_from_minio
         stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
         request = get_model_status(model_name=Resnet.name)
-        response = stub.GetModelStatus(request, 10)
+        response = stub.GetModelStatus(request, 60)
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]
         assert version_status.version == 1

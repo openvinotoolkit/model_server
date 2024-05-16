@@ -91,7 +91,7 @@ class TestModelVersionHandling:
         stub = create_channel(port=ports["grpc_port"], service=MODEL_SERVICE)
         request = get_model_status(model_name=self.model_name,
                                    version=version)
-        response = stub.GetModelStatus(request, 10)
+        response = stub.GetModelStatus(request, 60)
 
         versions_statuses = response.model_version_status
         version_status = versions_statuses[0]

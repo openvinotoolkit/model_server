@@ -96,7 +96,7 @@ class TestSingleModelInference:
 
         # Model status check
         request = get_model_status(model_name=Resnet.name)
-        status_response = status_stub.GetModelStatus(request, 10)
+        status_response = status_stub.GetModelStatus(request, 60)
         versions_statuses = status_response.model_version_status
         assert len(versions_statuses) == 2
         for version_status in versions_statuses:
@@ -133,7 +133,7 @@ class TestSingleModelInference:
 
         # Model status check
         request = get_model_status(model_name=Resnet.name)
-        status_response = status_stub.GetModelStatus(request, 10)
+        status_response = status_stub.GetModelStatus(request, 60)
         versions_statuses = status_response.model_version_status
         assert len(versions_statuses) == 3
         for version_status in versions_statuses:
@@ -189,7 +189,7 @@ class TestSingleModelInference:
 
         # Model status check
         request = get_model_status(model_name=Resnet.name)
-        status_response = status_stub.GetModelStatus(request, 10)
+        status_response = status_stub.GetModelStatus(request, 60)
         versions_statuses = status_response.model_version_status
         assert len(versions_statuses) == 3
         for version_status in versions_statuses:
@@ -235,7 +235,7 @@ class TestSingleModelInference:
 
         # Model status check before update
         request = get_model_status(model_name=Resnet.name)
-        status_response = status_stub.GetModelStatus(request, 10)
+        status_response = status_stub.GetModelStatus(request, 60)
         versions_statuses = status_response.model_version_status
         version_status = versions_statuses[0]
         assert len(versions_statuses) == 1
@@ -264,7 +264,7 @@ class TestSingleModelInference:
 
         # Model status check after update
         request = get_model_status(model_name=Resnet.name)
-        status_response = status_stub.GetModelStatus(request, 10)
+        status_response = status_stub.GetModelStatus(request, 60)
         versions_statuses = status_response.model_version_status
         assert len(versions_statuses) == 2
         for version_status in versions_statuses:

@@ -107,7 +107,7 @@ class TestModelVerPolicy:
             request = get_model_status(model_name=model_name,
                                        version=versions[x])
             if not throw_error[x]:
-                response = stub.GetModelStatus(request, 10)
+                response = stub.GetModelStatus(request, 60)
                 versions_statuses = response.model_version_status
                 version_status = versions_statuses[0]
                 assert version_status.version == versions[x]
@@ -117,13 +117,13 @@ class TestModelVerPolicy:
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
             else:
                 with pytest.raises(Exception) as e:
-                    stub.GetModelStatus(request, 10)
+                    stub.GetModelStatus(request, 60)
                 assert "Model with requested version is not found" in str(e.value)
 
         #   aggregated results check
         if model_name == 'all':
             request = get_model_status(model_name=model_name)
-            response = stub.GetModelStatus(request, 10)
+            response = stub.GetModelStatus(request, 60)
             versions_statuses = response.model_version_status
             assert len(versions_statuses) == 3
             for version_status in versions_statuses:

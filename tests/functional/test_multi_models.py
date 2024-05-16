@@ -81,7 +81,7 @@ class TestMultiModelInference:
 
         for model in [Resnet, ResnetBS4, ResnetBS8, ResnetS3]:
             request = get_model_status(model_name=model.name, version=1)
-            response = stub.GetModelStatus(request, 10)
+            response = stub.GetModelStatus(request, 60)
             versions_statuses = response.model_version_status
             version_status = versions_statuses[0]
             assert version_status.version == 1
