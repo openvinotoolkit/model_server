@@ -103,7 +103,7 @@ const std::string HttpRestApiHandler::kfs_serverliveRegexExp =
 const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
     R"(/v2)";
 
-const std::string HttpRestApiHandler::oai_chatCompletionRegexExp =
+const std::string HttpRestApiHandler::openai_chatCompletionRegexExp =
     R"(/v3/chat/completions)";
 
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics(\?(.*))?)";
@@ -119,7 +119,7 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     kfs_serverreadyRegex(kfs_serverreadyRegexExp),
     kfs_serverliveRegex(kfs_serverliveRegexExp),
     kfs_servermetadataRegex(kfs_servermetadataRegexExp),
-    oai_chatCompletionRegex(oai_chatCompletionRegexExp),
+    oai_chatCompletionRegex(openai_chatCompletionRegexExp),
     metricsRegex(metricsRegexExp),
     timeout_in_ms(timeout_in_ms),
     ovmsServer(ovmsServer),
@@ -467,7 +467,7 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
         return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
     }
 
-    auto modelNameIt = doc.FindMember("model");  // llama3-loraVer5
+    auto modelNameIt = doc.FindMember("model");
     if (modelNameIt == doc.MemberEnd()) {
         return Status(StatusCode::JSON_INVALID, "\"model\" field is missing in JSON body");
     }
@@ -478,7 +478,7 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
 
     const std::string model_name = modelNameIt->value.GetString();
 
-    bool stream = true;
+    bool stream = false;
     auto streamIt = doc.FindMember("stream");
     if (streamIt != doc.MemberEnd()) {
         if (!streamIt->value.IsBool()) {

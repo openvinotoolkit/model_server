@@ -89,7 +89,7 @@ public:
     static const std::string kfs_serverliveRegexExp;
     static const std::string kfs_servermetadataRegexExp;
 
-    static const std::string oai_chatCompletionRegexExp;
+    static const std::string openai_chatCompletionRegexExp;
     /**
      * @brief Construct a new HttpRest Api Handler
      *
