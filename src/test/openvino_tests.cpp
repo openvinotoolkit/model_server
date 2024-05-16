@@ -805,7 +805,7 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     ASSERT_EQ(std::string(DUMMY_MODEL_OUTPUT_NAME), outputName);
     EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
     EXPECT_EQ(dimCount, 2);
-    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);  // TODO ?
+    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_OPENCL);  // TODO ?
     EXPECT_EQ(capiDeviceId, 0);                  // TODO?
     for (size_t i = 0; i < DUMMY_MODEL_SHAPE.size(); ++i) {
         EXPECT_EQ(DUMMY_MODEL_SHAPE[i], shape[i]) << "Different at:" << i << " place.";
@@ -821,6 +821,10 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
 static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 
+const float INITIAL_VALUE{0.13666};
+const float GARBAGE_VALUE = 42.66613;
+const float FLOAT_TOLLERANCE{0.001};
+
 TEST(CAPISyncWithCalback, DummyCallback) {
     cl_platform_id platformId;
     cl_device_id deviceId;
@@ -830,9 +834,9 @@ TEST(CAPISyncWithCalback, DummyCallback) {
     cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
     auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties);
     // create OpenCL buffers
-    std::vector<float> in(10, 42);
+    std::vector<float> in(10, INITIAL_VALUE);
     void* inputBufferData = in.data();
-    std::vector<float> out(10, 13.1);
+    std::vector<float> out(10, GARBAGE_VALUE);
     void* outputBufferData = out.data();
     size_t inputByteSize = sizeof(float) * in.size();
     cl_int err;  // TODO not ignore
@@ -872,17 +876,10 @@ TEST(CAPISyncWithCalback, DummyCallback) {
     callbackStruct.queue = &queue;
 
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompleteCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness, reinterpret_cast<void*>(&callbackStruct)));
-    // infer
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
-    // check
+    // check is done in callback
     auto callbackReturnValue = unblockSignal.get();
-    queue.enqueueReadBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData);
-    const float* outputData = reinterpret_cast<const float*>(outputBufferData);
-    for (size_t i = 0; i < data.size(); ++i) {
-        EXPECT_EQ(in[i] + 1, outputData[i]) << "Different at:" << i << " place.";
-    }
     SPDLOG_INFO("Using callbacks!");
-    // TODO cleanup settings
     OVMS_ServerDelete(cserver);
 }
 
@@ -891,10 +888,6 @@ static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnes
 static void callbackUnblockingAndFreeingRequest(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
 
 cl::CommandQueue* globalQueue = nullptr;
-
-const float INITIAL_VALUE{0.13666};
-const float GARBAGE_VALUE = 42.66613;
-const float FLOAT_TOLLERANCE{0.001};
 
 TEST(CAPIAsyncWithCallback, DummyCallback) {
     cl_platform_id platformId;
@@ -1371,11 +1364,11 @@ static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnes
     void* buffer_out = out.data();
     SPDLOG_INFO("Queue address in callback:{}", (void*)callbackUnblockingStruct->queue);  // DEBUG does not work in callback
     callbackUnblockingStruct->queue->enqueueReadBuffer(*openCLCppOutputBuffer, /*blocking*/ true, 0, expectedShape[1] * sizeof(float), buffer_out);
-    std::vector<float> data(expectedShape[1], INITIAL_VALUE);
+    std::vector<float> expectedData(expectedShape[1], INITIAL_VALUE + 1);
 
     const float* outputData = reinterpret_cast<const float*>(buffer_out);
     for (size_t i = 0; i < out.size(); ++i) {
-        EXPECT_NEAR(data[i] + 1, outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
+        EXPECT_NEAR(expectedData[i], outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
     }
     OVMS_InferenceResponseDelete(response);
 }
