@@ -100,14 +100,13 @@ public:
             }
             outputPollers.emplace(name, std::move(absStatusOrPoller).value());
         }
-        std::map<std::string, mediapipe::Packet> sideInputPackets;
-        OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(sideInputPackets, *request));
+        std::map<std::string, mediapipe::Packet> inputSidePackets;
+        OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, *request));
 #if (PYTHON_DISABLE == 0)
-        sideInputPackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
-        if (this->llmNodeResourcesMap.size())
-            sideInputPackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
-        MP_RETURN_ON_FAIL(graph.StartRun(sideInputPackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
+        inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
+        MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         ::mediapipe::Packet packet;
         std::set<std::string> outputPollersWithReceivedPacket;
