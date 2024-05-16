@@ -334,11 +334,11 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
     return StatusCode::OK;
 }
 
-Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* context, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) {
+Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* context, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* serverReaderWriter) {
     OVMS_PROFILE_FUNCTION();
 #if (MEDIAPIPE_DISABLE == 0)
     ::inference::ModelInferRequest firstRequest;
-    if (!stream->Read(&firstRequest)) {
+    if (!serverReaderWriter->Read(&firstRequest)) {
         Status status = StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE;
         SPDLOG_DEBUG(status.string());
         return status;
@@ -348,7 +348,7 @@ Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* cont
     if (!status.ok()) {
         return status;
     }
-    return executor->inferStream(firstRequest, *stream);
+    return executor->inferStream(firstRequest, *serverReaderWriter);
 #else
     SPDLOG_DEBUG("Mediapipe support was disabled during build process...");
     return StatusCode::NOT_IMPLEMENTED;
