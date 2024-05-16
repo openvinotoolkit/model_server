@@ -62,7 +62,7 @@ class TestSingleModelMappingInference:
             logger.info("Output shape: {}".format(output[output_name].shape))
             assert output[output_name].shape == shape, ERROR_SHAPE
 
-    def test_get_model_metadata_request(self, start_server_with_mapping):
+    def test_get_model_metadata(self, start_server_with_mapping):
 
         _, ports = start_server_with_mapping
 

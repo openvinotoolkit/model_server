@@ -53,7 +53,7 @@ class TestMultiModelInference:
             assert_msg = "{} for model {}".format(ERROR_SHAPE, model.name)
             assert output[model.output_name].shape == model.output_shape, assert_msg
 
-    def test_get_model_metadata_request(self, start_server_multi_model):
+    def test_get_model_metadata(self, start_server_multi_model):
         _, ports = start_server_multi_model
 
         # Connect to grpc service

@@ -68,7 +68,7 @@ class TestSingleModelInference:
         logger.info("Output shape: {}".format(output[Resnet.output_name].shape))
         assert output[Resnet.output_name].shape == Resnet.output_shape, ERROR_SHAPE
 
-    def test_get_model_metadata_request(self, start_server_single_model):
+    def test_get_model_metadata(self, start_server_single_model):
 
         _, ports = start_server_single_model
 

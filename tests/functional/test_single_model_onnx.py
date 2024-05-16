@@ -69,7 +69,7 @@ class TestSingleModelInferenceOnnx:
         assert output[ResnetONNX.output_name].shape == ResnetONNX.output_shape, ERROR_SHAPE
 
 
-    def test_get_model_metadata_request(self, start_server_single_model_onnx):
+    def test_get_model_metadata(self, start_server_single_model_onnx):
 
         _, ports = start_server_single_model_onnx
 

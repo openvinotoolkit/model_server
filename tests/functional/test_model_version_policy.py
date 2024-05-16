@@ -42,7 +42,7 @@ class TestModelVerPolicy:
         ('specific', [False, True, False]),
         ('latest', [True, False, False]),
     ])
-    def test_get_model_metadata_request(self, model_version_policy_models,
+    def test_get_model_metadata(self, model_version_policy_models,
                                 start_server_model_ver_policy,
                                 model_name, throw_error):
 
@@ -69,8 +69,8 @@ class TestModelVerPolicy:
             logger.info("Getting info about model version: {}".format(versions[x]))
             expected_input_metadata = expected_inputs_metadata[x]
             expected_output_metadata = expected_outputs_metadata[x]
-            request = get_model_metadata_request(model_name=model_name,
-                                         version=versions[x])
+            request = get_model_metadata_request(model_name=model_name, 
+                                                 version=versions[x])
             if not throw_error[x]:
                 response = get_model_metadata(stub, request)
                 input_metadata, output_metadata = model_metadata_response(
