@@ -25,10 +25,10 @@
 #include <vector>
 
 #include "../dags/pipelinedefinitionstatus.hpp"
+#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
 #include "../tensorinfo.hpp"
-#include "../timer.hpp"
-#include "../version.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -48,7 +48,9 @@ class MediapipeGraphExecutor;
 class Status;
 class PythonBackend;
 class PythonNodeResources;
+class LLMNodeResources;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
+using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -83,6 +85,7 @@ public:
     static constexpr uint64_t WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS = 500000;
     static const std::string SCHEDULER_CLASS_NAME;
     static const std::string PYTHON_NODE_CALCULATOR_NAME;
+    static const std::string LLM_NODE_CALCULATOR_NAME;
     Status waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 
     // Pipelines are not versioned and any available definition has constant version equal 1.
@@ -90,6 +93,7 @@ public:
 
 protected:
     PythonNodeResourcesMap pythonNodeResourcesMap;
+    LLMNodeResourcesMap llmNodeResourcesMap;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :

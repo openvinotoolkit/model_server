@@ -39,6 +39,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     std::vector<std::string> inputNames,
     std::vector<std::string> outputNames,
     const PythonNodeResourcesMap& pythonNodeResourcesMap,
+    const LLMNodeResourcesMap& llmNodeResourcesMap,
     PythonBackend* pythonBackend) :
     name(name),
     version(version),
@@ -48,10 +49,12 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)),
     pythonNodeResourcesMap(pythonNodeResourcesMap),
+    llmNodeResourcesMap(llmNodeResourcesMap),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(STARTING_TIMESTAMP) {}
 
 const std::string MediapipeGraphExecutor::PYTHON_SESSION_SIDE_PACKET_TAG = "py";
+const std::string MediapipeGraphExecutor::LLM_SESSION_SIDE_PACKET_TAG = "llm";
 const ::mediapipe::Timestamp MediapipeGraphExecutor::STARTING_TIMESTAMP = ::mediapipe::Timestamp(0);
 
 }  // namespace ovms

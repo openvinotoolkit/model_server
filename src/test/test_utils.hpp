@@ -1001,6 +1001,15 @@ public:
     }
 #endif
 
+    ovms::LLMNodeResources* getLLMNodeResources(const std::string& nodeName) {
+        auto it = this->llmNodeResourcesMap.find(nodeName);
+        if (it == std::end(llmNodeResourcesMap)) {
+            return nullptr;
+        } else {
+            return it->second.get();
+        }
+    }
+
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,
         std::string inputConfig,
