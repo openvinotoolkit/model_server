@@ -20,7 +20,7 @@
 #include <string>
 
 #include "../mediapipe_internal/packettypes.hpp"
-#include "kfs_grpc_inference_service.hpp"
+#include "../status.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -28,21 +28,30 @@
 #include "mediapipe/framework/packet.h"
 #pragma GCC diagnostic pop
 
+#if (PYTHON_DISABLE == 0)
+#include "../python/python_backend.hpp"
+#endif
+
+namespace tensorflow::serving::net_http {
+class ServerRequestInterface;
+}
+
 namespace ovms {
 
 class PythonBackend;
-class Status;
+
+using HttpReaderWriter = tensorflow::serving::net_http::ServerRequestInterface;
 
 // Deserialization of parameters inside KServe gRPC request
 // into mediapipe Packets.
 // To be used by both - infer & inferStream.
 Status deserializeInputSidePacketsFromFirstRequestImpl(
     std::map<std::string, mediapipe::Packet>& inputSidePackets,  // out
-    const KFSRequest& request);                                  // in
+    const std::string& request);                                 // in
 
 // For unary graph execution request ID is forwarded to serialization function.
 const std::string& getRequestId(
-    const KFSRequest& request);
+    const std::string& request);
 
 // Used by inferStream only.
 // Whenever MediaPipe graph produces some packet, this function is triggered.
@@ -57,7 +66,7 @@ Status onPacketReadySerializeAndSendImpl(
     const std::string& packetName,
     const mediapipe_packet_type_enum packetType,
     const ::mediapipe::Packet& packet,
-    KFSServerReaderWriter& serverReaderWriter);
+    HttpReaderWriter& serverReaderWriter);
 
 // Used by infer only.
 // infer produces single response and lets the caller send the response back on its own.
@@ -72,7 +81,7 @@ Status onPacketReadySerializeImpl(
     const std::string& packetName,
     const mediapipe_packet_type_enum packetType,
     const ::mediapipe::Packet& packet,
-    KFSResponse& response);
+    std::string& response);
 
 // This is called whenever new request is received.
 // It is responsible for creating packet(s) out of the request.
@@ -80,7 +89,7 @@ Status onPacketReadySerializeImpl(
 // To be used by both - infer & inferStream.
 Status createAndPushPacketsImpl(
     // The request wrapped in shared pointer.
-    std::shared_ptr<const KFSRequest> request,
+    std::shared_ptr<const std::string> request,
     // Graph input name => type mapping.
     // Request can contain multiple packets.
     // Implementation should validate for existence of such packet type.
@@ -101,7 +110,7 @@ Status createAndPushPacketsImpl(
 // This is called before subsequent createAndPushPacketsImpl in inferStream scenario.
 // At this point we may reject requests with invalid data.
 Status validateSubsequentRequestImpl(
-    const KFSRequest& request,
+    const std::string& request,
     const std::string& endpointName,
     const std::string& endpointVersion,
     stream_types_mapping_t& inputTypes);
@@ -112,12 +121,12 @@ Status validateSubsequentRequestImpl(
 // which prevents writes at the same time.
 Status sendErrorImpl(
     const std::string& message,
-    KFSServerReaderWriter& serverReaderWriter);
+    HttpReaderWriter& serverReaderWriter);
 
 // Imitation of stream.Read(...) in gRPC stream API
 // Required for inferStream only.
 bool waitForNewRequest(
-    KFSServerReaderWriter& serverReaderWriter,
-    KFSRequest& newRequest);
+    HttpReaderWriter& serverReaderWriter,
+    std::string& newRequest);
 
 }  // namespace ovms

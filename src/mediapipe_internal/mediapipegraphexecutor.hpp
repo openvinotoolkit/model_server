@@ -37,6 +37,7 @@
 
 namespace ovms {
 class PythonBackend;
+class ServableMetricReporter;
 
 #define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)             \
     {                                                                    \
@@ -45,7 +46,7 @@ class PythonBackend;
             std::stringstream ss;                                        \
             ss << status.string() << "; " << message;                    \
             std::lock_guard<std::mutex> lock(sendMutex);                 \
-            auto status = sendErrorImpl(ss.str(), res);                  \
+            auto status = sendErrorImpl(ss.str(), serverReaderWriter);   \
             if (!status.ok()) {                                          \
                 SPDLOG_DEBUG("Writing error to disconnected client: {}", \
                     status.string());                                    \
@@ -143,7 +144,7 @@ public:
                 try {
                     OVMS_RETURN_ON_FAIL(
                         onPacketReadySerializeImpl(
-                            request->id(),
+                            getRequestId(*request),
                             this->name,
                             this->version,
                             outputStreamName,
@@ -167,8 +168,8 @@ public:
         return StatusCode::OK;
     }
 
-    template <typename RequestType, typename ResponseType>
-    Status inferStream(const RequestType& req, ResponseType& res) {
+    template <typename RequestType, typename ReaderWriterType>
+    Status inferStream(const RequestType& req, ReaderWriterType& serverReaderWriter) {
         SPDLOG_DEBUG("Start MediapipeGraphExecutor::inferEx mediapipe graph: {} execution", this->name);
         std::mutex sendMutex;
         try {
@@ -178,7 +179,7 @@ public:
 
             // Installing observers
             for (const auto& outputName : this->outputNames) {
-                MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&res, &sendMutex, &outputName, this](const ::mediapipe::Packet& packet) -> absl::Status {
+                MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&serverReaderWriter, &sendMutex, &outputName, this](const ::mediapipe::Packet& packet) -> absl::Status {
                     try {
                         std::lock_guard<std::mutex> lock(sendMutex);
                         OVMS_RETURN_MP_ERROR_ON_FAIL(onPacketReadySerializeAndSendImpl(
@@ -188,7 +189,7 @@ public:
                                                          outputName,
                                                          this->outputTypes.at(outputName),
                                                          packet,
-                                                         res),
+                                                         serverReaderWriter),
                             "error in send packet routine");
                         return absl::OkStatus();
                     } catch (...) {
@@ -227,7 +228,7 @@ public:
             // and move it down to custom packet holder to ensure
             // lifetime is extended to lifetime of deserialized Packets.
             auto newReq = std::make_shared<RequestType>();
-            while (waitForNewRequest(res, *newReq)) {
+            while (waitForNewRequest(serverReaderWriter, *newReq)) {
                 auto pstatus = validateSubsequentRequestImpl(
                     *newReq,
                     this->name,

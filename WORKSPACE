@@ -76,11 +76,12 @@ git_repository(
     remote = "https://github.com/tensorflow/serving.git",
     tag = "2.13.0",
     patch_args = ["-p1"],
-    patches = ["net_http.patch", "listen.patch"]
+    patches = ["net_http.patch", "listen.patch", "partial.patch"]
     #                             ^^^^^^^^^^^^
     #                       make bind address configurable
     #          ^^^^^^^^^^^^
-    #        allow all http methods
+    #        allow all http methods                ^^^^^^^^^
+    #                                        implements partial responses
 )
 
 ########################################################### Mediapipe

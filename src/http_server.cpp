@@ -208,7 +208,12 @@ private:
             req->uri_path(),
             body.size());
         HttpResponseComponents responseComponents;
-        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents);
+        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, req);
+        if (status == StatusCode::PARTIAL_END) {
+            // No further messaging is required.
+            // Partial responses were delivered via "req" object.
+            return;
+        }
         if (!status.ok() && output.empty()) {
             output.append("{\"error\": \"" + status.string() + "\"}");
         }

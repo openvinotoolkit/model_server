@@ -320,5 +320,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::SERVER_ALREADY_STARTED, "Server has already started"},
     {StatusCode::SERVER_ALREADY_STARTING, "Server is already starting"},
     {StatusCode::MODULE_ALREADY_INSERTED, "Module already inserted"},
+
+    {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},
 };
 }  // namespace ovms

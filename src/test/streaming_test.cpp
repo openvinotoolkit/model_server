@@ -442,7 +442,7 @@ TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSep
     std::shared_ptr<MediapipeGraphExecutor> executor;
     KFSRequest request;
     KFSResponse response;
-    auto status = manager.createPipeline(executor, name, &request, &response);
+    auto status = manager.createPipeline(executor, name);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
     // Mock receiving 1 request with not all inputs (client)
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);
@@ -565,7 +565,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -625,7 +625,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -665,7 +665,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -728,7 +728,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -782,7 +782,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     std::mutex mtx;
@@ -842,7 +842,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -904,7 +904,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -969,7 +969,7 @@ node_options: {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -1021,7 +1021,7 @@ node_options: {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -1057,7 +1057,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -1089,7 +1089,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();

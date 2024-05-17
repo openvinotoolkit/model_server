@@ -1542,11 +1542,9 @@ const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() cons
 }
 
 Status ModelManager::createPipeline(std::shared_ptr<MediapipeGraphExecutor>& graph,
-    const std::string& name,
-    const KFSRequest* request,
-    KFSResponse* response) {
+    const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
-    return this->mediapipeFactory.create(graph, name, request, response, *this);
+    return this->mediapipeFactory.create(graph, name, *this);
 #else
     SPDLOG_ERROR("Mediapipe support was disabled during build process...");
     return StatusCode::INTERNAL_ERROR;

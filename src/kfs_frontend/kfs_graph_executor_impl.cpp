@@ -1037,8 +1037,13 @@ static Status deserializeTimestampIfAvailable(
 
 // Implementation
 
+const std::string& getRequestId(
+    const KFSRequest& request) {
+    return request.id();
+}
+
 Status onPacketReadySerializeAndSendImpl(
-    const std::string& request_id,
+    const std::string& requestId,
     const std::string& endpointName,
     const std::string& endpointVersion,
     const std::string& packetName,
@@ -1049,7 +1054,7 @@ Status onPacketReadySerializeAndSendImpl(
     KFSStreamResponse resp;
     OVMS_RETURN_ON_FAIL(
         onPacketReadySerializeImpl(
-            request_id,
+            requestId,
             endpointName,
             endpointVersion,
             packetName,
@@ -1065,7 +1070,7 @@ Status onPacketReadySerializeAndSendImpl(
 }
 
 Status onPacketReadySerializeImpl(
-    const std::string& request_id,
+    const std::string& requestId,
     const std::string& endpointName,
     const std::string& endpointVersion,
     const std::string& packetName,
@@ -1104,7 +1109,7 @@ Status onPacketReadySerializeImpl(
     }
     response.set_model_name(endpointName);
     response.set_model_version(endpointVersion);
-    response.set_id(request_id);
+    response.set_id(requestId);
     response.mutable_parameters()->operator[](TIMESTAMP_PARAMETER_NAME).set_int64_param(packet.Timestamp().Value());
     return status;
 }

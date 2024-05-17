@@ -237,7 +237,7 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
     return StatusCode::OK;
 }
 
-Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response) {
+Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline) {
     std::unique_ptr<MediapipeGraphDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
     if (!status.ok()) {
