@@ -154,7 +154,8 @@ TEST_F(LLMFlowKfsTest, LLMNodeOptionsMissing) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_MISSING_OPTIONS);
 }
 
-TEST_F(LLMFlowKfsTest, LLMNodeNameExists) {
+// Currently disabled UT - need successfull resource init - only aavailable with LLM models.
+TEST_F(LLMFlowKfsTest, DISABLED_LLMNodeNameExists) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "REQUEST:in"
