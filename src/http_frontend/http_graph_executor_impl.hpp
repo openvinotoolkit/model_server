@@ -19,8 +19,11 @@
 #include <memory>
 #include <string>
 
+#include <rapidjson/document.h>
+
 #include "../mediapipe_internal/packettypes.hpp"
 #include "../status.hpp"
+#include "http_payload.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -47,11 +50,11 @@ using HttpReaderWriter = tensorflow::serving::net_http::ServerRequestInterface;
 // To be used by both - infer & inferStream.
 Status deserializeInputSidePacketsFromFirstRequestImpl(
     std::map<std::string, mediapipe::Packet>& inputSidePackets,  // out
-    const std::string& request);                                 // in
+    const HttpPayload& request);                                 // in
 
 // For unary graph execution request ID is forwarded to serialization function.
 const std::string& getRequestId(
-    const std::string& request);
+    const HttpPayload& request);
 
 // Used by inferStream only.
 // Whenever MediaPipe graph produces some packet, this function is triggered.
@@ -89,7 +92,7 @@ Status onPacketReadySerializeImpl(
 // To be used by both - infer & inferStream.
 Status createAndPushPacketsImpl(
     // The request wrapped in shared pointer.
-    std::shared_ptr<const std::string> request,
+    std::shared_ptr<const HttpPayload> request,
     // Graph input name => type mapping.
     // Request can contain multiple packets.
     // Implementation should validate for existence of such packet type.
@@ -110,7 +113,7 @@ Status createAndPushPacketsImpl(
 // This is called before subsequent createAndPushPacketsImpl in inferStream scenario.
 // At this point we may reject requests with invalid data.
 Status validateSubsequentRequestImpl(
-    const std::string& request,
+    const HttpPayload& request,
     const std::string& endpointName,
     const std::string& endpointVersion,
     stream_types_mapping_t& inputTypes);
@@ -127,6 +130,6 @@ Status sendErrorImpl(
 // Required for inferStream only.
 bool waitForNewRequest(
     HttpReaderWriter& serverReaderWriter,
-    std::string& newRequest);
+    HttpPayload& newRequest);
 
 }  // namespace ovms

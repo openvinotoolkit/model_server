@@ -135,6 +135,7 @@ public:
         // can be still processing those. Closing packet sources triggers Calculator::Close() on nodes that do not expect
         // new packets
         MP_RETURN_ON_FAIL(graph.WaitUntilIdle(), "graph wait until idle", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+
         MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
         for (auto& [outputStreamName, poller] : outputPollers) {
             size_t receivedOutputs = 0;

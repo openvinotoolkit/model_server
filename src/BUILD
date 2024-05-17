@@ -348,6 +348,7 @@ cc_library(
                 "mediapipe_internal/packettypes.hpp",
                 "kfs_frontend/kfs_graph_executor_impl.cpp",
                 "kfs_frontend/kfs_graph_executor_impl.hpp",
+                "http_frontend/http_payload.hpp",
                 "http_frontend/http_graph_executor_impl.cpp",
                 "http_frontend/http_graph_executor_impl.hpp",
             ],

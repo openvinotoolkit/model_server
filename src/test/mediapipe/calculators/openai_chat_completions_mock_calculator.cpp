@@ -17,6 +17,8 @@
 #include <string>
 #include <thread>
 
+#include "../../../http_frontend/http_payload.hpp"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
@@ -26,14 +28,6 @@
 using namespace std::chrono_literals;
 
 namespace mediapipe {
-
-// TODO(mkulakow):  Instead of std::string body packet type
-//                  we should accept HttpPayload with more data (CVS-140684)
-// struct HttpPayload {
-//     std::map<std::string, std::string> headers;
-//     std::string body;  // always
-//     rapidjson::Document doc;  // pre-parsed body             = null
-// };
 
 class OpenAIChatCompletionsMockCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
@@ -47,7 +41,7 @@ public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
-        cc->Inputs().Tag(INPUT_TAG_NAME).Set<std::string>();
+        cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::HttpPayload>();
         cc->Inputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<std::string>();
         cc->Outputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
@@ -67,7 +61,8 @@ public:
             return absl::OkStatus();
         }
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
-            this->body = cc->Inputs().Tag(INPUT_TAG_NAME).Get<std::string>();
+            auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+            this->body = payload.body;
         }
 
         this->body += std::to_string(timestamp.Value());
