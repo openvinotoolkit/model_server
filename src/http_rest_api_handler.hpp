@@ -64,6 +64,7 @@ struct HttpRequestComponents {
     std::string processing_method;
     std::string model_subresource;
     std::optional<int> inferenceHeaderContentLength;
+    std::vector<std::pair<std::string, std::string>> headers;
 };
 
 struct HttpResponseComponents {

@@ -42,11 +42,13 @@ static const std::string UNUSED_REQUEST_ID = "";
 
 Status deserializeInputSidePacketsFromFirstRequestImpl(
     std::map<std::string, mediapipe::Packet>& inputSidePackets,  // out
-    const std::string& request) {                                // in
+    const HttpPayload& request) {                                // in
     return StatusCode::OK;
 }
 
-const std::string& getRequestId(const std::string& request) {
+const std::string& getRequestId(
+    const HttpPayload& request) {
+    static const std::string _default{""};
     return UNUSED_REQUEST_ID;
 }
 
@@ -86,7 +88,7 @@ Status onPacketReadySerializeImpl(
 }
 
 Status createAndPushPacketsImpl(
-    std::shared_ptr<const std::string> request,
+    std::shared_ptr<const HttpPayload> request,
     stream_types_mapping_t& inputTypes,
     PythonBackend* pythonBackend,
     ::mediapipe::CalculatorGraph& graph,
@@ -94,7 +96,7 @@ Status createAndPushPacketsImpl(
     size_t& numberOfPacketsCreated) {
     MP_RETURN_ON_FAIL(
         graph.AddPacketToInputStream(
-            "input", ::mediapipe::Adopt(new std::string(*request)).At(currentTimestamp)),
+            "input", ::mediapipe::MakePacket<HttpPayload>(*request.get()).At(currentTimestamp)),
         "failed to deserialize",
         StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     numberOfPacketsCreated = 1;
@@ -102,7 +104,7 @@ Status createAndPushPacketsImpl(
 }
 
 Status validateSubsequentRequestImpl(
-    const std::string& request,
+    const HttpPayload& request,
     const std::string& endpointName,
     const std::string& endpointVersion,
     stream_types_mapping_t& inputTypes) {
@@ -119,7 +121,7 @@ Status sendErrorImpl(
 
 bool waitForNewRequest(
     HttpReaderWriter& serverReaderWriter,
-    std::string& newRequest) {
+    HttpPayload& newRequest) {
     return false;
 }
 
