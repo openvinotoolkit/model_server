@@ -165,7 +165,6 @@ endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   OS=redhat
-  BASE_OS_DISTRO=redhat
   ifeq ($(NVIDIA),1)
     BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubi8
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
@@ -174,6 +173,7 @@ ifeq ($(BASE_OS),redhat)
 	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   endif	
   DIST_OS=redhat
+  BASE_OS_DISTRO=$(DIST_OS)
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.2.0.15441.c17ea55cac2_x86_64.tgz
 endif
@@ -226,6 +226,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)\
 	--build-arg PROJECT_VERSION=$(PROJECT_VERSION)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
+	--build-arg BASE_OS=$(BASE_OS)\
 	--build-arg NVIDIA=$(NVIDIA)\
 	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
 	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
