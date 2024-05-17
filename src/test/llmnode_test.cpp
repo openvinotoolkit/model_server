@@ -191,7 +191,7 @@ TEST_F(LLMFlowKfsTest, LLMNodeNameExists) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_NAME_ALREADY_EXISTS);
 }
 
-TEST_F(LLMFlowKfsTest, LLMNodeBadWorkspacePath) {
+TEST_F(LLMFlowKfsTest, LLMNodeNonExistantWorkspacePath) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "REQUEST:in"
@@ -241,7 +241,7 @@ TEST_F(LLMFlowKfsTest, LLMNodeBadWorkspacePathEmpty) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
 }
 
-TEST_F(LLMFlowKfsTest, LLMNodeBadWorkspacePathFile) {
+TEST_F(LLMFlowKfsTest, LLMNodeWorkspacePathToFileNotDir) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "REQUEST:in"
