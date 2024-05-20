@@ -138,13 +138,13 @@ DIST_OS_TAG ?= $(BASE_OS_TAG)
 
 ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
+  DIST_OS=ubuntu
   ifeq ($(BASE_OS),ubuntu22)
 	BASE_OS_TAG=22.04
   endif
   ifeq ($(BASE_OS),ubuntu20)
 	BASE_OS_TAG=20.04
   endif
-  BASE_OS_DISTRO=ubuntu
   ifeq ($(NVIDIA),1)
 	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu$(BASE_OS_TAG)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
@@ -173,7 +173,6 @@ ifeq ($(BASE_OS),redhat)
 	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   endif	
   DIST_OS=redhat
-  BASE_OS_DISTRO=$(DIST_OS)
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.2.0.15441.c17ea55cac2_x86_64.tgz
 endif
@@ -376,13 +375,13 @@ else
 	@touch .workspace/metadata.json
 endif
 	@cat .workspace/metadata.json
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS_DISTRO) . \
+	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=build
 
 targz_package:
-	docker $(BUILDX) build -f Dockerfile.$(BASE_OS_DISTRO) . \
+	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
@@ -399,11 +398,11 @@ ifeq ($(USE_BUILDX),true)
 	$(eval BUILDX:=buildx)
 	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
 endif
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS_DISTRO) . \
+	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS_DISTRO) . \
+	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg GPU=1 \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
@@ -444,7 +443,7 @@ ifeq ($(USE_BUILDX),true)
 	$(eval BUILDX:=buildx)
 	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
 endif
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS_DISTRO) . \
+	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
 		--target=release
@@ -455,7 +454,7 @@ ifeq ($(BUILD_NGINX), 1)
 endif
 
 python_image:
-	@docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg IMAGE_NAME=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) -f demos/python_demos/Dockerfile.$(BASE_OS_DISTRO) demos/python_demos/ -t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_PYTHON_IMAGE_TAG)
+	@docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg IMAGE_NAME=$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) -f demos/python_demos/Dockerfile.$(DIST_OS) demos/python_demos/ -t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_PYTHON_IMAGE_TAG)
 
 
 # Ci build expects index.html in genhtml directory
@@ -639,7 +638,7 @@ tools_get_deps:
 
 cpu_extension:
 	cd src/example/SampleCpuExtension && \
-	docker build -f Dockerfile.$(BASE_OS_DISTRO) -t sample_cpu_extension:latest \
+	docker build -f Dockerfile.$(DIST_OS) -t sample_cpu_extension:latest \
 		--build-arg http_proxy=${http_proxy} \
 		--build-arg https_proxy=${https_proxy} \
 		--build-arg no_proxy=${no_proxy} \
