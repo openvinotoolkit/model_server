@@ -37,7 +37,7 @@ $(ACTIVATE):
 update-packages:
 	@echo "Updating crucial packages"
 	@pip3 install --upgrade pip
-	@pip3 install "setuptools>=40.1.0"
+	@pip3 install "setuptools>=69.5.1"
 	@pip3 install "wheel>=0.23.0"
 
 build-deps: update-packages
@@ -57,9 +57,9 @@ test: venv
 	@echo "Running ovmsclient tests"
 	@. $(ACTIVATE); pytest -v tests/
 ifeq ($(TEST_TYPE), FULL)
-	@echo "Installing NumPy version: 1.23"
-	@. $(ACTIVATE); pip3 install numpy==1.23
-	@echo "Rerunning ovmsclient tests with NumPy 1.23"
+	@echo "Installing NumPy version: 1.26.4"
+	@. $(ACTIVATE); pip3 install numpy==1.26.4
+	@echo "Rerunning ovmsclient tests with NumPy 1.26.4"
 	@. $(ACTIVATE); pytest -v tests/
 endif
 
