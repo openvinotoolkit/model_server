@@ -48,7 +48,6 @@ Status deserializeInputSidePacketsFromFirstRequestImpl(
 
 const std::string& getRequestId(
     const HttpPayload& request) {
-    static const std::string _default{""};
     return UNUSED_REQUEST_ID;
 }
 

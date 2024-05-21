@@ -496,7 +496,7 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
 
     request.headers = request_components.headers;
     request.body = request_body;
-    request.doc = &doc;
+    request.parsedJson = &doc;
     if (streamFieldVal == false) {
         ServableMetricReporter* smr = nullptr;                                                         // Unused
         ExecutionContext ec{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};  // Unused
