@@ -1268,8 +1268,8 @@ Status ModelInstance::infer(const RequestType* requestProto,
     ov::intel_gpu::ocl::ClContext ovOclContext(this->ieCore, this->ocl_context);
     OpenCLTensorFactory factory(*this->ocl_context_cpp);
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, &factory);
-    // TODO FIXME check status
-    isPipeline = true;
+    if (!status.ok())
+        return status;
     status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getOutputsInfo(), inputSink, isPipeline, &factory);
     timer.stop(DESERIALIZE);
     if (!status.ok())
