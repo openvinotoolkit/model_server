@@ -493,7 +493,7 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
     if (!status.ok()) {
         return status;
     }
-
+    // TODO: Possibly avoid making copy
     request.headers = request_components.headers;
     request.body = request_body;
     request.parsedJson = &doc;

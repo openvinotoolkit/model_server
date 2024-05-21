@@ -95,7 +95,7 @@ Status createAndPushPacketsImpl(
     size_t& numberOfPacketsCreated) {
     MP_RETURN_ON_FAIL(
         graph.AddPacketToInputStream(
-            "input", ::mediapipe::MakePacket<HttpPayload>(*request.get()).At(currentTimestamp)),
+            "input", ::mediapipe::MakePacket<HttpPayload>(*request.get()).At(currentTimestamp)), // TODO: Possibly avoid making copy
         "failed to deserialize",
         StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     numberOfPacketsCreated = 1;
