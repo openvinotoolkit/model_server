@@ -21,7 +21,7 @@
 #include <thread>
 
 #include <continuous_batching_pipeline.hpp>
-
+namespace ovms {
 class LLMExecutor {
     std::atomic<bool> end;
     std::shared_ptr<ContinuousBatchingPipeline> pipe;
@@ -45,3 +45,4 @@ public:
         llmExecutorThread.join();
     }
 };
+}  // namespace ovms
