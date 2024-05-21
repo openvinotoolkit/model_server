@@ -30,6 +30,7 @@
 
 namespace ovms {
 class Status;
+class LLMExecutor;
 
 struct LLMNodeResources {
 public:
@@ -42,7 +43,11 @@ public:
     std::shared_ptr<ContinuousBatchingPipeline> cbPipe = nullptr;
     std::string workspacePath;
 
+    void initiateGeneration();
+
 private:
+    // LLM Executor launches generation loop thread upon constrution and stops it when destroyed.
+    std::unique_ptr<LLMExecutor> llmExecutor;
     static std::unordered_map<std::string, std::string> prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath);
 };
 using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;

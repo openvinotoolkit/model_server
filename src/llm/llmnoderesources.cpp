@@ -34,10 +34,15 @@
 
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "src/llm/llm_calculator.pb.h"
+#include "src/llm/llm_executor.hpp"
 
 namespace ovms {
 
 LLMNodeResources::LLMNodeResources() {
+}
+
+void LLMNodeResources::initiateGeneration() {
+    llmExecutor = std::make_unique<LLMExecutor>(cbPipe);
 }
 
 std::unordered_map<std::string, std::string> LLMNodeResources::prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath) {
@@ -77,6 +82,7 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
     SchedulerConfig default_config{
         .max_num_batched_tokens = 256,
         .num_kv_blocks = NUM_BLOCKS,
+        .block_size = 32,
         .dynamic_split_fuse = false,
         .max_num_seqs = 256,
         .max_paddings = 256,
@@ -91,6 +97,8 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         SPDLOG_ERROR("Error during llm node initialization for workspace_path: {}", basePath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
+
+    nodeResources->initiateGeneration();
 
     return StatusCode::OK;
 }

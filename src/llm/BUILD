@@ -73,7 +73,7 @@ mediapipe_proto_library(
 
 cc_library(
     name = "llmnoderesources",
-    hdrs = ["llmnoderesources.hpp",],
+    hdrs = ["llmnoderesources.hpp", "llm_executor.hpp",],
     srcs = ["llmnoderesources.cpp",],
     deps = [
         "@linux_openvino//:openvino",
