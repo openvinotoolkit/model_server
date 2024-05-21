@@ -21,9 +21,9 @@
 
 #include <rapidjson/document.h>
 
+#include "../llm/http_payload.hpp"
 #include "../mediapipe_internal/packettypes.hpp"
 #include "../status.hpp"
-#include "http_payload.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

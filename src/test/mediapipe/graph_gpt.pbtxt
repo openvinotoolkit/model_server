@@ -17,9 +17,14 @@ input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 
 node: {
+  calculator: "RequestConverterCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  output_stream: "LLM_DATA:converteddata"
+}
+node: {
   calculator: "OpenAIChatCompletionsMockCalculator"
   input_stream: "LOOPBACK:loopback"
-  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_stream: "LLM_DATA:converteddata"
   output_stream: "LOOPBACK:loopback"
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
   input_stream_info: {

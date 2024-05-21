@@ -91,3 +91,28 @@ cc_library(
     alwayslink = 1,
 )
 
+cc_library(
+    name = "httppayload",
+    srcs = ["http_payload.hpp",],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+    ],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "requestconvertercalculator",
+    srcs = ["request_to_prompt_converter.cc",],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "httppayload",
+    ],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)

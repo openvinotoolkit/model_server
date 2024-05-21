@@ -458,7 +458,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
 Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
 #if (MEDIAPIPE_DISABLE == 0)
     HttpPayload request;
-    Document& doc = request.doc;
+    Document doc;
     doc.Parse(request_body.c_str());
     if (doc.HasParseError()) {
         return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
@@ -496,6 +496,7 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
 
     request.headers = request_components.headers;
     request.body = request_body;
+    request.doc = &doc;
     if (streamFieldVal == false) {
         ServableMetricReporter* smr = nullptr;                                                         // Unused
         ExecutionContext ec{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};  // Unused
