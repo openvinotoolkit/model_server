@@ -61,7 +61,7 @@ public:
             return absl::OkStatus();
         }
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
-            auto data = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>(); // TODO: Possibly avoid making copy
+            auto data = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();  // TODO: Possibly avoid making copy
             this->body = data.body;
         }
 

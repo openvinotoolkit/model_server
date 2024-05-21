@@ -25,7 +25,7 @@
 namespace ovms {
 struct HttpPayload {
     std::vector<std::pair<std::string, std::string>> headers;
-    std::string body;          // always
+    std::string body;                 // always
     rapidjson::Document* parsedJson;  // pre-parsed body             = null
 };
 }  // namespace ovms
