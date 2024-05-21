@@ -24,12 +24,6 @@
 
 namespace ovms {
 struct HttpPayload {
-    HttpPayload(const HttpPayload& src) {
-        headers = src.headers;
-        body = src.body;
-        doc = src.doc;
-    }
-    HttpPayload() = default;
     std::vector<std::pair<std::string, std::string>> headers;
     std::string body;          // always
     rapidjson::Document* doc;  // pre-parsed body             = null
