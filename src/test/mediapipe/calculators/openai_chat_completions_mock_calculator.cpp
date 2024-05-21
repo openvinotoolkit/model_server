@@ -41,7 +41,7 @@ public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
-        cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::LLMdata>();
+        cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::HttpPayload>();
         cc->Inputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<std::string>();
         cc->Outputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
@@ -61,8 +61,8 @@ public:
             return absl::OkStatus();
         }
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
-            auto data = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::LLMdata>();
-            this->body = data.prompt;
+            auto data = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+            this->body = data.body;
         }
 
         this->body += std::to_string(timestamp.Value());
@@ -98,7 +98,7 @@ public:
 #pragma GCC diagnostic pop
 
 // TODO: Names to be decided
-const std::string OpenAIChatCompletionsMockCalculator::INPUT_TAG_NAME{"LLM_DATA"};
+const std::string OpenAIChatCompletionsMockCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
 const std::string OpenAIChatCompletionsMockCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
 const std::string OpenAIChatCompletionsMockCalculator::LOOPBACK_TAG_NAME{"LOOPBACK"};
 

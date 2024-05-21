@@ -3336,7 +3336,6 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
 #endif
         "LLMCalculator",  // integral OVMS calculator
         "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
-        "RequestConverterCalculator",
         "AddHeaderCalculator",
         "AddNumbersMultiInputsOutputsTestCalculator",
         "AddOne3CycleIterationsTestCalculator",

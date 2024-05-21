@@ -98,14 +98,7 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
         {
             "model": "gpt",
             "stream": false,
-            "messages": [{
-                            "role" : "system",
-                            "content" : "You are a helpful assistant."
-                        },
-                        {
-                            "role" : "user",
-                            "content" : "Hello!"
-                        }]
+            "messages": []
         }
     )";
 
@@ -113,7 +106,7 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
         handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
 
-    ASSERT_EQ(response, "You are a helpful assistant. Hello! </s>0");
+    ASSERT_EQ(response, requestBody + std::string{"0"});
 }
 
 TEST_F(HttpOpenAIHandlerTest, Stream) {

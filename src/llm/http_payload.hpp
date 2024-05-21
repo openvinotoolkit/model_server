@@ -34,9 +34,4 @@ struct HttpPayload {
     std::string body;          // always
     rapidjson::Document* doc;  // pre-parsed body             = null
 };
-
-struct LLMdata {
-    std::string prompt;
-    std::map<std::string, std::string> params;
-};
 }  // namespace ovms
