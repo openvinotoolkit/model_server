@@ -45,6 +45,10 @@ void LLMNodeResources::initiateGeneration() {
     llmExecutor = std::make_unique<LLMExecutor>(cbPipe);
 }
 
+void LLMNodeResource::notifyExecutorThread() {
+    llmExecutor->notifyNewRequestArrived();
+}
+
 std::unordered_map<std::string, std::string> LLMNodeResources::prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath) {
     std::unordered_map<std::string, std::string> LLMArguments;
     return LLMArguments;

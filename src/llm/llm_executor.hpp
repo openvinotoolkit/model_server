@@ -17,32 +17,47 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <thread>
 
 #include <continuous_batching_pipeline.hpp>
 namespace ovms {
 class LLMExecutor {
-    std::atomic<bool> end;
+    std::mutex mutex;
+    std::condition_variable cv;
+    std::atomic<bool> finishExecutorThread;
     std::shared_ptr<ContinuousBatchingPipeline> pipe;
     std::thread llmExecutorThread;
 
-    static void run(std::shared_ptr<ContinuousBatchingPipeline> pipe, std::atomic<bool>* end) {
-        while (!(*end)) {
-            pipe->step();
+    static void run(std::shared_ptr<ContinuousBatchingPipeline> pipe, std::atomic<bool>* finishExecutorThread) {
+        while (!(*finishExecutorThread)) {
+            if (pipe->has_awaiting_requests() || pipe->has_running_requests()) {
+                pipe->step();
+            }
+            else {
+                std::unique_lock<std::mutex> lock(mutex);
+                cv.wait(lock, [this]{return !(pipe->has_awaiting_requests() || pipe->has_running_requests());});
+            }
         }
     }
 
 public:
     LLMExecutor(std::shared_ptr<ContinuousBatchingPipeline> pipe) :
-        end(false),
+        finishExecutorThread(false),
         pipe(pipe) {
-        llmExecutorThread = std::thread(LLMExecutor::run, pipe, &end);
+        llmExecutorThread = std::thread(LLMExecutor::run, pipe, &finishExecutorThread);
     }
 
     ~LLMExecutor() {
-        end = true;
+        finishExecutorThread = true;
         llmExecutorThread.join();
+    }
+
+    void notifyNewRequestArrived() {
+        std::unique_lock<std::mutex> lock(mutex);
+        cv.notify_one();
     }
 };
 }  // namespace ovms

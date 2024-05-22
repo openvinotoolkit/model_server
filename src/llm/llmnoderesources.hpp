@@ -45,6 +45,8 @@ public:
 
     void initiateGeneration();
 
+    void notifyExecutorThread();
+
 private:
     // LLM Executor launches generation loop thread upon constrution and stops it when destroyed.
     std::unique_ptr<LLMExecutor> llmExecutor;
