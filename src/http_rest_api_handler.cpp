@@ -457,6 +457,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
 
 Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
 #if (MEDIAPIPE_DISABLE == 0)
+    HttpPayload request;
     Document doc;
     doc.Parse(request_body.c_str());
     if (doc.HasParseError()) {
@@ -492,13 +493,16 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
     if (!status.ok()) {
         return status;
     }
-
+    // TODO: Possibly avoid making copy
+    request.headers = request_components.headers;
+    request.body = request_body;
+    request.parsedJson = &doc;
     if (streamFieldVal == false) {
         ServableMetricReporter* smr = nullptr;                                                         // Unused
         ExecutionContext ec{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};  // Unused
-        return executor->infer(&request_body, &response, ec, smr);
+        return executor->infer(&request, &response, ec, smr);
     } else {
-        status = executor->inferStream(request_body, *serverReaderWriter);
+        status = executor->inferStream(request, *serverReaderWriter);
         if (!status.ok()) {
             sendErrorImpl(status.string(), *serverReaderWriter);
         }
@@ -664,6 +668,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             auto status = parseInferenceHeaderContentLength(requestComponents, headers);
             if (!status.ok())
                 return status;
+            requestComponents.headers = headers;
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, configReloadRegex)) {
