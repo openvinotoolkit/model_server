@@ -22,7 +22,7 @@ node {
     output_stream: "RESPONSE:out"
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          workspace_path: "/workspace/"
+          models_path: "/workspace/"
         }
     }
 }

@@ -23,41 +23,72 @@
 #include <thread>
 
 #include <continuous_batching_pipeline.hpp>
+
+#include "../logging.hpp"
+
 namespace ovms {
-class LLMExecutor {
+struct LLMExecutor {
+    // For logging purposes we could have more information about graph and node here
     std::mutex mutex;
     std::condition_variable cv;
-    std::atomic<bool> finishExecutorThread;
-    std::shared_ptr<ContinuousBatchingPipeline> pipe;
-    std::thread llmExecutorThread;
+    std::shared_ptr<ContinuousBatchingPipeline> pipe = nullptr;
 
-    static void run(std::shared_ptr<ContinuousBatchingPipeline> pipe, std::atomic<bool>* finishExecutorThread) {
-        while (!(*finishExecutorThread)) {
-            if (pipe->has_awaiting_requests() || pipe->has_running_requests()) {
-                pipe->step();
-            }
-            else {
-                std::unique_lock<std::mutex> lock(mutex);
-                cv.wait(lock, [this]{return !(pipe->has_awaiting_requests() || pipe->has_running_requests());});
+    LLMExecutor(std::shared_ptr<ContinuousBatchingPipeline> pipe) {
+        this->pipe = pipe;
+    }
+
+    bool hasRequests() {
+        return (pipe->has_awaiting_requests() || pipe->has_running_requests());
+    }
+
+    void step() {
+        pipe->step();
+    }
+
+    void waitForRequests(std::atomic<bool>* receivedEndSignal) {
+        std::unique_lock<std::mutex> lock(mutex);
+        cv.wait(lock, [this, receivedEndSignal] { return (pipe->has_awaiting_requests() || pipe->has_running_requests() || *receivedEndSignal); });
+    }
+
+    void notify() {
+        std::unique_lock<std::mutex> lock(mutex);
+        cv.notify_one();
+    }
+};
+
+class LLMExecutorWrapper {
+    LLMExecutor llmExecutor;
+    std::thread llmExecutorThread;
+    std::atomic<bool> finishExecutorThread = false;
+
+    static void run(LLMExecutor* llmExecutor, std::atomic<bool>* receivedEndSignal) {
+        while (!(*receivedEndSignal)) {
+            try {
+                if (llmExecutor->hasRequests()) {
+                    llmExecutor->step();
+                } else {
+                    llmExecutor->waitForRequests(receivedEndSignal);
+                }
+            } catch (std::exception& e) {
+                SPDLOG_LOGGER_ERROR(llm_executor_logger, "Error occurred in LLM executor: {}.", e.what());
             }
         }
     }
 
 public:
-    LLMExecutor(std::shared_ptr<ContinuousBatchingPipeline> pipe) :
-        finishExecutorThread(false),
-        pipe(pipe) {
-        llmExecutorThread = std::thread(LLMExecutor::run, pipe, &finishExecutorThread);
+    LLMExecutorWrapper(std::shared_ptr<ContinuousBatchingPipeline> pipe) :
+        llmExecutor(pipe) {
+        llmExecutorThread = std::thread(LLMExecutorWrapper::run, &llmExecutor, &finishExecutorThread);
     }
 
-    ~LLMExecutor() {
+    ~LLMExecutorWrapper() {
         finishExecutorThread = true;
+        llmExecutor.notify();
         llmExecutorThread.join();
     }
 
     void notifyNewRequestArrived() {
-        std::unique_lock<std::mutex> lock(mutex);
-        cv.notify_one();
+        llmExecutor.notify();
     }
 };
 }  // namespace ovms

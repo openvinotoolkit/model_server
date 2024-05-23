@@ -122,7 +122,7 @@ TEST_F(LLMFlowKfsTest, LLMNodeNameMissing) {
             output_stream: "RESPONSE:out2"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    workspace_path: "/workspace/"
+                    models_path: "/workspace/"
                 }
             }
         }
@@ -168,7 +168,7 @@ TEST_F(LLMFlowKfsTest, DISABLED_LLMNodeNameExists) {
             output_stream: "RESPONSE:out1"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    workspace_path: "/workspace/"
+                    models_path: "/workspace/"
                 }
             }
         }
@@ -180,7 +180,7 @@ TEST_F(LLMFlowKfsTest, DISABLED_LLMNodeNameExists) {
             output_stream: "RESPONSE:out"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    workspace_path: "/workspace/"
+                    models_path: "/workspace/"
                 }
             }
         }
@@ -205,7 +205,7 @@ TEST_F(LLMFlowKfsTest, LLMNodeNonExistantWorkspacePath) {
             output_stream: "RESPONSE:out2"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    workspace_path: "/bad_path_to_workspace/"
+                    models_path: "/bad_path_to_workspace/"
                 }
             }
         }
@@ -230,7 +230,7 @@ TEST_F(LLMFlowKfsTest, LLMNodeBadWorkspacePathEmpty) {
             output_stream: "RESPONSE:out2"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    workspace_path: ""
+                    models_path: ""
                 }
             }
         }
@@ -255,7 +255,7 @@ TEST_F(LLMFlowKfsTest, LLMNodeWorkspacePathToFileNotDir) {
             output_stream: "RESPONSE:out2"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    workspace_path: "/ovms/src/test/llm/config_llm_dummy_kfs.json"
+                    models_path: "/ovms/src/test/llm/config_llm_dummy_kfs.json"
                 }
             }
         }
@@ -280,7 +280,7 @@ TEST_F(LLMFlowKfsTest, LLMNodeResourceInitFailed) {
             output_stream: "RESPONSE:out2"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    workspace_path: "/"
+                    models_path: "/"
                 }
             }
         }

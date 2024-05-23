@@ -30,7 +30,7 @@
 
 namespace ovms {
 class Status;
-class LLMExecutor;
+class LLMExecutorWrapper;
 
 struct LLMNodeResources {
 public:
@@ -49,7 +49,7 @@ public:
 
 private:
     // LLM Executor launches generation loop thread upon constrution and stops it when destroyed.
-    std::unique_ptr<LLMExecutor> llmExecutor;
+    std::unique_ptr<LLMExecutorWrapper> llmExecutorWrapper;
     static std::unordered_map<std::string, std::string> prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath);
 };
 using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;

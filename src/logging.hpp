@@ -33,6 +33,7 @@ extern std::shared_ptr<spdlog::logger> sequence_manager_logger;
 extern std::shared_ptr<spdlog::logger> capi_logger;
 #if (MEDIAPIPE_DISABLE != 0)
 extern std::shared_ptr<spdlog::logger> mediapipe_logger;
+extern std::shared_ptr<spdlog::logger> llm_executor_logger;
 #endif
 #if (OV_TRACING == 1)
 extern std::shared_ptr<spdlog::logger> ov_logger;
