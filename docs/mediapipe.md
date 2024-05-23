@@ -200,7 +200,7 @@ Currently the graph tracing on the model server side is not supported. If you wo
 
 ### Benchmarking
 While you implemented and deployed the graph you have several options to test the performance.
-To validate the throughput for unary requests you can use the [benchmark client](../demos/benchmark/python#mediapipe-benchmarking).
+To validate the throughput for unary requests you can use the [benchmark client](../demos/benchmark/python/README.md#mediapipe-benchmarking).
 
 For streaming gRPC connections, there is available [rtps_client](../demos/mediapipe/holistic_tracking#rtsp-client).
 It can generate the load to gRPC stream and the mediapipe graph based on the content from RTSP video stream, MPG4 file or from the local camera.
