@@ -18,13 +18,10 @@ __pycache__
 .workspace
 *user_config*
 *.swp
-demos/mediapipe/object_detection/ovms/
-demos/mediapipe/object_detection/results/
 dist/
 lib/
 !client/python/ovmsclient/lib
 cppclean_src
 cppclean_test
 tags
-tests/python/models/
 .venv-style/

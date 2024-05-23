@@ -3,7 +3,7 @@ git+https://github.com/huggingface/optimum-intel.git@7114900cd3d80fdfc6bc18aff1d
 # Optimum here is needed to download the model
 onnx==1.16.0
 openvino==2024.1.0
-nncf==2.8.1
+nncf==2.10.0
 einops==0.7.0
 transformers_stream_generator==0.0.4
 tiktoken==0.5.2
