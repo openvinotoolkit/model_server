@@ -1125,6 +1125,7 @@ cc_test(
         "test/c_api/config_standard_scalar.json",
         "test/configs/config_dummy_dynamic_shape.json",
         "test/configs/emptyConfigWithMetrics.json",
+        "test/llm/graphkfspass.pbtxt",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
         "test/dummy_fp64/1/saved_model.xml",
