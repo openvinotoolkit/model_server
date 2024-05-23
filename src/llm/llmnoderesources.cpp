@@ -85,7 +85,6 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         .block_size = 32,
         .dynamic_split_fuse = false,
         .max_num_seqs = 256,
-        .max_paddings = 256,
     };
 
     try {
