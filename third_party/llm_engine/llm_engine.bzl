@@ -19,11 +19,8 @@ def llm_engine():
     llm_engine_repository(name="_llm_engine")
     new_git_repository(
         name = "llm_engine",
-        #emote = "https://github.com/mzegla/openvino.genai",
-        #commit = "8359952379771f61d8f3f8087f975be0ee0f1b6c", # request_rate branch
         remote = "https://github.com/atobiszei/openvino.genai",
- #       commit = "89a71dc916ad18e847f51908140f9de8bd120e5b", # request_rate branch
-        commit = "e909023d7bd8da68be9319bb2f87d692aa651bf8", # request_rate branch
+        commit = "a737c5f232c0e45ad78934def99b68ae7543fd8c",
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,

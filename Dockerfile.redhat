@@ -28,7 +28,7 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=8
 
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf search rapidjson && dnf install -y rapidjson  && dnf clean all && yum update -d6 -y && yum install -d6 -y \
             libuuid-devel \
             bc \
             cmake \
@@ -42,7 +42,6 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             openssl-devel \
             patch \
             pkg-config \
-            rapidjson-dev \
             wget \
             yum-utils \
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
