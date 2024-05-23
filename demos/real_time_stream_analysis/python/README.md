@@ -39,7 +39,7 @@ Using the streaming API has the following advantages:
 
 ### Preparing the model server for gRPC streaming with a Holistic graph
 
-The [holistic graph](../../mediapipe/holistic_tracking/holistic_tracking.pbtxt) is expecting and IMAGE object on the input and returns an IMAGE on the output.
+The [holistic graph](https://github.com/openvinotoolkit/model_server/blob/releases/2024/0/demos/mediapipe/holistic_tracking/holistic_tracking.pbtxt) is expecting and IMAGE object on the input and returns an IMAGE on the output.
 As such it doesn't require any preprocessing and postprocessing. In this demo the returned stream will be just visualized or sent to the target sink.
 
 The model server with the holistic use case can be deployed with the following steps:
@@ -49,7 +49,7 @@ cd model_server/demos/mediapipe/holistic_tracking
 ./prepare_server.sh
 docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
 ```
-[Check more info about this use case](../../mediapipe/holistic_tracking/)
+[Check more info about this use case](../../mediapipe/holistic_tracking/README.md)
 
 > **Note** All the graphs with an image on input and output can be applied here without any changes on the client application.
 
@@ -155,7 +155,7 @@ The helper class `StreamClient` supports using unary gRPC calls. In that case it
 It sends the frames to the model server asynchronously but each of them is stateless and each request can be processed independently.
 The key advantage of that mode is easier load balancing and scalability, because each request could be routed to a different instance of the model server or a different compute node.
 
-Such use case with the unary calls with a horizontal text analysis can be followed based on [this document](../../horizontal_text_detection/python/).
+Such use case with the unary calls with a horizontal text analysis can be followed based on [this document](../../horizontal_text_detection/python/README.md).
 
 
 > **Note** Depending on the output format, there might be needed a custom postprocessing function implementation.

@@ -4,8 +4,8 @@
 
 **This feature is currently in preview, meaning some behaviors of the feature and user interface may change in future versions**
 
- Starting with version 2023.3, OpenVINO Model Server supports execution of custom Python code. Such code can execute simple pre- or post-processing as well as complex tasks like image or text generation. 
- 
+ Starting with version 2023.3, OpenVINO Model Server supports execution of custom Python code. Such code can execute simple pre- or post-processing as well as complex tasks like image or text generation.
+
  Python execution is enabled via [MediaPipe](../mediapipe.md) by the built-in [`PythonExecutorCalculator`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#pythonexecutorcalculator) that allows creating graph nodes to execute Python code. Python nodes can be used as standalone servables (single node graphs) or be part of larger MediaPipe graphs.
 
  Check out the [quickstart guide](quickstart.md) for a simple example that shows how to use this feature.
@@ -27,7 +27,7 @@ RUN pip3 install numpy
 ENTRYPOINT [ `/ovms/bin/ovms` ]
 ```
 
-You can also modify `requirements.txt` from our [python demos](https://github.com/openvinotoolkit/model_server/tree/releases/2024/0/demos/python_demos) and from repository top level directory run `make python_image` 
+You can also modify `requirements.txt` from our [python demos](https://github.com/openvinotoolkit/model_server/tree/releases/2024/0/demos/python_demos) and from repository top level directory run `make python_image`
 
 ## `OvmsPythonModel` class
 
@@ -38,11 +38,11 @@ class OvmsPythonModel:
 
     def initialize(self, kwargs):
         """
-        `initialize` is called when model server loads graph definition. 
-        It allows to initialize and maintain state between subsequent execute() calls 
-        and even graph instances. For gRPC unary, graphs are recreated per request. 
-        For gRPC streaming, there can be multiple graph instances existing at the same time. 
-        OvmsPythonModel object is initialized with this method and then shared between all graph instances. 
+        `initialize` is called when model server loads graph definition.
+        It allows to initialize and maintain state between subsequent execute() calls
+        and even graph instances. For gRPC unary, graphs are recreated per request.
+        For gRPC streaming, there can be multiple graph instances existing at the same time.
+        OvmsPythonModel object is initialized with this method and then shared between all graph instances.
         Implementing this function is optional.
 
         Parameters:
@@ -67,13 +67,13 @@ class OvmsPythonModel:
         which in turn is called by the MediaPipe framework. How MediaPipe
         calls the `Process` method for the node depends on the configuration
         and the two configurations supported by PythonExecutorCalculator are:
-        
-        * Regular: `execute` is called with a set of inputs and returns a set of outputs. 
+
+        * Regular: `execute` is called with a set of inputs and returns a set of outputs.
         For unary endpoints it's the only possible configuration.
-        
-        * Generative: `execute` is called with a set of inputs and returns a generator. 
+
+        * Generative: `execute` is called with a set of inputs and returns a generator.
         The generator is then called multiple times with no additional input data and produces
-        multiple sets of outputs over time. Works only with streaming endpoints. 
+        multiple sets of outputs over time. Works only with streaming endpoints.
 
         Implementing this function is required.
 
@@ -81,7 +81,7 @@ class OvmsPythonModel:
         -----------
         * inputs: list of pyovms.Tensor
         -----------
-        
+
         Returns: list of pyovms.Tensor or generator
         """
         ...
@@ -108,7 +108,7 @@ For gRPC streaming, there can be multiple graph instances existing at the same t
 
 #### Parameters and return value
 
-`initialize` is called with `kwargs` parameter which is a dictionary. 
+`initialize` is called with `kwargs` parameter which is a dictionary.
 `kwargs` contain information from [node configuration](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#pythonexecutorcalculator). Considering a sample:
 
 ```pbtxt
@@ -127,9 +127,9 @@ node {
 All keys are strings. Available keys and values:
 
 | Key           | Value type | Description |
-| ------------- |:-----------| :-----------| 
+| ------------- |:-----------| :-----------|
 | node_name     | string | Name of the node in the graph. `<NODE_NAME>` in the sample above |
-| input_names   | list of strings | List of `<INPUT_NAME>` from all input streams in the sample above | 
+| input_names   | list of strings | List of `<INPUT_NAME>` from all input streams in the sample above |
 | outputs_names | list of strings | List of `<OUTPUT_NAME>` from all output streams in the sample above |
 
 `initialize` is not expected to return any value.
@@ -147,7 +147,7 @@ When model server catches exception from `initialize` it cleans up all Python re
 
 `execute` is called in `Process` method of `PythonExecutorCalculator` which in turn is called by MediaPipe framework. How MediaPipe calls `Process` for the node depends on the configuration and the two configurations supported by `PythonExecutorCalculator` are:
 
-#### Regular 
+#### Regular
 
 `execute` is called with a set of inputs and returns a set of outputs. For unary endpoints it's the only possible configuration. On the implementation side, to use that mode, `execute` should `return` outputs.
 
@@ -159,7 +159,7 @@ def execute(self, inputs):
 
 More information along with the configuration aspect described can be found in [execution modes](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#execution-modes) section.
 
-#### Generative 
+#### Generative
 
 `execute` is called with a set of inputs and returns a [generator](https://wiki.python.org/moin/Generators). The generator is then called multiple times with no additional input data and produces multiple sets of outputs over time. Works only with streaming endpoints. On the implementation side, to use that mode, `execute` should `yield` outputs.
 
@@ -167,7 +167,7 @@ More information along with the configuration aspect described can be found in [
 def execute(self, inputs):
     # For single set on inputs generate 10 sets of outputs
     for _ in range(10):
-        ... 
+        ...
         yield outputs
 ```
 
@@ -175,7 +175,7 @@ More information along with the configuration aspect described can be found in [
 
 #### Parameters and return value
 
-`execute` is called with `inputs` parameter which is a `list of pyovms.Tensor`. 
+`execute` is called with `inputs` parameter which is a `list of pyovms.Tensor`.
 
 Depending on the mode it should return:
 
@@ -202,11 +202,11 @@ This behavior has different effect on the client depending on the kind of gRPC e
 
 - **Unary**
 
-  With unary endpoint a graph is created, executed and destroyed for every request. If `execute` encounters an error, model server logs it and sends error message in response immediately. 
+  With unary endpoint a graph is created, executed and destroyed for every request. If `execute` encounters an error, model server logs it and sends error message in response immediately.
 
 - **Streaming**
 
-  With streaming endpoint a graph is created for the first request in the stream and then reused by all subsequent requests. 
+  With streaming endpoint a graph is created for the first request in the stream and then reused by all subsequent requests.
 
   If `execute` encounters an error on the first request (for example the Python code doesn't work as expected), model server logs it  and sends error message in response immediately. The graph gets destroyed.
 
@@ -220,7 +220,7 @@ This behavior has different effect on the client depending on the kind of gRPC e
 
 ### `finalize`
 
-`finalize` is called when model server unloads graph definition. It allows to perform any cleanup actions before the graph is removed. 
+`finalize` is called when model server unloads graph definition. It allows to perform any cleanup actions before the graph is removed.
 
 #### Parameters and return value
 
@@ -237,7 +237,7 @@ When model server catches exception from `finalize` it logs it and proceeds with
 
 ## Python Tensor
 
-`PythonExecutorCalculator` operates on a dedicated `Tensor` class that wraps the data along with some additional information like name, shape or datatype. Objects of that class are passed to `execute` method as inputs and returned as output. They are also wrapped and exchanged between nodes in the graph and between graph and model server core. 
+`PythonExecutorCalculator` operates on a dedicated `Tensor` class that wraps the data along with some additional information like name, shape or datatype. Objects of that class are passed to `execute` method as inputs and returned as output. They are also wrapped and exchanged between nodes in the graph and between graph and model server core.
 
 This `Tensor` class is a C++ class with a Python binding that implements Python [Buffer Protocol](https://docs.python.org/3/c-api/buffer.html#buffer-protocol). It can be found in a built-in module `pyovms`.
 
@@ -246,15 +246,15 @@ This `Tensor` class is a C++ class with a Python binding that implements Python 
 `pyovms.Tensor` attributes:
 
 | Name           | Type | Description |
-| ------------- |:-----------| :-----------| 
+| ------------- |:-----------| :-----------|
 | name     | string | Name of the string that also associates it with input or output stream of the node |
-| shape   | tuple | Tuple of numbers defining the shape of the tensor | 
+| shape   | tuple | Tuple of numbers defining the shape of the tensor |
 | datatype | string | Type of elements in the buffer. |
 | data | memoryview | Memoryview of the underlying data buffer |
 | size | number | Size of data buffer in bytes |
 
 *Note*: `datatype` attribute is not part of buffer protocol implementation.
-Buffer protocol uses `format` value that uses [struct format characters](https://docs.python.org/3/library/struct.html#format-characters). It can be read from `data` memoryview. 
+Buffer protocol uses `format` value that uses [struct format characters](https://docs.python.org/3/library/struct.html#format-characters). It can be read from `data` memoryview.
 There's a mapping between those two - see [datatype considerations](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#datatype-considerations).
 
 As `pyovms.Tensor` implements buffer protocol it can be converted to another types that also implement buffer protocol:
@@ -274,7 +274,7 @@ Inputs will be provided to the `execute` function, but outputs must be prepared 
 `Tensor(name, data)`
 
 - `name`: a string that associates Tensor data with specific name. This name is also used by `PythonExecutorCalculator` to push data to the correct output stream in the node. More about it in [node configuration section](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#input-and-output-streams-in-python-code).
-- `data`: an object that implements Python [Buffer Protocol](https://docs.python.org/3/c-api/buffer.html#buffer-protocol). This could be an instance of some built-in type like `bytes` or types from external modules like `numpy.ndarray`. 
+- `data`: an object that implements Python [Buffer Protocol](https://docs.python.org/3/c-api/buffer.html#buffer-protocol). This could be an instance of some built-in type like `bytes` or types from external modules like `numpy.ndarray`.
 
 ```python
 from pyovms import Tensor
@@ -285,11 +285,11 @@ class OvmsPythonModel:
         output = Tensor("my_output", "some text".encode())
         # A list of Tensors is expected, even if there's only one output
         return [output]
-``` 
+```
 
 As `Tensor` gets created from another type it adapts all fields required by the buffer protocol as its own. In such case `datatype` and `shape` also are not defined explicitly. Learn more in [datatype considerations](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#datatype-considerations) section.
 
-If the node is connected to another Python node, then Tensors pushed to the output of this node, are inputs of another node. 
+If the node is connected to another Python node, then Tensors pushed to the output of this node, are inputs of another node.
 
 ### Datatype considerations
 
@@ -298,12 +298,12 @@ There are two places where `pyovms.Tensor` objects are created and accessed:
 - in model server core during serialization and deserialization if Python node inputs or outputs as also graph inputs or outputs
 
 Model Server receives requests and sends responses on gRPC interface via KServe API which defines [expected data types for tensors](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#tensor-data-types).
-On the other hand Python [Buffer Protocol](https://docs.python.org/3/c-api/buffer.html#buffer-protocol) requires `format` to be specified as [struct format characters](https://docs.python.org/3/library/struct.html#format-characters). 
+On the other hand Python [Buffer Protocol](https://docs.python.org/3/c-api/buffer.html#buffer-protocol) requires `format` to be specified as [struct format characters](https://docs.python.org/3/library/struct.html#format-characters).
 
 In order to let users work with KServe types without enforcing the usage of struct format characters on the client side, model server attempts to do the mapping as follows when creating `Tensor` objects from the request:
 
-| KServe Type   | Format Character | 
-| :------------ |:----------------:| 
+| KServe Type   | Format Character |
+| :------------ |:----------------:|
 |`BOOL`         | `?`              |
 |`UINT8`        | `B`              |
 |`UINT16`       | `H`              |
@@ -318,7 +318,7 @@ In order to let users work with KServe types without enforcing the usage of stru
 |`FP64`         | `d`              |
 
 
-The same mapping is applied the other way around when creating `Tensor` from another Python object in `execute` method. 
+The same mapping is applied the other way around when creating `Tensor` from another Python object in `execute` method.
 
 `Tensor` object always holds both values in `Tensor.datatype` and `Tensor.data.format` attributes so they can be used in deserialization and serialization, but also in another node in the graph.
 
@@ -338,16 +338,16 @@ The `datatype` field in the tensor is a `string` and model server will not rejec
     * Tensor.shape: (3,)
     * Tensor.data.format: "B"
     * Tensor.data.shape: (23,)
-    
+
 In `execute` user has access to both information from the request as well as how the internal buffer looks like.
 
-Above scenario is the case only for the nodes that are directly connected to graph inputs. `pyovms.Tensor` objects produced inside `execute` inherit most of the fields from the objects they are created from, so user cannot manually set datatype. In such case tensor will try to map buffer protocol `format` to `datatype` according to the mapping mentioned before. 
+Above scenario is the case only for the nodes that are directly connected to graph inputs. `pyovms.Tensor` objects produced inside `execute` inherit most of the fields from the objects they are created from, so user cannot manually set datatype. In such case tensor will try to map buffer protocol `format` to `datatype` according to the mapping mentioned before.
 
 If it fails, the `datatype` is set to `format`, so that if such tensor is the output tensor of the graph, client receives the most valuable information about the type of output data.
-  
+
 ## Configuration and deployment
 
-Python is enabled via [MediaPipe](../mediapipe.md) by built-in `PythonExecutorCalculator`, therefore, in order to execute Python code in OVMS you need to create a graph with a node that uses this calculator. 
+Python is enabled via [MediaPipe](../mediapipe.md) by built-in `PythonExecutorCalculator`, therefore, in order to execute Python code in OVMS you need to create a graph with a node that uses this calculator.
 
 The way the graph is configured has a huge impact on the whole deployment. It defines things like:
 - inputs and outputs of the graph
@@ -411,7 +411,7 @@ from pyovms import Tensor
 class OvmsPythonModel:
     def execute(self, inputs):
         my_input = inputs[0]
-        my_input.name == "input" # true             
+        my_input.name == "input" # true
         my_output = Tensor("output", "some text".encode())
         return [my_output]
 ```
@@ -449,7 +449,7 @@ class OvmsPythonModel:
         ...
 ```
 
-**Note**: Node configuration and `execute` implementation should always match. For example if the node is configured to work with [incomplete inputs](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#incomplete-inputs), then accessing `Tensors` via index will not be useful. 
+**Note**: Node configuration and `execute` implementation should always match. For example if the node is configured to work with [incomplete inputs](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#incomplete-inputs), then accessing `Tensors` via index will not be useful.
 
 ### Graph input and output streams
 
@@ -466,7 +466,7 @@ input_stream: "OVMS_PY_TENSOR_TEXT:text"
 output_stream: "OVMS_PY_TENSOR:output"
 ```
 
-**Note**: The same rule applies to **node** input and output streams. 
+**Note**: The same rule applies to **node** input and output streams.
 
 When it comes to the `[NAME]` part, it is used to connect graph inputs and output with the nodes. They are also the input and output names in server requests and responses.
 
@@ -476,7 +476,7 @@ Here is what you should know if you want to have multiple Python nodes in the sa
 - Every Python node must have a unique name in graph scope
 - Every Python node has it's own instance of `OvmsPythonModel` that is not shared even if two nodes have identical `handler_path`
 - Nodes based on `PythonExecutorCalculator` can be connected directly without need for converters
-- Nodes may reuse the same Python file, but every Python file used by the server must have a unique name, otherwise some nodes might not work as expected. 
+- Nodes may reuse the same Python file, but every Python file used by the server must have a unique name, otherwise some nodes might not work as expected.
 For example: `/ovms/workspace1/model.py` and `/ovms/workspace2/model.py` will result in only one `model.py` effectively loaded (this is supposed to be changed in the future versions).
 
 ### Basic example
@@ -540,12 +540,12 @@ def increment(input):
 class OvmsPythonModel:
     # Assuming this code is used with nodes
     # that have single input and single output
-    
+
     def initialize(self, kwargs):
         self.output_name = kwargs["output_names"][0]
 
     def execute(self, inputs):
-        my_input = inputs[0]           
+        my_input = inputs[0]
         my_output = Tensor(self.output_name, increment(my_input))
         return [my_output]
 ```
@@ -571,9 +571,9 @@ Where `name` defines the name of the graph and `graph_path` contains the path to
 
 ### Inference API and available endpoints
 
-Since Python execution is supported via MediaPipe serving flow, it inherits it's enhancements and limitations. First thing to note is that MediaPipe graphs are available **only via KServe API**. 
+Since Python execution is supported via MediaPipe serving flow, it inherits it's enhancements and limitations. First thing to note is that MediaPipe graphs are available **only via KServe API**.
 
-From the client perspective model server serves a graph and user interacts with a graph. Single node in the graph cannot be accessed from the outside. 
+From the client perspective model server serves a graph and user interacts with a graph. Single node in the graph cannot be accessed from the outside.
 
 For a graph client can:
 
@@ -583,7 +583,7 @@ For a graph client can:
 
 Learn more about how [MediaPipe flow works in OpenVINO Model Server](../mediapipe.md)
 
-For inference, if the format of graph input stream is [`OvmsPyTensor`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#graph-input-and-output-streams), then the data in the KServe request must be encapsulated in `raw_input_contents` field based on [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field. 
+For inference, if the format of graph input stream is [`OvmsPyTensor`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#graph-input-and-output-streams), then the data in the KServe request must be encapsulated in `raw_input_contents` field based on [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field.
 
 The data passed in `raw_input_contents` is accessible in `execute` method of the node connected to graph input via `data` attribute of [`pyovms.Tensor`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#python-tensor) object.
 
@@ -625,7 +625,7 @@ import numpy as np
 class OvmsPythonModel:
 
     def execute(self, inputs):
-        # Read inputs 
+        # Read inputs
         image_input = inputs[0]
         print(image_input.shape) # (<image_binary_size>, )
         print(image_input.datatype) # "BYTES"
@@ -637,7 +637,7 @@ class OvmsPythonModel:
         numpy_input = inputs[2]
         print(text_input.shape) # (2, 3)
         print(text_input.datatype) # "FP32"
-        
+
         # Convert pyovms.Tensor objects to more useful formats
 
         # Pillow Image created from image bytes
@@ -656,18 +656,18 @@ Mediapipe graph works with packets and every packet has its timestamp. The times
 When requesting inference, user can decide to use automatic timestamping, or send timestamps themself along with the request as `OVMS_MP_TIMESTAMP` parameter. Learn more about [timestamping](https://docs.openvino.ai/2024/ovms_docs_streaming_endpoints.html#timestamping)
 
 When it comes to Python node `PythonExecutorCalculator`:
-- for [regular execution mode](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#regular-mode) simply propagates timestamp i.e. uses input timestamp as output timestamp. 
-- for [generative execution mode](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#generative-mode) it saves timestamp of the input and sends first set of outputs downstream with this timestamp. Then timestamp gets incremented with each generation, so next sets of output packages have ascending timestamp. 
+- for [regular execution mode](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#regular-mode) simply propagates timestamp i.e. uses input timestamp as output timestamp.
+- for [generative execution mode](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#generative-mode) it saves timestamp of the input and sends first set of outputs downstream with this timestamp. Then timestamp gets incremented with each generation, so next sets of output packages have ascending timestamp.
 
 **Multiple generation cycles on a single graph instance**
 
-Keep in mind that node keeps the timestamp and overwrites it every time new input arrives. It means that if you want to run multiple generation cycles on a single graph instance you **must** use manual timestamping - next request timestamp must be larger than the one received in the last response. 
+Keep in mind that node keeps the timestamp and overwrites it every time new input arrives. It means that if you want to run multiple generation cycles on a single graph instance you **must** use manual timestamping - next request timestamp must be larger than the one received in the last response.
 
 #### Outputs synchronization in gRPC streaming
 
 Timestamping has a crucial role when synchronizing packets from different streams both on the inputs and outputs as well as inside the graph. MediaPipe provides outputs of the graph to the model server and what happens next depends on what endpoint is used:
 
-- on gRPC unary endpoints server waits for the packets from all required outputs and sends them in a single response. 
+- on gRPC unary endpoints server waits for the packets from all required outputs and sends them in a single response.
 - on gRPC streaming endpoints server serializes output packets as soon as they arrive and sends them back in separate responses.
 
 It means that if you have a graph that has two or more outputs and use gRPC streaming endpoint you will have to take care of gathering the outputs. You can do that using `OVMS_MP_TIMESTAMP`.
@@ -680,7 +680,7 @@ timestamp = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
 
 ### Execution modes
 
-Python nodes can be configured to run in two execution modes - regular and generative. 
+Python nodes can be configured to run in two execution modes - regular and generative.
 
 In regular execution mode the node produces one set of outputs per one set of inputs. It works via both gRPC unary and streaming endpoints and is a common mode for use cases like computer vision.
 
@@ -690,13 +690,13 @@ Depending on which mode is used, both the Python code and graph configuration mu
 
 #### Regular mode
 
-When using regular mode, the `execute` method in [`OvmsPythonModel`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#ovmspythonmodel-class) class must `return` value. 
+When using regular mode, the `execute` method in [`OvmsPythonModel`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#ovmspythonmodel-class) class must `return` value.
 
 ```python
 from pyovms import Tensor
 ...
   def execute(self, inputs):
-        ...           
+        ...
         my_output = Tensor("output", data)
         return [my_output]
 ```
@@ -720,19 +720,19 @@ node {
 
 #### Generative mode
 
-When using generative mode, the `execute` method in [`OvmsPythonModel`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#ovmspythonmodel-class) class must `yield` value. 
+When using generative mode, the `execute` method in [`OvmsPythonModel`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#ovmspythonmodel-class) class must `yield` value.
 
 ```python
 from pyovms import Tensor
 ...
   def execute(self, inputs):
         ...
-        for data in data_stream:         
+        for data in data_stream:
           my_output = Tensor("output", data)
           yield [my_output]
 ```
 
-When `execute` yields, the [`PythonExecutorCalculator`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#pythonexecutorcalculator) saves the generator. Then it repeatedly calls it until it reaches the end of generated sequence. Node `Process` method is called multiple times per single inputs set. To trigger such behavior a specific graph configuration is needed. See below: 
+When `execute` yields, the [`PythonExecutorCalculator`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#pythonexecutorcalculator) saves the generator. Then it repeatedly calls it until it reaches the end of generated sequence. Node `Process` method is called multiple times per single inputs set. To trigger such behavior a specific graph configuration is needed. See below:
 
 ```pbtxt
 node {
@@ -803,8 +803,8 @@ Apart from basic configuration present also in regular mode, this graph contains
       }
     }
     ```
-    
-    In regular configuration `DefaultInputStreamHandler` is used by default, but for generative mode it's not sufficient. When default handler is defined, node waits for all input streams before calling `Process`. In generative mode `Process` should be called once for data coming from the graph and then multiple times only by receiving signal on `LOOPBACK`, but inputs from a graph and `LOOPBACK` will never be present at the same time. 
+
+    In regular configuration `DefaultInputStreamHandler` is used by default, but for generative mode it's not sufficient. When default handler is defined, node waits for all input streams before calling `Process`. In generative mode `Process` should be called once for data coming from the graph and then multiple times only by receiving signal on `LOOPBACK`, but inputs from a graph and `LOOPBACK` will never be present at the same time.
 
     For generative mode to work, inputs from the graph and `LOOPBACK` must be decoupled, meaning `Process` can be called with a set of inputs from the graph, but also with just `LOOPBACK`. It can be achieved via `SyncSetInputStreamHandler`. Above configuration sample creates a set with `LOOPBACK`, which also, implicitly creates another set, with all remaining inputs.
     Effectively there are two sets that do not depend on each other:
@@ -812,14 +812,14 @@ Apart from basic configuration present also in regular mode, this graph contains
     - ... every other input specified by the user.
 
 It's recommended not to reuse the same graph instance when the cycle is finished.
-Instead, if you want to generate for new data, create new gRPC stream. 
+Instead, if you want to generate for new data, create new gRPC stream.
 
 For working configurations and code samples see the [demos](https://docs.openvino.ai/2024/ovms_docs_demos.html#check-out-new-generative-ai-demos).
 
 ### Incomplete inputs
 
-There are usecases when firing `Process` with only a subset of inputs defined in node configuration is desired. By default, node waits for all inputs with the same timestamp and launches `Process` once they're all available. Such behavior is implemented by the `DefaultInputStreamHandler` which is used by default. 
-To configure the node to launch `Process` with only a subset of inputs you should use a different input stream handler for different [input policy](https://developers.google.com/mediapipe/framework/framework_concepts/synchronization#input_policies). 
+There are usecases when firing `Process` with only a subset of inputs defined in node configuration is desired. By default, node waits for all inputs with the same timestamp and launches `Process` once they're all available. Such behavior is implemented by the `DefaultInputStreamHandler` which is used by default.
+To configure the node to launch `Process` with only a subset of inputs you should use a different input stream handler for different [input policy](https://developers.google.com/mediapipe/framework/framework_concepts/synchronization#input_policies).
 
 Such configuration is used in [generative execution mode](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#generative-mode), but let's see another example:
 
@@ -864,7 +864,7 @@ class OvmsPythonModel:
  ```
 
  In a scenario above the node runs some processing on the image with provided set of labels.
- When configuration allows for sending incomplete inputs, then the client can send labels only one time and then send only images. 
+ When configuration allows for sending incomplete inputs, then the client can send labels only one time and then send only images.
 
  **Note**: Keep in mind that members of `OvmsPythonModel` objects are shared between **all** graph instances. It means that if in above scenario one client in one graph changes `labels`, then that change is also effective in every other graph instance (for every other client that sends requests to that graph). Saving data between executions that will be exclusive to a single graph instance is planned to be supported in future versions.
 
@@ -907,14 +907,14 @@ class OvmsPythonModel:
         return [Tensor("result", output)]
  ```
 
-In such case, the client could implement different actions depending on which output it receives on the stream. 
+In such case, the client could implement different actions depending on which output it receives on the stream.
 
 Another example of such configuration is signaling that generation is finished when running in [generative mode](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#generative-mode). This solution is used in [text generation demo](https://github.com/openvinotoolkit/model_server/tree/releases/2024/0/demos/python_demos/llm_text_generation).
 
 
 ### Calculator type conversions
 
-Python nodes work with a dedicated [Python Tensor](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#python-tensor) objects that can be used both on C++ and Python side. The downside of that approach is that usually other calculators cannot read and create such objects. It means that Python nodes cannot be directly connected to any other, non-Python nodes. 
+Python nodes work with a dedicated [Python Tensor](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#python-tensor) objects that can be used both on C++ and Python side. The downside of that approach is that usually other calculators cannot read and create such objects. It means that Python nodes cannot be directly connected to any other, non-Python nodes.
 
 That's why converter calculators exists. They work as adapters between nodes and implement necessary conversions needed to create a connection between calculators that work on two different types of packets.
 
@@ -922,11 +922,11 @@ That's why converter calculators exists. They work as adapters between nodes and
 
 OpenVINO Model Server comes with a built-in `PyTensorOvTensorConverterCalculator` that provides conversion between [Python Tensor](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#python-tensor) and [OV Tensor](https://docs.openvino.ai/2024/api/c_cpp_api/classov_1_1_tensor.html).
 
-Currently `PyTensorOvTensorConverterCalculator` works with only one input and one output. 
-- The stream that expects Python Tensor **must** have tag `OVMS_PY_TENSOR` 
+Currently `PyTensorOvTensorConverterCalculator` works with only one input and one output.
+- The stream that expects Python Tensor **must** have tag `OVMS_PY_TENSOR`
 - The stream that expects OV Tensor **must** have tag `OVTENSOR`
 
-In future versions converter calculator will accept multiple inputs and produce multiple outputs, but for now the only correct configuration is with one input stream and one output stream. One of those stream **must** have tag `OVMS_PY_TENSOR` and the other `OVTENSOR`, depending on the conversion direction. 
+In future versions converter calculator will accept multiple inputs and produce multiple outputs, but for now the only correct configuration is with one input stream and one output stream. One of those stream **must** have tag `OVMS_PY_TENSOR` and the other `OVTENSOR`, depending on the conversion direction.
 
 `PyTensorOvTensorConverterCalculator` can also be configured to use node options with `tag_to_output_tensor_names` map and it's used in OV Tensor to Python Tensor conversion. It defines the name Python Tensor should be created with, based on output stream tag.
 

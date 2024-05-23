@@ -1,9 +1,9 @@
 # [DEPRECATED] GPT-J Causal Language Modeling Demo {#ovms_demo_gptj_causal_lm}
 
-**This demo is deprecated and will be removed in 2024.0. Check out new [python demos](../../python_demos) for latest examples with language models.**
+**This demo is deprecated and will be removed in 2024.0. Check out new [python demos](https://github.com/openvinotoolkit/model_server/tree/releases/2024/0/demos/python_demos) for latest examples with language models.**
 
 ### Introduction
-This demo illustrates usage of GPT-like models in OpenVINO™ Model Server. GPT-J 6B model used in this example can be found at [huggingface](https://huggingface.co/EleutherAI/gpt-j-6B) (~25GB). Steps below automate download and conversion steps to be able to load it using OpenVINO™. Example python client provided at the end of the document requests Model Server for the next word of the sentence until `EOS` (end of sequence) token is received. 
+This demo illustrates usage of GPT-like models in OpenVINO™ Model Server. GPT-J 6B model used in this example can be found at [huggingface](https://huggingface.co/EleutherAI/gpt-j-6B) (~25GB). Steps below automate download and conversion steps to be able to load it using OpenVINO™. Example python client provided at the end of the document requests Model Server for the next word of the sentence until `EOS` (end of sequence) token is received.
 
 
 ### Download the model
@@ -17,12 +17,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Download the GPT-J-6b model from huggingface and save to disk in pytorch format using script below.  
+Download the GPT-J-6b model from huggingface and save to disk in pytorch format using script below.
 > NOTE: First download might take a while since the model is ~25GB. Subsequent script runs will use the model from cache located in `~/.cache/huggingface` directory.
 ```bash
 python3 download_model.py
 ```
-The script downloads the model using `transformers` pip library, loads into the memory using `pytorch` backend and saves into disk in pytorch format.  
+The script downloads the model using `transformers` pip library, loads into the memory using `pytorch` backend and saves into disk in pytorch format.
 > NOTE: Loading the model into CPU device takes ~48GB of RAM. Read more in the [model specification](https://huggingface.co/docs/transformers/v4.15.0/model_doc/gptj#overview).
 
 ### Convert the model
@@ -116,7 +116,7 @@ make
 Workspace should look as follows:
 
 ```bash
-tree workspace 
+tree workspace
 workspace
 ├── config.json
 └── tokenizers
