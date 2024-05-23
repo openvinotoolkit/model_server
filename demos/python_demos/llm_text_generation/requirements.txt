@@ -7,7 +7,7 @@ nncf==2.8.1
 einops==0.7.0
 transformers_stream_generator==0.0.4
 tiktoken==0.5.2
-transformers==4.37.1
+transformers==4.38.0
 bitsandbytes==0.43.0
 accelerate==0.27.2
 datasets==2.18.0
