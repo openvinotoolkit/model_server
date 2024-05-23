@@ -1,2 +1,2 @@
-tritonclient[all]==2.37.0.9383150
-requests<=2.31.0,>=2.27.1
+tritonclient[all]<=2.45.0
+requests<=2.32.2
