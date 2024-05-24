@@ -25,5 +25,5 @@ message LLMCalculatorOptions {
     // no rule to obtain this
     optional LLMCalculatorOptions ext = 113473750;
     }
-    required string workspace_path = 1;
+    required string models_path = 1;
 }
