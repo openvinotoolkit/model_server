@@ -340,6 +340,7 @@ public:
             // Last iteration
             if (this->generationHandle->generation_finished()) {
                 std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true));
+                response += packIntoServerSideEventMessage("[DONE]");
                 LOG(INFO) << response;
                 // Produce last message, but do not producce loopback packets anymore so this is last Process() call
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
