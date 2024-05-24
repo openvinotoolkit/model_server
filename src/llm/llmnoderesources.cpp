@@ -38,22 +38,6 @@
 
 namespace ovms {
 
-LLMNodeResources::LLMNodeResources() {
-}
-
-void LLMNodeResources::initiateGeneration() {
-    llmExecutorWrapper = std::make_unique<LLMExecutorWrapper>(cbPipe);
-}
-
-void LLMNodeResources::notifyExecutorThread() {
-    llmExecutorWrapper->notifyNewRequestArrived();
-}
-
-std::unordered_map<std::string, std::string> LLMNodeResources::prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath) {
-    std::unordered_map<std::string, std::string> LLMArguments;
-    return LLMArguments;
-}
-
 Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
@@ -104,6 +88,19 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
     nodeResources->initiateGeneration();
 
     return StatusCode::OK;
+}
+
+void LLMNodeResources::initiateGeneration() {
+    llmExecutorWrapper = std::make_unique<LLMExecutorWrapper>(cbPipe);
+}
+
+void LLMNodeResources::notifyExecutorThread() {
+    llmExecutorWrapper->notifyNewRequestArrived();
+}
+
+std::unordered_map<std::string, std::string> LLMNodeResources::prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath) {
+    std::unordered_map<std::string, std::string> LLMArguments;
+    return LLMArguments;
 }
 
 }  // namespace ovms

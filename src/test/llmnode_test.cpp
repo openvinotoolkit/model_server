@@ -87,11 +87,20 @@ public:
 };
 
 // --------------------------------------- OVMS LLM nodes tests
+
+// TODO: Test bad sampling configuration that would cause errors in step() phase. Need to replace hardcoded generation config
+// with user defined one to do that.
+// TODO: Test bad message or sampling configuration that would cause errors in add_request() phase. Need to replace hardcoded generation config
+// with user defined one to do that.
+// TODO: Consider stress testing - exisitng model server under heavy load to check notifications work us expected.
+
 // Test disabled by default - needs LLM models to work in /workspace directory:
 // openvino_detokenizer.bin  openvino_detokenizer.xml  openvino_model.bin  openvino_model.xml  openvino_tokenizer.bin  openvino_tokenizer.xml
 // Model that was used:
 // https://huggingface.co/meta-llama/Llama-2-7b-chat-hf
 // converted with optimum cli
+
+// TODO: Use lighter model and enable when model preparation is automated
 TEST_F(LLMFlowKfsTest, DISABLED_Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();

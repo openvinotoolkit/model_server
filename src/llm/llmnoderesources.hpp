@@ -34,21 +34,20 @@ class LLMExecutorWrapper;
 
 struct LLMNodeResources {
 public:
-    LLMNodeResources(const LLMNodeResources&) = delete;
-    LLMNodeResources& operator=(LLMNodeResources&) = delete;
-
-    LLMNodeResources();
-    static Status createLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
-
     std::shared_ptr<ContinuousBatchingPipeline> cbPipe = nullptr;
     std::string workspacePath;
+
+    static Status createLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
+
+    LLMNodeResources(const LLMNodeResources&) = delete;
+    LLMNodeResources& operator=(LLMNodeResources&) = delete;
+    LLMNodeResources() = default;
 
     void initiateGeneration();
 
     void notifyExecutorThread();
 
 private:
-    // LLM Executor launches generation loop thread upon constrution and stops it when destroyed.
     std::unique_ptr<LLMExecutorWrapper> llmExecutorWrapper;
     static std::unordered_map<std::string, std::string> prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath);
 };
