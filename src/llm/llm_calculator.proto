@@ -35,7 +35,5 @@ message LLMCalculatorOptions {
 
     optional uint64 max_num_seqs = 5 [default = 256];
 
-    optional uint64 max_paddings = 6 [default = 256];
-
     optional bool dynamic_split_fuse = 7 [default = false];
 }

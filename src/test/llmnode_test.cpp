@@ -22,6 +22,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <pybind11/embed.h>
 
@@ -31,6 +32,7 @@
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../llm/llmnoderesources.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
@@ -161,6 +163,39 @@ TEST_F(LLMFlowKfsTest, LLMNodeOptionsMissing) {
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_MISSING_OPTIONS);
+}
+
+// Currently disabled UT - need successfull resource init - only aavailable with LLM models.
+TEST_F(LLMFlowKfsTest, LLMNodeOptionsCheckDefault) {
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "RESPONSE:out"
+        node {
+            name: "llmNode"
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out1"
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    workspace_path: "/workspace/"
+                }
+            }
+        }
+    )";
+
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
+    ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
+
+    // TODO: Add get_scheduler_config() to beam_search
+    //SchedulerConfig default_config = nodeResources->cbPipe->get_scheduler_config();
+    ASSERT_EQ(default_config.max_num_batched_tokens, 256);
+    ASSERT_EQ(default_config.num_kv_blocks, 364);
+    ASSERT_EQ(default_config.block_size, 32);
+    ASSERT_EQ(default_config.dynamic_split_fuse, false);
+    ASSERT_EQ(default_config.max_num_seqs, 256);
 }
 
 // Currently disabled UT - need successfull resource init - only aavailable with LLM models.
