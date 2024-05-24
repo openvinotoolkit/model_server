@@ -84,6 +84,7 @@ public:
             LOG(INFO) << "Received prompt: " << prompt << std::endl;
 
             GenerationHandle generation = nodeResources->cbPipe->add_request(0, prompt, GenerationConfig::greedy());
+            nodeResources->notifyExecutorThread();
             std::vector<GenerationOutput> outputs = generation.read_all();
             // For greedy this sampling params, there's only one output
             // TODO: work with multiple outputs

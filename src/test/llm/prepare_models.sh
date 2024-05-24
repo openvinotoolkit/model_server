@@ -1,3 +1,5 @@
+#!/bin/bash
+#
 # Copyright 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,17 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-input_stream: "REQUEST:in"
-output_stream: "RESPONSE:out"
-node {
-    name: "llmNode1"
-    calculator: "LLMCalculator"
-    input_side_packet: "LLM_NODE_RESOURCES:llm"
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-    node_options: {
-        [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          models_path: "/ovms/src/test/llm/facebook/opt-125m"
-        }
-    }
-}
+
+python3 -m venv .venv
+. .venv/bin/activate
+pip3 install -U pip
+pip3 install -r requirements.txt
+python3 prepare_models.py
