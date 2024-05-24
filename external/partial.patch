@@ -1,8 +1,51 @@
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
-index c8d0501b..e5bb9700 100644
+index c8d0501b..d8e6f9de 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
-@@ -339,11 +339,19 @@ void EvHTTPRequest::AppendResponseHeader(absl::string_view header,
+@@ -25,6 +25,8 @@ limitations under the License.
+ #include <cstring>
+ #include <string>
+ #include <vector>
++#include <iostream>
++
+ 
+ #include "absl/strings/match.h"
+ #include "absl/strings/string_view.h"
+@@ -143,6 +145,24 @@ bool EvHTTPRequest::Initialize() {
+   return output_buf != nullptr;
+ }
+ 
++void escapeSpecialCharacters(const char* input) {
++    std::cout << "NET_HTTP: => [";
++    while (*input) {
++        switch (*input) {
++            case '\r':
++                std::cout << "\\r";
++                break;
++            case '\n':
++                std::cout << "\\n";
++                break;
++            default:
++                std::cout << *input;
++        }
++        ++input;
++    }
++    std::cout << "]\n";
++}
++
+ void EvHTTPRequest::WriteResponseBytes(const char* data, int64_t size) {
+   assert(size >= 0);
+   if (output_buf == nullptr) {
+@@ -150,6 +170,8 @@ void EvHTTPRequest::WriteResponseBytes(const char* data, int64_t size) {
+     return;
+   }
+ 
++//  NET_LOG(ERROR, "Writing to buf: [%s]", data);
++  //escapeSpecialCharacters(data);
+   int ret = evbuffer_add(output_buf, data, static_cast<size_t>(size));
+   if (ret == -1) {
+     NET_LOG(ERROR, "Failed to write %zu bytes data to output buffer",
+@@ -339,11 +361,19 @@ void EvHTTPRequest::AppendResponseHeader(absl::string_view header,
  }
  
  void EvHTTPRequest::PartialReplyWithStatus(HTTPStatusCode status) {
@@ -24,7 +67,7 @@ index c8d0501b..e5bb9700 100644
  }
  
  ServerRequestInterface::CallbackStatus
-@@ -371,6 +379,24 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
+@@ -371,6 +401,24 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
    delete this;
  }
  
@@ -49,7 +92,7 @@ index c8d0501b..e5bb9700 100644
  void EvHTTPRequest::Reply() { ReplyWithStatus(HTTPStatusCode::OK); }
  
  // Treats this as 500 for now and let libevent decide what to do
-@@ -381,6 +407,18 @@ void EvHTTPRequest::Abort() {
+@@ -381,6 +429,18 @@ void EvHTTPRequest::Abort() {
    delete this;
  }
  

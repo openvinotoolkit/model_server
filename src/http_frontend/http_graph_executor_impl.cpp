@@ -83,6 +83,7 @@ Status onPacketReadySerializeImpl(
     const ::mediapipe::Packet& packet,
     std::string& response) {
     response = packet.Get<std::string>();
+    SPDLOG_DEBUG("HTTP onPacketReadySerializeImpl: {}", response);
     return StatusCode::OK;
 }
 

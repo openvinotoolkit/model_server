@@ -66,6 +66,8 @@ public:
     float                           getPresencePenalty()    const { return this->presencePenalty;   }
     float                           getTemperature()        const { return this->temperature;       }
     float                           getTopP()               const { return this->topP;              }
+// getTopK ?
+// 
 
     // TODO: Use exceptions to sneak error mesages into response
     bool parse() {
@@ -182,7 +184,7 @@ public:
 class TextStreamer {
     std::shared_ptr<Tokenizer> tokenizer;
     std::vector<int64_t> tokenCache;
-    size_t printLen;
+    size_t printLen{0};
 public:
     TextStreamer(std::shared_ptr<Tokenizer> tokenizer) : tokenizer(tokenizer) {}
 
@@ -302,6 +304,8 @@ public:
             // TODO: Support other samplings
             // TODO: Pass more params from request
             GenerationConfig config = GenerationConfig::greedy();
+            config.max_new_tokens = this->request->getMaxTokens().value_or(30);
+            config.ignore_eos = false;
             this->generationHandle = std::make_shared<GenerationHandle>(
                 nodeResources->cbPipe->add_request(
                     0/*to be removed from API?*/,
@@ -349,7 +353,8 @@ public:
                 int64_t token = generationOutputs.begin()->second.generated_token_ids[0];
                 auto chunk = this->streamer->put(token);
                 if (chunk.has_value()) {
-                    std::string response = packIntoServerSideEventMessage(serializeStreamingChunk(chunk.value(), true));
+                    std::string response = packIntoServerSideEventMessage(
+                        serializeStreamingChunk(chunk.value(), false));
                     LOG(INFO) << response;
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 }
@@ -425,7 +430,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& complet
     // TODO
     // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
-            
+ 
     // TODO
     // usage: object; Usage statistics for the completion request.
     // Might be crucial - possibly required for benchmarking purposes?
@@ -454,9 +459,9 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     // null - natural scenario when the generation has not completed yet
     writer.String("finish_reason");
     if (stop)
-        writer.Null();
-    else
         writer.String("stop");
+    else
+        writer.Null();
     // index: integer; Choice index, only n=1 supported anyway
     writer.String("index");
     writer.Int(0);
@@ -467,8 +472,10 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     writer.String("delta");
     writer.StartObject();  // {
     // content: string; Actual content of the text produced
-    writer.String("content");
-    writer.String(chunkResponse.c_str());
+    if (!stop) {
+        writer.String("content");
+        writer.String(chunkResponse.c_str());
+    }
     // role: string; Role of the text producer
     // Will make sense once we have chat templates? TODO(atobisze)
     // writer.String("role");
