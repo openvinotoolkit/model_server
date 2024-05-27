@@ -1,0 +1,9 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+        {
+            "name": "meta-llama/Llama-2-7b-chat-hf",
+            "graph_path": "/model/graph.pbtxt"
+        }
+    ]
+}
