@@ -25,7 +25,7 @@ def llm_engine():
         init_submodules = True,
         recursive_init_submodules = True,
     )
-    # when using local repository manually run: git submodule update --recursive 
+    #when using local repository manually run: git submodule update --recursive 
     #native.new_local_repository(
     #    name = "llm_engine",
     #    path = "/openvino.genai",
