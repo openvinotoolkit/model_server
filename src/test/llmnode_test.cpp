@@ -20,9 +20,9 @@
 #include <string>
 #include <thread>
 
+#include <continuous_batching_pipeline.hpp>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <pybind11/embed.h>
 
@@ -86,6 +86,12 @@ public:
     void SetUp() {
         SetUpServer("/ovms/src/test/llm/config_llm_dummy_kfs.json");
     }
+};
+
+class LLMOptionsKfsTest : public LLMFlowTest {
+public:
+    void SetUp() {}
+    void TearDown() {}
 };
 
 // --------------------------------------- OVMS LLM nodes tests
@@ -166,7 +172,7 @@ TEST_F(LLMFlowKfsTest, LLMNodeOptionsMissing) {
 }
 
 // Currently disabled UT - need successfull resource init - only aavailable with LLM models.
-TEST_F(LLMFlowKfsTest, LLMNodeOptionsCheckDefault) {
+TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckDefault) {
     std::string testPbtxt = R"(
     input_stream: "REQUEST:in"
     output_stream: "RESPONSE:out"
@@ -178,7 +184,7 @@ TEST_F(LLMFlowKfsTest, LLMNodeOptionsCheckDefault) {
             output_stream: "RESPONSE:out1"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    workspace_path: "/workspace/"
+                    models_path: "/workspace/"
                 }
             }
         }
@@ -194,6 +200,75 @@ TEST_F(LLMFlowKfsTest, LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
+}
+
+// Currently disabled UT - need successfull resource init - only aavailable with LLM models.
+TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckHalfDefault) {
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "RESPONSE:out"
+        node {
+            name: "llmNode"
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out1"
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: "/workspace/"
+                    max_num_batched_tokens: 98
+                    num_kv_blocks: 97
+                }
+            }
+        }
+    )";
+
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
+    ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
+
+    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
+    ASSERT_EQ(nodeResources->schedulerConfig.num_kv_blocks, 97);
+    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
+    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
+    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
+}
+
+// Currently disabled UT - need successfull resource init - only aavailable with LLM models.
+TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckNonDefault) {
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "RESPONSE:out"
+        node {
+            name: "llmNode"
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out1"
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: "/workspace/"
+                    max_num_batched_tokens: 98
+                    num_kv_blocks: 97
+                    block_size: 96
+                    max_num_seqs: 95
+                    dynamic_split_fuse: true
+                }
+            }
+        }
+    )";
+
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
+    ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
+
+    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
+    ASSERT_EQ(nodeResources->schedulerConfig.num_kv_blocks, 97);
+    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 96);
+    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
+    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
 }
 
 // Currently disabled UT - need successfull resource init - only aavailable with LLM models.
