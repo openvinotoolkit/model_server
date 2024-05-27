@@ -1,5 +1,5 @@
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
-index c8d0501b..7f1c2a88 100644
+index c8d0501b..f25a1e6b 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
 @@ -25,6 +25,8 @@ limitations under the License.
@@ -11,20 +11,22 @@ index c8d0501b..7f1c2a88 100644
  
  #include "absl/strings/match.h"
  #include "absl/strings/string_view.h"
-@@ -339,16 +341,24 @@ void EvHTTPRequest::AppendResponseHeader(absl::string_view header,
+@@ -339,16 +341,26 @@ void EvHTTPRequest::AppendResponseHeader(absl::string_view header,
  }
  
  void EvHTTPRequest::PartialReplyWithStatus(HTTPStatusCode status) {
 -  NET_LOG(FATAL, "PartialReplyWithStatus not implemented.");
-+  bool result =
-+      server_->EventLoopSchedule([this, status]() { EvPartialSendReply(status); });
++  EvPartialSendReply(status);
++  return;
++  // bool result =
++  //     server_->EventLoopSchedule([this, status]() { EvPartialSendReply(status); });
 +
-+  if (!result) {
-+    NET_LOG(ERROR, "Failed to EventLoopSchedule PartialReplyWithStatus()");
-+    Abort();
-+    // TODO(wenboz): should have a forced abort that doesn't write back anything
-+    // to the event-loop
-+  }
++  // if (!result) {
++  //   NET_LOG(ERROR, "Failed to EventLoopSchedule PartialReplyWithStatus()");
++  //   Abort();
++  //   // TODO(wenboz): should have a forced abort that doesn't write back anything
++  //   // to the event-loop
++  // }
  }
  
  void EvHTTPRequest::PartialReply() {
@@ -39,7 +41,7 @@ index c8d0501b..7f1c2a88 100644
    return CallbackStatus::NOT_SCHEDULED;
  }
  
-@@ -371,6 +381,25 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
+@@ -371,6 +383,25 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
    delete this;
  }
  
@@ -65,7 +67,7 @@ index c8d0501b..7f1c2a88 100644
  void EvHTTPRequest::Reply() { ReplyWithStatus(HTTPStatusCode::OK); }
  
  // Treats this as 500 for now and let libevent decide what to do
-@@ -381,6 +410,18 @@ void EvHTTPRequest::Abort() {
+@@ -381,6 +412,18 @@ void EvHTTPRequest::Abort() {
    delete this;
  }
  
