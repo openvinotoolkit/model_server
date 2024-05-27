@@ -153,7 +153,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   endif
   ifeq ($(BASE_OS_TAG),20.04)
-    OS=ubuntu20
+        OS=ubuntu20
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
 	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.2.0.15441.c17ea55cac2_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
