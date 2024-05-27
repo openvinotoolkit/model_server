@@ -117,7 +117,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             http://mirror.centos.org/centos/8-stream/BaseOS/x86_64/os/Packages/libusbx-devel-1.0.23-4.el8.x86_64.rpm && \
             yum clean all
 
-RUN python3 --version && python3 -m pip install numpy==1.26.4 --no-cache-dir
+RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir
 
 ARG NVIDIA=0
 # Add Nvidia dev tool if needed
