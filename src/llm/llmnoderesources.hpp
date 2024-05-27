@@ -36,6 +36,7 @@ struct LLMNodeResources {
 public:
     std::shared_ptr<ContinuousBatchingPipeline> cbPipe = nullptr;
     std::string workspacePath;
+    SchedulerConfig schedulerConfig;
 
     static Status createLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
 

@@ -189,13 +189,11 @@ TEST_F(LLMFlowKfsTest, LLMNodeOptionsCheckDefault) {
     std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
-    // TODO: Add get_scheduler_config() to beam_search
-    //SchedulerConfig default_config = nodeResources->cbPipe->get_scheduler_config();
-    ASSERT_EQ(default_config.max_num_batched_tokens, 256);
-    ASSERT_EQ(default_config.num_kv_blocks, 364);
-    ASSERT_EQ(default_config.block_size, 32);
-    ASSERT_EQ(default_config.dynamic_split_fuse, false);
-    ASSERT_EQ(default_config.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
+    ASSERT_EQ(nodeResources->schedulerConfig.num_kv_blocks, 364);
+    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
+    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
+    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
 }
 
 // Currently disabled UT - need successfull resource init - only aavailable with LLM models.
