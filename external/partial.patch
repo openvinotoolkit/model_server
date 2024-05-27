@@ -1,8 +1,17 @@
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
-index c8d0501b..e5bb9700 100644
+index c8d0501b..7f1c2a88 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
-@@ -339,11 +339,19 @@ void EvHTTPRequest::AppendResponseHeader(absl::string_view header,
+@@ -25,6 +25,8 @@ limitations under the License.
+ #include <cstring>
+ #include <string>
+ #include <vector>
++#include <iostream>
++
+ 
+ #include "absl/strings/match.h"
+ #include "absl/strings/string_view.h"
+@@ -339,16 +341,24 @@ void EvHTTPRequest::AppendResponseHeader(absl::string_view header,
  }
  
  void EvHTTPRequest::PartialReplyWithStatus(HTTPStatusCode status) {
@@ -24,7 +33,13 @@ index c8d0501b..e5bb9700 100644
  }
  
  ServerRequestInterface::CallbackStatus
-@@ -371,6 +379,24 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
+ EvHTTPRequest::PartialReplyWithFlushCallback(std::function<void()> callback) {
+-  NET_LOG(FATAL, "PartialReplyWithStatus not implemented.");
++  NET_LOG(FATAL, "PartialReplyWithFlushCallback not implemented.");
+   return CallbackStatus::NOT_SCHEDULED;
+ }
+ 
+@@ -371,6 +381,25 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
    delete this;
  }
  
@@ -34,6 +49,7 @@ index c8d0501b..e5bb9700 100644
 +    this->is_reply_started_ = true;
 +  }
 +  evhttp_send_reply_chunk(parsed_request_->request, output_buf);
++  evbuffer_drain(output_buf, -1);
 +}
 +
 +void EvHTTPRequest::EvPartialReplyEnd() {
@@ -49,7 +65,7 @@ index c8d0501b..e5bb9700 100644
  void EvHTTPRequest::Reply() { ReplyWithStatus(HTTPStatusCode::OK); }
  
  // Treats this as 500 for now and let libevent decide what to do
-@@ -381,6 +407,18 @@ void EvHTTPRequest::Abort() {
+@@ -381,6 +410,18 @@ void EvHTTPRequest::Abort() {
    delete this;
  }
  

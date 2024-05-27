@@ -502,6 +502,7 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
         ExecutionContext ec{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};  // Unused
         return executor->infer(&request, &response, ec, smr);
     } else {
+        //serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         status = executor->inferStream(request, *serverReaderWriter);
         if (!status.ok()) {
             sendErrorImpl(status.string(), *serverReaderWriter);
