@@ -83,9 +83,26 @@ cat config.json
 
 
 ## Start-up
-```
+```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
+Wait for the model to load. You can check the status with a simple command:
+```bash
+curl http://localhost:8000/v1/config
+{
+"meta-llama/Llama-2-7b-chat-hf" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
 
 ## Client code
 
