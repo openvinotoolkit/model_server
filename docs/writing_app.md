@@ -17,7 +17,9 @@ OpenVINO&trade; Model Server exposes two sets of APIs: one compatible with Tenso
 - [KServe gRPC API](./model_server_grpc_api_kfs.md)
 - [TensorFlow Serving REST API](./model_server_rest_api_tfs.md)
 - [KServe REST API](./model_server_rest_api_kfs.md)
+- [OpenAI chat API](./model_server_rest_api_chat.md)
 
 In this section you can find short code samples to interact with OpenVINO Model Server endpoints via:
 - [TensorFlow Serving API](./clients_tfs.md)
 - [KServe API](./clients_kfs.md)
+- [OpenAI API](./clients_openai.md)
