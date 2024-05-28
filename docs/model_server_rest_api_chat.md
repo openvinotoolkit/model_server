@@ -13,7 +13,7 @@ We support now the following parameters:
 - frequency_penalty
 - max_tokens
 - presence_penalty
-- response_format - only json is implementation
+- response_format - only json is implemented
 - stream
 - temperature
 - top_p
@@ -29,7 +29,7 @@ Not supported parameters:
 - tools
 - tools_choice
 - functions
-- funcation_call
+- function_call
 - seed
 - n
 - logit_bias
@@ -38,7 +38,7 @@ Not supported parameters:
 
 ### Response parameters
 Supported parameters:
-- choices - that includes `finish_reason`, `message.content`, `mesage.role`, index (always 0 for now)
+- choices - that includes `finish_reason`, `message.content`, `message.role`, index (always 0 for now)
 - created
 - model
 - object - always "chat.completion" 
@@ -53,6 +53,6 @@ Not supported now:
 
 [End to end demo with LLM model serving over OpenAI API](../demos/continuous_batching/)
 
-Code snippets
+[Code snippets](./clients_openai.md)
 
-[Developer guide for writing custom calcultors with REST API extention](TBD)
+[Developer guide for writing custom calculators with REST API extension](TBD)

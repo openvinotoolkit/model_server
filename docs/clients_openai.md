@@ -37,11 +37,11 @@ pip3 install requests
 :sync: python-openai
 ```{code} python
 from openai import OpenAI
-client = OpenAI(base_url="http://localhost:8000/v3")
+client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
 stream = client.chat.completions.create(
     model="meta-llama/Llama-2-7b-chat-hf",
     messages=[{"role": "user", "content": "Say this is a test"}],
-    stream=True,
+    stream=False,
 )
 for chunk in stream:
     if chunk.choices[0].delta.content is not None:
@@ -54,7 +54,7 @@ for chunk in stream:
 import requests
 payload = {"model": "meta-llama/Llama-2-7b-chat-hf", "messages": [ {"role": "user","content": "Say this is a test" }]}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://ov-spr-31.sclab.intel.com:8000/v3/chat/completions", json=payload, headers=headers)
+response = requests.post("http://localhost:8000/v3/chat/completions", json=payload, headers=headers)
 print(response.text)
 ```
 :::
