@@ -69,8 +69,15 @@ Status onPacketReadySerializeAndSendImpl(
             packetType,
             packet,
             out));
-    serverReaderWriter.WriteResponseString(out);
-    serverReaderWriter.PartialReply();
+
+    // sync
+    //serverReaderWriter.WriteResponseString(out);
+    // evbuffer_add
+
+    // async
+    serverReaderWriter.PartialReplyEx(out);
+    // evhttp_send_reply_chunk
+    //
     return StatusCode::OK;
 }
 
