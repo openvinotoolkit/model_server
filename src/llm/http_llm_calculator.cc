@@ -218,7 +218,7 @@ static std::string packIntoServerSideEventMessage(const std::string& message);
 
 class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<ovms::LLMNodeResources> nodeResources;
-    std::shared_ptr<GenerationHandle> generationHandle;
+    GenerationHandle generationHandle;
     std::shared_ptr<OpenAIChatCompletionsRequest> request;
 
     ////////////////
@@ -306,11 +306,10 @@ public:
             GenerationConfig config = GenerationConfig::greedy();
             config.max_new_tokens = this->request->getMaxTokens().value_or(30);
             config.ignore_eos = false;
-            this->generationHandle = std::make_shared<GenerationHandle>(
-                nodeResources->cbPipe->add_request(
+            this->generationHandle = nodeResources->cbPipe->add_request(
                     0/*to be removed from API?*/,
                     prompt/* to be replaced with chat*/,
-                    config));
+                    config);
             nodeResources->notifyExecutorThread();
             this->streamer = std::make_shared<TextStreamer>(
                 nodeResources->cbPipe->get_tokenizer());
