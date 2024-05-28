@@ -6,7 +6,7 @@ maxdepth: 1
 hidden:
 ---
 
-chat API <ovms_docs_rest_api_chat>
+Chat API <ovms_docs_rest_api_chat>
 demo <https://github.com/openvinotoolkit/model_server/tree/main/demos/continuous_batching/>
 LLM calculator <ovms_docs_llm_caclulator>
 ```
@@ -18,7 +18,7 @@ That way we are introducing a preview of OpenAI compatible endpoint [chat/comple
 
 ## Python Client
 
-When creating a Python-based client application, you can use OpenAI client library - [tritonclient](https://pypi.org/project/openai/).
+When creating a Python-based client application, you can use OpenAI client library - [openai](https://pypi.org/project/openai/).
 
 Alternatively, it is possible to use just a `curl` command or `requests` python library.
 
