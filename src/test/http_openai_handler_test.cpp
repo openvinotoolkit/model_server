@@ -45,7 +45,7 @@ public:
     MOCK_METHOD(void, OverwriteResponseHeader, (absl::string_view, absl::string_view), (override));
     MOCK_METHOD(void, AppendResponseHeader, (absl::string_view, absl::string_view), (override));
     MOCK_METHOD(void, PartialReplyWithStatus, (tensorflow::serving::net_http::HTTPStatusCode), (override));
-    MOCK_METHOD(void, PartialReply, (), (override));
+    MOCK_METHOD(void, PartialReply, (std::string), (override));
     MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::CallbackStatus, PartialReplyWithFlushCallback, ((std::function<void()>)), (override));
     MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, response_body_status, (), (override));
     MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, request_body_status, (), (override));
@@ -119,8 +119,8 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
     )";
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    EXPECT_CALL(writer, PartialReply()).Times(9);
-    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(9);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(9);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
     ASSERT_EQ(
         handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer),
@@ -133,7 +133,7 @@ TEST_F(HttpOpenAIHandlerTest, BodyNotAJson) {
     std::string requestBody = "not a json";
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
     auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
@@ -145,7 +145,7 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
     std::string requestBody = "[1, 2, 3]";
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
     auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
@@ -162,7 +162,7 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldMissing) {
     )";
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
     auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
@@ -180,7 +180,7 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldNotAString) {
     )";
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
     auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
@@ -198,7 +198,7 @@ TEST_F(HttpOpenAIHandlerTest, StreamFieldNotABoolean) {
     )";
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
     auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
@@ -216,7 +216,7 @@ TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
     )";
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply()).Times(0);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
     auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
