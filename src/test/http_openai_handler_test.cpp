@@ -53,6 +53,7 @@ public:
     MOCK_METHOD(void, Reply, (), (override));
     MOCK_METHOD(void, Abort, (), (override));
     MOCK_METHOD(void, PartialReplyEnd, (), (override));
+    MOCK_METHOD(void, PartialReplyEx, (std::string), (override));
 };
 
 class HttpOpenAIHandlerTest : public ::testing::Test {
