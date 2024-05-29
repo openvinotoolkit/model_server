@@ -85,7 +85,7 @@ public:
 
             GenerationHandle generation = nodeResources->cbPipe->add_request(0, prompt, GenerationConfig::greedy());
             nodeResources->notifyExecutorThread();
-            std::vector<GenerationOutput> outputs = generation.read_all();
+            std::vector<GenerationOutput> outputs = generation->read_all();
             // For greedy this sampling params, there's only one output
             // TODO: work with multiple outputs
             std::string result = nodeResources->cbPipe->get_tokenizer()->decode(outputs[0].generated_token_ids);

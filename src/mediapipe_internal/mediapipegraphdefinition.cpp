@@ -440,7 +440,8 @@ Status MediapipeGraphDefinition::initializeNodes() {
             pythonResourcesCleaningGuard.disableCleaning();
         }
 #endif
-        if (config.node(i).calculator() == LLM_NODE_CALCULATOR_NAME) {
+        // Passed to both calculators that require LLM Engine (gRPC KServe & HTTP OpenAI)
+        if (endsWith(config.node(i).calculator(), LLM_NODE_CALCULATOR_NAME)) {
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node missing options in graph: {}. ", this->name);
                 return StatusCode::LLM_NODE_MISSING_OPTIONS;
