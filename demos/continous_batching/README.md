@@ -1,4 +1,4 @@
-# How to serve LLM models with Continous Batching via OpenAI API
+# How to serve LLM models with Continous Batching via OpenAI API {#ovms_demos_continous_batching}
 
 ## Model preparation
 Download latest optimum-intel:
@@ -173,7 +173,7 @@ Output:
 This is a test.
 ```
 
-## Continuous batching
+## Benchmarking text generation with high concurrency
 
 OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
 It can be demostrated using benchmarking app from vLLM repository:

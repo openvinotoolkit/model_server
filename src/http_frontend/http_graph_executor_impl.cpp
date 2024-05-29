@@ -69,15 +69,7 @@ Status onPacketReadySerializeAndSendImpl(
             packetType,
             packet,
             out));
-
-    // sync
-    //serverReaderWriter.WriteResponseString(out);
-    // evbuffer_add
-
-    // async
-    serverReaderWriter.PartialReplyEx(out);
-    // evhttp_send_reply_chunk
-    //
+    serverReaderWriter.PartialReply(out);  // TODO: Possibly avoid copy
     return StatusCode::OK;
 }
 
@@ -90,7 +82,6 @@ Status onPacketReadySerializeImpl(
     const ::mediapipe::Packet& packet,
     std::string& response) {
     response = packet.Get<std::string>();
-    //SPDLOG_DEBUG("HTTP onPacketReadySerializeImpl: {}", response);
     return StatusCode::OK;
 }
 
@@ -121,8 +112,7 @@ Status validateSubsequentRequestImpl(
 Status sendErrorImpl(
     const std::string& message,
     HttpReaderWriter& serverReaderWriter) {
-    serverReaderWriter.WriteResponseString("{\"error\": \"" + message + "\"}");
-    serverReaderWriter.PartialReply();
+    serverReaderWriter.PartialReply("{\"error\": \"" + message + "\"}");
     return StatusCode::OK;
 }
 

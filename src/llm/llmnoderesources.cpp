@@ -65,15 +65,15 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
 
-    size_t NUM_BLOCKS = 364;//0;
+    size_t NUM_BLOCKS = 3640;
     // Currently harrdcoded, will parametrize in future
     SchedulerConfig default_config{
         .max_num_batched_tokens = 256,
-        .num_kv_blocks = NUM_BLOCKS * 10,
+        .num_kv_blocks = NUM_BLOCKS * 1,
         .block_size = 32,
-        .dynamic_split_fuse = true,//false,
+        .dynamic_split_fuse = true,
         .max_num_seqs = 256,
-        //.max_paddings = 256,
+        // .max_paddings = 256,
     };
 
     try {

@@ -391,15 +391,6 @@ http_archive(
     build_file = "@//third_party/fmtlib:BUILD"
 )
 
-# # libevent
-# http_archive(
-#     name = "com_github_libevent_libevent",
-#     url = "https://github.com/libevent/libevent/archive/release-2.1.8-stable.zip",
-#     sha256 = "70158101eab7ed44fd9cc34e7f247b3cae91a8e4490745d9d6eb7edc184e4d96",
-#     strip_prefix = "libevent-release-2.1.8-stable",
-#     build_file = "@//third_party/libevent:BUILD",
-# )
-
 # prometheus-cpp
 http_archive(
     name = "com_github_jupp0r_prometheus_cpp",

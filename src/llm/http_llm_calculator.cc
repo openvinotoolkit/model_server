@@ -14,13 +14,10 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
-#include <string>
-#include <thread>
-#include <chrono>
-#include <ctime>
-#include <unordered_map>
 #include <optional>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -28,14 +25,13 @@
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
 
-#include <openvino/openvino.hpp>
 #include <continuous_batching_pipeline.hpp>
-
+#include <openvino/openvino.hpp>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "llmnoderesources.hpp"
 #include "http_payload.hpp"
+#include "llmnoderesources.hpp"
 
 using namespace rapidjson;
 
@@ -55,19 +51,21 @@ class OpenAIChatCompletionsRequest {
     float presencePenalty{0.0f};
     float temperature{1.0f};
     float topP{1.0f};
-public:
-    OpenAIChatCompletionsRequest(Document& doc) : doc(doc) {}
 
-    chat_t                          getMessages()           const { return this->messages;          }
-    bool                            isStream()              const { return this->stream;            }
-    std::string                     getModel()              const { return this->model;             }
-    float                           getFrequencyPenalty()   const { return this->frequencyPenalty;  }
-    const std::optional<int64_t>&   getMaxTokens()          const { return this->maxTokens;         }
-    float                           getPresencePenalty()    const { return this->presencePenalty;   }
-    float                           getTemperature()        const { return this->temperature;       }
-    float                           getTopP()               const { return this->topP;              }
-// getTopK ?
-// 
+public:
+    OpenAIChatCompletionsRequest(Document& doc) :
+        doc(doc) {}
+
+    chat_t getMessages() const { return this->messages; }
+    bool isStream() const { return this->stream; }
+    std::string getModel() const { return this->model; }
+    float getFrequencyPenalty() const { return this->frequencyPenalty; }
+    const std::optional<int64_t>& getMaxTokens() const { return this->maxTokens; }
+    float getPresencePenalty() const { return this->presencePenalty; }
+    float getTemperature() const { return this->temperature; }
+    float getTopP() const { return this->topP; }
+    // getTopK ?
+    //
 
     // TODO: Use exceptions to sneak error mesages into response
     bool parse() {
@@ -185,8 +183,10 @@ class TextStreamer {
     std::shared_ptr<Tokenizer> tokenizer;
     std::vector<int64_t> tokenCache;
     size_t printLen{0};
+
 public:
-    TextStreamer(std::shared_ptr<Tokenizer> tokenizer) : tokenizer(tokenizer) {}
+    TextStreamer(std::shared_ptr<Tokenizer> tokenizer) :
+        tokenizer(tokenizer) {}
 
     std::optional<std::string> put(int64_t token) {
         tokenCache.push_back(token);
@@ -197,8 +197,7 @@ public:
             tokenCache.clear();
             printLen = 0;
             return chunk;
-        }
-        else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "�") == 0) {
+        } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "�") == 0) {  // NOLINT
             return std::nullopt;
         } else {
             std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
@@ -221,14 +220,8 @@ class HttpLLMCalculator : public CalculatorBase {
     GenerationHandle generationHandle;
     std::shared_ptr<OpenAIChatCompletionsRequest> request;
 
-    ////////////////
     // TODO: To be  moved to CB library
-    // Streaming related
-    std::stringstream res;
-    std::vector<int64_t> tokenCache;
-    int64_t printLen = 0;
     std::shared_ptr<TextStreamer> streamer;
-    ////////////////
 
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -262,16 +255,17 @@ public:
         ovms::LLMNodeResourcesMap nodeResourcesMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::LLMNodeResourcesMap>();
         auto it = nodeResourcesMap.find(cc->NodeName());
         RET_CHECK(it != nodeResourcesMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
-
         nodeResources = it->second;
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Open end";
         return absl::OkStatus();
     }
 
+    // TODO: Support all samplings:
     // greedy (no params)
     // beam-search (num groups, num beams, penalties)
     // random sampling - in-progress (top-p top-k)
     absl::Status Process(CalculatorContext* cc) final {
+        LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process start";
         RET_CHECK(this->nodeResources != nullptr);
 
         // For cases where MediaPipe decides to trigger Process() when there are no inputs
@@ -290,15 +284,15 @@ public:
             this->created = std::chrono::system_clock::now();
 
             InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
-            LOG(INFO) << "HTTP Request: \n" << payload.body << "\n";
-    
+            LOG(INFO) << "Request body: " << payload.body;
+
             this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson);
 
             // TODO: Support chat scenario once atobisze adds that to CB library
             RET_CHECK(this->request->parse());  // TODO: try catch and expose error message
             RET_CHECK(this->request->getMessages().size() >= 1);
             RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
-    
+
             std::string prompt = this->request->getMessages()[0]["content"];
 
             // TODO: Support other samplings
@@ -307,9 +301,9 @@ public:
             config.max_new_tokens = this->request->getMaxTokens().value_or(30);
             config.ignore_eos = false;
             this->generationHandle = nodeResources->cbPipe->add_request(
-                    0/*to be removed from API?*/,
-                    prompt/* to be replaced with chat*/,
-                    config);
+                0 /*to be removed from API?*/,
+                prompt /* to be replaced with chat*/,
+                config);
             nodeResources->notifyExecutorThread();
             this->streamer = std::make_shared<TextStreamer>(
                 nodeResources->cbPipe->get_tokenizer());
@@ -329,8 +323,7 @@ public:
             std::string completion = tokenizer->decode(tokens);
 
             std::string response = serializeUnaryResponse(tokenizer->decode(tokens));
-            //LOG(INFO) << response;
-
+            LOG(INFO) << "Complete unary response: " << response;
             cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
         } else {
             // Streaming scenario
@@ -340,7 +333,7 @@ public:
             if (this->generationHandle->generation_finished()) {
                 std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true));
                 response += packIntoServerSideEventMessage("[DONE]");
-                //LOG(INFO) << response;
+                LOG(INFO) << "Partial response (generation finished): " << response;
                 // Produce last message, but do not producce loopback packets anymore so this is last Process() call
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             } else {
@@ -355,7 +348,7 @@ public:
                 if (chunk.has_value()) {
                     std::string response = packIntoServerSideEventMessage(
                         serializeStreamingChunk(chunk.value(), false));
-                    //LOG(INFO) << response;
+                    LOG(INFO) << "Partial response (continue): " << response;
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 }
                 // Continue the loop
@@ -365,6 +358,7 @@ public:
 
         timestamp = timestamp.NextAllowedInStream();
 
+        LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process end";
         return absl::OkStatus();
     }
 };
@@ -379,7 +373,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& complet
 
     // choices: array of size N, where N is related to n request parameter
     writer.String("choices");
-    writer.StartArray();  // [
+    writer.StartArray();   // [
     writer.StartObject();  // {
     // finish_reason: string; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)
     // "stop" => natural stop point due to stopping criteria <---------------- the only used so far, remaining are TODO
@@ -408,9 +402,9 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& complet
     // TODO: tools_call
     // TODO: function_call (deprecated)
     writer.EndObject();  // }
-                
+
     writer.EndObject();  // }
-    writer.EndArray();  // ]
+    writer.EndArray();   // ]
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
     writer.String("created");
@@ -430,7 +424,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& complet
     // TODO
     // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
- 
+
     // TODO
     // usage: object; Usage statistics for the completion request.
     // Might be crucial - possibly required for benchmarking purposes?
@@ -448,7 +442,7 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     // choices: array of size N, where N is related to n request parameter
     // Can also be empty for the last chunk if you set stream_options: {"include_usage": true} TODO
     writer.String("choices");
-    writer.StartArray();  // [
+    writer.StartArray();   // [
     writer.StartObject();  // {
     // finish_reason: string or null; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)/null
     // "stop" => natural stop point due to stopping criteria <---------------- the only used so far, remaining are TODO
@@ -483,9 +477,9 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     // TODO: tools_call
     // TODO: function_call (deprecated)
     writer.EndObject();  // }
-                
+
     writer.EndObject();  // }
-    writer.EndArray();  // ]
+    writer.EndArray();   // ]
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
     writer.String("created");
@@ -505,7 +499,7 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     // TODO
     // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
-            
+
     // TODO
     // usage: object; An optional field that will only be present when you set stream_options: {"include_usage": true} in your request.
     // When present, it contains a null value except for the last chunk which contains the token usage statistics for the entire request.

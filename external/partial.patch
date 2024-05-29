@@ -1,58 +1,20 @@
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
-index c8d0501b..00741a47 100644
+index c8d0501b..f24a21d5 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
-@@ -25,6 +25,9 @@ limitations under the License.
- #include <cstring>
- #include <string>
- #include <vector>
-+#include <chrono>
-+#include <iostream>
-+#include <thread>
- 
- #include "absl/strings/match.h"
- #include "absl/strings/string_view.h"
-@@ -339,11 +342,45 @@ void EvHTTPRequest::AppendResponseHeader(absl::string_view header,
+@@ -342,8 +342,17 @@ void EvHTTPRequest::PartialReplyWithStatus(HTTPStatusCode status) {
+   NET_LOG(FATAL, "PartialReplyWithStatus not implemented.");
  }
  
- void EvHTTPRequest::PartialReplyWithStatus(HTTPStatusCode status) {
+-void EvHTTPRequest::PartialReply() {
 -  NET_LOG(FATAL, "PartialReplyWithStatus not implemented.");
-+  bool result =
-+      server_->EventLoopSchedule([this, status]() { EvPartialSendReply(status); });
-+  
-+  // server_->EventLoopSchedule([this]() {
-+  //   std::cout << "Sleep Start" << std::endl;
-+  //   using namespace std::chrono_literals;
-+  //   std::this_thread::sleep_for(1000ms);
-+  //   std::cout << "Sleep End" << std::endl;
-+  // });
-+
-+  if (!result) {
-+    NET_LOG(ERROR, "Failed to EventLoopSchedule PartialReplyWithStatus()");
-+    Abort();
-+    // TODO(wenboz): should have a forced abort that doesn't write back anything
-+    // to the event-loop
-+  }
- }
- 
- void EvHTTPRequest::PartialReply() {
--  NET_LOG(FATAL, "PartialReplyWithStatus not implemented.");
-+  PartialReplyWithStatus(HTTPStatusCode::OK);
-+}
-+
-+void EvHTTPRequest::PartialReplyEx(std::string data) {
++void EvHTTPRequest::PartialReply(std::string data) {
++  // TODO: Possibly avoid copy of data
 +  bool result =
 +      server_->EventLoopSchedule([this, data]() { EvPartialSendReply(data); });
 +  
-+  // server_->EventLoopSchedule([this]() {
-+  //   std::cout << "Sleep Start" << std::endl;
-+  //   using namespace std::chrono_literals;
-+  //   std::this_thread::sleep_for(1000ms);
-+  //   std::cout << "Sleep End" << std::endl;
-+  // });
-+
 +  if (!result) {
-+    NET_LOG(ERROR, "Failed to EventLoopSchedule PartialReplyWithStatus()");
++    NET_LOG(ERROR, "Failed to EventLoopSchedule PartialReply()");
 +    Abort();
 +    // TODO(wenboz): should have a forced abort that doesn't write back anything
 +    // to the event-loop
@@ -60,18 +22,10 @@ index c8d0501b..00741a47 100644
  }
  
  ServerRequestInterface::CallbackStatus
-@@ -371,6 +408,33 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
+@@ -371,6 +380,25 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
    delete this;
  }
  
-+void EvHTTPRequest::EvPartialSendReply(HTTPStatusCode status) {
-+  if (!this->is_reply_started_) {
-+    evhttp_send_reply_start(parsed_request_->request, static_cast<int>(status), "reply start");
-+    this->is_reply_started_ = true;
-+  }
-+  evhttp_send_reply_chunk(parsed_request_->request, output_buf);
-+}
-+
 +void EvHTTPRequest::EvPartialSendReply(std::string data) {
 +  if (!this->is_reply_started_) {
 +    evhttp_send_reply_start(parsed_request_->request, HTTP_OK, "reply start");
@@ -94,7 +48,7 @@ index c8d0501b..00741a47 100644
  void EvHTTPRequest::Reply() { ReplyWithStatus(HTTPStatusCode::OK); }
  
  // Treats this as 500 for now and let libevent decide what to do
-@@ -381,6 +445,18 @@ void EvHTTPRequest::Abort() {
+@@ -381,6 +409,18 @@ void EvHTTPRequest::Abort() {
    delete this;
  }
  
@@ -114,18 +68,19 @@ index c8d0501b..00741a47 100644
  }  // namespace serving
  }  // namespace tensorflow
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
-index 2f8e601d..5fb76a12 100644
+index 2f8e601d..ff51c570 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
-@@ -95,6 +95,7 @@ class EvHTTPRequest final : public ServerRequestInterface {
+@@ -94,7 +94,7 @@ class EvHTTPRequest final : public ServerRequestInterface {
+                             absl::string_view value) override;
  
    void PartialReplyWithStatus(HTTPStatusCode status) override;
-   void PartialReply() override;
-+  void PartialReplyEx(std::string data) override;
+-  void PartialReply() override;
++  void PartialReply(std::string data) override;
  
    CallbackStatus PartialReplyWithFlushCallback(
        std::function<void()> callback) override;
-@@ -104,6 +105,8 @@ class EvHTTPRequest final : public ServerRequestInterface {
+@@ -104,6 +104,8 @@ class EvHTTPRequest final : public ServerRequestInterface {
  
    void Abort() override;
  
@@ -134,17 +89,16 @@ index 2f8e601d..5fb76a12 100644
    // Initializes the resource and returns false if any error.
    bool Initialize();
  
-@@ -114,6 +117,9 @@ class EvHTTPRequest final : public ServerRequestInterface {
+@@ -114,6 +116,8 @@ class EvHTTPRequest final : public ServerRequestInterface {
  
   private:
    void EvSendReply(HTTPStatusCode status);
-+  void EvPartialSendReply(HTTPStatusCode status);
 +  void EvPartialSendReply(std::string data);
 +  void EvPartialReplyEnd();
  
    // Returns true if the data needs be uncompressed
    bool NeedUncompressGzipContent();
-@@ -133,6 +139,8 @@ class EvHTTPRequest final : public ServerRequestInterface {
+@@ -133,6 +137,8 @@ class EvHTTPRequest final : public ServerRequestInterface {
    std::unique_ptr<ParsedEvRequest> parsed_request_;
  
    evbuffer* output_buf;  // owned by this
@@ -154,18 +108,19 @@ index 2f8e601d..5fb76a12 100644
  
  }  // namespace net_http
 diff --git a/tensorflow_serving/util/net_http/server/public/server_request_interface.h b/tensorflow_serving/util/net_http/server/public/server_request_interface.h
-index e5f4b05f..ca8ec914 100644
+index e5f4b05f..7077a6c1 100644
 --- a/tensorflow_serving/util/net_http/server/public/server_request_interface.h
 +++ b/tensorflow_serving/util/net_http/server/public/server_request_interface.h
-@@ -145,6 +145,7 @@ class ServerRequestInterface {
+@@ -144,7 +144,7 @@ class ServerRequestInterface {
+   // PartialReply() is called is considered a programming error and
    // the underlying behavior is undefined.
    virtual void PartialReplyWithStatus(HTTPStatusCode status) = 0;
-   virtual void PartialReply() = 0;
-+  virtual void PartialReplyEx(std::string) = 0;
+-  virtual void PartialReply() = 0;
++  virtual void PartialReply(std::string data) = 0;
  
    // Similar to PartialReply() but with an on_flush callback which will be
    // invoked when the response data has been completely flushed by the
-@@ -182,6 +183,8 @@ class ServerRequestInterface {
+@@ -182,6 +182,8 @@ class ServerRequestInterface {
    // by the server runtime.
    virtual void Abort() = 0;
  
