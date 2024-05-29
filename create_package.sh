@@ -22,8 +22,9 @@ mkdir -vp /ovms_release/lib
 mkdir -vp /ovms_release/lib/hddl/config
 mkdir -vp /ovms_release/lib/custom_nodes
 
-if [ -f /openvino_tokenizers/build/src/libopenvino_tokenizers.so ]; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
-if [ -f /openvino_tokenizers/build/src/libcore_tokenizers.so ]; then cp -v /openvino_tokenizers/build/src/libcore_tokenizers.so /ovms_release/lib/ ; fi
+tokenizers_path=/ovms/bazel-out/k8-opt/bin/external/llm_engine/llm_engine_cmake_ubuntu/lib/
+if [ -f ${tokenizers_path}libopenvino_tokenizers.so ]; then cp -v ${tokenizers_path}libopenvino_tokenizers.so /ovms_release/lib/ ; fi
+if [ -f ${tokenizers_path}libcore_tokenizers.so ]; then cp -v ${tokenizers_path}libcore_tokenizers.so /ovms_release/lib/ ; fi
 
 find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "*params" ! -name "lib_node_*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -v {} /ovms_release/lib/ \;
 mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/
