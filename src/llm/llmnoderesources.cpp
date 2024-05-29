@@ -76,8 +76,9 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         //.max_paddings = 256,
     };
 
+    const std::string OVMS_TOKENIZER_SEARCH_PATH = "../lib";
     try {
-        nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, default_config);
+        nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, default_config, OVMS_TOKENIZER_SEARCH_PATH);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", basePath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
