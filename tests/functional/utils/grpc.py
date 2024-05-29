@@ -15,6 +15,7 @@
 #
 
 import grpc  # noqa
+from retry.api import retry_call
 from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import prediction_service_pb2_grpc, model_service_pb2_grpc, predict_pb2, \
     get_model_metadata_pb2, get_model_status_pb2
@@ -59,7 +60,7 @@ def infer(img, input_tensor, grpc_stub, model_spec_name,
     return data
 
 
-def get_model_metadata(model_name, metadata_field: str = "signature_def",
+def get_model_metadata_request(model_name, metadata_field: str = "signature_def",
                        version=None):
     request = get_model_metadata_pb2.GetModelMetadataRequest()
     request.model_spec.name = model_name
@@ -67,6 +68,14 @@ def get_model_metadata(model_name, metadata_field: str = "signature_def",
         request.model_spec.version.value = version
     request.metadata_field.append(metadata_field)
     return request
+
+
+def get_model_metadata(stub, request, timeout=10):
+    rargs = (request, int(timeout))
+    func = stub.GetModelMetadata
+    retry_setup = {"tries": 48,  "delay": 1}
+    response = retry_call(func, rargs, **retry_setup)
+    return response
 
 
 def model_metadata_response(response):

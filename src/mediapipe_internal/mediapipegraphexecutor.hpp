@@ -24,7 +24,6 @@
 #include <vector>
 
 #include "../execution_context.hpp"
-#include "../metric.hpp"
 #include "../status.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -37,6 +36,7 @@
 
 namespace ovms {
 class PythonBackend;
+class ServableMetricReporter;
 
 #define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)             \
     {                                                                    \
@@ -45,7 +45,7 @@ class PythonBackend;
             std::stringstream ss;                                        \
             ss << status.string() << "; " << message;                    \
             std::lock_guard<std::mutex> lock(sendMutex);                 \
-            auto status = sendErrorImpl(ss.str(), res);                  \
+            auto status = sendErrorImpl(ss.str(), serverReaderWriter);   \
             if (!status.ok()) {                                          \
                 SPDLOG_DEBUG("Writing error to disconnected client: {}", \
                     status.string());                                    \
@@ -63,12 +63,14 @@ class MediapipeGraphExecutor {
     const std::vector<std::string> outputNames;
 
     PythonNodeResourcesMap pythonNodeResourcesMap;
+    LLMNodeResourcesMap llmNodeResourcesMap;
     PythonBackend* pythonBackend;
 
     ::mediapipe::Timestamp currentStreamTimestamp;
 
 public:
     static const std::string PYTHON_SESSION_SIDE_PACKET_TAG;
+    static const std::string LLM_SESSION_SIDE_PACKET_TAG;
     static const ::mediapipe::Timestamp STARTING_TIMESTAMP;
 
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
@@ -76,6 +78,7 @@ public:
         stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
+        const LLMNodeResourcesMap& llmNodeResourcesMap,
         PythonBackend* pythonBackend);
 
     template <typename RequestType, typename ResponseType>
@@ -97,12 +100,13 @@ public:
             }
             outputPollers.emplace(name, std::move(absStatusOrPoller).value());
         }
-        std::map<std::string, mediapipe::Packet> sideInputPackets;
-        OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(sideInputPackets, *request));
+        std::map<std::string, mediapipe::Packet> inputSidePackets;
+        OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, *request));
 #if (PYTHON_DISABLE == 0)
-        sideInputPackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
-        MP_RETURN_ON_FAIL(graph.StartRun(sideInputPackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
+        inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
+        MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         ::mediapipe::Packet packet;
         std::set<std::string> outputPollersWithReceivedPacket;
@@ -134,6 +138,7 @@ public:
         // can be still processing those. Closing packet sources triggers Calculator::Close() on nodes that do not expect
         // new packets
         MP_RETURN_ON_FAIL(graph.WaitUntilIdle(), "graph wait until idle", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+
         MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
         for (auto& [outputStreamName, poller] : outputPollers) {
             size_t receivedOutputs = 0;
@@ -143,7 +148,7 @@ public:
                 try {
                     OVMS_RETURN_ON_FAIL(
                         onPacketReadySerializeImpl(
-                            request->id(),
+                            getRequestId(*request),
                             this->name,
                             this->version,
                             outputStreamName,
@@ -167,8 +172,8 @@ public:
         return StatusCode::OK;
     }
 
-    template <typename RequestType, typename ResponseType>
-    Status inferStream(const RequestType& req, ResponseType& res) {
+    template <typename RequestType, typename ReaderWriterType>
+    Status inferStream(const RequestType& req, ReaderWriterType& serverReaderWriter) {
         SPDLOG_DEBUG("Start MediapipeGraphExecutor::inferEx mediapipe graph: {} execution", this->name);
         std::mutex sendMutex;
         try {
@@ -178,7 +183,7 @@ public:
 
             // Installing observers
             for (const auto& outputName : this->outputNames) {
-                MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&res, &sendMutex, &outputName, this](const ::mediapipe::Packet& packet) -> absl::Status {
+                MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&serverReaderWriter, &sendMutex, &outputName, this](const ::mediapipe::Packet& packet) -> absl::Status {
                     try {
                         std::lock_guard<std::mutex> lock(sendMutex);
                         OVMS_RETURN_MP_ERROR_ON_FAIL(onPacketReadySerializeAndSendImpl(
@@ -188,7 +193,7 @@ public:
                                                          outputName,
                                                          this->outputTypes.at(outputName),
                                                          packet,
-                                                         res),
+                                                         serverReaderWriter),
                             "error in send packet routine");
                         return absl::OkStatus();
                     } catch (...) {
@@ -204,6 +209,7 @@ public:
             inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap)
                                                                    .At(STARTING_TIMESTAMP);
 #endif
+            inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
             MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), "graph start", StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
             // Deserialize first request
@@ -227,7 +233,7 @@ public:
             // and move it down to custom packet holder to ensure
             // lifetime is extended to lifetime of deserialized Packets.
             auto newReq = std::make_shared<RequestType>();
-            while (waitForNewRequest(res, *newReq)) {
+            while (waitForNewRequest(serverReaderWriter, *newReq)) {
                 auto pstatus = validateSubsequentRequestImpl(
                     *newReq,
                     this->name,

@@ -20,7 +20,6 @@
 #include <string>
 
 #include "../mediapipe_internal/packettypes.hpp"
-#include "../status.hpp"
 #include "kfs_grpc_inference_service.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
@@ -29,11 +28,10 @@
 #include "mediapipe/framework/packet.h"
 #pragma GCC diagnostic pop
 
-#if (PYTHON_DISABLE == 0)
-#include "../python/python_backend.hpp"
-#endif
-
 namespace ovms {
+
+class PythonBackend;
+class Status;
 
 // Deserialization of parameters inside KServe gRPC request
 // into mediapipe Packets.
@@ -42,6 +40,10 @@ Status deserializeInputSidePacketsFromFirstRequestImpl(
     std::map<std::string, mediapipe::Packet>& inputSidePackets,  // out
     const KFSRequest& request);                                  // in
 
+// For unary graph execution request ID is forwarded to serialization function.
+const std::string& getRequestId(
+    const KFSRequest& request);
+
 // Used by inferStream only.
 // Whenever MediaPipe graph produces some packet, this function is triggered.
 // Implementation should transform packet into KServe gRPC response and send it.
@@ -49,7 +51,7 @@ Status deserializeInputSidePacketsFromFirstRequestImpl(
 // MediaPipe packet available callbacks can be triggered simultanously, from different threads.
 // However, the graph executor synchronizes it with locking mechanism.
 Status onPacketReadySerializeAndSendImpl(
-    const std::string& request_id,
+    const std::string& requestId,
     const std::string& endpointName,
     const std::string& endpointVersion,
     const std::string& packetName,
@@ -64,7 +66,7 @@ Status onPacketReadySerializeAndSendImpl(
 // Data race safety:
 // This is always triggered on the same thread.
 Status onPacketReadySerializeImpl(
-    const std::string& request_id,
+    const std::string& requestId,
     const std::string& endpointName,
     const std::string& endpointVersion,
     const std::string& packetName,

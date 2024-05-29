@@ -140,7 +140,7 @@ void mediaexec<KFSRequest, KFSResponse>(std::shared_ptr<MediapipeGraphExecutor>&
 
 template <>
 void mediacreate<KFSRequest, KFSResponse>(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, KFSRequest& request, KFSResponse& response, ovms::Status& status) {
-    status = manager.createPipeline(executorPtr, request.model_name(), &request, &response);
+    status = manager.createPipeline(executorPtr, request.model_name());
 }
 #endif
 

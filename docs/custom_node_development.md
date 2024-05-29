@@ -123,8 +123,8 @@ Just add include statement like:
 #include "opencv2/core.hpp"
 ```
 
-## String support
-There are special consideration when handling in the custom nodes the input sent by the clients as string. Such data when received by the OVMS frontend, is automatically converted to a 2D array with shape [-1,-1]. Example of custom node using this feature is our [Tokenizer](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/tokenizer). 
+## String support (deprecated)
+There are special consideration when handling in the custom nodes the input sent by the clients as string. Such data when received by the OVMS frontend, is automatically converted to a 2D array with shape [-1,-1].
 
 ### inputs
 When strings are send to the custom node that has 2-dimensional shape and U8 precision OVMS, after receiving request containing such inputs converts them to the 2 dimensional U8 array of  shape [number of strings, length of the longest string + 1] with padding filled with zeros. For example batch of three strings ["String_123", "", "zebra"] would be converted to:

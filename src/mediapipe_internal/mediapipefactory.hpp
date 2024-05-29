@@ -65,8 +65,6 @@ private:
 public:
     Status create(std::shared_ptr<MediapipeGraphExecutor>& pipeline,
         const std::string& name,
-        const KFSRequest* request,
-        KFSResponse* response,
         ModelManager& manager) const;
 
     MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;

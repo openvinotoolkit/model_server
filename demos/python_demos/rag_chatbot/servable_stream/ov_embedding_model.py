@@ -18,11 +18,13 @@ from langchain.pydantic_v1 import BaseModel, Extra, Field
 from langchain.schema.embeddings import Embeddings
 from typing import Optional, Union, Dict, Tuple, Any, List
 from sklearn.preprocessing import normalize
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoModel
 from pathlib import Path
+import os
 import openvino as ov
 import torch
 import numpy as np
+from config import SUPPORTED_EMBEDDING_MODELS
 
 class OVEmbeddings(BaseModel, Embeddings):
     """
@@ -45,7 +47,7 @@ class OVEmbeddings(BaseModel, Embeddings):
     @classmethod
     def from_model_id(
         cls,
-        model_id: str,
+        model_name: str,
         do_norm: bool,
         ov_config: Optional[dict],
         model_kwargs: Optional[dict],
@@ -53,12 +55,20 @@ class OVEmbeddings(BaseModel, Embeddings):
     ):
         _model_kwargs = model_kwargs or {}
         _ov_config = ov_config or {}
-        tokenizer = AutoTokenizer.from_pretrained(model_id, **_model_kwargs)
-        core = ov.Core()
-        model_path = Path(model_id) / "openvino_model.xml"
-        model = core.compile_model(model_path, **_ov_config)
-        num_stream = model.get_property('NUM_STREAMS')
+        if os.path.isdir(model_name):
+            _model_kwargs = model_kwargs or {}
+            tokenizer = AutoTokenizer.from_pretrained(model_name, **_model_kwargs)
+            core = ov.Core()
+            model_path = os.path.join(model_name, "openvino_model.xml")
+            model = core.compile_model(model_path, **_ov_config)
+        else:
+            tokenizer = AutoTokenizer.from_pretrained(SUPPORTED_EMBEDDING_MODELS[model_name]["model_id"], **_model_kwargs)
+            model = AutoModel.from_pretrained(SUPPORTED_EMBEDDING_MODELS[model_name]["model_id"])
+            dummy_inputs = {"input_ids": torch.ones((1, 10), dtype=torch.long), "attention_mask": torch.ones((1, 10), dtype=torch.long)}
+            ov_model = ov.convert_model(model, example_input=dummy_inputs)
+            model = ov.compile_model(ov_model, **ov_config)
 
+        num_stream = model.get_property('NUM_STREAMS')
         return cls(
             model=model,
             tokenizer=tokenizer,

@@ -296,26 +296,17 @@ WORKDIR /example_cpp_client
 COPY demos/common/cpp /example_cpp_client/cpp
 COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
 
-# Compile tokenizer custom node
-WORKDIR /ovms/src/custom_nodes/tokenizer/build
-RUN cp /ovms/src/custom_node_interface.h /ovms/src/custom_nodes/tokenizer/ && \
-    cp -r /ovms/src/custom_nodes/common /ovms/src/custom_nodes/tokenizer/ && \
-    cmake -DWITH_TESTS=1 .. && \
-    make -j${JOBS} && \
-    ./test/detokenization_test && \
-    ./test/tokenization_test
-
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
 RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2024.0.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.0' > /opt/intel/openvino/python/openvino-2024.0.dist-info/METADATA
+    mkdir -p /opt/intel/openvino/python/openvino-2024.2.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.2' > /opt/intel/openvino/python/openvino-2024.2.dist-info/METADATA
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2024.0"
+ARG PROJECT_VERSION="2024.2"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 ARG minitrace_flags

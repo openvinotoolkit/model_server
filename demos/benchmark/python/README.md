@@ -68,6 +68,8 @@ To check available options use `-h`, `--help` switches:
 ```bash
   docker run benchmark_client --help
 
+Client 2.7
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py --help
 usage: main.py [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
                [-p GRPC_PORT] [-r REST_PORT] [-l] [-b [BS ...]]
                [-s [SHAPE ...]] [-d [DATA ...]] [-j] [-m MODEL_NAME]
@@ -77,7 +79,7 @@ usage: main.py [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
                [--max_value MAX_VALUE] [--min_value MIN_VALUE] [--xrand XRAND]
                [--dump_png] [--step_timeout STEP_TIMEOUT]
                [--metadata_timeout METADATA_TIMEOUT] [-Y DB_ENDPOINT]
-               [-y [DB_METADATA ...]] [--print_all] [--print_time]
+               [-y [DB_METADATA ...]] [--print_all] [-ps] [--print_time]
                [--report_warmup] [--certs_dir CERTS_DIR] [-q STATEFUL_LENGTH]
                [--stateful_id STATEFUL_ID] [--stateful_hop STATEFUL_HOP]
                [--sync_interval SYNC_INTERVAL]
@@ -93,6 +95,8 @@ The version can be checked by using `--internal_version` switch as follows:
 ```bash
   docker run benchmark_client --internal_version
 
+  Client 2.7
+  NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py --internal_version
   2.7
 ```
 
@@ -105,11 +109,11 @@ docker run --network host benchmark_client -a localhost -r 8000 --list_models
 
 Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 --list_models
-XI worker: try to send request to endpoint: http://localhost:8000/v1/config
-XI worker: received status code is 200.
-XI worker: found models and their status:
-XI worker:  model: resnet50-binary-0001, version: 1 - AVAILABLE
-
+          XW worker: Finished execution. If you want to run inference remove --list_models.
+          XI worker: try to send request to endpoint: http://localhost:8000/v1/config
+          XI worker: received status code is 200.
+          XI worker: found models and their status:
+          XI worker:  model: resnet50-binary-0001, version: 1 - AVAILABLE
 ```
 ## Sample benchmarks
 
@@ -123,25 +127,24 @@ docker run --network host benchmark_client -a localhost -r 8000 -l -m resnet50-b
 
 Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -l -m resnet50-binary-0001 -p 9000 -i id
-XW id: Finished execution. If you want to run inference remove --list_models.
-XI id: try to send request to endpoint: http://localhost:8000/v1/config
-XI id: received status code is 200.
-XI id: found models and their status:
-XI id:  model: resnet50-binary-0001, version: 1 - AVAILABLE
-XI id: request for metadata of model resnet50-binary-0001...
-XI id: Metadata for model resnet50-binary-0001 is downloaded...
-XI id: set version of model resnet50-binary-0001: 1
-XI id: inputs:
-XI id:  0:
-XI id:   name: 0
-XI id:   dtype: DT_FLOAT
-XI id:   tensorShape: {'dim': [{'size': '1'}, {'size': '3'}, {'size': '224'}, {'size': '224'}]}
-XI id: outputs:
-XI id:  1463:
-XI id:   name: 1463
-XI id:   dtype: DT_FLOAT
-XI id:   tensorShape: {'dim': [{'size': '1'}, {'size': '1000'}]}
-
+          XW id: Finished execution. If you want to run inference remove --list_models.
+          XI id: try to send request to endpoint: http://localhost:8000/v1/config
+          XI id: received status code is 200.
+          XI id: found models and their status:
+          XI id:  model: resnet50-binary-0001, version: 1 - AVAILABLE
+          XI id: request for metadata of model resnet50-binary-0001...
+          XI id: Metadata for model resnet50-binary-0001 is downloaded...
+          XI id: set version of model resnet50-binary-0001: 1
+          XI id: inputs:
+          XI id:  0:
+          XI id:   name: 0
+          XI id:   dtype: DT_FLOAT
+          XI id:   tensorShape: {'dim': [{'size': '1'}, {'size': '3'}, {'size': '224'}, {'size': '224'}]}
+          XI id: outputs:
+          XI id:  1463:
+          XI id:   name: 1463
+          XI id:   dtype: DT_FLOAT
+          XI id:   tensorShape: {'dim': [{'size': '1'}, {'size': '1000'}]}
 ```
 Be sure the model name specified is identical to the model name shown when using
 the `--list_models` parameter. A model version is not required but it can be added
@@ -159,127 +162,126 @@ docker run --network host benchmark_client -a localhost -r 8000 -m resnet50-bina
 
 Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m resnet50-binary-0001 -p 9000 -n 8 --report_warmup --print_all
-XI worker: request for metadata of model resnet50-binary-0001...
-XI worker: Metadata for model resnet50-binary-0001 is downloaded...
-XI worker: set version of model resnet50-binary-0001: 1
-XI worker: inputs:
-XI worker:  0:
-XI worker:   name: 0
-XI worker:   dtype: DT_FLOAT
-XI worker:   tensorShape: {'dim': [{'size': '1'}, {'size': '3'}, {'size': '224'}, {'size': '224'}]}
-XI worker: outputs:
-XI worker:  1463:
-XI worker:   name: 1463
-XI worker:   dtype: DT_FLOAT
-XI worker:   tensorShape: {'dim': [{'size': '1'}, {'size': '1000'}]}
-XI worker: new random range: 0.0, 255.0
-XI worker: batchsize sequence: [1]
-XI worker: dataset length (0): 1
-XI worker: --> dim: 1
-XI worker: --> dim: 3
-XI worker: --> dim: 224
-XI worker: --> dim: 224
-XI worker: Generated data shape: (1, 3, 224, 224)
-XI worker: start workload...
-XI worker: stop warmup: 374943.047975389
-XI worker: stop window: inf
-XI worker: Workload started!
-XI worker: Warmup normally stopped: 374943.075028319
-XI worker: Window normally start: 374943.07504102
-XI worker: Window stopped: 374943.354446821
-XI worker: total_duration: 0.3065074360347353
-XI worker: total_batches: 8
-XI worker: total_frames: 8
-XI worker: start_timestamp: 374943.047975189
-XI worker: stop_timestamp: 374943.354482625
-XI worker: pass_batches: 8
-XI worker: fail_batches: 0
-XI worker: pass_frames: 8
-XI worker: fail_frames: 0
-XI worker: first_latency: 0.027021727000828832
-XI worker: pass_max_latency: 0.0449919409584254
-XI worker: fail_max_latency: 0.0
-XI worker: brutto_batch_rate: 26.100508697261724
-XI worker: brutto_frame_rate: 26.100508697261724
-XI worker: netto_batch_rate: 26.127558971388062
-XI worker: netto_frame_rate: 26.127558971388062
-XI worker: frame_passrate: 1.0
-XI worker: batch_passrate: 1.0
-XI worker: mean_latency: 0.0382737630061456
-XI worker: mean_latency2: 0.0015027467953827884
-XI worker: stdev_latency: 0.006153524252994284
-XI worker: cv_latency: 0.16077656780197483
-XI worker: pass_mean_latency: 0.0382737630061456
-XI worker: pass_mean_latency2: 0.0015027467953827884
-XI worker: pass_stdev_latency: 0.006153524252994284
-XI worker: pass_cv_latency: 0.16077656780197483
-XI worker: fail_mean_latency: 0.0
-XI worker: fail_mean_latency2: 0.0
-XI worker: fail_stdev_latency: 0.0
-XI worker: fail_cv_latency: 0.0
-XI worker: window_total_duration: 0.27940580097492784
-XI worker: window_total_batches: 8
-XI worker: window_total_frames: 8
-XI worker: window_start_timestamp: 374943.07504102
-XI worker: window_stop_timestamp: 374943.354446821
-XI worker: window_pass_batches: 8
-XI worker: window_fail_batches: 0
-XI worker: window_pass_frames: 8
-XI worker: window_fail_frames: 0
-XI worker: window_first_latency: 0.027021727000828832
-XI worker: window_pass_max_latency: 0.0449919409584254
-XI worker: window_fail_max_latency: 0.0
-XI worker: window_brutto_batch_rate: 28.632190069374655
-XI worker: window_brutto_frame_rate: 28.632190069374655
-XI worker: window_netto_batch_rate: 26.127558971388062
-XI worker: window_netto_frame_rate: 26.127558971388062
-XI worker: window_frame_passrate: 1.0
-XI worker: window_batch_passrate: 1.0
-XI worker: window_mean_latency: 0.0382737630061456
-XI worker: window_mean_latency2: 0.0015027467953827884
-XI worker: window_stdev_latency: 0.006153524252994284
-XI worker: window_cv_latency: 0.16077656780197483
-XI worker: window_pass_mean_latency: 0.0382737630061456
-XI worker: window_pass_mean_latency2: 0.0015027467953827884
-XI worker: window_pass_stdev_latency: 0.006153524252994284
-XI worker: window_pass_cv_latency: 0.16077656780197483
-XI worker: window_fail_mean_latency: 0.0
-XI worker: window_fail_mean_latency2: 0.0
-XI worker: window_fail_stdev_latency: 0.0
-XI worker: window_fail_cv_latency: 0.0
-XI worker: window_hist_latency_4: 2
-XI worker: window_hist_latency_9: 1
-XI worker: window_hist_latency_8: 5
-XI worker: warmup_total_duration: 0.02705443004379049
-XI worker: warmup_total_batches: 0
-XI worker: warmup_total_frames: 0
-XI worker: warmup_start_timestamp: 374943.047973889
-XI worker: warmup_stop_timestamp: 374943.075028319
-XI worker: warmup_pass_batches: 0
-XI worker: warmup_fail_batches: 0
-XI worker: warmup_pass_frames: 0
-XI worker: warmup_fail_frames: 0
-XI worker: warmup_first_latency: inf
-XI worker: warmup_pass_max_latency: 0.0
-XI worker: warmup_fail_max_latency: 0.0
-XI worker: warmup_brutto_batch_rate: 0.0
-XI worker: warmup_brutto_frame_rate: 0.0
-XI worker: warmup_netto_batch_rate: 0.0
-XI worker: warmup_netto_frame_rate: 0.0
-XI worker: warmup_frame_passrate: 0.0
-XI worker: warmup_batch_passrate: 0.0
-XI worker: warmup_mean_latency: 0.0
-XI worker: warmup_mean_latency2: 0.0
-XI worker: warmup_stdev_latency: 0.0
-XI worker: warmup_cv_latency: 0.0
-XI worker: warmup_pass_mean_latency: 0.0
-XI worker: warmup_pass_mean_latency2: 0.0
-XI worker: warmup_pass_stdev_latency: 0.0
-XI worker: warmup_pass_cv_latency: 0.0
-XI worker: warmup_fail_mean_latency: 0.0
-XI worker: warmup_fail_mean_latency2: 0.0
-XI worker: warmup_fail_stdev_latency: 0.0
-XI worker: warmup_fail_cv_latency: 0.0
+          XI worker: request for metadata of model resnet50-binary-0001...
+          XI worker: Metadata for model resnet50-binary-0001 is downloaded...
+          XI worker: set version of model resnet50-binary-0001: 1
+          XI worker: inputs:
+          XI worker:  0:
+          XI worker:   name: 0
+          XI worker:   dtype: DT_FLOAT
+          XI worker:   tensorShape: {'dim': [{'size': '1'}, {'size': '3'}, {'size': '224'}, {'size': '224'}]}
+          XI worker: outputs:
+          XI worker:  1463:
+          XI worker:   name: 1463
+          XI worker:   dtype: DT_FLOAT
+          XI worker:   tensorShape: {'dim': [{'size': '1'}, {'size': '1000'}]}
+          XI worker: new random range: 0.0, 255.0
+          XI worker: batchsize sequence: [1]
+          XI worker: dataset length (0): 1
+          XI worker: --> dim: 1
+          XI worker: --> dim: 3
+          XI worker: --> dim: 224
+          XI worker: --> dim: 224
+          XI worker: Generated data shape: (1, 3, 224, 224)
+          XI worker: start workload...
+          XI worker: stop warmup: 9408188.83686497
+          XI worker: stop window: inf
+          XI worker: Workload started!
+          XI worker: Warmup normally stopped: 9408188.848778868
+          XI worker: Window normally start: 9408188.848811286
+          XI worker: Window stopped: 9408188.893217305
+          XI worker: total_duration: 0.0563836432993412
+          XI worker: total_batches: 8
+          XI worker: total_frames: 8
+          XI worker: start_timestamp: 9408188.836864596
+          XI worker: stop_timestamp: 9408188.89324824
+          XI worker: pass_batches: 8
+          XI worker: fail_batches: 0
+          XI worker: pass_frames: 8
+          XI worker: fail_frames: 0
+          XI worker: first_latency: 0.011858431622385979
+          XI worker: pass_max_latency: 0.011858431622385979
+          XI worker: fail_max_latency: 0.0
+          XI worker: brutto_batch_rate: 141.88512007867135
+          XI worker: brutto_frame_rate: 141.88512007867135
+          XI worker: netto_batch_rate: 142.7839056346449
+          XI worker: netto_frame_rate: 142.7839056346449
+          XI worker: frame_passrate: 1.0
+          XI worker: batch_passrate: 1.0
+          XI worker: mean_latency: 0.00700359046459198
+          XI worker: mean_latency2: 5.376289226632219e-05
+          XI worker: stdev_latency: 0.002170855331568294
+          XI worker: cv_latency: 0.309963202809113
+          XI worker: pass_mean_latency: 0.00700359046459198
+          XI worker: pass_mean_latency2: 5.376289226632219e-05
+          XI worker: pass_stdev_latency: 0.002170855331568294
+          XI worker: pass_cv_latency: 0.309963202809113
+          XI worker: fail_mean_latency: 0.0
+          XI worker: fail_mean_latency2: 0.0
+          XI worker: fail_stdev_latency: 0.0
+          XI worker: fail_cv_latency: 0.0
+          XI worker: window_total_duration: 0.044406019151210785
+          XI worker: window_total_batches: 8
+          XI worker: window_total_frames: 8
+          XI worker: window_start_timestamp: 9408188.848811286
+          XI worker: window_stop_timestamp: 9408188.893217305
+          XI worker: window_pass_batches: 8
+          XI worker: window_fail_batches: 0
+          XI worker: window_pass_frames: 8
+          XI worker: window_fail_frames: 0
+          XI worker: window_first_latency: 0.011858431622385979
+          XI worker: window_pass_max_latency: 0.011858431622385979
+          XI worker: window_fail_max_latency: 0.0
+          XI worker: window_brutto_batch_rate: 180.15575710037206
+          XI worker: window_brutto_frame_rate: 180.15575710037206
+          XI worker: window_netto_batch_rate: 142.7839056346449
+          XI worker: window_netto_frame_rate: 142.7839056346449
+          XI worker: window_frame_passrate: 1.0
+          XI worker: window_batch_passrate: 1.0
+          XI worker: window_mean_latency: 0.00700359046459198
+          XI worker: window_mean_latency2: 5.376289226632219e-05
+          XI worker: window_stdev_latency: 0.002170855331568294
+          XI worker: window_cv_latency: 0.309963202809113
+          XI worker: window_pass_mean_latency: 0.00700359046459198
+          XI worker: window_pass_mean_latency2: 5.376289226632219e-05
+          XI worker: window_pass_stdev_latency: 0.002170855331568294
+          XI worker: window_pass_cv_latency: 0.309963202809113
+          XI worker: window_fail_mean_latency: 0.0
+          XI worker: window_fail_mean_latency2: 0.0
+          XI worker: window_fail_stdev_latency: 0.0
+          XI worker: window_fail_cv_latency: 0.0
+          XI worker: window_hist_latency_1: 1
+          XI worker: window_hist_latency_0: 7
+          XI worker: warmup_total_duration: 0.011916300281882286
+          XI worker: warmup_total_batches: 0
+          XI worker: warmup_total_frames: 0
+          XI worker: warmup_start_timestamp: 9408188.836862568
+          XI worker: warmup_stop_timestamp: 9408188.848778868
+          XI worker: warmup_pass_batches: 0
+          XI worker: warmup_fail_batches: 0
+          XI worker: warmup_pass_frames: 0
+          XI worker: warmup_fail_frames: 0
+          XI worker: warmup_first_latency: inf
+          XI worker: warmup_pass_max_latency: 0.0
+          XI worker: warmup_fail_max_latency: 0.0
+          XI worker: warmup_brutto_batch_rate: 0.0
+          XI worker: warmup_brutto_frame_rate: 0.0
+          XI worker: warmup_netto_batch_rate: 0.0
+          XI worker: warmup_netto_frame_rate: 0.0
+          XI worker: warmup_frame_passrate: 0.0
+          XI worker: warmup_batch_passrate: 0.0
+          XI worker: warmup_mean_latency: 0.0
+          XI worker: warmup_mean_latency2: 0.0
+          XI worker: warmup_stdev_latency: 0.0
+          XI worker: warmup_cv_latency: 0.0
+          XI worker: warmup_pass_mean_latency: 0.0
+          XI worker: warmup_pass_mean_latency2: 0.0
+          XI worker: warmup_pass_stdev_latency: 0.0
+          XI worker: warmup_pass_cv_latency: 0.0
+          XI worker: warmup_fail_mean_latency: 0.0
+          XI worker: warmup_fail_mean_latency2: 0.0
+          XI worker: warmup_fail_stdev_latency: 0.0
+          XI worker: warmup_fail_cv_latency: 0.0
 ```
 
 ## Dynamic models benchmarking
@@ -326,6 +328,38 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
 ...
 ```
 
+## Summarize benchmarking results
+
+Summary of the benchmark results can be viewed with command option ```-ps```.
+```
+docker run --network host benchmark_client -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -s 2 3 300 300 -t 20 -u 2 -w 10 -ps
+```
+
+Sample output log with results summary:
+
+```
+Client 2.7
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -s 2 3 300 300 -t 20 -u 2 -w 10 -ps
+          XI worker: start workload...
+
+### Benchmark Parameters ###
+ Model: face-detection-retail-0005
+ Input shape: ['2', '3', '300', '300']
+ Request concurrency: 1
+ Test Duration (s): Total (t): 20.00 | Warmup (u): 2.00 | Window (w): 10.00
+
+### Benchmark Summary ###
+ ## General Metrics ##
+ Duration(s): Total: 20.01 | Window: 10.01
+ Batches: Total: 1781 | Window: 891
+
+ ## Latency Metrics (ms) ##
+ Mean: 11.20 | stdev: 0.74 | p50: 12.78 | p90: 15.26 | p95: 15.56
+
+ ## Throughput Metrics (fps) ##
+ Frame Rate (FPS): Brutto: 89.01 | Netto: 89.24
+ Batch Rate (batches/s): Brutto: 89.01 | Netto: 89.24
+```
 ## MediaPipe benchmarking
 
 Start OVMS container with `config.json` including mediapipe servable. OVMS should be built with MediaPipe enabled.

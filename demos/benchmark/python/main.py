@@ -262,6 +262,8 @@ if __name__ == "__main__":
                         help="database metadata configuration. default: None")
     parser.add_argument("--print_all", required=False, action="store_true",
                         help="flag to print all output")
+    parser.add_argument("-ps", "--print_summary", required=False, action="store_true",
+                        help="flag to print output summary")
     parser.add_argument("--print_time", required=False, action="store_true",
                         help="flag to print datetime next to each output line")
     parser.add_argument("--report_warmup", required=False, action="store_true",
@@ -333,7 +335,79 @@ if __name__ == "__main__":
     if xargs["json"]:
         jout = json.dumps(common_results)
         print(f"{BaseClient.json_prefix}###{worker_id}###STATISTICS###{jout}")
+
     if xargs["print_all"]:
         for key, value in common_results.items():
             sys.stdout.write(f"{worker_id}: {key}: {value}\n")
+
+    if xargs["print_summary"]:
+        sys.stdout.write("\n### Benchmark Parameters ###\n")
+        if xargs['model_name'] is not None:
+            model_name = xargs['model_name']
+            sys.stdout.write(f" Model: {model_name}\n")
+        if xargs['shape']:
+            inp_shape = xargs['shape']
+            sys.stdout.write(f" Input shape: {inp_shape}\n")
+        if 'submetrics' in common_results:
+            total_clients = common_results["submetrics"]
+        else:
+            total_clients = 1
+
+        sys.stdout.write(f" Request concurrency: {total_clients}\n")
+        if xargs['duration']:
+            total_t = float(xargs['duration'])
+            sys.stdout.write(f" Test Duration (s): Total (t): {total_t:.2f}")
+        if xargs['warmup']:
+            warm_up = float(xargs['warmup'])
+            sys.stdout.write(f" | Warmup (u): {warm_up:.2f}")
+        if xargs['window']:
+            window = float(xargs['window'])
+            sys.stdout.write(f" | Window (w): {window:.2f}\n")
+
+
+        sys.stdout.write("\n### Benchmark Summary ###\n")
+        sys.stdout.write(" ## General Metrics ##\n")
+
+        sys.stdout.write(f" Duration(s): Total: {common_results['total_duration']:.2f}")
+        sys.stdout.write(f" | Window: {common_results['window_total_duration']:.2f}\n")
+
+        sys.stdout.write(f" Batches: Total: {common_results['total_batches']}")
+        sys.stdout.write(f" | Window: {common_results['window_total_batches']}\n")
+
+        if total_clients:
+            sys.stdout.write("\n ## Latency Metrics (ms) ##\n")
+            sys.stdout.write(f" Mean: {common_results['window_mean_latency']*1000:.2f}")
+            sys.stdout.write(f" | stdev: {common_results['window_stdev_latency']*1000:.2f}")
+
+            base, factor = float(xargs["hist_base"]), float(xargs["hist_factor"])
+            xargs["quantile_list"] = [0.5, 0.9, 0.95]
+
+            common_results.recalculate_quantiles("window_", base, factor, xargs["quantile_list"])
+
+            for idx, v in enumerate(xargs["quantile_list"]):
+                # Convert string to float
+                try:
+                    quantile_value = float(v)
+                except ValueError:
+                    # case where the string cannot be converted to a float
+                    sys.stdout.write(f"Invalid quantile value: {v}")
+                    continue
+                # float to percentage
+                q = str(int(quantile_value * 100))
+                p = str("p") + q
+                qv = str("qos_latency_") + str(idx)
+
+                sys.stdout.write(f" | {p}: {common_results[qv]*1000:.2f}")
+            sys.stdout.write("\n")
+            sys.stdout.write("\n ## Throughput Metrics (fps) ##\n")
+
+            # Brutto: Total number of frames processed or produced per second by a system or application.
+            # It doesn't take into account any overhead or inefficiencies in the system
+            # Netto: Effective or net frame rate, which is the frame rate adjusted for any overhead,
+            # delays, or processing inefficiencies in the system
+            sys.stdout.write(f" Frame Rate (FPS): Brutto: {common_results['brutto_frame_rate']:.2f}")
+            sys.stdout.write(f" | Netto: {common_results['netto_frame_rate']:.2f} \n")
+            sys.stdout.write(f" Batch Rate (batches/s): Brutto: {common_results['brutto_batch_rate']:.2f}")
+            sys.stdout.write(f" | Netto: {common_results['netto_batch_rate']:.2f}\n")
+
     sys.exit(return_code)
