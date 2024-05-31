@@ -6,6 +6,7 @@ maxdepth: 1
 hidden:
 ---
 
+OpenAI chat API <ovms_docs_rest_api_chat>
 TensorFlow Serving API <ovms_docs_clients_tfs>
 KServe API <ovms_docs_clients_kfs>
 OpenVINO Model Server C-API <ovms_docs_c_api>
