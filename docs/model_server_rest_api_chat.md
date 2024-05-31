@@ -10,9 +10,7 @@ Please see the [OpenAI API Reference](https://platform.openai.com/docs/api-refer
 We support now the following parameters:
 - model - this name is assigning the request to a graph of the same name
 - messages - user content type is supported as text. Currently it is not allowed to send the image_url in the user message content
-- frequency_penalty
 - max_tokens
-- presence_penalty
 - response_format - only json is implemented
 - stream
 - temperature
@@ -23,7 +21,7 @@ Extra parameters:
 - best_of - This is treated as the beam width 
 - use_beam_search - Whether to use beam search instead of sampling.
 - top_k - Integer that controls the number of top tokens to consider. Set to -1 to consider all tokens.
-
+- repetition_penalty 
 
 Not supported parameters:
 - tools
@@ -35,13 +33,15 @@ Not supported parameters:
 - logit_bias
 - logprobs
 - top_logprobs
+- frequency_penalty
+- presence_penalty
 
 ### Response parameters
 Supported parameters:
 - choices - that includes `finish_reason`, `message.content`, `message.role`, index (always 0 for now)
-- created
-- model
-- object - always "chat.completion" 
+- created - data and time when the request was received
+- model - model name like specified in the config
+- object - "chat.completion" 
 
 Not supported now:
 - id
