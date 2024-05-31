@@ -47,13 +47,15 @@ cc_library(
 
 cc_library(
     name = "llmcalculator",
-    srcs = ["llm_calculator.cc",],
+    srcs = ["llm_calculator.cc", "http_llm_calculator.cc"],
     deps = [
         "@linux_openvino//:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
+        "@com_github_tencent_rapidjson//:rapidjson",
         "//src/kfserving_api:kfserving_api_cpp",
         ":llm_engine",
         ":llmnoderesources",
+        ":httppayload",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,

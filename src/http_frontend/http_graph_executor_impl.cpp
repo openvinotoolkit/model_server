@@ -69,8 +69,7 @@ Status onPacketReadySerializeAndSendImpl(
             packetType,
             packet,
             out));
-    serverReaderWriter.WriteResponseString(out);
-    serverReaderWriter.PartialReply();
+    serverReaderWriter.PartialReply(out);  // TODO: Possibly avoid copy
     return StatusCode::OK;
 }
 
@@ -113,8 +112,7 @@ Status validateSubsequentRequestImpl(
 Status sendErrorImpl(
     const std::string& message,
     HttpReaderWriter& serverReaderWriter) {
-    serverReaderWriter.WriteResponseString("{\"error\": \"" + message + "\"}");
-    serverReaderWriter.PartialReply();
+    serverReaderWriter.PartialReply("{\"error\": \"" + message + "\"}");
     return StatusCode::OK;
 }
 

@@ -177,6 +177,37 @@ Time per generated token  20.0 ms
 Total time 6822 ms
 ```
 
+### Use KServe REST API with curl
+
+Run OVMS :
+```bash
+docker run -d --rm -p 8000:8000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}:/model \
+-e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --rest_port 8000
+```
+
+Send request using curl:
+```bash
+curl --header "Content-Type: application/json" --data '{"inputs":[{"name" : "pre_prompt", "shape" : [1], "datatype" : "BYTES", "data" : ["What is the theory of relativity?"]}]}' localhost:8000/v2/models/python_model/infer
+```
+
+Example output:
+```bash
+{
+    "model_name": "python_model",
+    "outputs": [{
+            "name": "token_count",
+            "shape": [1],
+            "datatype": "INT32",
+            "data": [249]
+        }, {
+            "name": "completion",
+            "shape": [1],
+            "datatype": "BYTES",
+            "data": ["The theory of relativity is a long-standing field of physics which states that the behavior of matter and energy in relation to space and time is influenced by the principles of special theory of relativity and general theory of relativity. It proposes that gravity is a purely mathematical construct (as opposed to a physical reality), which affects distant masses on superluminal speeds just as they would alter objects on Earth moving at light speed. According to the theory, space and time are more fluid than we perceive them to be, with phenomena like lensing causing distortions that cannot be explained through more traditional laws of physics. Since its introduction in 1905, it has revolutionized the way we understand the world and has shed fresh light on important concepts in modern scientific thought, such as causality, time dilation, and the nature of space-time. The theory was proposed by Albert Einstein in an article published in the British journal 'Philosophical Transactions of the Royal Society A' in 1915, although his findings were first formulated in his 1907 book 'Einstein: Photography & Poetry,' where he introduced the concept of equivalence principle."]
+        }]
+}
+```
+
 ## Run a client with gRPC streaming
 
 ### Deploy OpenVINO Model Server with the Python Calculator
