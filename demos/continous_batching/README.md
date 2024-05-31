@@ -1,5 +1,16 @@
 # How to serve LLM models with Continous Batching via OpenAI API {#ovms_demos_continous_batching}
 
+
+## Build the docker image
+
+To use the latest features of the model server build the image from the main branch.
+Public image will support this demo starting from version 2024.2.
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+make release_image
+```
+
 ## Model preparation
 Download latest optimum-intel:
 ```bash
@@ -183,6 +194,27 @@ cd vllm/benchmarks
 pip install -r ../requirements-cpu.txt
 sed -i -e 's|v1/chat/completions|v3/chat/completions|g' backend_request_func.py  # allow calls to endpoint with v3 instead of v1 like in vLLM
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
-python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Llama-2-7b-chat-hf --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json  --num-prompts 1000 --request-rate 1
+python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Llama-2-7b-chat-hf --dataset ShareGPT_V3_unfiltered_cleaned_split.json  --num-prompts 1000 --request-rate 1
+
+Namespace(backend='openai-chat', version='N/A', base_url=None, host='ov-spr-31.sclab.intel.com', port=8000, endpoint='/v3/chat/completions', dataset='ShareGPT_V3_unfiltered_cleaned_split.json', model='meta-llama/Llama-2-7b-chat-hf', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, request_rate=1.0, seed=0, trust_remote_code=False, disable_tqdm=False, save_result=False)
+Traffic request rate: 1.0
+100%|██████████████████████████████████████████████████| 1000/1000 [17:17<00:00,  1.04s/it]
+============ Serving Benchmark Result ============
+Successful requests:                     1000
+Benchmark duration (s):                  1037.78
+Total input tokens:                      245995
+Total generated tokens:                  195504
+Request throughput (req/s):              0.96
+Input token throughput (tok/s):          237.04
+Output token throughput (tok/s):         188.39
+---------------Time to First Token----------------
+Mean TTFT (ms):                          693.63
+Median TTFT (ms):                        570.60
+P99 TTFT (ms):                           2187.77
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          132.96
+Median TPOT (ms):                        143.28
+P99 TPOT (ms):                           234.14
+==================================================
 
 ```

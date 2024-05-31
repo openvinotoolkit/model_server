@@ -39,7 +39,7 @@ Not supported parameters:
 ### Response parameters
 Supported parameters:
 - choices - that includes `finish_reason`, `message.content`, `message.role`, index (always 0 for now)
-- created - data and time when the request was received
+- created - time when the request was received
 - model - model name like specified in the config
 - object - "chat.completion" 
 
