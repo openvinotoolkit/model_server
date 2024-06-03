@@ -116,37 +116,35 @@ public:
     bool isStream() const { return this->stream; }
     std::string getModel() const { return this->model; }
 
-    // TODO: Use exceptions to sneak error mesages into response
-    bool parse() {
-        OVMS_PROFILE_FUNCTION();
+    absl::Status parse() {
         // stream: bool; optional
         if (!this->doc.IsObject())
-            return false;
+            return absl::InvalidArgumentError("Received json is not an object");
         auto it = this->doc.FindMember("stream");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsBool())
-                return false;
+                return absl::InvalidArgumentError("Stream is not bool");
             this->stream = it->value.GetBool();
         }
 
         // messages: [{role: content}, {role: content}, ...]; required
         it = doc.FindMember("messages");
         if (it == doc.MemberEnd())
-            return false;
+            return absl::InvalidArgumentError("Messages missing in request");
         if (!it->value.IsArray())
-            return false;
+            return absl::InvalidArgumentError("Messages are not an array");
         this->messages.clear();
         this->messages.reserve(it->value.GetArray().Size());
         for (int i = 0; i < it->value.GetArray().Size(); i++) {
             const auto& obj = it->value.GetArray()[i];
             if (!obj.IsObject())
-                return false;
+                return absl::InvalidArgumentError("Invalid message structure");
             auto& chat = this->messages.emplace_back(chat_entry_t{});
             for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
                 if (!member->name.IsString())
-                    return false;
+                    return absl::InvalidArgumentError("Invalid message structure");
                 if (!member->value.IsString())
-                    return false;
+                    return absl::InvalidArgumentError("Invalid message structure");
                 chat[member->name.GetString()] = member->value.GetString();
             }
         }
@@ -155,20 +153,20 @@ public:
         it = this->doc.FindMember("model");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsString())
-                return false;
+                return absl::InvalidArgumentError("model is not a string");
             this->model = it->value.GetString();
         } else {
-            return false;
+            return absl::InvalidArgumentError("model missing in request");
         }
 
         // max_tokens: int; optional
         it = this->doc.FindMember("max_tokens");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return false;
+                return absl::InvalidArgumentError("max_tokens is not an int");
             this->maxTokens = it->value.GetInt();
             if (this->maxTokens.value() <= 0)
-                return false;
+                return absl::InvalidArgumentError("maxTokens value should be greater than 0");
         }
 
         // TODO: Supported by OpenAI and vLLM, however unsupported by CB lib
@@ -200,9 +198,8 @@ public:
         it = this->doc.FindMember("repetition_penalty");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return false;
+                return absl::InvalidArgumentError("repetition_penalty is not a double");
             this->repetitionPenalty = it->value.GetDouble();
-            // TODO: Validate?
         }
 
         // diversity_penalty: float; optional - defaults to 1.0
@@ -210,9 +207,8 @@ public:
         it = this->doc.FindMember("diversity_penalty");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return false;
+                return absl::InvalidArgumentError("diversity_penalty is not a double");
             this->diversityPenalty = it->value.GetDouble();
-            // TODO: Validate?
         }
 
         // length_penalty: float; optional - defaults to 1.0
@@ -220,29 +216,28 @@ public:
         it = this->doc.FindMember("length_penalty");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return false;
+                return absl::InvalidArgumentError("length_penalty is not a double");
             this->lengthPenalty = it->value.GetDouble();
-            // TODO: Validate?
         }
 
         // temperature: float; optional - defaults to 0.0 (different than OpenAI which is 1.0)
         it = this->doc.FindMember("temperature");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return false;
+                return absl::InvalidArgumentError("temperature is not a double");
             this->temperature = it->value.GetDouble();
             if (this->temperature < 0.0f || this->temperature > 2.0f)
-                return false;
+                return absl::InvalidArgumentError("temperature out of range(0.0,2.0)");
         }
 
         // top_p: float; optional - defaults to 1
         it = this->doc.FindMember("top_p");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return false;
+                return absl::InvalidArgumentError("top_p is not a double");
             this->topP = it->value.GetDouble();
             if (this->topP < 0.0f || this->topP > 1.0f)
-                return false;
+                return absl::InvalidArgumentError("top_p out of range(0.0,1.0)");
         }
 
         // top_k: int; optional - defaults to 0
@@ -250,18 +245,16 @@ public:
         it = this->doc.FindMember("top_k");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return false;
+                return absl::InvalidArgumentError("top_k is not an int");
             this->topK = it->value.GetInt();
-            // TODO: Validate?
         }
 
         // seed: int; optional - defaults to 0 (not set)
         it = this->doc.FindMember("seed");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return false;
+                return absl::InvalidArgumentError("seed is not an int");
             this->seed = it->value.GetInt();
-            // TODO: Validate?
         }
 
         // best_of: int; optional - defaults to 1
@@ -269,9 +262,8 @@ public:
         it = this->doc.FindMember("best_of");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return false;
+                return absl::InvalidArgumentError("best_of is not an int");
             this->bestOf = it->value.GetInt();
-            // TODO: Validate?
         }
 
         // n: int; optional - defaults to 1
@@ -279,9 +271,8 @@ public:
         it = this->doc.FindMember("n");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return false;
+                return absl::InvalidArgumentError("n is not an int");
             this->numReturnSequences = it->value.GetInt();
-            // TODO: Validate?
         }
 
         // use_beam_search: bool; optional - defaults to false
@@ -299,11 +290,9 @@ public:
         it = this->doc.FindMember("ignore_eos");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsBool())
-                return false;
+                return absl::InvalidArgumentError("ignore_eos is not a bool");
             this->ignoreEOS = it->value.GetBool();
         }
-
-        return true;
 
         // logit_bias TODO
         // logprops TODO
@@ -316,6 +305,7 @@ public:
         // user TODO
         // function_call TODO (deprecated)
         // functions TODO (deprecated)
+        return absl::OkStatus();
     }
 };
 
@@ -459,7 +449,10 @@ public:
 
             this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson);
 
-            RET_CHECK(this->request->parse());  // TODO: try catch and expose error message
+            // TODO: Support chat scenario once atobisze adds that to CB library
+            auto status = this->request->parse();
+            if (status != absl::OkStatus())
+                return status;
             RET_CHECK(this->request->getMessages().size() >= 1);
             RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
 
