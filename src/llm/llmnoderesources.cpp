@@ -68,7 +68,7 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
     // Currently harrdcoded, will parametrize in future
     nodeResources->schedulerConfig = {
         .max_num_batched_tokens = nodeOptions.max_num_batched_tokens(),
-        .num_kv_blocks = nodeOptions.num_kv_blocks(),
+        .cache_size = nodeOptions.cache_size(),
         .block_size = nodeOptions.block_size(),
         .dynamic_split_fuse = nodeOptions.dynamic_split_fuse(),
         .max_num_seqs = nodeOptions.max_num_seqs(),

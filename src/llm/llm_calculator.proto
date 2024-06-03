@@ -29,11 +29,12 @@ message LLMCalculatorOptions {
 
     optional uint64 max_num_batched_tokens = 2 [default = 256];
 
-    optional uint64 num_kv_blocks = 3 [default = 364];
+    // model memory cache to allocate in GB
+    optional uint64 cache_size  = 3 [default = 4];
 
     optional uint64 block_size = 4 [default = 32];
 
     optional uint64 max_num_seqs = 5 [default = 256];
 
-    optional bool dynamic_split_fuse = 7 [default = false];
+    optional bool dynamic_split_fuse = 7 [default = true];
 }

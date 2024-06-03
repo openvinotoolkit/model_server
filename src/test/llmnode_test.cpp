@@ -196,9 +196,9 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
-    ASSERT_EQ(nodeResources->schedulerConfig.num_kv_blocks, 364);
+    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 4);
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
+    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
 }
 
@@ -217,7 +217,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckHalfDefault) {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
                     models_path: "/workspace/"
                     max_num_batched_tokens: 98
-                    num_kv_blocks: 97
+                    cache_size: 1
                 }
             }
         }
@@ -229,9 +229,9 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckHalfDefault) {
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
-    ASSERT_EQ(nodeResources->schedulerConfig.num_kv_blocks, 97);
+    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
+    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
 }
 
@@ -250,10 +250,10 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckNonDefault) {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
                     models_path: "/workspace/"
                     max_num_batched_tokens: 98
-                    num_kv_blocks: 97
+                    cache_size: 1
                     block_size: 96
                     max_num_seqs: 95
-                    dynamic_split_fuse: true
+                    dynamic_split_fuse: false
                 }
             }
         }
@@ -265,9 +265,9 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
-    ASSERT_EQ(nodeResources->schedulerConfig.num_kv_blocks, 97);
+    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 97);
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 96);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
+    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
 }
 
