@@ -330,7 +330,7 @@ public:
             // Each iteration is single execution of Process() method
 
             // Last iteration
-            if (this->generationHandle->generation_finished()) {
+            if (this->generationHandle->get_status() == GenerationStatus::FINISHED) {
                 std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true));
                 response += packIntoServerSideEventMessage("[DONE]");
                 LOG(INFO) << "Partial response (generation finished): " << response;
