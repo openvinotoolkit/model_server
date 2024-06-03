@@ -1,4 +1,4 @@
-# How to serve LLM models with Continous Batching via OpenAI API {#ovms_demos_continous_batching}
+# How to serve LLM models with Continous Batching via OpenAI API {#ovms_demos_continuous_batching}
 
 
 ## Build the docker image
