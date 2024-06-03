@@ -265,7 +265,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
-    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 97);
+    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 96);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
