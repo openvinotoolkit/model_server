@@ -11,7 +11,7 @@ We support now the following parameters:
 - model - this name is assigning the request to a graph of the same name
 - messages - user content type is supported as text. Currently it is not allowed to send the image_url in the user message content
 - max_tokens
-- response_format - only json is implemented
+- response_format - only `text` is implemented
 - stream
 - temperature
 - top_p
@@ -41,7 +41,7 @@ Supported parameters:
 - choices - that includes `finish_reason`, `message.content`, `message.role`, index (always 0 for now)
 - created - time when the request was received
 - model - model name like specified in the config
-- object - "chat.completion" 
+- object - "chat.completion" or "chat.completion.chunk"
 
 Not supported now:
 - id
@@ -51,8 +51,8 @@ Not supported now:
 
 ## References
 
-[End to end demo with LLM model serving over OpenAI API](../demos/continuous_batching/)
+[End to end demo with LLM model serving over OpenAI API](../demos/continuous_batching/README.md
 
 [Code snippets](./clients_openai.md)
 
-[Developer guide for writing custom calculators with REST API extension](TBD)
+[Developer guide for writing custom calculators with REST API extension](./mediapipe.md)
