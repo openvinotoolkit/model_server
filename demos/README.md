@@ -36,12 +36,12 @@ ovms_demo_python_llama
 ovms_demo_python_seq2seq
 ovms_demo_python_stable_diffusion
 ovms_string_output_model_demo
-ovms_demos_continous_batching
+ovms_demos_continuous_batching
 ```
 
 OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities.
 ### Check Out New Generative AI Demos
- - [Text Generation with continous batching](continous_batching/README.md)
+ - [Text Generation with continuous batching](continuous_batching/README.md)
 
 Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
 
