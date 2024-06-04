@@ -38,7 +38,7 @@ struct LLMExecutor {
     }
 
     bool hasRequests() {
-        return (pipe->has_awaiting_requests() || pipe->has_running_requests());
+        return (pipe->has_non_finished_requests());
     }
 
     void step() {
@@ -47,7 +47,7 @@ struct LLMExecutor {
 
     void waitForRequests(std::atomic<bool>* receivedEndSignal) {
         std::unique_lock<std::mutex> lock(mutex);
-        cv.wait(lock, [this, receivedEndSignal] { return (pipe->has_awaiting_requests() || pipe->has_running_requests() || *receivedEndSignal); });
+        cv.wait(lock, [this, receivedEndSignal] { return (pipe->has_non_finished_requests() || *receivedEndSignal); });
     }
 
     void notify() {

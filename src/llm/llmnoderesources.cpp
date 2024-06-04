@@ -65,19 +65,17 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
 
-    size_t NUM_BLOCKS = 3640;
     // Currently harrdcoded, will parametrize in future
-    SchedulerConfig default_config{
-        .max_num_batched_tokens = 256,
-        .num_kv_blocks = NUM_BLOCKS * 1,
-        .block_size = 32,
-        .dynamic_split_fuse = true,
-        .max_num_seqs = 256,
-        // .max_paddings = 256,
+    nodeResources->schedulerConfig = {
+        .max_num_batched_tokens = nodeOptions.max_num_batched_tokens(),
+        .cache_size = nodeOptions.cache_size(),
+        .block_size = nodeOptions.block_size(),
+        .dynamic_split_fuse = nodeOptions.dynamic_split_fuse(),
+        .max_num_seqs = nodeOptions.max_num_seqs(),
     };
 
     try {
-        nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, default_config);
+        nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", basePath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
