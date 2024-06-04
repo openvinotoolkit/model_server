@@ -325,6 +325,11 @@ new_local_repository(
     path = "/usr/local/lib/",
     build_file = "@//third_party/boost:BUILD"
 )
+new_local_repository(
+    name = "Jinja2Cpp",
+    path = "/jinja2cpp/Jinja2Cpp/build/install/lib",
+    build_file = "@//third_party/Jinja2Cpp:BUILD"
+)
 
 # Google Cloud SDK
 http_archive(
