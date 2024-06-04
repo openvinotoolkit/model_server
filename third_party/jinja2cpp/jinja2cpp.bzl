@@ -15,22 +15,19 @@
 #
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
-def llm_engine():
-    llm_engine_repository(name="_llm_engine")
+def jinja2cpp():
+    llm_engine_repository(name="_jinja2cpp")
     new_git_repository(
-        name = "llm_engine",
-        remote = "https://github.com/atobiszei/openvino.genai",
-        commit = "6f26c4183bafb8bdff33375a10ac0649c950c778", # chate_template_rebased and with jinja fork
-        build_file = "@_llm_engine//:BUILD",
+        name = "jinja2cpp",
+        remote = "https://github.com/atobiszei/Jinja2Cpp",
+        commit = "98a69ee68502d7c186a93870512cf112fdd3fd17",
+#        commit = "20ab985f8798c72e0443d9bc8d335bf772c45dd6", # does not work
+#        commit = "9ebc98b46ee8c9c6a2ad2475d1c7c31b9d959ac9", # works
+        #commit = "73ef8f2699611c7058135c1a7a316c4c748bd92e", works with Ilya jinja
+        build_file = "@_jinja2cpp//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
     )
-    # when using local repository manually run: git submodule update --recursive 
-    #native.new_local_repository(
-    #    name = "llm_engine",
-    #    path = "/openvino.genai",
-    #    build_file = "@_llm_engine//:BUILD",
-    #)
 
 def _impl(repository_ctx):
     http_proxy = repository_ctx.os.environ.get("http_proxy", "")
@@ -54,12 +51,12 @@ config_setting(
 
 filegroup(
     name = "all_srcs",
-    srcs = glob(["text_generation/causal_lm/cpp/continuous_batching/library/**"]),
+    srcs = glob(["**"]),
     visibility = ["//visibility:public"],
 )
 
 cmake(
-    name = "llm_engine_cmake_ubuntu",
+    name = "jinja2cpp_cmake_ubuntu",
     build_args = [
         "--verbose",
         "--",  # <- Pass remaining options to the native tool.
@@ -73,12 +70,18 @@ cmake(
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
-        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
-        "JINJA2CPP_DEPS_MODE": "internal",
+        #"CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
         "JINJA2CPP_BUILD_TESTS": "OFF",
+ #       "JINJA2CPP_INSTALL": "ON",
+ #       "JINJA2CPP_BUILD_SHARED": "OFF",
+ #       "JINJA2CPP_DEPS_MODE": "internal",
+        "JINJA2CPP_DEPS_MODE": "external-boost",
+ #       "JINJA2CPP_DEPS_MODE": "conan-build",
+         "JINJA2CPP_STRICT_WARNINGS": "OFF",
+ #       "JINJA2CPP_WITH_JSON_BINDINGS": "none",
     }},
     env = {{
-        "OpenVINO_DIR": "{OpenVINO_DIR}",
+ #       "OpenVINO_DIR": "{OpenVINO_DIR}",
         "HTTP_PROXY": "{http_proxy}",
         "HTTPS_PROXY": "{https_proxy}",
     }},
@@ -86,13 +89,13 @@ cmake(
     #out_lib_dir = "lib",
     out_lib_dir = "",
     out_bin_dir = "",
-    out_binaries = [],
+    out_binaries = ["noizatkao"],
     out_data_dirs = ["_deps"],
     # linking order
     out_static_libs = [
             #"libopenvino_continuous_batching.a",
             "lib/libopenvino_continuous_batching.a",
-            #"_deps/jinja2cpp-build/lib/libjinja2cpp.a",
+            "_deps/jinja2cpp-build/lib/libjinja2cpp.a",
         ],
     install = True,
     tags = ["requires-network"],
@@ -101,9 +104,9 @@ cmake(
 )
 
 cc_library(
-    name = "llm_engine_ubuntu",
+    name = "jinja2cpp_ubuntu",
     deps = [
-        ":llm_engine_cmake_ubuntu",
+        ":jinja2cpp_cmake_ubuntu",
     ],
     visibility = ["//visibility:public"],
     alwayslink = True,
