@@ -288,7 +288,7 @@ Status Model::reloadVersions(std::shared_ptr<model_versions_t>& versionsToReload
 }
 
 Status Model::cleanupModelTmpFiles(const ModelConfig& config) {
-    auto lfstatus = StatusCode::OK;
+    Status lfstatus = StatusCode::OK;
 
     if (config.isCloudStored()) {
         LocalFileSystem lfs;
@@ -296,7 +296,7 @@ Status Model::cleanupModelTmpFiles(const ModelConfig& config) {
         if (lfstatus != StatusCode::OK) {
             SPDLOG_ERROR("Error occurred while deleting local copy of cloud model: {} reason: {}",
                 config.getLocalPath(),
-                lfstatus);
+                lfstatus.string());
         } else {
             SPDLOG_DEBUG("Model removed from: {}", config.getPath());
         }

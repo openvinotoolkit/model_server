@@ -517,10 +517,10 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, const std::
 StatusCode S3FileSystem::downloadModelVersions(const std::string& path,
     std::string* local_path,
     const std::vector<model_version_t>& versions) {
-    auto sc = createTempPath(local_path);
+    Status sc = createTempPath(local_path);
     if (sc != StatusCode::OK) {
-        SPDLOG_LOGGER_ERROR(s3_logger, "Failed to create a temporary path {}", sc);
-        return sc;
+        SPDLOG_LOGGER_ERROR(s3_logger, "Failed to create a temporary path {}", sc.string());
+        return sc.getCode();
     }
 
     StatusCode result = StatusCode::OK;
