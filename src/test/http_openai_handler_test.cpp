@@ -16,6 +16,7 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <map>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -106,7 +107,39 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
         handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
 
-    ASSERT_EQ(response, requestBody + std::string{"0"});
+    std::string expectedResponse = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    {"model":"gpt","stream":false,"messages":[]}0)";
+    ASSERT_EQ(response, expectedResponse);
+}
+
+TEST_F(HttpOpenAIHandlerTest, UnaryWithHeaders) {
+    std::string requestBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    )";
+    comp.headers.push_back(std::pair<std::string,std::string>("test1","header"));
+    comp.headers.push_back(std::pair<std::string,std::string>("test2","header"));
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+
+    std::string expectedResponse = R"(test1headertest2header
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    {"model":"gpt","stream":false,"messages":[]}0)";
+    ASSERT_EQ(response, expectedResponse);
 }
 
 TEST_F(HttpOpenAIHandlerTest, Stream) {
