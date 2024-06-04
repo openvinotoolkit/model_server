@@ -31,4 +31,6 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     defines = ["FMT_HEADER_ONLY"],
+
+    alwayslink = 1,
 )

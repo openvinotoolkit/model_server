@@ -947,7 +947,7 @@ Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelP
     this->status.setLoading();
     while (!canUnloadInstance()) {
         SPDLOG_INFO("Waiting to reload model: {} version: {}. Blocked by: {} inferences in progress.",
-            getName(), getVersion(), predictRequestsHandlesCount);
+            getName(), getVersion(), predictRequestsHandlesCount.load());
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
     if ((this->config.isCustomLoaderRequiredToLoadModel()) && (isCustomLoaderConfigChanged)) {
@@ -1029,18 +1029,18 @@ Status ModelInstance::reloadModelIfRequired(
             status = Status(StatusCode::INVALID_BATCH_DIMENSION, e.what());
         }
         if (!status.ok()) {
-            SPDLOG_ERROR("Model: {}, version: {} reload (batch size change) failed. Status Code: {}, Error {}",
-                getName(), getVersion(), status.getCode(), status.string());
+            SPDLOG_ERROR("Model: {}, version: {} reload (batch size change) failed, Error {}",
+                getName(), getVersion(), status.string());
         }
     } else if (status.reshapeRequired()) {
         status = reloadModel(std::nullopt, requestedShapes, modelUnloadGuardPtr);
         if (!status.ok() && status != StatusCode::RESHAPE_ERROR) {
-            SPDLOG_ERROR("Model: {}, version: {} reload (reshape) failed. Status Code: {}, Error: {}",
-                getName(), getVersion(), status.getCode(), status.string());
+            SPDLOG_ERROR("Model: {}, version: {} reload (reshape) failed, Error: {}",
+                getName(), getVersion(), status.string());
         }
     } else if (!status.ok()) {
-        SPDLOG_DEBUG("Model: {}, version: {} validation of inferRequest failed. Status Code: {}, Error: {}",
-            getName(), getVersion(), status.getCode(), status.string());
+        SPDLOG_DEBUG("Model: {}, version: {} validation of inferRequest failed, Error: {}",
+            getName(), getVersion(), status.string());
     }
     return status;
 }
@@ -1118,7 +1118,7 @@ void ModelInstance::unloadModelComponents() {
     subscriptionManager.notifySubscribers();
     while (!canUnloadInstance()) {
         SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progres.",
-            getName(), getVersion(), predictRequestsHandlesCount);
+            getName(), getVersion(), predictRequestsHandlesCount.load());
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
     SET_IF_ENABLED(this->getMetricReporter().inferReqQueueSize, 0);

@@ -384,18 +384,18 @@ http_archive(
 # spdlog
 http_archive(
     name = "com_github_gabime_spdlog",
-    url = "https://github.com/gabime/spdlog/archive/v1.4.0.tar.gz",
-    sha256 = "afd18f62d1bc466c60bef088e6b637b0284be88c515cedc59ad4554150af6043",
-    strip_prefix = "spdlog-1.4.0",
+    url = "https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz",
+    sha256 = "1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b",
+    strip_prefix = "spdlog-1.14.1",
     build_file = "@//third_party/spdlog:BUILD"
 )
 
 # fmtlib
 http_archive(
     name = "fmtlib",
-    url = "https://github.com/fmtlib/fmt/archive/6.0.0.tar.gz",
-    sha256 = "f1907a58d5e86e6c382e51441d92ad9e23aea63827ba47fd647eacc0d3a16c78",
-    strip_prefix = "fmt-6.0.0",
+    url = "https://github.com/fmtlib/fmt/archive/refs/tags/10.1.1.tar.gz",
+    sha256 = "78b8c0a72b1c35e4443a7e308df52498252d1cefc2b08c9a97bc9ee6cfe61f8b",
+    strip_prefix = "fmt-10.1.1",
     build_file = "@//third_party/fmtlib:BUILD"
 )
 

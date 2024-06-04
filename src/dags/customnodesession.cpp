@@ -81,7 +81,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
     // If result is not 0, it means execution has failed.
     // In this case shared library is responsible for cleaning up resources (memory).
     if (result != 0) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has failed custom node execution with return code: {}", getName(), getSessionKey(), result);
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; has failed custom node execution with return code", getName(), getSessionKey());
         notifyEndQueue.push({node, getSessionKey()});
         return StatusCode::NODE_LIBRARY_EXECUTION_FAILED;
     }
@@ -173,10 +173,9 @@ Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov
 
     auto precision = ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision));
     if (precision == ov::element::Type_t::undefined) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; Unspecified output precision:{} from custom node tensor: {}",
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; Unspecified output precision from custom node tensor: {}",
             this->getName(),
             this->getSessionKey(),
-            precision,
             tensor->name);
         return StatusCode::NODE_LIBRARY_INVALID_PRECISION;
     }
