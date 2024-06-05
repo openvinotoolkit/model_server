@@ -19,11 +19,13 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <spdlog/spdlog.h>
 
 #include <rapidjson/document.h>
 
 namespace ovms {
 struct HttpPayload {
+    public:
     std::vector<std::pair<std::string, std::string>> headers;
     std::string body;                 // always
     rapidjson::Document* parsedJson;  // pre-parsed body             = null

@@ -460,7 +460,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
 Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
-    HttpPayload request;
+    std::unique_ptr<HttpPayload> request = std::make_unique<HttpPayload>();
     Document doc;
     std::shared_ptr<MediapipeGraphExecutor> executor;
     bool streamFieldVal = false;
@@ -502,19 +502,19 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
             return status;
         }
         // TODO: Possibly avoid making copy
-        request.headers = request_components.headers;
-        request.body = request_body;
-        request.parsedJson = &doc;
+        request->headers = request_components.headers;
+        request->body = request_body;
+        request->parsedJson = &doc;
     }
     if (streamFieldVal == false) {
         ServableMetricReporter* smr = nullptr;                                                         // Unused
         ExecutionContext ec{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};  // Unused
-        return executor->infer(&request, &response, ec, smr);
+        return executor->infer(request.release(), &response, ec, smr);
     } else {
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        auto status = executor->inferStream(request, *serverReaderWriter);
+        status = executor->inferStream(*(request.release()), *serverReaderWriter);
         if (!status.ok()) {
             sendErrorImpl(status.string(), *serverReaderWriter);
         }
