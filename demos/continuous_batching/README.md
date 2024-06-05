@@ -12,7 +12,7 @@ Public image will support this demo starting from version 2024.2.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make release_image
+make release_image RUN_TESTS=0
 ```
 It will create an image called `openvino/model_server:latest`.
 
