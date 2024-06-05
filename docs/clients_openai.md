@@ -38,14 +38,13 @@ pip3 install requests
 ```{code} python
 from openai import OpenAI
 client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
-stream = client.chat.completions.create(
+response = client.chat.completions.create(
     model="meta-llama/Llama-2-7b-chat-hf",
     messages=[{"role": "user", "content": "Say this is a test"}],
     stream=False,
 )
-for chunk in stream:
-    if chunk.choices[0].delta.content is not None:
-        print(chunk.choices[0].delta.content, end="")
+
+print(response.choices[0].message)
 ```
 :::
 :::{tab-item} python [requests]
