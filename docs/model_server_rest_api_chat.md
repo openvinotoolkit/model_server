@@ -98,8 +98,10 @@ Not supported now:
 
 ## References
 
-[End to end demo with LLM model serving over OpenAI API](../demos/continuous_batching/README.md
+[End to end demo with LLM model serving over OpenAI API](../demos/continuous_batching/README.md)
 
 [Code snippets](./clients_openai.md)
+
+[LLM calculator](./llm_calculator.md)
 
 [Developer guide for writing custom calculators with REST API extension](./mediapipe.md)
