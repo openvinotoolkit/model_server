@@ -4,7 +4,54 @@
 
 
 ## API Reference
-Please see the [OpenAI API Reference](https://platform.openai.com/docs/api-reference/chat) for more information on the API. 
+OpenVINO Model Server includes now the `chat/completions` endpoint using OpenAI API.
+Please see the [OpenAI API Reference](https://platform.openai.com/docs/api-reference/chat) for more information on the API.
+The endpoint is exposed via a path:
+
+<b>http://server_name:port/v3/chat/completions</b>
+
+### Example request
+
+```bash
+curl http://localhost/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama3",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "hello"
+      }
+    ],
+    stream: false
+  }'
+```
+
+### Example response
+
+```json
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "\n\nHow can I help you?",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1716825108,
+  "model": "llama3",
+  "object": "chat.completion"
+}
+```
+
 
 ### Request parameters
 We support now the following parameters:

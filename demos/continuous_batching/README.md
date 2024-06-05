@@ -1,4 +1,8 @@
 # How to serve LLM models with Continous Batching via OpenAI API {#ovms_demos_continuous_batching}
+This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algotithms.
+Text generation use case is exposed via OpenAI API `chat/completions` endpoint.
+That makes it easy to use and efficient expecially on on Intel® Xeon® processors.
+
 
 
 ## Build the docker image
@@ -10,18 +14,23 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 make release_image
 ```
+It will create an image called `openvino/model_server:latest`.
 
 ## Model preparation
-Download latest optimum-intel:
+In this step the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
+That ensures faster initialization time, better performance and lower memory consumtion.
+Here, we will also define the LLM engine parameters inside the `graph.pbtxt`.
+
+Install python dependencies for the conversion script:
 ```bash
 PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu" python3 -m pip install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
 ```
 
 Run optimum-cli to download and quantize the model:
 ```bash
-optimum-cli export openvino --model meta-llama/Llama-2-7b-chat-hf --weight-format int8 meta-llama/Llama-2-7b-chat-hf
+optimum-cli export openvino --model meta-llama/Llama-2-7b-chat-hf --weight-format int8 Llama-2-7b-chat-hf
 ```
-Copy the graph to the model folder. The same graph can be used for a range of LLM models.
+Copy the graph to the model folder. 
 ```bash
 cat graph.pbtxt
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -56,26 +65,27 @@ node: {
   }
 }
 
-cp graph.pbtxt meta-llama/Llama-2-7b-chat-hf/
+cp graph.pbtxt Llama-2-7b-chat-hf/
 
-tree meta-llama/
-meta-llama/
-└── Llama-2-7b-chat-hf
-    ├── config.json
-    ├── generation_config.json
-    ├── graph.pbtxt
-    ├── openvino_detokenizer.bin
-    ├── openvino_detokenizer.xml
-    ├── openvino_model.bin
-    ├── openvino_model.xml
-    ├── openvino_tokenizer.bin
-    ├── openvino_tokenizer.xml
-    ├── special_tokens_map.json
-    ├── tokenizer_config.json
-    ├── tokenizer.json
-    └── tokenizer.model
+tree Llama-2-7b-chat-hf/
+Llama-2-7b-chat-hf
+├── config.json
+├── generation_config.json
+├── graph.pbtxt
+├── openvino_detokenizer.bin
+├── openvino_detokenizer.xml
+├── openvino_model.bin
+├── openvino_model.xml
+├── openvino_tokenizer.bin
+├── openvino_tokenizer.xml
+├── special_tokens_map.json
+├── tokenizer_config.json
+├── tokenizer.json
+└── tokenizer.model
 
 ```
+The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tunned inside the `node_options` section in the `graph.pbtxt` file.
+Note that the `models_path` parameter in the graph file can be an absolute path or relative to the `base_path` from `config.json`.
 
 ## Server configuration
 Prepare config.json:
@@ -86,7 +96,7 @@ cat config.json
     "mediapipe_config_list": [
         {
             "name": "meta-llama/Llama-2-7b-chat-hf",
-            "graph_path": "graph.pbtxt"
+            "base_path": "Llama-2-7b-chat-hf"
         }
     ]
 }
