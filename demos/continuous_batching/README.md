@@ -24,13 +24,14 @@ Here, we will also define the LLM engine parameters inside the `graph.pbtxt`.
 Install python dependencies for the conversion script:
 ```bash
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-python3 -m pip install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
+pip install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
 ```
 
 Run optimum-cli to download and quantize the model:
 ```bash
 cd demos/continuous_batching
-optimum-cli export openvino --model meta-llama/Llama-2-7b-chat-hf --weight-format int8 Llama-2-7b-chat-hf
+optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Llama-2-7b-chat-hf --weight-format int8 Llama-2-7b-chat-hf
+convert_tokenizer -o Llama-2-7b-chat-hf --with-detokenizer --skip-special-tokens --not_add-special-tokens meta-llama/Llama-2-7b-chat-hf
 ```
 Copy the graph to the model folder. 
 ```bash
