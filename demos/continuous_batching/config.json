@@ -3,7 +3,7 @@
     "mediapipe_config_list": [
         {
             "name": "meta-llama/Llama-2-7b-chat-hf",
-            "graph_path": "graph.pbtxt"
+            "base_path": "Llama-2-7b-chat-hf"
         }
     ]
 }
