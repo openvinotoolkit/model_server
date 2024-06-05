@@ -15,7 +15,7 @@ The input json content should be compatible with the `chat/completions` API. Rea
 
 The input also includes a side packet with a reference to LLM_NODE_RESOURCES which is a shared object representing an LLM engine. It loads the model, runs the generation cycles and reports the generated results to the LLM calculator via a generation handler.
 
-On the output the calculator creates an std::string with the json content, which is returned to the client as one response of in chunks with streaming.
+On the output the calculator creates an std::string with the json content, which is returned to the client as one response or in chunks with streaming.
 
 In the backend, LLM engine from LLM_NODE_RESOURCES employs algorithms for efficient generation with high concurrency.
 Thanks to continuous batching and paged attention from a [OpenVINO GenAI Library](https://github.com/mzegla/openvino.genai/tree/request_rate/text_generation/causal_lm/cpp/continuous_batching/library), throughput results are highly optimized.

@@ -58,7 +58,6 @@ We support now the following parameters:
 - model - this name is assigning the request to a graph of the same name
 - messages - user content type is supported as text. Currently it is not allowed to send the image_url in the user message content
 - max_tokens
-- response_format - only `text` is implemented
 - stream
 - temperature
 - top_p
@@ -82,10 +81,11 @@ Not supported parameters:
 - top_logprobs
 - frequency_penalty
 - presence_penalty
+- response_format 
 
 ### Response parameters
 Supported parameters:
-- choices - that includes `finish_reason`, `message.content`, `message.role`, index (always 0 for now)
+- choices - that includes `finish_reason` ((only null and stop reasons, others unsupported)), `message.content`, `message.role`, index (always 0 for now)
 - created - time when the request was received
 - model - model name like specified in the config
 - object - "chat.completion" or "chat.completion.chunk"

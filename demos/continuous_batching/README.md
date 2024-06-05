@@ -23,7 +23,8 @@ Here, we will also define the LLM engine parameters inside the `graph.pbtxt`.
 
 Install python dependencies for the conversion script:
 ```bash
-PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu" python3 -m pip install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+python3 -m pip install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
 ```
 
 Run optimum-cli to download and quantize the model:
@@ -32,6 +33,7 @@ optimum-cli export openvino --model meta-llama/Llama-2-7b-chat-hf --weight-forma
 ```
 Copy the graph to the model folder. 
 ```bash
+cd model_server/demos/continuous_batching
 cat graph.pbtxt
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -204,7 +206,7 @@ cd vllm/benchmarks
 pip install -r ../requirements-cpu.txt
 sed -i -e 's|v1/chat/completions|v3/chat/completions|g' backend_request_func.py  # allow calls to endpoint with v3 instead of v1 like in vLLM
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
-python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Llama-2-7b-chat-hf --dataset ShareGPT_V3_unfiltered_cleaned_split.json  --num-prompts 1000 --request-rate 1
+python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Llama-2-7b-chat-hf --dataset ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate 1
 
 Namespace(backend='openai-chat', version='N/A', base_url=None, host='ov-spr-31.sclab.intel.com', port=8000, endpoint='/v3/chat/completions', dataset='ShareGPT_V3_unfiltered_cleaned_split.json', model='meta-llama/Llama-2-7b-chat-hf', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, request_rate=1.0, seed=0, trust_remote_code=False, disable_tqdm=False, save_result=False)
 Traffic request rate: 1.0
