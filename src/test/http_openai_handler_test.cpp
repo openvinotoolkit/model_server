@@ -14,9 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <map>
 #include <memory>
 #include <string>
-#include <map>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -125,8 +125,8 @@ TEST_F(HttpOpenAIHandlerTest, UnaryWithHeaders) {
             "messages": []
         }
     )";
-    comp.headers.push_back(std::pair<std::string,std::string>("test1","header"));
-    comp.headers.push_back(std::pair<std::string,std::string>("test2","header"));
+    comp.headers.push_back(std::pair<std::string, std::string>("test1", "header"));
+    comp.headers.push_back(std::pair<std::string, std::string>("test2", "header"));
 
     ASSERT_EQ(
         handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer),
