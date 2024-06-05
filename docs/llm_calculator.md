@@ -1,7 +1,7 @@
 # LLM calculator {#ovms_docs_llm_calculator}
 
 LLM calculator included in the OpenVINO Model Server implements a MediaPipe node for text generation.
-It is desinged to run in cycles and return the chunks of reponses to the client.
+It is designed to run in cycles and return the chunks of reponses to the client.
 
 On the input it expects a HttpPayload struct passed by the Model Server frontend:
 ```cpp
@@ -18,7 +18,7 @@ The input also includes a side packet with a reference to LLM_NODE_RESOURCES whi
 On the output the calculator creates an std::string with the json content, which is returned to the client as one response or in chunks with streaming.
 
 In the backend, LLM engine from LLM_NODE_RESOURCES employs algorithms for efficient generation with high concurrency.
-Thanks to continuous batching and paged attention from a [OpenVINO GenAI Library](https://github.com/mzegla/openvino.genai/tree/request_rate/text_generation/causal_lm/cpp/continuous_batching/library), throughput results are highly optimized.
+Thanks to continuous batching and paged attention from a [OpenVINO GenAI Library](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library), throughput results are highly optimized.
 
 
 Here is an example of the MediaPipe graph for chat completions:
