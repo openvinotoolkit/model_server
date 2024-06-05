@@ -29,11 +29,11 @@ python3 -m pip install "optimum-intel[nncf,openvino]"@git+https://github.com/hug
 
 Run optimum-cli to download and quantize the model:
 ```bash
+cd model_server/demos/continuous_batching
 optimum-cli export openvino --model meta-llama/Llama-2-7b-chat-hf --weight-format int8 Llama-2-7b-chat-hf
 ```
 Copy the graph to the model folder. 
 ```bash
-cd model_server/demos/continuous_batching
 cat graph.pbtxt
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
