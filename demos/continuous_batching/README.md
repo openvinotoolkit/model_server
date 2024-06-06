@@ -128,6 +128,7 @@ curl http://localhost:8000/v1/config
   }
  ]
 }
+```
 
 ## Client code
 
