@@ -24,7 +24,7 @@ Here, we will also define the LLM engine parameters inside the `graph.pbtxt`.
 Install python dependencies for the conversion script:
 ```bash
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-pip install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
+pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
 ```
 
 Run optimum-cli to download and quantize the model:
@@ -172,7 +172,7 @@ The endpoint `chat/completions` is compatible with OpenAI client so it can be ea
 
 Install the client library:
 ```bash
-pip install openai
+pip3 install openai
 ```
 
 ```python
@@ -205,7 +205,7 @@ It can be demostrated using benchmarking app from vLLM repository:
 ```bash
 git clone https://github.com/vllm-project/vllm
 cd vllm/benchmarks
-pip install -r ../requirements-cpu.txt
+pip3 install -r ../requirements-cpu.txt
 sed -i -e 's|v1/chat/completions|v3/chat/completions|g' backend_request_func.py  # allow calls to endpoint with v3 instead of v1 like in vLLM
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
 python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Llama-2-7b-chat-hf --dataset ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate 1
