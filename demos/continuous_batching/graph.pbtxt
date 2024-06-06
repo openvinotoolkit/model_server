@@ -15,7 +15,7 @@ node: {
   }
   node_options: {
       [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-          models_path: "/model/ov_model"
+          models_path: "./"
       }
   }
   input_stream_handler {
