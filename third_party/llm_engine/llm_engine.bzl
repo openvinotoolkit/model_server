@@ -20,7 +20,9 @@ def llm_engine():
     new_git_repository(
         name = "llm_engine",
         remote = "https://github.com/atobiszei/openvino.genai",
+        #commit = "templates_branch_old_rapid",
         commit = "347862e61feb339ddcc8192a27e74a8ecd0e50a6",
+        #commit = "62ccb872092f803e7e3f440cdb56a5bd91e4473c",
 #        commit = "20ab985f8798c72e0443d9bc8d335bf772c45dd6", # does not work
 #        commit = "9ebc98b46ee8c9c6a2ad2475d1c7c31b9d959ac9", # works
         #commit = "73ef8f2699611c7058135c1a7a316c4c748bd92e", works with Ilya jinja

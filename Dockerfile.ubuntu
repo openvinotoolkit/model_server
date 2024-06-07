@@ -42,6 +42,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             libxml2-dev \
             patch \
             pkg-config \
+            rapidjson-dev \
             tree \
             wget \
             zlib1g-dev && \
@@ -87,6 +88,7 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.29.3/cmake-3.29.3
 
 WORKDIR /jinja2cpp
 RUN git clone --recursive --branch atobisze_wa_fix_install https://github.com/atobiszei/Jinja2Cpp.git
+RUN cd Jinja2Cpp && git checkout 98a69ee68502d7c186a93870512cf112fdd3fd17 # clone --recursive --branch atobisze_wa_fix_install https://github.com/atobiszei/Jinja2Cpp.git
 WORKDIR /jinja2cpp/Jinja2Cpp/build
 RUN /cmake_new/bin/cmake .. -DCMAKE_INSTALL_PREFIX="./install" -DJINJA2CPP_DEPS_MODE=internal
 #RUN /cmake_new/bin/cmake build .  -j 24 --target install
