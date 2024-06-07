@@ -57,6 +57,7 @@ class OpenAIChatCompletionsRequest {
     std::optional<float> temperature{std::nullopt};
     std::optional<float> topP{std::nullopt};
     std::optional<int> topK{std::nullopt};
+    std::optional<int> seed{std::nullopt};
     std::optional<int> bestOf{std::nullopt};
     // std::optional<bool> useBeamSearch{std::nullopt};
     std::optional<bool> ignoreEOS{std::nullopt};
@@ -99,12 +100,9 @@ public:
             config.top_k = topK.value();
         if (topP.has_value())
             config.top_p = topP.value();
+        if (seed.has_value())
+            config.rng_seed = seed.value();
         config.do_sample = config.temperature > 0.0f && config.group_size == 1;
-        // TODO: rng_seed = ?
-
-        // TODO: bos_token_id = ?
-        // TODO: pad_token_id = ?
-        // TODO: eos_token_id = ?
 
         return config;
     }
@@ -213,16 +211,6 @@ public:
         }
 
         // length_penalty: float; optional - defaults to 1.0
-        // Extension, unsupported by OpenAI however available in vLLM and CB lib
-        it = this->doc.FindMember("diversity_penalty");
-        if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsDouble())
-                return false;
-            this->diversityPenalty = it->value.GetDouble();
-            // TODO: Validate?
-        }
-
-        // length_penalty: float; optional - defaults to 1.0
         // Extension, unsupported by OpenAI API however supported by vLLM and CB lib
         it = this->doc.FindMember("length_penalty");
         if (it != this->doc.MemberEnd()) {
@@ -259,6 +247,15 @@ public:
             if (!it->value.IsInt())
                 return false;
             this->topK = it->value.GetInt();
+            // TODO: Validate?
+        }
+
+        // seed: int; optional - defaults to 0 (not set)
+        it = this->doc.FindMember("seed");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsInt())
+                return false;
+            this->seed = it->value.GetInt();
             // TODO: Validate?
         }
 
@@ -307,7 +304,6 @@ public:
         // logprops TODO
         // top_logprobs TODO
         // response_format TODO
-        // seed TODO
         // stop TODO
         // stream_options TODO
         // tools TODO
