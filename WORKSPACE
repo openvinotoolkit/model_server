@@ -375,8 +375,11 @@ http_archive(
 # RapidJSON
 http_archive(
     name = "com_github_tencent_rapidjson",
-    url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.zip",
-    sha256 = "8e00c38829d6785a2dfb951bb87c6974fa07dfe488aa5b25deec4b8bc0f6a3ab",
+   # url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.zip",
+    #sha256 = "8e00c38829d6785a2dfb951bb87c6974fa07dfe488aa5b25deec4b8bc0f6a3ab",
+    # newer version from jinja2cpp
+    url = "https://github.com/Tencent/rapidjson/archive/973dc9c06dcd3d035ebd039cfb9ea457721ec213.tar.gz",
+    sha256 = "d0c9e52823d493206eb721d38cb3a669ca0212360862bd15a3c2f7d35ea7c6f7",
     strip_prefix = "rapidjson-1.1.0",
     build_file = "@//third_party/rapidjson:BUILD"
 )

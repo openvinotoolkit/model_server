@@ -78,13 +78,15 @@ COMMON_FUZZER_COPTS = [
     "-fprofile-generate",
     "-ftest-coverage",
 ]
+
+
 COMMON_FUZZER_LINKOPTS = [
     "-fprofile-generate",
     "-fsanitize=address",
     "-fsanitize-coverage=trace-pc",
     "-static-libasan",
 ]
-COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE",]
+COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE","RAPIDJSON_HAS_CXX11=TRUE"]
 PYBIND_DEPS = [
     "@python3_linux//:python3-lib",
     "@pybind11//:pybind11_embed",
