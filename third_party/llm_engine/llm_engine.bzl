@@ -90,9 +90,7 @@ cmake(
     out_data_dirs = ["_deps"],
     # linking order
     out_static_libs = [
-            #"libopenvino_continuous_batching.a",
             "lib/libopenvino_continuous_batching.a",
-            #"_deps/jinja2cpp-build/lib/libjinja2cpp.a",
         ],
     install = True,
     tags = ["requires-network"],

@@ -13,11 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+load("@ovms//:distro.bzl", "distro_flag")
 cc_library(
    name = "libjinja2cpp",
-   srcs = [
-      "static/libjinja2cpp.a",
-   ],
+   srcs = select({
+            "@ovms//:ubuntu_build": [
+               "lib/static/libjinja2cpp.a",
+            ],
+            "@ovms//:redhat_build": [
+               "lib64/static/libjinja2cpp.a",
+            ],
+        }),
    visibility = ["//visibility:public"],
 )

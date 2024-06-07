@@ -90,7 +90,7 @@ WORKDIR /jinja2cpp
 RUN git clone --recursive --branch atobisze_wa_fix_install https://github.com/atobiszei/Jinja2Cpp.git
 RUN cd Jinja2Cpp && git checkout 98a69ee68502d7c186a93870512cf112fdd3fd17 # clone --recursive --branch atobisze_wa_fix_install https://github.com/atobiszei/Jinja2Cpp.git
 WORKDIR /jinja2cpp/Jinja2Cpp/build
-RUN /cmake_new/bin/cmake .. -DCMAKE_INSTALL_PREFIX="./install" -DJINJA2CPP_DEPS_MODE=internal
+RUN /cmake_new/bin/cmake .. -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_INSTALL_PREFIX="./install" -DJINJA2CPP_DEPS_MODE=internal
 #RUN /cmake_new/bin/cmake build .  -j 24 --target install
 #RUN /cmake_new/bin/cmake --install .
 RUN /cmake_new/bin/cmake --build . --config Release  --verbose -- VERBOSE=1 -j 12

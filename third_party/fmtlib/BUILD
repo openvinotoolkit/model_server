@@ -18,24 +18,6 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-cc_library(
-    name = "fmtlib2",
-    srcs = glob([
-        "src/*.cc",
-    ]),
-    hdrs = glob([
-        "include/fmt/*.h",
-    ]),
-    includes = [
-        "include/",
-    ],
-    visibility = ["//visibility:public"],
-    defines = ["FMT_HEADER_ONLY"],
-
-    alwayslink = 1,
-        )
-
-
 filegroup(
     name = "all_srcs",
     srcs = glob(["**"]),
@@ -107,9 +89,14 @@ cmake(
 
 cc_library(
     name = "fmtlib",
-    deps = [
-        ":fmtlib_cmake_ubuntu",
-    ],
+    deps =  select({
+            "@ovms//:ubuntu_build": [
+                ":fmtlib_cmake_ubuntu",
+            ],
+            "@ovms//:redhat_build": [
+                ":fmtlib_cmake_redhat",
+            ],
+        }),
     visibility = ["//visibility:public"],
     alwayslink = False,
 )

@@ -298,9 +298,6 @@ rules_pkg_dependencies()
 load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
 
-load("@//third_party/jinja2cpp:jinja2cpp.bzl", "jinja2cpp")
-jinja2cpp()
-
 load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
 
@@ -325,9 +322,10 @@ new_local_repository(
     path = "/usr/local/lib/",
     build_file = "@//third_party/boost:BUILD"
 )
+
 new_local_repository(
     name = "Jinja2Cpp",
-    path = "/jinja2cpp/Jinja2Cpp/build/install/lib",
+    path = "/jinja2cpp/Jinja2Cpp/build/install/",
     build_file = "@//third_party/Jinja2Cpp:BUILD"
 )
 
@@ -370,18 +368,6 @@ http_archive(
     sha256 = "25b644a2bfa9c6704d723be51b026bc02420dfdee1277a49bfe5df3f19b0eaa4",
     strip_prefix = "cxxopts-3.1.1",
     build_file = "@//third_party/cxxopts:BUILD",
-)
-
-# RapidJSON
-http_archive(
-    name = "com_github_tencent_rapidjson",
-   # url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.zip",
-    #sha256 = "8e00c38829d6785a2dfb951bb87c6974fa07dfe488aa5b25deec4b8bc0f6a3ab",
-    # newer version from jinja2cpp
-    url = "https://github.com/Tencent/rapidjson/archive/973dc9c06dcd3d035ebd039cfb9ea457721ec213.tar.gz",
-    sha256 = "d0c9e52823d493206eb721d38cb3a669ca0212360862bd15a3c2f7d35ea7c6f7",
-    strip_prefix = "rapidjson-1.1.0",
-    build_file = "@//third_party/rapidjson:BUILD"
 )
 
 # spdlog
