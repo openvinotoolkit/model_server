@@ -94,6 +94,7 @@ void LLMNodeResources::initiateGeneration() {
 }
 
 void LLMNodeResources::notifyExecutorThread() {
+    OVMS_PROFILE_FUNCTION();
     llmExecutorWrapper->notifyNewRequestArrived();
 }
 

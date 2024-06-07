@@ -25,6 +25,7 @@
 #include <continuous_batching_pipeline.hpp>
 
 #include "../logging.hpp"
+#include "../profiler.hpp"
 
 namespace ovms {
 struct LLMExecutor {
@@ -42,6 +43,7 @@ struct LLMExecutor {
     }
 
     void step() {
+        OVMS_PROFILE_FUNCTION();
         pipe->step();
     }
 

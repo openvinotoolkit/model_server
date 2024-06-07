@@ -52,6 +52,7 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "prediction_service_utils.hpp"
+#include "profiler.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
 #include "servablemanagermodule.hpp"
@@ -197,6 +198,7 @@ void HttpRestApiHandler::registerAll() {
     });
 
     registerHandler(OAI_ChatCompletion, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) -> Status {
+        OVMS_PROFILE_FUNCTION();
         return processOAIChatCompletionsRequest(request_components, response, request_body, serverReaderWriter);
     });
     registerHandler(Metrics, [this](const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
@@ -457,46 +459,53 @@ Status HttpRestApiHandler::dispatchToProcessor(
 
 Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
 #if (MEDIAPIPE_DISABLE == 0)
+    OVMS_PROFILE_FUNCTION();
     HttpPayload request;
     Document doc;
-    doc.Parse(request_body.c_str());
-    if (doc.HasParseError()) {
-        return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
-    }
-
-    if (!doc.IsObject()) {
-        return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
-    }
-
-    auto modelNameIt = doc.FindMember("model");
-    if (modelNameIt == doc.MemberEnd()) {
-        return Status(StatusCode::JSON_INVALID, "\"model\" field is missing in JSON body");
-    }
-
-    if (!modelNameIt->value.IsString()) {
-        return Status(StatusCode::JSON_INVALID, "\"model\" field is not a string");
-    }
-
-    const std::string model_name = modelNameIt->value.GetString();
-
-    bool streamFieldVal = false;
-    auto streamIt = doc.FindMember("stream");
-    if (streamIt != doc.MemberEnd()) {
-        if (!streamIt->value.IsBool()) {
-            return Status(StatusCode::JSON_INVALID, "\"stream\" field is not a boolean");
-        }
-        streamFieldVal = streamIt->value.GetBool();
-    }
-
     std::shared_ptr<MediapipeGraphExecutor> executor;
-    auto status = this->modelManager.createPipeline(executor, model_name);
-    if (!status.ok()) {
-        return status;
+    bool streamFieldVal = false;
+    {
+        OVMS_PROFILE_SCOPE("rapidjson parse body");
+        doc.Parse(request_body.c_str());
     }
-    // TODO: Possibly avoid making copy
-    request.headers = request_components.headers;
-    request.body = request_body;
-    request.parsedJson = &doc;
+    {
+        OVMS_PROFILE_SCOPE("rapidjson validate");
+        if (doc.HasParseError()) {
+            return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
+        }
+
+        if (!doc.IsObject()) {
+            return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
+        }
+
+        auto modelNameIt = doc.FindMember("model");
+        if (modelNameIt == doc.MemberEnd()) {
+            return Status(StatusCode::JSON_INVALID, "\"model\" field is missing in JSON body");
+        }
+
+        if (!modelNameIt->value.IsString()) {
+            return Status(StatusCode::JSON_INVALID, "\"model\" field is not a string");
+        }
+
+        const std::string model_name = modelNameIt->value.GetString();
+
+        auto streamIt = doc.FindMember("stream");
+        if (streamIt != doc.MemberEnd()) {
+            if (!streamIt->value.IsBool()) {
+                return Status(StatusCode::JSON_INVALID, "\"stream\" field is not a boolean");
+            }
+            streamFieldVal = streamIt->value.GetBool();
+        }
+
+        auto status = this->modelManager.createPipeline(executor, model_name);
+        if (!status.ok()) {
+            return status;
+        }
+        // TODO: Possibly avoid making copy
+        request.headers = request_components.headers;
+        request.body = request_body;
+        request.parsedJson = &doc;
+    }
     if (streamFieldVal == false) {
         ServableMetricReporter* smr = nullptr;                                                         // Unused
         ExecutionContext ec{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};  // Unused
@@ -505,7 +514,7 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        status = executor->inferStream(request, *serverReaderWriter);
+        auto status = executor->inferStream(request, *serverReaderWriter);
         if (!status.ok()) {
             sendErrorImpl(status.string(), *serverReaderWriter);
         }

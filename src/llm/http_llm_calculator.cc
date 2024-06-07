@@ -30,6 +30,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
+#include "../profiler.hpp"
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
 
@@ -46,29 +47,73 @@ class OpenAIChatCompletionsRequest {
     chat_t messages;
     bool stream{false};
     std::string model;
-    float frequencyPenalty{0.0f};
-    std::optional<int64_t> maxTokens{std::nullopt};
-    float presencePenalty{0.0f};
-    float temperature{1.0f};
-    float topP{1.0f};
+    std::optional<int> maxTokens{std::nullopt};
+    // float frequencyPenalty{0.0f};
+    // float presencePenalty{0.0f};
+    std::optional<float> diversityPenalty{std::nullopt};
+    std::optional<float> repetitionPenalty{std::nullopt};
+    std::optional<float> lengthPenalty{std::nullopt};
+    std::optional<int> numReturnSequences{std::nullopt};
+    std::optional<float> temperature{std::nullopt};
+    std::optional<float> topP{std::nullopt};
+    std::optional<int> topK{std::nullopt};
+    std::optional<int> seed{std::nullopt};
+    std::optional<int> bestOf{std::nullopt};
+    // std::optional<bool> useBeamSearch{std::nullopt};
+    std::optional<bool> ignoreEOS{std::nullopt};
 
 public:
     OpenAIChatCompletionsRequest(Document& doc) :
         doc(doc) {}
 
+    GenerationConfig createGenerationConfig() const {
+        GenerationConfig config;
+
+        // Generic
+        if (maxTokens.has_value())
+            config.max_new_tokens = maxTokens.value();
+        // TODO: max_length = ?
+        if (ignoreEOS.has_value())
+            config.ignore_eos = ignoreEOS.value();
+
+        // Beam search specific
+        config.num_groups = 1;  // OpenAI hardcoded
+        if (bestOf.has_value())
+            config.group_size = bestOf.value();
+        if (diversityPenalty.has_value())
+            config.diversity_penalty = diversityPenalty.value();  // TODO: Not available in OpenAI nor vLLM
+        // TODO: stop_criteria = ?
+        if (numReturnSequences.has_value())
+            config.num_return_sequences = numReturnSequences.value();
+        if (repetitionPenalty.has_value())
+            config.repetition_penalty = repetitionPenalty.value();
+        if (lengthPenalty.has_value())
+            config.length_penalty = lengthPenalty.value();
+        // TODO: no_repeat_ngram_size = ?
+        // TODO: early_finish = ?
+        // TODO use_beam_search is unused ?
+
+        // Multinomial specific
+        if (temperature.has_value())
+            config.temperature = temperature.value();
+        if (topK.has_value())
+            config.top_k = topK.value();
+        if (topP.has_value())
+            config.top_p = topP.value();
+        if (seed.has_value())
+            config.rng_seed = seed.value();
+        config.do_sample = config.temperature > 0.0f && config.group_size == 1;
+
+        return config;
+    }
+
     chat_t getMessages() const { return this->messages; }
     bool isStream() const { return this->stream; }
     std::string getModel() const { return this->model; }
-    float getFrequencyPenalty() const { return this->frequencyPenalty; }
-    const std::optional<int64_t>& getMaxTokens() const { return this->maxTokens; }
-    float getPresencePenalty() const { return this->presencePenalty; }
-    float getTemperature() const { return this->temperature; }
-    float getTopP() const { return this->topP; }
-    // getTopK ?
-    //
 
     // TODO: Use exceptions to sneak error mesages into response
     bool parse() {
+        OVMS_PROFILE_FUNCTION();
         // stream: bool; optional
         if (!this->doc.IsObject())
             return false;
@@ -111,16 +156,6 @@ public:
             return false;
         }
 
-        // frequency_penalty: float; optional - defaults to 0
-        it = this->doc.FindMember("frequency_penalty");
-        if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsDouble())
-                return false;
-            this->frequencyPenalty = it->value.GetDouble();
-            if (this->frequencyPenalty < -2.0f || this->frequencyPenalty > 2.0f)
-                return false;
-        }
-
         // max_tokens: int; optional
         it = this->doc.FindMember("max_tokens");
         if (it != this->doc.MemberEnd()) {
@@ -131,17 +166,61 @@ public:
                 return false;
         }
 
-        // presence_penalty: float; optional - defaults to 0
-        it = this->doc.FindMember("presence_penalty");
+        // TODO: Supported by OpenAI and vLLM, however unsupported by CB lib
+        // // frequency_penalty: float; optional - defaults to 0
+        // it = this->doc.FindMember("frequency_penalty");
+        // if (it != this->doc.MemberEnd()) {
+        //     return false;  // TODO: Unsupported by CB
+        //     if (!it->value.IsDouble())
+        //         return false;
+        //     this->frequencyPenalty = it->value.GetDouble();
+        //     if (this->frequencyPenalty < -2.0f || this->frequencyPenalty > 2.0f)
+        //         return false;
+        // }
+
+        // TODO: Supported by OpenAI and vLLM, however unsupported by CB lib
+        // // presence_penalty: float; optional - defaults to 0
+        // it = this->doc.FindMember("presence_penalty");
+        // if (it != this->doc.MemberEnd()) {
+        //     return false;  // TODO: Unsupported by CB
+        //     if (!it->value.IsDouble())
+        //         return false;
+        //     this->presencePenalty = it->value.GetDouble();
+        //     if (this->presencePenalty < -2.0f || this->presencePenalty > 2.0f)
+        //         return false;
+        // }
+
+        // repetition_penalty: float; optional - defaults to 1.0
+        // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
+        it = this->doc.FindMember("repetition_penalty");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
                 return false;
-            this->presencePenalty = it->value.GetDouble();
-            if (this->presencePenalty < -2.0f || this->presencePenalty > 2.0f)
-                return false;
+            this->repetitionPenalty = it->value.GetDouble();
+            // TODO: Validate?
         }
 
-        // temperature: float; optional - defaults to 1
+        // diversity_penalty: float; optional - defaults to 1.0
+        // Extension, unsupported by OpenAI API and vLLM, however available in CB lib
+        it = this->doc.FindMember("diversity_penalty");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsDouble())
+                return false;
+            this->diversityPenalty = it->value.GetDouble();
+            // TODO: Validate?
+        }
+
+        // length_penalty: float; optional - defaults to 1.0
+        // Extension, unsupported by OpenAI API however supported by vLLM and CB lib
+        it = this->doc.FindMember("length_penalty");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsDouble())
+                return false;
+            this->lengthPenalty = it->value.GetDouble();
+            // TODO: Validate?
+        }
+
+        // temperature: float; optional - defaults to 0.0 (different than OpenAI which is 1.0)
         it = this->doc.FindMember("temperature");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
@@ -161,12 +240,70 @@ public:
                 return false;
         }
 
+        // top_k: int; optional - defaults to 0
+        // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
+        it = this->doc.FindMember("top_k");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsInt())
+                return false;
+            this->topK = it->value.GetInt();
+            // TODO: Validate?
+        }
+
+        // seed: int; optional - defaults to 0 (not set)
+        it = this->doc.FindMember("seed");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsInt())
+                return false;
+            this->seed = it->value.GetInt();
+            // TODO: Validate?
+        }
+
+        // best_of: int; optional - defaults to 1
+        // Extension, unsupported by OpenAI API, however supported by vLLM, supported in CB lib by mapping to group_size param
+        it = this->doc.FindMember("best_of");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsInt())
+                return false;
+            this->bestOf = it->value.GetInt();
+            // TODO: Validate?
+        }
+
+        // n: int; optional - defaults to 1
+        // Supported by OpenAI API and vLLM, supported in CB lib by mapping to num_return_sequences param
+        it = this->doc.FindMember("n");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsInt())
+                return false;
+            this->numReturnSequences = it->value.GetInt();
+            // TODO: Validate?
+        }
+
+        // use_beam_search: bool; optional - defaults to false
+        // Extension from vLLM, unsupported by OpenAI API, not available directly in CB lib
+        // Use best_of>1 to steer into beams earch
+        // it = this->doc.FindMember("use_beam_search");
+        // if (it != this->doc.MemberEnd()) {
+        //     if (!it->value.IsBool())
+        //         return false;
+        //     this->useBeamSearch = it->value.GetBool();
+        // }
+
+        // ignore_eos: bool; optional - defaults to false
+        // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
+        it = this->doc.FindMember("ignore_eos");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsBool())
+                return false;
+            this->ignoreEOS = it->value.GetBool();
+        }
+
+        return true;
+
         // logit_bias TODO
         // logprops TODO
         // top_logprobs TODO
-        // n TODO
         // response_format TODO
-        // seed TODO
         // stop TODO
         // stream_options TODO
         // tools TODO
@@ -174,7 +311,6 @@ public:
         // user TODO
         // function_call TODO (deprecated)
         // functions TODO (deprecated)
-        return true;
     }
 };
 
@@ -231,6 +367,7 @@ class HttpLLMCalculator : public CalculatorBase {
     std::chrono::time_point<std::chrono::system_clock> created;
 
     std::string serializeUnaryResponse(const std::string& completeResponse);
+    std::string serializeUnaryResponse(const std::vector<std::string>& completeResponse);
     std::string serializeStreamingChunk(const std::string& chunkResponse, bool stop);
 
 public:
@@ -246,11 +383,13 @@ public:
     }
 
     absl::Status Close(CalculatorContext* cc) final {
+        OVMS_PROFILE_FUNCTION();
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Close";
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
+        OVMS_PROFILE_FUNCTION();
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Open start";
         ovms::LLMNodeResourcesMap nodeResourcesMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::LLMNodeResourcesMap>();
         auto it = nodeResourcesMap.find(cc->NodeName());
@@ -260,11 +399,8 @@ public:
         return absl::OkStatus();
     }
 
-    // TODO: Support all samplings:
-    // greedy (no params)
-    // beam-search (num groups, num beams, penalties)
-    // random sampling - in-progress (top-p top-k)
     absl::Status Process(CalculatorContext* cc) final {
+        OVMS_PROFILE_FUNCTION();
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process start";
         RET_CHECK(this->nodeResources != nullptr);
 
@@ -275,6 +411,7 @@ public:
 
         // First iteration of Process()
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
+            OVMS_PROFILE_SCOPE("Deserialization of first request");
             // Check if we did not receive the payload twice
             RET_CHECK(this->request == nullptr);
             RET_CHECK(this->generationHandle == nullptr);
@@ -295,15 +432,13 @@ public:
 
             std::string prompt = this->request->getMessages()[0]["content"];
 
-            // TODO: Support other samplings
-            // TODO: Pass more params from request
-            GenerationConfig config = GenerationConfig::greedy();
-            config.max_new_tokens = this->request->getMaxTokens().value_or(30);
-            config.ignore_eos = false;
-            this->generationHandle = nodeResources->cbPipe->add_request(
-                0 /*to be removed from API?*/,
-                prompt /* to be replaced with chat*/,
-                config);
+            {
+                OVMS_PROFILE_SCOPE("pipeline->add_request()");
+                this->generationHandle = nodeResources->cbPipe->add_request(
+                    0 /*to be removed from API?*/,
+                    prompt /* to be replaced with chat*/,
+                    this->request->createGenerationConfig());
+            }
             nodeResources->notifyExecutorThread();
             this->streamer = std::make_shared<TextStreamer>(
                 nodeResources->cbPipe->get_tokenizer());
@@ -315,22 +450,41 @@ public:
 
         // Unary scenario
         if (!this->request->isStream()) {
+            OVMS_PROFILE_SCOPE("Unary generation cycle");
             std::vector<GenerationOutput> generationOutput = this->generationHandle->read_all();
-            RET_CHECK(generationOutput.size() == 1);
 
-            std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
-            std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
-            std::string completion = tokenizer->decode(tokens);
+            RET_CHECK(generationOutput.size() >= 1);
+            // legacy
+            if (generationOutput.size() == 1) {
+                std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
+                std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
+                std::string completion = tokenizer->decode(tokens);
 
-            std::string response = serializeUnaryResponse(tokenizer->decode(tokens));
-            LOG(INFO) << "Complete unary response: " << response;
-            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
+                std::string response = serializeUnaryResponse(tokenizer->decode(tokens));
+                LOG(INFO) << "Complete unary response: " << response;
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
+            } else {
+                // Beam search only supported for unary
+                std::vector<std::string> completions;
+                for (GenerationOutput& out : generationOutput) {
+                    std::vector<int64_t> tokens = out.generated_token_ids;
+                    std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
+                    std::string completion = tokenizer->decode(tokens);
+                    completions.emplace_back(completion);
+                }
+
+                std::string response = serializeUnaryResponse(completions);
+                LOG(INFO) << "Complete unary response: " << response;
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
+            }
         } else {
+            OVMS_PROFILE_SCOPE("Stream generation cycle");
             // Streaming scenario
             // Each iteration is single execution of Process() method
 
             // Last iteration
             if (this->generationHandle->get_status() == GenerationStatus::FINISHED) {
+                OVMS_PROFILE_SCOPE("Generation of last streaming response");
                 std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true));
                 response += packIntoServerSideEventMessage("[DONE]");
                 LOG(INFO) << "Partial response (generation finished): " << response;
@@ -338,6 +492,7 @@ public:
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             } else {
                 // Subsequent iteration
+                OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
                 GenerationOutputs generationOutputs = this->generationHandle->read();
                 RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
                 RET_CHECK(generationOutputs.begin()->second.generated_token_ids.size() == 1);
@@ -363,9 +518,12 @@ public:
     }
 };
 
-// TODO: Different samplings may produce multiple generations.
-// Consider switching from string to vector<string>?
 std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& completeResponse) {
+    return serializeUnaryResponse(std::vector<std::string>{completeResponse});
+}
+
+std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::string>& completeResponses) {
+    OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
 
@@ -373,38 +531,41 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& complet
 
     // choices: array of size N, where N is related to n request parameter
     writer.String("choices");
-    writer.StartArray();   // [
-    writer.StartObject();  // {
-    // finish_reason: string; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)
-    // "stop" => natural stop point due to stopping criteria <---------------- the only used so far, remaining are TODO
-    // "length" => due to reaching max_tokens parameter TODO
-    // "content_filter" => when produced restricted output
-    // "tool_calls" => generation stopped and waiting for tool output
-    // "function_call" => deprecated
-    writer.String("finish_reason");
-    writer.String("stop");
-    // index: integer; Choice index, only n=1 supported anyway
-    writer.String("index");
-    writer.Int(0);
-    // logprobs: object/null; Log probability information for the choice. TODO
-    writer.String("logprobs");
-    writer.Null();
-    // message: object
-    writer.String("message");
-    writer.StartObject();  // {
-    // content: string; Actual content of the text produced
-    writer.String("content");
-    writer.String(completeResponse.c_str());
-    // role: string; Role of the text producer
-    // Will make sense once we have chat templates? TODO(atobisze)
-    writer.String("role");
-    writer.String("assistant");  // TODO - hardcoded
-    // TODO: tools_call
-    // TODO: function_call (deprecated)
-    writer.EndObject();  // }
+    writer.StartArray();  // [
+    int i = 0;
+    for (const std::string& completeResponse : completeResponses) {
+        writer.StartObject();  // {
+        // finish_reason: string; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)
+        // "stop" => natural stop point due to stopping criteria <---------------- the only used so far, remaining are TODO
+        // "length" => due to reaching max_tokens parameter TODO
+        // "content_filter" => when produced restricted output
+        // "tool_calls" => generation stopped and waiting for tool output
+        // "function_call" => deprecated
+        writer.String("finish_reason");
+        writer.String("stop");
+        // index: integer; Choice index, only n=1 supported anyway
+        writer.String("index");
+        writer.Int(i++);
+        // logprobs: object/null; Log probability information for the choice. TODO
+        writer.String("logprobs");
+        writer.Null();
+        // message: object
+        writer.String("message");
+        writer.StartObject();  // {
+        // content: string; Actual content of the text produced
+        writer.String("content");
+        writer.String(completeResponse.c_str());
+        // role: string; Role of the text producer
+        // Will make sense once we have chat templates? TODO(atobisze)
+        writer.String("role");
+        writer.String("assistant");  // TODO - hardcoded
+        // TODO: tools_call
+        // TODO: function_call (deprecated)
+        writer.EndObject();  // }
 
-    writer.EndObject();  // }
-    writer.EndArray();   // ]
+        writer.EndObject();  // }
+    }
+    writer.EndArray();  // ]
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
     writer.String("created");
@@ -434,6 +595,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& complet
 }
 
 std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkResponse, bool stop) {
+    OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
 
