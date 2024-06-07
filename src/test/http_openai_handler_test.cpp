@@ -103,10 +103,10 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor("/v3/test/", requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
 
-    ASSERT_EQ(response, requestBody + std::string{"0"});
+    ASSERT_EQ(response, "/v3/test/\n" + requestBody + std::string{"0"});
 }
 
 TEST_F(HttpOpenAIHandlerTest, Stream) {
@@ -123,7 +123,7 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
 
     ASSERT_EQ(response, "");
@@ -136,7 +136,7 @@ TEST_F(HttpOpenAIHandlerTest, BodyNotAJson) {
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
-    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - Cannot parse JSON body");
 }
@@ -148,7 +148,7 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
-    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body must be an object");
 }
@@ -165,7 +165,7 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldMissing) {
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
-    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - \"model\" field is missing in JSON body");
 }
@@ -183,7 +183,7 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldNotAString) {
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
-    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - \"model\" field is not a string");
 }
@@ -201,7 +201,7 @@ TEST_F(HttpOpenAIHandlerTest, StreamFieldNotABoolean) {
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
-    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - \"stream\" field is not a boolean");
 }
@@ -219,7 +219,7 @@ TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
-    auto status = handler->dispatchToProcessor(requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
 }
 

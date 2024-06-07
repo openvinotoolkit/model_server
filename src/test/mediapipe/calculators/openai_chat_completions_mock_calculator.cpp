@@ -62,7 +62,8 @@ public:
         }
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             auto data = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();  // TODO: Possibly avoid making copy
-            this->body = data.body;
+            this->body = data.uri;
+            this->body += std::string{"\n"} + data.body;
         }
 
         this->body += std::to_string(timestamp.Value());
