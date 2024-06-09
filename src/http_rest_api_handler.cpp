@@ -514,7 +514,7 @@ Status HttpRestApiHandler::processOAIChatCompletionsRequest(const HttpRequestCom
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        status = executor->inferStream(*(request.release()), *serverReaderWriter);
+        auto status = executor->inferStream(*(request.release()), *serverReaderWriter);
         if (!status.ok()) {
             sendErrorImpl(status.string(), *serverReaderWriter);
         }
