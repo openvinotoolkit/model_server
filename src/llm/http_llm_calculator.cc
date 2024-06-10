@@ -38,6 +38,12 @@ using namespace rapidjson;
 
 namespace mediapipe {
 
+enum Endpoint {
+    CHAT_COMPLETIONS,
+    COMPLETIONS,
+    UNDEFINED
+};
+
 using chat_entry_t = std::unordered_map<std::string, std::string>;
 using chat_t = std::vector<chat_entry_t>;
 
@@ -62,7 +68,7 @@ class OpenAIChatCompletionsRequest {
     // std::optional<bool> useBeamSearch{std::nullopt};
     std::optional<bool> ignoreEOS{std::nullopt};
     std::optional<std::string> prompt{std::nullopt};
-    std::string uri{""};
+    Endpoint endpoint{UNDEFINED};
 
 public:
     OpenAIChatCompletionsRequest(Document& doc) :
@@ -110,8 +116,8 @@ public:
     }
 
     chat_t getMessages() const { return this->messages;};
-    std::string getUri() const { return this->uri; }
-    void setUri(std::string uri) { this->uri = uri; }
+    Endpoint getEndpoint() const { return this->endpoint; }
+    void setEndpoint(Endpoint endpoint) { this->endpoint = endpoint; }
     std::string getPrompt() const { 
         if (this->prompt.has_value()) {
             return this->prompt.value();
@@ -124,7 +130,7 @@ public:
     std::string getModel() const { return this->model; }
 
     // TODO: Use exceptions to sneak error messages into response
-    bool parse() {
+    bool parse( Endpoint endpoint) {
         OVMS_PROFILE_FUNCTION();
         // stream: bool; optional
         if (!this->doc.IsObject())
@@ -137,34 +143,38 @@ public:
         }
 
         // messages: [{role: content}, {role: content}, ...]; required
-        it = doc.FindMember("messages");
-        //if (it == doc.MemberEnd())
-        //    return false;
-        //if (!it->value.IsArray())
-        //    return false;
-        this->messages.clear();
-        this->messages.reserve(it->value.GetArray().Size());
-        for (int i = 0; i < it->value.GetArray().Size(); i++) {
-            const auto& obj = it->value.GetArray()[i];
-            if (!obj.IsObject())
+        if (endpoint == CHAT_COMPLETIONS){
+            it = doc.FindMember("messages");
+            if (it == doc.MemberEnd())
                 return false;
-            auto& chat = this->messages.emplace_back(chat_entry_t{});
-            for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
-                if (!member->name.IsString())
+            if (!it->value.IsArray())
+                return false;
+            this->messages.clear();
+            this->messages.reserve(it->value.GetArray().Size());
+            for (int i = 0; i < it->value.GetArray().Size(); i++) {
+                const auto& obj = it->value.GetArray()[i];
+                if (!obj.IsObject())
                     return false;
-                if (!member->value.IsString())
-                    return false;
-                chat[member->name.GetString()] = member->value.GetString();
+                auto& chat = this->messages.emplace_back(chat_entry_t{});
+                for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
+                    if (!member->name.IsString())
+                        return false;
+                    if (!member->value.IsString())
+                        return false;
+                    chat[member->name.GetString()] = member->value.GetString();
+                }
             }
         }
 
         // prompt: string
-        it = this->doc.FindMember("prompt");
-        if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsString()){
-                return false;
-            }else {
-                this->prompt = it->value.GetString();
+        if (endpoint == COMPLETIONS){
+            it = this->doc.FindMember("prompt");
+            if (it != this->doc.MemberEnd()) {
+                if (!it->value.IsString()){
+                    return false;
+                }else {
+                    this->prompt = it->value.GetString();
+                }
             }
         }
         // model: string; required
@@ -387,9 +397,9 @@ class HttpLLMCalculator : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
 
-    std::string serializeUnaryResponse(const std::string& completeResponse, const std::string uri);
-    std::string serializeUnaryResponse(const std::vector<std::string>& completeResponse, std::string uri);
-    std::string serializeStreamingChunk(const std::string& chunkResponse, bool stop, const std::string uri);
+    std::string serializeUnaryResponse(const std::string& completeResponse, Endpoint endpoint);
+    std::string serializeUnaryResponse(const std::vector<std::string>& completeResponse, Endpoint endpoint);
+    std::string serializeStreamingChunk(const std::string& chunkResponse, bool stop, Endpoint endpoint);
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -443,18 +453,26 @@ public:
             InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
             LOG(INFO) << "Request body: " << payload.body;
             LOG(INFO) << "Request uri: " << payload.uri;
+            Endpoint endpoint;
+            if (payload.uri == "/v3/chat/completions"){
+                endpoint = CHAT_COMPLETIONS;
+            } else if (payload.uri == "/v3/completions"){
+                endpoint = COMPLETIONS;
+            } else {
+                endpoint = UNDEFINED;
+            }
 
             this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson);
 
             // TODO: Support chat scenario once atobisze adds that to CB library
-            RET_CHECK(this->request->parse());  // TODO: try catch and expose error message
+            RET_CHECK(this->request->parse(endpoint));  // TODO: try catch and expose error message
 
             std::string prompt;
-            if (payload.uri == "/v3/chat/completions"){
+            if (endpoint == CHAT_COMPLETIONS){
                 RET_CHECK(this->request->getMessages().size() >= 1);
                 RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
                 prompt = this->request->getMessages()[0]["content"];        
-            }else if (payload.uri == "/v3/completions"){
+            }else if (endpoint == COMPLETIONS){
                 RET_CHECK(this->request->getPrompt() != "");
                 prompt = this->request->getPrompt();
             }else {
@@ -470,7 +488,7 @@ public:
             nodeResources->notifyExecutorThread();
             this->streamer = std::make_shared<TextStreamer>(
                 nodeResources->cbPipe->get_tokenizer());
-            this->request->setUri(payload.uri);
+            this->request->setEndpoint(endpoint);
         }
 
         RET_CHECK(this->generationHandle != nullptr);
@@ -489,7 +507,7 @@ public:
                 std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
                 std::string completion = tokenizer->decode(tokens);
 
-                std::string response = serializeUnaryResponse(tokenizer->decode(tokens), this->request->getUri());
+                std::string response = serializeUnaryResponse(tokenizer->decode(tokens), this->request->getEndpoint());
                 LOG(INFO) << "Complete unary response: " << response;
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             } else {
@@ -502,7 +520,7 @@ public:
                     completions.emplace_back(completion);
                 }
 
-                std::string response = serializeUnaryResponse(completions, this->request->getUri());
+                std::string response = serializeUnaryResponse(completions, this->request->getEndpoint());
                 LOG(INFO) << "Complete unary response: " << response;
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             }
@@ -514,7 +532,7 @@ public:
             // Last iteration
             if (this->generationHandle->get_status() == GenerationStatus::FINISHED) {
                 OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true, this->request->getUri()));
+                std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true, this->request->getEndpoint()));
                 response += packIntoServerSideEventMessage("[DONE]");
                 LOG(INFO) << "Partial response (generation finished): " << response;
                 // Produce last message, but do not produce loopback packets anymore so this is last Process() call
@@ -531,8 +549,8 @@ public:
                 auto chunk = this->streamer->put(token);
                 if (chunk.has_value()) {
                     std::string response = packIntoServerSideEventMessage(
-                        serializeStreamingChunk(chunk.value(), false, this->request->getUri()));
-                    LOG(INFO) << "Partial response (continue): " << response << "URI " << this->request->getUri();
+                        serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint()));
+                    LOG(INFO) << "Partial response (continue): " << response ;
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 }
                 // Continue the loop
@@ -547,11 +565,11 @@ public:
     }
 };
 
-std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& completeResponse, std::string uri) {
-    return serializeUnaryResponse(std::vector<std::string>{completeResponse}, uri);
+std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& completeResponse, Endpoint endpoint) {
+    return serializeUnaryResponse(std::vector<std::string>{completeResponse}, endpoint);
 }
 
-std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::string>& completeResponses, std::string uri) {
+std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::string>& completeResponses, Endpoint endpoint) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -579,7 +597,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
         writer.String("logprobs");
         writer.Null();
         // message: object
-        if (uri == "/v3/chat/completions"){
+        if (endpoint == CHAT_COMPLETIONS){
             writer.String("message");
             writer.StartObject();  // {
             // content: string; Actual content of the text produced
@@ -592,7 +610,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
             // TODO: tools_call
             // TODO: function_call (deprecated)
             writer.EndObject();  // }
-        }else if (uri == "/v3/completions"){
+        }else if (endpoint == COMPLETIONS){
             writer.String("text");
             writer.String(completeResponse.c_str());
         }
@@ -610,10 +628,10 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     writer.String(this->request->getModel().c_str());
 
     // object: string; defined that the type is unary rather than streamed chunk
-    if (uri == "/v3/chat/completions"){
+    if (endpoint == CHAT_COMPLETIONS){
         writer.String("object");
         writer.String("chat.completion");
-    } else if (uri == "/v3/completions"){
+    } else if (endpoint == COMPLETIONS){
         writer.String("object");
         writer.String("text_completion");
     }
@@ -633,7 +651,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     return buffer.GetString();
 }
 
-std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkResponse, bool stop, std::string uri) {
+std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkResponse, bool stop, Endpoint endpoint) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -663,26 +681,24 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     // logprobs: object/null; Log probability information for the choice. TODO
     writer.String("logprobs");
     writer.Null();
-
-    writer.String("delta");
-    writer.StartObject();  // {
-    // content: string; Actual content of the text produced
-    
-        // delta: object
-    if (!stop) {
-        if (uri == "/v3/chat/completions"){
+    if (endpoint == CHAT_COMPLETIONS){
+        writer.String("delta");
+        writer.StartObject();  // {
+        if (!stop) {
             writer.String("content");
             // writer.String("role");
             // writer.String("assistant");
+            // role: string; Role of the text producer
+            // Will make sense once we have chat templates? TODO(atobisze)
             writer.String(chunkResponse.c_str());
-        } else if (uri == "/v3/completions"){
+        }
+        writer.EndObject();  // }
+    } else if (endpoint == COMPLETIONS){
+        if (!stop) {
             writer.String("text");
             writer.String(chunkResponse.c_str());
         }
     }
-        // role: string; Role of the text producer
-        // Will make sense once we have chat templates? TODO(atobisze)
-
         // TODO: tools_call
         // TODO: function_call (deprecated)
     writer.EndObject();  // }
@@ -697,14 +713,14 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     writer.String(this->request->getModel().c_str());
 
     // object: string; defined that the type streamed chunk rather than complete response
-    if (uri == "/v3/chat/completions"){
+    if (endpoint == CHAT_COMPLETIONS){
         writer.String("object");
         writer.String("chat.completion.chunk");
-    } else if (uri == "/v3/completions"){
+    } else if (endpoint == COMPLETIONS){
         writer.String("object");
         writer.String("text_completion.chunk");
     }
-
+    
     // TODO
     // id: string; A unique identifier for the chat completion. Each chunk has the same ID.
 
@@ -733,4 +749,5 @@ const std::string HttpLLMCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
 const std::string HttpLLMCalculator::LOOPBACK_TAG_NAME{"LOOPBACK"};
 
 REGISTER_CALCULATOR(HttpLLMCalculator);
+
 }  // namespace mediapipe
