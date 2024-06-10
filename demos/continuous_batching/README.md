@@ -18,20 +18,20 @@ It will create an image called `openvino/model_server:latest`.
 
 ## Model preparation
 In this step the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
-That ensures faster initialization time, better performance and lower memory consumtion.
+That ensures faster initialization time, better performance and lower memory consumption.
 Here, we will also define the LLM engine parameters inside the `graph.pbtxt`.
 
 Install python dependencies for the conversion script:
 ```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
 ```
 
 Run optimum-cli to download and quantize the model:
 ```bash
 cd demos/continuous_batching
-optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Llama-2-7b-chat-hf --weight-format int8 Llama-2-7b-chat-hf
-convert_tokenizer -o Llama-2-7b-chat-hf --with-detokenizer --skip-special-tokens --not_add-special-tokens meta-llama/Llama-2-7b-chat-hf
+optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 Meta-Llama-3-8B-Instruct
+convert_tokenizer -o Meta-Llama-3-8B-Instruct --with-detokenizer --skip-special-tokens --not_add-special-tokens meta-llama/Meta-Llama-3-8B-Instruct
 ```
 Copy the graph to the model folder. 
 ```bash
@@ -68,10 +68,10 @@ node: {
   }
 }
 
-cp graph.pbtxt Llama-2-7b-chat-hf/
+cp graph.pbtxt Meta-Llama-3-8B-Instruct/
 
-tree Llama-2-7b-chat-hf/
-Llama-2-7b-chat-hf
+tree Meta-Llama-3-8B-Instruct/
+Meta-Llama-3-8B-Instruct
 ├── config.json
 ├── generation_config.json
 ├── graph.pbtxt
@@ -99,8 +99,8 @@ cat config.json
     "model_config_list": [],
     "mediapipe_config_list": [
         {
-            "name": "meta-llama/Llama-2-7b-chat-hf",
-            "base_path": "Llama-2-7b-chat-hf"
+            "name": "meta-llama/Meta-Llama-3-8B-Instruct",
+            "base_path": "Meta-Llama-3-8B-Instruct"
         }
     ]
 }
@@ -115,7 +115,7 @@ Wait for the model to load. You can check the status with a simple command:
 ```bash
 curl http://localhost:8000/v1/config
 {
-"meta-llama/Llama-2-7b-chat-hf" : 
+"meta-llama/Meta-Llama-3-8B-Instruct" : 
 {
  "model_version_status": [
   {
@@ -194,12 +194,11 @@ curl http://localhost:8000/v3/completions \
       "index": 0,
       "logprobs": null,
       "text": "\n\nOpenVINO is an open-source software library for deep learning inference that is designed to optimize and run deep learning models on a variety"
-      }
     }
   ],
   "created": 1716825108,
   "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-  "object": "text_completion"
+  "object": "text_completions"
 }
 ```
 
@@ -265,12 +264,15 @@ It looks like you're testing me!
 ## Benchmarking text generation with high concurrency
 
 OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
-It can be demostrated using benchmarking app from vLLM repository:
+It can be demonstrated using benchmarking app from vLLM repository:
 ```bash
 git clone https://github.com/vllm-project/vllm
-cd vllm/benchmarks
-pip3 install -r ../requirements-cpu.txt vllm
-sed -i -e 's|v1/chat/completions|v3/chat/completions|g' backend_request_func.py  # allow calls to endpoint with v3 instead of v1 like in vLLM
+cd vllm
+pip install wheel packaging ninja "setuptools>=49.4.0" numpy
+pip3 install -r ../requirements-cpu.txt
+VLLM_TARGET_DEVICE=cpu python setup.py install
+cd benchmarks
+sed -i -e 's|v1/chat/completions|v3/chat/completions|g' backend_request_func.py  # allows calls to endpoint with v3 instead of v1 like in vLLM
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
 python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate 1
 

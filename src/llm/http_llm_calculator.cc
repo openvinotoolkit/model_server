@@ -115,10 +115,10 @@ public:
         return config;
     }
 
-    chat_t getMessages() const { return this->messages;};
+    chat_t getMessages() const { return this->messages; };
     Endpoint getEndpoint() const { return this->endpoint; }
     void setEndpoint(Endpoint endpoint) { this->endpoint = endpoint; }
-    std::string getPrompt() const { 
+    std::string getPrompt() const {
         if (this->prompt.has_value()) {
             return this->prompt.value();
         } else {
@@ -130,7 +130,7 @@ public:
     std::string getModel() const { return this->model; }
 
     // TODO: Use exceptions to sneak error messages into response
-    bool parse( Endpoint endpoint) {
+    bool parse(Endpoint endpoint) {
         OVMS_PROFILE_FUNCTION();
         // stream: bool; optional
         if (!this->doc.IsObject())
@@ -143,7 +143,7 @@ public:
         }
 
         // messages: [{role: content}, {role: content}, ...]; required
-        if (endpoint == CHAT_COMPLETIONS){
+        if (endpoint == CHAT_COMPLETIONS) {
             it = doc.FindMember("messages");
             if (it == doc.MemberEnd())
                 return false;
@@ -167,12 +167,12 @@ public:
         }
 
         // prompt: string
-        if (endpoint == COMPLETIONS){
+        if (endpoint == COMPLETIONS) {
             it = this->doc.FindMember("prompt");
             if (it != this->doc.MemberEnd()) {
-                if (!it->value.IsString()){
+                if (!it->value.IsString()) {
                     return false;
-                }else {
+                } else {
                     this->prompt = it->value.GetString();
                 }
             }
@@ -454,9 +454,9 @@ public:
             LOG(INFO) << "Request body: " << payload.body;
             LOG(INFO) << "Request uri: " << payload.uri;
             Endpoint endpoint;
-            if (payload.uri == "/v3/chat/completions"){
+            if (payload.uri == "/v3/chat/completions") {
                 endpoint = CHAT_COMPLETIONS;
-            } else if (payload.uri == "/v3/completions"){
+            } else if (payload.uri == "/v3/completions") {
                 endpoint = COMPLETIONS;
             } else {
                 endpoint = UNDEFINED;
@@ -468,14 +468,14 @@ public:
             RET_CHECK(this->request->parse(endpoint));  // TODO: try catch and expose error message
 
             std::string prompt;
-            if (endpoint == CHAT_COMPLETIONS){
+            if (endpoint == CHAT_COMPLETIONS) {
                 RET_CHECK(this->request->getMessages().size() >= 1);
                 RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
-                prompt = this->request->getMessages()[0]["content"];        
-            }else if (endpoint == COMPLETIONS){
+                prompt = this->request->getMessages()[0]["content"];
+            } else if (endpoint == COMPLETIONS) {
                 RET_CHECK(this->request->getPrompt() != "");
                 prompt = this->request->getPrompt();
-            }else {
+            } else {
                 RET_CHECK(false);
             }
             {
@@ -550,7 +550,7 @@ public:
                 if (chunk.has_value()) {
                     std::string response = packIntoServerSideEventMessage(
                         serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint()));
-                    LOG(INFO) << "Partial response (continue): " << response ;
+                    LOG(INFO) << "Partial response (continue): " << response;
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 }
                 // Continue the loop
@@ -597,7 +597,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
         writer.String("logprobs");
         writer.Null();
         // message: object
-        if (endpoint == CHAT_COMPLETIONS){
+        if (endpoint == CHAT_COMPLETIONS) {
             writer.String("message");
             writer.StartObject();  // {
             // content: string; Actual content of the text produced
@@ -610,7 +610,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
             // TODO: tools_call
             // TODO: function_call (deprecated)
             writer.EndObject();  // }
-        }else if (endpoint == COMPLETIONS){
+        } else if (endpoint == COMPLETIONS) {
             writer.String("text");
             writer.String(completeResponse.c_str());
         }
@@ -628,10 +628,10 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     writer.String(this->request->getModel().c_str());
 
     // object: string; defined that the type is unary rather than streamed chunk
-    if (endpoint == CHAT_COMPLETIONS){
+    if (endpoint == CHAT_COMPLETIONS) {
         writer.String("object");
         writer.String("chat.completion");
-    } else if (endpoint == COMPLETIONS){
+    } else if (endpoint == COMPLETIONS) {
         writer.String("object");
         writer.String("text_completion");
     }
@@ -681,7 +681,7 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     // logprobs: object/null; Log probability information for the choice. TODO
     writer.String("logprobs");
     writer.Null();
-    if (endpoint == CHAT_COMPLETIONS){
+    if (endpoint == CHAT_COMPLETIONS) {
         writer.String("delta");
         writer.StartObject();  // {
         if (!stop) {
@@ -693,14 +693,14 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
             writer.String(chunkResponse.c_str());
         }
         writer.EndObject();  // }
-    } else if (endpoint == COMPLETIONS){
+    } else if (endpoint == COMPLETIONS) {
         if (!stop) {
             writer.String("text");
             writer.String(chunkResponse.c_str());
         }
     }
-        // TODO: tools_call
-        // TODO: function_call (deprecated)
+    // TODO: tools_call
+    // TODO: function_call (deprecated)
     writer.EndObject();  // }
     writer.EndArray();   // ]
 
@@ -713,14 +713,14 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     writer.String(this->request->getModel().c_str());
 
     // object: string; defined that the type streamed chunk rather than complete response
-    if (endpoint == CHAT_COMPLETIONS){
+    if (endpoint == CHAT_COMPLETIONS) {
         writer.String("object");
         writer.String("chat.completion.chunk");
-    } else if (endpoint == COMPLETIONS){
+    } else if (endpoint == COMPLETIONS) {
         writer.String("object");
         writer.String("text_completion.chunk");
     }
-    
+
     // TODO
     // id: string; A unique identifier for the chat completion. Each chunk has the same ID.
 
