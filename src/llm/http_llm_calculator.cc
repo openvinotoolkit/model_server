@@ -117,6 +117,7 @@ public:
     std::string getModel() const { return this->model; }
 
     absl::Status parse() {
+        OVMS_PROFILE_FUNCTION();
         // stream: bool; optional
         if (!this->doc.IsObject())
             return absl::InvalidArgumentError("Received json is not an object");
@@ -138,7 +139,7 @@ public:
         for (int i = 0; i < it->value.GetArray().Size(); i++) {
             const auto& obj = it->value.GetArray()[i];
             if (!obj.IsObject())
-                return absl::InvalidArgumentError("Invalid message structure");
+                return absl::InvalidArgumentError("Message is not a JSON object");
             auto& chat = this->messages.emplace_back(chat_entry_t{});
             for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
                 if (!member->name.IsString())
@@ -163,10 +164,10 @@ public:
         it = this->doc.FindMember("max_tokens");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return absl::InvalidArgumentError("max_tokens is not an int");
+                return absl::InvalidArgumentError("max_tokens is not an integer");
             this->maxTokens = it->value.GetInt();
             if (this->maxTokens.value() <= 0)
-                return absl::InvalidArgumentError("maxTokens value should be greater than 0");
+                return absl::InvalidArgumentError("max_tokens value should be greater than 0");
         }
 
         // TODO: Supported by OpenAI and vLLM, however unsupported by CB lib
@@ -198,7 +199,7 @@ public:
         it = this->doc.FindMember("repetition_penalty");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("repetition_penalty is not a double");
+                return absl::InvalidArgumentError("repetition_penalty is not a floating point number");
             this->repetitionPenalty = it->value.GetDouble();
         }
 
@@ -207,7 +208,7 @@ public:
         it = this->doc.FindMember("diversity_penalty");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("diversity_penalty is not a double");
+                return absl::InvalidArgumentError("diversity_penalty is not a floating point number");
             this->diversityPenalty = it->value.GetDouble();
         }
 
@@ -216,7 +217,7 @@ public:
         it = this->doc.FindMember("length_penalty");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("length_penalty is not a double");
+                return absl::InvalidArgumentError("length_penalty is not a floating point number");
             this->lengthPenalty = it->value.GetDouble();
         }
 
@@ -224,17 +225,17 @@ public:
         it = this->doc.FindMember("temperature");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("temperature is not a double");
+                return absl::InvalidArgumentError("temperature is not a floating point number");
             this->temperature = it->value.GetDouble();
             if (this->temperature < 0.0f || this->temperature > 2.0f)
-                return absl::InvalidArgumentError("temperature out of range(0.0,2.0)");
+                return absl::InvalidArgumentError("temperature out of range(0.0, 2.0)");
         }
 
         // top_p: float; optional - defaults to 1
         it = this->doc.FindMember("top_p");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("top_p is not a double");
+                return absl::InvalidArgumentError("top_p is not a floating point number");
             this->topP = it->value.GetDouble();
             if (this->topP < 0.0f || this->topP > 1.0f)
                 return absl::InvalidArgumentError("top_p out of range(0.0,1.0)");
@@ -245,7 +246,7 @@ public:
         it = this->doc.FindMember("top_k");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return absl::InvalidArgumentError("top_k is not an int");
+                return absl::InvalidArgumentError("top_k is not an integer");
             this->topK = it->value.GetInt();
         }
 
@@ -253,7 +254,7 @@ public:
         it = this->doc.FindMember("seed");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return absl::InvalidArgumentError("seed is not an int");
+                return absl::InvalidArgumentError("seed is not an integer");
             this->seed = it->value.GetInt();
         }
 
@@ -262,7 +263,7 @@ public:
         it = this->doc.FindMember("best_of");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return absl::InvalidArgumentError("best_of is not an int");
+                return absl::InvalidArgumentError("best_of is not an integer");
             this->bestOf = it->value.GetInt();
         }
 
@@ -271,7 +272,7 @@ public:
         it = this->doc.FindMember("n");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return absl::InvalidArgumentError("n is not an int");
+                return absl::InvalidArgumentError("n is not an integer");
             this->numReturnSequences = it->value.GetInt();
         }
 
