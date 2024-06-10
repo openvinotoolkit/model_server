@@ -238,7 +238,7 @@ public:
                 return absl::InvalidArgumentError("top_p is not a floating point number");
             this->topP = it->value.GetDouble();
             if (this->topP < 0.0f || this->topP > 1.0f)
-                return absl::InvalidArgumentError("top_p out of range(0.0,1.0)");
+                return absl::InvalidArgumentError("top_p out of range(0.0, 1.0)");
         }
 
         // top_k: int; optional - defaults to 0
