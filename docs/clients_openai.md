@@ -30,7 +30,7 @@ pip3 install requests
 ```
 
 
-### Request chat completion with unary calls
+### Request chat completions with unary calls
 
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
@@ -67,8 +67,45 @@ curl http://localhost:8000/v3/chat/completions \
 :::
 ::::
 
+### Request completions with unary calls
 
-### Request chat completion with streaming
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```{code} python
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
+response = client.completions.create(
+    model="meta-llama/Llama-2-7b",
+    prompt="Say this is a test",
+    stream=False,
+)
+
+print(response.choices[0].text)
+```
+:::
+:::{tab-item} python [requests]
+:sync: python-requests
+```{code} python
+import requests
+payload = {"model": "meta-llama/Llama-2-7b", "prompt": "Say this is a test"}
+headers = {"Content-Type": "application/json", "Authorization": "not used"}
+response = requests.post("http://localhost:8000/v3/completions", json=payload, headers=headers)
+print(response.text)
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```{code} bash
+curl http://localhost:8000/v3/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "meta-llama/Llama-2-7b", "prompt": "Say this is a test"}'
+```
+:::
+::::
+
+
+### Request chat completions with streaming
 
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
@@ -81,7 +118,7 @@ client = OpenAI(
 )
 
 stream = client.chat.completions.create(
-    model="llama",
+    model="meta-llama/Llama-2-7b-chat-hf",
     messages=[{"role": "user", "content": "Say this is a test"}],
     stream=True,
 )
@@ -92,3 +129,26 @@ for chunk in stream:
 :::
 ::::
 
+### Request completions with streaming
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```{code} python
+from openai import OpenAI
+client = OpenAI(
+  base_url="http://localhost:8000/v3",
+  api_key="unused"
+)
+
+stream = client.completions.create(
+    model="meta-llama/Llama-2-7b",
+    prompt="Say this is a test",
+    stream=True,
+)
+for chunk in stream:
+    if chunk.choices[0].text is not None:
+        print(chunk.choices[0].text, end="")
+```
+:::
+::::
