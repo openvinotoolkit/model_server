@@ -31,7 +31,10 @@
 using namespace std::chrono_literals;
 
 namespace mediapipe {
-
+/*
+    Concatenates headers names and values(with no space), request body
+    and rapidjson request body if exists.
+*/
 class OpenAIChatCompletionsMockCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
