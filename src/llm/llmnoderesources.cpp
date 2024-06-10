@@ -91,7 +91,8 @@ void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources) {
                 jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
                 jinja_env.globals["raise_exception"] = raise_exception
                 template = jinja_env.from_string(chat_template)
-        )", py::globals(), locals);
+        )",
+            py::globals(), locals);
 
         nodeResources->textProcessor.bosToken = locals["bos_token"].cast<std::string>();
         nodeResources->textProcessor.eosToken = locals["eos_token"].cast<std::string>();

@@ -354,15 +354,16 @@ bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
         return false;
     }
-    
+
     py::gil_scoped_acquire acquire;
     try {
-        auto locals = py::dict("request_body"_a=requestBody, "chat_template"_a=textProcessor.chatTemplate->getObject(), 
-                            "bos_token"_a=textProcessor.bosToken, "eos_token"_a=textProcessor.eosToken);
+        auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = textProcessor.chatTemplate->getObject(),
+            "bos_token"_a = textProcessor.bosToken, "eos_token"_a = textProcessor.eosToken);
         py::exec(R"(
             messages = json.loads(request_body)["messages"]
             output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
-        )", py::globals(), locals);
+        )",
+            py::globals(), locals);
 
         output = locals["output"].cast<std::string>();
         return true;
@@ -458,25 +459,23 @@ public:
 
             this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson);
 
-            // TODO: Support chat scenario once atobisze adds that to CB library
             RET_CHECK(this->request->parse());  // TODO: try catch and expose error message
             RET_CHECK(this->request->getMessages().size() >= 1);
             RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
 
             std::string templateApplyOutput = "";
-            if(!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, templateApplyOutput)) {
+            if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, templateApplyOutput)) {
                 // TODO: Require better error response support
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{templateApplyOutput}, timestamp);
                 return absl::OkStatus();
             }
-            std::string prompt = templateApplyOutput;
-            LOG(INFO) << "Input prompt:" << prompt;
+            LOG(INFO) << "Input prompt:" << templateApplyOutput;
 
             {
                 OVMS_PROFILE_SCOPE("pipeline->add_request()");
                 this->generationHandle = nodeResources->cbPipe->add_request(
                     0 /*to be removed from API?*/,
-                    prompt /* to be replaced with chat*/,
+                    templateApplyOutput,
                     this->request->createGenerationConfig());
             }
             nodeResources->notifyExecutorThread();
