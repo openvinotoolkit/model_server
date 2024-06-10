@@ -576,10 +576,10 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
         writer.String("index");
         writer.Int(i++);
         // logprobs: object/null; Log probability information for the choice. TODO
-        writer.String("logprobs");:q
+        writer.String("logprobs");
         writer.Null();
         // message: object
-        if (uri == "v3/chat/completions"){
+        if (uri == "/v3/chat/completions"){
             writer.String("message");
             writer.StartObject();  // {
             // content: string; Actual content of the text produced
@@ -592,7 +592,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
             // TODO: tools_call
             // TODO: function_call (deprecated)
             writer.EndObject();  // }
-        }else if (uri == "v3/completions"){
+        }else if (uri == "/v3/completions"){
             writer.String("text");
             writer.String(completeResponse.c_str());
         }
@@ -610,10 +610,10 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     writer.String(this->request->getModel().c_str());
 
     // object: string; defined that the type is unary rather than streamed chunk
-    if (uri == "v3/chat/completions"){
+    if (uri == "/v3/chat/completions"){
         writer.String("object");
         writer.String("chat.completion");
-    } else if (uri == "v3/completions"){
+    } else if (uri == "/v3/completions"){
         writer.String("object");
         writer.String("text_completion");
     }
