@@ -519,15 +519,9 @@ public:
             // Streaming scenario
             // Each iteration is single execution of Process() method
 
-            // Last iteration
-            if (this->generationHandle->get_status() == GenerationStatus::FINISHED) {
-                OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true));
-                response += packIntoServerSideEventMessage("[DONE]");
-                LOG(INFO) << "Partial response (generation finished): " << response;
-                // Produce last message, but do not producce loopback packets anymore so this is last Process() call
-                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
-            } else {
+            // For in progress generation we follow GenerationHandle::read_all logic.
+            // We read next tokens as long as generation is in running state or we still have unread tokens to pull.
+            if (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
                 // Subsequent iteration
                 OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
                 GenerationOutputs generationOutputs = this->generationHandle->read();
@@ -545,15 +539,25 @@ public:
                 }
                 // Continue the loop
                 cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
+            } else {
+                // Last generation where we do not read any more tokens, but only finish the stream.
+                // This happens when we gracefully finish (reach max_tokens or EOS token), but also when
+                // generation runs out of memory or for some other reason is aborted by the pipeline.
+                OVMS_PROFILE_SCOPE("Generation of last streaming response");
+                std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true));
+                response += packIntoServerSideEventMessage("[DONE]");
+                LOG(INFO) << "Partial response (generation finished): " << response;
+                // Produce last message, but do not producce loopback packets anymore so this is last Process() call
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             }
         }
 
-        timestamp = timestamp.NextAllowedInStream();
+    timestamp = timestamp.NextAllowedInStream();
 
-        LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process end";
-        return absl::OkStatus();
-    }
-};
+    LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process end";
+    return absl::OkStatus();
+}
+};  // namespace mediapipe
 
 std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& completeResponse) {
     return serializeUnaryResponse(std::vector<std::string>{completeResponse});
