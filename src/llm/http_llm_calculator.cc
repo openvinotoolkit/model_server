@@ -465,11 +465,9 @@ public:
 
             std::string templateApplyOutput = "";
             if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, templateApplyOutput)) {
-                // TODO: Require better error response support
-                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{templateApplyOutput}, timestamp);
-                return absl::OkStatus();
+                return absl::Status(absl::StatusCode::kInvalidArgument, templateApplyOutput);
             }
-            LOG(INFO) << "Input prompt:" << templateApplyOutput;
+            // LOG(INFO) << "Input prompt:" << templateApplyOutput;
 
             {
                 OVMS_PROFILE_SCOPE("pipeline->add_request()");
