@@ -43,12 +43,12 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
         ] + select({
             "//:ubuntu_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
-                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_ubuntu",
+#                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
+#                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_ubuntu",
             ],
             "//:redhat_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
-                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_redhat",
+#                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
+#                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_redhat",
             ],
         }) + [
         "@azure//:storage",

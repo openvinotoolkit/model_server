@@ -19,9 +19,6 @@
 #include <string>
 #include <vector>
 
-#include <aws/core/Aws.h>
-#include <aws/s3/S3Client.h>
-
 #include "filesystem.hpp"
 #include "status.hpp"
 
@@ -35,7 +32,7 @@ public:
      * @param options 
      * @param s3_path 
      */
-    S3FileSystem(const Aws::SDKOptions& options, const std::string& s3_path);
+    S3FileSystem(const std::string& s3_path);
 
     /**
      * @brief Destroy the S3FileSystem object
@@ -139,13 +136,11 @@ private:
      * @brief 
      * 
      */
-    Aws::SDKOptions options_;
 
     /**
      * @brief 
      * 
      */
-    Aws::S3::S3Client client_;
     std::regex s3_regex_;
     std::regex proxy_regex_;
 };

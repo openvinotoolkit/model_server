@@ -74,7 +74,7 @@ cc_shared_library(
         "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
         "@com_github_jarro2783_cxxopts//:__subpackages__",
-        "@aws-sdk-cpp//:__subpackages__",
+        #"@aws-sdk-cpp//:__subpackages__",
         "@boost//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
         "@curl//:__subpackages__",
@@ -871,10 +871,10 @@ cc_library( # make ovms_lib dependent, use share doptions
     ],
     deps = select({
             "//:ubuntu_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
+                #"@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
             ],
             "//:redhat_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
+                #"@aws-sdk-cpp//:aws-sdk-cpp_redhat",
             ],
         }) + [
         "libovmsfilesystem",
