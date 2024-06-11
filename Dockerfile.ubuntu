@@ -125,7 +125,6 @@ ARG ov_contrib_org=openvinotoolkit
 ARG DLDT_PACKAGE_URL
 ARG ov_source_branch=master
 ARG ov_contrib_branch=master
-ARG APT_OV_PACKAGE=openvino-2022.1.0
 ARG CMAKE_BUILD_TYPE=Release
 
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
@@ -151,7 +150,7 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     ln -s /openvino/inference-engine/temp/opencv_*_ubuntu20/opencv /opt/intel/openvino/extras && \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
-    ln -s /opt/intel/openvino /opt/intel/openvino_2023
+    ln -s /opt/intel/openvino /opt/intel/openvino_2024
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/Release/python /opt/intel/openvino/
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
 
@@ -161,13 +160,6 @@ ARG TEMP_DIR=/tmp/openvino_installer
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
 WORKDIR $TEMP_DIR
-# OV toolkit package
-#RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
-#    wget $DLDT_PACKAGE_URL && \
-#    chmod 755 l_openvino_toolkit_* && \
-#    ./l_openvino_toolkit_* -a -s --eula accept && \
-#    rm -rf /opt/intel/openvino && \
-#    ln -s /opt/intel/openvino_2023 /opt/intel/openvino
 
 # OV toolkit package
 RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; \
@@ -175,20 +167,9 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     mkdir /opt/intel && \
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
-    ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2023
+    ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2024
 
 WORKDIR /
-# apt package
-RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" = "" ] ; then true ; else exit 0 ; fi ; \
-    echo "installing apt package" && \
-    wget -nv https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
-    apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
-    echo "deb https://apt.repos.intel.com/openvino/2022 focal main" | tee /etc/apt/sources.list.d/intel-openvino-2022.list && \
-    apt-get update && \
-    apt-get install --no-install-recommends -y $APT_OV_PACKAGE && \
-    rm -rf /var/lib/apt/lists/* && \
-    ln -s /opt/intel/openvino_2023 /opt/intel/openvino
-
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
@@ -267,7 +248,7 @@ COPY src/BUILD /ovms/src/BUILD
 COPY src/python/binding/BUILD /ovms/src/python/binding/BUILD
 COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/requirements.txt
 
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib
 
 # FROM BASE BUILD
 COPY --from=base_build /opt/opencv /opt/opencv/
@@ -408,8 +389,7 @@ COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,SC2164
 RUN     apt-get update -y ; \
-    if [[ "$BASE_IMAGE" == *"20.04"* ]] ; then os_specific_packages=libtbb2; else os_specific_packages=libtbb12; fi; \
-    apt-get install -y curl ca-certificates libpugixml1v5 $os_specific_packages --no-install-recommends && \
+    apt-get install -y curl ca-certificates libpugixml1v5 --no-install-recommends && \
         if [ "$GPU" == "1" ] ; then \
             apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
                 case $INSTALL_DRIVER_VERSION in \
