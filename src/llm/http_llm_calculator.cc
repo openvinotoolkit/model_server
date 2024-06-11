@@ -115,7 +115,7 @@ public:
         return config;
     }
 
-    chat_t getMessages() const { return this->messages; };
+    chat_t getMessages() const { return this->messages; }
     Endpoint getEndpoint() const { return this->endpoint; }
     void setEndpoint(Endpoint endpoint) { this->endpoint = endpoint; }
     std::string getPrompt() const {
