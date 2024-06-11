@@ -47,6 +47,8 @@ struct LLMNodeResources {
 public:
     std::shared_ptr<ContinuousBatchingPipeline> cbPipe = nullptr;
     std::string modelsPath;
+    std::string device;
+    std::string pluginConfig;
     SchedulerConfig schedulerConfig;
     TextProcessor textProcessor;
 

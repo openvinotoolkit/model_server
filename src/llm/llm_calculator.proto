@@ -37,4 +37,8 @@ message LLMCalculatorOptions {
     optional uint64 max_num_seqs = 5 [default = 256];
 
     optional bool dynamic_split_fuse = 7 [default = true];
+
+    optional string device = 8 [default = "CPU"];
+
+    optional string plugin_config = 9 [default = ""];
 }

@@ -150,8 +150,11 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         .max_num_seqs = nodeOptions.max_num_seqs(),
     };
 
+    nodeResources->device = nodeOptions.device();
+    nodeResources->pluginConfig = nodeOptions.plugin_config();
+
     try {
-        nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig);
+        nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", basePath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;

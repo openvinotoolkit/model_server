@@ -200,6 +200,8 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources->device, "CPU");
+    ASSERT_EQ(nodeResources->pluginConfig, "");
 }
 
 // Currently disabled UT - need successfull resource init - only aavailable with LLM models.
@@ -218,6 +220,8 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckHalfDefault) {
                     models_path: "/workspace/"
                     max_num_batched_tokens: 98
                     cache_size: 1
+                    device: "GPU"
+                    plugin_config: "{"PERF_COUNT":true}"
                 }
             }
         }
@@ -233,6 +237,8 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckHalfDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources->device, "GPU");
+    ASSERT_EQ(nodeResources->pluginConfig, "{\"PERF_COUNT\":true}");
 }
 
 // Currently disabled UT - need successfull resource init - only aavailable with LLM models.
