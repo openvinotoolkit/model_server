@@ -47,6 +47,8 @@ namespace mediapipe {
 using chat_entry_t = std::unordered_map<std::string, std::string>;
 using chat_t = std::vector<chat_entry_t>;
 
+#define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
+
 class OpenAIChatCompletionsRequest {
     Document& doc;
 
@@ -161,16 +163,32 @@ public:
             return absl::InvalidArgumentError("model missing in request");
         }
 
+        // ignore_eos: bool; optional - defaults to false
+        // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
+        it = this->doc.FindMember("ignore_eos");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsBool())
+                return absl::InvalidArgumentError("ignore_eos accepts values true or false");
+            this->ignoreEOS = it->value.GetBool();
+        }
+
         // max_tokens: int; optional
         it = this->doc.FindMember("max_tokens");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsInt())
-                return absl::InvalidArgumentError("max_tokens is not an integer");
-            this->maxTokens = it->value.GetInt();
-            if (this->maxTokens.value() <= 0)
+            if (!it->value.IsUint())
+                return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
+            if (it->value.GetUint() == 0)
                 return absl::InvalidArgumentError("max_tokens value should be greater than 0");
+            this->maxTokens = it->value.GetUint();
         }
-
+        if (this->ignoreEOS.value_or(false)) {
+            if (this->maxTokens.has_value()) {
+                if (it->value.GetUint() > IGNORE_EOS_MAX_TOKENS_LIMIT)
+                    return absl::InvalidArgumentError("when ignore_eos is true max_tokens can not be greater than 4000");
+            } else {
+                this->maxTokens = IGNORE_EOS_MAX_TOKENS_LIMIT;
+            }
+        }
         // TODO: Supported by OpenAI and vLLM, however unsupported by CB lib
         // // frequency_penalty: float; optional - defaults to 0
         // it = this->doc.FindMember("frequency_penalty");
@@ -254,27 +272,31 @@ public:
         // seed: int; optional - defaults to 0 (not set)
         it = this->doc.FindMember("seed");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsInt())
-                return absl::InvalidArgumentError("seed is not an integer");
-            this->seed = it->value.GetInt();
+            if (!it->value.IsUint())
+                return absl::InvalidArgumentError("seed is not an unsigned integer");
+            this->seed = it->value.GetUint();
         }
 
         // best_of: int; optional - defaults to 1
         // Extension, unsupported by OpenAI API, however supported by vLLM, supported in CB lib by mapping to group_size param
         it = this->doc.FindMember("best_of");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsInt())
-                return absl::InvalidArgumentError("best_of is not an integer");
-            this->bestOf = it->value.GetInt();
+            if (!it->value.IsUint())
+                return absl::InvalidArgumentError("best_of is not an unsigned integer");
+            if (it->value.GetUint() == 0)
+                return absl::InvalidArgumentError("best_of value should be greater than 0");
+            this->bestOf = it->value.GetUint();
         }
 
         // n: int; optional - defaults to 1
         // Supported by OpenAI API and vLLM, supported in CB lib by mapping to num_return_sequences param
         it = this->doc.FindMember("n");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsInt())
-                return absl::InvalidArgumentError("n is not an integer");
-            this->numReturnSequences = it->value.GetInt();
+            if (!it->value.IsUint())
+                return absl::InvalidArgumentError("n is not an unsigned integer");
+            if (it->value.GetUint() == 0)
+                return absl::InvalidArgumentError("n value should be greater than 0");
+            this->numReturnSequences = it->value.GetUint();
         }
 
         // use_beam_search: bool; optional - defaults to false
@@ -286,15 +308,6 @@ public:
         //         return false;
         //     this->useBeamSearch = it->value.GetBool();
         // }
-
-        // ignore_eos: bool; optional - defaults to false
-        // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
-        it = this->doc.FindMember("ignore_eos");
-        if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsBool())
-                return absl::InvalidArgumentError("ignore_eos accepts values true or false");
-            this->ignoreEOS = it->value.GetBool();
-        }
 
         // logit_bias TODO
         // logprops TODO
