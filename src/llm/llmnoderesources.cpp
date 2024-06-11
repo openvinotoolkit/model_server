@@ -38,7 +38,9 @@
 
 namespace ovms {
 
-void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources) {
+static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
+
+static void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources) {
     py::gil_scoped_acquire acquire;
     try {
         auto locals = py::dict("models_path"_a = nodeResources->modelsPath);
@@ -98,10 +100,10 @@ void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources) {
         nodeResources->textProcessor.eosToken = locals["eos_token"].cast<std::string>();
         nodeResources->textProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
     } catch (const pybind11::error_already_set& e) {
-        SPDLOG_INFO("Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.");
+        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
     } catch (...) {
-        SPDLOG_INFO("Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.");
+        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
     }
 }
