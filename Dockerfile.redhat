@@ -114,7 +114,8 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
             yum clean all
 
-RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir
+RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
+    python3 --version && python3 -m pip install "Jinja2==3.1.4" --no-cache-dir
 
 ARG NVIDIA=0
 # Add Nvidia dev tool if needed
@@ -388,7 +389,7 @@ LABEL supported-devices="CPU=1 GPU=${GPU} NVIDIA=${NVIDIA}"
 ARG RELEASE_BASE_IMAGE
 LABEL base-image=${RELEASE_BASE_IMAGE}
 
-ENV PYTHONPATH=/ovms/lib/python
+ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -487,6 +488,8 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
 ENV LD_LIBRARY_PATH=/ovms/lib
 
 COPY --from=pkg /ovms_release /ovms
+COPY --from=build /usr/local/lib/python3.*/site-packages /ovms/python_deps
+COPY --from=build /usr/local/lib64/python3.*/site-packages /ovms/python_deps
 COPY --from=pkg /licenses /licenses
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]

@@ -34,7 +34,12 @@
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
 
+// Python execution for template processing
+#include <pybind11/embed.h>  // everything needed for embedding
+#include <pybind11/stl.h>
+
 using namespace rapidjson;
+using namespace ovms;
 
 namespace mediapipe {
 
@@ -344,6 +349,35 @@ public:
     }
 };
 
+bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
+    if (textProcessor.chatTemplate == nullptr) {
+        output = "Error: Chat template not loaded correctly, so it cannot be applied";
+        return false;
+    }
+
+    py::gil_scoped_acquire acquire;
+    try {
+        auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = textProcessor.chatTemplate->getObject(),
+            "bos_token"_a = textProcessor.bosToken, "eos_token"_a = textProcessor.eosToken);
+        py::exec(R"(
+            messages = json.loads(request_body)["messages"]
+            output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
+        )",
+            py::globals(), locals);
+
+        output = locals["output"].cast<std::string>();
+        return true;
+    } catch (const pybind11::error_already_set& e) {
+        LOG(INFO) << "Error occured when applying chat template: " << e.what();
+        // TODO: Don't include traceback in response
+        output = e.what();
+    } catch (...) {
+        LOG(INFO) << "Unexpected error occured when applying chat template";
+        output = "Unexpected error occured when applying chat template";
+    }
+    return false;
+}
+
 using InputDataType = ovms::HttpPayload;
 using OutputDataType = std::string;
 
@@ -425,18 +459,21 @@ public:
 
             this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson);
 
-            // TODO: Support chat scenario once atobisze adds that to CB library
             RET_CHECK(this->request->parse());  // TODO: try catch and expose error message
             RET_CHECK(this->request->getMessages().size() >= 1);
             RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
 
-            std::string prompt = this->request->getMessages()[0]["content"];
+            std::string templateApplyOutput = "";
+            if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, templateApplyOutput)) {
+                return absl::Status(absl::StatusCode::kInvalidArgument, templateApplyOutput);
+            }
+            // LOG(INFO) << "Input prompt:" << templateApplyOutput;
 
             {
                 OVMS_PROFILE_SCOPE("pipeline->add_request()");
                 this->generationHandle = nodeResources->cbPipe->add_request(
                     0 /*to be removed from API?*/,
-                    prompt /* to be replaced with chat*/,
+                    templateApplyOutput,
                     this->request->createGenerationConfig());
             }
             nodeResources->notifyExecutorThread();

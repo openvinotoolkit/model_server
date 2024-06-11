@@ -106,8 +106,8 @@ public:
         OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, *request));
 #if (PYTHON_DISABLE == 0)
         inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
-#endif
         inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
+#endif
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         ::mediapipe::Packet packet;
@@ -219,8 +219,8 @@ public:
 #if (PYTHON_DISABLE == 0)
                 inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap)
                                                                        .At(STARTING_TIMESTAMP);
-#endif
                 inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
+#endif
             }
 
             {
