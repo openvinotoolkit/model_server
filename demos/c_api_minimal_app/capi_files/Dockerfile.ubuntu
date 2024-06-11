@@ -51,6 +51,7 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/ovms/lib"
 RUN make -f MakefileCapi cpp
 RUN make -f MakefileCapi c
 RUN make -f MakefileCapi benchmark
+RUN chown ovms:ovms /ovms/demos
 
 USER ovms
 ENTRYPOINT ["/bin/bash"]
