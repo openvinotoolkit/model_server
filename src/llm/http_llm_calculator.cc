@@ -291,7 +291,7 @@ public:
         it = this->doc.FindMember("ignore_eos");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsBool())
-                return absl::InvalidArgumentError("ignore_eos is not a bool");
+                return absl::InvalidArgumentError("ignore_eos accepts values true or false");
             this->ignoreEOS = it->value.GetBool();
         }
 
