@@ -335,7 +335,7 @@ public:
             return chunk;
         } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "�") == 0) {  // NOLINT
             return std::nullopt;
-        } else {
+        } else if (text.size() > printLen) {
             std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
             printLen = text.size();
             return chunk;
