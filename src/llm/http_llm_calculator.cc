@@ -130,7 +130,7 @@ public:
     std::string getModel() const { return this->model; }
 
     // TODO: Use exceptions to sneak error messages into response
-    bool parse(Endpoint endpoint) {
+    bool parse() {
         OVMS_PROFILE_FUNCTION();
         // stream: bool; optional
         if (!this->doc.IsObject())
@@ -143,7 +143,7 @@ public:
         }
 
         // messages: [{role: content}, {role: content}, ...]; required
-        if (endpoint == CHAT_COMPLETIONS) {
+        if (this->endpoint == CHAT_COMPLETIONS) {
             it = doc.FindMember("messages");
             if (it == doc.MemberEnd())
                 return false;
@@ -167,7 +167,7 @@ public:
         }
 
         // prompt: string
-        if (endpoint == COMPLETIONS) {
+        if (this->endpoint == COMPLETIONS) {
             it = this->doc.FindMember("prompt");
             if (it != this->doc.MemberEnd()) {
                 if (!it->value.IsString()) {
@@ -460,12 +460,13 @@ public:
                 endpoint = COMPLETIONS;
             } else {
                 endpoint = UNDEFINED;
+                return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v3/chat/completions, /v3/completions");
             }
-
             this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson);
+            this->request->setEndpoint(endpoint);
 
             // TODO: Support chat scenario once atobisze adds that to CB library
-            RET_CHECK(this->request->parse(endpoint));  // TODO: try catch and expose error message
+            RET_CHECK(this->request->parse());  // TODO: try catch and expose error message
 
             std::string prompt;
             if (endpoint == CHAT_COMPLETIONS) {
@@ -488,7 +489,6 @@ public:
             nodeResources->notifyExecutorThread();
             this->streamer = std::make_shared<TextStreamer>(
                 nodeResources->cbPipe->get_tokenizer());
-            this->request->setEndpoint(endpoint);
         }
 
         RET_CHECK(this->generationHandle != nullptr);
