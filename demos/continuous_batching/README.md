@@ -1,7 +1,7 @@
 # How to serve LLM models with Continuous Batching via OpenAI API {#ovms_demos_continuous_batching}
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
-Text generation use case is exposed via OpenAI API `chat/completions` endpoint.
-That makes it easy to use and efficient expecially on on Intel® Xeon® processors.
+Text generation use case is exposed via OpenAI API `chat/completions` and `completions` endpoints.
+That makes it easy to use and efficient especially on on Intel® Xeon® processors.
 
 
 
@@ -18,20 +18,20 @@ It will create an image called `openvino/model_server:latest`.
 
 ## Model preparation
 In this step the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
-That ensures faster initialization time, better performance and lower memory consumtion.
+That ensures faster initialization time, better performance and lower memory consumption.
 Here, we will also define the LLM engine parameters inside the `graph.pbtxt`.
 
 Install python dependencies for the conversion script:
 ```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
 ```
 
 Run optimum-cli to download and quantize the model:
 ```bash
 cd demos/continuous_batching
-optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Llama-2-7b-chat-hf --weight-format int8 Llama-2-7b-chat-hf
-convert_tokenizer -o Llama-2-7b-chat-hf --with-detokenizer --skip-special-tokens --not_add-special-tokens meta-llama/Llama-2-7b-chat-hf
+optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 Meta-Llama-3-8B-Instruct
+convert_tokenizer -o Meta-Llama-3-8B-Instruct --with-detokenizer --skip-special-tokens --not_add-special-tokens meta-llama/Meta-Llama-3-8B-Instruct
 ```
 Copy the graph to the model folder. 
 ```bash
@@ -68,10 +68,10 @@ node: {
   }
 }
 
-cp graph.pbtxt Llama-2-7b-chat-hf/
+cp graph.pbtxt Meta-Llama-3-8B-Instruct/
 
-tree Llama-2-7b-chat-hf/
-Llama-2-7b-chat-hf
+tree Meta-Llama-3-8B-Instruct/
+Meta-Llama-3-8B-Instruct
 ├── config.json
 ├── generation_config.json
 ├── graph.pbtxt
@@ -99,8 +99,8 @@ cat config.json
     "model_config_list": [],
     "mediapipe_config_list": [
         {
-            "name": "meta-llama/Llama-2-7b-chat-hf",
-            "base_path": "Llama-2-7b-chat-hf"
+            "name": "meta-llama/Meta-Llama-3-8B-Instruct",
+            "base_path": "Meta-Llama-3-8B-Instruct"
         }
     ]
 }
@@ -115,7 +115,7 @@ Wait for the model to load. You can check the status with a simple command:
 ```bash
 curl http://localhost:8000/v1/config
 {
-"meta-llama/Llama-2-7b-chat-hf" : 
+"meta-llama/Meta-Llama-3-8B-Instruct" : 
 {
  "model_version_status": [
   {
@@ -128,26 +128,35 @@ curl http://localhost:8000/v1/config
   }
  ]
 }
+```
 
 ## Client code
 
-Both unary and streaming calls should be available via the same servable:
+A single servable exposes both `chat/completions` and `completions` endpoints with and without steam capabilities.
+Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
+Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
 
 ### Unary:
 ```bash
 curl http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "meta-llama/Llama-2-7b-chat-hf",
+    "model": "meta-llama/Meta-Llama-3-8B-Instruct",
     "max_tokens":30,
     "stream":false,
     "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
       {
         "role": "user",
         "content": "What is OpenVINO?"
       }
     ]
   }'| jq .
+```
+```json
 {
   "choices": [
     {
@@ -161,20 +170,46 @@ curl http://localhost:8000/v3/chat/completions \
     }
   ],
   "created": 1716825108,
-  "model": "meta-llama/Llama-2-7b-chat-hf",
+  "model": "meta-llama/Meta-Llama-3-8B-Instruct",
   "object": "chat.completion"
 }
 ```
 
-## Streaming:
+A similar call can be made with a `completion` endpoint:
+```bash
+curl http://localhost:8000/v3/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "max_tokens":30,
+    "stream":false,
+    "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
+  }'| jq .
+```
+```json
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "text": "\n\nOpenVINO is an open-source software library for deep learning inference that is designed to optimize and run deep learning models on a variety"
+    }
+  ],
+  "created": 1716825108,
+  "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+  "object": "text_completions"
+}
+```
 
-The endpoint `chat/completions` is compatible with OpenAI client so it can be easily used to generated code also in streaming mode:
+### Streaming:
+
+The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generated code also in streaming mode:
 
 Install the client library:
 ```bash
 pip3 install openai
 ```
-
 ```python
 from openai import OpenAI
 
@@ -184,7 +219,7 @@ client = OpenAI(
 )
 
 stream = client.chat.completions.create(
-    model="llama",
+    model="meta-llama/Meta-Llama-3-8B-Instruct",
     messages=[{"role": "user", "content": "Say this is a test"}],
     stream=True,
 )
@@ -195,22 +230,53 @@ for chunk in stream:
 
 Output:
 ```
-This is a test.
+It looks like you're testing me!
 ```
+
+A similar code can be applied for the completion endpoint:
+```bash
+pip3 install openai
+```
+```python
+from openai import OpenAI
+
+client = OpenAI(
+  base_url="http://localhost:8000/v3",
+  api_key="unused"
+)
+
+stream = client.completions.create(
+    model="meta-llama/Meta-Llama-3-8B-Instruct",
+    prompt="<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nSay this is a test.<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
+    stream=True,
+)
+for chunk in stream:
+    if chunk.choices[0].text is not None:
+        print(chunk.choices[0].text, end="")
+```
+
+Output:
+```
+It looks like you're testing me!
+```
+
 
 ## Benchmarking text generation with high concurrency
 
 OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
-It can be demostrated using benchmarking app from vLLM repository:
+It can be demonstrated using benchmarking app from vLLM repository:
 ```bash
 git clone https://github.com/vllm-project/vllm
-cd vllm/benchmarks
+cd vllm
+pip install wheel packaging ninja "setuptools>=49.4.0" numpy
 pip3 install -r ../requirements-cpu.txt
-sed -i -e 's|v1/chat/completions|v3/chat/completions|g' backend_request_func.py  # allow calls to endpoint with v3 instead of v1 like in vLLM
+VLLM_TARGET_DEVICE=cpu python setup.py install
+cd benchmarks
+sed -i -e 's|v1/chat/completions|v3/chat/completions|g' backend_request_func.py  # allows calls to endpoint with v3 instead of v1 like in vLLM
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
-python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Llama-2-7b-chat-hf --dataset ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate 1
+python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate 1
 
-Namespace(backend='openai-chat', version='N/A', base_url=None, host='ov-spr-31.sclab.intel.com', port=8000, endpoint='/v3/chat/completions', dataset='ShareGPT_V3_unfiltered_cleaned_split.json', model='meta-llama/Llama-2-7b-chat-hf', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, request_rate=1.0, seed=0, trust_remote_code=False, disable_tqdm=False, save_result=False)
+Namespace(backend='openai-chat', version='N/A', base_url=None, host='localhost', port=8000, endpoint='/v3/chat/completions', dataset='ShareGPT_V3_unfiltered_cleaned_split.json', model='meta-llama/Meta-Llama-3-8B-Instruct', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, request_rate=1.0, seed=0, trust_remote_code=False, disable_tqdm=False, save_result=False)
 Traffic request rate: 1.0
 100%|██████████████████████████████████████████████████| 1000/1000 [17:17<00:00,  1.04s/it]
 ============ Serving Benchmark Result ============
