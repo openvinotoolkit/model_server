@@ -108,6 +108,7 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
         ovms::StatusCode::OK);
 
     std::string expectedResponse = R"(/v3/test/
+
         {
             "model": "gpt",
             "stream": false,
