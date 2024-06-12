@@ -201,7 +201,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
     ASSERT_EQ(nodeResources->device, "CPU");
-    ASSERT_EQ(nodeResources->pluginConfig, "");
+    ASSERT_EQ(nodeResources->pluginConfig.size(), 0);
 }
 
 // Currently disabled UT - need successfull resource init - only aavailable with LLM models.
@@ -238,7 +238,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckHalfDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
     ASSERT_EQ(nodeResources->device, "GPU");
-    ASSERT_EQ(nodeResources->pluginConfig, "{\"PERF_COUNT\":true}");
+    ASSERT_EQ(nodeResources->pluginConfig["PERF_COUNT"], true);
 }
 
 // Currently disabled UT - need successfull resource init - only aavailable with LLM models.

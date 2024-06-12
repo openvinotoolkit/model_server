@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -37,6 +38,8 @@ namespace ovms {
 class Status;
 class LLMExecutorWrapper;
 
+using plugin_config_t = std::map<std::string, ov::Any>;
+
 struct TextProcessor {
     std::string bosToken = "";
     std::string eosToken = "";
@@ -48,7 +51,7 @@ public:
     std::shared_ptr<ContinuousBatchingPipeline> cbPipe = nullptr;
     std::string modelsPath;
     std::string device;
-    std::string pluginConfig;
+    plugin_config_t pluginConfig;
     SchedulerConfig schedulerConfig;
     TextProcessor textProcessor;
 

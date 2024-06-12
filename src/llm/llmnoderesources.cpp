@@ -24,6 +24,7 @@
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
+#include "../json_parser.hpp"
 #include "../logging.hpp"
 #include "../status.hpp"
 
@@ -151,7 +152,8 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
     };
 
     nodeResources->device = nodeOptions.device();
-    nodeResources->pluginConfig = nodeOptions.plugin_config();
+
+    auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), nodeResources->pluginConfig);
 
     try {
         nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig);
