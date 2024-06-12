@@ -552,11 +552,11 @@ public:
             }
         }
 
-    timestamp = timestamp.NextAllowedInStream();
+        timestamp = timestamp.NextAllowedInStream();
 
-    LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process end";
-    return absl::OkStatus();
-}
+        LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process end";
+        return absl::OkStatus();
+    }
 };  // namespace mediapipe
 
 std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& completeResponse) {
