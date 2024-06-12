@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <atomic>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -386,7 +387,7 @@ const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 static std::string packIntoServerSideEventMessage(const std::string& message);
 
 // CB lib internals rely on request_id, so for now we provide increasing ID
-static uint64_t currentRequestId = 0;
+static std::atomic<uint64_t> currentRequestId = 0;
 
 class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<ovms::LLMNodeResources> nodeResources;
