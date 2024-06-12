@@ -385,6 +385,9 @@ const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 
 static std::string packIntoServerSideEventMessage(const std::string& message);
 
+// CB lib internals rely on request_id, so for now we provide increasing ID
+static uint64_t currentRequestId = 0;
+
 class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<ovms::LLMNodeResources> nodeResources;
     GenerationHandle generationHandle;
@@ -472,7 +475,7 @@ public:
             {
                 OVMS_PROFILE_SCOPE("pipeline->add_request()");
                 this->generationHandle = nodeResources->cbPipe->add_request(
-                    0 /*to be removed from API?*/,
+                    currentRequestId++, /*to be removed from API?*/
                     templateApplyOutput,
                     this->request->createGenerationConfig());
             }
