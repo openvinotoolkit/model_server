@@ -356,15 +356,24 @@ public:
         std::string text = tokenizer->decode(tokenCache);
 
         if (!text.empty() && '\n' == text.back()) {
+            // The chunk is ready if the generated text ends with new line.
+            // Also, clear the cache.
             std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
             tokenCache.clear();
             printLen = 0;
             return chunk;
         } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "�") == 0) {  // NOLINT
             return std::nullopt;
-        } else if (text.size() > printLen && std::any_of(text.begin() + printLen, text.end(), [](char c) { return c == ' '; })) {
-            std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
-            printLen = text.size();
+        } else if (text.size() > printLen) {
+            // The chunk is ready if the new text in the cache contains space.
+            // The chunk is constructed from the new text, however only up to the last space character (including it)
+            // Does not clear the cache.
+            auto lastSpacePos = text.rfind(' ');
+            if (lastSpacePos == std::string::npos || lastSpacePos < printLen) {
+                return std::nullopt;
+            }
+            std::string chunk = std::string{text.data() + printLen, lastSpacePos - printLen + 1};
+            printLen = lastSpacePos + 1;
             return chunk;
         }
         return std::nullopt;
