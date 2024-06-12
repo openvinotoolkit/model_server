@@ -114,7 +114,8 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
             yum clean all
 
-RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir
+RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
+    python3 --version && python3 -m pip install "Jinja2==3.1.4" --no-cache-dir
 
 ARG NVIDIA=0
 # Add Nvidia dev tool if needed
@@ -176,7 +177,7 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     ln -s /openvino/inference-engine/temp/opencv_*/opencv /opt/intel/openvino/extras && \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
-    ln -s /opt/intel/openvino /opt/intel/openvino_2023
+    ln -s /opt/intel/openvino /opt/intel/openvino_2024
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/Release/python /opt/intel/openvino/
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
 ################## END OF OPENVINO SOURCE BUILD ######################
@@ -189,7 +190,7 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; 
     mkdir /opt/intel && \
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
-    ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2023
+    ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2024
 
 # install sample apps including benchmark_app
 RUN yum install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
@@ -388,7 +389,7 @@ LABEL supported-devices="CPU=1 GPU=${GPU} NVIDIA=${NVIDIA}"
 ARG RELEASE_BASE_IMAGE
 LABEL base-image=${RELEASE_BASE_IMAGE}
 
-ENV PYTHONPATH=/ovms/lib/python
+ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -487,6 +488,8 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
 ENV LD_LIBRARY_PATH=/ovms/lib
 
 COPY --from=pkg /ovms_release /ovms
+COPY --from=build /usr/local/lib/python3.*/site-packages /ovms/python_deps
+COPY --from=build /usr/local/lib64/python3.*/site-packages /ovms/python_deps
 COPY --from=pkg /licenses /licenses
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]

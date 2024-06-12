@@ -1,3 +1,5 @@
+
+
 #
 # Copyright (c) 2021 Intel Corporation
 #
@@ -14,7 +16,7 @@
 # limitations under the License.
 #
 
-FROM golang:1.20.10
+FROM golang:1.21.9
 ARG http_proxy
 
 RUN echo "Acquire::http::Proxy \"$http_proxy\";" > /etc/apt/apt.conf.d/proxy.conf
@@ -26,15 +28,14 @@ RUN apt-get update && apt-get install -y sudo
 RUN rm -rf /var/lib/apt/lists/*
 RUN git clone https://github.com/hybridgroup/gocv.git && \
     cd gocv && \
-    sed -i "s:libdc1394-22-dev:libdc1394-dev:g; s:libtbb2:libtbb12:g" Makefile && \
     make install
 
 RUN mkdir /app
 COPY . /app
 WORKDIR /app
 
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31
-RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.1
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
 
 # Compile API
 RUN protoc -I apis/ apis/tensorflow_serving/apis/*.proto --go_out="./" --go-grpc_out="./"

@@ -34,7 +34,12 @@
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
 
+// Python execution for template processing
+#include <pybind11/embed.h>  // everything needed for embedding
+#include <pybind11/stl.h>
+
 using namespace rapidjson;
+using namespace ovms;
 
 namespace mediapipe {
 
@@ -129,16 +134,15 @@ public:
     bool isStream() const { return this->stream; }
     std::string getModel() const { return this->model; }
 
-    // TODO: Use exceptions to sneak error messages into response
-    bool parse() {
+    absl::Status parse() {
         OVMS_PROFILE_FUNCTION();
         // stream: bool; optional
         if (!this->doc.IsObject())
-            return false;
+            return absl::InvalidArgumentError("Received json is not an object");
         auto it = this->doc.FindMember("stream");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsBool())
-                return false;
+                return absl::InvalidArgumentError("Stream is not bool");
             this->stream = it->value.GetBool();
         }
 
@@ -146,21 +150,21 @@ public:
         if (this->endpoint == CHAT_COMPLETIONS) {
             it = doc.FindMember("messages");
             if (it == doc.MemberEnd())
-                return false;
+                return absl::InvalidArgumentError("Messages missing in request");
             if (!it->value.IsArray())
-                return false;
+                return absl::InvalidArgumentError("Messages are not an array");
             this->messages.clear();
             this->messages.reserve(it->value.GetArray().Size());
             for (int i = 0; i < it->value.GetArray().Size(); i++) {
                 const auto& obj = it->value.GetArray()[i];
                 if (!obj.IsObject())
-                    return false;
+                    return absl::InvalidArgumentError("Message is not a JSON object");
                 auto& chat = this->messages.emplace_back(chat_entry_t{});
                 for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
                     if (!member->name.IsString())
-                        return false;
+                        return absl::InvalidArgumentError("Invalid message structure");
                     if (!member->value.IsString())
-                        return false;
+                        return absl::InvalidArgumentError("Invalid message structure");
                     chat[member->name.GetString()] = member->value.GetString();
                 }
             }
@@ -171,7 +175,7 @@ public:
             it = this->doc.FindMember("prompt");
             if (it != this->doc.MemberEnd()) {
                 if (!it->value.IsString()) {
-                    return false;
+                    return absl::InvalidArgumentError("prompt is not a string");
                 } else {
                     this->prompt = it->value.GetString();
                 }
@@ -181,20 +185,20 @@ public:
         it = this->doc.FindMember("model");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsString())
-                return false;
+                return absl::InvalidArgumentError("model is not a string");
             this->model = it->value.GetString();
         } else {
-            return false;
+            return absl::InvalidArgumentError("model missing in request");
         }
 
         // max_tokens: int; optional
         it = this->doc.FindMember("max_tokens");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return false;
+                return absl::InvalidArgumentError("max_tokens is not an integer");
             this->maxTokens = it->value.GetInt();
             if (this->maxTokens.value() <= 0)
-                return false;
+                return absl::InvalidArgumentError("max_tokens value should be greater than 0");
         }
 
         // TODO: Supported by OpenAI and vLLM, however unsupported by CB lib
@@ -226,9 +230,8 @@ public:
         it = this->doc.FindMember("repetition_penalty");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return false;
+                return absl::InvalidArgumentError("repetition_penalty is not a floating point number");
             this->repetitionPenalty = it->value.GetDouble();
-            // TODO: Validate?
         }
 
         // diversity_penalty: float; optional - defaults to 1.0
@@ -236,9 +239,8 @@ public:
         it = this->doc.FindMember("diversity_penalty");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return false;
+                return absl::InvalidArgumentError("diversity_penalty is not a floating point number");
             this->diversityPenalty = it->value.GetDouble();
-            // TODO: Validate?
         }
 
         // length_penalty: float; optional - defaults to 1.0
@@ -246,29 +248,28 @@ public:
         it = this->doc.FindMember("length_penalty");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return false;
+                return absl::InvalidArgumentError("length_penalty is not a floating point number");
             this->lengthPenalty = it->value.GetDouble();
-            // TODO: Validate?
         }
 
         // temperature: float; optional - defaults to 0.0 (different than OpenAI which is 1.0)
         it = this->doc.FindMember("temperature");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return false;
+                return absl::InvalidArgumentError("temperature is not a floating point number");
             this->temperature = it->value.GetDouble();
             if (this->temperature < 0.0f || this->temperature > 2.0f)
-                return false;
+                return absl::InvalidArgumentError("temperature out of range(0.0, 2.0)");
         }
 
         // top_p: float; optional - defaults to 1
         it = this->doc.FindMember("top_p");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble())
-                return false;
+                return absl::InvalidArgumentError("top_p is not a floating point number");
             this->topP = it->value.GetDouble();
             if (this->topP < 0.0f || this->topP > 1.0f)
-                return false;
+                return absl::InvalidArgumentError("top_p out of range(0.0, 1.0)");
         }
 
         // top_k: int; optional - defaults to 0
@@ -276,18 +277,16 @@ public:
         it = this->doc.FindMember("top_k");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return false;
+                return absl::InvalidArgumentError("top_k is not an integer");
             this->topK = it->value.GetInt();
-            // TODO: Validate?
         }
 
         // seed: int; optional - defaults to 0 (not set)
         it = this->doc.FindMember("seed");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return false;
+                return absl::InvalidArgumentError("seed is not an integer");
             this->seed = it->value.GetInt();
-            // TODO: Validate?
         }
 
         // best_of: int; optional - defaults to 1
@@ -295,9 +294,8 @@ public:
         it = this->doc.FindMember("best_of");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return false;
+                return absl::InvalidArgumentError("best_of is not an integer");
             this->bestOf = it->value.GetInt();
-            // TODO: Validate?
         }
 
         // n: int; optional - defaults to 1
@@ -305,9 +303,8 @@ public:
         it = this->doc.FindMember("n");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsInt())
-                return false;
+                return absl::InvalidArgumentError("n is not an integer");
             this->numReturnSequences = it->value.GetInt();
-            // TODO: Validate?
         }
 
         // use_beam_search: bool; optional - defaults to false
@@ -325,11 +322,9 @@ public:
         it = this->doc.FindMember("ignore_eos");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsBool())
-                return false;
+                return absl::InvalidArgumentError("ignore_eos accepts values true or false");
             this->ignoreEOS = it->value.GetBool();
         }
-
-        return true;
 
         // logit_bias TODO
         // logprops TODO
@@ -342,6 +337,7 @@ public:
         // user TODO
         // function_call TODO (deprecated)
         // functions TODO (deprecated)
+        return absl::OkStatus();
     }
 };
 
@@ -366,7 +362,7 @@ public:
             return chunk;
         } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "�") == 0) {  // NOLINT
             return std::nullopt;
-        } else {
+        } else if (text.size() > printLen && std::any_of(text.begin() + printLen, text.end(), [](char c) { return c == ' '; })) {
             std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
             printLen = text.size();
             return chunk;
@@ -374,6 +370,35 @@ public:
         return std::nullopt;
     }
 };
+
+bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
+    if (textProcessor.chatTemplate == nullptr) {
+        output = "Error: Chat template not loaded correctly, so it cannot be applied";
+        return false;
+    }
+
+    py::gil_scoped_acquire acquire;
+    try {
+        auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = textProcessor.chatTemplate->getObject(),
+            "bos_token"_a = textProcessor.bosToken, "eos_token"_a = textProcessor.eosToken);
+        py::exec(R"(
+            messages = json.loads(request_body)["messages"]
+            output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
+        )",
+            py::globals(), locals);
+
+        output = locals["output"].cast<std::string>();
+        return true;
+    } catch (const pybind11::error_already_set& e) {
+        LOG(INFO) << "Error occured when applying chat template: " << e.what();
+        // TODO: Don't include traceback in response
+        output = e.what();
+    } catch (...) {
+        LOG(INFO) << "Unexpected error occured when applying chat template";
+        output = "Unexpected error occured when applying chat template";
+    }
+    return false;
+}
 
 using InputDataType = ovms::HttpPayload;
 using OutputDataType = std::string;
@@ -466,7 +491,17 @@ public:
             this->request->setEndpoint(endpoint);
 
             // TODO: Support chat scenario once atobisze adds that to CB library
-            RET_CHECK(this->request->parse());  // TODO: try catch and expose error message
+            auto status = this->request->parse();
+            if (status != absl::OkStatus())
+                return status;
+            RET_CHECK(this->request->getMessages().size() >= 1);
+            RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
+
+            std::string templateApplyOutput = "";
+            if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, templateApplyOutput)) {
+                return absl::Status(absl::StatusCode::kInvalidArgument, templateApplyOutput);
+            }
+            // LOG(INFO) << "Input prompt:" << templateApplyOutput;
 
             std::string prompt;
             if (endpoint == CHAT_COMPLETIONS) {
@@ -483,7 +518,7 @@ public:
                 OVMS_PROFILE_SCOPE("pipeline->add_request()");
                 this->generationHandle = nodeResources->cbPipe->add_request(
                     0 /*to be removed from API?*/,
-                    prompt /* to be replaced with chat*/,
+                    templateApplyOutput,
                     this->request->createGenerationConfig());
             }
             nodeResources->notifyExecutorThread();

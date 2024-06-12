@@ -28,11 +28,11 @@
 #include "../execution_context.hpp"
 #include "../filesystem.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
-#include "../llm/llmnoderesources.hpp"
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
 #if (PYTHON_DISABLE == 0)
+#include "../llm/llmnoderesources.hpp"
 #include "../python/pythonnoderesources.hpp"
 #endif
 #include "../serialization.hpp"
@@ -393,14 +393,16 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
 }
 
 #if (PYTHON_DISABLE == 0)
-struct PythonResourcesCleaningGuard {
+template <typename T>
+class ResourcesCleaningGuard {
+public:
     bool shouldCleanup{true};
-    std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>& resource;
-    PythonResourcesCleaningGuard(std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>& resource) :
-        resource(resource) {}
-    ~PythonResourcesCleaningGuard() {
+    T& resources;
+    ResourcesCleaningGuard(T& resources) :
+        resources(resources) {}
+    ~ResourcesCleaningGuard() {
         if (shouldCleanup) {
-            resource.clear();
+            resources.clear();
         }
     }
     void disableCleaning() {
@@ -414,7 +416,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
     for (int i = 0; i < config.node().size(); i++) {
 #if (PYTHON_DISABLE == 0)
         if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
-            PythonResourcesCleaningGuard pythonResourcesCleaningGuard(this->pythonNodeResourcesMap);
+            ResourcesCleaningGuard<PythonNodeResourcesMap> pythonResourcesCleaningGuard(this->pythonNodeResourcesMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node missing options in graph: {}. ", this->name);
                 return StatusCode::PYTHON_NODE_MISSING_OPTIONS;
@@ -439,9 +441,9 @@ Status MediapipeGraphDefinition::initializeNodes() {
             this->pythonNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<PythonNodeResources>>(nodeName, std::move(nodeResources)));
             pythonResourcesCleaningGuard.disableCleaning();
         }
-#endif
         // Passed to both calculators that require LLM Engine (gRPC KServe & HTTP OpenAI)
         if (endsWith(config.node(i).calculator(), LLM_NODE_CALCULATOR_NAME)) {
+            ResourcesCleaningGuard<LLMNodeResourcesMap> llmResourcesCleaningGuard(this->llmNodeResourcesMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node missing options in graph: {}. ", this->name);
                 return StatusCode::LLM_NODE_MISSING_OPTIONS;
@@ -464,7 +466,9 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
 
             this->llmNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<LLMNodeResources>>(nodeName, std::move(nodeResources)));
+            llmResourcesCleaningGuard.disableCleaning();
         }
+#endif
     }
 
     return StatusCode::OK;

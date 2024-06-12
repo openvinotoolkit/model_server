@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -106,7 +107,40 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
         handler->dispatchToProcessor("/v3/test/", requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
 
-    ASSERT_EQ(response, "/v3/test/\n" + requestBody + std::string{"0"});
+    std::string expectedResponse = R"(/v3/test/
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    {"model":"gpt","stream":false,"messages":[]}0)";
+    ASSERT_EQ(response, expectedResponse);
+}
+
+TEST_F(HttpOpenAIHandlerTest, UnaryWithHeaders) {
+    std::string requestBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    )";
+    comp.headers.push_back(std::pair<std::string, std::string>("test1", "header"));
+    comp.headers.push_back(std::pair<std::string, std::string>("test2", "header"));
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor("/v3/test/", requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+
+    std::string expectedResponse = R"(/v3/test/
+test1headertest2header
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    {"model":"gpt","stream":false,"messages":[]}0)";
+    ASSERT_EQ(response, expectedResponse);
 }
 
 TEST_F(HttpOpenAIHandlerTest, Stream) {
