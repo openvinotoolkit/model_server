@@ -19,8 +19,8 @@ def llm_engine():
     llm_engine_repository(name="_llm_engine")
     new_git_repository(
         name = "llm_engine",
-        remote = "https://github.com/mzegla/openvino.genai",
-        commit = "582af04ae297a5ebc8246e326979495ab2e12748",
+        remote = "https://github.com/atobiszei/openvino.genai",
+        commit = "6f26c4183bafb8bdff33375a10ac0649c950c778", # chate_template_rebased and with jinja fork
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
@@ -66,14 +66,16 @@ cmake(
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
         # there is no elegant paralell compilation support
         "VERBOSE=1",
-        "-j 4",
+        "-j 12",
     ],
     cache_entries = {{
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
-        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib"
+        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
+        "JINJA2CPP_DEPS_MODE": "internal",
+        "JINJA2CPP_BUILD_TESTS": "OFF",
     }},
     env = {{
         "OpenVINO_DIR": "{OpenVINO_DIR}",
@@ -81,14 +83,18 @@ cmake(
         "HTTPS_PROXY": "{https_proxy}",
     }},
     lib_source = ":all_srcs",
-    out_lib_dir = "lib",
-   
+    #out_lib_dir = "lib",
+    out_lib_dir = "",
+    out_bin_dir = "",
+    out_binaries = [],
+    out_data_dirs = ["_deps"],
     # linking order
     out_static_libs = [
-            "libopenvino_continuous_batching.a",
+            "lib/libopenvino_continuous_batching.a",
         ],
+    install = True,
     tags = ["requires-network"],
-    alwayslink = False,
+    alwayslink = True,
     visibility = ["//visibility:public"],
 )
 
@@ -98,7 +104,9 @@ cc_library(
         ":llm_engine_cmake_ubuntu",
     ],
     visibility = ["//visibility:public"],
-    alwayslink = False,
+    alwayslink = True,
+    linkstatic = True,
+    features = ["fully_static_link"],
 )
 
 cmake(
@@ -131,7 +139,7 @@ cmake(
             "libopenvino_continuous_batching.a",
         ],
     tags = ["requires-network"],
-    alwayslink = False,
+    alwayslink = True,
     visibility = ["//visibility:public"],
 )
 
@@ -141,7 +149,8 @@ cc_library(
         ":llm_engine_cmake_redhat",
     ],
     visibility = ["//visibility:public"],
-    alwayslink = False,
+    alwayslink = True,
+    linkstatic = True,
 )
 """
     repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy))

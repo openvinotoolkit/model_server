@@ -38,7 +38,9 @@ cc_library(
             "//:redhat_build": [
                 "@llm_engine//:llm_engine_redhat",
             ],
-        }),
+        }) + [
+            "@Jinja2Cpp//:libjinja2cpp",
+        ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,

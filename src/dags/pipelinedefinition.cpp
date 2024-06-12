@@ -388,10 +388,9 @@ public:
         nodeInfos(nodeInfos),
         nodeResources(nodeResources),
         isMultiBatchAllowed(isMultiBatchAllowed) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validation of pipeline: {}; node name: {}; node kind: {}",
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validation of pipeline: {}; node name: {}",
             pipelineName,
-            dependantNodeInfo.nodeName,
-            dependantNodeInfo.kind);
+            dependantNodeInfo.nodeName);
     }
 
     Status fetchUnderlyingModelInstance() {
@@ -1337,8 +1336,8 @@ Status PipelineDefinition::getCustomNodeMetadata(const NodeInfo& customNodeInfo,
     int paramArrayLength = customNodeInfo.parameters.size();
     int result = callback(&info, &infoCount, paramArray.get(), paramArrayLength, customNodeLibraryInternalManager);
     if (result != 0) {
-        SPDLOG_ERROR("Metadata call to custom node: {} in pipeline: {} returned error code: {}",
-            customNodeInfo.nodeName, pipelineName, result);
+        SPDLOG_ERROR("Metadata call to custom node: {} in pipeline: {} returned",
+            customNodeInfo.nodeName, pipelineName);
         return StatusCode::NODE_LIBRARY_METADATA_FAILED;
     }
     return createTensorInfoMap(info, infoCount, inputsInfo, customNodeInfo.library.release, customNodeLibraryInternalManager);
