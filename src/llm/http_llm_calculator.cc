@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <atomic>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -385,6 +386,9 @@ const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 
 static std::string packIntoServerSideEventMessage(const std::string& message);
 
+// CB lib internals rely on request_id, so for now we provide increasing ID
+static std::atomic<uint64_t> currentRequestId = 0;
+
 class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<ovms::LLMNodeResources> nodeResources;
     GenerationHandle generationHandle;
@@ -475,7 +479,7 @@ public:
             {
                 OVMS_PROFILE_SCOPE("pipeline->add_request()");
                 this->generationHandle = nodeResources->cbPipe->add_request(
-                    0 /*to be removed from API?*/,
+                    currentRequestId++, /*to be removed from API?*/
                     templateApplyOutput,
                     this->request->createGenerationConfig());
             }
@@ -522,15 +526,9 @@ public:
             // Streaming scenario
             // Each iteration is single execution of Process() method
 
-            // Last iteration
-            if (this->generationHandle->get_status() == GenerationStatus::FINISHED) {
-                OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true));
-                response += packIntoServerSideEventMessage("[DONE]");
-                LOG(INFO) << "Partial response (generation finished): " << response;
-                // Produce last message, but do not producce loopback packets anymore so this is last Process() call
-                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
-            } else {
+            // For in progress generation we follow GenerationHandle::read_all logic.
+            // We read next tokens as long as generation is in running state or we still have unread tokens to pull.
+            if (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
                 // Subsequent iteration
                 OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
                 GenerationOutputs generationOutputs = this->generationHandle->read();
@@ -548,6 +546,16 @@ public:
                 }
                 // Continue the loop
                 cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
+            } else {
+                // Last generation where we do not read any more tokens, but only finish the stream.
+                // This happens when we gracefully finish (reach max_tokens or EOS token), but also when
+                // generation runs out of memory or for some other reason is aborted by the pipeline.
+                OVMS_PROFILE_SCOPE("Generation of last streaming response");
+                std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true));
+                response += packIntoServerSideEventMessage("[DONE]");
+                LOG(INFO) << "Partial response (generation finished): " << response;
+                // Produce last message, but do not producce loopback packets anymore so this is last Process() call
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             }
         }
 
