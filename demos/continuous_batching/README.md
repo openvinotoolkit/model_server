@@ -31,7 +31,7 @@ Run optimum-cli to download and quantize the model:
 ```bash
 cd demos/continuous_batching
 optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 Meta-Llama-3-8B-Instruct
-convert_tokenizer -o Meta-Llama-3-8B-Instruct --with-detokenizer --skip-special-tokens --not_add-special-tokens meta-llama/Meta-Llama-3-8B-Instruct
+convert_tokenizer -o Meta-Llama-3-8B-Instruct --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens meta-llama/Meta-Llama-3-8B-Instruct
 ```
 Copy the graph to the model folder. 
 ```bash
