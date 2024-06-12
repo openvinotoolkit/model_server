@@ -557,7 +557,7 @@ public:
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process end";
         return absl::OkStatus();
     }
-};  // namespace mediapipe
+};
 
 std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& completeResponse) {
     return serializeUnaryResponse(std::vector<std::string>{completeResponse});
