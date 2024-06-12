@@ -29,10 +29,10 @@
 #include "layout_configuration.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
+#include "status.hpp"
 
 namespace ovms {
 class ModelVersionPolicy;
-class Status;
 
 using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, ov::Any>;
