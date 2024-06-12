@@ -21,7 +21,7 @@ NO_PROXY := "$(no_proxy)"
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
 OVMS_CPP_IMAGE_TAG ?= 2024.1
-BASE_OS ?= ubuntu
+BASE_OS ?= ubuntu22
 
 ifeq ($(BASE_OS),ubuntu22)
   BASE_OS_TAG_UBUNTU ?= 22.04
@@ -43,7 +43,7 @@ clean:
 from_docker:
 	mkdir -p capi/$(DIST_OS)
 	docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
-			"tar -c -C /ovms_pkg/$(DIST_OS) ovms.tar.gz ; sleep 2" | tar -x -C capi/$(DIST_OS)/ && cd ../../
+			"tar -c -C /ovms_pkg/$(BASE_OS) ovms.tar.gz ; sleep 2" | tar -x -C capi/$(DIST_OS)/ && cd ../../
 	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG))
 
 from_web:
