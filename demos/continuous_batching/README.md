@@ -132,7 +132,7 @@ curl http://localhost:8000/v1/config
 
 ## Client code
 
-A single servable exposes both `chat/completions` and `completions` endpoints with and without steam capabilities.
+A single servable exposes both `chat/completions` and `completions` endpoints with and without stream capabilities.
 Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
 Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
 
@@ -204,7 +204,7 @@ curl http://localhost:8000/v3/completions \
 
 ### Streaming:
 
-The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generated code also in streaming mode:
+The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
 Install the client library:
 ```bash
@@ -268,9 +268,10 @@ It can be demonstrated using benchmarking app from vLLM repository:
 ```bash
 git clone https://github.com/vllm-project/vllm
 cd vllm
-pip install wheel packaging ninja "setuptools>=49.4.0" numpy
+pip3 install wheel packaging ninja "setuptools>=49.4.0" numpy
 pip3 install -r ../requirements-cpu.txt
-VLLM_TARGET_DEVICE=cpu python setup.py install
+export VLLM_TARGET_DEVICE=cpu
+python setup.py install
 cd benchmarks
 sed -i -e 's|v1/chat/completions|v3/chat/completions|g' backend_request_func.py  # allows calls to endpoint with v3 instead of v1 like in vLLM
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
