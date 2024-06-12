@@ -154,6 +154,10 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
     nodeResources->device = nodeOptions.device();
 
     auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), nodeResources->pluginConfig);
+    if (!status.ok()) {
+        SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeResources->pluginConfig);
+        return status;
+    }
 
     try {
         nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig);
