@@ -155,7 +155,7 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
 
     auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), nodeResources->pluginConfig);
     if (!status.ok()) {
-        SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeResources->pluginConfig);
+        SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
         return status;
     }
 
