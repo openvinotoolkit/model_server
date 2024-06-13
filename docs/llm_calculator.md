@@ -66,7 +66,7 @@ The calculator supports the following node_options for tuning the pipeline confi
 -    optional string device = 8 [default = "CPU"]
 -    optional string plugin_config = 9 [default = ""]
 
-It is important to set cache_size to bigger values for bigger models because the default value of 4GB is just used for simple testing.
+The value of `cache_size` might have performance  implications. It is used for storing LLM model KV cache data. Adjust it based on the model size and the expected level of concurrency. Set `50` or even more for high load with large models.
 
 References:
 - [chat API](./model_server_rest_api_chat.md)
