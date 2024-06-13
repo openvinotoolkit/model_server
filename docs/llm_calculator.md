@@ -59,7 +59,7 @@ node: {
 The calculator supports the following node_options for tuning the pipeline configuration:
 -    required string models_path = 1;
 -    optional uint64 max_num_batched_tokens = 2 [default = 256];
--    optional uint64 cache_size = 3 [default = 4];
+-    optional uint64 cache_size = 3 [default = 8];
 -    optional uint64 block_size = 4 [default = 32];
 -    optional uint64 max_num_seqs = 5 [default = 256];
 -    optional bool dynamic_split_fuse = 7 [default = true];
