@@ -19,8 +19,8 @@ def llm_engine():
     llm_engine_repository(name="_llm_engine")
     new_git_repository(
         name = "llm_engine",
-        remote = "https://github.com/rasapala/openvino.genai",
-        commit = "7a2478e2daf05713d1eb6ae10bbf879532824f7f",
+        remote = "https://github.com/ilya-lavrenov/openvino.genai",
+        commit = "911db22c9c584902a46b1750ebbba69b3134d923", # Add device plugin configuration
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
