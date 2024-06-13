@@ -81,6 +81,8 @@ cc_library(
     deps = [
         "@linux_openvino//:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:libmodelconfigjsonparser",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovmsmediapipe_utils",

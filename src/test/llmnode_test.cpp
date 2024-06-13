@@ -200,6 +200,8 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources->device, "CPU");
+    ASSERT_EQ(nodeResources->pluginConfig.size(), 0);
 }
 
 // Currently disabled UT - need successfull resource init - only aavailable with LLM models.
@@ -218,6 +220,8 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckHalfDefault) {
                     models_path: "/workspace/"
                     max_num_batched_tokens: 98
                     cache_size: 1
+                    device: "GPU"
+                    plugin_config: "{"PERF_COUNT":true}"
                 }
             }
         }
@@ -233,6 +237,34 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckHalfDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources->device, "GPU");
+    ASSERT_EQ(nodeResources->pluginConfig["PERF_COUNT"], "true");
+}
+
+// Currently disabled UT - need successfull resource init - only aavailable with LLM models.
+TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsWrongJsonFormat) {
+    std::string testPbtxt = R"(
+    input_stream: "REQUEST:in"
+    output_stream: "RESPONSE:out"
+        node {
+            name: "llmNode"
+            calculator: "LLMCalculator"
+            input_side_packet: "LLM_NODE_RESOURCES:py"
+            input_stream: "REQUEST:in"
+            output_stream: "RESPONSE:out1"
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: "/workspace/"
+                    plugin_config: ""PERF_COUNT":true}"
+                }
+            }
+        }
+    )";
+
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
+    ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
 }
 
 // Currently disabled UT - need successfull resource init - only aavailable with LLM models.

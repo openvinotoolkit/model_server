@@ -59,12 +59,14 @@ node: {
 The calculator supports the following node_options for tuning the pipeline configuration:
 -    required string models_path = 1;
 -    optional uint64 max_num_batched_tokens = 2 [default = 256];
--    optional uint64 num_kv_blocks = 3 [default = 364];
+-    optional uint64 cache_size = 3 [default = 8];
 -    optional uint64 block_size = 4 [default = 32];
 -    optional uint64 max_num_seqs = 5 [default = 256];
--    optional bool dynamic_split_fuse = 7 [default = false];
+-    optional bool dynamic_split_fuse = 7 [default = true];
+-    optional string device = 8 [default = "CPU"]
+-    optional string plugin_config = 9 [default = ""]
 
-
+The value of `cache_size` might have performance  implications. It is used for storing LLM model KV cache data. Adjust it based on the model size and the expected level of concurrency. Set `50` or even more for high load with large models.
 
 References:
 - [chat API](./model_server_rest_api_chat.md)

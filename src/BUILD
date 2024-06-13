@@ -363,6 +363,7 @@ cc_library(
             "//:disable_python": []
         }) + [
             "cpp_headers",
+            "libmodelconfigjsonparser",
             "libovmsfilesystem",
             "libovmsfilesystemfactory",
             "libovmslocalfilesystem", # indirectly & directly through factory
@@ -929,6 +930,22 @@ cc_library(
             "libovmss3filesystem",
             "libovmslocalfilesystem",
             "libovmslogging"],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "libmodelconfigjsonparser",
+    hdrs = [
+        "json_parser.hpp",
+    ],
+    srcs = ["json_parser.cpp"],
+    deps = ["cpp_headers",
+            "@com_github_tencent_rapidjson//:rapidjson",
+            "@linux_openvino//:openvino",
+            "@com_github_gabime_spdlog//:spdlog"],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,

@@ -24,6 +24,7 @@
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
+#include "../json_parser.hpp"
 #include "../logging.hpp"
 #include "../status.hpp"
 
@@ -150,8 +151,16 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         .max_num_seqs = nodeOptions.max_num_seqs(),
     };
 
+    nodeResources->device = nodeOptions.device();
+
+    auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), nodeResources->pluginConfig);
+    if (!status.ok()) {
+        SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
+        return status;
+    }
+
     try {
-        nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig);
+        nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", basePath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
