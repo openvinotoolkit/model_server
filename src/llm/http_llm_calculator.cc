@@ -44,10 +44,9 @@ using namespace ovms;
 
 namespace mediapipe {
 
-enum Endpoint {
+enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
-    UNDEFINED
 };
 
 using chat_entry_t = std::unordered_map<std::string, std::string>;
@@ -59,6 +58,7 @@ class OpenAIChatCompletionsRequest {
     Document& doc;
 
     chat_t messages;
+    std::optional<std::string> prompt{std::nullopt};
     bool stream{false};
     std::string model;
     std::optional<int> maxTokens{std::nullopt};
@@ -75,12 +75,12 @@ class OpenAIChatCompletionsRequest {
     std::optional<int> bestOf{std::nullopt};
     // std::optional<bool> useBeamSearch{std::nullopt};
     std::optional<bool> ignoreEOS{std::nullopt};
-    std::optional<std::string> prompt{std::nullopt};
-    Endpoint endpoint{UNDEFINED};
+    Endpoint endpoint;
 
 public:
-    OpenAIChatCompletionsRequest(Document& doc) :
-        doc(doc) {}
+    OpenAIChatCompletionsRequest(Document& doc, Endpoint endpoint) :
+        doc(doc),
+        endpoint(endpoint) {}
 
     GenerationConfig createGenerationConfig() const {
         GenerationConfig config;
@@ -125,14 +125,7 @@ public:
 
     chat_t getMessages() const { return this->messages; }
     Endpoint getEndpoint() const { return this->endpoint; }
-    void setEndpoint(Endpoint endpoint) { this->endpoint = endpoint; }
-    std::string getPrompt() const {
-        if (this->prompt.has_value()) {
-            return this->prompt.value();
-        } else {
-            return "";
-        }
-    }
+    std::optional<std::string> getPrompt() const { return this->prompt; }
 
     bool isStream() const { return this->stream; }
     std::string getModel() const { return this->model; }
@@ -150,7 +143,7 @@ public:
         }
 
         // messages: [{role: content}, {role: content}, ...]; required
-        if (this->endpoint == CHAT_COMPLETIONS) {
+        if (this->endpoint == Endpoint::CHAT_COMPLETIONS) {
             it = doc.FindMember("messages");
             if (it == doc.MemberEnd())
                 return absl::InvalidArgumentError("Messages missing in request");
@@ -174,7 +167,7 @@ public:
         }
 
         // prompt: string
-        if (this->endpoint == COMPLETIONS) {
+        if (this->endpoint == Endpoint::COMPLETIONS) {
             it = this->doc.FindMember("prompt");
             if (it != this->doc.MemberEnd()) {
                 if (!it->value.IsString()) {
@@ -394,7 +387,7 @@ public:
     }
 };
 
-bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
+static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
     if (textProcessor.chatTemplate == nullptr) {
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
         return false;
@@ -428,7 +421,11 @@ using OutputDataType = std::string;
 
 const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 
-static std::string packIntoServerSideEventMessage(const std::string& message);
+static std::string packIntoServerSideEventMessage(const std::string& message) {
+    std::stringstream ss;
+    ss << "data: " << message << "\n\n";
+    return ss.str();
+}
 
 // CB lib internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
@@ -506,15 +503,13 @@ public:
             LOG(INFO) << "Request uri: " << payload.uri;
             Endpoint endpoint;
             if (payload.uri == "/v3/chat/completions") {
-                endpoint = CHAT_COMPLETIONS;
+                endpoint = Endpoint::CHAT_COMPLETIONS;
             } else if (payload.uri == "/v3/completions") {
-                endpoint = COMPLETIONS;
+                endpoint = Endpoint::COMPLETIONS;
             } else {
-                endpoint = UNDEFINED;
                 return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v3/chat/completions, /v3/completions");
             }
-            this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson);
-            this->request->setEndpoint(endpoint);
+            this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson, endpoint);
 
             // TODO: Support chat scenario once atobisze adds that to CB library
             auto status = this->request->parse();
@@ -526,18 +521,24 @@ public:
             // LOG(INFO) << "Input prompt:" << templateApplyOutput;
 
             std::string prompt;
-            if (endpoint == CHAT_COMPLETIONS) {
-                RET_CHECK(this->request->getMessages().size() >= 1);
-                RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
+            switch (endpoint) {
+            case Endpoint::CHAT_COMPLETIONS: {
+                if (this->request->getMessages().size() <= 0) {
+                    return absl::Status(absl::StatusCode::kInvalidArgument, "There are no messages to apply for chat");
+                }
                 if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
                     return absl::Status(absl::StatusCode::kInvalidArgument, finalPrompt);
                 }
-            } else if (endpoint == COMPLETIONS) {
-                RET_CHECK(this->request->getPrompt() != "");
-                finalPrompt = this->request->getPrompt();
-            } else {
-                RET_CHECK(false);
+                break;
             }
+            case Endpoint::COMPLETIONS: {
+                if (!this->request->getPrompt().has_value() || !this->request->getPrompt().value().size()) {
+                    return absl::Status(absl::StatusCode::kInvalidArgument, "Prompt is missing");
+                }
+                finalPrompt = this->request->getPrompt().value();
+            }
+            }
+
             {
                 OVMS_PROFILE_SCOPE("pipeline->add_request()");
                 this->generationHandle = nodeResources->cbPipe->add_request(
@@ -656,7 +657,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
         writer.String("logprobs");
         writer.Null();
         // message: object
-        if (endpoint == CHAT_COMPLETIONS) {
+        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
             writer.String("message");
             writer.StartObject();  // {
             // content: string; Actual content of the text produced
@@ -669,7 +670,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
             // TODO: tools_call
             // TODO: function_call (deprecated)
             writer.EndObject();  // }
-        } else if (endpoint == COMPLETIONS) {
+        } else if (endpoint == Endpoint::COMPLETIONS) {
             writer.String("text");
             writer.String(completeResponse.c_str());
         }
@@ -687,10 +688,10 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     writer.String(this->request->getModel().c_str());
 
     // object: string; defined that the type is unary rather than streamed chunk
-    if (endpoint == CHAT_COMPLETIONS) {
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         writer.String("object");
         writer.String("chat.completion");
-    } else if (endpoint == COMPLETIONS) {
+    } else if (endpoint == Endpoint::COMPLETIONS) {
         writer.String("object");
         writer.String("text_completion");
     }
@@ -740,7 +741,7 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     // logprobs: object/null; Log probability information for the choice. TODO
     writer.String("logprobs");
     writer.Null();
-    if (endpoint == CHAT_COMPLETIONS) {
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         writer.String("delta");
         writer.StartObject();  // {
         if (!stop) {
@@ -752,7 +753,7 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
             writer.String(chunkResponse.c_str());
         }
         writer.EndObject();  // }
-    } else if (endpoint == COMPLETIONS) {
+    } else if (endpoint == Endpoint::COMPLETIONS) {
         if (!stop) {
             writer.String("text");
             writer.String(chunkResponse.c_str());
@@ -772,10 +773,10 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     writer.String(this->request->getModel().c_str());
 
     // object: string; defined that the type streamed chunk rather than complete response
-    if (endpoint == CHAT_COMPLETIONS) {
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         writer.String("object");
         writer.String("chat.completion.chunk");
-    } else if (endpoint == COMPLETIONS) {
+    } else if (endpoint == Endpoint::COMPLETIONS) {
         writer.String("object");
         writer.String("text_completion.chunk");
     }
@@ -794,12 +795,6 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
 
     writer.EndObject();  // }
     return buffer.GetString();
-}
-
-std::string packIntoServerSideEventMessage(const std::string& message) {
-    std::stringstream ss;
-    ss << "data: " << message << "\n\n";
-    return ss.str();
 }
 
 // TODO: Names to be decided

@@ -225,7 +225,7 @@ stream = client.chat.completions.create(
 )
 for chunk in stream:
     if chunk.choices[0].delta.content is not None:
-        print(chunk.choices[0].delta.content, end="")
+        print(chunk.choices[0].delta.content, end="", flush=True)
 ```
 
 Output:
@@ -252,7 +252,7 @@ stream = client.completions.create(
 )
 for chunk in stream:
     if chunk.choices[0].text is not None:
-        print(chunk.choices[0].text, end="")
+        print(chunk.choices[0].text, end="", flush=True)
 ```
 
 Output:

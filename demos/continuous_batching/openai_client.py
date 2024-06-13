@@ -20,16 +20,16 @@ client = OpenAI(
   base_url="http://localhost:8000/v3",
   api_key="unused"
 )
-model = "meta-llama/Llama-2-7b-chat-hf"
+model = "meta-llama/Meta-Llama-3-8B-Instruct"
 
 print("unary completions")
-stream = client.completions.create(
+response = client.completions.create(
     model=model,
     prompt="hello",
     max_tokens=100,
     stream=False
 )
-print(stream)
+print(response)
 
 print("stream completions")
 stream = client.completions.create(
@@ -41,7 +41,7 @@ stream = client.completions.create(
 
 for chunk in stream:
     if chunk.choices[0].text is not None:
-        print(chunk.choices[0].text, end="")
+        print(chunk.choices[0].text, end="", flush=True)
 
 print("unary chat completions")
 response = client.chat.completions.create(
@@ -62,4 +62,4 @@ stream = client.chat.completions.create(
 
 for chunk in stream:
     if chunk.choices[0].delta.content is not None:
-        print(chunk.choices[0].delta.content, end="")
+        print(chunk.choices[0].delta.content, end="", flush=True)
