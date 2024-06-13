@@ -52,7 +52,7 @@ enum RequestType { Predict,
     KFS_GetServerReady,
     KFS_GetServerLive,
     KFS_GetServerMetadata,
-    OAI_ChatCompletion,
+    V3,
     Metrics };
 
 struct HttpRequestComponents {
@@ -71,7 +71,7 @@ struct HttpResponseComponents {
     std::optional<int> inferenceHeaderContentLength;
 };
 
-using HandlerCallbackFn = std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&, tensorflow::serving::net_http::ServerRequestInterface*)>;
+using HandlerCallbackFn = std::function<Status(const std::string_view, const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&, tensorflow::serving::net_http::ServerRequestInterface*)>;
 
 class HttpRestApiHandler {
 public:
@@ -90,7 +90,7 @@ public:
     static const std::string kfs_serverliveRegexExp;
     static const std::string kfs_servermetadataRegexExp;
 
-    static const std::string openai_chatCompletionRegexExp;
+    static const std::string v3_RegexExp;
     /**
      * @brief Construct a new HttpRest Api Handler
      *
@@ -111,6 +111,7 @@ public:
     void registerAll();
 
     Status dispatchToProcessor(
+        const std::string_view uri,
         const std::string& request_body,
         std::string* response,
         const HttpRequestComponents& request_components,
@@ -215,7 +216,7 @@ public:
     Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
-    Status processOAIChatCompletionsRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* writer);
+    Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* writer);
 
 private:
     const std::regex predictionRegex;
@@ -231,7 +232,7 @@ private:
     const std::regex kfs_serverliveRegex;
     const std::regex kfs_servermetadataRegex;
 
-    const std::regex oai_chatCompletionRegex;
+    const std::regex v3_Regex;
 
     const std::regex metricsRegex;
 
