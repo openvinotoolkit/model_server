@@ -296,6 +296,10 @@ public:
                 return absl::InvalidArgumentError("n is not an unsigned integer");
             if (it->value.GetUint() == 0)
                 return absl::InvalidArgumentError("n value should be greater than 0");
+            size_t bestOf = this->bestOf.has_value() ? this->bestOf.value() : 1;
+            if(bestOf < it->value.GetUint()) {
+                return absl::InvalidArgumentError("n value cannot be greater than best_of");
+            }
             this->numReturnSequences = it->value.GetUint();
         }
 
