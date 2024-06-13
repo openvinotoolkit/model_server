@@ -296,6 +296,10 @@ public:
                 return absl::InvalidArgumentError("n is not an unsigned integer");
             if (it->value.GetUint() == 0)
                 return absl::InvalidArgumentError("n value should be greater than 0");
+            size_t bestOf = this->bestOf.has_value() ? this->bestOf.value() : 1;  // 1 is default best_of value
+            if (bestOf < it->value.GetUint()) {
+                return absl::InvalidArgumentError("n value cannot be greater than best_of");
+            }
             this->numReturnSequences = it->value.GetUint();
         }
 
@@ -459,119 +463,123 @@ public:
         if (cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty() && cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty()) {
             return absl::OkStatus();
         }
+        try {
+            // First iteration of Process()
+            if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
+                OVMS_PROFILE_SCOPE("Deserialization of first request");
+                // Check if we did not receive the payload twice
+                RET_CHECK(this->request == nullptr);
+                RET_CHECK(this->generationHandle == nullptr);
+                RET_CHECK(this->streamer == nullptr);
 
-        // First iteration of Process()
-        if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
-            OVMS_PROFILE_SCOPE("Deserialization of first request");
-            // Check if we did not receive the payload twice
-            RET_CHECK(this->request == nullptr);
-            RET_CHECK(this->generationHandle == nullptr);
-            RET_CHECK(this->streamer == nullptr);
+                // Register resource creation time
+                this->created = std::chrono::system_clock::now();
 
-            // Register resource creation time
-            this->created = std::chrono::system_clock::now();
+                InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
+                LOG(INFO) << "Request body: " << payload.body;
 
-            InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
-            LOG(INFO) << "Request body: " << payload.body;
+                this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson);
 
-            this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson);
+                // TODO: Support chat scenario once atobisze adds that to CB library
+                auto status = this->request->parse();
+                if (status != absl::OkStatus())
+                    return status;
+                RET_CHECK(this->request->getMessages().size() >= 1);
+                RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
 
-            // TODO: Support chat scenario once atobisze adds that to CB library
-            auto status = this->request->parse();
-            if (status != absl::OkStatus())
-                return status;
-            RET_CHECK(this->request->getMessages().size() >= 1);
-            RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
+                std::string templateApplyOutput = "";
+                if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, templateApplyOutput)) {
+                    return absl::Status(absl::StatusCode::kInvalidArgument, templateApplyOutput);
+                }
+                // LOG(INFO) << "Input prompt:" << templateApplyOutput;
 
-            std::string templateApplyOutput = "";
-            if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, templateApplyOutput)) {
-                return absl::Status(absl::StatusCode::kInvalidArgument, templateApplyOutput);
+                {
+                    OVMS_PROFILE_SCOPE("pipeline->add_request()");
+                    this->generationHandle = nodeResources->cbPipe->add_request(
+                        currentRequestId++, /*to be removed from API?*/
+                        templateApplyOutput,
+                        this->request->createGenerationConfig());
+                }
+                nodeResources->notifyExecutorThread();
+                this->streamer = std::make_shared<TextStreamer>(
+                    nodeResources->cbPipe->get_tokenizer());
             }
-            // LOG(INFO) << "Input prompt:" << templateApplyOutput;
 
-            {
-                OVMS_PROFILE_SCOPE("pipeline->add_request()");
-                this->generationHandle = nodeResources->cbPipe->add_request(
-                    currentRequestId++, /*to be removed from API?*/
-                    templateApplyOutput,
-                    this->request->createGenerationConfig());
-            }
-            nodeResources->notifyExecutorThread();
-            this->streamer = std::make_shared<TextStreamer>(
-                nodeResources->cbPipe->get_tokenizer());
-        }
+            RET_CHECK(this->generationHandle != nullptr);
+            RET_CHECK(this->request != nullptr);
+            RET_CHECK(this->streamer != nullptr);
 
-        RET_CHECK(this->generationHandle != nullptr);
-        RET_CHECK(this->request != nullptr);
-        RET_CHECK(this->streamer != nullptr);
+            // Unary scenario
+            if (!this->request->isStream()) {
+                OVMS_PROFILE_SCOPE("Unary generation cycle");
+                std::vector<GenerationOutput> generationOutput = this->generationHandle->read_all();
 
-        // Unary scenario
-        if (!this->request->isStream()) {
-            OVMS_PROFILE_SCOPE("Unary generation cycle");
-            std::vector<GenerationOutput> generationOutput = this->generationHandle->read_all();
-
-            RET_CHECK(generationOutput.size() >= 1);
-            // legacy
-            if (generationOutput.size() == 1) {
-                std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
-                std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
-                std::string completion = tokenizer->decode(tokens);
-
-                std::string response = serializeUnaryResponse(tokenizer->decode(tokens));
-                LOG(INFO) << "Complete unary response: " << response;
-                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
-            } else {
-                // Beam search only supported for unary
-                std::vector<std::string> completions;
-                for (GenerationOutput& out : generationOutput) {
-                    std::vector<int64_t> tokens = out.generated_token_ids;
+                RET_CHECK(generationOutput.size() >= 1);
+                // legacy
+                if (generationOutput.size() == 1) {
+                    std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
                     std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
                     std::string completion = tokenizer->decode(tokens);
-                    completions.emplace_back(completion);
-                }
 
-                std::string response = serializeUnaryResponse(completions);
-                LOG(INFO) << "Complete unary response: " << response;
-                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
-            }
-        } else {
-            OVMS_PROFILE_SCOPE("Stream generation cycle");
-            // Streaming scenario
-            // Each iteration is single execution of Process() method
+                    std::string response = serializeUnaryResponse(tokenizer->decode(tokens));
+                    LOG(INFO) << "Complete unary response: " << response;
+                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
+                } else {
+                    // Beam search only supported for unary
+                    std::vector<std::string> completions;
+                    for (GenerationOutput& out : generationOutput) {
+                        std::vector<int64_t> tokens = out.generated_token_ids;
+                        std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
+                        std::string completion = tokenizer->decode(tokens);
+                        completions.emplace_back(completion);
+                    }
 
-            // For in progress generation we follow GenerationHandle::read_all logic.
-            // We read next tokens as long as generation is in running state or we still have unread tokens to pull.
-            if (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
-                // Subsequent iteration
-                OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
-                GenerationOutputs generationOutputs = this->generationHandle->read();
-                RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
-                RET_CHECK(generationOutputs.begin()->second.generated_token_ids.size() == 1);
-
-                // TODO(dkalinow): Move this logic to CB library
-                int64_t token = generationOutputs.begin()->second.generated_token_ids[0];
-                auto chunk = this->streamer->put(token);
-                if (chunk.has_value()) {
-                    std::string response = packIntoServerSideEventMessage(
-                        serializeStreamingChunk(chunk.value(), false));
-                    LOG(INFO) << "Partial response (continue): " << response;
+                    std::string response = serializeUnaryResponse(completions);
+                    LOG(INFO) << "Complete unary response: " << response;
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 }
-                // Continue the loop
-                cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
             } else {
-                // Last generation where we do not read any more tokens, but only finish the stream.
-                // This happens when we gracefully finish (reach max_tokens or EOS token), but also when
-                // generation runs out of memory or for some other reason is aborted by the pipeline.
-                OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true));
-                response += packIntoServerSideEventMessage("[DONE]");
-                LOG(INFO) << "Partial response (generation finished): " << response;
-                // Produce last message, but do not producce loopback packets anymore so this is last Process() call
-                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
-            }
-        }
+                OVMS_PROFILE_SCOPE("Stream generation cycle");
+                // Streaming scenario
+                // Each iteration is single execution of Process() method
 
+                // For in progress generation we follow GenerationHandle::read_all logic.
+                // We read next tokens as long as generation is in running state or we still have unread tokens to pull.
+                if (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
+                    // Subsequent iteration
+                    OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
+                    GenerationOutputs generationOutputs = this->generationHandle->read();
+                    RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
+                    RET_CHECK(generationOutputs.begin()->second.generated_token_ids.size() == 1);
+
+                    // TODO(dkalinow): Move this logic to CB library
+                    int64_t token = generationOutputs.begin()->second.generated_token_ids[0];
+                    auto chunk = this->streamer->put(token);
+                    if (chunk.has_value()) {
+                        std::string response = packIntoServerSideEventMessage(
+                            serializeStreamingChunk(chunk.value(), false));
+                        LOG(INFO) << "Partial response (continue): " << response;
+                        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
+                    }
+                    // Continue the loop
+                    cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
+                } else {
+                    // Last generation where we do not read any more tokens, but only finish the stream.
+                    // This happens when we gracefully finish (reach max_tokens or EOS token), but also when
+                    // generation runs out of memory or for some other reason is aborted by the pipeline.
+                    OVMS_PROFILE_SCOPE("Generation of last streaming response");
+                    std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true));
+                    response += packIntoServerSideEventMessage("[DONE]");
+                    LOG(INFO) << "Partial response (generation finished): " << response;
+                    // Produce last message, but do not producce loopback packets anymore so this is last Process() call
+                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
+                }
+            }
+        } catch (ov::AssertFailure& e) {
+            return absl::InvalidArgumentError(e.what());
+        } catch (...) {
+            return absl::InvalidArgumentError("Response generation failed");
+        }
         timestamp = timestamp.NextAllowedInStream();
 
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process end";
