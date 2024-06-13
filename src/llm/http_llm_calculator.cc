@@ -402,17 +402,29 @@ static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPa
         auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = textProcessor.chatTemplate->getObject(),
             "bos_token"_a = textProcessor.bosToken, "eos_token"_a = textProcessor.eosToken);
         py::exec(R"(
-            messages = json.loads(request_body)["messages"]
-            output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
+            output = ""
+            error = ""
+            try:
+                messages = json.loads(request_body)["messages"]
+                output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
+            except Exception as e:
+                error = str(e)            
         )",
             py::globals(), locals);
 
-        output = locals["output"].cast<std::string>();
+        std::string result = locals["output"].cast<std::string>();
+        std::string error = locals["error"].cast<std::string>();
+
+        if (error != "") {
+            output = error;
+            return false;
+        }
+
+        output = result;
         return true;
     } catch (const pybind11::error_already_set& e) {
-        LOG(INFO) << "Error occurred when applying chat template: " << e.what();
-        // TODO: Don't include traceback in response
-        output = e.what();
+        LOG(INFO) << "Error occured when applying chat template: " << e.what();
+        output = "Unexpected error occurred when applying chat template";
     } catch (...) {
         LOG(INFO) << "Unexpected error occurred when applying chat template";
         output = "Unexpected error occurred when applying chat template";
