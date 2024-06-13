@@ -520,7 +520,7 @@ public:
             auto status = this->request->parse();
             if (status != absl::OkStatus())
                 return status;
-            
+
             std::string finalPrompt = "";
 
             // LOG(INFO) << "Input prompt:" << templateApplyOutput;
@@ -531,7 +531,7 @@ public:
                 RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
                 if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
                     return absl::Status(absl::StatusCode::kInvalidArgument, finalPrompt);
-            }
+                }
             } else if (endpoint == COMPLETIONS) {
                 RET_CHECK(this->request->getPrompt() != "");
                 finalPrompt = this->request->getPrompt();
