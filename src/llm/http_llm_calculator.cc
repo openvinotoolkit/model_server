@@ -463,7 +463,7 @@ public:
         if (cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty() && cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty()) {
             return absl::OkStatus();
         }
-
+        try {
         // First iteration of Process()
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             OVMS_PROFILE_SCOPE("Deserialization of first request");
@@ -575,7 +575,9 @@ public:
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             }
         }
-
+        } catch (std::exception& e) {
+            return absl::InvalidArgumentError(e.what());
+        }
         timestamp = timestamp.NextAllowedInStream();
 
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process end";
