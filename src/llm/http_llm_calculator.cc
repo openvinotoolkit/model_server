@@ -518,9 +518,6 @@ public:
 
             std::string finalPrompt = "";
 
-            // LOG(INFO) << "Input prompt:" << templateApplyOutput;
-
-            std::string prompt;
             switch (endpoint) {
             case Endpoint::CHAT_COMPLETIONS: {
                 if (this->request->getMessages().size() <= 0) {
