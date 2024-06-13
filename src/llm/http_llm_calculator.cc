@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <atomic>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -51,6 +52,8 @@ enum Endpoint {
 
 using chat_entry_t = std::unordered_map<std::string, std::string>;
 using chat_t = std::vector<chat_entry_t>;
+
+#define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
 
 class OpenAIChatCompletionsRequest {
     Document& doc;
@@ -191,16 +194,32 @@ public:
             return absl::InvalidArgumentError("model missing in request");
         }
 
+        // ignore_eos: bool; optional - defaults to false
+        // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
+        it = this->doc.FindMember("ignore_eos");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsBool())
+                return absl::InvalidArgumentError("ignore_eos accepts values true or false");
+            this->ignoreEOS = it->value.GetBool();
+        }
+
         // max_tokens: int; optional
         it = this->doc.FindMember("max_tokens");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsInt())
-                return absl::InvalidArgumentError("max_tokens is not an integer");
-            this->maxTokens = it->value.GetInt();
-            if (this->maxTokens.value() <= 0)
+            if (!it->value.IsUint())
+                return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
+            if (it->value.GetUint() == 0)
                 return absl::InvalidArgumentError("max_tokens value should be greater than 0");
+            this->maxTokens = it->value.GetUint();
         }
-
+        if (this->ignoreEOS.value_or(false)) {
+            if (this->maxTokens.has_value()) {
+                if (it->value.GetUint() > IGNORE_EOS_MAX_TOKENS_LIMIT)
+                    return absl::InvalidArgumentError("when ignore_eos is true max_tokens can not be greater than 4000");
+            } else {
+                this->maxTokens = IGNORE_EOS_MAX_TOKENS_LIMIT;
+            }
+        }
         // TODO: Supported by OpenAI and vLLM, however unsupported by CB lib
         // // frequency_penalty: float; optional - defaults to 0
         // it = this->doc.FindMember("frequency_penalty");
@@ -284,27 +303,31 @@ public:
         // seed: int; optional - defaults to 0 (not set)
         it = this->doc.FindMember("seed");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsInt())
-                return absl::InvalidArgumentError("seed is not an integer");
-            this->seed = it->value.GetInt();
+            if (!it->value.IsUint())
+                return absl::InvalidArgumentError("seed is not an unsigned integer");
+            this->seed = it->value.GetUint();
         }
 
         // best_of: int; optional - defaults to 1
         // Extension, unsupported by OpenAI API, however supported by vLLM, supported in CB lib by mapping to group_size param
         it = this->doc.FindMember("best_of");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsInt())
-                return absl::InvalidArgumentError("best_of is not an integer");
-            this->bestOf = it->value.GetInt();
+            if (!it->value.IsUint())
+                return absl::InvalidArgumentError("best_of is not an unsigned integer");
+            if (it->value.GetUint() == 0)
+                return absl::InvalidArgumentError("best_of value should be greater than 0");
+            this->bestOf = it->value.GetUint();
         }
 
         // n: int; optional - defaults to 1
         // Supported by OpenAI API and vLLM, supported in CB lib by mapping to num_return_sequences param
         it = this->doc.FindMember("n");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsInt())
-                return absl::InvalidArgumentError("n is not an integer");
-            this->numReturnSequences = it->value.GetInt();
+            if (!it->value.IsUint())
+                return absl::InvalidArgumentError("n is not an unsigned integer");
+            if (it->value.GetUint() == 0)
+                return absl::InvalidArgumentError("n value should be greater than 0");
+            this->numReturnSequences = it->value.GetUint();
         }
 
         // use_beam_search: bool; optional - defaults to false
@@ -316,15 +339,6 @@ public:
         //         return false;
         //     this->useBeamSearch = it->value.GetBool();
         // }
-
-        // ignore_eos: bool; optional - defaults to false
-        // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
-        it = this->doc.FindMember("ignore_eos");
-        if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsBool())
-                return absl::InvalidArgumentError("ignore_eos accepts values true or false");
-            this->ignoreEOS = it->value.GetBool();
-        }
 
         // logit_bias TODO
         // logprops TODO
@@ -399,12 +413,12 @@ bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std
         output = locals["output"].cast<std::string>();
         return true;
     } catch (const pybind11::error_already_set& e) {
-        LOG(INFO) << "Error occured when applying chat template: " << e.what();
+        LOG(INFO) << "Error occurred when applying chat template: " << e.what();
         // TODO: Don't include traceback in response
         output = e.what();
     } catch (...) {
-        LOG(INFO) << "Unexpected error occured when applying chat template";
-        output = "Unexpected error occured when applying chat template";
+        LOG(INFO) << "Unexpected error occurred when applying chat template";
+        output = "Unexpected error occurred when applying chat template";
     }
     return false;
 }
@@ -415,6 +429,9 @@ using OutputDataType = std::string;
 const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 
 static std::string packIntoServerSideEventMessage(const std::string& message);
+
+// CB lib internals rely on request_id, so for now we provide increasing ID
+static std::atomic<uint64_t> currentRequestId = 0;
 
 class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<ovms::LLMNodeResources> nodeResources;
@@ -503,31 +520,29 @@ public:
             auto status = this->request->parse();
             if (status != absl::OkStatus())
                 return status;
-            RET_CHECK(this->request->getMessages().size() >= 1);
-            RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
+            
+            std::string finalPrompt = "";
 
-            std::string templateApplyOutput = "";
-            if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, templateApplyOutput)) {
-                return absl::Status(absl::StatusCode::kInvalidArgument, templateApplyOutput);
-            }
             // LOG(INFO) << "Input prompt:" << templateApplyOutput;
 
             std::string prompt;
             if (endpoint == CHAT_COMPLETIONS) {
                 RET_CHECK(this->request->getMessages().size() >= 1);
                 RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
-                prompt = this->request->getMessages()[0]["content"];
+                if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
+                    return absl::Status(absl::StatusCode::kInvalidArgument, finalPrompt);
+            }
             } else if (endpoint == COMPLETIONS) {
                 RET_CHECK(this->request->getPrompt() != "");
-                prompt = this->request->getPrompt();
+                finalPrompt = this->request->getPrompt();
             } else {
                 RET_CHECK(false);
             }
             {
                 OVMS_PROFILE_SCOPE("pipeline->add_request()");
                 this->generationHandle = nodeResources->cbPipe->add_request(
-                    0 /*to be removed from API?*/,
-                    templateApplyOutput,
+                    currentRequestId++, /*to be removed from API?*/
+                    finalPrompt,
                     this->request->createGenerationConfig());
             }
             nodeResources->notifyExecutorThread();
@@ -573,15 +588,7 @@ public:
             // Streaming scenario
             // Each iteration is single execution of Process() method
 
-            // Last iteration
-            if (this->generationHandle->get_status() == GenerationStatus::FINISHED) {
-                OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true, this->request->getEndpoint()));
-                response += packIntoServerSideEventMessage("[DONE]");
-                LOG(INFO) << "Partial response (generation finished): " << response;
-                // Produce last message, but do not produce loopback packets anymore so this is last Process() call
-                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
-            } else {
+            if (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
                 // Subsequent iteration
                 OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
                 GenerationOutputs generationOutputs = this->generationHandle->read();
@@ -599,6 +606,14 @@ public:
                 }
                 // Continue the loop
                 cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
+
+            } else {
+                OVMS_PROFILE_SCOPE("Generation of last streaming response");
+                std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true, this->request->getEndpoint()));
+                response += packIntoServerSideEventMessage("[DONE]");
+                LOG(INFO) << "Partial response (generation finished): " << response;
+                // Produce last message, but do not produce loopback packets anymore so this is last Process() call
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             }
         }
 

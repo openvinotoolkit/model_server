@@ -135,10 +135,16 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
 
-    // Currently harrdcoded, will parametrize in future
+    // temporary fix for wrong cache size calculation on in GenAI
+    size_t cache_size;
+    if (nodeOptions.cache_size() % 2)
+        cache_size = nodeOptions.cache_size() / 2 + 1;
+    else
+        cache_size = nodeOptions.cache_size() / 2;
+
     nodeResources->schedulerConfig = {
         .max_num_batched_tokens = nodeOptions.max_num_batched_tokens(),
-        .cache_size = nodeOptions.cache_size(),
+        .cache_size = cache_size,
         .block_size = nodeOptions.block_size(),
         .dynamic_split_fuse = nodeOptions.dynamic_split_fuse(),
         .max_num_seqs = nodeOptions.max_num_seqs(),
