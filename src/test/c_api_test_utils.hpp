@@ -33,6 +33,21 @@
         }                                    \
     }
 
+#define EXPECT_CAPI_STATUS_NULL(C_API_CALL)  \
+    {                                        \
+        auto* err = C_API_CALL;              \
+        if (err != nullptr) {                \
+            uint32_t code = 0;               \
+            const char* msg = nullptr;       \
+            OVMS_StatusCode(err, &code);     \
+            OVMS_StatusDetails(err, &msg);   \
+            std::string smsg(msg);           \
+            OVMS_StatusDelete(err);          \
+            EXPECT_EQ(0, code) << smsg;      \
+            EXPECT_EQ(err, nullptr) << smsg; \
+        }                                    \
+    }
+
 #define ASSERT_CAPI_STATUS_NOT_NULL(C_API_CALL) \
     {                                           \
         auto* err = C_API_CALL;                 \

@@ -297,6 +297,8 @@ cc_library(
         "ov_utils.cpp",
         "ov_utils.hpp",
         "ovms.h",
+        "ocl_utils.cpp",
+        "ocl_utils.hpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
         "prediction_service_utils.hpp",
@@ -375,6 +377,7 @@ cc_library(
             "libovmsstring_utils",
             "libovmsazurefilesystem",
             "libovmsmodelversioning",
+            "libovmstensorfactory",
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
         ] + select({
@@ -396,7 +399,7 @@ cc_library(
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + ["-lOpenCL",],
     data = select({
         "//:not_disable_python": [
             "//src/python/binding:pyovms.so",
@@ -863,6 +866,19 @@ cc_library( # make ovms_lib dependent, use share doptions
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
+# TODO
+cc_library( # make ovms_lib dependent, use share doptions
+    name = "libovmstensorfactory",
+    hdrs = ["itensorfactory.hpp",
+            "opencltensorfactory.hpp",],
+    srcs = [
+    ],
+    deps = ["@linux_openvino//:openvino",],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
 
 cc_library( # make ovms_lib dependent, use share doptions
     name = "libovmss3filesystem",
@@ -1058,6 +1074,7 @@ cc_test(
         "test/modelmanager_test.cpp",
         "test/modelversionstatus_test.cpp",
         "test/nodesessionmetadata_test.cpp",
+        "test/openvino_tests.cpp",
         "test/ovmsconfig_test.cpp",
         "test/ovinferrequestqueue_test.cpp",
         "test/ov_utils_test.cpp",
