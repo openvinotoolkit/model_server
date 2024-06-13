@@ -269,7 +269,7 @@ It can be demonstrated using benchmarking app from vLLM repository:
 git clone https://github.com/vllm-project/vllm
 cd vllm
 pip3 install wheel packaging ninja "setuptools>=49.4.0" numpy
-pip3 install -r ../requirements-cpu.txt
+pip3 install -r requirements-cpu.txt
 export VLLM_TARGET_DEVICE=cpu
 python setup.py install
 cd benchmarks
