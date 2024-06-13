@@ -575,8 +575,10 @@ public:
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             }
         }
-        } catch (std::exception& e) {
+        } catch (ov::AssertFailure& e) {
             return absl::InvalidArgumentError(e.what());
+        } catch (...) {
+            return absl::InvalidArgumentError("Response generation failed");
         }
         timestamp = timestamp.NextAllowedInStream();
 
