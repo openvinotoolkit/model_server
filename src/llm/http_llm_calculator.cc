@@ -44,6 +44,11 @@ using namespace ovms;
 
 namespace mediapipe {
 
+enum class Endpoint {
+    CHAT_COMPLETIONS,
+    COMPLETIONS,
+};
+
 using chat_entry_t = std::unordered_map<std::string, std::string>;
 using chat_t = std::vector<chat_entry_t>;
 
@@ -53,6 +58,7 @@ class OpenAIChatCompletionsRequest {
     Document& doc;
 
     chat_t messages;
+    std::optional<std::string> prompt{std::nullopt};
     bool stream{false};
     std::string model;
     std::optional<int> maxTokens{std::nullopt};
@@ -69,10 +75,12 @@ class OpenAIChatCompletionsRequest {
     std::optional<int> bestOf{std::nullopt};
     // std::optional<bool> useBeamSearch{std::nullopt};
     std::optional<bool> ignoreEOS{std::nullopt};
+    Endpoint endpoint;
 
 public:
-    OpenAIChatCompletionsRequest(Document& doc) :
-        doc(doc) {}
+    OpenAIChatCompletionsRequest(Document& doc, Endpoint endpoint) :
+        doc(doc),
+        endpoint(endpoint) {}
 
     GenerationConfig createGenerationConfig() const {
         GenerationConfig config;
@@ -116,6 +124,9 @@ public:
     }
 
     chat_t getMessages() const { return this->messages; }
+    Endpoint getEndpoint() const { return this->endpoint; }
+    std::optional<std::string> getPrompt() const { return this->prompt; }
+
     bool isStream() const { return this->stream; }
     std::string getModel() const { return this->model; }
 
@@ -132,27 +143,40 @@ public:
         }
 
         // messages: [{role: content}, {role: content}, ...]; required
-        it = doc.FindMember("messages");
-        if (it == doc.MemberEnd())
-            return absl::InvalidArgumentError("Messages missing in request");
-        if (!it->value.IsArray())
-            return absl::InvalidArgumentError("Messages are not an array");
-        this->messages.clear();
-        this->messages.reserve(it->value.GetArray().Size());
-        for (int i = 0; i < it->value.GetArray().Size(); i++) {
-            const auto& obj = it->value.GetArray()[i];
-            if (!obj.IsObject())
-                return absl::InvalidArgumentError("Message is not a JSON object");
-            auto& chat = this->messages.emplace_back(chat_entry_t{});
-            for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
-                if (!member->name.IsString())
-                    return absl::InvalidArgumentError("Invalid message structure");
-                if (!member->value.IsString())
-                    return absl::InvalidArgumentError("Invalid message structure");
-                chat[member->name.GetString()] = member->value.GetString();
+        if (this->endpoint == Endpoint::CHAT_COMPLETIONS) {
+            it = doc.FindMember("messages");
+            if (it == doc.MemberEnd())
+                return absl::InvalidArgumentError("Messages missing in request");
+            if (!it->value.IsArray())
+                return absl::InvalidArgumentError("Messages are not an array");
+            this->messages.clear();
+            this->messages.reserve(it->value.GetArray().Size());
+            for (int i = 0; i < it->value.GetArray().Size(); i++) {
+                const auto& obj = it->value.GetArray()[i];
+                if (!obj.IsObject())
+                    return absl::InvalidArgumentError("Message is not a JSON object");
+                auto& chat = this->messages.emplace_back(chat_entry_t{});
+                for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
+                    if (!member->name.IsString())
+                        return absl::InvalidArgumentError("Invalid message structure");
+                    if (!member->value.IsString())
+                        return absl::InvalidArgumentError("Invalid message structure");
+                    chat[member->name.GetString()] = member->value.GetString();
+                }
             }
         }
 
+        // prompt: string
+        if (this->endpoint == Endpoint::COMPLETIONS) {
+            it = this->doc.FindMember("prompt");
+            if (it != this->doc.MemberEnd()) {
+                if (!it->value.IsString()) {
+                    return absl::InvalidArgumentError("prompt is not a string");
+                } else {
+                    this->prompt = it->value.GetString();
+                }
+            }
+        }
         // model: string; required
         it = this->doc.FindMember("model");
         if (it != this->doc.MemberEnd()) {
@@ -367,7 +391,7 @@ public:
     }
 };
 
-bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
+static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
     if (textProcessor.chatTemplate == nullptr) {
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
         return false;
@@ -386,12 +410,12 @@ bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std
         output = locals["output"].cast<std::string>();
         return true;
     } catch (const pybind11::error_already_set& e) {
-        LOG(INFO) << "Error occured when applying chat template: " << e.what();
+        LOG(INFO) << "Error occurred when applying chat template: " << e.what();
         // TODO: Don't include traceback in response
         output = e.what();
     } catch (...) {
-        LOG(INFO) << "Unexpected error occured when applying chat template";
-        output = "Unexpected error occured when applying chat template";
+        LOG(INFO) << "Unexpected error occurred when applying chat template";
+        output = "Unexpected error occurred when applying chat template";
     }
     return false;
 }
@@ -401,7 +425,11 @@ using OutputDataType = std::string;
 
 const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 
-static std::string packIntoServerSideEventMessage(const std::string& message);
+static std::string packIntoServerSideEventMessage(const std::string& message) {
+    std::stringstream ss;
+    ss << "data: " << message << "\n\n";
+    return ss.str();
+}
 
 // CB lib internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
@@ -421,9 +449,9 @@ class HttpLLMCalculator : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
 
-    std::string serializeUnaryResponse(const std::string& completeResponse);
-    std::string serializeUnaryResponse(const std::vector<std::string>& completeResponse);
-    std::string serializeStreamingChunk(const std::string& chunkResponse, bool stop);
+    std::string serializeUnaryResponse(const std::string& completeResponse, Endpoint endpoint);
+    std::string serializeUnaryResponse(const std::vector<std::string>& completeResponse, Endpoint endpoint);
+    std::string serializeStreamingChunk(const std::string& chunkResponse, bool stop, Endpoint endpoint);
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -477,27 +505,50 @@ public:
 
                 InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
                 LOG(INFO) << "Request body: " << payload.body;
-
-                this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson);
+                LOG(INFO) << "Request uri: " << payload.uri;
+                Endpoint endpoint;
+                if (payload.uri == "/v3/chat/completions") {
+                    endpoint = Endpoint::CHAT_COMPLETIONS;
+                } else if (payload.uri == "/v3/completions") {
+                    endpoint = Endpoint::COMPLETIONS;
+                } else {
+                    return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v3/chat/completions, /v3/completions");
+                }
+                this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson, endpoint);
 
                 // TODO: Support chat scenario once atobisze adds that to CB library
                 auto status = this->request->parse();
                 if (status != absl::OkStatus())
                     return status;
-                RET_CHECK(this->request->getMessages().size() >= 1);
-                RET_CHECK(this->request->getMessages()[0].count("content") >= 1);
 
-                std::string templateApplyOutput = "";
-                if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, templateApplyOutput)) {
-                    return absl::Status(absl::StatusCode::kInvalidArgument, templateApplyOutput);
-                }
+                std::string finalPrompt = "";
+
                 // LOG(INFO) << "Input prompt:" << templateApplyOutput;
+
+                std::string prompt;
+                switch (endpoint) {
+                case Endpoint::CHAT_COMPLETIONS: {
+                    if (this->request->getMessages().size() <= 0) {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "There are no messages to apply for chat");
+                    }
+                    if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, finalPrompt);
+                    }
+                    break;
+                }
+                case Endpoint::COMPLETIONS: {
+                    if (!this->request->getPrompt().has_value() || !this->request->getPrompt().value().size()) {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "Prompt is missing");
+                    }
+                    finalPrompt = this->request->getPrompt().value();
+                }
+                }
 
                 {
                     OVMS_PROFILE_SCOPE("pipeline->add_request()");
                     this->generationHandle = nodeResources->cbPipe->add_request(
                         currentRequestId++, /*to be removed from API?*/
-                        templateApplyOutput,
+                        finalPrompt,
                         this->request->createGenerationConfig());
                 }
                 nodeResources->notifyExecutorThread();
@@ -521,7 +572,7 @@ public:
                     std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
                     std::string completion = tokenizer->decode(tokens);
 
-                    std::string response = serializeUnaryResponse(tokenizer->decode(tokens));
+                    std::string response = serializeUnaryResponse(tokenizer->decode(tokens), this->request->getEndpoint());
                     LOG(INFO) << "Complete unary response: " << response;
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 } else {
@@ -534,7 +585,7 @@ public:
                         completions.emplace_back(completion);
                     }
 
-                    std::string response = serializeUnaryResponse(completions);
+                    std::string response = serializeUnaryResponse(completions, this->request->getEndpoint());
                     LOG(INFO) << "Complete unary response: " << response;
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 }
@@ -543,8 +594,6 @@ public:
                 // Streaming scenario
                 // Each iteration is single execution of Process() method
 
-                // For in progress generation we follow GenerationHandle::read_all logic.
-                // We read next tokens as long as generation is in running state or we still have unread tokens to pull.
                 if (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
                     // Subsequent iteration
                     OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
@@ -557,21 +606,19 @@ public:
                     auto chunk = this->streamer->put(token);
                     if (chunk.has_value()) {
                         std::string response = packIntoServerSideEventMessage(
-                            serializeStreamingChunk(chunk.value(), false));
+                            serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint()));
                         LOG(INFO) << "Partial response (continue): " << response;
                         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                     }
                     // Continue the loop
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
+
                 } else {
-                    // Last generation where we do not read any more tokens, but only finish the stream.
-                    // This happens when we gracefully finish (reach max_tokens or EOS token), but also when
-                    // generation runs out of memory or for some other reason is aborted by the pipeline.
                     OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                    std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true));
+                    std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true, this->request->getEndpoint()));
                     response += packIntoServerSideEventMessage("[DONE]");
                     LOG(INFO) << "Partial response (generation finished): " << response;
-                    // Produce last message, but do not producce loopback packets anymore so this is last Process() call
+                    // Produce last message, but do not produce loopback packets anymore so this is last Process() call
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 }
             }
@@ -587,11 +634,11 @@ public:
     }
 };
 
-std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& completeResponse) {
-    return serializeUnaryResponse(std::vector<std::string>{completeResponse});
+std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& completeResponse, Endpoint endpoint) {
+    return serializeUnaryResponse(std::vector<std::string>{completeResponse}, endpoint);
 }
 
-std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::string>& completeResponses) {
+std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::string>& completeResponses, Endpoint endpoint) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -619,18 +666,23 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
         writer.String("logprobs");
         writer.Null();
         // message: object
-        writer.String("message");
-        writer.StartObject();  // {
-        // content: string; Actual content of the text produced
-        writer.String("content");
-        writer.String(completeResponse.c_str());
-        // role: string; Role of the text producer
-        // Will make sense once we have chat templates? TODO(atobisze)
-        writer.String("role");
-        writer.String("assistant");  // TODO - hardcoded
-        // TODO: tools_call
-        // TODO: function_call (deprecated)
-        writer.EndObject();  // }
+        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+            writer.String("message");
+            writer.StartObject();  // {
+            // content: string; Actual content of the text produced
+            writer.String("content");
+            writer.String(completeResponse.c_str());
+            // role: string; Role of the text producer
+            // Will make sense once we have chat templates? TODO(atobisze)
+            writer.String("role");
+            writer.String("assistant");  // TODO - hardcoded
+            // TODO: tools_call
+            // TODO: function_call (deprecated)
+            writer.EndObject();  // }
+        } else if (endpoint == Endpoint::COMPLETIONS) {
+            writer.String("text");
+            writer.String(completeResponse.c_str());
+        }
 
         writer.EndObject();  // }
     }
@@ -645,8 +697,13 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     writer.String(this->request->getModel().c_str());
 
     // object: string; defined that the type is unary rather than streamed chunk
-    writer.String("object");
-    writer.String("chat.completion");
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        writer.String("object");
+        writer.String("chat.completion");
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        writer.String("object");
+        writer.String("text_completion");
+    }
 
     // TODO
     // id: string; A unique identifier for the chat completion.
@@ -663,7 +720,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     return buffer.GetString();
 }
 
-std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkResponse, bool stop) {
+std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkResponse, bool stop, Endpoint endpoint) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -693,22 +750,26 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     // logprobs: object/null; Log probability information for the choice. TODO
     writer.String("logprobs");
     writer.Null();
-    // delta: object
-    writer.String("delta");
-    writer.StartObject();  // {
-    // content: string; Actual content of the text produced
-    if (!stop) {
-        writer.String("content");
-        writer.String(chunkResponse.c_str());
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        writer.String("delta");
+        writer.StartObject();  // {
+        if (!stop) {
+            writer.String("content");
+            // writer.String("role");
+            // writer.String("assistant");
+            // role: string; Role of the text producer
+            // Will make sense once we have chat templates? TODO(atobisze)
+            writer.String(chunkResponse.c_str());
+        }
+        writer.EndObject();  // }
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        if (!stop) {
+            writer.String("text");
+            writer.String(chunkResponse.c_str());
+        }
     }
-    // role: string; Role of the text producer
-    // Will make sense once we have chat templates? TODO(atobisze)
-    // writer.String("role");
-    // writer.String("assistant");
     // TODO: tools_call
     // TODO: function_call (deprecated)
-    writer.EndObject();  // }
-
     writer.EndObject();  // }
     writer.EndArray();   // ]
 
@@ -721,8 +782,13 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     writer.String(this->request->getModel().c_str());
 
     // object: string; defined that the type streamed chunk rather than complete response
-    writer.String("object");
-    writer.String("chat.completion.chunk");
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        writer.String("object");
+        writer.String("chat.completion.chunk");
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        writer.String("object");
+        writer.String("text_completion.chunk");
+    }
 
     // TODO
     // id: string; A unique identifier for the chat completion. Each chunk has the same ID.
@@ -740,16 +806,11 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     return buffer.GetString();
 }
 
-std::string packIntoServerSideEventMessage(const std::string& message) {
-    std::stringstream ss;
-    ss << "data: " << message << "\n\n";
-    return ss.str();
-}
-
 // TODO: Names to be decided
 const std::string HttpLLMCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
 const std::string HttpLLMCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
 const std::string HttpLLMCalculator::LOOPBACK_TAG_NAME{"LOOPBACK"};
 
 REGISTER_CALCULATOR(HttpLLMCalculator);
+
 }  // namespace mediapipe

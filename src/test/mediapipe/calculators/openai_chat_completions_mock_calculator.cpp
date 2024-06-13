@@ -68,6 +68,7 @@ public:
         }
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             auto data = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();  // TODO: Possibly avoid making copy
+            this->body = data.uri + std::string{"\n"};
             for (auto header : data.headers) {
                 this->body += header.first;
                 this->body += header.second;
