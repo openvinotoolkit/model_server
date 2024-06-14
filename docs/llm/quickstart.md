@@ -11,7 +11,7 @@ pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/hugging
 
 2. Run optimum-cli to download and quantize the model:
 ```bash
-cd demos/continuous_batching
+mkdir workspace && cd workspace
 
 optimum-cli export openvino --disable-convert-tokenizer --model TinyLlama/TinyLlama-1.1B-Chat-v1.0 --weight-format int8 TinyLlama-1.1B-Chat-v1.0
 
