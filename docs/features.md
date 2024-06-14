@@ -26,7 +26,7 @@ ovms_docs_advanced
 ## Efficient LLM Serving
 Serve LLMs enhanced with state of the art optimization techniques for best performance and resource utilization on generative workloads
 
-[Learn more](llm_serving.md)
+[Learn more](llm/reference.md)
 
 ## Python Code Execution
 Write Python code that will do your custom processing and serve it in the Model Server. 

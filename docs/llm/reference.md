@@ -1,4 +1,4 @@
-# Efficient LLM Serving {#ovms_docs_llm_serving}
+# Efficient LLM Serving {#ovms_docs_llm_reference}
 
 **THIS IS A PREVIEW FEATURE**
 
@@ -10,140 +10,9 @@ With rapid development of generative AI, new techniques and algorithms for perfo
   - Dynamic Split Fuse 
   - *and more...*
 
- It is now integrated into OpenVINO Model Server providing efficient way to run generative workloads.
+It is now integrated into OpenVINO Model Server providing efficient way to run generative workloads.
 
-## Quickstart
-Let's deploy [meta-llama/Meta-Llama-3-8B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) model and request generation.
-
-1. Install python dependencies for the conversion script:
-```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
-
-pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
-```
-
-2. Run optimum-cli to download and quantize the model:
-```bash
-cd demos/continuous_batching
-
-optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 Meta-Llama-3-8B-Instruct
-
-convert_tokenizer -o Meta-Llama-3-8B-Instruct --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens meta-llama/Meta-Llama-3-8B-Instruct
-```
-
-3. Create `graph.pbtxt` file in a model directory: 
-```bash
-echo """
-input_stream: "HTTP_REQUEST_PAYLOAD:input"
-output_stream: "HTTP_RESPONSE_PAYLOAD:output"
-
-node: {
-  name: "LLMExecutor"
-  calculator: "HttpLLMCalculator"
-  input_stream: "LOOPBACK:loopback"
-  input_stream: "HTTP_REQUEST_PAYLOAD:input"
-  input_side_packet: "LLM_NODE_RESOURCES:llm"
-  output_stream: "LOOPBACK:loopback"
-  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
-  input_stream_info: {
-    tag_index: 'LOOPBACK:0',
-    back_edge: true
-  }
-  node_options: {
-      [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-          models_path: "./"
-      }
-  }
-  input_stream_handler {
-    input_stream_handler: "SyncSetInputStreamHandler",
-    options {
-      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
-        sync_set {
-          tag_index: "LOOPBACK:0"
-        }
-      }
-    }
-  }
-}
-""" > Meta-Llama-3-8B-Instruct/graph.pbtxt
-```
-
-4. Create server `config.json` file:
-```bash
-echo """
-{
-    "model_config_list": [],
-    "mediapipe_config_list": [
-        {
-            "name": "meta-llama/Meta-Llama-3-8B-Instruct",
-            "base_path": "Meta-Llama-3-8B-Instruct"
-        }
-    ]
-}
-""" > config.json
-```
-5. Deploy:
-
-```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server --rest_port 8000 --config_path /workspace/config.json
-```
-Wait for the model to load. You can check the status with a simple command:
-```bash
-curl http://localhost:8000/v1/config
-{
-"meta-llama/Meta-Llama-3-8B-Instruct" : 
-{
- "model_version_status": [
-  {
-   "version": "1",
-   "state": "AVAILABLE",
-   "status": {
-    "error_code": "OK",
-    "error_message": "OK"
-   }
-  }
- ]
-}
-```
-6. Run generation
-```bash
-curl http://localhost:8000/v3/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-    "max_tokens":30,
-    "stream":false,
-    "messages": [
-      {
-        "role": "system",
-        "content": "You are a helpful assistant."
-      },
-      {
-        "role": "user",
-        "content": "What is OpenVINO?"
-      }
-    ]
-  }'| jq .
-```
-```json
-{
-  "choices": [
-    {
-      "finish_reason": "stop",
-      "index": 0,
-      "logprobs": null,
-      "message": {
-        "content": "\n\nOpenVINO is an open-source software library for deep learning inference that is designed to optimize and run deep learning models on a variety",
-        "role": "assistant"
-      }
-    }
-  ],
-  "created": 1716825108,
-  "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-  "object": "chat.completion"
-}
-```
-**Note:** If you want to get the response chunks streamed back as they are generated change `stream` parameter in the request to `true`.
+Check out the [quickstart guide](quickstart.md) for a simple example that shows how to use this feature.
 
 ## LLM Calculator
 As you can see in the quickstart above, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) solutions. The calculator is designed to run in cycles and return the chunks of reponses to the client.
@@ -265,7 +134,7 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 
 As it's in preview, this feature has set of limitations:
 
-- Limited support for [API parameters](./model_server_rest_api_chat.md#request-parameters),
+- Limited support for [API parameters](./model_server_rest_api_chat.md#request),
 - Only completions and chat completions endpoints supported,
 - Only one node with LLM calculator can be deployed at once,
 - Lack of metrics,
