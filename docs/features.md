@@ -6,7 +6,7 @@ maxdepth: 1
 hidden:
 ---
 
-ovms_docs_llm_serving
+ovms_docs_llm_reference
 ovms_docs_dag
 ovms_docs_mediapipe
 ovms_docs_streaming_endpoints
