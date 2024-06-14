@@ -1,0 +1,279 @@
+# Efficient LLM Serving {#ovms_docs_llm_serving}
+
+**THIS IS A PREVIEW FEATURE**
+
+## Overview
+
+With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in it's [GenAI Library](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) like:
+  - Continuous Batching
+  - Paged Attention
+  - Dynamic Split Fuse 
+  - *and more...*
+
+ It is now integrated into OpenVINO Model Server providing efficient way to run generative workloads.
+
+## Quickstart
+Let's deploy [meta-llama/Meta-Llama-3-8B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) model and request generation.
+
+1. Install python dependencies for the conversion script:
+```bash
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
+
+pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
+```
+
+2. Run optimum-cli to download and quantize the model:
+```bash
+cd demos/continuous_batching
+
+optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 Meta-Llama-3-8B-Instruct
+
+convert_tokenizer -o Meta-Llama-3-8B-Instruct --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens meta-llama/Meta-Llama-3-8B-Instruct
+```
+
+3. Create `graph.pbtxt` file in a model directory: 
+```bash
+echo """
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "LLMExecutor"
+  calculator: "HttpLLMCalculator"
+  input_stream: "LOOPBACK:loopback"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "LLM_NODE_RESOURCES:llm"
+  output_stream: "LOOPBACK:loopback"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
+  node_options: {
+      [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+          models_path: "./"
+      }
+  }
+  input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+        sync_set {
+          tag_index: "LOOPBACK:0"
+        }
+      }
+    }
+  }
+}
+""" > Meta-Llama-3-8B-Instruct/graph.pbtxt
+```
+
+4. Create server `config.json` file:
+```bash
+echo """
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+        {
+            "name": "meta-llama/Meta-Llama-3-8B-Instruct",
+            "base_path": "Meta-Llama-3-8B-Instruct"
+        }
+    ]
+}
+""" > config.json
+```
+5. Deploy:
+
+```bash
+docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server --rest_port 8000 --config_path /workspace/config.json
+```
+Wait for the model to load. You can check the status with a simple command:
+```bash
+curl http://localhost:8000/v1/config
+{
+"meta-llama/Meta-Llama-3-8B-Instruct" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+```
+6. Run generation
+```bash
+curl http://localhost:8000/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "max_tokens":30,
+    "stream":false,
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "What is OpenVINO?"
+      }
+    ]
+  }'| jq .
+```
+```json
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "\n\nOpenVINO is an open-source software library for deep learning inference that is designed to optimize and run deep learning models on a variety",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1716825108,
+  "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+  "object": "chat.completion"
+}
+```
+**Note:** If you want to get the response chunks streamed back as they are generated change `stream` parameter in the request to `true`.
+
+## LLM Calculator
+As you can see in the quickstart above, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) solutions. The calculator is designed to run in cycles and return the chunks of reponses to the client.
+
+On the input it expects a HttpPayload struct passed by the Model Server frontend:
+```cpp
+struct HttpPayload {
+    std::vector<std::pair<std::string, std::string>> headers;
+    std::string body;                 // always
+    rapidjson::Document* parsedJson;  // pre-parsed body = null
+};
+```
+The input json content should be compatible with the `chat/completions` API. Read more about the [API](./model_server_rest_api_chat.md).
+
+The input also includes a side packet with a reference to `LLM_NODE_RESOURCES` which is a shared object representing an LLM engine. It loads the model, runs the generation cycles and reports the generated results to the LLM calculator via a generation handler. 
+
+**Every node based on LLM Calculator MUST have exactly that specification of this side packet:**
+
+`input_side_packet: "LLM_NODE_RESOURCES:llm"`
+
+**If it's modified, model server will fail to provide graph with the model**
+
+On the output the calculator creates an std::string with the json content, which is returned to the client as one response or in chunks with streaming.
+
+Let's have a look at the graph from the graph configuration from the quickstart:
+```protobuf
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "LLMExecutor"
+  calculator: "HttpLLMCalculator"
+  input_stream: "LOOPBACK:loopback"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "LLM_NODE_RESOURCES:llm"
+  output_stream: "LOOPBACK:loopback"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
+  node_options: {
+      [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+          models_path: "./"
+      }
+  }
+  input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+        sync_set {
+          tag_index: "LOOPBACK:0"
+        }
+      }
+    }
+  }
+}
+```
+
+Above node configuration should be used as a template since user is not expected to change most of it's content. Fields that can be safely changed are:
+ - `name`
+ - `input_stream: "HTTP_REQUEST_PAYLOAD:input"` - in case you want to change input name
+ - `output_stream: "HTTP_RESPONSE_PAYLOAD:output"` - in case you want to change input name
+- `node_options`
+
+From this options only `node_options` really requires user attention as they specify LLM engine parameters. The rest of them can remain unchanged. 
+
+The calculator supports the following `node_options` for tuning the pipeline configuration:
+-    `required string models_path` - location of the model directory (can be relative);
+-    `optional uint64 max_num_batched_tokens` - max number of tokens processed in a single iteration [default = 256];
+-    `optional uint64 cache_size` - memory size in GB for storing KV cache [default = 8];
+-    `optional uint64 block_size` - number of tokens which KV is stored in a single block (Paged Attention related) [default = 32];
+-    `optional uint64 max_num_seqs` - max number of sequences actively processed by the engine [default = 256];
+-    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
+-    `optional string device` - device to load models to. Supported values: "CPU" [default = "CPU"]
+-    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](./parameters.md#model-configuration-options) [default = ""]
+
+
+The value of `cache_size` might have performance  implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
+
+## Models Directory
+
+In node configuration we set `models_path` indicating location of the directory with files loaded by LLM engine. It loads following files:
+
+```
+├── openvino_detokenizer.bin
+├── openvino_detokenizer.xml
+├── openvino_model.bin
+├── openvino_model.xml
+├── openvino_tokenizer.bin
+├── openvino_tokenizer.xml
+├── tokenizer_config.json
+├── template.jinja
+```
+
+Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing.
+
+### Chat template
+
+Loading chat template proceeds as follows:
+1. If `tokenizer.jinja` is present, try to load template from it.
+2. If there is no `tokenizer.jinja` and `tokenizer_config.json` exists, try to read template from its `chat_template` field. If it's not present, use default template.
+3. If `tokenizer_config.json` exists try to read `eos_token` and `bos_token` fields. If they are not present, both values are set to empty string. 
+
+**Note**: If both `template.jinja` file and `chat_completion` field from `tokenizer_config.json` are successfully loaded `template.jinja` takes precedence over `tokenizer_config.json`.
+
+If there are errors in loading or reading files or fields (they exist but are wrong) no template is loaded and servable will not respond to `/chat/completions` calls. 
+
+If no chat template has been specified, default template is applied. The template looks as follows:
+```
+"{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+```
+
+When default template is loaded, servable accepts `/chat/completions` calls when `messages` list contains only single element (otherwise returns error) and treats `content` value of that single message as an input prompt for the model.
+
+
+## Limitations
+
+As it's in preview, this feature has set of limitations:
+
+- Limited support for API parameters,
+- Only completions and chat completions endpoints supported,
+- Only one node with LLM calculator can be deployed at once,
+- Lack of metrics,
+- Not all performance optimizations yet applied,
+- Improvements in stability and recovery mechanisms are also expected,
+
+## References:
+- [Chat Completions API](./model_server_rest_api_chat.md)
+- [Completions API](./model_server_rest_api_completions.md)
+- [Demo](./../demos/continuous_batching/)
+
+
