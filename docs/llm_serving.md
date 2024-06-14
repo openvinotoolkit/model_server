@@ -151,12 +151,13 @@ As you can see in the quickstart above, big part of the configuration resides in
 On the input it expects a HttpPayload struct passed by the Model Server frontend:
 ```cpp
 struct HttpPayload {
+    std::string uri;
     std::vector<std::pair<std::string, std::string>> headers;
     std::string body;                 // always
-    rapidjson::Document* parsedJson;  // pre-parsed body = null
+    rapidjson::Document* parsedJson;  // pre-parsed body             = null
 };
 ```
-The input json content should be compatible with the `chat/completions` API. Read more about the [API](./model_server_rest_api_chat.md).
+The input json content should be compatible with the [chat completions](./model_server_rest_api_chat.md) or [completions](./model_server_rest_api_completions.md) API.
 
 The input also includes a side packet with a reference to `LLM_NODE_RESOURCES` which is a shared object representing an LLM engine. It loads the model, runs the generation cycles and reports the generated results to the LLM calculator via a generation handler. 
 
@@ -239,7 +240,7 @@ In node configuration we set `models_path` indicating location of the directory 
 ├── template.jinja
 ```
 
-Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing.
+Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing. Chat template is used only on `/chat/completions` endpoint. Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`. 
 
 ### Chat template
 
@@ -264,7 +265,7 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 
 As it's in preview, this feature has set of limitations:
 
-- Limited support for API parameters,
+- Limited support for [API parameters](./model_server_rest_api_chat.md#request-parameters),
 - Only completions and chat completions endpoints supported,
 - Only one node with LLM calculator can be deployed at once,
 - Lack of metrics,
@@ -275,5 +276,3 @@ As it's in preview, this feature has set of limitations:
 - [Chat Completions API](./model_server_rest_api_chat.md)
 - [Completions API](./model_server_rest_api_completions.md)
 - [Demo](./../demos/continuous_batching/)
-
-
