@@ -18,22 +18,20 @@
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
-BASE_OS_TAG_UBUNTU ?= 22.04
-BASE_OS_TAG_REDHAT ?= 8.8
-REDHAT_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2024.0/ovms_redhat.tar.gz"
-UBUNTU_PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2024.0/ovms_ubuntu22.tar.gz"
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
-OVMS_CPP_IMAGE_TAG ?= 2024.0
-BASE_OS ?= ubuntu
-DIST_OS ?= $(BASE_OS)
+OVMS_CPP_IMAGE_TAG ?= 2024.1
+BASE_OS ?= ubuntu22
 
-ifeq ($(BASE_OS),ubuntu)
-  PACKAGE_URL = ${UBUNTU_PACKAGE_URL}
+ifeq ($(BASE_OS),ubuntu22)
+  BASE_OS_TAG_UBUNTU ?= 22.04
+  PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2024.1/ovms_ubuntu22.tar.gz"
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
+  DIST_OS=ubuntu
 endif
 ifeq ($(BASE_OS),redhat)
-  PACKAGE_URL = ${REDHAT_PACKAGE_URL}
+  BASE_OS_TAG_REDHAT ?= 8.8
+  PACKAGE_URL ="https://github.com/openvinotoolkit/model_server/releases/download/v2024.1/ovms_redhat.tar.gz"
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
 endif
@@ -45,7 +43,7 @@ clean:
 from_docker:
 	mkdir -p capi/$(DIST_OS)
 	docker run $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) bash -c \
-			"tar -c -C /ovms_pkg/$(DIST_OS) ovms.tar.gz ; sleep 2" | tar -x -C capi/$(DIST_OS)/ && cd ../../
+			"tar -c -C /ovms_pkg/$(BASE_OS) ovms.tar.gz ; sleep 2" | tar -x -C capi/$(DIST_OS)/ && cd ../../
 	-docker rm -v $$(docker ps -a -q -f status=exited -f ancestor=$(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG))
 
 from_web:
@@ -59,7 +57,7 @@ build_image:
 	cp -r ../../src/main_benchmark.cpp capi/$(DIST_OS)/demos
 	sed -i s+/ovms/src/test/c_api/config.json+/ovms/demos/config.json+ capi/$(DIST_OS)/demos/main_capi.c
 	sed -i s+/ovms/src/test/c_api/config_standard_dummy.json+/ovms/demos/config_standard_dummy.json+ capi/$(DIST_OS)/demos/main_capi.cpp
-	cd capi/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(BASE_OS) . \
+	cd capi/$(DIST_OS)/ && docker build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		--build-arg http_proxy=$(HTTP_PROXY) --build-arg https_proxy="$(HTTPS_PROXY)" \
 		--build-arg no_proxy=$(NO_PROXY) \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
