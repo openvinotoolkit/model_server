@@ -126,7 +126,7 @@ curl http://localhost/v3/chat/completions \
 | choices.message.role | ⚠️ | ✅ | string | The role of the author of this message. **_Currently hardcoded as `assistant`_** |
 | choices.message.content | ✅ | ✅ | string | The contents of the message. |
 | choices.finish_reason | ⚠️ | ✅ | string or null | The reason the model stopped generating tokens. This will be `stop` if the model hit a natural stop point or a provided stop sequence, `length` if the maximum number of tokens specified in the request was reached, or `null` when generation continues (streaming). **_However, in current version `length` is not supported_** |
-| choices.logprobs | ❌ | ✅ | object or null | Log probability information for the choice. **_In current version, the logprobs is always null and never returned._** |
+| choices.logprobs | ❌ | ✅ | object or null | Log probability information for the choice. **_In current version, the logprobs is always null._** |
 | created | ✅ | ✅ | string | The Unix timestamp (in seconds) of when the chat completion was created.  |
 | model | ✅ | ✅ | string | The model used for the chat completion. |
 | object | ✅ | ✅ | string | `chat.completion` for unary requests and `chat.completion.chunk` for streaming responses |
