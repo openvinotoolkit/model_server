@@ -7,6 +7,7 @@ hidden:
 ---
 
 Chat API <ovms_docs_rest_api_chat>
+Chat API <ovms_docs_rest_api_completion>
 demo <https://github.com/openvinotoolkit/model_server/tree/main/demos/continuous_batching/>
 LLM calculator <ovms_docs_llm_caclulator>
 ```
