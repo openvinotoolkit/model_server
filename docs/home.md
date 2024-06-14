@@ -37,8 +37,9 @@ The models used by the server need to be stored locally or hosted remotely by ob
 Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md) or explore [Model Server features](features.md).
 
 ### Key features:
-- **[NEW]** [Python code execution](python_support/reference.md)
-- **[NEW]** [gRPC streaming](streaming_endpoints.md)
+- **[NEW]** [Efficient Text Generation - preview](llm/reference.md)
+- [Python code execution](python_support/reference.md)
+- [gRPC streaming](streaming_endpoints.md)
 - [MediaPipe graphs serving](mediapipe.md) 
 - Model management - including [model versioning](model_version_policy.md) and [model updates in runtime](online_config_changes.md)
 - [Dynamic model inputs](shape_batch_size_and_layout.md)
