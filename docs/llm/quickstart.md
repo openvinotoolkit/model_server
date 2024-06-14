@@ -94,7 +94,7 @@ curl http://localhost:8000/v1/config
 ```
 6. Run generation
 ```bash
-curl http://localhost:8000/v3/chat/completions \
+curl -s http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
@@ -113,7 +113,22 @@ curl http://localhost:8000/v3/chat/completions \
   }'| jq .
 ```
 ```json
-XXX
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "OpenVINO is a software development kit (SDK) for machine learning (ML) and deep learning (DL) applications. It is developed",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1718401064,
+  "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  "object": "chat.completion"
+}
+
 ```
 **Note:** If you want to get the response chunks streamed back as they are generated change `stream` parameter in the request to `true`.
 
@@ -122,4 +137,4 @@ XXX
 - [Efficient LLM Serving - reference](./reference.md)
 - [Chat Completions API](./model_server_rest_api_chat.md)
 - [Completions API](./model_server_rest_api_completions.md)
-- [Demo](./../demos/continuous_batching/)
+- [Demo with Llama3 serving](./../demos/continuous_batching/)
