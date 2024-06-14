@@ -1,4 +1,4 @@
-# OpenAI API {#ovms_docs_rest_api_chat}
+# OpenAI API chat/completions endpoint {#ovms_docs_rest_api_chat}
 
 **Note**: This endpoint works only with [LLM graphs](./llm/reference.md).
 
