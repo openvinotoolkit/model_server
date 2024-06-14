@@ -33,7 +33,7 @@ node: {
   output_stream: "LOOPBACK:loopback"
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
   input_stream_info: {
-    tag_index: 'LOOPBACK:0',
+    tag_index: "LOOPBACK:0",
     back_edge: true
   }
   node_options: {

@@ -136,8 +136,7 @@ As it's in preview, this feature has set of limitations:
 
 - Limited support for [API parameters](./model_server_rest_api_chat.md#request),
 - Only one node with LLM calculator can be deployed at once,
-- Lack of metrics,
-- Not all performance optimizations yet applied,
+- Metrics related to text generation - they are planned to be added later,
 - Improvements in stability and recovery mechanisms are also expected
 
 ## References:
