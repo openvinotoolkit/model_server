@@ -15,7 +15,8 @@ node: {
   }
   node_options: {
       [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-          models_path: "./"
+          models_path: "./",
+          cache_size: 50
       }
   }
   input_stream_handler {
