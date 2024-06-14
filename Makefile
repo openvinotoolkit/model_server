@@ -51,7 +51,7 @@ BASE_OS ?= ubuntu22
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 22.04
-BASE_OS_TAG_REDHAT ?= 8.10
+BASE_OS_TAG_REDHAT ?= 9.4
 
 INSTALL_RPMS_FROM_URL ?=
 
@@ -165,11 +165,11 @@ ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   OS=redhat
   ifeq ($(NVIDIA),1)
-    BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubi8
+    BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubi9
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   else
-    BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
-	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
+    BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
+	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
@@ -354,9 +354,9 @@ ifeq ($(NO_DOCKER_CACHE),true)
 	@echo "Docker image will be rebuilt from scratch"
 	@docker pull $(BASE_IMAGE)
   ifeq ($(BASE_OS),redhat)
-	@docker pull registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
+	@docker pull registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
     ifeq ($(NVIDIA),1)
-	@docker pull docker.io/nvidia/cuda:11.8.0-runtime-ubi8
+	@docker pull docker.io/nvidia/cuda:11.8.0-runtime-ubi9
     endif
   endif
 endif
@@ -425,7 +425,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 endif
 ifeq ($(BASE_OS),redhat)
 	touch base_packages.txt
-	docker run registry.access.redhat.com/ubi8-minimal:8.10 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
+	docker run registry.access.redhat.com/ubi9-minimal:9.4 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
 	docker run --entrypoint rpm $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -qa  --qf "%{NAME}\n" | sort > all_packages.txt
 	rm -rf ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
 	mkdir ovms_rhel_$(OVMS_CPP_IMAGE_TAG)

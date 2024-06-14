@@ -102,7 +102,7 @@ TEST_F(TfsPredictValidation, RequestWithScalar) {
         std::make_shared<ovms::TensorInfo>("Input_FP32_Scalar", ovms::Precision::FP32, ovms::shape_t{}, ovms::Layout{"..."})}});
     preparePredictRequest(request,
         {{"Input_FP32_Scalar",
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{std::vector<int64_t>{}, ovms::Precision::FP32}}});
     auto status = instance->mockValidate(&request);
     EXPECT_TRUE(status.ok());
 }
@@ -333,7 +333,7 @@ TEST_F(TfsPredictValidation, RequestWithScalarBatchSizeAuto) {
 
     // First is incorrect, second is correct, but endpoint is abnormal anyway (scalar with batch size auto)
     preparePredictRequest(request, {{"im_data", {{3, 3, 800, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{}, ovms::Precision::FP32}}});
+                                       {"im_info", {std::vector<int64_t>{}, ovms::Precision::FP32}}});
 
     servableInputs.clear();
     servableInputs = ovms::tensor_map_t{
@@ -346,7 +346,7 @@ TEST_F(TfsPredictValidation, RequestWithScalarBatchSizeAuto) {
 
     // First and second is correct, but endpoint is abnormal (scalar with batch size auto)
     preparePredictRequest(request, {{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{}, ovms::Precision::FP32}}});
+                                       {"im_info", {std::vector<int64_t>{}, ovms::Precision::FP32}}});
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
@@ -437,7 +437,7 @@ TEST_F(TfsPredictValidation, RequestWithScalarShapeAuto) {
 
     // First is incorrect, second is correct, expect reshape request due to shape=auto
     preparePredictRequest(request, {{"im_data", {{1, 3, 801, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{}, ovms::Precision::FP32}}});
+                                       {"im_info", {std::vector<int64_t>{}, ovms::Precision::FP32}}});
 
     servableInputs.clear();
     servableInputs = ovms::tensor_map_t{
@@ -450,7 +450,7 @@ TEST_F(TfsPredictValidation, RequestWithScalarShapeAuto) {
 
     // First and second is correct, expect no further reshaping due to shape=auto
     preparePredictRequest(request, {{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{}, ovms::Precision::FP32}}});
+                                       {"im_info", {std::vector<int64_t>{}, ovms::Precision::FP32}}});
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
@@ -600,7 +600,7 @@ TEST_F(TfsPredictValidation, RequestIncorrectContentSizeForScalarEndpoint) {
         std::make_shared<ovms::TensorInfo>("Input_FP32_Scalar", ovms::Precision::FP32, ovms::shape_t{}, ovms::Layout{"..."})}});
     preparePredictRequest(request,
         {{"Input_FP32_Scalar",
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{std::vector<int64_t>{}, ovms::Precision::FP32}}});
 
     auto& input = (*request.mutable_inputs())["Input_FP32_Scalar"];
     *input.mutable_tensor_content() = std::string(sizeof(float) + 1, '1');
@@ -905,7 +905,7 @@ TEST_F(KFSPredictValidation, RequestWithScalar) {
         std::make_shared<ovms::TensorInfo>("Input_FP32_Scalar", ovms::Precision::FP32, ovms::shape_t{}, ovms::Layout{"..."})}});
     preparePredictRequest(request,
         {{"Input_FP32_Scalar",
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{std::vector<int64_t>{}, ovms::Precision::FP32}}});
     auto status = instance->mockValidate(&request);
     EXPECT_TRUE(status.ok());
 }
@@ -1118,7 +1118,7 @@ TEST_F(KFSPredictValidation, RequestWithScalarBatchSizeAuto) {
 
     // First is incorrect, second is correct, but endpoint is abnormal anyway (scalar with batch size auto)
     preparePredictRequest(request, {{"im_data", {{3, 3, 800, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{}, ovms::Precision::FP32}}});
+                                       {"im_info", {std::vector<int64_t>{}, ovms::Precision::FP32}}});
 
     servableInputs.clear();
     servableInputs = ovms::tensor_map_t{
@@ -1131,7 +1131,7 @@ TEST_F(KFSPredictValidation, RequestWithScalarBatchSizeAuto) {
 
     // First and second is correct, but endpoint is abnormal (scalar with batch size auto)
     preparePredictRequest(request, {{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{}, ovms::Precision::FP32}}});
+                                       {"im_info", {std::vector<int64_t>{}, ovms::Precision::FP32}}});
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
@@ -1221,7 +1221,7 @@ TEST_F(KFSPredictValidation, RequestWithScalarShapeAuto) {
 
     // First is incorrect, second is correct, expect reshape request due to shape=auto
     preparePredictRequest(request, {{"im_data", {{1, 3, 801, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{}, ovms::Precision::FP32}}});
+                                       {"im_info", {std::vector<int64_t>{}, ovms::Precision::FP32}}});
 
     servableInputs.clear();
     servableInputs = ovms::tensor_map_t{
@@ -1234,7 +1234,7 @@ TEST_F(KFSPredictValidation, RequestWithScalarShapeAuto) {
 
     // First and second is correct, expect no further reshaping due to shape=auto
     preparePredictRequest(request, {{"im_data", {{1, 3, 800, 1344}, ovms::Precision::FP32}},
-                                       {"im_info", {{}, ovms::Precision::FP32}}});
+                                       {"im_info", {std::vector<int64_t>{}, ovms::Precision::FP32}}});
 
     status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
@@ -1328,7 +1328,7 @@ TEST_F(KFSPredictValidation, RequestIncorrectContentSizeForScalarEndpoint) {
         std::make_shared<ovms::TensorInfo>("Input_FP32_Scalar", ovms::Precision::FP32, ovms::shape_t{}, ovms::Layout{"..."})}});
     preparePredictRequest(request,
         {{"Input_FP32_Scalar",
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{std::vector<int64_t>{}, ovms::Precision::FP32}}});
 
     findKFSInferInputTensorContentInRawInputs(request, "Input_FP32_Scalar")->assign('c', sizeof(float) + 1);
 
