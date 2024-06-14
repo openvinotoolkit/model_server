@@ -6,6 +6,7 @@ maxdepth: 1
 hidden:
 ---
 
+ovms_docs_llm_reference
 ovms_docs_dag
 ovms_docs_mediapipe
 ovms_docs_streaming_endpoints
@@ -21,6 +22,11 @@ ovms_docs_metrics
 ovms_docs_c_api
 ovms_docs_advanced
 ```
+
+## Efficient LLM Serving
+Serve LLMs enhanced with state of the art optimization techniques for best performance and resource utilization on generative workloads
+
+[Learn more](llm/reference.md)
 
 ## Python Code Execution
 Write Python code that will do your custom processing and serve it in the Model Server. 
