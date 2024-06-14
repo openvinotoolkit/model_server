@@ -135,11 +135,10 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 As it's in preview, this feature has set of limitations:
 
 - Limited support for [API parameters](./model_server_rest_api_chat.md#request),
-- Only completions and chat completions endpoints supported,
 - Only one node with LLM calculator can be deployed at once,
 - Lack of metrics,
 - Not all performance optimizations yet applied,
-- Improvements in stability and recovery mechanisms are also expected,
+- Improvements in stability and recovery mechanisms are also expected
 
 ## References:
 - [Chat Completions API](./model_server_rest_api_chat.md)

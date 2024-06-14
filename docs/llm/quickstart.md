@@ -20,7 +20,7 @@ convert_tokenizer -o TinyLlama-1.1B-Chat-v1.0 --with-detokenizer --skip-special-
 
 3. Create `graph.pbtxt` file in a model directory: 
 ```bash
-echo """
+echo '
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 
@@ -52,12 +52,12 @@ node: {
     }
   }
 }
-""" > TinyLlama-1.1B-Chat-v1.0/graph.pbtxt
+' > TinyLlama-1.1B-Chat-v1.0/graph.pbtxt
 ```
 
 4. Create server `config.json` file:
 ```bash
-echo """
+echo '
 {
     "model_config_list": [],
     "mediapipe_config_list": [
@@ -67,7 +67,7 @@ echo """
         }
     ]
 }
-""" > config.json
+' > config.json
 ```
 5. Deploy:
 
