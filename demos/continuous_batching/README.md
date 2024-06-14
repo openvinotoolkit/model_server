@@ -3,6 +3,8 @@ This demo shows how to deploy LLM models in the OpenVINO Model Server using cont
 Text generation use case is exposed via OpenAI API `chat/completions` and `completions` endpoints.
 That makes it easy to use and efficient especially on on Intel® Xeon® processors.
 
+> **Note:** This demo was tested on Intel® Xeon® processors Gen4 and Gen5.
+
 
 
 ## Build the docker image
@@ -15,6 +17,7 @@ cd model_server
 make release_image RUN_TESTS=0
 ```
 It will create an image called `openvino/model_server:latest`.
+> **Note:** This operation might take 40min or more depending on your build host.
 
 ## Model preparation
 In this step the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
@@ -33,6 +36,9 @@ cd demos/continuous_batching
 optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 Meta-Llama-3-8B-Instruct
 convert_tokenizer -o Meta-Llama-3-8B-Instruct --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens meta-llama/Meta-Llama-3-8B-Instruct
 ```
+
+> **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/meta-llama/Meta-Llama-3-8B) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`.
+
 Copy the graph to the model folder. 
 ```bash
 cat graph.pbtxt
@@ -53,7 +59,8 @@ node: {
   }
   node_options: {
       [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-          models_path: "./"
+          models_path: "./",
+          cache_size: 50
       }
   }
   input_stream_handler {
@@ -86,10 +93,15 @@ Meta-Llama-3-8B-Instruct
 ├── tokenizer.json
 └── tokenizer.model
 
+
 ```
+
+
 The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tunned inside the `node_options` section in the `graph.pbtxt` file. 
 Note that the `models_path` parameter in the graph file can be an absolute path or relative to the `base_path` from `config.json`.
 Check the [LLM calculator documentation](./llm_calculator.md) to learn about configuration options.
+
+> **Note:** The parameter `cache_size` in the graph represents KV cache size in GB. Reduce the value if you don't have enough RAM on the host.
 
 ## Server configuration
 Prepare config.json:
@@ -114,6 +126,8 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server -
 Wait for the model to load. You can check the status with a simple command:
 ```bash
 curl http://localhost:8000/v1/config
+```
+```json
 {
 "meta-llama/Meta-Llama-3-8B-Instruct" : 
 {
@@ -299,3 +313,10 @@ P99 TPOT (ms):                           234.14
 ==================================================
 
 ```
+
+## RAG with Model Server
+
+The service deployed above can be used in RAG chain using `langchain` library with OpenAI endpoint as the LLM engine.
+
+Check the example in the [RAG notebook](./rag/rag_demo.ipynb)
+
