@@ -93,10 +93,15 @@ Meta-Llama-3-8B-Instruct
 ├── tokenizer.json
 └── tokenizer.model
 
+
 ```
+
+
 The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tunned inside the `node_options` section in the `graph.pbtxt` file. 
 Note that the `models_path` parameter in the graph file can be an absolute path or relative to the `base_path` from `config.json`.
 Check the [LLM calculator documentation](./llm_calculator.md) to learn about configuration options.
+
+> **Note:** The parameter `cache_size` in the graph represents KV cache size in GB. Reduce the value if you don't have enough RAM on the host.
 
 ## Server configuration
 Prepare config.json:
