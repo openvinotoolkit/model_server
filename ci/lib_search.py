@@ -134,7 +134,8 @@ def check_dir(start_dir):
         "test.log",
         "aipc.txt",
         "internal_tests",
-        "pugixml_v1.13_flags.patch"
+        "pugixml_v1.13_flags.patch",
+        "rag_demo.ipynb"
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
