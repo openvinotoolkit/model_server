@@ -121,6 +121,8 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server -
 Wait for the model to load. You can check the status with a simple command:
 ```bash
 curl http://localhost:8000/v1/config
+```
+```json
 {
 "meta-llama/Meta-Llama-3-8B-Instruct" : 
 {
