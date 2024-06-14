@@ -22,44 +22,45 @@ client = OpenAI(
 )
 model = "meta-llama/Meta-Llama-3-8B-Instruct"
 
-print("unary completions")
+print("\n*****Unary completions")
 response = client.completions.create(
     model=model,
-    prompt="hello",
+    prompt="<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\\Hello!<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
     max_tokens=100,
     stream=False
 )
-print(response)
 
-print("stream completions")
+print("response:",response.choices[0].text)
+
+print("\n****Stream completions")
 stream = client.completions.create(
     model=model,
-    prompt="hello",
+    prompt="<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\\Hello. What is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
     max_tokens=100,
     stream=True
 )
-
+print("stream response:")
 for chunk in stream:
     if chunk.choices[0].text is not None:
         print(chunk.choices[0].text, end="", flush=True)
 
-print("unary chat completions")
+print("\n****Unary chat completions")
 response = client.chat.completions.create(
     model=model,
     messages=[{"role": "user", "content": "hello"}],
     max_tokens=100,
     stream=False
 )
-print(response)
+print("response",response)
 
-print("stream chat completions")
+print("\n****Stream chat completions")
 stream = client.chat.completions.create(
     model=model,
-    messages=[{"role": "user", "content": "hello"}],
+    messages=[{"role": "user", "content": "how do you say hello in chinese?"}],
     max_tokens=100,
     stream=True
 )
-
+print("stream response:")
 for chunk in stream:
     if chunk.choices[0].delta.content is not None:
         print(chunk.choices[0].delta.content, end="", flush=True)
