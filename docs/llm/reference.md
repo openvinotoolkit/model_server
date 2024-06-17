@@ -15,7 +15,7 @@ It is now integrated into OpenVINO Model Server providing efficient way to run g
 Check out the [quickstart guide](quickstart.md) for a simple example that shows how to use this feature.
 
 ## LLM Calculator
-As you can see in the quickstart above, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) solutions. The calculator is designed to run in cycles and return the chunks of reponses to the client.
+As you can see in the quickstart above, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) solutions. The calculator is designed to run in cycles and return the chunks of responses to the client.
 
 On the input it expects a HttpPayload struct passed by the Model Server frontend:
 ```cpp
@@ -26,7 +26,7 @@ struct HttpPayload {
     rapidjson::Document* parsedJson;  // pre-parsed body             = null
 };
 ```
-The input json content should be compatible with the [chat completions](./model_server_rest_api_chat.md) or [completions](./model_server_rest_api_completions.md) API.
+The input json content should be compatible with the [chat completions](../model_server_rest_api_chat.md) or [completions](../model_server_rest_api_completions.md) API.
 
 The input also includes a side packet with a reference to `LLM_NODE_RESOURCES` which is a shared object representing an LLM engine. It loads the model, runs the generation cycles and reports the generated results to the LLM calculator via a generation handler. 
 
@@ -83,7 +83,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional uint64 max_num_seqs` - max number of sequences actively processed by the engine [default = 256];
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
 -    `optional string device` - device to load models to. Supported values: "CPU" [default = "CPU"]
--    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](./parameters.md#model-configuration-options) [default = ""]
+-    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = ""]
 
 
 The value of `cache_size` might have performance  implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.

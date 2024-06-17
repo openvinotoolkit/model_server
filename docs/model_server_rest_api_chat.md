@@ -146,6 +146,6 @@ curl http://localhost/v3/chat/completions \
 
 [Code snippets](./clients_openai.md)
 
-[LLM calculator](./llm_calculator.md)
+[LLM calculator](./llm/reference.md)
 
 [Developer guide for writing custom calculators with REST API extension](./mediapipe.md)
