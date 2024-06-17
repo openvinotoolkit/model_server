@@ -134,7 +134,7 @@ curl -s http://localhost:8000/v3/chat/completions \
 
 
 ## References
-- [Efficient LLM Serving - reference](../reference.md)
+- [Efficient LLM Serving - reference](reference.md)
 - [Chat Completions API](../model_server_rest_api_chat.md)
 - [Completions API](../model_server_rest_api_completions.md)
 - [Demo with Llama3 serving](../../demos/continuous_batching/README.md)
