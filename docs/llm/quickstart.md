@@ -52,7 +52,7 @@ node: {
     }
   }
 }
-' > TinyLlama-1.1B-Chat-v1.0/graph.pbtxt
+' >> TinyLlama-1.1B-Chat-v1.0/graph.pbtxt
 ```
 
 4. Create server `config.json` file:
@@ -67,7 +67,7 @@ echo '
         }
     ]
 }
-' > config.json
+' >> config.json
 ```
 5. Deploy:
 
@@ -134,7 +134,7 @@ curl -s http://localhost:8000/v3/chat/completions \
 
 
 ## References:
-- [Efficient LLM Serving - reference](./reference.md)
-- [Chat Completions API](./model_server_rest_api_chat.md)
-- [Completions API](./model_server_rest_api_completions.md)
-- [Demo with Llama3 serving](./../demos/continuous_batching/)
+- [Efficient LLM Serving - reference](../reference.md)
+- [Chat Completions API](../model_server_rest_api_chat.md)
+- [Completions API](../model_server_rest_api_completions.md)
+- [Demo with Llama3 serving](../../demos/continuous_batching/README.md)

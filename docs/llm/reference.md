@@ -73,13 +73,7 @@ node: {
 }
 ```
 
-Above node configuration should be used as a template since user is not expected to change most of it's content. Fields that can be safely changed are:
- - `name`
- - `input_stream: "HTTP_REQUEST_PAYLOAD:input"` - in case you want to change input name
- - `output_stream: "HTTP_RESPONSE_PAYLOAD:output"` - in case you want to change input name
-- `node_options`
-
-From this options only `node_options` really requires user attention as they specify LLM engine parameters. The rest of them can remain unchanged. 
+Above node configuration should be used as a template since user is not expected to change most of it's content. Actually only `node_options` requires user attention as it specifies LLM engine parameters. The rest of the configuration can remain unchanged. 
 
 The calculator supports the following `node_options` for tuning the pipeline configuration:
 -    `required string models_path` - location of the model directory (can be relative);
@@ -109,9 +103,11 @@ In node configuration we set `models_path` indicating location of the directory 
 ├── template.jinja
 ```
 
-Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing. Chat template is used only on `/chat/completions` endpoint. Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`. 
+Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing.
 
 ### Chat template
+
+Chat template is used only on `/chat/completions` endpoint. Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`. 
 
 Loading chat template proceeds as follows:
 1. If `tokenizer.jinja` is present, try to load template from it.
@@ -134,12 +130,12 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 
 As it's in preview, this feature has set of limitations:
 
-- Limited support for [API parameters](./model_server_rest_api_chat.md#request),
+- Limited support for [API parameters](../model_server_rest_api_chat.md#request),
 - Only one node with LLM calculator can be deployed at once,
 - Metrics related to text generation - they are planned to be added later,
 - Improvements in stability and recovery mechanisms are also expected
 
 ## References:
-- [Chat Completions API](./model_server_rest_api_chat.md)
-- [Completions API](./model_server_rest_api_completions.md)
-- [Demo](./../demos/continuous_batching/)
+- [Chat Completions API](../model_server_rest_api_chat.md)
+- [Completions API](../model_server_rest_api_completions.md)
+- [Demo](../../demos/continuous_batching/)
