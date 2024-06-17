@@ -113,27 +113,27 @@ curl -s http://localhost:8000/v3/chat/completions \
   }'| jq .
 ```
 ```json
+{
   "choices": [
     {
       "finish_reason": "stop",
       "index": 0,
       "logprobs": null,
       "message": {
-        "content": "OpenVINO is a software development kit (SDK) for machine learning (ML) and deep learning (DL) applications. It is developed",
+        "content": "OpenVINO is a software toolkit developed by Intel that enables developers to accelerate the training and deployment of deep learning models on Intel hardware.",
         "role": "assistant"
       }
     }
   ],
-  "created": 1718401064,
+  "created": 1718607923,
   "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
   "object": "chat.completion"
 }
-
 ```
 **Note:** If you want to get the response chunks streamed back as they are generated change `stream` parameter in the request to `true`.
 
 
-## References:
+## References
 - [Efficient LLM Serving - reference](../reference.md)
 - [Chat Completions API](../model_server_rest_api_chat.md)
 - [Completions API](../model_server_rest_api_completions.md)
