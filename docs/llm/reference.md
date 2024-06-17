@@ -138,4 +138,4 @@ As it's in preview, this feature has set of limitations:
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
 - [Completions API](../model_server_rest_api_completions.md)
-- [Demo](../../demos/continuous_batching/)
+- [Demo](../../demos/continuous_batching/README.md)
