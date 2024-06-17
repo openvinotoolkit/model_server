@@ -1,18 +1,11 @@
 # Integration with mediapipe {#ovms_docs_mediapipe}
 
-```{toctree}
----
-maxdepth: 1
-hidden:
----
-```
-
 ## Introduction
 MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. It comes with a wide range of calculators/nodes which can be applied for unlimited number of scenarios in image and media analytics, generative AI, transformers and many more. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)
 
 Thanks to the integration between MediaPipe and OpenVINO Model Server, the graphs can be exposed over the network and the complete load can be delegated to a remote host or a microservice.
 We support the following scenarios:
-- stateless execution via unary to unary gRPC calls
+- stateless execution via unary to unary gRPC/REST calls
 - stateful graph execution via [gRPC streaming sessions](./streaming_endpoints.md).
 
 With the introduction of OpenVINO calculator it is possible to optimize inference execution in the OpenVINO Runtime backend. This calculator can be applied both in the graphs deployed inside the Model Server but also in the standalone applications using the MediaPipe framework.
@@ -23,16 +16,29 @@ Check [our MediaPipe github fork](https://github.com/openvinotoolkit/mediapipe) 
 
 This guide gives information about:
 
-* [OpenVINO Model Server Calculators](#openvino-calculators)
-* [How to create the graph for deployment in OpenVINO Model Server](#how-to-create-the-graph-for-deployment-in-openvino-model-server)
-* [Graph deployment](#graph-deployment)
-* [Deployment testing](#deployment-testing)
-* [Using MediaPipe graphs from the remote client](#using-mediapipe-graphs-from-the-remote-client)
-* [How to update existing graphs to use OV for inference](mediapipe_conversion.md)
-* [Adding your own MediaPipe calculator to OpenVINO Model Server](#adding-your-own-mediapipe-calculator-to-openvino-model-server)
-* [Demos and examples](#mediapipe-graphs-examples)
-* [Current Limitations](#current-limitations)
-* [Known Issues](#known-issues)
+- [Integration with mediapipe {#ovms\_docs\_mediapipe}](#integration-with-mediapipe-ovms_docs_mediapipe)
+  - [Introduction](#introduction)
+  - [OpenVINO calculators](#openvino-calculators)
+  - [PythonExecutorCalculator](#pythonexecutorcalculator)
+  - [PyTensorOvTensorConverterCalculator](#pytensorovtensorconvertercalculator)
+  - [How to create the graph for deployment in OpenVINO Model Server](#how-to-create-the-graph-for-deployment-in-openvino-model-server)
+    - [Supported graph input/output streams packet types](#supported-graph-inputoutput-streams-packet-types)
+    - [Side packets](#side-packets)
+    - [List of default calculators](#list-of-default-calculators)
+    - [CPU and GPU execution](#cpu-and-gpu-execution)
+  - [Graph deployment](#graph-deployment)
+    - [How to package the graph and models](#how-to-package-the-graph-and-models)
+    - [Starting OpenVINO Model Server with Mediapipe servables](#starting-openvino-model-server-with-mediapipe-servables)
+    - [MediaPipe configuration options explained](#mediapipe-configuration-options-explained)
+  - [Deployment testing](#deployment-testing)
+    - [Debug logs](#debug-logs)
+    - [Tracing](#tracing)
+    - [Benchmarking](#benchmarking)
+  - [Using MediaPipe graphs from the remote client](#using-mediapipe-graphs-from-the-remote-client)
+  - [Adding your own mediapipe calculator to OpenVINO Model Server](#adding-your-own-mediapipe-calculator-to-openvino-model-server)
+  - [MediaPipe Graphs Examples](#mediapipe-graphs-examples)
+  - [Current limitations](#current-limitations)
+  - [Known issues](#known-issues)
 
 
 
@@ -79,10 +85,10 @@ The required data layout for the MediaPipe `IMAGE` conversion is HWC and the sup
 |UINT16|1,3,4|
 |INT16|1,3,4|
 
-> **Note**: Input serialization to MediaPipe ImageFrame format, requires the data in the KServe request to be encapsulated in `raw_input_contents` field based on [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto). That is the default behavior in the client libs like `triton-client`.
+> **Note**: Input serialization to MediaPipe ImageFrame format, requires the data in the KServe request to be encapsulated in `raw_input_contents` field based on [KServe API GRPC](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto) or in binary extension of based on [KServe API REST](./binary_input_kfs.md#http). That is the default behavior in the client libs like `triton-client`.
 
-When the client is sending in the gRPC request the input as an numpy array, it will be deserialized on the Model Server side to the format specified in the graph.
-For example when the graph has the input type IMAGE, the gRPC client could send the input data with the shape `(300, 300, 3)` and precision INT8. It would not be allowed to send the data in the shape for example `(1,300,300,1)` as that would be incorrect layout and the number of dimensions.
+When the client is sending in the gRPC/REST request the input as an numpy array, it will be deserialized on the Model Server side to the format specified in the graph.
+For example when the graph has the input type IMAGE, the gRPC/REST client could send the input data with the shape `(300, 300, 3)` and precision INT8. It would not be allowed to send the data in the shape for example `(1,300,300,1)` as that would be incorrect layout and the number of dimensions.
 
 When the input graph would be set as `OVTENSOR`, any shape and precisions of the input would be allowed. It will be converted to `ov::Tensor` object and passed to the graph. For example input can have shape `(1,3,300,300)` and precision `FP32`. If passed tensor would not be accepted by model, calculator and graph will return error.
 
@@ -94,7 +100,7 @@ There is also an option to avoid any data conversions in the serialization and d
 
 ### Side packets
 Side packets are special parameters which can be passed to the calculators at the beginning of the graph initialization. It can tune the behavior of the calculator like set the object detection threshold or number of objects to process.
-With KServe gRPC API you are also able to push side input packets into graph. They are to be passed as KServe request parameters. They can be of type `string`, `int64` or `boolean`.
+With KServe API you are also able to push side input packets into graph. They are to be passed as KServe request parameters. They can be of type `string`, `int64` or `boolean`.
 Note that with the gRPC stream connection, only the first request in the stream can include the side package parameters. On the client side, the snippet below illustrates how it can be defined:
 ```python
 client.async_stream_infer(
@@ -207,7 +213,7 @@ It can generate the load to gRPC stream and the mediapipe graph based on the con
 
 ## Using MediaPipe graphs from the remote client
 
-MediaPipe graphs can use the same gRPC KServe Inference API both for the unary calls and the streaming.
+MediaPipe graphs can use the same gRPC/REST KServe Inference API both for the unary calls and the streaming.
 The same client libraries with KServe API support can be used in both cases. The client code for the unary and streaming is different.
 Check the [code snippets](https://docs.openvino.ai/2024/ovms_docs_clients_kfs.html)
 
@@ -261,7 +267,7 @@ in the conditions:default section of the deps property:
 
 
 ## Current limitations
-- MediaPipe graphs are supported only for gRPC KServe API.
+- Inputs of type string are supported only for inputs tagged as OVMS_PY_TENSOR.
 
 - KServe ModelMetadata call response contains only input and output names. In the response, shapes will be empty and datatypes will be `"INVALID"`.
 

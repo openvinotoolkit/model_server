@@ -41,9 +41,9 @@ SELECTED_MODEL = args.model
 
 model_configuration = SUPPORTED_EMBEDDING_MODELS[SELECTED_MODEL]
 
-MODEL_PATH = "./" + SELECTED_MODEL
+MODEL_PATH = "./servable_stream/" + SELECTED_MODEL
 
-embedding_model_dir = Path(SELECTED_MODEL)
+embedding_model_dir = Path("./servable_stream/" + SELECTED_MODEL)
 embedding_model_configuration = SUPPORTED_EMBEDDING_MODELS[SELECTED_MODEL]
 
 if not (embedding_model_dir / "openvino_model.xml").exists():

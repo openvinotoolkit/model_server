@@ -224,6 +224,13 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PYTHON_NODE_MISSING_OPTIONS, "The Python Node is missing options definition"},
     {StatusCode::PYTHON_NODE_MISSING_NAME, "The Python Node is missing name definition"},
 
+    // LLM Nodes
+    {StatusCode::LLM_NODE_NAME_ALREADY_EXISTS, "The LLM Node name is already present in nodes list"},
+    {StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST, "The LLM Node workspace path does not exist"},
+    {StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "The LLM Node resource initialization failed"},
+    {StatusCode::LLM_NODE_MISSING_OPTIONS, "The LLM Node is missing options definition"},
+    {StatusCode::LLM_NODE_MISSING_NAME, "The LLM Node is missing name definition"},
+
     // Storage errors
     // S3
     {StatusCode::S3_BUCKET_NOT_FOUND, "S3 Bucket not found"},
@@ -320,5 +327,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::SERVER_ALREADY_STARTED, "Server has already started"},
     {StatusCode::SERVER_ALREADY_STARTING, "Server is already starting"},
     {StatusCode::MODULE_ALREADY_INSERTED, "Module already inserted"},
+
+    {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},
 };
 }  // namespace ovms

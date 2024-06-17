@@ -30,6 +30,10 @@
 #include "rest_parser.hpp"
 #include "status.hpp"
 
+namespace tensorflow::serving::net_http {
+class ServerRequestInterface;
+}
+
 namespace ovms {
 class ServableMetricReporter;
 class KFSInferenceServiceImpl;
@@ -48,6 +52,7 @@ enum RequestType { Predict,
     KFS_GetServerReady,
     KFS_GetServerLive,
     KFS_GetServerMetadata,
+    V3,
     Metrics };
 
 struct HttpRequestComponents {
@@ -59,11 +64,14 @@ struct HttpRequestComponents {
     std::string processing_method;
     std::string model_subresource;
     std::optional<int> inferenceHeaderContentLength;
+    std::vector<std::pair<std::string, std::string>> headers;
 };
 
 struct HttpResponseComponents {
     std::optional<int> inferenceHeaderContentLength;
 };
+
+using HandlerCallbackFn = std::function<Status(const std::string_view, const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&, tensorflow::serving::net_http::ServerRequestInterface*)>;
 
 class HttpRestApiHandler {
 public:
@@ -81,6 +89,8 @@ public:
     static const std::string kfs_serverreadyRegexExp;
     static const std::string kfs_serverliveRegexExp;
     static const std::string kfs_servermetadataRegexExp;
+
+    static const std::string v3_RegexExp;
     /**
      * @brief Construct a new HttpRest Api Handler
      *
@@ -97,14 +107,16 @@ public:
     static void parseParams(rapidjson::Value&, rapidjson::Document&);
     static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
 
-    void registerHandler(RequestType type, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)>);
+    void registerHandler(RequestType type, HandlerCallbackFn);
     void registerAll();
 
     Status dispatchToProcessor(
+        const std::string_view uri,
         const std::string& request_body,
         std::string* response,
         const HttpRequestComponents& request_components,
-        HttpResponseComponents& response_components);
+        HttpResponseComponents& response_components,
+        tensorflow::serving::net_http::ServerRequestInterface* writer);
 
     /**
      * @brief Process Request
@@ -123,7 +135,8 @@ public:
         const std::string& request_body,
         std::vector<std::pair<std::string, std::string>>* headers,
         std::string* response,
-        HttpResponseComponents& responseComponents);
+        HttpResponseComponents& responseComponents,
+        tensorflow::serving::net_http::ServerRequestInterface* writer);
 
     /**
      * @brief Process predict request
@@ -203,6 +216,8 @@ public:
     Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
+    Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* writer);
+
 private:
     const std::regex predictionRegex;
     const std::regex modelstatusRegex;
@@ -217,9 +232,11 @@ private:
     const std::regex kfs_serverliveRegex;
     const std::regex kfs_servermetadataRegex;
 
+    const std::regex v3_Regex;
+
     const std::regex metricsRegex;
 
-    std::map<RequestType, std::function<Status(const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&)>> handlers;
+    std::map<RequestType, HandlerCallbackFn> handlers;
     int timeout_in_ms;
 
     ovms::Server& ovmsServer;

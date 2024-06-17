@@ -28,21 +28,21 @@ NO_WARNINGS_TEST_DIRECT=$(grep "not found in any directly #included header" ${CP
 NO_WARNINGS_TEST_NOTUSED=$(grep " not used$" ${CPPCLEAN_RESULTS_FILE_TEST} | wc -l)
 echo "Number of warnings:" ${NO_WARNINGS}
 echo "Number of warnings in tests:" ${NO_WARNINGS_TEST}
-echo "Number of warnings about not using forward delares:" ${NO_WARNINGS_FORWARD}
+echo "Number of warnings about not using forward declarations:" ${NO_WARNINGS_FORWARD}
 echo "Number of warnings about not direct includes:" ${NO_WARNINGS_DIRECT}
 echo "Number of warnings about not used: " ${NO_WARNINGS_NOTUSED}
-echo "Number of warnings in tests about not using forward delares:" ${NO_WARNINGS_TEST_FORWARD}
+echo "Number of warnings in tests about not using forward declarations:" ${NO_WARNINGS_TEST_FORWARD}
 echo "Number of warnings in tests about not direct includes:" ${NO_WARNINGS_TEST_DIRECT}
 echo "Number of warnings in tests about not used: " ${NO_WARNINGS_TEST_NOTUSED}
 
 errors=""
-if [ ${NO_WARNINGS_FORWARD} -gt 6 ]; then
+if [ ${NO_WARNINGS_FORWARD} -gt 7 ]; then
     errors+="Failed due to not using forward declarations where possible: ${NO_WARNINGS_FORWARD}"$'\n'
 fi
-if [ ${NO_WARNINGS_DIRECT} -gt 19 ]; then
+if [ ${NO_WARNINGS_DIRECT} -gt 15 ]; then
     errors+="Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_DIRECT}"$'\n'
 fi
-if [ ${NO_WARNINGS_NOTUSED} -gt 5 ]; then
+if [ ${NO_WARNINGS_NOTUSED} -gt 4 ]; then
     errors+="Failed probably due to unnecessary forward includes: ${NO_WARNINGS_NOTUSED}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST_FORWARD} -gt 1 ]; then

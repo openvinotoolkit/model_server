@@ -42,7 +42,7 @@ node {
   output_stream: "END_SIGNAL:end_signal"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-      handler_path: "/workspace/model.py"
+      handler_path: "model.py"
     }
   }
 }

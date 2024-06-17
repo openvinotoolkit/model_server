@@ -1,0 +1,9 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+        {
+            "name": "meta-llama/Meta-Llama-3-8B-Instruct",
+            "base_path": "Meta-Llama-3-8B-Instruct"
+        }
+    ]
+}

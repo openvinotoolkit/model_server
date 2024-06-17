@@ -22,7 +22,6 @@ mkdir -vp /ovms_release/lib
 mkdir -vp /ovms_release/lib/hddl/config
 mkdir -vp /ovms_release/lib/custom_nodes
 
-cp /ovms/src/custom_nodes/tokenizer/build/src/lib*tokenizer.so /ovms_release/lib/custom_nodes/
 if [ -f /openvino_tokenizers/build/src/libopenvino_tokenizers.so ]; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 if [ -f /openvino_tokenizers/build/src/libcore_tokenizers.so ]; then cp -v /openvino_tokenizers/build/src/libcore_tokenizers.so /ovms_release/lib/ ; fi
 

@@ -76,11 +76,12 @@ git_repository(
     remote = "https://github.com/tensorflow/serving.git",
     tag = "2.13.0",
     patch_args = ["-p1"],
-    patches = ["net_http.patch", "listen.patch"]
+    patches = ["net_http.patch", "listen.patch", "partial.patch"]
     #                             ^^^^^^^^^^^^
     #                       make bind address configurable
     #          ^^^^^^^^^^^^
-    #        allow all http methods
+    #        allow all http methods                ^^^^^^^^^
+    #                                        implements partial responses
 )
 
 ########################################################### Mediapipe
@@ -297,6 +298,9 @@ rules_pkg_dependencies()
 load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
 
+load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
+llm_engine()
+
 # Azure Storage SDK
 new_local_repository(
     name = "azure",
@@ -385,15 +389,6 @@ http_archive(
     sha256 = "f1907a58d5e86e6c382e51441d92ad9e23aea63827ba47fd647eacc0d3a16c78",
     strip_prefix = "fmt-6.0.0",
     build_file = "@//third_party/fmtlib:BUILD"
-)
-
-# libevent
-http_archive(
-    name = "com_github_libevent_libevent",
-    url = "https://github.com/libevent/libevent/archive/release-2.1.8-stable.zip",
-    sha256 = "70158101eab7ed44fd9cc34e7f247b3cae91a8e4490745d9d6eb7edc184e4d96",
-    strip_prefix = "libevent-release-2.1.8-stable",
-    build_file = "@//third_party/libevent:BUILD",
 )
 
 # prometheus-cpp

@@ -1,0 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/cpu 
+langchain_community
+openai
+sentence_transformers
+chromadb
+unstructured
+langchain-openai
+langchain
+langchainhub

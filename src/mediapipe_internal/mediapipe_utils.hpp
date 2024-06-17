@@ -18,7 +18,10 @@
 #include <unordered_map>
 #include <utility>
 
+#include "../logging.hpp"
+#include "../status.hpp"
 #include "packettypes.hpp"
+
 namespace ovms {
 extern const std::string KFS_REQUEST_PREFIX;
 extern const std::string KFS_RESPONSE_PREFIX;

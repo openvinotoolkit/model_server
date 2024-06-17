@@ -36,7 +36,7 @@ model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
 
 model_id = model_configuration["model_id"]
 
-MODEL_PATH = "./" + SELECTED_MODEL
+MODEL_PATH = "./servable_stream/" + SELECTED_MODEL
 
 print('Downloading and converting...')
 ov_model = OVModelForCausalLM.from_pretrained(

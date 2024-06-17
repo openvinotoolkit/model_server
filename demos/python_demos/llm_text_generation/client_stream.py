@@ -61,16 +61,11 @@ def callback(result, error):
     elif result.as_numpy('token_count') is not None:
         token_count[0] = result.as_numpy('token_count')[0]
     elif result.as_numpy('completion') is not None:
-        if len(prompts) == 1:
-            # For single batch, partial response is represented as single buffer of bytes
-            print(result.as_numpy('completion').tobytes().decode(), flush=True, end='')
-        else:
-            # For multi batch, responses are packed in 4byte len tritonclient format
-            os.system('clear')
-            for i, completion in enumerate(deserialize_bytes_tensor(result._result.raw_output_contents[0])):
-                completions[i] += completion.decode()
-                print(completions[i])
-                print()
+        os.system('cls' if os.name=='nt' else 'clear')
+        for i, completion in enumerate(deserialize_bytes_tensor(result._result.raw_output_contents[0])):
+            completions[i] += completion.decode()
+            print(completions[i])
+            print()
         duration = int((endtime - start_time).total_seconds() * 1000)
         processing_times = np.append(processing_times, duration)
         start_time = datetime.datetime.now()
@@ -87,9 +82,11 @@ event.wait()
 client.stop_stream()
 print('\nEND')
 
-print("\n\nNumber of tokens ", token_count[0])
-print("Generated tokens per second ", round(token_count[0] / (np.sum(processing_times) / 1000), 2))
-print("Time per generated token", round((np.sum(processing_times) / 1000) / token_count[0] * 1000, 2), "ms")
+
+if token_count[0]>0:
+    print("\n\nNumber of tokens ", token_count[0])
+    print("Generated tokens per second ", round(token_count[0] / (np.sum(processing_times) / 1000), 2))
+    print("Time per generated token", round((np.sum(processing_times) / 1000) / token_count[0] * 1000, 2), "ms")
 print("Total time", np.sum(processing_times), "ms")
 print("Number of responses", processing_times.size)
 print("First response time", processing_times[0], "ms")

@@ -523,6 +523,15 @@ public:
     }
 
     /**
+         * @brief Get the plugin config
+         * 
+         * @return const std::string&
+         */
+    plugin_config_t& getPluginConfig() {
+        return this->pluginConfig;
+    }
+
+    /**
          * @brief Set the plugin config
          * 
          * @param pluginConfig 
@@ -610,26 +619,16 @@ public:
          * 
          * @return status
          */
-    Status parsePluginConfig(const rapidjson::Value& node);
+    Status parsePluginConfig(const rapidjson::Value& node, plugin_config_t& pluginConfig);
 
     /**
-         * @brief Parses string for plugin config keys and values
-         * 
-         * @param string representing plugin_config
-         * 
-         * @return status
-         */
-    Status parsePluginConfig(std::string command) {
-        rapidjson::Document node;
-        if (command.empty()) {
-            return StatusCode::OK;
-        }
-        if (node.Parse(command.c_str()).HasParseError()) {
-            return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
-        }
-
-        return parsePluginConfig(node);
-    }
+        * @brief Parses string for plugin config keys and values
+        * 
+        * @param string representing plugin_config
+        * 
+        * @return status
+        */
+    Status parsePluginConfig(std::string command, plugin_config_t& pluginConfig);
 
     /**
          * @brief Parses value from json and extracts shapes info

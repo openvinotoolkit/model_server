@@ -104,6 +104,7 @@ def check_dir(start_dir):
         'missing_headers.txt',
         'model.xml',
         'net_http.patch',
+        'partial.patch',
         'opencv_cmake_flags.txt',
         'ovms-c/dist',
         'requirements.txt',
@@ -133,7 +134,8 @@ def check_dir(start_dir):
         "test.log",
         "aipc.txt",
         "internal_tests",
-        "pugixml_v1.13_flags.patch"
+        "pugixml_v1.13_flags.patch",
+        "rag_demo.ipynb"
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
@@ -202,6 +204,7 @@ def check_func(start_dir):
         'missing_headers.txt',
         'missing_headers.txt',
         'net_http.patch',
+        'partial.patch',
         'openvino.LICENSE.txt',
         'ovms-c/dist',
         'requirements.txt',

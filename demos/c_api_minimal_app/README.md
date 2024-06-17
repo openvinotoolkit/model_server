@@ -31,8 +31,9 @@ make -f MakefileCapi cpp
 ```
 
 It will link the main_capi.cpp binary with the `libovms_shared.so` library from /ovms/lib and use the headers from /ovms/include directory:
-```
-g++ main_capi.cpp -I/ovms/include -L/ovms/lib -lovms_shared
+```bash
+g++ main_capi.cpp -I/ovms/include -L/ovms/lib -lovms_shared -o main_capi
+./main_capi
 ```
 
 The example output is:

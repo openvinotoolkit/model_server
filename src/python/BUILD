@@ -62,7 +62,7 @@ cc_library(
     deps = PYBIND_DEPS + [
         "//src:libovmslogging",
     ],
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,

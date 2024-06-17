@@ -31,6 +31,7 @@ std::shared_ptr<spdlog::logger> sequence_manager_logger = std::make_shared<spdlo
 std::shared_ptr<spdlog::logger> capi_logger = std::make_shared<spdlog::logger>("C-API");
 #if (MEDIAPIPE_DISABLE == 0)
 std::shared_ptr<spdlog::logger> mediapipe_logger = std::make_shared<spdlog::logger>("mediapipe");
+std::shared_ptr<spdlog::logger> llm_executor_logger = std::make_shared<spdlog::logger>("llm_executor");
 #endif
 #if (OV_TRACING == 1)
 std::shared_ptr<spdlog::logger> ov_logger = std::make_shared<spdlog::logger>("openvino");
@@ -68,6 +69,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     capi_logger->set_pattern(default_pattern);
 #if (MEDIAPIPE_DISABLE == 0)
     mediapipe_logger->set_pattern(default_pattern);
+    llm_executor_logger->set_pattern(default_pattern);
 #endif
 #if (OV_TRACING == 1)
     ov_logger->set_pattern(default_pattern);
@@ -82,6 +84,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
         capi_logger->sinks().push_back(sink);
 #if (MEDIAPIPE_DISABLE == 0)
         mediapipe_logger->sinks().push_back(sink);
+        llm_executor_logger->sinks().push_back(sink);
 #endif
 #if (OV_TRACING == 1)
         ov_logger->sinks().push_back(sink);
@@ -97,6 +100,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     set_log_level(log_level, capi_logger);
 #if (MEDIAPIPE_DISABLE == 0)
     set_log_level(log_level, mediapipe_logger);
+    set_log_level(log_level, llm_executor_logger);
 #endif
 #if (OV_TRACING == 1)
     set_log_level(log_level, ov_logger);

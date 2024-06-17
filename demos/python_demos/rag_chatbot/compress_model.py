@@ -43,15 +43,15 @@ SELECTED_MODEL = args['model']
 LANGUAGE = 'English'
 
 model_configuration = SUPPORTED_LLM_MODELS[LANGUAGE][SELECTED_MODEL]
-MODEL_PATH = "./" + SELECTED_MODEL
+MODEL_PATH = "./servable_stream/" + SELECTED_MODEL
 
 print(model_configuration)
 pt_model_id = model_configuration["model_id"]
 pt_model_name = SELECTED_MODEL.split("-")[0]
 model_type = AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True).model_type
-fp16_model_dir = Path(SELECTED_MODEL + "_FP16")
-int8_model_dir = Path(SELECTED_MODEL + "_INT8_compressed_weights")
-int4_model_dir = Path(SELECTED_MODEL + "_INT4_compressed_weights")
+fp16_model_dir = Path("./servable_stream/" + SELECTED_MODEL + "_FP16")
+int8_model_dir = Path("./servable_stream/" + SELECTED_MODEL + "_INT8_compressed_weights")
+int4_model_dir = Path("./servable_stream/" + SELECTED_MODEL + "_INT4_compressed_weights")
 
 def save_tokenizer(model_id, PATH):
     print(f'Downloading tokenizer to {PATH} ...')

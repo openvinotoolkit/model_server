@@ -86,10 +86,12 @@ static const net_http::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::MODEL_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::MODEL_VERSION_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::MEDIAPIPE_EXECUTION_ERROR, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::MODEL_VERSION_NOT_LOADED_YET, net_http::HTTPStatusCode::SERVICE_UNAV},
-        {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, net_http::HTTPStatusCode::SERVICE_UNAV},
+        {StatusCode::MODEL_VERSION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
         {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
@@ -208,7 +210,12 @@ private:
             req->uri_path(),
             body.size());
         HttpResponseComponents responseComponents;
-        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents);
+        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, req);
+        if (status == StatusCode::PARTIAL_END) {
+            // No further messaging is required.
+            // Partial responses were delivered via "req" object.
+            return;
+        }
         if (!status.ok() && output.empty()) {
             output.append("{\"error\": \"" + status.string() + "\"}");
         }
