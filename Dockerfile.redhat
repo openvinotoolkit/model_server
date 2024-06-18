@@ -168,15 +168,9 @@ RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https:/
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; pip3 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
-<<<<<<< HEAD
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; dnf install -y http://mirror.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && dnf clean all
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; dnf install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && dnf clean all
 RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE=${VERBOSE_LOGS} -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -DCMAKE_VERBOSE_MAKEFILE=${VERBOSE_LOGS} -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
-=======
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; dnf install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && dnf clean all
-RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -DCMAKE_VERBOSE_MAKEFILE=ON -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
->>>>>>> origin/main
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
@@ -214,11 +208,8 @@ ARG ov_tokenizers_branch=master
 # hadolint ignore=DL3003
 RUN if [[ "$tokenizers" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 WORKDIR /openvino_tokenizers/build
-<<<<<<< HEAD
-RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=${VERBOSE_LOGS} && cmake --build . --parallel $JOBS
-=======
-RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
->>>>>>> origin/main
+
+RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=${VERBOSE_LOGS}  && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
