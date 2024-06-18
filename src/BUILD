@@ -356,10 +356,14 @@ cc_library(
         deps = select({
             "//:not_disable_python": [
                 "//src/python:libovmspythonmodule",
+                # Jinja template processing is done in Python
+                "//src/llm:llmcalculator",
+                "//src/llm:llmnoderesources",
             ],
             "//:disable_python": []
         }) + [
             "cpp_headers",
+            "libmodelconfigjsonparser",
             "libovmsfilesystem",
             "libovmsfilesystemfactory",
             "libovmslocalfilesystem", # indirectly & directly through factory
@@ -386,8 +390,6 @@ cc_library(
                 "@mediapipe//mediapipe/calculators/geti/utils:utils",
                 "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
                 "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
-                "//src/llm:llmcalculator",
-                "//src/llm:llmnoderesources",
                 "//src/llm:httppayload",
             ],
             "//:disable_mediapipe" : [],
@@ -934,6 +936,22 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+cc_library(
+    name = "libmodelconfigjsonparser",
+    hdrs = [
+        "json_parser.hpp",
+    ],
+    srcs = ["json_parser.cpp"],
+    deps = ["cpp_headers",
+            "@com_github_tencent_rapidjson//:rapidjson",
+            "@linux_openvino//:openvino",
+            "@com_github_gabime_spdlog//:spdlog"],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
 cc_library( # TODO split further
     name = "cpp_headers",
     hdrs = [
@@ -1093,7 +1111,6 @@ cc_test(
             "//:not_disable_mediapipe": [
                 "test/http_openai_handler_test.cpp",
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
-                "test/llmnode_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/mediapipeflow_test.cpp",
                 "test/mediapipe_framework_test.cpp",
@@ -1106,6 +1123,8 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
+                # LLM logic uses Python for processing Jinja templates
+                "test/llmnode_test.cpp",
             ],
             "//:disable_python" : [],
         }),
@@ -1237,12 +1256,16 @@ cc_test(
         "@com_google_googletest//:gtest",
         ] + select({
             "//conditions:default": [
-                "//src/llm:llmnoderesources",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
             "//:disable_mediapipe" : [],
+        }) +select({
+            "//:not_disable_python": [
+                "//src/llm:llmnoderesources",
+            ],
+            "//:disable_python": []
         }),
     copts = COPTS_TESTS,
 )

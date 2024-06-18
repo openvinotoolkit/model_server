@@ -1,12 +1,5 @@
 # Integration with mediapipe {#ovms_docs_mediapipe}
 
-```{toctree}
----
-maxdepth: 1
-hidden:
----
-```
-
 ## Introduction
 MediaPipe is an open-source framework for building pipelines to perform inference over arbitrary sensory data. It comes with a wide range of calculators/nodes which can be applied for unlimited number of scenarios in image and media analytics, generative AI, transformers and many more. Here can be found more information about [MediaPipe framework ](https://developers.google.com/mediapipe/framework/framework_concepts/overview)
 
@@ -23,16 +16,29 @@ Check [our MediaPipe github fork](https://github.com/openvinotoolkit/mediapipe) 
 
 This guide gives information about:
 
-* [OpenVINO Model Server Calculators](#openvino-calculators)
-* [How to create the graph for deployment in OpenVINO Model Server](#how-to-create-the-graph-for-deployment-in-openvino-model-server)
-* [Graph deployment](#graph-deployment)
-* [Deployment testing](#deployment-testing)
-* [Using MediaPipe graphs from the remote client](#using-mediapipe-graphs-from-the-remote-client)
-* [How to update existing graphs to use OV for inference](mediapipe_conversion.md)
-* [Adding your own MediaPipe calculator to OpenVINO Model Server](#adding-your-own-mediapipe-calculator-to-openvino-model-server)
-* [Demos and examples](#mediapipe-graphs-examples)
-* [Current Limitations](#current-limitations)
-* [Known Issues](#known-issues)
+- [Integration with mediapipe {#ovms\_docs\_mediapipe}](#integration-with-mediapipe-ovms_docs_mediapipe)
+  - [Introduction](#introduction)
+  - [OpenVINO calculators](#openvino-calculators)
+  - [PythonExecutorCalculator](#pythonexecutorcalculator)
+  - [PyTensorOvTensorConverterCalculator](#pytensorovtensorconvertercalculator)
+  - [How to create the graph for deployment in OpenVINO Model Server](#how-to-create-the-graph-for-deployment-in-openvino-model-server)
+    - [Supported graph input/output streams packet types](#supported-graph-inputoutput-streams-packet-types)
+    - [Side packets](#side-packets)
+    - [List of default calculators](#list-of-default-calculators)
+    - [CPU and GPU execution](#cpu-and-gpu-execution)
+  - [Graph deployment](#graph-deployment)
+    - [How to package the graph and models](#how-to-package-the-graph-and-models)
+    - [Starting OpenVINO Model Server with Mediapipe servables](#starting-openvino-model-server-with-mediapipe-servables)
+    - [MediaPipe configuration options explained](#mediapipe-configuration-options-explained)
+  - [Deployment testing](#deployment-testing)
+    - [Debug logs](#debug-logs)
+    - [Tracing](#tracing)
+    - [Benchmarking](#benchmarking)
+  - [Using MediaPipe graphs from the remote client](#using-mediapipe-graphs-from-the-remote-client)
+  - [Adding your own mediapipe calculator to OpenVINO Model Server](#adding-your-own-mediapipe-calculator-to-openvino-model-server)
+  - [MediaPipe Graphs Examples](#mediapipe-graphs-examples)
+  - [Current limitations](#current-limitations)
+  - [Known issues](#known-issues)
 
 
 

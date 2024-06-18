@@ -221,7 +221,7 @@ Status ModelManager::startFromConfig() {
 
     ModelConfig& modelConfig = it->second;
 
-    status = modelConfig.parsePluginConfig(config.pluginConfig());
+    status = modelConfig.parsePluginConfig(config.pluginConfig(), modelConfig.getPluginConfig());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse plugin config");
         return status;

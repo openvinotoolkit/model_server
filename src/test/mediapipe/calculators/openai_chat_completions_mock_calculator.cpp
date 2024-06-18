@@ -18,6 +18,9 @@
 #include <thread>
 
 #include "../../../llm/http_payload.hpp"
+#include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -28,7 +31,10 @@
 using namespace std::chrono_literals;
 
 namespace mediapipe {
-
+/*
+    Concatenates headers names and values(with no space), request body
+    and rapidjson request body if exists.
+*/
 class OpenAIChatCompletionsMockCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -62,7 +68,19 @@ public:
         }
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             auto data = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();  // TODO: Possibly avoid making copy
-            this->body = data.body;
+            this->body = data.uri + std::string{"\n"};
+            for (auto header : data.headers) {
+                this->body += header.first;
+                this->body += header.second;
+            }
+            this->body += data.body;
+            if (data.parsedJson != NULL) {
+                rapidjson::StringBuffer buffer;
+                buffer.Clear();
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                data.parsedJson->Accept(writer);
+                this->body += buffer.GetString();
+            }
         }
 
         this->body += std::to_string(timestamp.Value());
