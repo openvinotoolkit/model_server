@@ -121,7 +121,6 @@ packages = {
         'libicu66',
         'libssl1.1',
         'tzdata',
-        'libtbb2',
     },
     OvmsBaseImageType.UBUNTU20_PYTHON: {
         'libmpdec2',
@@ -130,7 +129,7 @@ packages = {
         'libpython3.8-stdlib',
         'mime-support',
     },
-    OvmsBaseImageType.UBUNTU22: {'libicu70', 'libtbbmalloc2', 'libtbb12'},
+    OvmsBaseImageType.UBUNTU22: {'libicu70'},
     OvmsBaseImageType.UBUNTU22_PYTHON: {
         'libmpdec3',
         'libpython3.10',
