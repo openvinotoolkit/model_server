@@ -14,9 +14,10 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <optional>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <optional>
 #include <rapidjson/document.h>
 
 #include "../get_model_metadata_impl.hpp"

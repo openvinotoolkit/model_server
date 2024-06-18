@@ -13,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <optional>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-
-#include <optional>
 
 #include "../dags/custom_node_library_manager.hpp"
 #include "../dags/entry_node.hpp"
