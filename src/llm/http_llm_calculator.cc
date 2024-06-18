@@ -561,7 +561,7 @@ public:
                 }
 
                 {
-                    OVMS_PROFILE_SCOPE("pipeline->add_request()");
+                    OVMS_PROFILE_SCOPE_S("pipeline->add_request()", "prompt", finalPrompt.c_str());
                     this->generationHandle = nodeResources->cbPipe->add_request(
                         currentRequestId++, /*to be removed from API?*/
                         finalPrompt,
