@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <string>
+#include <stdexcept>
 #include <vector>
 
 #include "execution_context.hpp"
