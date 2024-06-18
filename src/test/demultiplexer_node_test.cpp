@@ -16,6 +16,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <optional>
+
 #include "../dags/dl_node.hpp"
 #include "../dags/dlnodesession.hpp"
 #include "../dags/gathernodeinputhandler.hpp"

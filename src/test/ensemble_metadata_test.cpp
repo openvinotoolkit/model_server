@@ -16,6 +16,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <optional>
+
 #include "../dags/custom_node_library_manager.hpp"
 #include "../dags/entry_node.hpp"
 #include "../dags/exit_node.hpp"

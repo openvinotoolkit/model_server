@@ -17,6 +17,7 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include <optional>
 #include <rapidjson/document.h>
 
 #pragma GCC diagnostic push

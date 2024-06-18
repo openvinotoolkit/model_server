@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "inferencetensor.hpp"
 
+#include <optional>
 #include <utility>
 
 #include "../ovms.h"  // NOLINT

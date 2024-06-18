@@ -16,6 +16,7 @@
 #include "node.hpp"
 
 #include <algorithm>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <vector>

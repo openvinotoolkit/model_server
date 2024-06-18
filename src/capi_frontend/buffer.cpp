@@ -16,6 +16,7 @@
 #include "buffer.hpp"
 
 #include <cstring>
+#include <optional>
 
 namespace ovms {
 Buffer::Buffer(const void* pptr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> bufferDeviceId, bool createCopy) :
