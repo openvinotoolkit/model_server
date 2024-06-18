@@ -96,3 +96,16 @@ build --experimental_cc_shared_library
 
 build --check_visibility=true
 
+build --strip=never
+build --copt -fsanitize=address
+build --copt -DADDRESS_SANITIZER
+build --copt -O1
+build --copt -g
+build --copt -fno-omit-frame-pointer
+build --linkopt -fsanitize=address
+build --cxxopt -fsanitize=address
+build --cxxopt -DADDRESS_SANITIZER
+build --cxxopt -O1
+build --cxxopt -g
+build --cxxopt -fno-omit-frame-pointer
+build --linkopt -fsanitize=address
