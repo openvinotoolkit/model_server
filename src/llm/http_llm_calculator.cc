@@ -364,7 +364,11 @@ public:
 
     std::optional<std::string> put(int64_t token) {
         tokenCache.push_back(token);
-        std::string text = tokenizer->decode(tokenCache);
+        std::string text;
+        {
+            OVMS_PROFILE_SCOPE("tokenizer->decode(tokenCache)");
+            text = tokenizer->decode(tokenCache);
+        }
 
         if (!text.empty() && '\n' == text.back()) {
             // The chunk is ready if the generated text ends with new line.
@@ -609,16 +613,31 @@ public:
                 if (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
                     // Subsequent iteration
                     OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
-                    GenerationOutputs generationOutputs = this->generationHandle->read();
+                    GenerationOutputs generationOutputs;
+                    {
+                        OVMS_PROFILE_SCOPE("pipeline->read()");
+                        generationOutputs = this->generationHandle->read();
+                    }
                     RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
                     RET_CHECK(generationOutputs.begin()->second.generated_token_ids.size() == 1);
 
                     // TODO(dkalinow): Move this logic to CB library
                     int64_t token = generationOutputs.begin()->second.generated_token_ids[0];
-                    auto chunk = this->streamer->put(token);
+                    std::optional<std::string> chunk;
+                    {
+                        OVMS_PROFILE_SCOPE("chunk = streamer->put(token)");
+                        chunk = this->streamer->put(token);
+                    }
                     if (chunk.has_value()) {
-                        std::string response = packIntoServerSideEventMessage(
-                            serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint()));
+                        std::string serializedChunk, response;
+                        {
+                            OVMS_PROFILE_SCOPE("serializeStreamingChunk(chunk)");
+                            serializedChunk = serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint());
+                        }
+                        {
+                            OVMS_PROFILE_SCOPE("packIntoServerSideEventMessage(serializedChunk)");
+                            response = packIntoServerSideEventMessage(serializedChunk);
+                        }
                         LOG(INFO) << "Partial response (continue): " << response;
                         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                     }
