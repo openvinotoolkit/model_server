@@ -235,8 +235,8 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg GPU=$(GPU)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
 	--build-arg JOBS=$(JOBS)\
-	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)
-        --build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)
+	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
+	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)
 
 
 .PHONY: default docker_build \
