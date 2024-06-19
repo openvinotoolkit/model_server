@@ -288,7 +288,7 @@ RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2024.2"
+ARG PROJECT_VERSION="2024.3"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 ARG minitrace_flags

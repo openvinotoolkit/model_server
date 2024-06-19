@@ -290,7 +290,7 @@ ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2024.2"
+ARG PROJECT_VERSION="2024.3"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 ARG minitrace_flags
@@ -375,7 +375,7 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 FROM $RELEASE_BASE_IMAGE as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2024.2"
+LABEL "version"="2024.3"
 LABEL "release"="2024"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
