@@ -650,6 +650,6 @@ cpu_extension:
 
 run_unit_tests:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}/facebook/opt-125m
-	docker run -v $(realpath ${TEST_LLM_PATH}):/llm_testing/facebook/opt-125m -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh > test.log 2>&1 ; exit_status=$?
+	docker run -v $(realpath ${TEST_LLM_PATH})/facebook/opt-125m:/llm_testing/facebook/opt-125m -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh > test.log 2>&1 ; exit_status=$?
 	tail -200 test.log
 	exit $(exit_status)
