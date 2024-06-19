@@ -171,8 +171,7 @@ TEST_F(LLMFlowKfsTest, LLMNodeOptionsMissing) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_MISSING_OPTIONS);
 }
 
-// Currently disabled UT - need successfull resource init - only aavailable with LLM models.
-TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckDefault) {
+TEST_F(LLMOptionsKfsTest, LLMNodeOptionsCheckDefault) {
     std::string testPbtxt = R"(
     input_stream: "REQUEST:in"
     output_stream: "RESPONSE:out"
@@ -184,7 +183,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckDefault) {
             output_stream: "RESPONSE:out1"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/workspace/"
+                    models_path: "/llm_testing/facebook/opt-125m"
                 }
             }
         }
@@ -204,8 +203,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(nodeResources->pluginConfig.size(), 0);
 }
 
-// Currently disabled UT - need successfull resource init - only aavailable with LLM models.
-TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckHalfDefault) {
+TEST_F(LLMOptionsKfsTest, LLMNodeOptionsCheckHalfDefault) {
     std::string testPbtxt = R"(
     input_stream: "REQUEST:in"
     output_stream: "RESPONSE:out"
@@ -217,7 +215,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckHalfDefault) {
             output_stream: "RESPONSE:out1"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/workspace/"
+                    models_path: "/llm_testing/facebook/opt-125m"
                     max_num_batched_tokens: 98
                     cache_size: 1
                     device: "GPU"
@@ -241,8 +239,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckHalfDefault) {
     ASSERT_EQ(nodeResources->pluginConfig["PERF_COUNT"], "true");
 }
 
-// Currently disabled UT - need successfull resource init - only aavailable with LLM models.
-TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsWrongJsonFormat) {
+TEST_F(LLMOptionsKfsTest, LLMNodeOptionsWrongJsonFormat) {
     std::string testPbtxt = R"(
     input_stream: "REQUEST:in"
     output_stream: "RESPONSE:out"
@@ -254,7 +251,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsWrongJsonFormat) {
             output_stream: "RESPONSE:out1"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/workspace/"
+                    models_path: "/llm_testing/facebook/opt-125m"
                     plugin_config: ""PERF_COUNT":true}"
                 }
             }
@@ -267,8 +264,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsWrongJsonFormat) {
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
 }
 
-// Currently disabled UT - need successfull resource init - only aavailable with LLM models.
-TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckNonDefault) {
+TEST_F(LLMOptionsKfsTest, LLMNodeOptionsCheckNonDefault) {
     std::string testPbtxt = R"(
     input_stream: "REQUEST:in"
     output_stream: "RESPONSE:out"
@@ -280,7 +276,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckNonDefault) {
             output_stream: "RESPONSE:out1"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/workspace/"
+                    models_path: "/llm_testing/facebook/opt-125m"
                     max_num_batched_tokens: 98
                     cache_size: 1
                     block_size: 96
@@ -303,8 +299,7 @@ TEST_F(LLMOptionsKfsTest, DISABLED_LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
 }
 
-// Currently disabled UT - need successfull resource init - only aavailable with LLM models.
-TEST_F(LLMFlowKfsTest, DISABLED_LLMNodeNameExists) {
+TEST_F(LLMFlowKfsTest, LLMNodeNameExists) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
     input_stream: "REQUEST:in"
@@ -317,7 +312,7 @@ TEST_F(LLMFlowKfsTest, DISABLED_LLMNodeNameExists) {
             output_stream: "RESPONSE:out1"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/workspace/"
+                    models_path: "/llm_testing/facebook/opt-125m"
                 }
             }
         }
@@ -329,7 +324,7 @@ TEST_F(LLMFlowKfsTest, DISABLED_LLMNodeNameExists) {
             output_stream: "RESPONSE:out"
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/workspace/"
+                    models_path: "/llm_testing/facebook/opt-125m"
                 }
             }
         }
