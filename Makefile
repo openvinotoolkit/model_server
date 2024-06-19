@@ -207,6 +207,8 @@ TEST_PATH ?= tests/functional/
 
 BUILD_CUSTOM_NODES ?= false
 
+VERBOSE_LOGS ?= OFF
+
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
 	--build-arg no_proxy=$(NO_PROXY)\
@@ -233,7 +235,8 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg GPU=$(GPU)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
 	--build-arg JOBS=$(JOBS)\
-	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)
+	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
+	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)
 
 
 .PHONY: default docker_build \
