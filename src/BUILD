@@ -367,6 +367,7 @@ cc_library(
         }) + [
             "cpp_headers",
             "libmodelconfigjsonparser",
+            "libovmscapibuffer",
             "libovmsfilesystem",
             "libovmsfilesystemfactory",
             "libovmslocalfilesystem", # indirectly & directly through factory
@@ -872,10 +873,30 @@ cc_library( # make ovms_lib dependent, use share doptions
 cc_library( # make ovms_lib dependent, use share doptions
     name = "libovmstensorfactory",
     hdrs = ["itensorfactory.hpp",
-            "opencltensorfactory.hpp",],
-    srcs = [
+            "opencltensorfactory.hpp", # TODO depends on image?
+            "regularovtensorfactory.hpp",],
+    srcs = ["regularovtensorfactory.cpp",
     ],
-    deps = ["@linux_openvino//:openvino",],
+    deps = ["@linux_openvino//:openvino",
+            "libovmscapibuffer",
+            "libovmslogging",
+            "ovms_header",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library( # make ovms_lib dependent, use share doptions
+    name = "libovmscapibuffer",
+    hdrs = ["capi_frontend/buffer.hpp",
+    ],
+    srcs = [
+        "capi_frontend/buffer.cpp",
+    ],
+    deps = [
+            "ovms_header",
+    ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
