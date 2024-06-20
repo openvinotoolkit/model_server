@@ -11,7 +11,7 @@ The endpoint is exposed via a path:
 
 ### Example request
 
-```bash
+```
 curl http://localhost/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
