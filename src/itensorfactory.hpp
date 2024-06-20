@@ -16,6 +16,7 @@
 #pragma once
 
 #include <openvino/openvino.hpp>
+#include "capi_frontend/buffer.hpp"
 namespace ovms {
 
 class IOVTensorFactory {

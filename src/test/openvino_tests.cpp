@@ -23,6 +23,7 @@
 //#include <CL/opencl.hpp>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <openvino/core/type/element_type.hpp>
 #include <openvino/openvino.hpp>
 
 #include "../ov_utils.hpp"
@@ -37,6 +38,7 @@ using namespace ov;
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#include <openvino/runtime/intel_gpu/ocl/va.hpp>
 
 cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
     cl_int err;
@@ -202,6 +204,7 @@ TEST(OpenVINO, SetTensorTest) {
         GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL,
         GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS,
         GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS_CONCUR,
+	GPU_OV_SET_VAA_BUF,
     };
     std::unordered_map<int, std::unordered_map<int, double>> times;
     for (auto tSize : sizeSet) {
@@ -577,6 +580,19 @@ TEST(OpenVINO, SetTensorTest) {
             times[GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;  // ms
             SPDLOG_ERROR("finished GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS:{}", times[GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS][tSize]);
         }
+	#ifdef TEST_VAAPI
+        // TODO:
+	// * no get_va_display function
+	// * no allocate_image
+        {  // GPU_OV_SET_VAA_BUF model loaded with ov context and vaapi tensors used
+	    VADisplay display = get_va_display();
+	    ov::intel_gpu::ocl::VAContext va_gpu_context(core, display);
+            cl::Image2D y_plane_surface = allocate_image(y_plane_size);
+            cl::Image2D uv_plane_surface = allocate_image(uv_plane_size);
+            auto remote_tensor = gpu_context.create_tensor_nv12(y_plane_surface, uv_plane_surface);
+            SPDLOG_ERROR("finished GPU_OV_SET_VAA_BUF:{}", times[GPU_OV_SET_VAA_BUF][tSize]);
+	}
+	#endif
         {  // GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS model loaded with ov context and different ocl context used to create ocl tensors
             cl_platform_id platformId;
             cl_device_id deviceId;
@@ -744,6 +760,37 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputTensor) {
     }
     OVMS_ServerDelete(cserver);
 }
+
+TEST(OpenCL, UseDifferentContextWhenReadingAndWritingToBuffer) {
+    cl_platform_id platformId;
+    cl_device_id deviceId;
+    cl_context openCLCContext = get_cl_context(platformId, deviceId);
+    cl_context openCLCContext2 = get_cl_context(platformId, deviceId);
+    cl::Context openCLCppContext(openCLCContext);
+    cl::Context openCLCppContext2(openCLCContext2);
+    cl::Device device(deviceId);
+    cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
+    auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties);
+    auto queue2 = cl::CommandQueue(openCLCppContext2, device, oclQueueProperties);
+    // create OpenCL buffers
+    std::vector<float> in(10, 42);
+    void* inputBufferData = in.data();
+    std::vector<float> out(10, 13.1);
+    void* outputBufferData = out.data();
+    size_t inputByteSize = sizeof(float) * in.size();
+    cl_int err;  // TODO not ignore
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
+    queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    queue2.enqueueReadBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData);
+    const float* outputData = reinterpret_cast<const float*>(outputBufferData);
+    for (size_t i = 0; i < 10; ++i) {
+        SPDLOG_ERROR("ER:{}", *(outputData + i));
+    }
+}
+
+
 TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     cl_platform_id platformId;
     cl_device_id deviceId;
@@ -786,8 +833,16 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));     // device id ?? TODO
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputSetData(request, DUMMY_MODEL_OUTPUT_NAME, reinterpret_cast<void*>(&openCLCppOutputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));  // device id ?? TODO
     OVMS_InferenceResponse* response = nullptr;
+    SPDLOG_ERROR("ER");
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
-    queue.enqueueReadBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData);
+    SPDLOG_ERROR("ER");
+    cl::vector<cl::Event> readEvents;
+    SPDLOG_ERROR("ER");
+    auto oclError = queue.enqueueReadBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData, &readEvents);
+    SPDLOG_ERROR("ER");
+    readEvents[0].wait();
+    SPDLOG_ERROR("ER:{}", oclError);
+    SPDLOG_ERROR("ER");
     //TODO what to do if output set was not enough?
     uint32_t outputCount = 42;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
@@ -816,7 +871,9 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     }*/
     // TODO FIXME add output checking
     // TODO cleanup settings
+    SPDLOG_ERROR("ER");
     OVMS_ServerDelete(cserver);
+    SPDLOG_ERROR("ER");
 }
 static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
@@ -1182,6 +1239,58 @@ protected:
     }
     void TearDown() {}
 };
+TEST_F(OpenVINO2, UseCLContextForBuffersOVContextForInference) {
+    cl_platform_id platformId;
+    cl_device_id deviceId;
+    cl_context openCLCContext = get_cl_context(platformId, deviceId);
+    cl::Context openCLCppContext(openCLCContext);
+    cl::Device device(deviceId);
+    cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
+    auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties);
+    // create OpenCL buffers
+    std::vector<float> in(10, 42);
+    void* inputBufferData = in.data();
+    std::vector<float> out(10, 13.1);
+    void* outputBufferData = out.data();
+    size_t inputByteSize = sizeof(float) * in.size();
+    cl_int err;  // TODO not ignore
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
+    queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    // here perform inf with OV
+    ov::Core core;
+    auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
+    using plugin_config_t = std::map<std::string, ov::Any>;
+    plugin_config_t pluginConfig;
+    pluginConfig["PERFORMANCE_HINT"] = "LATENCY";
+    auto compiledModel = core.compile_model(model, "GPU", pluginConfig);
+    auto request = compiledModel.create_infer_request();
+    ov::element::Type_t type = ov::element::Type_t::f32;
+    ov::Shape shape;
+    shape.emplace_back(1);
+    shape.emplace_back(10);
+    // we need context from OV modelinstance.cpp
+    std::unique_ptr<ov::intel_gpu::ocl::ClContext> ocl_context_cpp;
+    cl_context ocl_context_c;
+    {
+        auto ocl_context = compiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
+        ocl_context_cpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(ocl_context);
+        ocl_context_c = ocl_context_cpp->get();
+    }
+    SPDLOG_ERROR("{}", (void*)ocl_context_c);;
+    // opencltensorfactory.hpp
+    auto inputTensor = ocl_context_cpp->create_tensor(type, shape, openCLCppInputBuffer);
+    auto outputTensor = ocl_context_cpp->create_tensor(type, shape, openCLCppOutputBuffer);
+    request.set_tensor("b", inputTensor);
+    request.set_tensor("a", outputTensor);
+    request.start_async();
+    request.wait();
+    queue.enqueueReadBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData);
+    const float* outputData = reinterpret_cast<const float*>(outputBufferData);
+    for (size_t i = 0; i < 10; ++i) {
+        SPDLOG_ERROR("ER:{}", *(outputData + i));
+    }
+}
 
 TEST_F(OpenVINO2, OutputTensorHasBiggerUnderlyingOCLBufferThanNeededPass) {
     bool retain = true;
