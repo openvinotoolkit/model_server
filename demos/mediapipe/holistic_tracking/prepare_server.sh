@@ -33,10 +33,11 @@ curl https://storage.googleapis.com/mediapipe-assets/palm_detection_full.tflite 
 curl https://storage.googleapis.com/mediapipe-assets/pose_detection.tflite -o ovms/pose_detection/1/pose_detection.tflite --create-dirs
 curl https://storage.googleapis.com/mediapipe-assets/pose_landmark_full.tflite -o ovms/pose_landmark_full/1/pose_landmark_full.tflite --create-dirs
 
+# convert pose_detection model to the format supported by OV. It will eliminate DENDIFY layer, which is currently not supported by OpenVINO
+chmod 777 ovms/pose_detection/1
+docker run -w /home/user/workdir  --rm  -v `pwd`/ovms/pose_detection/1:/home/user/workdir ghcr.io/pinto0309/tflite2tensorflow:latest tflite2tensorflow --model_path pose_detection.tflite --flatc_path ../flatc --schema_path ../schema.fbs --output_pb
+docker run --rm -w /home/user/workdir -v `pwd`/ovms/pose_detection/1:/home/user/workdir ghcr.io/pinto0309/tflite2tensorflow:latest tflite2tensorflow --model_path pose_detection.tflite --flatc_path ../flatc --schema_path ../schema.fbs --output_no_quant_float32_tflite
+# replace the model and drop temporary files
+cp ovms/pose_detection/1/saved_model/model_float32.tflite ovms/pose_detection/1/pose_detection.tflite
+docker run --rm -w /home/user/workdir -v `pwd`/ovms/pose_detection/1:/home/user/workdir ghcr.io/pinto0309/tflite2tensorflow:latest rm -Rf saved_model pose_detection.json
 chmod -R 755 ovms/ 
-
-
-
-
-
-
