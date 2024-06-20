@@ -133,7 +133,7 @@ cc_library(
 )
 
 """
-    repository_ctx.file("BUILD", build_file_content.format(http_proxy=http_proxy, https_proxy=https_proxy))
+    repository_ctx.file("BUILD", build_file_content.format(http_proxy=http_proxy, https_proxy=https_proxy, lib_path=lib_path))
 
 aws_sdk_cpp_repository = repository_rule(
     implementation = _impl,

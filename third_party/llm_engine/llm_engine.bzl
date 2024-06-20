@@ -110,7 +110,7 @@ cc_library(
     alwayslink = False,
 )
 """
-    repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy))
+    repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy, lib_path=lib_path))
 
 llm_engine_repository = repository_rule(
     implementation = _impl,
