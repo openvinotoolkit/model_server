@@ -55,7 +55,6 @@
 #pragma GCC diagnostic pop
 
 #include "opencv2/opencv.hpp"
-#include "python/python_backend.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -81,17 +80,17 @@ protected:
     }
 };
 
-class LLMFlowKfsTest : public LLMFlowTest {
+class LLMFlowHttpTest : public LLMFlowTest {
 public:
     void SetUp() {
         SetUpServer("/ovms/src/test/llm/config_llm_dummy_kfs.json");
     }
 };
 
-class LLMOptionsKfsTest : public LLMFlowTest {
+class LLMOptionsHttpTest : public ::testing::TestWithParam<std::string> {
 public:
-    void SetUp() {}
-    void TearDown() {}
+    void SetUp() { py::initialize_interpreter(); }
+    void TearDown() { py::finalize_interpreter(); }
 };
 
 // --------------------------------------- OVMS LLM nodes tests
@@ -108,8 +107,8 @@ public:
 // https://huggingface.co/meta-llama/Llama-2-7b-chat-hf
 // converted with optimum cli
 
-// TODO: Use lighter model and enable when model preparation is automated
-TEST_F(LLMFlowKfsTest, DISABLED_Infer) {
+// TODO: Switch to HTTP caclulator
+TEST_F(LLMFlowHttpTest, DISABLED_Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -127,21 +126,38 @@ TEST_F(LLMFlowKfsTest, DISABLED_Infer) {
     ASSERT_EQ(expectedResponse, content);
 }
 
-TEST_F(LLMFlowKfsTest, LLMNodeNameMissing) {
+TEST_F(LLMFlowHttpTest, LLMNodeNameMissing) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-        node {
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out2"
-            node_options: {
-                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/workspace/"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "./"
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
                 }
             }
+            }
+        }
         }
     )";
 
@@ -151,17 +167,34 @@ TEST_F(LLMFlowKfsTest, LLMNodeNameMissing) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_MISSING_NAME);
 }
 
-TEST_F(LLMFlowKfsTest, LLMNodeOptionsMissing) {
+TEST_F(LLMFlowHttpTest, LLMNodeOptionsMissing) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-        node {
-            name: "llmNode2"
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out2"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "LLMExecutor"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
         }
     )";
 
@@ -171,29 +204,289 @@ TEST_F(LLMFlowKfsTest, LLMNodeOptionsMissing) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_MISSING_OPTIONS);
 }
 
-TEST_F(LLMOptionsKfsTest, LLMNodeOptionsCheckDefault) {
+TEST_F(LLMFlowHttpTest, LLMNodeNameExists) {
+    ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-        node {
-            name: "llmNode"
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out1"
-            node_options: {
-                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/llm_testing/facebook/opt-125m"
+        input_stream: "HTTP_REQUEST_PAYLOAD_1:input"
+        input_stream: "HTTP_REQUEST_PAYLOAD_2:input2"
+        output_stream: "HTTP_RESPONSE_PAYLOAD_1:output"
+        output_stream: "HTTP_RESPONSE_PAYLOAD_2:output2"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/llm_testing/facebook/opt-125m"
+                cache_size: 1
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
                 }
             }
+            }
+        }
+        }
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback2"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input2"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback2"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output2"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/llm_testing/facebook/opt-125m"
+                cache_size: 1
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_NAME_ALREADY_EXISTS);
+}
+
+TEST_F(LLMFlowHttpTest, LLMNodeNonExistantModelsPath) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/models_path"
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
         }
     )";
 
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
+}
+
+TEST_F(LLMFlowHttpTest, LLMNodeBadWorkspacePathEmpty) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ""
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
+}
+
+TEST_F(LLMFlowHttpTest, LLMNodeWorkspacePathToFileNotDir) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/llm_testing/facebook/opt-125m/config.json"
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
+}
+
+TEST_F(LLMFlowHttpTest, LLMNodeResourceInitFailed) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/"
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    ASSERT_EQ(mediapipeDummy.getLLMNodeResources("llmNode"), nullptr);
+}
+
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/llm_testing/facebook/opt-125m"
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+    std::cout << "------------------------A--------------------\n";
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
-
+    std::cout << "------------------------B--------------------\n";
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 4);
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
@@ -203,25 +496,41 @@ TEST_F(LLMOptionsKfsTest, LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(nodeResources->pluginConfig.size(), 0);
 }
 
-TEST_F(LLMOptionsKfsTest, LLMNodeOptionsCheckHalfDefault) {
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
     std::string testPbtxt = R"(
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-        node {
-            name: "llmNode"
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out1"
-            node_options: {
-                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/llm_testing/facebook/opt-125m"
-                    max_num_batched_tokens: 98
-                    cache_size: 1
-                    device: "GPU"
-                    plugin_config: "{"PERF_COUNT":true}"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/llm_testing/facebook/opt-125m"
+                max_num_batched_tokens: 98
+                cache_size: 1
+                block_size: 16
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
                 }
             }
+            }
+        }
         }
     )";
 
@@ -232,29 +541,46 @@ TEST_F(LLMOptionsKfsTest, LLMNodeOptionsCheckHalfDefault) {
 
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
+    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 16);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
-    ASSERT_EQ(nodeResources->device, "GPU");
-    ASSERT_EQ(nodeResources->pluginConfig["PERF_COUNT"], "true");
+    // TODO: Check plugin config
 }
 
-TEST_F(LLMOptionsKfsTest, LLMNodeOptionsWrongJsonFormat) {
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
     std::string testPbtxt = R"(
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-        node {
-            name: "llmNode"
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out1"
-            node_options: {
-                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/llm_testing/facebook/opt-125m"
-                    plugin_config: ""PERF_COUNT":true}"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/llm_testing/facebook/opt-125m"
+                cache_size: 1
+                plugin_config: "[PERF_COUNT=TRUE]"
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
                 }
             }
+            }
+        }
         }
     )";
 
@@ -264,26 +590,43 @@ TEST_F(LLMOptionsKfsTest, LLMNodeOptionsWrongJsonFormat) {
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
 }
 
-TEST_F(LLMOptionsKfsTest, LLMNodeOptionsCheckNonDefault) {
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     std::string testPbtxt = R"(
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-        node {
-            name: "llmNode"
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out1"
-            node_options: {
-                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/llm_testing/facebook/opt-125m"
-                    max_num_batched_tokens: 98
-                    cache_size: 1
-                    block_size: 96
-                    max_num_seqs: 95
-                    dynamic_split_fuse: false
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/llm_testing/facebook/opt-125m"
+                max_num_batched_tokens: 1024
+                cache_size: 1
+                block_size: 8
+                max_num_seqs: 95
+                dynamic_split_fuse: false
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
                 }
             }
+            }
+        }
         }
     )";
 
@@ -292,147 +635,9 @@ TEST_F(LLMOptionsKfsTest, LLMNodeOptionsCheckNonDefault) {
     std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
+    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 1024);
     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 96);
+    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
-}
-
-TEST_F(LLMFlowKfsTest, LLMNodeNameExists) {
-    ConstructorEnabledModelManager manager;
-    std::string testPbtxt = R"(
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-        node {
-            name: "llmNode"
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out1"
-            node_options: {
-                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/llm_testing/facebook/opt-125m"
-                }
-            }
-        }
-        node {
-            name: "llmNode"
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out"
-            node_options: {
-                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/llm_testing/facebook/opt-125m"
-                }
-            }
-        }
-    )";
-
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_NAME_ALREADY_EXISTS);
-}
-
-TEST_F(LLMFlowKfsTest, LLMNodeNonExistantWorkspacePath) {
-    ConstructorEnabledModelManager manager;
-    std::string testPbtxt = R"(
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-        node {
-            name: "llmNode"
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out2"
-            node_options: {
-                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/bad_path_to_workspace/"
-                }
-            }
-        }
-    )";
-
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
-}
-
-TEST_F(LLMFlowKfsTest, LLMNodeBadWorkspacePathEmpty) {
-    ConstructorEnabledModelManager manager;
-    std::string testPbtxt = R"(
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-        node {
-            name: "llmNode"
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out2"
-            node_options: {
-                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: ""
-                }
-            }
-        }
-    )";
-
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
-}
-
-TEST_F(LLMFlowKfsTest, LLMNodeWorkspacePathToFileNotDir) {
-    ConstructorEnabledModelManager manager;
-    std::string testPbtxt = R"(
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-        node {
-            name: "llmNode"
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out2"
-            node_options: {
-                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/ovms/src/test/llm/config_llm_dummy_kfs.json"
-                }
-            }
-        }
-    )";
-
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
-}
-
-TEST_F(LLMFlowKfsTest, LLMNodeResourceInitFailed) {
-    ConstructorEnabledModelManager manager;
-    std::string testPbtxt = R"(
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
-        node {
-            name: "llmNode"
-            calculator: "LLMCalculator"
-            input_side_packet: "LLM_NODE_RESOURCES:py"
-            input_stream: "REQUEST:in"
-            output_stream: "RESPONSE:out2"
-            node_options: {
-                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                    models_path: "/"
-                }
-            }
-        }
-    )";
-
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
-    ASSERT_EQ(mediapipeDummy.getLLMNodeResources("llmNode"), nullptr);
 }
