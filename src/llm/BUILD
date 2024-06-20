@@ -31,14 +31,7 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 cc_library(
     name = "llm_engine",
     srcs = [],
-    deps = select({
-            "//:ubuntu_build": [
-                "@llm_engine//:llm_engine_ubuntu",
-            ],
-            "//:redhat_build": [
-                "@llm_engine//:llm_engine_redhat",
-            ],
-        }),
+    deps =  ["@llm_engine//:llm_engine"],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,

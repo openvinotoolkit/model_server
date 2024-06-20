@@ -41,16 +41,8 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
-        ] + select({
-            "//:ubuntu_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
-                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_ubuntu",
-            ],
-            "//:redhat_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
-                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_redhat",
-            ],
-        }) + [
+        "@aws-sdk-cpp//:aws-sdk-cpp",
+        "@aws-sdk-cpp//:aws-sdk-cpp_cmake",
         "@azure//:storage",
         "@cpprest//:sdk",
         "@boost//:lib",
