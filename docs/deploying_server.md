@@ -150,9 +150,7 @@ make docker_build
 # Unpack the package
 tar -xzvf dist/ubuntu/ovms.tar.gz
 ```
-
 Install required libraries:
-
 ```{code} sh
 sudo apt update -y && apt install -y libxml2 curl
 ```
@@ -164,14 +162,11 @@ export LD_LIBRARY_PATH=${pwd}/ovms/lib
 :::{tab-item} RHEL 8.10
 :sync: rhel-8-10
 Download precompiled package:
-
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.2/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
-
 or build it yourself:
-
 ```{code} sh
 # Clone the model server repository
 git clone https://github.com/openvinotoolkit/model_server
@@ -180,8 +175,6 @@ cd model_server
 make docker_build BASE_OS=redhat
 # Unpack the package
 tar -xzvf dist/redhat/ovms.tar.gz
-```
-
 ```
 Set path to the libraries
 ```{code} sh
@@ -191,14 +184,11 @@ export LD_LIBRARY_PATH=${pwd}/ovms/lib
 :::{tab-item} RHEL 9.4
 :sync: rhel-9.4
 Download precompiled package:
-
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.2/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
-
 or build it yourself:
-
 ```{code} sh
 # Clone the model server repository
 git clone https://github.com/openvinotoolkit/model_server
@@ -208,9 +198,7 @@ make docker_build BASE_OS=redhat
 # Unpack the package
 tar -xzvf dist/redhat/ovms.tar.gz
 ```
-
 Install required libraries:
-
 ```{code} sh
 sudo yum install compat-openssl11.x86_64
 ```
