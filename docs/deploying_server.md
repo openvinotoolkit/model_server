@@ -98,23 +98,23 @@ make docker_build BASE_OS=ubuntu20
 # Unpack the package
 tar -xzvf dist/ubuntu/ovms.tar.gz
 ```
-
 Install required libraries:
-
 ```{code} sh
 sudo apt update -y && apt install -y liblibxml2 curl
+```
+Set path to the libraries
+```{code} sh
+export LD_LIBRARY_PATH=${pwd}/ovms/lib
 ```
 :::
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
 Download precompiled package:
-
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.2/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
-
+```
 or build it yourself:
-
 ```{code} sh
 # Clone the model server repository
 git clone https://github.com/openvinotoolkit/model_server
@@ -124,27 +124,23 @@ make docker_build
 # Unpack the package
 tar -xzvf dist/ubuntu/ovms.tar.gz
 ```
-
 Install required libraries:
-
 ```{code} sh
 sudo apt update -y && apt install -y libxml2 curl
 ```
 Set path to the libraries
-```
+```{code} sh
 export LD_LIBRARY_PATH=${pwd}/ovms/lib
 ```
 :::
 :::{tab-item} Ubuntu 24.04
 :sync: ubuntu-24-04
 Download precompiled package:
-
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.2/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
-
+```
 or build it yourself:
-
 ```{code} sh
 # Clone the model server repository
 git clone https://github.com/openvinotoolkit/model_server
@@ -161,7 +157,7 @@ Install required libraries:
 sudo apt update -y && apt install -y libxml2 curl
 ```
 Set path to the libraries
-```
+```{code} sh
 export LD_LIBRARY_PATH=${pwd}/ovms/lib
 ```
 :::
@@ -188,7 +184,7 @@ tar -xzvf dist/redhat/ovms.tar.gz
 
 ```
 Set path to the libraries
-```
+```{code} sh
 export LD_LIBRARY_PATH=${pwd}/ovms/lib
 ```
 :::
@@ -219,7 +215,7 @@ Install required libraries:
 sudo yum install compat-openssl11.x86_64
 ```
 Set path to the libraries
-```
+```{code} sh
 export LD_LIBRARY_PATH=${pwd}/ovms/lib
 ```
 :::
