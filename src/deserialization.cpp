@@ -66,7 +66,9 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
             SPDLOG_DEBUG("Tried to use empty tensor factory");
             return ov::Tensor();
         }
+        SPDLOG_ERROR("ER");
         auto t = factory->create(precision, shape, requestInput.getBuffer()->data());
+        SPDLOG_ERROR("ER");
         return t;
         // TODO instead of context pass in factory of tensors
     }
