@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <exception>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <utility>
 

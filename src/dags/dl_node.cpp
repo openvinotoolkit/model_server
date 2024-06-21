@@ -16,6 +16,7 @@
 #include "dl_node.hpp"
 
 #include <map>
+#include <optional>
 #include <utility>
 
 #include "../executingstreamidguard.hpp"

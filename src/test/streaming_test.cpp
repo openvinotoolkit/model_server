@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <chrono>
 #include <mutex>
+#include <optional>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

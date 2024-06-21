@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <chrono>
 #include <functional>
+#include <optional>
 #include <unordered_set>
 
 #include "../capi_frontend/capi_utils.hpp"

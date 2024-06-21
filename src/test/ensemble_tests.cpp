@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <cstdio>
 #include <memory>
+#include <optional>
 #include <sstream>
 
 #include <gmock/gmock.h>
