@@ -51,7 +51,7 @@ cc_library(
 cc_library(
     name = "openvino",
     srcs = glob([
-        "lib/intel64/libopenvino.so"
+        "lib/aarch64/libopenvino.so"
     ]),
     strip_include_prefix = "include/ie",
     visibility = ["//visibility:public"],

@@ -27,9 +27,7 @@
 namespace ovms {
 std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath) {
     if (basePath.rfind(FileSystem::S3_URL_PREFIX, 0) == 0) {
-        Aws::SDKOptions options;
-        Aws::InitAPI(options);
-        return std::make_shared<S3FileSystem>(options, basePath);
+        return std::make_shared<S3FileSystem>(basePath);
     }
     if (basePath.rfind(FileSystem::GCS_URL_PREFIX, 0) == 0) {
         return std::make_shared<ovms::GCSFileSystem>();

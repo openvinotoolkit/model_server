@@ -43,14 +43,14 @@ new_local_repository(
 cc_library(
     name = "ssl",
     hdrs = glob(["include/openssl/*"]),
-    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    srcs = glob(["lib/aarch64-linux-gnu/libssl.so"]),
     copts = ["-lcrypto", "-lssl"],
     visibility = ["//visibility:public"],
 )
 cc_library(
     name = "crypto",
     hdrs = glob(["include/openssl/*"]),
-    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    srcs = glob(["lib/aarch64-linux-gnu/libssl.so"]),
     copts = ["-lcrypto", "-lssl"],
     visibility = ["//visibility:public"],
 )
@@ -64,7 +64,7 @@ new_local_repository(
 cc_library(
     name = "curl",
     hdrs = glob(["include/x86_64/curl/*"]),
-    srcs = glob(["lib/x86_64-linux-gnu/libcurl.so"]),
+    srcs = glob(["lib/aarch64-linux-gnu/libcurl.so"]),
     copts = ["-lcrypto", "-lssl"],
     visibility = ["//visibility:public"],
 )
@@ -295,8 +295,8 @@ workspace()
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 rules_pkg_dependencies()
 
-load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
-aws_sdk_cpp()
+#load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
+#aws_sdk_cpp()
 
 load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
