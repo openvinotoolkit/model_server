@@ -115,6 +115,8 @@ def check_dir(start_dir):
         'tf.patch',
         'tf_graph_info_multilinecomment.patch',
         'tftext.patch',
+        'upb_platform_fix.patch',
+        'upb_warning_turn_off.patch',
         'vehicle_images.txt',
         'bazel_rules_apple.patch',
         "pom.xml",
