@@ -385,7 +385,7 @@ endif
 targz_package:
 	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
-		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		--build-arg BUILD_IMAGE=build \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--target=pkg && \
 	rm -vrf dist/$(OS) && mkdir -p dist/$(OS) && \
@@ -393,7 +393,6 @@ targz_package:
 	docker cp $$ID:/ovms_pkg/$(OS) dist/ && \
 	docker rm $$ID
 	cd dist/$(OS) && sha256sum --check ovms.tar.gz.sha256
-	cd dist/$(OS) && sha256sum --check ovms.tar.xz.sha256
 
 ovms_release_images:
 ifeq ($(USE_BUILDX),true)

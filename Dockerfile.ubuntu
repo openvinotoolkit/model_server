@@ -111,8 +111,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             python3-pip \
             unzip \
             gdb \
-            vim \
-            xz-utils && \
+            vim && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/* && \
     python3 -m pip install "numpy<2.0.0" --no-cache-dir  && \
@@ -146,13 +145,11 @@ RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"PYTHON_DISABLE=
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/extras && \
     mkdir -p /opt/intel/openvino && \
-    ln -s /openvino/inference-engine/temp/opencv_*_ubuntu20/opencv /opt/intel/openvino/extras && \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
     ln -s /opt/intel/openvino /opt/intel/openvino_2024
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/Release/python /opt/intel/openvino/
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/${CMAKE_BUILD_TYPE}/python /opt/intel/openvino/
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
 
 ################## END OF OPENVINO SOURCE BUILD ######################
@@ -182,7 +179,7 @@ ARG ov_tokenizers_branch=master
 # hadolint ignore=DL3003
 RUN if [[ "$tokenizers" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 WORKDIR /openvino_tokenizers/build
-RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
+RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
@@ -275,8 +272,8 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/co
 
 # Copy example clients into build image for static analysis
 WORKDIR /example_cpp_client
-COPY demos/common/cpp /example_cpp_client/cpp
-COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
+#COPY demos/common/cpp /example_cpp_client/cpp
+#COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
@@ -345,7 +342,7 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-FROM $BUILD_IMAGE as pkg
+FROM build as pkg
 
 RUN mkdir /patchelf
 WORKDIR /patchelf
@@ -390,7 +387,7 @@ COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,SC2164
 RUN     apt-get update -y ; \
-    apt-get install -y curl ca-certificates libpugixml1v5 --no-install-recommends && \
+    apt-get install -y curl ca-certificates --no-install-recommends && \
         if [ "$GPU" == "1" ] ; then \
             apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
                 case $INSTALL_DRIVER_VERSION in \
@@ -498,8 +495,6 @@ RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit
     if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then python_version=3.10; else python_version=3.8; fi; \
     apt-get install libpython$python_version --no-install-recommends -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
-
-ENV LD_LIBRARY_PATH=/ovms/lib
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
