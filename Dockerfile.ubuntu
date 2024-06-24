@@ -272,8 +272,8 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/co
 
 # Copy example clients into build image for static analysis
 WORKDIR /example_cpp_client
-#COPY demos/common/cpp /example_cpp_client/cpp
-#COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
+COPY demos/common/cpp /example_cpp_client/cpp
+COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
