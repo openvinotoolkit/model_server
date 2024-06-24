@@ -41,9 +41,3 @@ docker run --rm -w /home/user/workdir -v `pwd`/ovms/pose_detection/1:/home/user/
 cp ovms/pose_detection/1/saved_model/model_float32.tflite ovms/pose_detection/1/pose_detection.tflite
 docker run --rm -w /home/user/workdir -v `pwd`/ovms/pose_detection/1:/home/user/workdir ghcr.io/pinto0309/tflite2tensorflow:latest rm -Rf saved_model pose_detection.json
 chmod -R 755 ovms/ 
-
-
-
-
-
-
