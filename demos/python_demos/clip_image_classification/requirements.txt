@@ -1,1 +1,2 @@
 tritonclient[all]==2.37.0.9383150
+numpy<2.0.0
