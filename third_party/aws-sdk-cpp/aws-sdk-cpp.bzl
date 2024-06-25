@@ -28,13 +28,6 @@ def aws_sdk_cpp():
         patch_cmds = ["find . -name '*xample.txt' -delete"],
     )
 
-def get_compilation_mode(compilation_mode):
-    if compilation_mode.endswith("dbg"):
-        cmake_compilation_mode = "Debug"
-    else: # for opt
-        cmake_compilation_mode = "Release"
-    return cmake_compilation_mode
-
 def _impl(repository_ctx):
     http_proxy = repository_ctx.os.environ.get("http_proxy", "")
     https_proxy = repository_ctx.os.environ.get("https_proxy", "")
