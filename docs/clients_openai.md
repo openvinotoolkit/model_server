@@ -23,6 +23,19 @@ When creating a Python-based client application, you can use OpenAI client libra
 
 Alternatively, it is possible to use just a `curl` command or `requests` python library.
 
+Allong with the prompt you can send parameters described here [for chat completions endpoint](../../docs/model_server_rest_api_chat.md#Request) and here [for completions endpoint](../../docs/model_server_rest_api_completions.md#Request).
+> **NOTE**:
+ Parameters that are not supported in OpenAI API (for example top_k) but are supported in OVMS can be passed as a `extra_body` parameter when using openai python client. Example:
+```bash
+response = client.chat.completions.create(
+    model=model,
+    messages=[{"role": "user", "content": "hello"}],
+    max_tokens=100,
+    extra_body={"top_k" : 1},
+    stream=False
+)
+```
+
 ### Install the Package
 
 ```bash
