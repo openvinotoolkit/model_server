@@ -28,16 +28,12 @@ def aws_sdk_cpp():
         patch_cmds = ["find . -name '*xample.txt' -delete"],
     )
 
-def _impl_rule(ctx):
-    compilation_mode = ctx.var["COMPILATION_MODE"]
+def get_compilation_mode(compilation_mode):
     if compilation_mode.endswith("dbg"):
         cmake_compilation_mode = "Debug"
     else: # for opt
         cmake_compilation_mode = "Release"
-
-    return [
-        DefaultInfo(cmake_compilation_mode = cmake_compilation_mode),
-    ]
+    return cmake_compilation_mode
 
 def _impl(repository_ctx):
     http_proxy = repository_ctx.os.environ.get("http_proxy", "")
@@ -59,12 +55,24 @@ load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 
 visibility = ["//visibility:public"]
 
+config_setting(
+    name = "dbg",
+    values = {{"compilation_mode": "dbg"}},
+)
+
+config_setting(
+    name = "opt",
+    values = {{"compilation_mode": "opt"}},
+)
+
 filegroup(
     name = "all_srcs",
     srcs = glob(["**"]),
     visibility = ["//visibility:public"],
 )
 
+build_release = {{"CMAKE_BUILD_TYPE": "Release"}}
+build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
 cmake(
     name = "aws-sdk-cpp_cmake",
     build_args = [
@@ -76,7 +84,6 @@ cmake(
         "-j 4",
     ],
     cache_entries = {{
-        "CMAKE_BUILD_TYPE": "aws-sdk-cpp_cmake_rule[DefaultInfo].cmake_compilation_mode",
         "BUILD_ONLY": "s3", # core builds always
         "ENABLE_TESTING": "OFF",
         "AUTORUN_UNIT_TESTS": "OFF",
@@ -86,7 +93,14 @@ cmake(
         "FORCE_SHARED_CRT": "OFF",
         "SIMPLE_INSTALL": "OFF",
         "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
-    }},
+    }} | select({{
+           "//conditions:default": dict(
+               build_release
+            ),
+            ":dbg":  dict(
+               build_debug
+            ),
+        }}),
     env = {{
         "HTTP_PROXY": "{http_proxy}",
         "HTTPS_PROXY": "{https_proxy}",
@@ -123,23 +137,10 @@ cmake(
     visibility = ["//visibility:public"],
 )
 
-aws-sdk-cpp_cmake_rule = rule(
-    implementation = _impl_rule,
-)
-
-aws-sdk-cpp_cmake_rule(
-    name = "aws-sdk-cpp",
-    deps = [
-        ":aws-sdk-cpp_cmake",
-    ],
-    visibility = ["//visibility:public"],
-    alwayslink = False,
-)
-
 cc_library(
     name = "aws-sdk-cpp",
     deps = [
-        ":aws-sdk-cpp_cmake_rule",
+        ":aws-sdk-cpp_cmake",
     ],
     visibility = ["//visibility:public"],
     alwayslink = False,
