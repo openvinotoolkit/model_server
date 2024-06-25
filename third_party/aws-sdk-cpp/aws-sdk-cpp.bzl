@@ -28,6 +28,16 @@ def aws_sdk_cpp():
         patch_cmds = ["find . -name '*xample.txt' -delete"],
     )
 
+def _impl_rule(ctx):
+    compilation_mode = ctx.var["COMPILATION_MODE"]
+    if compilation_mode.endswith("dbg"):
+        cmake_compilation_mode = "Debug"
+    else: # for opt
+        cmake_compilation_mode = "Release"
+
+    return [
+        DefaultInfo(cmake_compilation_mode = cmake_compilation_mode),
+    ]
 
 def _impl(repository_ctx):
     http_proxy = repository_ctx.os.environ.get("http_proxy", "")
@@ -49,16 +59,6 @@ load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 
 visibility = ["//visibility:public"]
 
-config_setting(
-    name = "dbg",
-    values = {{"compilation_mode": "dbg"}},
-)
-
-config_setting(
-    name = "opt",
-    values = {{"compilation_mode": "opt"}},
-)
-
 filegroup(
     name = "all_srcs",
     srcs = glob(["**"]),
@@ -76,7 +76,7 @@ cmake(
         "-j 4",
     ],
     cache_entries = {{
-        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_BUILD_TYPE": "aws-sdk-cpp_cmake_rule[DefaultInfo].cmake_compilation_mode",
         "BUILD_ONLY": "s3", # core builds always
         "ENABLE_TESTING": "OFF",
         "AUTORUN_UNIT_TESTS": "OFF",
@@ -123,10 +123,23 @@ cmake(
     visibility = ["//visibility:public"],
 )
 
-cc_library(
+aws-sdk-cpp_cmake_rule = rule(
+    implementation = _impl_rule,
+)
+
+aws-sdk-cpp_cmake_rule(
     name = "aws-sdk-cpp",
     deps = [
         ":aws-sdk-cpp_cmake",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = False,
+)
+
+cc_library(
+    name = "aws-sdk-cpp",
+    deps = [
+        ":aws-sdk-cpp_cmake_rule",
     ],
     visibility = ["//visibility:public"],
     alwayslink = False,
