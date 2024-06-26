@@ -48,7 +48,6 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 ## With Python Client 
 | Demo | Description |
 |---|---|
-|[Text Generation](python_demos/llm_text_generation/README.md) | Generate text using one of popular LLMs sending prompts via gRPC API unary or interactive streaming endpoint.|
 |[Stable Diffusion](python_demos/stable_diffusion/README.md) | Generate image using Stable Diffusion model sending prompts via gRPC API unary or interactive streaming endpoint.|
 |[CLIP image classification](python_demos/clip_image_classification/README.md) | Classify image according to provided labels using CLIP model embedded in a multi-node MediaPipe graph.|
 |[Seq2seq translation](python_demos/seq2seq_translation/README.md) | Translate text using seq2seq model via gRPC API.|
@@ -82,3 +81,11 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 | Demo | Description |
 |---|---|
 |[Image Classification](image_classification/go/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
+
+
+## Legacy demos
+
+| Demo | Description |
+|---|---|
+|[Text Generation](python_demos/llm_text_generation/README.md) | Generate text using one of popular LLMs sending prompts via gRPC API unary or interactive streaming endpoint.|
+

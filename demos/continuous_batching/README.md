@@ -7,10 +7,15 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 
 
-## Build the docker image
+## Get the docker image
 
-To use the latest features of the model server build the image from the main branch.
-Public image will support this demo starting from version 2024.2.
+This demo is supported starting from version 2024.2.
+
+```bash
+docker pull openvino/model_server:latest
+```
+
+Optionally, to use the latest features of the model server build the image from the main branch.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
@@ -318,5 +323,5 @@ P99 TPOT (ms):                           234.14
 
 The service deployed above can be used in RAG chain using `langchain` library with OpenAI endpoint as the LLM engine.
 
-Check the example in the [RAG notebook](./rag/rag_demo.ipynb)
+Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
 

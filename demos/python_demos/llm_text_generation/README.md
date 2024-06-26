@@ -1,5 +1,13 @@
 # LLM text generation with python node {#ovms_demo_python_llm_text_generation}
 
+> **NOTE** This text generation demo is considered as deprecated and is replaced with improved implementation using OpenAI API endpoint with continuous batching text generation.
+
+Check the following new demos:
+- [text generation with OpenAI API and continuous batching](../../continuous_batching/README.md)
+- [RAG with chat/completions endpoint and continuous batching](../../continuous_batching/rag/rag_demo.ipynb)
+
+---
+
 This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models. 
 The demo explains how to serve MediaPipe Graph using Python libraries. We use Hugging Face Optimum with OpenVINO Runtime as execution engine.
 Two use cases are possible:
