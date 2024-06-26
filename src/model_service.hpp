@@ -16,6 +16,7 @@
 #pragma once
 
 #include <map>
+#include <optional>
 #include <string>
 
 #include <grpcpp/server_context.h>

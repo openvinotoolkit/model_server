@@ -871,14 +871,8 @@ cc_library( # make ovms_lib dependent, use share doptions
     srcs = [
             "s3filesystem.cpp",
     ],
-    deps = select({
-            "//:ubuntu_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
-            ],
-            "//:redhat_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
-            ],
-        }) + [
+    deps = [
+        "@aws-sdk-cpp//:aws-sdk-cpp",
         "libovmsfilesystem",
         "libovmslogging",
         "libovmsstring_utils",

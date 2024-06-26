@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <limits>
+#include <optional>
 #include <set>
 #include <sstream>
 

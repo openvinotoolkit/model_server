@@ -15,6 +15,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <map>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
