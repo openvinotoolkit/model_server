@@ -42,6 +42,7 @@ ovms_demos_continuous_batching
 OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities.
 ### Check Out New Generative AI Demos
  - [Text Generation with continuous batching](continuous_batching/README.md)
+ - [RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
 
 Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
 
