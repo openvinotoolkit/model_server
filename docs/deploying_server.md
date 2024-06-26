@@ -168,7 +168,7 @@ Set path to the libraries
 ```{code} sh
 export LD_LIBRARY_PATH=${pwd}/ovms/lib
 ```
-In case of the build with Python calculators for MediaPipe graphs, run also:
+In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
 export PYTHONPATH=${pwd}/ovms/lib/python
 sudo apt -y install libpython3.10
