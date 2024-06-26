@@ -94,7 +94,7 @@ Build the binary:
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build BASE_OS=ubuntu20
+make docker_build BASE_OS=ubuntu20 PYTHON_DISABLE=1 RUN_TESTS=0
 # Unpack the package
 tar -xzvf dist/ubuntu20/ovms.tar.gz
 ```
@@ -171,7 +171,7 @@ export LD_LIBRARY_PATH=${pwd}/ovms/lib
 In case of the build with Python calculators for MediaPipe graphs, run also:
 ```{code} sh
 export PYTHONPATH=${pwd}/ovms/lib/python
-sudo apt -y install libpython3.8
+sudo apt -y install libpython3.10
 ```
 :::
 :::{tab-item} RHEL 8.10
