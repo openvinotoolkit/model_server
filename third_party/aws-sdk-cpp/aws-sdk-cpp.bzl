@@ -28,7 +28,6 @@ def aws_sdk_cpp():
         patch_cmds = ["find . -name '*xample.txt' -delete"],
     )
 
-
 def _impl(repository_ctx):
     http_proxy = repository_ctx.os.environ.get("http_proxy", "")
     https_proxy = repository_ctx.os.environ.get("https_proxy", "")
@@ -65,6 +64,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+build_release = {{"CMAKE_BUILD_TYPE": "Release"}}
+build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
 cmake(
     name = "aws-sdk-cpp_cmake",
     build_args = [
@@ -76,7 +77,6 @@ cmake(
         "-j 4",
     ],
     cache_entries = {{
-        "CMAKE_BUILD_TYPE": "Release",
         "BUILD_ONLY": "s3", # core builds always
         "ENABLE_TESTING": "OFF",
         "AUTORUN_UNIT_TESTS": "OFF",
@@ -86,7 +86,14 @@ cmake(
         "FORCE_SHARED_CRT": "OFF",
         "SIMPLE_INSTALL": "OFF",
         "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
-    }},
+    }} | select({{
+           "//conditions:default": dict(
+               build_release
+            ),
+            ":dbg":  dict(
+               build_debug
+            ),
+        }}),
     env = {{
         "HTTP_PROXY": "{http_proxy}",
         "HTTPS_PROXY": "{https_proxy}",

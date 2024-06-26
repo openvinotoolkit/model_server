@@ -67,6 +67,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+build_release = {{"CMAKE_BUILD_TYPE": "Release"}}
+build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
 cmake(
     name = "llm_engine_cmake",
     build_args = [
@@ -78,12 +80,18 @@ cmake(
         "-j 4",
     ],
     cache_entries = {{
-        "CMAKE_BUILD_TYPE": "Release",
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib"
-    }},
+    }} | select({{
+           "//conditions:default": dict(
+               build_release
+            ),
+            ":dbg":  dict(
+               build_debug
+            ),
+        }}),
     env = {{
         "OpenVINO_DIR": "{OpenVINO_DIR}",
         "HTTP_PROXY": "{http_proxy}",
