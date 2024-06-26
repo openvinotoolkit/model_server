@@ -59,7 +59,8 @@ struct LLMExecutor {
 
     void printMetrics() {
         PipelineMetrics metrics = pipe->get_metrics();
-        SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Total requests: {}; Scheduled requests: {};", metrics.m_total_requests, metrics.m_scheduled_requests);
+        SPDLOG_LOGGER_DEBUG(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {:.1f}%;",
+            metrics.m_total_requests, metrics.m_scheduled_requests, metrics.m_cache_usage * 100);
     }
 };
 
