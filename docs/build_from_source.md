@@ -108,28 +108,6 @@ Example:
 make release_image OV_USE_BINARY=0 OV_SOURCE_BRANCH=<commit or branch> OV_SOURCE_ORG=<fork org>
 ```
 
-### `RUN_TESTS`
-
-Enables or disabled unit tests execution as part of the docker image building.
-- `0` Unit tests are skipped
-- `1` Unit tests are executed (default)
-
-```bash
-make release_image RUN_TESTS=0
-```
-
-Running the unit tests will make the building last longer and it will consume a bit more RAM
-
-### `CHECK_COVERAGE`
-
-Enables or disabled calculating the unit tests coverage as part of the docker image building.
-- `0` Checking the coverage is skipped
-- `1` Checking the coverage is included
-
-```bash
-make release_image CHECK_COVERAGE=0
-```
-
 Running the unit tests will increase build time and consume more RAM
 
 ### `JOBS`
