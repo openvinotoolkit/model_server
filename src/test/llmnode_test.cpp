@@ -13,8 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <set>
 #include <sstream>
 #include <string>
@@ -28,8 +30,8 @@
 
 #include "../config.hpp"
 #include "../dags/pipelinedefinition.hpp"
-#include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
+#include "../httpservermodule.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../llm/llmnoderesources.hpp"
@@ -59,39 +61,71 @@
 
 using namespace ovms;
 
-class LLMFlowTest : public ::testing::TestWithParam<std::string> {
+class MockedServerRequestInterface final : public tensorflow::serving::net_http::ServerRequestInterface {
+public:
+    MOCK_METHOD(absl::string_view, uri_path, (), (const, override));
+    MOCK_METHOD(absl::string_view, http_method, (), (const, override));
+    MOCK_METHOD(void, WriteResponseBytes, (const char*, int64_t), (override));
+    MOCK_METHOD(void, WriteResponseString, (absl::string_view), (override));
+    MOCK_METHOD((std::unique_ptr<char[], tensorflow::serving::net_http::ServerRequestInterface::BlockDeleter>), ReadRequestBytes, (int64_t*), (override));
+    MOCK_METHOD(absl::string_view, GetRequestHeader, (absl::string_view), (const, override));
+    MOCK_METHOD((std::vector<absl::string_view>), request_headers, (), (const, override));
+    MOCK_METHOD(void, OverwriteResponseHeader, (absl::string_view, absl::string_view), (override));
+    MOCK_METHOD(void, AppendResponseHeader, (absl::string_view, absl::string_view), (override));
+    MOCK_METHOD(void, PartialReplyWithStatus, (tensorflow::serving::net_http::HTTPStatusCode), (override));
+    MOCK_METHOD(void, PartialReply, (std::string), (override));
+    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::CallbackStatus, PartialReplyWithFlushCallback, ((std::function<void()>)), (override));
+    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, response_body_status, (), (override));
+    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, request_body_status, (), (override));
+    MOCK_METHOD(void, ReplyWithStatus, (tensorflow::serving::net_http::HTTPStatusCode), (override));
+    MOCK_METHOD(void, Reply, (), (override));
+    MOCK_METHOD(void, Abort, (), (override));
+    MOCK_METHOD(void, PartialReplyEnd, (), (override));
+};
+
+class LLMFlowHttpTest : public ::testing::Test {
 protected:
-    ovms::Server& server = ovms::Server::instance();
+    static std::unique_ptr<std::thread> t;
 
-    const Precision precision = Precision::STRING;
-    std::unique_ptr<std::thread> t;
-    std::string port = "9178";
+public:
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
 
-    void SetUpServer(const char* configPath) {
-        ::SetUpServer(this->t, this->server, this->port, configPath);
+    std::vector<std::pair<std::string, std::string>> headers;
+    ovms::HttpRequestComponents comp;
+    const std::string endpointChatCompletions = "/v3/chat/completions";
+    const std::string endpointCompletions = "/v3/completions";
+    MockedServerRequestInterface writer;
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(t, server, port, "/ovms/src/test/llm/config_llm_dummy_kfs.json");
+        auto start = std::chrono::high_resolution_clock::now();
+        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+        }
     }
 
-    void SetUp() override {
+    void SetUp() {
+        ovms::Server& server = ovms::Server::instance();
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointChatCompletions, headers), ovms::StatusCode::OK);
     }
-    void TearDown() {
+
+    static void TearDownTestSuite() {
+        ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(1);
         t->join();
         server.setShutdownRequest(0);
     }
-};
 
-class LLMFlowHttpTest : public LLMFlowTest {
-public:
-    void SetUp() {
-        SetUpServer("/ovms/src/test/llm/config_llm_dummy_kfs.json");
+    void TearDown() {
+        handler.reset();
     }
 };
-
-class LLMOptionsHttpTest : public ::testing::TestWithParam<std::string> {
-public:
-    void SetUp() { py::initialize_interpreter(); }
-    void TearDown() { py::finalize_interpreter(); }
-};
+std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 
 // --------------------------------------- OVMS LLM nodes tests
 
@@ -101,32 +135,524 @@ public:
 // with user defined one to do that.
 // TODO: Consider stress testing - exisitng model server under heavy load to check notifications work us expected.
 
-// Test disabled by default - needs LLM models to work in /workspace directory:
-// openvino_detokenizer.bin  openvino_detokenizer.xml  openvino_model.bin  openvino_model.xml  openvino_tokenizer.bin  openvino_tokenizer.xml
-// Model that was used:
-// https://huggingface.co/meta-llama/Llama-2-7b-chat-hf
-// converted with optimum cli
+TEST_F(LLMFlowHttpTest, inferChatCompletionsUnary) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
 
-// TODO: Switch to HTTP caclulator
-TEST_F(LLMFlowHttpTest, DISABLED_Infer) {
-    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
-    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    ::KFSRequest request;
-    ::KFSResponse response;
-    const std::string modelName = "llmDummyKFS";
-    request.Clear();
-    response.Clear();
-    std::vector<std::string> requestData1{"What is OpenVINO?"};
-    std::string expectedResponse = "\n\nOpenVINO is an open-source software library for deep learning inference that is designed to optimize and run deep learning models on a variety";
-
-    prepareInferStringRequest(request, "in", requestData1, false);
-    request.mutable_model_name()->assign(modelName);
-    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    const std::string& content = response.raw_output_contents(0);
-    ASSERT_EQ(expectedResponse, content);
+    std::time_t t = std::time(0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    std::stringstream ss;
+    ss << t;
+    std::string time = ss.str();
+    std::string expectedResponse = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"\nOpenVINO is","role":"assistant"}}],"created":)" + time + R"(,"model":"llmDummyKFS","object":"chat.completion"})";
+    ASSERT_EQ(response, expectedResponse);
 }
 
-TEST_F(LLMFlowHttpTest, LLMNodeNameMissing) {
+TEST_F(LLMFlowHttpTest, inferCompletionsUnary) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    std::time_t t = std::time(0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    std::stringstream ss;
+    ss << t;
+    std::string time = ss.str();
+    std::string expectedResponse = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"text":"\nOpenVINO is"}],"created":)" + time + R"(,"model":"llmDummyKFS","object":"text_completion"})";
+    ASSERT_EQ(response, expectedResponse);
+}
+
+TEST_F(LLMFlowHttpTest, inferChatCompletionsStream) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(3);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(response, "");
+}
+
+TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(3);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(response, "");
+}
+
+const std::string validRequestBodyWithGivenParameter(const std::string& parameter, const std::string& value) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "max_tokens": 1,
+            ")" + parameter + R"(": )" +
+                              value + R"(,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    return requestBody;
+}
+
+class LLMHttpParametersValidationTest : public LLMFlowHttpTest {};
+
+TEST_F(LLMHttpParametersValidationTest, maxTokensInvalid) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_tokens": "INVALID",
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, streamInvalid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("stream", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::JSON_INVALID);
+}
+
+TEST_F(LLMHttpParametersValidationTest, messagesInvalid) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_tokens": 1,
+            "messages": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, messagesMissing) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_tokens": 1
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, messageNotAnObject) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_tokens": 1,
+            "messages": [
+                "What is OpenVINO?"
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, messageNotAString) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "user",
+                "content": 1
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, roleNotAString) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": false,
+                "content": "What is OpenVino?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, promptInvalid) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_tokens": 1,
+            "prompt": 5
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, promptMissing) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_tokens": 1
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, modelMissing) {
+    std::string requestBody = R"(
+        {
+            "stream": false,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::JSON_INVALID);
+}
+
+TEST_F(LLMHttpParametersValidationTest, modelInvalid) {
+    std::string requestBody = R"(
+        {
+            "model": 0,
+            "stream": false,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::JSON_INVALID);
+}
+
+TEST_F(LLMHttpParametersValidationTest, ignoreEosValid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("ignore_eos", "false");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, ignoreEosInvalid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("ignore_eos", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, repetitionPenaltyValid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("repetition_penalty", "2.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, repetitionPenaltyInvalid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("repetition_penalty", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, diversityPenaltyValid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("diversity_penalty", "2.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, diversityPenaltyInvalid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("diversity_penalty", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, lengthPenaltyValid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("length_penalty", "2.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, lengthPenaltyInvalid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("length_penalty", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, temperatureValid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("temperature", "1.5");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, temperatureInvalid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("temperature", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, temperatureOutOfRange) {
+    std::string requestBody = validRequestBodyWithGivenParameter("temperature", "3.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, topPValid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("top_p", "0.5");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, topPInvalid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("top_p", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, topPOutOfRange) {
+    std::string requestBody = validRequestBodyWithGivenParameter("top_p", "3.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, topKValid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("top_k", "2");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, topKInvalid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("top_k", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, seedValid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("seed", "1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, seedInvalid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("seed", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, bestOfValid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("best_of", "1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, bestOfInvalid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("best_of", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, bestOfNegative) {
+    std::string requestBody = validRequestBodyWithGivenParameter("best_of", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, nValid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("n", "1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, nInvalid) {
+    std::string requestBody = validRequestBodyWithGivenParameter("n", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, nNegative) {
+    std::string requestBody = validRequestBodyWithGivenParameter("best_of", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, nGreaterThanBestOf) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "best_of" : 1,
+            "n" : 2,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+class LLMConfigHttpTest : public ::testing::Test {
+public:
+    void SetUp() { py::initialize_interpreter(); }
+    void TearDown() { py::finalize_interpreter(); }
+};
+
+TEST_F(LLMConfigHttpTest, LLMNodeNameMissing) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -167,7 +693,7 @@ TEST_F(LLMFlowHttpTest, LLMNodeNameMissing) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_MISSING_NAME);
 }
 
-TEST_F(LLMFlowHttpTest, LLMNodeOptionsMissing) {
+TEST_F(LLMConfigHttpTest, LLMNodeOptionsMissing) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -204,7 +730,7 @@ TEST_F(LLMFlowHttpTest, LLMNodeOptionsMissing) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_MISSING_OPTIONS);
 }
 
-TEST_F(LLMFlowHttpTest, LLMNodeNameExists) {
+TEST_F(LLMConfigHttpTest, LLMNodeNameExists) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD_1:input"
@@ -278,7 +804,7 @@ TEST_F(LLMFlowHttpTest, LLMNodeNameExists) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_NAME_ALREADY_EXISTS);
 }
 
-TEST_F(LLMFlowHttpTest, LLMNodeNonExistantModelsPath) {
+TEST_F(LLMConfigHttpTest, LLMNodeNonExistantModelsPath) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -320,7 +846,7 @@ TEST_F(LLMFlowHttpTest, LLMNodeNonExistantModelsPath) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
 }
 
-TEST_F(LLMFlowHttpTest, LLMNodeBadWorkspacePathEmpty) {
+TEST_F(LLMConfigHttpTest, LLMNodeBadWorkspacePathEmpty) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -362,7 +888,7 @@ TEST_F(LLMFlowHttpTest, LLMNodeBadWorkspacePathEmpty) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
 }
 
-TEST_F(LLMFlowHttpTest, LLMNodeWorkspacePathToFileNotDir) {
+TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -404,7 +930,7 @@ TEST_F(LLMFlowHttpTest, LLMNodeWorkspacePathToFileNotDir) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
 }
 
-TEST_F(LLMFlowHttpTest, LLMNodeResourceInitFailed) {
+TEST_F(LLMConfigHttpTest, LLMNodeResourceInitFailed) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -446,6 +972,12 @@ TEST_F(LLMFlowHttpTest, LLMNodeResourceInitFailed) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
     ASSERT_EQ(mediapipeDummy.getLLMNodeResources("llmNode"), nullptr);
 }
+
+class LLMOptionsHttpTest : public ::testing::Test {
+public:
+    void SetUp() { py::initialize_interpreter(); }
+    void TearDown() { py::finalize_interpreter(); }
+};
 
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     std::string testPbtxt = R"(
@@ -641,3 +1173,61 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
 }
+
+// class LLMHttpParametersValidationTest : public LLMOptionsHttpTest {
+// public:
+//     void SetUp() {}
+//     void TearDown() {}
+// };
+
+// TEST_F(LLMHttpParametersValidationTest, LLMNodeOptionsCheckNonDefault) {
+//     std::string testPbtxt = R"(
+//         input_stream: "HTTP_REQUEST_PAYLOAD:input"
+//         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+//         node: {
+//         name: "llmNode"
+//         calculator: "HttpLLMCalculator"
+//         input_stream: "LOOPBACK:loopback"
+//         input_stream: "HTTP_REQUEST_PAYLOAD:input"
+//         input_side_packet: "LLM_NODE_RESOURCES:llm"
+//         output_stream: "LOOPBACK:loopback"
+//         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+//         input_stream_info: {
+//             tag_index: 'LOOPBACK:0',
+//             back_edge: true
+//         }
+//         node_options: {
+//             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+//                 models_path: "/ovms/llm_testing/facebook/opt-125m"
+//                 max_num_batched_tokens: 1024
+//                 cache_size: 1
+//                 block_size: 8
+//                 max_num_seqs: 95
+//                 dynamic_split_fuse: false
+//             }
+//         }
+//         input_stream_handler {
+//             input_stream_handler: "SyncSetInputStreamHandler",
+//             options {
+//             [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+//                 sync_set {
+//                 tag_index: "LOOPBACK:0"
+//                 }
+//             }
+//             }
+//         }
+//         }
+//     )";
+
+//     ::mediapipe::CalculatorGraphConfig config;
+//     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+//     std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
+//     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
+
+//     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 1024);
+//     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
+//     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
+//     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
+//     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
+// }
