@@ -177,8 +177,9 @@ bool isValidUtf8(const std::string& text) {
                 return true;
             else
                 return false;
-        } else
+        } else {
             return false;
+        }
     }
     return true;
 }
