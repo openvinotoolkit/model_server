@@ -223,3 +223,35 @@ TEST(StringUtils, stoi64) {
     result = ovms::stoi64("");
     EXPECT_FALSE(result);
 }
+
+TEST(StringUtils, isValidUtf8) {
+    auto result = ovms::isValidUtf8("\x7a");  // one ASCII char
+    EXPECT_TRUE(result);
+
+    result = ovms::isValidUtf8("\x1a\x2b\x3c");  // three ASCII chars
+    EXPECT_TRUE(result);
+
+    result = ovms::isValidUtf8("\x2b\x3c\x1a\x2b\x3c");  //six ASCII chars
+    EXPECT_TRUE(result);
+
+    result = ovms::isValidUtf8("\x1a\xca\xaa");  // one ASCII char and one UTF-8 char
+    EXPECT_TRUE(result);
+
+    result = ovms::isValidUtf8("\xea\xaa\xaa");  // one 3byte long UTF-8 char
+    EXPECT_TRUE(result);
+
+    result = ovms::isValidUtf8("\xf5\xab\xab\xac");  // one 4byte long UTF-8 char
+    EXPECT_TRUE(result);
+
+    result = ovms::isValidUtf8("\xf5\xab\xab");  // incomplete 4byte long UTF-8 char
+    EXPECT_FALSE(result);
+
+    result = ovms::isValidUtf8("\xea\xaa");  // incomplete 3byte long UTF-8 char
+    EXPECT_FALSE(result);
+
+    result = ovms::isValidUtf8("\xf5\xc0");  // incorrect char
+    EXPECT_FALSE(result);
+
+    result = ovms::isValidUtf8("\x1a\xca");  // ASCII char followed by incomplete UTF-8 char
+    EXPECT_FALSE(result);
+}
