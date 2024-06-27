@@ -387,7 +387,7 @@ private:
                 return false;
         }
         return true;
-    }
+    };
 
 public:
     TextStreamer(std::shared_ptr<Tokenizer> tokenizer) :
@@ -420,10 +420,10 @@ public:
         }
         return std::nullopt;
     }
-};
-;
+}
 
-static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
+static bool
+applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
     if (textProcessor.chatTemplate == nullptr) {
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
         return false;
