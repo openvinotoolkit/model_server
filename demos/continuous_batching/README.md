@@ -14,8 +14,8 @@ This demo is supported starting from version 2024.2.
 ```bash
 docker pull openvino/model_server:latest
 ```
-
-Optionally, to use the latest features of the model server build the image from the main branch.
+It is optional but recommended to build the latest code version from the main branch.
+That way you can take advantage of the latest enhancements in this feature.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
