@@ -151,15 +151,15 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsUnary) {
         }
     )";
 
-    std::time_t t = std::time(0);
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
-    std::stringstream ss;
-    ss << t;
-    std::string time = ss.str();
-    std::string expectedResponse = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"\nOpenVINO is","role":"assistant"}}],"created":)" + time + R"(,"model":"llmDummyKFS","object":"chat.completion"})";
-    ASSERT_EQ(response, expectedResponse);
+    //Assertion split in two parts to avoid timestamp missmatch
+    const size_t timestampLength = 10;
+    std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"\nOpenVINO is","role":"assistant"}}],"created":)";
+    std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"chat.completion"})";
+    ASSERT_EQ(response.compare(0, expectedResponsePart1.length(), expectedResponsePart1), 0);
+    ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
 }
 
 TEST_F(LLMFlowHttpTest, inferCompletionsUnary) {
@@ -173,15 +173,15 @@ TEST_F(LLMFlowHttpTest, inferCompletionsUnary) {
         }
     )";
 
-    std::time_t t = std::time(0);
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
-    std::stringstream ss;
-    ss << t;
-    std::string time = ss.str();
-    std::string expectedResponse = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"text":"\nOpenVINO is"}],"created":)" + time + R"(,"model":"llmDummyKFS","object":"text_completion"})";
-    ASSERT_EQ(response, expectedResponse);
+    //Assertion split in two parts to avoid timestamp missmatch
+    const size_t timestampLength = 10;
+    std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"text":"\nOpenVINO is"}],"created":)";
+    std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"text_completion"})";
+    ASSERT_EQ(response.compare(0, expectedResponsePart1.length(), expectedResponsePart1), 0);
+    ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
 }
 
 TEST_F(LLMFlowHttpTest, inferChatCompletionsStream) {
