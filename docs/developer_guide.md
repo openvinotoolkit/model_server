@@ -279,6 +279,17 @@ export LD_LIBRARY_PATH="'${PWD}'/dist/<os_name>/ovms/lib"
 
 > **NOTE**: For additional problems, see the [debugging section](#debugging).
 
+
+## Run unit tests
+
+Executing the unit tests require building the ovms build image. All unit tests are expected to be started in a container using model server build image. Some unit tests require test models to be pulled and attached to the container.
+The following commands create the build image and start the unit tests:
+
+```
+make ovms_builder_image
+make run_unit_tests
+```
+
 ## Debugging
 
 Debugging options are available. Click on the required option :
