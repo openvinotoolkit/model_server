@@ -73,7 +73,7 @@ For more information on using Model Server in various scenarios you can check th
 
 * [RESTful API](https://restfulapi.net/)
 
-* [Benchmarking results](https://docs.openvino.ai/nightly/openvino_docs_performance_benchmarks.html)
+* [Benchmarking results](https://docs.openvino.ai/nightly/about-openvino/performance-benchmarks.html)
 
 * [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - webinar recording
 
