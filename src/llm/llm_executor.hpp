@@ -56,6 +56,12 @@ struct LLMExecutor {
         std::unique_lock<std::mutex> lock(mutex);
         cv.notify_one();
     }
+
+    void printMetrics() {
+        PipelineMetrics metrics = pipe->get_metrics();
+        SPDLOG_LOGGER_DEBUG(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {:.1f}%;",
+            metrics.requests, metrics.scheduled_requests, metrics.cache_usage * 100);
+    }
 };
 
 class LLMExecutorWrapper {
@@ -66,6 +72,7 @@ class LLMExecutorWrapper {
     static void run(LLMExecutor* llmExecutor, std::atomic<bool>* receivedEndSignal) {
         while (!(*receivedEndSignal)) {
             try {
+                llmExecutor->printMetrics();
                 if (llmExecutor->hasRequests()) {
                     llmExecutor->step();
                 } else {
@@ -73,6 +80,7 @@ class LLMExecutorWrapper {
                 }
             } catch (std::exception& e) {
                 SPDLOG_LOGGER_ERROR(llm_executor_logger, "Error occurred in LLM executor: {}.", e.what());
+                exit(1);
             }
         }
     }

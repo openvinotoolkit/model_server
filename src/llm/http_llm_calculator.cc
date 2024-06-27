@@ -619,17 +619,13 @@ public:
                     if (chunk.has_value()) {
                         std::string response = packIntoServerSideEventMessage(
                             serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint()));
-                        LOG(INFO) << "Partial response (continue): " << response;
                         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                     }
-                    // Continue the loop
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
-
                 } else {
                     OVMS_PROFILE_SCOPE("Generation of last streaming response");
                     std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true, this->request->getEndpoint()));
                     response += packIntoServerSideEventMessage("[DONE]");
-                    LOG(INFO) << "Partial response (generation finished): " << response;
                     // Produce last message, but do not produce loopback packets anymore so this is last Process() call
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 }
