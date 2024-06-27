@@ -231,7 +231,7 @@ TEST(StringUtils, isValidUtf8) {
     result = ovms::isValidUtf8("\x1a\x2b\x3c");  // three ASCII chars
     EXPECT_TRUE(result);
 
-    result = ovms::isValidUtf8("\x2b\x3c\x1a\x2b\x3c");  //six ASCII chars
+    result = ovms::isValidUtf8("\x2b\x3c\x1a\x2b\x3c");  // six ASCII chars
     EXPECT_TRUE(result);
 
     result = ovms::isValidUtf8("\x1a\xca\xaa");  // one ASCII char and one UTF-8 char
