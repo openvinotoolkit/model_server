@@ -358,22 +358,45 @@ class TextStreamer {
     std::vector<int64_t> tokenCache;
     size_t printLen{0};
 
+private:
+    bool isValidUtf8(const std::string& text) {
+        //checking only last 4 characters
+        std::string subtext = text.substr(text.size()-std::min(text.size(),(std::size_t) 4));
+        int byte_counter = 0;
+        for (int i = subtext.size()-1; i >= 0; i--) {
+            std::cout<< "i:" << i << std::endl;
+            int x = static_cast<int>(static_cast<unsigned char>(subtext[i]));
+            if ((x >> 7) == 0b0) return true;  // last char is a single byte char
+            if ((x >> 6) == 0b10){ // octet belong to multibyte sequence
+                byte_counter++;
+            }else if ((x >> 5) == 0b110){  // first byte of 2 byte sequence
+                if (byte_counter + 1 == 2) return true; else return false;
+            }else if ((x >> 4) == 0b1110){  // first byte of 3 byte sequence
+                if (byte_counter + 1 == 3) return true; else return false;
+            }else if ((x >> 3) == 0b11110){  // first byte of 3 byte sequence
+                if (byte_counter + 1 == 4) return true; else return false;
+            }else return false;
+        }
+        return true;
+    }
+
 public:
     TextStreamer(std::shared_ptr<Tokenizer> tokenizer) :
         tokenizer(tokenizer) {}
 
     std::optional<std::string> put(int64_t token) {
         tokenCache.push_back(token);
+        LOG(INFO) << "Adding token" << token;
         std::string text = tokenizer->decode(tokenCache);
 
-        if (!text.empty() && '\n' == text.back()) {
+        if (!text.empty() && '\n' == text.back() && text.size() > printLen) {
             // The chunk is ready if the generated text ends with new line.
             // Also, clear the cache.
             std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
             tokenCache.clear();
             printLen = 0;
             return chunk;
-        } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "�") == 0) {  // NOLINT
+        } else if (isValidUtf8(text) != true) {
             return std::nullopt;
         } else if (text.size() > printLen) {
             // The chunk is ready if the new text in the cache contains space.
@@ -389,7 +412,7 @@ public:
         }
         return std::nullopt;
     }
-};
+};;
 
 static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
     if (textProcessor.chatTemplate == nullptr) {
