@@ -130,7 +130,7 @@ public:
     bool isStream() const { return this->stream; }
     std::string getModel() const { return this->model; }
 
-    absl::Status parse() {
+    absl::Status parse(uint32_t maxTokensLimit, uint32_t bestOfLimit) {
         OVMS_PROFILE_FUNCTION();
         // stream: bool; optional
         if (!this->doc.IsObject())
@@ -203,6 +203,8 @@ public:
                 return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
             if (it->value.GetUint() == 0)
                 return absl::InvalidArgumentError("max_tokens value should be greater than 0");
+            if(!(it->value.GetUint() < maxTokensLimit))
+                return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit));
             this->maxTokens = it->value.GetUint();
         }
         if (this->ignoreEOS.value_or(false)) {
@@ -309,6 +311,8 @@ public:
                 return absl::InvalidArgumentError("best_of is not an unsigned integer");
             if (it->value.GetUint() == 0)
                 return absl::InvalidArgumentError("best_of value should be greater than 0");
+            if(!(it->value.GetUint() < bestOfLimit))
+                return absl::InvalidArgumentError(absl::StrCat("best_of exceeds limit provided in graph config: ", bestOfLimit));
             this->bestOf = it->value.GetUint();
         }
 
@@ -529,7 +533,7 @@ public:
                 this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson, endpoint);
 
                 // TODO: Support chat scenario once atobisze adds that to CB library
-                auto status = this->request->parse();
+                auto status = this->request->parse(nodeResources->maxTokensLimit, nodeResources->bestOfLimit);
                 if (status != absl::OkStatus())
                     return status;
 

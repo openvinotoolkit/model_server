@@ -54,6 +54,8 @@ public:
     plugin_config_t pluginConfig;
     SchedulerConfig schedulerConfig;
     TextProcessor textProcessor;
+    int maxTokensLimit;
+    int bestOfLimit;
 
     static Status createLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
 

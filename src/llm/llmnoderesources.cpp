@@ -173,6 +173,9 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
 
     nodeResources->initiateGeneration();
 
+    nodeResources->maxTokensLimit = nodeOptions.max_tokens_limit();
+    nodeResources->bestOfLimit = nodeOptions.best_of_limit();
+
     return StatusCode::OK;
 }
 
