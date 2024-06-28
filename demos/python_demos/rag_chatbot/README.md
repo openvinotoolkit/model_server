@@ -34,7 +34,7 @@ Building the image with all required python dependencies is required. Follow the
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image BASE_OS=redhat OVMS_CPP_DOCKER_IMAGE=registry.connect.redhat.com/intel/openvino-model-server OVMS_CPP_IMAGE_TAG=2024.1
+make python_image BASE_OS=redhat OVMS_CPP_DOCKER_IMAGE=registry.connect.redhat.com/intel/openvino-model-server OVMS_CPP_IMAGE_TAG=2024.2
 ```
 It will create an image called `registry.connect.redhat.com/intel/openvino-model-server:py`
 
