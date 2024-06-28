@@ -229,7 +229,7 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
     ASSERT_EQ(response, "");
 }
 
-const std::string validRequestBodyWithGivenParameter(const std::string& parameter, const std::string& value) {
+const std::string validRequestBodyWithParameter(const std::string& parameter, const std::string& value) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -271,7 +271,7 @@ TEST_F(LLMHttpParametersValidationTest, maxTokensInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, streamInvalid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("stream", "\"INVALID\"");
+    std::string requestBody = validRequestBodyWithParameter("stream", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -433,7 +433,7 @@ TEST_F(LLMHttpParametersValidationTest, modelInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, ignoreEosValid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("ignore_eos", "false");
+    std::string requestBody = validRequestBodyWithParameter("ignore_eos", "false");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -441,7 +441,7 @@ TEST_F(LLMHttpParametersValidationTest, ignoreEosValid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, ignoreEosInvalid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("ignore_eos", "\"INVALID\"");
+    std::string requestBody = validRequestBodyWithParameter("ignore_eos", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -449,7 +449,7 @@ TEST_F(LLMHttpParametersValidationTest, ignoreEosInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, repetitionPenaltyValid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("repetition_penalty", "2.0");
+    std::string requestBody = validRequestBodyWithParameter("repetition_penalty", "2.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -457,7 +457,7 @@ TEST_F(LLMHttpParametersValidationTest, repetitionPenaltyValid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, repetitionPenaltyInvalid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("repetition_penalty", "\"INVALID\"");
+    std::string requestBody = validRequestBodyWithParameter("repetition_penalty", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -465,7 +465,7 @@ TEST_F(LLMHttpParametersValidationTest, repetitionPenaltyInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, diversityPenaltyValid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("diversity_penalty", "2.0");
+    std::string requestBody = validRequestBodyWithParameter("diversity_penalty", "2.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -473,7 +473,7 @@ TEST_F(LLMHttpParametersValidationTest, diversityPenaltyValid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, diversityPenaltyInvalid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("diversity_penalty", "\"INVALID\"");
+    std::string requestBody = validRequestBodyWithParameter("diversity_penalty", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -481,7 +481,7 @@ TEST_F(LLMHttpParametersValidationTest, diversityPenaltyInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, lengthPenaltyValid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("length_penalty", "2.0");
+    std::string requestBody = validRequestBodyWithParameter("length_penalty", "2.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -489,7 +489,7 @@ TEST_F(LLMHttpParametersValidationTest, lengthPenaltyValid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, lengthPenaltyInvalid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("length_penalty", "\"INVALID\"");
+    std::string requestBody = validRequestBodyWithParameter("length_penalty", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -497,7 +497,7 @@ TEST_F(LLMHttpParametersValidationTest, lengthPenaltyInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, temperatureValid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("temperature", "1.5");
+    std::string requestBody = validRequestBodyWithParameter("temperature", "1.5");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -505,7 +505,7 @@ TEST_F(LLMHttpParametersValidationTest, temperatureValid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, temperatureInvalid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("temperature", "\"INVALID\"");
+    std::string requestBody = validRequestBodyWithParameter("temperature", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -513,7 +513,7 @@ TEST_F(LLMHttpParametersValidationTest, temperatureInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, temperatureOutOfRange) {
-    std::string requestBody = validRequestBodyWithGivenParameter("temperature", "3.0");
+    std::string requestBody = validRequestBodyWithParameter("temperature", "3.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -521,7 +521,7 @@ TEST_F(LLMHttpParametersValidationTest, temperatureOutOfRange) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, topPValid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("top_p", "0.5");
+    std::string requestBody = validRequestBodyWithParameter("top_p", "0.5");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -529,7 +529,7 @@ TEST_F(LLMHttpParametersValidationTest, topPValid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, topPInvalid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("top_p", "\"INVALID\"");
+    std::string requestBody = validRequestBodyWithParameter("top_p", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -537,7 +537,7 @@ TEST_F(LLMHttpParametersValidationTest, topPInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, topPOutOfRange) {
-    std::string requestBody = validRequestBodyWithGivenParameter("top_p", "3.0");
+    std::string requestBody = validRequestBodyWithParameter("top_p", "3.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -545,7 +545,7 @@ TEST_F(LLMHttpParametersValidationTest, topPOutOfRange) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, topKValid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("top_k", "2");
+    std::string requestBody = validRequestBodyWithParameter("top_k", "2");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -553,7 +553,7 @@ TEST_F(LLMHttpParametersValidationTest, topKValid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, topKInvalid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("top_k", "\"INVALID\"");
+    std::string requestBody = validRequestBodyWithParameter("top_k", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -561,7 +561,7 @@ TEST_F(LLMHttpParametersValidationTest, topKInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, seedValid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("seed", "1");
+    std::string requestBody = validRequestBodyWithParameter("seed", "1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -569,7 +569,7 @@ TEST_F(LLMHttpParametersValidationTest, seedValid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, seedInvalid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("seed", "\"INVALID\"");
+    std::string requestBody = validRequestBodyWithParameter("seed", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -577,7 +577,7 @@ TEST_F(LLMHttpParametersValidationTest, seedInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, bestOfValid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("best_of", "1");
+    std::string requestBody = validRequestBodyWithParameter("best_of", "1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -585,7 +585,7 @@ TEST_F(LLMHttpParametersValidationTest, bestOfValid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, bestOfInvalid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("best_of", "\"INVALID\"");
+    std::string requestBody = validRequestBodyWithParameter("best_of", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -593,7 +593,7 @@ TEST_F(LLMHttpParametersValidationTest, bestOfInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, bestOfNegative) {
-    std::string requestBody = validRequestBodyWithGivenParameter("best_of", "-1");
+    std::string requestBody = validRequestBodyWithParameter("best_of", "-1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -601,7 +601,7 @@ TEST_F(LLMHttpParametersValidationTest, bestOfNegative) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, nValid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("n", "1");
+    std::string requestBody = validRequestBodyWithParameter("n", "1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -609,7 +609,7 @@ TEST_F(LLMHttpParametersValidationTest, nValid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, nInvalid) {
-    std::string requestBody = validRequestBodyWithGivenParameter("n", "\"INVALID\"");
+    std::string requestBody = validRequestBodyWithParameter("n", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -617,7 +617,7 @@ TEST_F(LLMHttpParametersValidationTest, nInvalid) {
 }
 
 TEST_F(LLMHttpParametersValidationTest, nNegative) {
-    std::string requestBody = validRequestBodyWithGivenParameter("best_of", "-1");
+    std::string requestBody = validRequestBodyWithParameter("best_of", "-1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
