@@ -1,5 +1,13 @@
 # LLM-powered RAG chatbot serving via Python Calculator in MediaPipe Graph {#ovms_demo_python_rag_chatbot}
 
+> **NOTE** This RAG demo is considered as deprecated and is replaced with improved implementation using OpenAI API endpoint with continuous batching text generation.
+
+Check the following new demos:
+- [text generation with OpenAI API and continuous batching](../../continuous_batching/README.md)
+- [RAG with chat/completions endpoint and continuous batching](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
+
+---
+
 This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models based on attached documents.
 The demo explains how to serve MediaPipe Graph with Python node that implements demo logic using Python libraries like Hugging Face Optimum with OpenVINO Runtime as execution engine and LangChain Retrieval QA pipeline that wraps entire processing.
 
