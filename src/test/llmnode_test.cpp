@@ -154,7 +154,7 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsUnary) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
-    //Assertion split in two parts to avoid timestamp missmatch
+    // Assertion split in two parts to avoid timestamp missmatch
     const size_t timestampLength = 10;
     std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"\nOpenVINO is","role":"assistant"}}],"created":)";
     std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"chat.completion"})";
@@ -176,7 +176,7 @@ TEST_F(LLMFlowHttpTest, inferCompletionsUnary) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
-    //Assertion split in two parts to avoid timestamp missmatch
+    // Assertion split in two parts to avoid timestamp missmatch
     const size_t timestampLength = 10;
     std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"text":"\nOpenVINO is"}],"created":)";
     std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"text_completion"})";
@@ -1173,61 +1173,3 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
 }
-
-// class LLMHttpParametersValidationTest : public LLMOptionsHttpTest {
-// public:
-//     void SetUp() {}
-//     void TearDown() {}
-// };
-
-// TEST_F(LLMHttpParametersValidationTest, LLMNodeOptionsCheckNonDefault) {
-//     std::string testPbtxt = R"(
-//         input_stream: "HTTP_REQUEST_PAYLOAD:input"
-//         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
-
-//         node: {
-//         name: "llmNode"
-//         calculator: "HttpLLMCalculator"
-//         input_stream: "LOOPBACK:loopback"
-//         input_stream: "HTTP_REQUEST_PAYLOAD:input"
-//         input_side_packet: "LLM_NODE_RESOURCES:llm"
-//         output_stream: "LOOPBACK:loopback"
-//         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
-//         input_stream_info: {
-//             tag_index: 'LOOPBACK:0',
-//             back_edge: true
-//         }
-//         node_options: {
-//             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-//                 models_path: "/ovms/llm_testing/facebook/opt-125m"
-//                 max_num_batched_tokens: 1024
-//                 cache_size: 1
-//                 block_size: 8
-//                 max_num_seqs: 95
-//                 dynamic_split_fuse: false
-//             }
-//         }
-//         input_stream_handler {
-//             input_stream_handler: "SyncSetInputStreamHandler",
-//             options {
-//             [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
-//                 sync_set {
-//                 tag_index: "LOOPBACK:0"
-//                 }
-//             }
-//             }
-//         }
-//         }
-//     )";
-
-//     ::mediapipe::CalculatorGraphConfig config;
-//     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-//     std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
-//     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
-
-//     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 1024);
-//     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-//     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
-//     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
-//     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
-// }
