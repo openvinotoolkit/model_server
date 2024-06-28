@@ -374,7 +374,7 @@ public:
             tokenCache.clear();
             printLen = 0;
             return chunk;
-        } else if (isValidUtf8(text) != true) {
+        } else if (!isValidUtf8(text)) {
             return std::nullopt;
         } else if (text.size() > printLen) {
             // The chunk is ready if the new text in the cache contains space.

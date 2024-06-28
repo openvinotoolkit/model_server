@@ -254,4 +254,10 @@ TEST(StringUtils, isValidUtf8) {
 
     result = ovms::isValidUtf8("\x1a\xca");  // ASCII char followed by incomplete UTF-8 char
     EXPECT_FALSE(result);
+
+    result = ovms::isValidUtf8("");  // Empty content considered invalid because there is nothing to return as partial response
+    EXPECT_FALSE(result);
+
+    result = ovms::isValidUtf8("\x7a\xaa\xaa");  // incorrect sequence without length information
+    EXPECT_FALSE(result);
 }

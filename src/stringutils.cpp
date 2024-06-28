@@ -158,30 +158,20 @@ bool isValidUtf8(const std::string& text) {
     int byte_counter = 0;
     for (int i = text.size() - 1; i >= 0 && byte_counter <= 3; i--) {
         int x = static_cast<int>(static_cast<unsigned char>(text[i]));
-        if ((x >> 7) == 0b0)
-            return true;         // last char is a single byte char
-        if ((x >> 6) == 0b10) {  // octet belong to multibyte sequence
-            byte_counter++;
-        } else if ((x >> 5) == 0b110) {  // first byte of 2 byte sequence
-            if (byte_counter + 1 == 2)
-                return true;
-            else
-                return false;
-        } else if ((x >> 4) == 0b1110) {  // first byte of 3 byte sequence
-            if (byte_counter + 1 == 3)
-                return true;
-            else
-                return false;
-        } else if ((x >> 3) == 0b11110) {  // first byte of 3 byte sequence
-            if (byte_counter + 1 == 4)
-                return true;
-            else
-                return false;
-        } else {
-            return false;
-        }
+        if (((x >> 7) == 0b0) && (byte_counter == 0))
+            return true;  // last char is a single byte char
+        if ((x >> 6) == 0b10)
+            byte_counter++;  // octet belong to multibyte sequence
+        else if (((x >> 5) == 0b110) && (byte_counter + 1 == 2))
+            return true;  // first byte of 2 byte sequence
+        else if (((x >> 4) == 0b1110) && (byte_counter + 1 == 3))
+            return true;  // first byte of 3 byte sequence
+        else if (((x >> 3) == 0b11110) && (byte_counter + 1 == 4))
+            return true;  // first byte of 3 byte sequence
+        else
+            return false;  // invalid utf8 sequence
     }
-    return true;
+    return false;
 }
 
 }  // namespace ovms
