@@ -32,6 +32,7 @@
 #include <rapidjson/writer.h>
 
 #include "../profiler.hpp"
+#include "../stringutils.hpp"
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
 
@@ -366,14 +367,14 @@ public:
         tokenCache.push_back(token);
         std::string text = tokenizer->decode(tokenCache);
 
-        if (!text.empty() && '\n' == text.back()) {
+        if (!text.empty() && '\n' == text.back() && text.size() > printLen) {
             // The chunk is ready if the generated text ends with new line.
             // Also, clear the cache.
             std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
             tokenCache.clear();
             printLen = 0;
             return chunk;
-        } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "�") == 0) {  // NOLINT
+        } else if (!isValidUtf8(text)) {
             return std::nullopt;
         } else if (text.size() > printLen) {
             // The chunk is ready if the new text in the cache contains space.
@@ -391,7 +392,8 @@ public:
     }
 };
 
-static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
+static bool
+applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
     if (textProcessor.chatTemplate == nullptr) {
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
         return false;

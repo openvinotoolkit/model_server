@@ -98,4 +98,7 @@ std::optional<uint32_t> stou32(const std::string& input);
 std::optional<int32_t> stoi32(const std::string& str);
 
 std::optional<int64_t> stoi64(const std::string& str);
+
+bool isValidUtf8(const std::string& text);
+
 }  // namespace ovms
