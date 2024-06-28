@@ -4,7 +4,7 @@
 
 Check the following new demos:
 - [text generation with OpenAI API and continuous batching](../../continuous_batching/README.md)
-- [RAG with chat/completions endpoint and continuous batching](../../continuous_batching/rag/rag_demo.ipynb)
+- [RAG with chat/completions endpoint and continuous batching](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
 
 ---
 
