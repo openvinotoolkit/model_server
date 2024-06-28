@@ -249,6 +249,26 @@ TEST_F(LLMHttpParametersValidationTest, maxTokensInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_F(LLMHttpParametersValidationTest, maxTokensExceedsLimit) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_tokens": 40,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_F(LLMHttpParametersValidationTest, streamInvalid) {
     std::string requestBody = validRequestBodyWithParameter("stream", "\"INVALID\"");
 
@@ -573,6 +593,14 @@ TEST_F(LLMHttpParametersValidationTest, bestOfInvalid) {
 
 TEST_F(LLMHttpParametersValidationTest, bestOfNegative) {
     std::string requestBody = validRequestBodyWithParameter("best_of", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, bestOfExceedsLimit) {
+    std::string requestBody = validRequestBodyWithParameter("best_of", "40");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
