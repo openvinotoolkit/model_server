@@ -103,7 +103,7 @@ public:
         ovms::Server& server = ovms::Server::instance();
         ::SetUpServer(t, server, port, "/ovms/src/test/llm/config_llm_dummy_kfs.json");
         auto start = std::chrono::high_resolution_clock::now();
-        const size_t numberOfRetries = 5;
+        const int numberOfRetries = 5;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
         }
