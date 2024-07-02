@@ -103,7 +103,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "193d4089f2511ba11c918c1861f9f79b3da24c23", # Fix leak (#72)
+    commit = "bb6c85af8bb43fb183487d13225419f7b3a61350", # Update Model api (#77)
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -407,7 +407,7 @@ new_git_repository(
     name = "model_api",
     remote = "https:///github.com/openvinotoolkit/model_api/",
     build_file = "@_model-api//:BUILD",
-    commit = "0ba6bee38fb77484c559d65d654b05b267f9f35c"
+    commit = "eb9fcfb1e1eebc047ff144707f76203b132e1aa6" # master Jun 24 15:02:17 2024 [cpp] Fix num classes check
 )
 
 new_local_repository(
