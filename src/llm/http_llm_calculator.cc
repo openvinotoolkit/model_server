@@ -578,7 +578,6 @@ public:
             if (!this->request->isStream()) {
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
                 std::vector<GenerationOutput> generationOutput = this->generationHandle->read_all();
-
                 RET_CHECK(generationOutput.size() >= 1);
                 // legacy
                 if (generationOutput.size() == 1) {
