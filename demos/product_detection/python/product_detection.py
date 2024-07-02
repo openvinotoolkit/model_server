@@ -40,14 +40,14 @@ parser = argparse.ArgumentParser(description='Demo for face detection requests v
                                              'and saves images with bounding boxes drawn around detected faces. '
                                              'It relies on face_detection model...')
 
-parser.add_argument('--input_images_dir', required=False, help='Directory with input images', default="../../common/static/images/people")
+parser.add_argument('--input_images_dir', required=False, help='Directory with input images', default="../../common/static/images/cars")
 parser.add_argument('--output_dir', required=False, help='Directory for storing images with detection results', default="results")
 parser.add_argument('--batch_size', required=False, help='How many images should be grouped in one batch', default=1, type=int)
 parser.add_argument('--width', required=False, help='How the input image width should be resized in pixels', default=1200, type=int)
 parser.add_argument('--height', required=False, help='How the input image width should be resized in pixels', default=800, type=int)
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
-parser.add_argument('--model_name',required=False, default='face-detection', help='Specify the model name')
+parser.add_argument('--model_name',required=False, default='product-detection', help='Specify the model name')
 parser.add_argument('--tls', default=False, action='store_true', help='use TLS communication with gRPC endpoint')
 parser.add_argument('--server_cert', required=False, help='Path to server certificate')
 parser.add_argument('--client_cert', required=False, help='Path to client certificate')
@@ -91,14 +91,14 @@ for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
     request.model_spec.name = args['model_name']
     img = imgs[x:(x + batch_size)]
     print("\nRequest shape", img.shape)
-    request.inputs["data"].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
+    request.inputs["input.1"].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
     start_time = datetime.datetime.now()
     result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
     end_time = datetime.datetime.now()
 
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times = np.append(processing_times,np.array([int(duration)]))
-    output = make_ndarray(result.outputs["detection_out"])
+    output = make_ndarray(result.outputs["868"])
     print("Response shape", output.shape)
     for y in range(0,img.shape[0]):  # iterate over responses from all images in the batch
         img_out = img[y,:,:,:]
@@ -107,6 +107,7 @@ for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
         img_out = img_out.transpose(1,2,0)
         for i in range(0, 200*batch_size-1):  # there is returned 200 detections for each image in the batch
             detection = output[:,:,i,:]
+            label_id = 0
             # each detection has shape 1,1,7 where last dimension represent:
             # image_id - ID of the image in the batch
             # label - predicted class ID
@@ -126,6 +127,13 @@ for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
                 print("y_max", y_max)
 
                 img_out = cv2.rectangle(cv2.UMat(img_out),(x_min,y_min),(x_max,y_max),(0,0,255),1)
+                font = cv2.FONT_HERSHEY_SIMPLEX
+
+                label = np.argmax(output[:,label_id,:,:])
+                conf = np.argmax(output[:,:,label_id,:]) * 100
+                label_id += 1
+                print(label)
+                img_out = cv2.putText(img_out,str(label) + " conf : " + str(conf) + "%",(x_min,y_min), font, 0.5,(0,0,255),2,cv2.LINE_AA)
                 # draw each detected box on the input image
         print("saving result to",os.path.join(args['output_dir'],str(iteration)+"_"+str(y)+'.jpg'))
         cv2.imwrite(os.path.join(args['output_dir'],str(iteration)+"_"+str(y)+'.jpg'),img_out)
