@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2021 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,13 +56,9 @@ docker push openvino/model_server:$RELEASE_TAG;
 docker tag $IMAGE openvino/model_server:latest;
 docker push openvino/model_server:latest;
 
-echo "Image pushed to $REPOSITORY";
-
 docker pull $IMAGE_GPU;
 docker tag $IMAGE_GPU openvino/model_server:$RELEASE_TAG-gpu;
 docker push openvino/model_server:$RELEASE_TAG-gpu;
 
 docker tag $IMAGE_GPU openvino/model_server:latest-gpu;
 docker push openvino/model_server:latest-gpu;
-
-echo "Image with gpu pushed to $REPOSITORY";
