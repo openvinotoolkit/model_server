@@ -21,6 +21,7 @@
 #include <optional>
 #include <set>
 #include <sstream>
+#include <utility>
 
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
@@ -314,9 +315,9 @@ Status ModelConfig::parseShapeParameter(const rapidjson::Value& node) {
         if (!status.ok()) {
             return status;
         }
-        shapes[it->name.GetString()] = shapeInfo;
+        shapes[it->name.GetString()] = std::move(shapeInfo);
     }
-    this->shapes = shapes;
+    this->shapes = std::move(shapes);
 
     return StatusCode::OK;
 }

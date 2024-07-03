@@ -106,7 +106,7 @@ Status Pipeline::execute(ExecutionContext context) {
     }
     auto entrySessionKey = meta.getSessionKey();
     startedSessions.emplace(entry.getName() + entrySessionKey);
-    ovms::Status status = entry.execute(entrySessionKey, finishedNodeQueue);  // first node will triger first message
+    ovms::Status status = entry.execute(std::move(entrySessionKey), finishedNodeQueue);  // first node will triger first message
     if (!status.ok()) {
         SPDLOG_LOGGER_WARN(dag_executor_logger, "Executing pipeline: {} node: {} failed with: {}",
             getName(), entry.getName(), status.string());

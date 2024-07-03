@@ -1135,7 +1135,7 @@ static Status updateInputsInfoWithNodeConnection(tensor_map_t& inputsInfo, const
                     newTensorInfo->asString());
                 return status;
             }
-            inputsInfo[alias] = intersectionTensorInfo;
+            inputsInfo[alias] = std::move(intersectionTensorInfo);
             return StatusCode::OK;
         }
     }
@@ -1192,7 +1192,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                 }
                 status = updateInputsInfoWithNodeConnections(inputsInfo,
                     specificDependencyMapping,
-                    [&instance](const std::string& realName) {
+                    [&instance](const std::string& realName) -> const TensorInfo& {
                         return *instance->getInputsInfo().at(realName);
                     });
                 if (!status.ok()) {
@@ -1214,7 +1214,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
 
                 status = updateInputsInfoWithNodeConnections(inputsInfo,
                     specificDependencyMapping,
-                    [&info](const std::string& realName) {
+                    [&info](const std::string& realName) -> const TensorInfo& {
                         return *info.at(realName);
                     });
                 if (!status.ok()) {
@@ -1363,7 +1363,7 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
             return;
         }
         if (info.gatherFromNode.count(nodeName) > 0) {
-            auto someNodeInfo = this->findNodeByName(nodeName);
+            const auto& someNodeInfo = this->findNodeByName(nodeName);
             dimension_value_t demultiplyCount = static_cast<dimension_value_t>(someNodeInfo.demultiplyCount.value_or(0));
             Dimension dim = demultiplyCount == 0 ? Dimension::any() : Dimension(demultiplyCount);
             if (dim.isAny()) {

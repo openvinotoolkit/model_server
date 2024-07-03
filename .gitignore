@@ -25,3 +25,4 @@ cppclean_src
 cppclean_test
 tags
 .venv-style/
+llm_testing

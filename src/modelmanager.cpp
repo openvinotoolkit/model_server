@@ -711,7 +711,7 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
         }
         modelConfig.setCacheDir(this->modelCacheDirectory);
 
-        const auto modelName = modelConfig.getName();
+        const auto& modelName = modelConfig.getName();
         if (pipelineDefinitionExists(modelName)) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline definition.", modelName);
@@ -1464,7 +1464,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     if (versionsToReload->size() > 0) {
         auto status = reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
         if (!status.ok()) {
-            blocking_status = status;
+            blocking_status = std::move(status);
         }
     }
 

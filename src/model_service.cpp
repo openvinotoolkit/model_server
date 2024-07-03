@@ -19,6 +19,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <google/protobuf/util/json_util.h>
@@ -240,7 +241,7 @@ Status GetModelStatusImpl::serializeModelsStatuses2Json(const std::map<std::stri
         }
     }
     outputTmp += "\n}";
-    output = outputTmp;
+    output = std::move(outputTmp);
 
     return StatusCode::OK;
 }

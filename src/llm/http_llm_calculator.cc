@@ -361,7 +361,7 @@ class TextStreamer {
 
 public:
     TextStreamer(std::shared_ptr<Tokenizer> tokenizer) :
-        tokenizer(tokenizer) {}
+        tokenizer(std::move(tokenizer)) {}
 
     std::optional<std::string> put(int64_t token) {
         tokenCache.push_back(token);
@@ -585,7 +585,7 @@ public:
                     std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
                     std::string completion = tokenizer->decode(tokens);
 
-                    std::string response = serializeUnaryResponse(tokenizer->decode(tokens), this->request->getEndpoint());
+                    std::string response = serializeUnaryResponse(tokenizer->decode(std::move(tokens)), this->request->getEndpoint());
                     LOG(INFO) << "Complete unary response: " << response;
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 } else {
@@ -620,7 +620,7 @@ public:
                     if (chunk.has_value()) {
                         std::string response = packIntoServerSideEventMessage(
                             serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint()));
-                        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
+                        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                     }
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
                 } else {
@@ -628,7 +628,7 @@ public:
                     std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true, this->request->getEndpoint()));
                     response += packIntoServerSideEventMessage("[DONE]");
                     // Produce last message, but do not produce loopback packets anymore so this is last Process() call
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
+                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                 }
             }
         } catch (ov::AssertFailure& e) {

@@ -114,7 +114,7 @@ Status CustomNodeSession::execute(PipelineEventQueue& notifyEndQueue, Node& node
         if (!result.ok()) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed to convert {}: to tensor", getName(), getSessionKey(), outputTensors[i].name);
             if (status.ok()) {
-                status = result;
+                status = std::move(result);
             }
             continue;
         }
