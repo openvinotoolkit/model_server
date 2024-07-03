@@ -123,7 +123,7 @@ TEST_F(ModelDefaultVersions, DefaultVersionShouldReturnHighestWhenVersionReloade
     versionsToChange->push_back(1);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     auto fs = ovms::ModelManager::getFilesystem(config.getBasePath());
-    ASSERT_NEQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, versionsFailed), ovms::StatusCode::OK);
+    ASSERT_EQ(mockModel.addVersions(versionsToChange, config, fs, *ieCore, versionsFailed), ovms::StatusCode::OK);
     versionsToChange->clear();
 
     versionsToChange->push_back(2);
