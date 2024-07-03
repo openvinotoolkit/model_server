@@ -21,7 +21,7 @@ def llm_engine():
         name = "llm_engine",
         remote = "https://github.com/mzegla/openvino.genai",
         #branch = "simple_metrics",
-        commit = "27a5c69cc97db7fca6ec6163b471db9cb0f876d1", # sampler optimization
+        commit = "511431ab428409ae061639724b5008bdb9a40b52", # sampler optimization
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
