@@ -392,48 +392,6 @@ public:
     }
 };
 
-static bool
-applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
-    if (textProcessor.chatTemplate == nullptr) {
-        output = "Error: Chat template not loaded correctly, so it cannot be applied";
-        return false;
-    }
-
-    py::gil_scoped_acquire acquire;
-    try {
-        auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = textProcessor.chatTemplate->getObject(),
-            "bos_token"_a = textProcessor.bosToken, "eos_token"_a = textProcessor.eosToken);
-        py::exec(R"(
-            output = ""
-            error = ""
-            try:
-                messages = json.loads(request_body)["messages"]
-                output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
-            except Exception as e:
-                error = str(e)            
-        )",
-            py::globals(), locals);
-
-        std::string result = locals["output"].cast<std::string>();
-        std::string error = locals["error"].cast<std::string>();
-
-        if (error != "") {
-            output = error;
-            return false;
-        }
-
-        output = result;
-        return true;
-    } catch (const pybind11::error_already_set& e) {
-        LOG(INFO) << "Error occured when applying chat template: " << e.what();
-        output = "Unexpected error occurred when applying chat template";
-    } catch (...) {
-        LOG(INFO) << "Unexpected error occurred when applying chat template";
-        output = "Unexpected error occurred when applying chat template";
-    }
-    return false;
-}
-
 using InputDataType = ovms::HttpPayload;
 using OutputDataType = std::string;
 
@@ -465,7 +423,7 @@ class HttpLLMCalculator : public CalculatorBase {
 
     std::string serializeUnaryResponse(const std::string& completeResponse, Endpoint endpoint);
     std::string serializeUnaryResponse(const std::vector<std::string>& completeResponse, Endpoint endpoint);
-    std::string serializeStreamingChunk(const std::string& chunkResponse, bool stop, Endpoint endpoint);
+    std::string serializeStreamingChunk(const std::string& chunkResponse, bool stop, Endpoint endpoint);   
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {

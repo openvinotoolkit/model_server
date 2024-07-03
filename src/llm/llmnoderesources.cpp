@@ -41,7 +41,7 @@ namespace ovms {
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
 
-static void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources) {
+void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources) {
     py::gil_scoped_acquire acquire;
     try {
         auto locals = py::dict("models_path"_a = nodeResources->modelsPath);

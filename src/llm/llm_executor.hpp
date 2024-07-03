@@ -58,12 +58,15 @@ struct LLMExecutor {
         cv.notify_one();
     }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
     void printMetrics() {
         PipelineMetrics metrics = pipe->get_metrics();
         SPDLOG_LOGGER_DEBUG(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {:.1f}%;",
             metrics.requests, metrics.scheduled_requests, metrics.cache_usage * 100);
     }
 };
+#pragma GCC diagnostic pop
 
 class LLMExecutorWrapper {
     LLMExecutor llmExecutor;
