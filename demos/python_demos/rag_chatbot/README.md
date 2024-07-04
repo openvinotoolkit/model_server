@@ -40,14 +40,14 @@ It will create an image called `registry.connect.redhat.com/intel/openvino-model
 
 You can also build Ubuntu 22.04 image:
 ```
-make python_image BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=openvino/model_server OVMS_CPP_IMAGE_TAG=2024.1
+make python_image BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=openvino/model_server OVMS_CPP_IMAGE_TAG=2024.2
 ```
 It will create an image called `openvino/model_server:py`
 
 ## OpenVINO Model Server deployment with online models pulling from Hugging Face Hub
 
 In this demo, OpenVINO Model Server has an option to pull the required models from Hugging Face Hub.
-It's a simple deployment option because it doesn't require models preparation which have to be attached to the container. Just the demo scripts and configation files are required in the container at startup.
+It's a simple deployment option because it doesn't require models preparation which have to be attached to the container. Just the demo scripts and configuration files are required in the container at startup.
 
 What needs to be prepared is a list of documents, which should give context of RAG analysis. It is provided in a format of text file containing URLs of the documents sources:
 
