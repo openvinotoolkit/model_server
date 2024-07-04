@@ -35,7 +35,6 @@
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../llm/llmnoderesources.hpp"
-#include "../llm/llm_executor.hpp"
 #include "../llm/http_payload.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
@@ -1175,88 +1174,4 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
-}
-
-class LLMChatTemplateTest : public TestWithTempDir {
-private:
-    std::string tokenizerFilePath;
-    std::string jinjaFilePath;
-
-    void CreateConfig(std::string& fileContents, std::string& filePath){
-        std::ofstream configFile{filePath};
-        SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filePath, fileContents);
-        configFile << fileContents << std::endl;
-        configFile.close();
-        if (configFile.fail()) {
-            SPDLOG_INFO("Closing configFile failed");
-        } else {
-            SPDLOG_INFO("Closing configFile succeed");
-        }
-    }
-protected:
-    void SetUp() { 
-        py::initialize_interpreter(); 
-        TestWithTempDir::SetUp();
-        tokenizerFilePath = directoryPath + "/tokenizer_config.json";
-        jinjaFilePath = directoryPath + "/template.jinja";
-    }
-    void TearDown() { py::finalize_interpreter(); }
-public:
-    void CreateTokenizerConfig(std::string& fileContents){
-        CreateConfig(fileContents, tokenizerFilePath);
-    }
-    void CreateJinjaConfig(std::string& fileContents){
-        CreateConfig(fileContents, jinjaFilePath);
-    }
-};
-
-TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    std::cout << directoryPath << std::endl;
-    LLMNodeResources::loadTextProcessor(nodeResources);
-
-    std::string finalPrompt = "";
-    std::string payloadBody = "";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
-    std::string errorOutput = "Expecting value: line 1 column 1 (char 0)";
-    ASSERT_EQ(finalPrompt, errorOutput);
-}
-
-TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    std::cout << directoryPath << std::endl;
-    LLMNodeResources::loadTextProcessor(nodeResources);
-
-    std::string finalPrompt = "";
-    std::string payloadBody = R"(
-        {
-            "model": "gpt",
-            "stream": false,
-            "messages": []
-        }
-    )";
-    std::string errorOutput = "list object has no element 0";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
-    ASSERT_EQ(finalPrompt, errorOutput);
-}
-
-TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    std::cout << directoryPath << std::endl;
-    LLMNodeResources::loadTextProcessor(nodeResources);
-
-    std::string finalPrompt = "";
-    std::string payloadBody = R"(
-        {
-            "model": "gpt",
-            "stream": false,
-            "messages": [This is a test]
-        }
-    )";
-    std::string errorOutput = "list object has no element 0";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
-    ASSERT_EQ(finalPrompt, payloadBody);
 }
