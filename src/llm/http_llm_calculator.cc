@@ -423,7 +423,7 @@ class HttpLLMCalculator : public CalculatorBase {
 
     std::string serializeUnaryResponse(const std::string& completeResponse, Endpoint endpoint);
     std::string serializeUnaryResponse(const std::vector<std::string>& completeResponse, Endpoint endpoint);
-    std::string serializeStreamingChunk(const std::string& chunkResponse, bool stop, Endpoint endpoint);   
+    std::string serializeStreamingChunk(const std::string& chunkResponse, bool stop, Endpoint endpoint);
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {

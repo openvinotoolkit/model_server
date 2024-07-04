@@ -23,9 +23,9 @@
 #include <openvino/openvino.hpp>
 #include <pybind11/embed.h>
 
+#include "../llm/http_payload.hpp"
 #include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
-#include "../llm/http_payload.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 
 #pragma GCC diagnostic push
@@ -44,7 +44,7 @@ private:
     std::string tokenizerFilePath;
     std::string jinjaFilePath;
 
-    void CreateConfig(std::string& fileContents, std::string& filePath){
+    void CreateConfig(std::string& fileContents, std::string& filePath) {
         std::ofstream configFile{filePath};
         SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filePath, fileContents);
         configFile << fileContents << std::endl;
@@ -55,19 +55,21 @@ private:
             SPDLOG_INFO("Closing configFile succeed");
         }
     }
+
 protected:
-    void SetUp() { 
-        py::initialize_interpreter(); 
+    void SetUp() {
+        py::initialize_interpreter();
         TestWithTempDir::SetUp();
         tokenizerFilePath = directoryPath + "/tokenizer_config.json";
         jinjaFilePath = directoryPath + "/template.jinja";
     }
     void TearDown() { py::finalize_interpreter(); }
+
 public:
-    void CreateTokenizerConfig(std::string& fileContents){
+    void CreateTokenizerConfig(std::string& fileContents) {
         CreateConfig(fileContents, tokenizerFilePath);
     }
-    void CreateJinjaConfig(std::string& fileContents){
+    void CreateJinjaConfig(std::string& fileContents) {
         CreateConfig(fileContents, jinjaFilePath);
     }
 };
