@@ -239,7 +239,7 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
-COPY .bazelrc WORKSPACE /ovms/
+COPY .bazelrc .bazelversion WORKSPACE /ovms/
 COPY external /ovms/external/
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
