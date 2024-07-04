@@ -1021,7 +1021,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
     std::cout << "------------------------B--------------------\n";
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
-    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 4);
+    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 8);
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
