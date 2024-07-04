@@ -123,4 +123,16 @@ bool waitForNewRequest(
     return false;
 }
 
+bool isDisconnected(
+    HttpReaderWriter& serverReaderWriter) {
+    // TODO: Implement
+    return serverReaderWriter.IsDisconnected();
+}
+
+void setDisconnectionCallback(
+    HttpReaderWriter& serverReaderWriter,
+    std::function<void()> callback) {
+    serverReaderWriter.SetDisconnectedCallback(std::move(callback));
+}
+
 }  // namespace ovms

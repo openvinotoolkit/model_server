@@ -1206,4 +1206,16 @@ bool waitForNewRequest(
     return serverReaderWriter.Read(&newRequest);
 }
 
+bool isDisconnected(
+    KFSServerReaderWriter& serverReaderWriter) {
+    // TODO: Implement
+    return false;
+}
+
+void setDisconnectionCallback(
+    KFSServerReaderWriter& serverReaderWriter,
+    std::function<void()> callback) {
+}
+
+
 }  // namespace ovms

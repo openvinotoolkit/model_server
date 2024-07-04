@@ -22,6 +22,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <thread>
+#include <chrono>
 
 #include "../execution_context.hpp"
 #include "../profiler.hpp"
@@ -53,6 +55,16 @@ class ServableMetricReporter;
             }                                                            \
         }                                                                \
     }
+
+class LogGuard {
+public:
+    LogGuard() {
+
+    }
+    ~LogGuard() {
+        SPDLOG_INFO("Graph no longer exists");
+    }
+};
 
 class MediapipeGraphExecutor {
     const std::string name;
@@ -181,6 +193,8 @@ public:
         std::mutex sendMutex;
         try {
             ::mediapipe::CalculatorGraph graph;
+            LogGuard lg;
+            setDisconnectionCallback(serverReaderWriter, [&graph]() { SPDLOG_INFO("Cancelling the graph..."); graph.Cancel(); });
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph initialization");
                 // Init

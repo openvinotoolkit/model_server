@@ -18,6 +18,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <functional>
 
 #include <rapidjson/document.h>
 
@@ -131,5 +132,12 @@ Status sendErrorImpl(
 bool waitForNewRequest(
     HttpReaderWriter& serverReaderWriter,
     HttpPayload& newRequest);
+
+bool isDisconnected(
+    HttpReaderWriter& serverReaderWriter);
+
+void setDisconnectionCallback(
+    HttpReaderWriter& serverReaderWriter,
+    std::function<void()> callback);
 
 }  // namespace ovms

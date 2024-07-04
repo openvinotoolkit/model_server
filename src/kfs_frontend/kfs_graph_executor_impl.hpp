@@ -18,6 +18,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <functional>
 
 #include "../mediapipe_internal/packettypes.hpp"
 #include "kfs_grpc_inference_service.hpp"
@@ -119,5 +120,12 @@ Status sendErrorImpl(
 bool waitForNewRequest(
     KFSServerReaderWriter& serverReaderWriter,
     KFSRequest& newRequest);
+
+bool isDisconnected(
+    KFSServerReaderWriter& serverReaderWriter);
+
+void setDisconnectionCallback(
+    KFSServerReaderWriter& serverReaderWriter,
+    std::function<void()> callback);
 
 }  // namespace ovms
