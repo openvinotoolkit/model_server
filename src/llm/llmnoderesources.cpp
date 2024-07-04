@@ -41,10 +41,10 @@ namespace ovms {
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
 
-void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources) {
+void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources, const std::string& chatTemplateDirectory) {
     py::gil_scoped_acquire acquire;
     try {
-        auto locals = py::dict("models_path"_a = nodeResources->modelsPath);
+        auto locals = py::dict("templates_directory"_a = chatTemplateDirectory);
         py::exec(R"(
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/25245ec26dc29bcf6102e1b4ddd0dfd02e720cf5/src/transformers/tokenization_utils_base.py#L1837
@@ -72,18 +72,18 @@ void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& node
             template = None
 
             # Try to read template from template.jinja file
-            jinja_file = Path(models_path + "/template.jinja")
+            jinja_file = Path(templates_directory + "/template.jinja")
             if jinja_file.is_file():
-                template_loader = jinja2.FileSystemLoader(searchpath=models_path)
+                template_loader = jinja2.FileSystemLoader(searchpath=templates_directory)
                 jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, loader=template_loader)
                 jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
                 jinja_env.globals["raise_exception"] = raise_exception
                 template = jinja_env.get_template("template.jinja")
 
             # Try to read data from tokenizer_config.json
-            tokenizer_config_file = Path(models_path + "/tokenizer_config.json")
+            tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")
             if tokenizer_config_file.is_file():
-                f = open(models_path + "/tokenizer_config.json")
+                f = open(templates_directory + "/tokenizer_config.json")
                 data = json.load(f)
                 bos_token = data.get("bos_token", "")
                 eos_token = data.get("eos_token", "")
@@ -162,7 +162,7 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
-    loadTextProcessor(nodeResources);
+    loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     nodeResources->initiateGeneration();
 
