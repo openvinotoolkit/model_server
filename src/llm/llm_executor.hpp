@@ -76,8 +76,8 @@ class LLMExecutorWrapper {
     static void run(LLMExecutor* llmExecutor, std::atomic<bool>* receivedEndSignal) {
         while (!(*receivedEndSignal)) {
             try {
-                llmExecutor->printMetrics();
                 if (llmExecutor->hasRequests()) {
+                    llmExecutor->printMetrics();
                     llmExecutor->step();
                 } else {
                     llmExecutor->waitForRequests(receivedEndSignal);

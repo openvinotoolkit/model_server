@@ -194,7 +194,9 @@ public:
         try {
             ::mediapipe::CalculatorGraph graph;
             LogGuard lg;
-            setDisconnectionCallback(serverReaderWriter, [&graph]() { SPDLOG_INFO("Cancelling the graph..."); graph.Cancel(); });
+            //bool disc = false;
+            std::shared_ptr<bool> disc = std::make_shared<bool>(false);
+            setDisconnectionCallback(serverReaderWriter, [disc]() { SPDLOG_INFO("Setting disc to true"); /**disc = true;*/ SPDLOG_INFO("Setting disc to true DONE"); });
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph initialization");
                 // Init
@@ -235,6 +237,7 @@ public:
                                                                        .At(STARTING_TIMESTAMP);
                 inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
+                inputSidePackets["disc"] = mediapipe::MakePacket<std::shared_ptr<bool>>(disc).At(STARTING_TIMESTAMP);
             }
 
             {
