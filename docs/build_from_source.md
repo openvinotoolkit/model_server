@@ -162,15 +162,13 @@ The binary packages includes the `ovms` executable and linked libraries for bare
 
 ```bash
 make targz_package PYTHON_DISABLE=1
-tree dist/ubuntu
+tree dist/ubuntu22
 ````
 
 ```bash
-dist/ubuntu
+dist/ubuntu22
 ├── ovms.tar.gz
-├── ovms.tar.gz.sha256
-├── ovms.tar.xz
-└── ovms.tar.xz.sha2
+└── ovms.tar.gz.sha256
 ```
 
 
