@@ -96,7 +96,7 @@ void ModelInstance::unsubscribe(PipelineDefinition& pd) {
 static Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name, Shape& shapeOut) {
     Shape shape;
     auto mappedName = config.getMappingInputByKey(name);
-    auto inputNameToUse = (mappedName != "" ? mappedName : name);
+    const auto& inputNameToUse = (mappedName != "" ? mappedName : name);
     if (config.getBatchSize().has_value() || parameter.isBatchSizeRequested()) {
         // leave shape untouched
     } else if (config.isShapeAuto(inputNameToUse) && parameter.isShapeRequested(inputNameToUse)) {
@@ -109,7 +109,7 @@ static Status getRequestedShape(const ModelConfig& config, const DynamicModelPar
     } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
         shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
     }
-    shapeOut = shape;
+    shapeOut = std::move(shape);
     return StatusCode::OK;
 }
 
@@ -250,7 +250,7 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
             } else {
                 OV_LOGGER("input: {}, input.get_rt_info()", reinterpret_cast<const void*>(&input));
                 auto inheritedModelLayout = getLayoutFromRTMap(input.get_rt_info());
-                auto guessedModelLayout = Layout::getDefaultLayout(input.get_partial_shape().size());
+                const auto& guessedModelLayout = Layout::getDefaultLayout(input.get_partial_shape().size());
 
                 ov::Layout targetModelLayout = inheritedModelLayout.has_value() ? inheritedModelLayout.value() : ov::Layout(guessedModelLayout);
 
@@ -303,7 +303,7 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
             } else {
                 OV_LOGGER("output: {}, output.get_rt_info()", reinterpret_cast<const void*>(&output));
                 auto inheritedModelLayout = getLayoutFromRTMap(output.get_rt_info());
-                auto guessedModelLayout = Layout::getDefaultLayout(output.get_partial_shape().size());
+                const auto& guessedModelLayout = Layout::getDefaultLayout(output.get_partial_shape().size());
 
                 ov::Layout targetModelLayout = inheritedModelLayout.has_value() ? inheritedModelLayout.value() : ov::Layout(guessedModelLayout);
 

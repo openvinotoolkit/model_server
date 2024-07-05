@@ -49,9 +49,9 @@ std::string getTensorMapString(const std::map<std::string, std::shared_ptr<const
     for (const auto& pair : inputsInfo) {
         const auto& name = pair.first;
         auto inputInfo = pair.second;
-        auto precision = inputInfo->getPrecision();
-        auto layout = inputInfo->getLayout();
-        auto shape = inputInfo->getShape();
+        const auto precision = inputInfo->getPrecision();
+        const auto& layout = inputInfo->getLayout();
+        const auto& shape = inputInfo->getShape();
 
         stringStream << "\nname: " << name
                      << "; mapping: " << inputInfo->getMappedName()

@@ -21,6 +21,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <utility>
 
 #include <continuous_batching_pipeline.hpp>
 
@@ -35,7 +36,7 @@ struct LLMExecutor {
     std::shared_ptr<ContinuousBatchingPipeline> pipe = nullptr;
 
     LLMExecutor(std::shared_ptr<ContinuousBatchingPipeline> pipe) {
-        this->pipe = pipe;
+        this->pipe = std::move(pipe);
     }
 
     bool hasRequests() {
@@ -87,7 +88,7 @@ class LLMExecutorWrapper {
 
 public:
     LLMExecutorWrapper(std::shared_ptr<ContinuousBatchingPipeline> pipe) :
-        llmExecutor(pipe) {
+        llmExecutor(std::move(pipe)) {
         llmExecutorThread = std::thread(LLMExecutorWrapper::run, &llmExecutor, &finishExecutorThread);
     }
 

@@ -198,7 +198,7 @@ Status receiveAndSerializePacket<::mediapipe::Tensor>(const ::mediapipe::Packet&
 template <>
 Status receiveAndSerializePacket<ov::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
-        auto received = packet.Get<ov::Tensor>();
+        const auto& received = packet.Get<ov::Tensor>();
         auto* output = response.add_outputs();
         output->set_name(outputStreamName);
         output->set_datatype(
