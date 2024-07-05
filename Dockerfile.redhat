@@ -194,6 +194,13 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; 
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2024
 
+# update oneTBB
+RUN wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.13.0/oneapi-tbb-2021.13.0-lin.tgz && \
+tar -zxf oneapi-tbb-2021.13.0-lin.tgz && \
+rm /opt/intel/openvino/runtime/3rdparty/tbb/lib/*.so* && \
+cp -vP oneapi-tbb-2021.13.0/lib/intel64/gcc4.8/*.so* /opt/intel/openvino/runtime/3rdparty/tbb/lib/ && \
+rm -f /opt/intel/openvino/oneapi-tbb-2021.13.0-lin.tgz
+
 # install sample apps including benchmark_app
 RUN yum install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
     http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-2.2.2-1.el8.x86_64.rpm \
