@@ -135,7 +135,8 @@ def check_dir(start_dir):
         "aipc.txt",
         "internal_tests",
         "pugixml_v1.13_flags.patch",
-        "rag_demo.ipynb"
+        "rag_demo.ipynb",
+        ".bazelversion",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
@@ -221,7 +222,8 @@ def check_func(start_dir):
         'graph.pbtxt',
         "build_dependencies.sh",
         "iris_tracking.pbtxt",
-        "internal_tests"
+        "internal_tests",
+        ".bazelversion",
     ]
 
     exclude_directories = ['/dist/']
