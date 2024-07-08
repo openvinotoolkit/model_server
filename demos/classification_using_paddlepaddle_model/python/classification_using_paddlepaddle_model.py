@@ -40,8 +40,7 @@ if __name__ == "__main__":
     args = build_parser().parse_args()
 
     modelname = 'mobilenet'
-    filename = "coco.jpg"
-    test_image = image_preprocess_mobilenetv3(filename) 
+    test_image = image_preprocess_mobilenetv3(args.image_input_path) 
 
     client = make_grpc_client(f"{args.grpc_address}:{args.grpc_port}")
     input_key = next(iter(client.get_model_metadata(model_name=modelname)['inputs']))

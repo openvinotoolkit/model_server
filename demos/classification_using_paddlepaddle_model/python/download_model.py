@@ -21,3 +21,8 @@ else:
         print("Model Extracted to \"model/MobileNetV3_large_x1_0_infer\".")
     else:
         print("Error Extracting the model. Please check the network.")
+
+    os.rename('model/MobileNetV3_large_x1_0_infer', 'model/1')
+    os.remove('model/MobileNetV3_large_x1_0_infer.tar')
+    print("Workspace created")
+
