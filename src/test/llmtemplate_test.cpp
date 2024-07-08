@@ -34,49 +34,55 @@
 #include "mediapipe/framework/calculator_runner.h"
 #pragma GCC diagnostic pop
 
-#include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
 
 class LLMChatTemplateTest : public TestWithTempDir {
 private:
-    std::string tokenizerFilePath;
-    std::string jinjaFilePath;
-
-    void CreateConfig(std::string& fileContents, std::string& filePath) {
+    bool CreateConfig(std::string& fileContents, std::string& filePath) {
         std::ofstream configFile{filePath};
+        if (!configFile.is_open()) {
+            std::cout << "Failed to open " << filePath << std::endl;
+            return false;
+        }
         SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filePath, fileContents);
         configFile << fileContents << std::endl;
         configFile.close();
         if (configFile.fail()) {
             SPDLOG_INFO("Closing configFile failed");
+            return false;
         } else {
             SPDLOG_INFO("Closing configFile succeed");
         }
+
+        return true;
     }
 
 protected:
+    std::string tokenizerConfigFilePath;
+    std::string jinjaConfigFilePath;
     void SetUp() {
         py::initialize_interpreter();
         TestWithTempDir::SetUp();
-        tokenizerFilePath = directoryPath + "/tokenizer_config.json";
-        jinjaFilePath = directoryPath + "/template.jinja";
+        tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
+        jinjaConfigFilePath = directoryPath + "/template.jinja";
     }
     void TearDown() { py::finalize_interpreter(); }
 
 public:
-    void CreateTokenizerConfig(std::string& fileContents) {
-        CreateConfig(fileContents, tokenizerFilePath);
+    bool CreateTokenizerConfig(std::string& fileContents) {
+        return CreateConfig(fileContents, tokenizerConfigFilePath);
     }
-    void CreateJinjaConfig(std::string& fileContents) {
-        CreateConfig(fileContents, jinjaFilePath);
+    bool CreateJinjaConfig(std::string& fileContents) {
+        return CreateConfig(fileContents, jinjaConfigFilePath);
     }
 };
 
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
+    // default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     std::string finalPrompt = "";
@@ -89,6 +95,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
+    // default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     std::string finalPrompt = "";
@@ -104,27 +111,10 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
-TEST_F(LLMChatTemplateTest, ChatTemplateSingleMessageError) {
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
-
-    std::string finalPrompt = "";
-    std::string payloadBody = R"(
-        {
-            "model": "gpt",
-            "stream": false,
-            "messages": {"role": "user", "content": "hello"}
-        }
-    )";
-    std::string errorOutput = "This servable accepts only single message requests";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
-    ASSERT_EQ(finalPrompt, errorOutput);
-}
-
 TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
+    // default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     std::string finalPrompt = "";
@@ -141,6 +131,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
 TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
+    // default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     std::string finalPrompt = "";
@@ -157,6 +148,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
 TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
+    // default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     std::string finalPrompt = "";
@@ -174,7 +166,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
 
 TEST_F(LLMChatTemplateTest, ChatTemplateJinjaUppercase) {
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[0]['content'] | upper }} )";
-    CreateJinjaConfig(jinjaTemplate);
+    ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
@@ -194,7 +186,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaUppercase) {
 
 TEST_F(LLMChatTemplateTest, ChatTemplateJinjaException) {
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[3]['content'] | upper }} )";
-    CreateJinjaConfig(jinjaTemplate);
+    ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
@@ -207,7 +199,9 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaException) {
             "messages": [{"role": "user", "content": "hello"}]
         }
     )";
+    std::string errorOutput = "list object has no element 3";
     ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(finalPrompt, errorOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerDefault) {
@@ -215,7 +209,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerDefault) {
     "bos_token": "</s>",
     "eos_token": "</s>"
     })";
-    CreateTokenizerConfig(tokenizerJson);
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
@@ -238,7 +232,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerException) {
     "bos_token": "</s>",
     "eos_token": "</s>",
     })";
-    CreateTokenizerConfig(tokenizerJson);
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
@@ -262,7 +256,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerUpperCase) {
     "eos_token": "</s>",
     "chat_template": "{{ \"Hi, \" + messages[0]['content'] | upper }}"
     })";
-    CreateTokenizerConfig(tokenizerJson);
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
@@ -286,7 +280,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateException) {
     "eos_token": "</s>",
     "chat_template": "{{ \"Hi, \" + messages[3]['content'] | upper }}"
     })";
-    CreateTokenizerConfig(tokenizerJson);
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
@@ -304,15 +298,39 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateException) {
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
+TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateBadVariable) {
+    std::string tokenizerJson = R"({
+    "bos_token": "</s>",
+    "eos_token": "</s>",
+    "chat_template": {}
+    })";
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
+    nodeResources->modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+
+    std::string finalPrompt = "";
+    std::string payloadBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": [{"role": "user", "content": "hello"}]
+        }
+    )";
+    std::string expectedError = "Error: Chat template not loaded correctly, so it cannot be applied";
+    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(finalPrompt, expectedError);
+}
+
 TEST_F(LLMChatTemplateTest, ChatTemplateTwoConfigs) {
     std::string tokenizerJson = R"({
     "bos_token": "</s>",
     "eos_token": "</s>",
     "chat_template": "{{ \"Hi, \" + messages[0]['content'] | lower }}"
     })";
-    CreateTokenizerConfig(tokenizerJson);
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[0]['content'] | upper }} )";
-    CreateJinjaConfig(jinjaTemplate);
+    ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
 
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
