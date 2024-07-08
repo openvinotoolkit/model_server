@@ -22,7 +22,7 @@ default: setup_repository
 
 download:
 	mkdir workspace
-	docker run -u $(id -u):$(id -g) -e http_proxy=${http_proxy} -e https_proxy=${https_proxy} -e no_proxy=${no_proxy} -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu20_dev:latest omz_downloader --name ocrnet-hrnet-w48-paddle --output_dir /models
+	docker run -u $(id -u):$(id -g) -e http_proxy=${http_proxy} -e https_proxy=${https_proxy} -e no_proxy=${no_proxy} -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu20_dev:2023.3.0 omz_downloader --name ocrnet-hrnet-w48-paddle --output_dir /models
 
 setup_repository: download
 	python3 workspace/models/public/ocrnet-hrnet-w48-paddle/export.py --config workspace/models/public/ocrnet-hrnet-w48-paddle/configs/ocrnet/ocrnet_hrnetw48_cityscapes_1024x512_160k.yml --model_path workspace/models/public/ocrnet-hrnet-w48-paddle/model.pdparams --save_dir workspace/output

@@ -40,7 +40,8 @@ make
 Deploy OVMS with vehicles analysis pipeline using the following command:
 
 ```bash
-docker run -p 9000:9000 -d -v ${PWD}/model:/models openvino/model_server --port 9000 --model_path /models --model_name mobilenet --shape "(1,3,-1,-1)"
+docker run -p 9000:9000 -d -v ${PWD}/model:/models openvino/model_server --port 9000 --model_path /models --model_name ocrnet
+#docker run -p 1255:1255 -it --rm -v ${PWD}/model2:/models openvino/model_server --port 1255 --model_path /models --model_name mobilenet --shape "(1,3,-1,-1)"
 ```
 ## Requesting the Service
 
