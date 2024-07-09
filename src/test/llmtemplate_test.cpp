@@ -362,7 +362,7 @@ std::string configTemplate = R"(
             "mediapipe_config_list": [
             {
                 "name":"llmDummyKFS",
-                "graph_path":"GRAPH_PATTERN"
+                "graph_path":"<GRAPH_PATTERN>"
             }
             ]
         }
@@ -385,7 +385,7 @@ std::string graphTemplate = R"(
             }
             node_options: {
                 [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-                models_path: "MODELS_PATTERN",
+                models_path: "<MODELS_PATTERN>",
                 }
             }
             input_stream_handler {
@@ -415,9 +415,9 @@ class LLMChatTemplateHttpTest : public TestWithTempDir {
 protected:
     static std::unique_ptr<std::thread> t;
 
-    const std::string GRAPH_PATTERN = "GRAPH_PATTERN";
-    const std::string WORKSPACE_PATTERN = "MODELS_PATTERN";
-    const std::string ONE_MODEL_PATH = "/ovms/llm_testing/facebook/opt-125m";
+    const std::string GRAPH_PATTERN = "<GRAPH_PATTERN>";
+    const std::string WORKSPACE_PATTERN = "<MODELS_PATTERN>";
+    const std::string MODEL_PATH = "/ovms/llm_testing/facebook/opt-125m";
 
     std::string tokenizerConfigFilePath;
     std::string jinjaConfigFilePath;
@@ -443,14 +443,14 @@ protected:
     }
 
     void CreateSymbolicLinks() {
-        for (const auto& entry : fs::directory_iterator(ONE_MODEL_PATH)) {
-            std::filesystem::path outfilename = entry.path();
-            std::string outfilename_str = outfilename.string();
-            std::string fileName = GetFileNameFromPath(ONE_MODEL_PATH, outfilename_str);
+        for (const auto& entry : fs::directory_iterator(MODEL_PATH )) {
+            std::filesystem::path outFilename = entry.path();
+            std::string outFilenameStr = outFilename.string();
+            std::string fileName = GetFileNameFromPath(MODEL_PATH , outFilenameStr);
             SPDLOG_INFO("Filename to link {}\n", fileName);
             std::string symlinkPath = ovms::FileSystem::joinPath({directoryPath, fileName});
-            SPDLOG_INFO("Creating symlink from: {}\n to:\n{}", outfilename_str, symlinkPath);
-            fs::create_symlink(outfilename_str, symlinkPath);
+            SPDLOG_INFO("Creating symlink from: {}\n to:\n{}", outFilenameStr, symlinkPath);
+            fs::create_symlink(outFilenameStr, symlinkPath);
         }
     }
 
