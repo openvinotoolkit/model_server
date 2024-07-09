@@ -42,28 +42,6 @@
 
 using namespace ovms;
 
-class MockedServerRequestInterface final : public tensorflow::serving::net_http::ServerRequestInterface {
-public:
-    MOCK_METHOD(absl::string_view, uri_path, (), (const, override));
-    MOCK_METHOD(absl::string_view, http_method, (), (const, override));
-    MOCK_METHOD(void, WriteResponseBytes, (const char*, int64_t), (override));
-    MOCK_METHOD(void, WriteResponseString, (absl::string_view), (override));
-    MOCK_METHOD((std::unique_ptr<char[], tensorflow::serving::net_http::ServerRequestInterface::BlockDeleter>), ReadRequestBytes, (int64_t*), (override));
-    MOCK_METHOD(absl::string_view, GetRequestHeader, (absl::string_view), (const, override));
-    MOCK_METHOD((std::vector<absl::string_view>), request_headers, (), (const, override));
-    MOCK_METHOD(void, OverwriteResponseHeader, (absl::string_view, absl::string_view), (override));
-    MOCK_METHOD(void, AppendResponseHeader, (absl::string_view, absl::string_view), (override));
-    MOCK_METHOD(void, PartialReplyWithStatus, (tensorflow::serving::net_http::HTTPStatusCode), (override));
-    MOCK_METHOD(void, PartialReply, (std::string), (override));
-    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::CallbackStatus, PartialReplyWithFlushCallback, ((std::function<void()>)), (override));
-    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, response_body_status, (), (override));
-    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, request_body_status, (), (override));
-    MOCK_METHOD(void, ReplyWithStatus, (tensorflow::serving::net_http::HTTPStatusCode), (override));
-    MOCK_METHOD(void, Reply, (), (override));
-    MOCK_METHOD(void, Abort, (), (override));
-    MOCK_METHOD(void, PartialReplyEnd, (), (override));
-};
-
 class LLMChatTemplateTest : public TestWithTempDir {
 private:
     bool CreateConfig(std::string& fileContents, std::string& filePath) {
@@ -408,7 +386,6 @@ std::string graphTemplate = R"(
             node_options: {
                 [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
                 models_path: "MODELS_PATTERN",
-                plugin_config: "{\"INFERENCE_PRECISION_HINT\":\"f32\"}"
                 }
             }
             input_stream_handler {
@@ -422,6 +399,15 @@ std::string graphTemplate = R"(
             }
             }
     })";
+
+class CleanupFilesGuard {
+
+public:
+    CleanupFilesGuard(){}
+    ~CleanupFilesGuard() {
+        ovmsServer.shutdownModules();
+    }
+};
 
 class LLMChatTemplateHttpTest : public TestWithTempDir {
 protected:
