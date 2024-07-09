@@ -329,7 +329,6 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
     this->mgconfig = config;
     this->pythonNodeResourcesMap.clear();
     this->llmNodeResourcesMap.clear();
-
     return validate(manager);
 }
 

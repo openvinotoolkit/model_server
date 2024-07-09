@@ -49,9 +49,6 @@ bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std
         std::string result = locals["output"].cast<std::string>();
         std::string error = locals["error"].cast<std::string>();
 
-        LOG(INFO) << std::endl
-                  << "################ APPLY result :" << result << std::endl;
-
         if (error != "") {
             output = error;
             return false;

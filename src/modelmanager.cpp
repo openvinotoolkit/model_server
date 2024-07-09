@@ -943,7 +943,6 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
     // models from ovms config
 #if (MEDIAPIPE_DISABLE == 0)
     std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
-
     status = parseMediapipeConfig(configJson, this->rootDirectoryPath, mediapipesInConfigFile);
     if (!status.ok()) {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
