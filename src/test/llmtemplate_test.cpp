@@ -24,12 +24,12 @@
 #include <pybind11/embed.h>
 
 #include "../filesystem.hpp"
+#include "../http_rest_api_handler.hpp"
+#include "../httpservermodule.hpp"
 #include "../llm/http_payload.hpp"
 #include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../http_rest_api_handler.hpp"
-#include "../httpservermodule.hpp"
 #include "../server.hpp"
 
 #pragma GCC diagnostic push
@@ -94,9 +94,9 @@ protected:
         tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
         jinjaConfigFilePath = directoryPath + "/template.jinja";
     }
-    void TearDown() { 
+    void TearDown() {
         TestWithTempDir::TearDown();
-        py::finalize_interpreter(); 
+        py::finalize_interpreter();
     }
 
 public:
@@ -424,26 +424,6 @@ std::string graphTemplate = R"(
     })";
 
 class LLMChatTemplateHttpTest : public TestWithTempDir {
-private:
-    bool CreateConfig(std::string& fileContents, std::string& filePath) {
-        std::ofstream configFile{filePath};
-        if (!configFile.is_open()) {
-            std::cout << "Failed to open " << filePath << std::endl;
-            return false;
-        }
-        SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filePath, fileContents);
-        configFile << fileContents << std::endl;
-        configFile.close();
-        if (configFile.fail()) {
-            SPDLOG_INFO("Closing configFile failed");
-            return false;
-        } else {
-            SPDLOG_INFO("Closing configFile succeed");
-        }
-
-        return true;
-    }
-
 protected:
     static std::unique_ptr<std::thread> t;
 
@@ -462,7 +442,7 @@ protected:
         return fileName;
     }
 
-    bool CreateConfigFile(const std::string& graphPath){
+    bool CreateConfigFile(const std::string& graphPath) {
         std::string configContents = configTemplate;
         configContents.replace(configContents.find(GRAPH_PATTERN), std::string(GRAPH_PATTERN).size(), graphPath);
         return CreateConfig(configContents, ovmsConfigFilePath);
@@ -487,11 +467,23 @@ protected:
     }
 
 public:
-    bool CreateTokenizerConfig(std::string& fileContents) {
-        return CreateConfig(fileContents, tokenizerConfigFilePath);
-    }
-    bool CreateJinjaConfig(std::string& fileContents) {
-        return CreateConfig(fileContents, jinjaConfigFilePath);
+    bool CreateConfig(std::string& fileContents, std::string& filePath) {
+        std::ofstream configFile{filePath};
+        if (!configFile.is_open()) {
+            std::cout << "Failed to open " << filePath << std::endl;
+            return false;
+        }
+        SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filePath, fileContents);
+        configFile << fileContents << std::endl;
+        configFile.close();
+        if (configFile.fail()) {
+            SPDLOG_INFO("Closing configFile failed");
+            return false;
+        } else {
+            SPDLOG_INFO("Closing configFile succeed");
+        }
+
+        return true;
     }
 
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
@@ -505,7 +497,6 @@ public:
     ovms::HttpResponseComponents responseComponents;
 
     void SetUp() {
-        TestWithTempDir::SetUp();
         tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
         jinjaConfigFilePath = directoryPath + "/template.jinja";
         ovmsConfigFilePath = directoryPath + "/ovms_config.json";
@@ -537,7 +528,14 @@ public:
 };
 std::unique_ptr<std::thread> LLMChatTemplateHttpTest::t;
 
-TEST_F(LLMChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
+class LLMDefaultChatTemplateHttpTest : public LLMChatTemplateHttpTest {
+    void SetUp() {
+        TestWithTempDir::SetUp();
+        LLMChatTemplateHttpTest::SetUp();
+    }
+};
+
+TEST_F(LLMDefaultChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -566,13 +564,15 @@ TEST_F(LLMChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
 
 class LLMJinjaChatTemplateHttpTest : public LLMChatTemplateHttpTest {
     void SetUp() {
-        std::string jinjaTemplate = R"( {{ "JINJA:" + messages[0]['content'] | upper }} )";
-        CreateJinjaConfig(jinjaTemplate);
+        TestWithTempDir::SetUp();
+        jinjaConfigFilePath = directoryPath + "/template.jinja";
+        std::string jinjaTemplate = R"({{"What is OpenVINO" + messages[0]['content']}})";
+        ASSERT_EQ(CreateConfig(jinjaTemplate, jinjaConfigFilePath), true);
         LLMChatTemplateHttpTest::SetUp();
     }
 };
 
-TEST_F(LLMJinjaChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
+TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsUnary) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -582,7 +582,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
             "messages": [
             {
                 "role": "user",
-                "content": "What is OpenVINO?"
+                "content": "?"
             }
             ]
         }
@@ -597,4 +597,71 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
     std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"chat.completion"})";
     ASSERT_EQ(response.compare(0, expectedResponsePart1.length(), expectedResponsePart1), 0);
     ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
+}
+
+TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsUnary) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    // Assertion split in two parts to avoid timestamp missmatch
+    const size_t timestampLength = 10;
+    std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"text":"\n\nThe first thing"}],"created":)";
+    std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"text_completion"})";
+    ASSERT_EQ(response.compare(0, expectedResponsePart1.length(), expectedResponsePart1), 0);
+    ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
+}
+
+TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "?"
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(3);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(response, "");
+}
+
+TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "?"
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(5);
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(response, "");
 }
