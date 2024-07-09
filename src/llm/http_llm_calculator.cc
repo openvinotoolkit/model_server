@@ -385,8 +385,9 @@ public:
             if (lastSpacePos == std::string::npos || lastSpacePos < printLen) {
                 return std::nullopt;
             }
-            std::string chunk = std::string{text.data() + printLen, lastSpacePos - printLen + 1};
-            printLen = lastSpacePos + 1;
+            std::string chunk = std::string{text.data() + printLen, text.size() - printLen + 1};
+            tokenCache.clear();
+            printLen = 0;
             return chunk;
         }
         return std::nullopt;
