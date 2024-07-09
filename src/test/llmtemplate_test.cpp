@@ -401,11 +401,13 @@ std::string graphTemplate = R"(
     })";
 
 class CleanupFilesGuard {
+    const std::string& pathToClean;
 
 public:
-    CleanupFilesGuard(){}
+    CleanupFilesGuard(const std::string& pathToClean) :
+        pathToClean(pathToClean) {}
     ~CleanupFilesGuard() {
-        ovmsServer.shutdownModules();
+        std::filesystem::remove_all(pathToClean);
     }
 };
 
@@ -522,6 +524,7 @@ class LLMDefaultChatTemplateHttpTest : public LLMChatTemplateHttpTest {
 };
 
 TEST_F(LLMDefaultChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
+    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -559,6 +562,7 @@ class LLMJinjaChatTemplateHttpTest : public LLMChatTemplateHttpTest {
 };
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsUnary) {
+    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -586,6 +590,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsUnary) {
 }
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsUnary) {
+    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -608,6 +613,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsUnary) {
 }
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
+    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -633,6 +639,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
 }
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
+    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
