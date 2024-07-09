@@ -443,10 +443,10 @@ protected:
     }
 
     void CreateSymbolicLinks() {
-        for (const auto& entry : fs::directory_iterator(MODEL_PATH )) {
+        for (const auto& entry : fs::directory_iterator(MODEL_PATH)) {
             std::filesystem::path outFilename = entry.path();
             std::string outFilenameStr = outFilename.string();
-            std::string fileName = GetFileNameFromPath(MODEL_PATH , outFilenameStr);
+            std::string fileName = GetFileNameFromPath(MODEL_PATH, outFilenameStr);
             SPDLOG_INFO("Filename to link {}\n", fileName);
             std::string symlinkPath = ovms::FileSystem::joinPath({directoryPath, fileName});
             SPDLOG_INFO("Creating symlink from: {}\n to:\n{}", outFilenameStr, symlinkPath);
