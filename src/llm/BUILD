@@ -93,10 +93,12 @@ cc_library(
 
 cc_library(
     name = "httppayload",
-    srcs = ["http_payload.hpp",],
+    hdrs = ["http_payload.hpp"],
+    srcs = ["http_payload.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
-    ],
+        ":llmnoderesources",
+    ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,

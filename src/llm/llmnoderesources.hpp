@@ -40,6 +40,7 @@ class LLMExecutorWrapper;
 
 using plugin_config_t = std::map<std::string, ov::Any>;
 
+#pragma GCC visibility push(hidden)
 struct TextProcessor {
     std::string bosToken = "";
     std::string eosToken = "";
@@ -56,6 +57,7 @@ public:
     TextProcessor textProcessor;
 
     static Status createLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
+    static void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources, const std::string& chatTemplateDirectory);
 
     LLMNodeResources(const LLMNodeResources&) = delete;
     LLMNodeResources& operator=(LLMNodeResources&) = delete;
@@ -69,5 +71,7 @@ private:
     std::unique_ptr<LLMExecutorWrapper> llmExecutorWrapper;
     static std::unordered_map<std::string, std::string> prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath);
 };
+#pragma GCC visibility pop
 using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;
+
 }  // namespace ovms
