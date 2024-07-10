@@ -25,7 +25,7 @@ ${debug_bazel_flags} \
 --test_env PYTHONPATH=${PYTHONPATH}"
 test_success_procedure() {
     grep -a " ms \| ms)" ${TEST_LOG}
-    tail -1000 ${TEST_LOG}
+    tail -50 ${TEST_LOG}
 }
 generate_coverage_report() {
     test_success_procedure
@@ -47,7 +47,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
     fi
     { bazel test \
         ${SHARED_OPTIONS} "${TEST_FILTER}" \
-        //src:ovms_test --test_filter="*LLMJinjaChatTemplateHttpTest.inferCompletions*" ${BAZEL_OPTIONS} > ${TEST_LOG} 2>&1 || \
+        //src:ovms_test ${BAZEL_OPTIONS} > ${TEST_LOG} 2>&1 || \
         test_fail_procedure; } && \
         test_success_procedure && \
         rm -rf ${TEST_LOG};
