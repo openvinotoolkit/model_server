@@ -38,6 +38,11 @@
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
+// TODO
+#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+
+#include "openvino/runtime/remote_tensor.hpp"
+
 namespace ovms {
 class MetricRegistry;
 class ModelInstanceUnloadGuard;
@@ -98,6 +103,8 @@ protected:
          */
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
+    cl_context ocl_context;
+    std::unique_ptr<ov::intel_gpu::ocl::ClContext> ocl_context_cpp;
     /**
          * @brief Model name
          */
@@ -573,6 +580,9 @@ public:
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* requestProto,
         ResponseType* responseProto,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+    template <typename RequestType, typename ResponseType>
+    Status inferAsync(const RequestType* requestProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }

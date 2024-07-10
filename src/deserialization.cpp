@@ -16,6 +16,7 @@
 #include "deserialization.hpp"
 
 #include "capi_frontend/buffer.hpp"
+#include "itensorfactory.hpp"
 #include "logging.hpp"
 
 namespace ovms {
@@ -39,11 +40,10 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
         SPDLOG_DEBUG("{}: {}", status.string(), e.what());
         return status;
     }
-
     return status;
 }
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo, IOVTensorFactory* factory) {
     OVMS_PROFILE_FUNCTION();
     OV_LOGGER("ov::Shape()");
     ov::Shape shape;
@@ -57,7 +57,19 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
         return ov::Tensor(precision, shape);
     }
     OV_LOGGER("ov::Tensor({}, shape, data)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
-    return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
+    if (requestInput.getBuffer()->getBufferType() == OVMS_BUFFERTYPE_CPU) {
+        return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
+    } else {
+        // TODO FIXME check ptr
+        //       return factory->create(precision, shape, requestInput.getBuffer()->data());
+        if (!factory) {
+            SPDLOG_DEBUG("Tried to use empty tensor factory");
+            return ov::Tensor();
+        }
+        auto t = factory->create(precision, shape, requestInput.getBuffer()->data());
+        return t;
+        // TODO instead of context pass in factory of tensors
+    }
 }
 
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
@@ -111,4 +123,37 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     ov::Tensor tensor(precision, shape);
     return tensor;
 }
+
+template <>
+bool specifiesOutputs(const InferenceRequest& request) {
+    return true;  // TODO FIXME
+}
+
+template <>
+Status getTensor(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
+    return request.getInput(name.c_str(), tensor);
+}
+
+template <>
+class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, true> {
+public:
+    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor);
+};
+// TODO why we need this defined outside class? Linking issues otherwise
+Status RequestTensorExtractor<InferenceRequest, const InferenceTensor**, true>::extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
+    SPDLOG_TRACE("Extracting output: {}", name);
+    return request.getOutput(name.c_str(), tensor);
+}
+
+template <>
+class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, false> {
+public:
+    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
+        SPDLOG_TRACE("Extracting input", name);
+        return request.getInput(name.c_str(), tensor);
+    };
+};
+
+template class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, false>;
+template class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, true>;
 }  // namespace ovms
