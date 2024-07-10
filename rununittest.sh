@@ -25,7 +25,7 @@ ${debug_bazel_flags} \
 --test_env PYTHONPATH=${PYTHONPATH}"
 test_success_procedure() {
     grep -a " ms \| ms)" ${TEST_LOG}
-    tail -200 ${TEST_LOG}
+    tail -1000 ${TEST_LOG}
 }
 generate_coverage_report() {
     test_success_procedure
