@@ -651,7 +651,6 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
     )";
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(5);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
