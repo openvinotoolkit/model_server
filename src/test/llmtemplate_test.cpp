@@ -634,15 +634,15 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     EXPECT_CALL(writer, PartialReply(::testing::_))
-        .WillRepeatedly([](std::string response){ 
+        .WillRepeatedly([](std::string response) {
             rapidjson::Document responseJson;
             const int dataHeaderSize = 6;
             std::string jsonResponse = response.substr(dataHeaderSize);
             rapidjson::ParseResult ok = responseJson.Parse(jsonResponse.c_str());
-            if (response.find("[DONE]") == std::string::npos){
+            if (response.find("[DONE]") == std::string::npos) {
                 ASSERT_EQ(ok.Code(), 0);
                 auto m = responseJson.FindMember("choices");
-                ASSERT_NE(m , responseJson.MemberEnd());
+                ASSERT_NE(m, responseJson.MemberEnd());
                 auto& choices = m->value.GetArray()[0];
                 auto modelOutput = choices.GetObject()["text"].GetString();
                 ConcatenateResponse(modelOutput);
@@ -656,7 +656,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
 
     ASSERT_EQ(response, "");
 
-    ASSERT_EQ(fullResponse, "\n\nThe first thing ");  
+    ASSERT_EQ(fullResponse, "\n\nThe first thing ");
 }
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
@@ -673,15 +673,15 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     EXPECT_CALL(writer, PartialReply(::testing::_))
-        .WillRepeatedly([](std::string response){ 
+        .WillRepeatedly([](std::string response) {
             rapidjson::Document responseJson;
             const int dataHeaderSize = 6;
             std::string jsonResponse = response.substr(dataHeaderSize);
             rapidjson::ParseResult ok = responseJson.Parse(jsonResponse.c_str());
-            if (response.find("[DONE]") == std::string::npos){
+            if (response.find("[DONE]") == std::string::npos) {
                 ASSERT_EQ(ok.Code(), 0);
                 auto m = responseJson.FindMember("choices");
-                ASSERT_NE(m , responseJson.MemberEnd());
+                ASSERT_NE(m, responseJson.MemberEnd());
                 auto& choices = m->value.GetArray()[0];
                 auto modelOutput = choices.GetObject()["text"].GetString();
                 ConcatenateResponse(modelOutput);
@@ -695,5 +695,5 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
 
     ASSERT_EQ(response, "");
 
-    ASSERT_EQ(fullResponse, "\n\nThe first thing ");  
+    ASSERT_EQ(fullResponse, "\n\nThe first thing ");
 }
