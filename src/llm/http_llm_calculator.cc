@@ -730,10 +730,8 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
         }
         writer.EndObject();  // }
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        if (!stop) {
-            writer.String("text");
-            writer.String(chunkResponse.c_str());
-        }
+        writer.String("text");
+        writer.String(chunkResponse.c_str());
     }
     // TODO: tools_call
     // TODO: function_call (deprecated)

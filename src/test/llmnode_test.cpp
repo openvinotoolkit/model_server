@@ -57,6 +57,7 @@
 #pragma GCC diagnostic pop
 
 #include "opencv2/opencv.hpp"
+#include "rapidjson/document.h"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -135,6 +136,143 @@ std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 // TODO: Test bad message or sampling configuration that would cause errors in add_request() phase. Need to replace hardcoded generation config
 // with user defined one to do that.
 // TODO: Consider stress testing - exisitng model server under heavy load to check notifications work us expected.
+//
+
+TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "best_of": 16,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    d.Parse(response.c_str());
+    ASSERT_TRUE(d["choices"].IsArray());
+    ASSERT_EQ(d["choices"].Capacity(), 16);
+    int i = 0;
+    for (auto& choice : d["choices"].GetArray()) {
+        ASSERT_EQ(choice["finish_reason"], "stop");
+        ASSERT_EQ(choice["index"], i++);
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["text"].IsString());
+    }
+    ASSERT_EQ(d["model"], "llmDummyKFS");
+    ASSERT_EQ(d["object"], "text_completion");
+}
+
+TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "best_of": 16,
+            "n": 8,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    d.Parse(response.c_str());
+    ASSERT_TRUE(d["choices"].IsArray());
+    ASSERT_EQ(d["choices"].Capacity(), 16);
+    int i = 0;
+    for (auto& choice : d["choices"].GetArray()) {
+        ASSERT_EQ(choice["finish_reason"], "stop");
+        ASSERT_EQ(choice["index"], i++);
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["text"].IsString());
+    }
+    ASSERT_EQ(d["model"], "llmDummyKFS");
+    ASSERT_EQ(d["object"], "text_completion");
+}
+
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "best_of" : 16,
+            "n" : 8,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    d.Parse(response.c_str());
+    ASSERT_TRUE(d["choices"].IsArray());
+    ASSERT_EQ(d["choices"].Capacity(), 16);
+    int i = 0;
+    for (auto& choice : d["choices"].GetArray()) {
+        ASSERT_EQ(choice["finish_reason"], "stop");
+        ASSERT_EQ(choice["index"], i++);
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        ASSERT_EQ(choice["message"]["role"], "assistant");
+    }
+    ASSERT_EQ(d["model"], "llmDummyKFS");
+    ASSERT_EQ(d["object"], "chat.completion");
+}
+
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "best_of" : 16,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    d.Parse(response.c_str());
+    ASSERT_TRUE(d["choices"].IsArray());
+    ASSERT_EQ(d["choices"].Capacity(), 16);
+    int i = 0;
+    for (auto& choice : d["choices"].GetArray()) {
+        ASSERT_EQ(choice["finish_reason"], "stop");
+        ASSERT_EQ(choice["index"], i++);
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        ASSERT_EQ(choice["message"]["role"], "assistant");
+    }
+    ASSERT_EQ(d["model"], "llmDummyKFS");
+    ASSERT_EQ(d["object"], "chat.completion");
+}
 
 TEST_F(LLMFlowHttpTest, inferChatCompletionsUnary) {
     std::string requestBody = R"(
