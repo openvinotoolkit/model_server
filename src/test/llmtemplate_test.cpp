@@ -22,6 +22,7 @@
 #include <gtest/gtest.h>
 #include <openvino/openvino.hpp>
 #include <pybind11/embed.h>
+#include <rapidjson/error/en.h>
 
 #include "../filesystem.hpp"
 #include "../http_rest_api_handler.hpp"
@@ -551,8 +552,15 @@ TEST_F(LLMDefaultChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
     ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
 }
 
+std::string fullResponse;
+
+static void ConcatenateResponse(const std::string& partial) {
+    fullResponse += partial;
+}
+
 class LLMJinjaChatTemplateHttpTest : public LLMChatTemplateHttpTest {
     void SetUp() {
+        fullResponse = "";
         TestWithTempDir::SetUp();
         jinjaConfigFilePath = directoryPath + "/template.jinja";
         std::string jinjaTemplate = R"({{"What is OpenVINO" + messages[0]['content']}})";
@@ -619,23 +627,36 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
             "model": "llmDummyKFS",
             "stream": true,
             "seed" : 1,
-            "max_tokens": 5,
-            "messages": [
-            {
-                "role": "user",
-                "content": "?"
-            }
-            ]
+            "max_tokens": 6,
+            "prompt": "?"
         }
     )";
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(3);
+    EXPECT_CALL(writer, PartialReply(::testing::_))
+        .WillRepeatedly([](std::string response){ 
+            rapidjson::Document responseJson;
+            const int dataHeaderSize = 6;
+            std::string jsonResponse = response.substr(dataHeaderSize);
+            rapidjson::ParseResult ok = responseJson.Parse(jsonResponse.c_str());
+            if (response.find("[DONE]") == std::string::npos){
+                ASSERT_EQ(ok.Code(), 0);
+                auto m = responseJson.FindMember("choices");
+                ASSERT_NE(m , responseJson.MemberEnd());
+                auto& choices = m->value.GetArray()[0];
+                auto modelOutput = choices.GetObject()["text"].GetString();
+                ConcatenateResponse(modelOutput);
+            }
+        });
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
+
     ASSERT_EQ(response, "");
+
+    ASSERT_EQ(fullResponse, "\n\nThe first thing ");  
 }
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
@@ -645,15 +666,34 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
             "model": "llmDummyKFS",
             "stream": true,
             "seed" : 1,
-            "max_tokens": 5,
+            "max_tokens": 6,
             "prompt": "?"
         }
     )";
 
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply(::testing::_))
+        .WillRepeatedly([](std::string response){ 
+            rapidjson::Document responseJson;
+            const int dataHeaderSize = 6;
+            std::string jsonResponse = response.substr(dataHeaderSize);
+            rapidjson::ParseResult ok = responseJson.Parse(jsonResponse.c_str());
+            if (response.find("[DONE]") == std::string::npos){
+                ASSERT_EQ(ok.Code(), 0);
+                auto m = responseJson.FindMember("choices");
+                ASSERT_NE(m , responseJson.MemberEnd());
+                auto& choices = m->value.GetArray()[0];
+                auto modelOutput = choices.GetObject()["text"].GetString();
+                ConcatenateResponse(modelOutput);
+            }
+        });
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
+
     ASSERT_EQ(response, "");
+
+    ASSERT_EQ(fullResponse, "\n\nThe first thing ");  
 }
