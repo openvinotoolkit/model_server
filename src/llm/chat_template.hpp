@@ -16,18 +16,14 @@
 #pragma once
 
 #include <string>
-#include <utility>
-#include <vector>
 
-#include <rapidjson/document.h>
+// Python execution for template processing
+#include <pybind11/embed.h>  // everything needed for embedding
+#include <pybind11/stl.h>
 
 namespace ovms {
+class TextProcessor;
 
-struct HttpPayload {
-    std::string uri;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::string body;                 // always
-    rapidjson::Document* parsedJson;  // pre-parsed body             = null
-};
+bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output);
 
 }  // namespace ovms

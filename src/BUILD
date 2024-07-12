@@ -359,6 +359,7 @@ cc_library(
                 # Jinja template processing is done in Python
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
+                "//src/llm:chat_template",
             ],
             "//:disable_python": []
         }) + [

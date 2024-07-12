@@ -50,6 +50,7 @@ cc_library(
         ":llm_engine",
         ":llmnoderesources",
         ":httppayload",
+        ":chat_template",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
@@ -94,9 +95,20 @@ cc_library(
 cc_library(
     name = "httppayload",
     hdrs = ["http_payload.hpp"],
-    srcs = ["http_payload.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+    ],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "chat_template",
+    hdrs = ["chat_template.hpp"],
+    srcs = ["chat_template.cpp"],
+    deps = [
         ":llmnoderesources",
     ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],

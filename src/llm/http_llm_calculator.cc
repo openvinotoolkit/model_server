@@ -33,6 +33,7 @@
 
 #include "../profiler.hpp"
 #include "../stringutils.hpp"
+#include "chat_template.hpp"
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
 
