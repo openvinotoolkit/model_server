@@ -168,6 +168,23 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
     ASSERT_EQ(d["object"], "text_completion");
 }
 
+TEST_F(LLMFlowHttpTest, unaryCompletionsJsonNFail) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "best_of": 2,
+            "n": 3,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
 TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
     std::string requestBody = R"(
         {
@@ -197,6 +214,29 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
     }
     ASSERT_EQ(d["model"], "llmDummyKFS");
     ASSERT_EQ(d["object"], "text_completion");
+}
+
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonNFail) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "best_of" : 2,
+            "n" : 3,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
