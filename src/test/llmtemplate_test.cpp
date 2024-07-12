@@ -96,7 +96,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
 
     std::string finalPrompt = "";
     std::string payloadBody = "";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
     std::string errorOutput = "Expecting value: line 1 column 1 (char 0)";
     ASSERT_EQ(finalPrompt, errorOutput);
 }
@@ -116,7 +116,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
         }
     )";
     std::string errorOutput = "list object has no element 0";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
@@ -133,7 +133,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
         }
     )";
     std::string expectedOutput = "How can I help you?";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -150,7 +150,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
         }
     )";
     std::string errorOutput = "This servable accepts only single message requests";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
@@ -169,7 +169,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
         }
     )";
     std::string expectedOutput = "hello";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -189,7 +189,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaUppercase) {
         }
     )";
     std::string expectedOutput = " Hi, HELLO ";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -209,7 +209,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaException) {
         }
     )";
     std::string errorOutput = "list object has no element 3";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
@@ -232,7 +232,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerDefault) {
         }
     )";
     std::string expectedOutput = "hello";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -255,7 +255,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerException) {
         }
     )";
     std::string expectedOutput = "Error: Chat template not loaded correctly, so it cannot be applied";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -279,7 +279,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerUpperCase) {
         }
     )";
     std::string expectedOutput = "Hi, HELLO";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -303,7 +303,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateException) {
         }
     )";
     std::string expectedOutput = "list object has no element 3";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -327,7 +327,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateBadVariable) {
         }
     )";
     std::string expectedError = "Error: Chat template not loaded correctly, so it cannot be applied";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, expectedError);
 }
 
@@ -354,7 +354,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTwoConfigs) {
         }
     )";
     std::string expectedOutput = " Hi, HELLO ";
-    ASSERT_EQ(applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 

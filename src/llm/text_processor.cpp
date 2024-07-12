@@ -17,7 +17,10 @@
 
 #include <string>
 
-#include <spdlog/spdlog.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/calculator_framework.h"
+#pragma GCC diagnostic pop
 
 // Python execution for template processing
 #include <pybind11/embed.h>  // everything needed for embedding

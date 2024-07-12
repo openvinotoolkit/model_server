@@ -33,6 +33,7 @@
 #include <pybind11/stl.h>
 
 #include "src/python/utils.hpp"
+#include "text_processor.hpp"
 
 namespace ovms {
 class Status;
