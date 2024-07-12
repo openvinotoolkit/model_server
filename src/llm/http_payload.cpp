@@ -17,14 +17,17 @@
 
 #include <string>
 
+#if (PYTHON_DISABLE == 0)
 // Python execution for template processing
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
+#endif
 
 #include "llmnoderesources.hpp"
 
 namespace ovms {
 
+#if (PYTHON_DISABLE == 0)
 bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
     if (textProcessor.chatTemplate == nullptr) {
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
@@ -65,5 +68,6 @@ bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std
     }
     return false;
 }
+#endif
 
 }  // namespace ovms

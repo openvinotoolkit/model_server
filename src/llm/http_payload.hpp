@@ -21,9 +21,11 @@
 
 #include <rapidjson/document.h>
 
+#if (PYTHON_DISABLE == 0)
 // Python execution for template processing
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
+#endif
 
 namespace ovms {
 class TextProcessor;
@@ -35,6 +37,7 @@ struct HttpPayload {
     rapidjson::Document* parsedJson;  // pre-parsed body             = null
 };
 
+#if (PYTHON_DISABLE == 0)
 bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output);
-
+#endif
 }  // namespace ovms
