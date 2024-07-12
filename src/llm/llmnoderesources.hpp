@@ -41,11 +41,6 @@ class LLMExecutorWrapper;
 using plugin_config_t = std::map<std::string, ov::Any>;
 
 #pragma GCC visibility push(hidden)
-struct TextProcessor {
-    std::string bosToken = "";
-    std::string eosToken = "";
-    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
-};
 
 struct LLMNodeResources {
 public:

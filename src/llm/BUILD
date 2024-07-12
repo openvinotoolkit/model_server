@@ -50,7 +50,7 @@ cc_library(
         ":llm_engine",
         ":llmnoderesources",
         ":httppayload",
-        ":chat_template",
+        ":text_processor",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
@@ -105,9 +105,9 @@ cc_library(
 )
 
 cc_library(
-    name = "chat_template",
-    hdrs = ["chat_template.hpp"],
-    srcs = ["chat_template.cpp"],
+    name = "text_processor",
+    hdrs = ["text_processor.hpp"],
+    srcs = ["text_processor.cpp"],
     deps = [
         ":llmnoderesources",
     ] + PYBIND_DEPS,

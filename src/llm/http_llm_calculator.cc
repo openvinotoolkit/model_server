@@ -33,9 +33,9 @@
 
 #include "../profiler.hpp"
 #include "../stringutils.hpp"
-#include "chat_template.hpp"
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
+#include "text_processor.hpp"
 
 // Python execution for template processing
 #include <pybind11/embed.h>  // everything needed for embedding

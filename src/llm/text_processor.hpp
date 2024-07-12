@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
 #include <string>
 
 // Python execution for template processing
@@ -22,8 +23,14 @@
 #include <pybind11/stl.h>
 
 namespace ovms {
-class TextProcessor;
 
-bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output);
+class TextProcessor {
+public:
+    std::string bosToken = "";
+    std::string eosToken = "";
+    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
+
+    static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output);
+};
 
 }  // namespace ovms
