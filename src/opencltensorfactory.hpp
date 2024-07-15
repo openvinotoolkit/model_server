@@ -16,30 +16,22 @@
 #pragma once
 
 #include <openvino/openvino.hpp>
+#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
 
 #include "itensorfactory.hpp"
-#include "logging.hpp"
 namespace ovms {
 
 class OpenCLTensorFactory : public IOVTensorFactory {
     ov::intel_gpu::ocl::ClContext& ovOclContext;
 
 public:
-    OpenCLTensorFactory(ov::intel_gpu::ocl::ClContext& ovOclContext) :
-        ovOclContext(ovOclContext) {
-    }
+    OpenCLTensorFactory(ov::intel_gpu::ocl::ClContext& ovOclContext);
 
     /**
      * Create tensor and intepret data ptr appropiately depending on the
      * factory type.
      */
-    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) override {
-        SPDLOG_TRACE("create ov::Tensor from context with buffer: {}", data);  // TODO OVTRACING
-        return ovOclContext.create_tensor(type, shape, *(reinterpret_cast<const cl::Buffer*>(data)));
-    }
-    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) override {
-        // FIXME TODO
-        return ov::Tensor(type, shape);
-    }
+    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) override;
+    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) override;
 };
 }  // namespace ovms

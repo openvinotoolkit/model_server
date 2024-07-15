@@ -4,7 +4,7 @@
                 "name": "dummy",
                 "base_path": "/ovms/src/test/dummy",
                 "shape": "(1, 10)",
-                "target_device": "CPU"
+                "target_device": "GPU"
         	}
 	}
     ]

@@ -17,16 +17,16 @@
 
 #include <openvino/openvino.hpp>
 
-#include "capi_frontend/buffer.hpp"
+#include "itensorfactory.hpp"
 namespace ovms {
-
-class IOVTensorFactory {
+class RegularOVTensorFactory : public IOVTensorFactory {
 public:
+    RegularOVTensorFactory() = default;
     /**
      * Create tensor and intepret data ptr appropiately depending on the
      * factory type.
      */
-    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) = 0;
-    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) = 0;
+    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) override;
+    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) override;
 };
 }  // namespace ovms

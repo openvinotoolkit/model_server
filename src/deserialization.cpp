@@ -45,8 +45,8 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo, IOVTensorFactory* factory) {
     OVMS_PROFILE_FUNCTION();
-    OV_LOGGER("ov::Shape()");
     ov::Shape shape;
+    OV_LOGGER("ov::Shape(): {}", (void*)&shape);
     for (const auto& dim : requestInput.getShape()) {
         OV_LOGGER("ov::Shape::push_back({})", dim);
         shape.push_back(dim);
@@ -56,8 +56,8 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
         OV_LOGGER("ov::Tensor({}, shape)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
         return ov::Tensor(precision, shape);
     }
-    OV_LOGGER("ov::Tensor({}, shape, data)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
     if (requestInput.getBuffer()->getBufferType() == OVMS_BUFFERTYPE_CPU) {
+        OV_LOGGER("ov::Tensor({}, shape, data:{})", toString(ovms::ovElementTypeToOvmsPrecision(precision)), const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
         return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
     } else {
         // TODO FIXME check ptr
@@ -68,7 +68,7 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
         }
         SPDLOG_ERROR("ER");
         auto t = factory->create(precision, shape, requestInput.getBuffer()->data());
-        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER:{}", (void*)&t);
         return t;
         // TODO instead of context pass in factory of tensors
     }
