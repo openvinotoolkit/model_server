@@ -31,9 +31,4 @@ ov::Tensor OpenCLTensorFactory::create(ov::element::Type_t type, const ov::Shape
     OV_LOGGER("ov::intel_gpu::ocl::ClContext: {}, ov::intel_gpu::ocl::ClContext::create_tensor(type:{}, shape:{}, data:{})", (void*)&ovOclContext, type, (void*)&shape, data);
     return ovOclContext.create_tensor(type, shape, *(reinterpret_cast<const cl::Buffer*>(data)));
 }
-ov::Tensor OpenCLTensorFactory::create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) {
-    // FIXME TODO
-    OV_LOGGER("ov::Tensor({}, shape:{})", type, (void*)&shape);
-    return ov::Tensor(type, shape);
-}
 }  // namespace ovms

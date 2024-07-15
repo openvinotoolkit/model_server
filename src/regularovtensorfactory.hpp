@@ -27,6 +27,5 @@ public:
      * factory type.
      */
     virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) override;
-    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) override;
 };
 }  // namespace ovms
