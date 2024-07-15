@@ -13,20 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#include "regularovtensorfactory.hpp"
 
 #include <openvino/openvino.hpp>
 
-#include "capi_frontend/buffer.hpp"
+#include "logging.hpp"
 namespace ovms {
-
-class IOVTensorFactory {
-public:
-    /**
-     * Create tensor and intepret data ptr appropiately depending on the
-     * factory type.
-     */
-    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) = 0;
-    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) = 0;
-};
+ov::Tensor RegularOVTensorFactory::create(ov::element::Type_t type, const ov::Shape& shape, const void* data) {
+    SPDLOG_TRACE("create regular ov::Tensor buffer: {}", data);  // TODO OVTRACING
+    return ov::Tensor(type, shape, (void*)data);                 // TODO cast
+}
+ov::Tensor RegularOVTensorFactory::create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) {
+    // FIXME TODO
+    return ov::Tensor(type, shape);
+}
 }  // namespace ovms

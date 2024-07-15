@@ -410,6 +410,7 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
 // \param state The servable state
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_GetServableState(OVMS_Server* server, const char* servableName, int64_t servableVersion, OVMS_ServableState* state);
+OVMS_Status* OVMS_GetServableContext(OVMS_Server* server, const char* servableName, int64_t servableVersion, void** oclContext);
 
 // OVMS_InferenceRequest
 //

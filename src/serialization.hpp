@@ -97,7 +97,7 @@ Status serializePredictResponse(
     tensorflow::serving::PredictResponse* response,
     outputNameChooser_t outputNameChooser,
     bool useSharedOutputContent = true) {  // does not apply for TFS frontend
-return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
+    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
 }
 
 template <typename T>
@@ -312,15 +312,18 @@ Status serializePredictResponse(
     uint32_t outputId = 0;
     for (const auto& [outputName, outputInfo] : outputMap) {
         ov::Tensor tensor;
+        OV_LOGGER("ov::Tensor(): {}", (void*)&tensor);
         status = outputGetter.get(outputNameChooser(outputName, *outputInfo), tensor);
         if (!status.ok()) {
             return status;
         }
+        OV_LOGGER("ov::Tensor: {}, tensor.get_element_type()", (void*)&tensor);
         auto servableMetaPrecision = outputInfo->getPrecision();
         auto actualPrecision = ovElementTypeToOvmsPrecision(tensor.get_element_type());
         if (servableMetaPrecision != actualPrecision) {
             return StatusCode::INTERNAL_ERROR;
         }
+        OV_LOGGER("ov::Tensor: {}, tensor.get_shape()", (void*)&tensor);
         if (!outputInfo->getShape().match(tensor.get_shape())) {
             return StatusCode::INTERNAL_ERROR;
         }
@@ -355,6 +358,7 @@ Status serializePredictResponse(
         }
         }
         // Mapped name for single model result serialization: possible mapping_config.json setting
+        OV_LOGGER("ov::Tensor: {}, tensor.get_shape()", (void*)&tensor);
         // For DAG: setting in pipeline output configuration
         status = response->addOutput(
             outputInfo->getMappedName(),
@@ -382,36 +386,35 @@ Status serializePredictResponse(
         }
         const InferenceTensor* outputTensorFromRequest{nullptr};
         status = request->getOutput(outputInfo->getMappedName().c_str(), &outputTensorFromRequest);
+        bool copyBuffer = true;
+        const void* bufferAddr{nullptr};
+        OVMS_BufferType bufferType;
         if (!status.ok()) {
-            outputTensorFromResponse->setBuffer(
-                tensor.data(),
-                tensor.get_byte_size(),
-                OVMS_BUFFERTYPE_CPU,
-                std::nullopt,
-                true);
-            SPDLOG_TRACE("Will serialize output with name:{} for servable name:{}; version:{} with buffer copy",
+            OV_LOGGER("ov::Tensor: {}, tensor.data(): {}", (void*)&tensor, tensor.data());
+            bufferAddr = tensor.data();
+            bufferType = OVMS_BUFFERTYPE_CPU;
+        } else {  // output is in request
+            SPDLOG_TRACE("Will serialize output with name:{} for servable name:{}; version:{} with buffer from request",
                 outputName, response->getServableName(), response->getServableVersion());
-            return StatusCode::OK;
+            copyBuffer = false;
+            const Buffer* requestOutputBuffer = outputTensorFromRequest->getBuffer();
+            if (!requestOutputBuffer) {  // this should be rejected in validation
+                SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find inserted output",
+                    outputName, response->getServableName(), response->getServableVersion());
+                return Status(StatusCode::INTERNAL_ERROR, "tried to use tensor with no buffer!");
+            }
+            bufferType = requestOutputBuffer->getBufferType();
+            bufferAddr = requestOutputBuffer->data();
         }
-        SPDLOG_TRACE("Will serialize output with name:{} for servable name:{}; version:{} with buffer from request",
-            outputName, response->getServableName(), response->getServableVersion());
-        const Buffer* requestOutputBuffer = outputTensorFromRequest->getBuffer();
-        if (!requestOutputBuffer) {  // this should be rejected in validation
-            SPDLOG_ERROR("Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find inserted output",
-                outputName, response->getServableName(), response->getServableVersion());
-            return Status(StatusCode::INTERNAL_ERROR, "tried to use tensor with no buffer!");
-        }
-        if (!requestOutputBuffer) {
-            SPDLOG_ERROR("Request output set but not buffer. We shouldn't allow such requests");
-            return StatusCode::INTERNAL_ERROR;
-        }
-        bool copyBuffer = false;
+        OV_LOGGER("ov::Tensor: {}, tensor.get_byt_size()", (void*)&tensor);
         outputTensorFromResponse->setBuffer(
-            requestOutputBuffer->data(),
-            tensor.get_byte_size(),  // here we pass the actual content bytesize not the original buffer size passed in request
-            requestOutputBuffer->getBufferType(),
-            std::nullopt,
+            bufferAddr,
+            tensor.get_byte_size(),  // here we pass the actual content bytesize not the original buffer size passed in request TODO TBD
+            bufferType,
+            std::nullopt,  // TODO TBD
             copyBuffer);
+        SPDLOG_TRACE("Serialized output with name:{} for servable name:{}; version:{} with no buffer copy",
+            outputName, response->getServableName(), response->getServableVersion());
         ++outputId;
     }
     return StatusCode::OK;
