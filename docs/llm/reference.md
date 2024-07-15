@@ -84,6 +84,8 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
 -    `optional string device` - device to load models to. Supported values: "CPU" [default = "CPU"]
 -    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = ""]
+-    `optional uint32 best_of_limit` - max value of best_of parameter accepted by OVMS [default = 30];
+-    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by OVMS [default = 800];
 
 
 The value of `cache_size` might have performance  implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
