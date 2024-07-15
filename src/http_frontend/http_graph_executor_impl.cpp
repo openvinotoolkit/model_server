@@ -132,7 +132,7 @@ bool isDisconnected(
 void setDisconnectionCallback(
     HttpReaderWriter& serverReaderWriter,
     std::function<void()> callback) {
-    serverReaderWriter.SetDisconnectedCallback(std::move(callback));
+    serverReaderWriter.RegisterDisconnectionCallback(std::move(callback));
 }
 
 }  // namespace ovms

@@ -21,7 +21,7 @@ if [ -d "$1" ]; then
 fi
 
 echo "Downloading LLM testing models to directory $1"
-python3.10 -m venv .venv
+python3 -m venv .venv
 . .venv/bin/activate
 pip3 install -U pip
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"

@@ -94,6 +94,17 @@ public:
         const LLMNodeResourcesMap& llmNodeResourcesMap,
         PythonBackend* pythonBackend);
 
+    class MyGuard {
+    public:
+        std::shared_ptr<::mediapipe::CalculatorGraph> pGraph;
+        MyGuard() {
+            pGraph = std::make_shared<::mediapipe::CalculatorGraph>();
+        }
+        ~MyGuard() {
+            SPDLOG_INFO("Destructing My Guard");
+        }
+    };
+
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) {
         OVMS_PROFILE_FUNCTION();
@@ -192,11 +203,15 @@ public:
         SPDLOG_DEBUG("Start MediapipeGraphExecutor::inferEx mediapipe graph: {} execution", this->name);
         std::mutex sendMutex;
         try {
-            ::mediapipe::CalculatorGraph graph;
+            //std::shared_ptr<::mediapipe::CalculatorGraph> pGraph = std::make_shared<::mediapipe::CalculatorGraph>();
+            std::shared_ptr<MyGuard> pp = std::make_shared<MyGuard>();
+            ::mediapipe::CalculatorGraph& graph = *(pp->pGraph).get();
             LogGuard lg;
-            //bool disc = false;
-            std::shared_ptr<bool> disc = std::make_shared<bool>(false);
-            setDisconnectionCallback(serverReaderWriter, [disc]() { SPDLOG_INFO("Setting disc to true"); /**disc = true;*/ SPDLOG_INFO("Setting disc to true DONE"); });
+            setDisconnectionCallback(serverReaderWriter, [pp]() {
+                SPDLOG_INFO("========================= Start of Disconnection Callback");
+                pp->pGraph->Cancel();
+                SPDLOG_INFO("========================= End of Disconnection Callback");
+            });
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph initialization");
                 // Init
@@ -237,7 +252,7 @@ public:
                                                                        .At(STARTING_TIMESTAMP);
                 inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
-                inputSidePackets["disc"] = mediapipe::MakePacket<std::shared_ptr<bool>>(disc).At(STARTING_TIMESTAMP);
+                //inputSidePackets["disc"] = mediapipe::MakePacket<std::shared_ptr<bool>>(disc).At(STARTING_TIMESTAMP);
             }
 
             {

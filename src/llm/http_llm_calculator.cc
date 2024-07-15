@@ -435,7 +435,7 @@ public:
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<InputDataType>();
         cc->Inputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Set<ovms::LLMNodeResourcesMap>();
-        cc->InputSidePackets().Tag("DISCONNECTED").Set<std::shared_ptr<bool>>();
+        //cc->InputSidePackets().Tag("DISCONNECTED").Set<std::shared_ptr<bool>>();
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<OutputDataType>();
         cc->Outputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         return absl::OkStatus();
@@ -451,7 +451,7 @@ public:
         OVMS_PROFILE_FUNCTION();
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Open start";
         ovms::LLMNodeResourcesMap nodeResourcesMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::LLMNodeResourcesMap>();
-        this->disc = cc->InputSidePackets().Tag("DISCONNECTED").Get<std::shared_ptr<bool>>();
+        //this->disc = cc->InputSidePackets().Tag("DISCONNECTED").Get<std::shared_ptr<bool>>();
         auto it = nodeResourcesMap.find(cc->NodeName());
         RET_CHECK(it != nodeResourcesMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
         nodeResources = it->second;
@@ -570,10 +570,10 @@ public:
                 // Streaming scenario
                 // Each iteration is single execution of Process() method
 
-                if (*this->disc == true) {
-                    LOG(INFO) << "Disconnected! -----------------------";
-                    return absl::OkStatus();
-                }
+                // if (*this->disc == true) {
+                //     LOG(INFO) << "Disconnected! -----------------------";
+                //     return absl::OkStatus();
+                // }
 
                 if (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
                     // Subsequent iteration
