@@ -28,6 +28,7 @@
 
 #include <openvino/openvino.hpp>
 
+#include "itensorfactory.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
@@ -48,6 +49,7 @@ class MetricRegistry;
 class ModelInstanceUnloadGuard;
 class InferenceRequest;
 class InferenceResponse;
+class IOVTensorFactory;
 class PipelineDefinition;
 class Status;
 template <typename T1, typename T2>
@@ -111,6 +113,7 @@ public:
 
 protected:
     std::unique_ptr<ov::intel_gpu::ocl::ClContext> ocl_context_cpp;
+    std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> tensorFactories;
     /**
          * @brief Model name
          */
@@ -219,6 +222,7 @@ protected:
          * @return Status
          */
     virtual Status loadOVCompiledModel(const ModelConfig& config);
+    void loadTensorFactories();
 
     /**
          * @brief Prepares inferenceRequestsQueue

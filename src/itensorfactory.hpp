@@ -27,6 +27,6 @@ public:
      * factory type.
      */
     virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) = 0;
-    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) = 0;
+    virtual ~IOVTensorFactory() = default;
 };
 }  // namespace ovms

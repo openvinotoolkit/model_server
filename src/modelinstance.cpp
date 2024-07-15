@@ -73,6 +73,7 @@ enum : unsigned int {
 namespace ovms {
 
 const uint MAX_NIREQ_COUNT = 100000;
+class IOVTensorFactory;
 
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
@@ -872,6 +873,14 @@ void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicM
     }
 }
 
+void ModelInstance::loadTensorFactories() {
+    using std::make_shared;
+    this->tensorFactories.emplace(OVMS_BUFFERTYPE_CPU, make_shared<RegularOVTensorFactory>());
+    if (this->targetDevice.find("GPU") != std::string::npos)
+        this->tensorFactories.emplace(OVMS_BUFFERTYPE_OPENCL, make_shared<OpenCLTensorFactory>(*this->ocl_context_cpp));
+    // TODO test MULTI/AUTO/HETERO
+}
+
 Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     bool isLayoutConfigurationChanged = !config.isLayoutConfigurationEqual(this->config);
     bool needsToApplyLayoutConfiguration = isLayoutConfigurationChanged || !this->model;
@@ -921,6 +930,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
+        this->loadTensorFactories();
     } catch (const ov::Exception& e) {
         SPDLOG_ERROR("exception occurred while loading model: {}", e.what());
         this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
@@ -1316,23 +1326,13 @@ Status ModelInstance::infer(const RequestType* requestProto,
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
-    RegularOVTensorFactory regFactory;
-    // TODO move logic inside model loading phase
-    IOVTensorFactory* factory{nullptr};
-    if (this->targetDevice.find("GPU") != std::string::npos) {
-        OpenCLTensorFactory oclFactory(*this->ocl_context_cpp);
-        factory = &oclFactory;
-    } else {
-        factory = &regFactory;
-    }
-
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, factory);
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, this->tensorFactories);
     if (!status.ok()) {
         SPDLOG_DEBUG("Deserialization of inputs failed for model {}, version {}",
             getName(), getVersion());
         return status;
     }
-    status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getOutputsInfo(), inputSink, isPipeline, factory);
+    status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {
         SPDLOG_DEBUG("Deserialization of outputs failed for model {}, version {}", getName(), getVersion());
@@ -1439,23 +1439,13 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     bool isPipeline = false;
     SPDLOG_ERROR("ER");
     RegularOVTensorFactory regFactory;
-    // TODO move logic inside model loading phase
-    IOVTensorFactory* factory{nullptr};
-    if (this->targetDevice.find("GPU") != std::string::npos) {
-        SPDLOG_ERROR("ER");
-        OpenCLTensorFactory oclFactory(*this->ocl_context_cpp);
-        SPDLOG_ERROR("ER");
-        factory = &oclFactory;
-    } else {
-        factory = &regFactory;
-    }
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, factory);
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, this->tensorFactories);
     if (!status.ok()) {
         SPDLOG_DEBUG("Deserialization of inputs failed for model {}, version {}",
             getName(), getVersion());
         return status;
     }
-    status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getOutputsInfo(), inputSink, isPipeline, factory);
+    status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {
         SPDLOG_DEBUG("Deserialization of outputs failed for model {}, version {}", getName(), getVersion());

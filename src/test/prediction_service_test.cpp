@@ -39,6 +39,7 @@
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelversion.hpp"
 #include "../prediction_service_utils.hpp"
+#include "../regularovtensorfactory.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../serialization.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
@@ -548,7 +549,9 @@ static void performPrediction(const std::string modelName,
     ovms::InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
 
-    auto status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(request, modelInstance->getInputsInfo(), inputSink, isPipeline);
+    std::unordered_map<int, std::shared_ptr<ovms::IOVTensorFactory>> factories;
+    factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<ovms::RegularOVTensorFactory>());
+    auto status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(request, modelInstance->getInputsInfo(), inputSink, isPipeline, factories);
     status = modelInstance->performInference(inferRequest);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     size_t outputSize = requestBatchSize * extractDummyOutputSize(request);
