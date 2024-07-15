@@ -499,6 +499,54 @@ TEST_F(LLMHttpParametersValidationTest, temperatureOutOfRange) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_F(LLMHttpParametersValidationTest, frequencePenaltyValid) {
+    std::string requestBody = validRequestBodyWithParameter("frequence_penalty", "1.5");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, frequencePenaltyInvalid) {
+    std::string requestBody = validRequestBodyWithParameter("frequence_penalty", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, frequencePenaltyOutOfRange) {
+    std::string requestBody = validRequestBodyWithParameter("frequence_penalty", "3.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, presencePenaltyValid) {
+    std::string requestBody = validRequestBodyWithParameter("presence_penalty", "1.5");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(LLMHttpParametersValidationTest, presencePenaltyInvalid) {
+    std::string requestBody = validRequestBodyWithParameter("presence_penalty", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, presencePenaltyOutOfRange) {
+    std::string requestBody = validRequestBodyWithParameter("presence_penalty", "3.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_F(LLMHttpParametersValidationTest, topPValid) {
     std::string requestBody = validRequestBodyWithParameter("top_p", "0.5");
 
