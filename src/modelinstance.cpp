@@ -46,11 +46,11 @@
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "opencltensorfactory.hpp"
-#include "regularovtensorfactory.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "prediction_service_utils.hpp"
 #include "profiler.hpp"
+#include "regularovtensorfactory.hpp"
 #include "serialization.hpp"
 #include "shape.hpp"
 #include "status.hpp"
@@ -726,7 +726,7 @@ namespace ovms {
 void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
     OV_LOGGER("ov::Core: {}, ov::Model: {}, targetDevice: {}, ieCore.compile_model(model, targetDevice, pluginConfig", reinterpret_cast<void*>(&ieCore), reinterpret_cast<void*>(this->model.get()), this->targetDevice);
     if (this->targetDevice.find("GPU") != std::string::npos) {
-        if(false ) { // use this only for test for now until we have config management
+        if (false) {  // use this only for test for now until we have config management
             cl_platform_id platformId;
             cl_device_id deviceId;
             //auto ocl_context = getOCLContext();  // TODO use params from config, use device from config
@@ -738,15 +738,15 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
             compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->ocl_context_cpp, pluginConfig));
         } else {
             compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
-            const auto ocl_context =compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
+            const auto ocl_context = compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
             this->ocl_context_cpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(ocl_context);
             this->ocl_context = this->ocl_context_cpp->get();
+            SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXX :{}", (void*)&this->ocl_context);
         }
     } else {
         compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
         // TODO reset contexts
         this->ocl_context_cpp.reset();
-
     }
 }
 
@@ -1229,6 +1229,44 @@ Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
     return StatusCode::OK;
 }
 
+template <typename RequestType>
+OVMS_InferenceResponseCompleteCallback_t getCallback(RequestType request) {
+    return nullptr;
+}
+template <typename RequestType>
+void* getCallbackData(RequestType request) {
+    return nullptr;
+}
+
+template <>
+OVMS_InferenceResponseCompleteCallback_t getCallback(const InferenceRequest* request) {
+    SPDLOG_ERROR("ADAKJEHFCAOWEHFOAWEFOHAW");
+    return request->getResponseCompleteCallback();
+}
+template <>
+void* getCallbackData(const InferenceRequest* request) {
+    SPDLOG_ERROR("ADAKJEHFCAOWEHFOAWEFOHAW");
+    return request->getResponseCompleteCallbackData();
+}
+
+template <typename RequestType, typename ResponseType>
+void handleCallback(RequestType request, ResponseType response) {
+    SPDLOG_ERROR("ER");
+    return;
+}
+template <>
+void handleCallback(const InferenceRequest* request, InferenceResponse* response) {
+    SPDLOG_ERROR("C-API handle callback overload");
+    OVMS_InferenceResponseCompleteCallback_t userCallback = getCallback(request);
+    SPDLOG_ERROR("ER");
+    if (userCallback) {
+        SPDLOG_ERROR("ER");
+        void* userCallbackData = getCallbackData(request);
+        OVMS_InferenceResponse* responseC = reinterpret_cast<OVMS_InferenceResponse*>(response);
+        userCallback(responseC, 1, userCallbackData);
+    }
+}
+
 template <typename RequestType, typename ResponseType>
 Status ModelInstance::infer(const RequestType* requestProto,
     ResponseType* responseProto,
@@ -1287,13 +1325,19 @@ Status ModelInstance::infer(const RequestType* requestProto,
     } else {
         factory = &regFactory;
     }
+
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, factory);
-    if (!status.ok())
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Deserialization of inputs failed for model {}, version {}",
+            getName(), getVersion());
         return status;
+    }
     status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getOutputsInfo(), inputSink, isPipeline, factory);
     timer.stop(DESERIALIZE);
-    if (!status.ok())
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Deserialization of outputs failed for model {}, version {}", getName(), getVersion());
         return status;
+    }
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
 
@@ -1307,7 +1351,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
 
     timer.start(SERIALIZE);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    //status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), requestProto, responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));
+    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), requestProto, responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));
     timer.stop(SERIALIZE);
     if (!status.ok())
         return status;
@@ -1326,6 +1370,8 @@ Status ModelInstance::infer(const RequestType* requestProto,
             SPDLOG_DEBUG("Used device: {}", device);
 
     status = requestProcessor->release();
+    SPDLOG_DEBUG("Calling user provided callback");  // TODO check if this shows
+    //handleCallback(requestProto, responseProto);
     return status;
 }
 template <typename RequestType>
@@ -1392,16 +1438,13 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
     SPDLOG_ERROR("ER");
-    SPDLOG_ERROR("ER");
-    SPDLOG_ERROR("ER");
     RegularOVTensorFactory regFactory;
     // TODO move logic inside model loading phase
     IOVTensorFactory* factory{nullptr};
     if (this->targetDevice.find("GPU") != std::string::npos) {
-    SPDLOG_ERROR("ER");
-    SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER");
         OpenCLTensorFactory oclFactory(*this->ocl_context_cpp);
-    SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER");
         factory = &oclFactory;
     } else {
         factory = &regFactory;
@@ -1421,6 +1464,7 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
     // set callback
+    // TODO check if there is callback
     OVMS_InferenceResponseCompleteCallback_t userCallback = requestProto->getResponseCompleteCallback();
     void* userCallbackData = requestProto->getResponseCompleteCallbackData();
     // here pass by copy into callback
@@ -1458,7 +1502,7 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
         SPDLOG_DEBUG("Calling user provided callback");  // TODO check if this shows
         userCallback(response, 1, userCallbackData);
         SPDLOG_DEBUG("Called user provided callback");                       // TODO check if this shows
-        inferRequest.set_callback([](std::exception_ptr exception_ptr) {});  // reset callback on infer request
+        inferRequest.set_callback([](std::exception_ptr exception_ptr) {});  // reset callback on infer request // TODO this should be called on all exit paths
     });
     OV_LOGGER("ov::InferRequest: {}, inferRequest.start_async()", reinterpret_cast<void*>(&inferRequest));
     inferRequest.start_async();  // TODO wrap into try catch

@@ -876,6 +876,7 @@ cc_library( # make ovms_lib dependent, use share doptions
             "opencltensorfactory.hpp", # TODO depends on image?
             "regularovtensorfactory.hpp",],
     srcs = ["regularovtensorfactory.cpp",
+            "opencltensorfactory.cpp", # TODO depends on image?
     ],
     deps = ["@linux_openvino//:openvino",
             "libovmscapibuffer",

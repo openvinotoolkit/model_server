@@ -104,6 +104,12 @@ protected:
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
     cl_context ocl_context;
+
+public:
+    // TODO const correctness & ownership & thread safety
+    const cl_context* getOclCContext() const { return &ocl_context; }
+
+protected:
     std::unique_ptr<ov::intel_gpu::ocl::ClContext> ocl_context_cpp;
     /**
          * @brief Model name
