@@ -43,7 +43,7 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
     return status;
 }
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo, IOVTensorFactory* factory) {
+    const std::shared_ptr<const TensorInfo>& tensorInfo, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
     OVMS_PROFILE_FUNCTION();
     ov::Shape shape;
     OV_LOGGER("ov::Shape(): {}", (void*)&shape);
@@ -56,22 +56,17 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
         OV_LOGGER("ov::Tensor({}, shape)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
         return ov::Tensor(precision, shape);
     }
-    if (requestInput.getBuffer()->getBufferType() == OVMS_BUFFERTYPE_CPU) {
-        OV_LOGGER("ov::Tensor({}, shape, data:{})", toString(ovms::ovElementTypeToOvmsPrecision(precision)), const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
-        return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.getBuffer()->data())));
-    } else {
-        // TODO FIXME check ptr
-        //       return factory->create(precision, shape, requestInput.getBuffer()->data());
-        if (!factory) {
-            SPDLOG_DEBUG("Tried to use empty tensor factory");
-            return ov::Tensor();
-        }
-        SPDLOG_ERROR("ER");
-        auto t = factory->create(precision, shape, requestInput.getBuffer()->data());
-        SPDLOG_ERROR("ER:{}", (void*)&t);
-        return t;
-        // TODO instead of context pass in factory of tensors
+    // TODO FIXME validation shouldn't allow setting unsupported memory types
+    // in inputs/outputs for particular device
+    // validation shouldn't allow unsupporeted buffer types
+    // write test
+    auto it = factories.find(requestInput.getBuffer()->getBufferType());
+    if (it == factories.end()) {
+        SPDLOG_ERROR("Could not find appropiate tensor factory for buffer type:{}", requestInput.getBuffer()->getBufferType());
+        throw std::runtime_error("Could not find appropiate tensor factory");
     }
+    IOVTensorFactory* factory = it->second.get();
+    return factory->create(precision, shape, requestInput.getBuffer()->data());
 }
 
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,

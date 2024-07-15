@@ -20,11 +20,8 @@
 #include "logging.hpp"
 namespace ovms {
 ov::Tensor RegularOVTensorFactory::create(ov::element::Type_t type, const ov::Shape& shape, const void* data) {
-    SPDLOG_TRACE("create regular ov::Tensor buffer: {}", data);  // TODO OVTRACING
-    return ov::Tensor(type, shape, (void*)data);                 // TODO cast
-}
-ov::Tensor RegularOVTensorFactory::create(ov::element::Type_t type, const ov::Shape& shape, Buffer* buffer) {
-    // FIXME TODO
-    return ov::Tensor(type, shape);
+    SPDLOG_TRACE("create regular ov::Tensor buffer: {}", data);
+    OV_LOGGER("ov::Tensor({}, shape:{}, data:{})", type, (void*)&shape, data);
+    return ov::Tensor(type, shape, (void*)data);  // TODO cast
 }
 }  // namespace ovms
