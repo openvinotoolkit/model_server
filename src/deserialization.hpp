@@ -30,6 +30,7 @@
 
 #include "capi_frontend/inferencerequest.hpp"
 #include "capi_frontend/inferencetensor.hpp"
+#include "itensorfactory.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "logging.hpp"
 #include "profiler.hpp"
@@ -63,7 +64,7 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo);
 
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo, IOVTensorFactory* factory);
+    const std::shared_ptr<const TensorInfo>& tensorInfo, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories);
 
 class ConcreteTensorProtoDeserializator {
 public:
@@ -233,7 +234,7 @@ public:
 
     static ov::Tensor deserializeTensorProto(
         const InferenceTensor& requestInput,
-        const std::shared_ptr<const TensorInfo>& tensorInfo, IOVTensorFactory* factory = nullptr) {
+        const std::shared_ptr<const TensorInfo>& tensorInfo, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
         OVMS_PROFILE_FUNCTION();
         switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP64:
@@ -249,7 +250,7 @@ public:
         case ovms::Precision::BOOL:
         case ovms::Precision::U1:
         case ovms::Precision::U8: {
-            return makeTensor(requestInput, tensorInfo, factory);
+            return makeTensor(requestInput, tensorInfo, factories);
         }
         case ovms::Precision::CUSTOM:
         case ovms::Precision::UNDEFINED:
@@ -334,8 +335,8 @@ ov::Tensor deserializeTensorProto(
 template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo, IOVTensorFactory* factory = nullptr) {
-    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, factory);
+    const std::shared_ptr<const TensorInfo>& tensorInfo, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
+    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, factories);
 }
 
 template <class Requester>
@@ -352,7 +353,7 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
+    Sink& inputSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     for (const auto& pair : inputMap) {
@@ -424,7 +425,7 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const ::KFSRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
+    Sink& inputSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     bool deserializeFromSharedInputContents = request.raw_input_contents().size() > 0;
@@ -504,7 +505,7 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const InferenceRequest& request,
     const tensor_map_t& inputMap,  // add another entry for outputs
-    Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
+    Sink& inputSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     for (const auto& [name, tensorInfo] : inputMap) {
@@ -517,7 +518,7 @@ Status deserializePredictRequest(
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
             ov::Tensor tensor;
-            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputPtr, tensorInfo, factory);
+            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputPtr, tensorInfo, factories);
             if (!tensor) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());
@@ -571,21 +572,21 @@ template <class TensorProtoDeserializator, class Sink, bool isOkToSkip>
 static Status deserializePredictRequest2(
     const KFSRequest& request,
     const tensor_map_t& inputMap,  // add another entry for outputs
-    Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
+    Sink& inputSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
     return StatusCode::OK;
 }
 template <class TensorProtoDeserializator, class Sink, bool isOkToSkip>
 static Status deserializePredictRequest2(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputMap,  // add another entry for outputs
-    Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
+    Sink& inputSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
     return StatusCode::OK;
 }
 template <class TensorProtoDeserializator, class Sink, bool isOkToSkip>  // isOkToSkip - is input or output
 static Status deserializePredictRequest2(
     const InferenceRequest& request,
     const tensor_map_t& inputMap,  // add another entry for outputs
-    Sink& inputSink, bool isPipeline, IOVTensorFactory* factory = nullptr) {
+    Sink& inputSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     for (const auto& [name, tensorInfo] : inputMap) {
@@ -605,7 +606,7 @@ static Status deserializePredictRequest2(
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
             ov::Tensor tensor;
-            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputPtr, tensorInfo, factory);
+            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputPtr, tensorInfo, factories);
             if (!tensor) {
                 status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
                 SPDLOG_DEBUG(status.string());
