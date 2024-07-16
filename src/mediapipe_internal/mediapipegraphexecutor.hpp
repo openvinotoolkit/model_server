@@ -207,11 +207,15 @@ public:
             std::shared_ptr<MyGuard> pp = std::make_shared<MyGuard>();
             ::mediapipe::CalculatorGraph& graph = *(pp->pGraph).get();
             LogGuard lg;
-            setDisconnectionCallback(serverReaderWriter, [pp]() {
-                SPDLOG_INFO("========================= Start of Disconnection Callback");
-                pp->pGraph->Cancel();
-                SPDLOG_INFO("========================= End of Disconnection Callback");
-            });
+
+            // std::shared_ptr<::mediapipe::CalculatorGraph> pGraph;
+
+            // setDisconnectionCallback(serverReaderWriter, [pp]() {
+            //     SPDLOG_INFO("========================= Start of Disconnection Callback");
+            //     pp->pGraph->Cancel();
+            //     // pGraph->AddPacket()
+            //     SPDLOG_INFO("========================= End of Disconnection Callback");
+            // });
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph initialization");
                 // Init

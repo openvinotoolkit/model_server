@@ -96,6 +96,7 @@ cc_library(
     hdrs = ["http_payload.hpp"],
     srcs = ["http_payload.cpp"],
     deps = [
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@com_github_tencent_rapidjson//:rapidjson",
         ":llmnoderesources",
     ] + PYBIND_DEPS,

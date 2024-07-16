@@ -441,6 +441,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
     HttpPayload request;
+    request.serverReaderWriter = serverReaderWriter;
     Document doc;
     std::shared_ptr<MediapipeGraphExecutor> executor;
     bool streamFieldVal = false;

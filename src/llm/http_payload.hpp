@@ -19,6 +19,12 @@
 #include <utility>
 #include <vector>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
+#pragma GCC diagnostic pop
+
 #include <rapidjson/document.h>
 
 // Python execution for template processing
@@ -33,6 +39,7 @@ struct HttpPayload {
     std::vector<std::pair<std::string, std::string>> headers;
     std::string body;                 // always
     rapidjson::Document* parsedJson;  // pre-parsed body             = null
+    tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter;
 };
 
 bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output);

@@ -409,6 +409,7 @@ static std::atomic<uint64_t> currentRequestId = 0;
 
 class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<bool> disc;
+    tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter{nullptr};
 
     std::shared_ptr<ovms::LLMNodeResources> nodeResources;
     GenerationHandle generationHandle;
@@ -481,6 +482,7 @@ public:
                 this->created = std::chrono::system_clock::now();
 
                 InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
+                this->serverReaderWriter = payload.serverReaderWriter;
                 LOG(INFO) << "Request body: " << payload.body;
                 LOG(INFO) << "Request uri: " << payload.uri;
                 Endpoint endpoint;
@@ -536,6 +538,7 @@ public:
             RET_CHECK(this->generationHandle != nullptr);
             RET_CHECK(this->request != nullptr);
             RET_CHECK(this->streamer != nullptr);
+            RET_CHECK(this->serverReaderWriter != nullptr);
 
             // Unary scenario
             if (!this->request->isStream()) {
@@ -570,14 +573,10 @@ public:
                 // Streaming scenario
                 // Each iteration is single execution of Process() method
 
-                // if (*this->disc == true) {
-                //     LOG(INFO) << "Disconnected! -----------------------";
-                //     return absl::OkStatus();
-                // }
-
-                if (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
-                    // Subsequent iteration
-                    OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
+                while (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
+                    if (serverReaderWriter->IsDisconnected()) {
+                        return absl::OkStatus();
+                    }
                     GenerationOutputs generationOutputs = this->generationHandle->read();
                     RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
                     RET_CHECK(generationOutputs.begin()->second.generated_token_ids.size() == 1);
@@ -588,16 +587,39 @@ public:
                     if (chunk.has_value()) {
                         std::string response = packIntoServerSideEventMessage(
                             serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint()));
-                        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
+                       this->serverReaderWriter->PartialReply(std::move(response));
                     }
-                    cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
-                } else {
-                    OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                    std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true, this->request->getEndpoint()));
-                    response += packIntoServerSideEventMessage("[DONE]");
-                    // Produce last message, but do not produce loopback packets anymore so this is last Process() call
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                 }
+
+                std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true, this->request->getEndpoint()));
+                response += packIntoServerSideEventMessage("[DONE]");
+
+                this->serverReaderWriter->PartialReply(std::move(response));
+
+
+                // if (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
+                //     // Subsequent iteration
+                //     OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
+                //     GenerationOutputs generationOutputs = this->generationHandle->read();
+                //     RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
+                //     RET_CHECK(generationOutputs.begin()->second.generated_token_ids.size() == 1);
+
+                //     // TODO(dkalinow): Move this logic to CB library
+                //     int64_t token = generationOutputs.begin()->second.generated_token_ids[0];
+                //     auto chunk = this->streamer->put(token);
+                //     if (chunk.has_value()) {
+                //         std::string response = packIntoServerSideEventMessage(
+                //             serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint()));
+                //         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
+                //     }
+                //     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
+                // } else {
+                //     OVMS_PROFILE_SCOPE("Generation of last streaming response");
+                //     std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true, this->request->getEndpoint()));
+                //     response += packIntoServerSideEventMessage("[DONE]");
+                //     // Produce last message, but do not produce loopback packets anymore so this is last Process() call
+                //     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
+                // }
             }
         } catch (ov::AssertFailure& e) {
             return absl::InvalidArgumentError(e.what());
