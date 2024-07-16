@@ -35,6 +35,7 @@
 #include "../stringutils.hpp"
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
+#include "text_processor.hpp"
 
 // Python execution for template processing
 #include <pybind11/embed.h>  // everything needed for embedding
@@ -503,7 +504,7 @@ public:
                     if (this->request->getMessages().size() <= 0) {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "There are no messages to apply for chat");
                     }
-                    if (!applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
+                    if (!TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
                         return absl::Status(absl::StatusCode::kInvalidArgument, finalPrompt);
                     }
                     break;

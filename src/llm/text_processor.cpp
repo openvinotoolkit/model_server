@@ -13,19 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "http_payload.hpp"
+#include "text_processor.hpp"
 
 #include <string>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/calculator_framework.h"
+#pragma GCC diagnostic pop
 
 // Python execution for template processing
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
 
-#include "llmnoderesources.hpp"
-
 namespace ovms {
 
-bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
+bool TextProcessor::applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
     if (textProcessor.chatTemplate == nullptr) {
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
         return false;

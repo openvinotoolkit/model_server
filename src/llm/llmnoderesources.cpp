@@ -36,6 +36,7 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "src/llm/llm_calculator.pb.h"
 #include "src/llm/llm_executor.hpp"
+#include "src/llm/text_processor.hpp"
 
 namespace ovms {
 

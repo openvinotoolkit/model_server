@@ -25,7 +25,6 @@
 
 #include <continuous_batching_pipeline.hpp>
 
-#include "../logging.hpp"
 #include "../profiler.hpp"
 
 namespace ovms {

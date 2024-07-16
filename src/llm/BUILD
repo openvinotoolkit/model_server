@@ -50,6 +50,7 @@ cc_library(
         ":llm_engine",
         ":llmnoderesources",
         ":httppayload",
+        ":text_processor",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
@@ -83,6 +84,7 @@ cc_library(
         "llmcalculator_cc_proto",
         ":llm_engine",
         "//src/python:utils",
+        ":text_processor",
     ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -94,10 +96,22 @@ cc_library(
 cc_library(
     name = "httppayload",
     hdrs = ["http_payload.hpp"],
-    srcs = ["http_payload.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
-        ":llmnoderesources",
+    ],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "text_processor",
+    hdrs = ["text_processor.hpp"],
+    srcs = ["text_processor.cpp"],
+    deps = ["@mediapipe//mediapipe/framework:calculator_framework",
+            "//src:libovmslogging",
+            "//src/python:utils",
     ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
