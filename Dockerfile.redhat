@@ -41,9 +41,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
             patch \
             pkg-config \
             wget \
-            yum-utils \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-2020.3-8.el9.x86_64.rpm \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-devel-2020.3-8.el9.x86_64.rpm && \
+            yum-utils && \
             yum clean all
 
 ####### Azure SDK needs new boost:
@@ -63,12 +61,12 @@ COPY third_party /ovms/third_party/
 
 # Build and install pugixml
 # hadolint ignore=DL3003
-RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
-    cd pugixml && \
-    patch -p1 < /ovms/third_party/pugixml/pugixml_v1.13_flags.patch && \
-    cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=${VERBOSE_LOGS} && \
-    make all && \
-    cp -P libpugixml.so* /usr/lib64/
+#RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
+#    cd pugixml && \
+#    patch -p1 < /ovms/third_party/pugixml/pugixml_v1.13_flags.patch && \
+#    cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=${VERBOSE_LOGS} && \
+#    make all && \
+#    cp -P libpugixml.so* /usr/lib64/
 
 ####### Azure SDK
 WORKDIR /azure
@@ -97,7 +95,7 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=40
 
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf clean all && yum install -d6 -y \
             ccache \
             gdb \
             java-11-openjdk-devel \
@@ -111,12 +109,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
             unzip \
             vim \
             xz \
-            python3-devel \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-2020.3-8.el9.x86_64.rpm \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-devel-2020.3-8.el9.x86_64.rpm \
-            https://mirror.stream.centos.org/9-stream/CRB/x86_64/os/Packages/libusb-devel-0.1.7-5.el9.x86_64.rpm \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/libusb-0.1.7-5.el9.x86_64.rpm \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/libusbx-devel-1.0.26-1.el9.x86_64.rpm && \
+            python3-devel && \
             yum clean all
 
 RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
@@ -125,18 +118,18 @@ ARG NVIDIA=0
 # Add Nvidia dev tool if needed
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    yum config-manager --save --set-enabled codeready-builder-for-rhel-9-x86_64-rpms ; \
-    yum -y install libzstd-devel ; \
+    #yum config-manager --save --set-enabled codeready-builder-for-rhel-9-x86_64-rpms ; \
+    #yum -y install libzstd-devel ; \
     yum install -y \
-        cuda-nvcc-11-8 libcublas-11-8 libcublas-devel-11-8 \
-        libcudnn8-8.6.0.163-1.cuda11.8 \
-        libcudnn8-devel-8.6.0.163-1.cuda11.8 \
-        libcutensor1-1.6.1.5-1 \
-        libcutensor-devel-1.6.1.5-1 \
-        cuda-cudart-devel-11-8 && \
+        cuda-nvcc-12-1 libcublas-12-1 libcublas-devel-12-1 \
+        libcudnn8-8.9.3.28-1.cuda12.1 \
+        libcudnn8-devel-8.9.3.28-1.cuda12.1 \
+        libcutensor1-1.7.0.1-1 \
+        libcutensor-devel-1.7.0.1-1 \
+        cuda-cudart-devel-12-1 && \
     # ignore errors on hosts with older nvidia drivers
-    yum install -y cuda-11-8 || true && \
-    yum install -y python38-Cython && \
+    yum install -y cuda.x86_64 || true && \
+    yum install -y python3-Cython.x86_64 && \
     curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin && \
     curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
     chmod a+x /usr/local/bin/sccache && \
