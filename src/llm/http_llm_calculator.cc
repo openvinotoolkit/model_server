@@ -31,6 +31,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
+#include "../logging.hpp"
 #include "../profiler.hpp"
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
@@ -423,7 +424,6 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process start";
         RET_CHECK(this->nodeResources != nullptr);
 
         // For cases where MediaPipe decides to trigger Process() when there are no inputs
@@ -443,8 +443,8 @@ public:
                 this->created = std::chrono::system_clock::now();
 
                 InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
-                LOG(INFO) << "Request body: " << payload.body;
-                LOG(INFO) << "Request uri: " << payload.uri;
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
                 Endpoint endpoint;
                 if (payload.uri == "/v3/chat/completions") {
                     endpoint = Endpoint::CHAT_COMPLETIONS;
@@ -461,10 +461,6 @@ public:
                     return status;
 
                 std::string finalPrompt = "";
-
-                // LOG(INFO) << "Input prompt:" << templateApplyOutput;
-
-                std::string prompt;
                 switch (endpoint) {
                 case Endpoint::CHAT_COMPLETIONS: {
                     if (this->request->getMessages().size() <= 0) {
@@ -514,7 +510,7 @@ public:
                     std::string completion = tokenizer->decode(tokens);
 
                     std::string response = serializeUnaryResponse(tokenizer->decode(std::move(tokens)), this->request->getEndpoint());
-                    LOG(INFO) << "Complete unary response: " << response;
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 } else {
                     // Beam search only supported for unary
@@ -527,7 +523,7 @@ public:
                     }
 
                     std::string response = serializeUnaryResponse(completions, this->request->getEndpoint());
-                    LOG(INFO) << "Complete unary response: " << response;
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 }
             } else {
@@ -549,6 +545,7 @@ public:
                         std::string response = packIntoServerSideEventMessage(
                             serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint()));
                         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
+                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", response);
                     }
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
                 } else {
@@ -557,6 +554,7 @@ public:
                     response += packIntoServerSideEventMessage("[DONE]");
                     // Produce last message, but do not produce loopback packets anymore so this is last Process() call
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", response);
                 }
             }
         } catch (ov::AssertFailure& e) {
@@ -566,7 +564,6 @@ public:
         }
         timestamp = timestamp.NextAllowedInStream();
 
-        LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Process end";
         return absl::OkStatus();
     }
 };
