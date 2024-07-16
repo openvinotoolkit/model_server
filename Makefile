@@ -145,7 +145,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	BASE_OS_TAG=20.04
   endif
   ifeq ($(NVIDIA),1)
-	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu$(BASE_OS_TAG)
+	BASE_IMAGE=docker.io/nvidia/cuda:12.1.0-runtime-ubuntu$(BASE_OS_TAG)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   else
 	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
@@ -165,7 +165,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   OS=redhat
   ifeq ($(NVIDIA),1)
-    BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubi9
+    BASE_IMAGE=docker.io/nvidia/cuda:12.1.0-runtime-ubi9
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   else
     BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
