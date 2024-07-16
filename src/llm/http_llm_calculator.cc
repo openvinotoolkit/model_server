@@ -53,6 +53,7 @@ enum class Endpoint {
 
 using chat_entry_t = std::unordered_map<std::string, std::string>;
 using chat_t = std::vector<chat_entry_t>;
+using ovms::llm_calculator_logger;
 
 #define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
 
@@ -408,6 +409,9 @@ public:
     absl::Status Close(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Close";
+        SPDLOG_TRACE("\n#######################################TRACE");
+        SPDLOG_DEBUG("\n#######################################DEBUG");
+        SPDLOG_INFO("\n#######################################INFO");
         return absl::OkStatus();
     }
 
@@ -426,6 +430,9 @@ public:
         OVMS_PROFILE_FUNCTION();
         RET_CHECK(this->nodeResources != nullptr);
 
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "\n#######################################TEST INFO");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "\n#######################################TEST DEBUG ");
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "\n#######################################TEST TRACE ");
         // For cases where MediaPipe decides to trigger Process() when there are no inputs
         if (cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty() && cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty()) {
             return absl::OkStatus();
@@ -507,9 +514,11 @@ public:
                 if (generationOutput.size() == 1) {
                     std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
                     std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Input tokens: {}", tokens);
                     std::string completion = tokenizer->decode(tokens);
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Decoded tokens: {}", completion);
 
-                    std::string response = serializeUnaryResponse(tokenizer->decode(std::move(tokens)), this->request->getEndpoint());
+                    std::string response = serializeUnaryResponse(completion, this->request->getEndpoint());
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
                 } else {
@@ -518,7 +527,9 @@ public:
                     for (GenerationOutput& out : generationOutput) {
                         std::vector<int64_t> tokens = out.generated_token_ids;
                         std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Input tokens: {}", tokens);
                         std::string completion = tokenizer->decode(tokens);
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Decoded tokens: {}", completion);
                         completions.emplace_back(completion);
                     }
 

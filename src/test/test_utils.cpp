@@ -682,8 +682,10 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
         (char*)"--config_path",
         (char*)configPath,
         (char*)"--port",
-        (char*)port.c_str()};
-    int argc = 5;
+        (char*)port.c_str(),
+        (char*)"--log_level",
+        (char*)"TRACE"};
+    int argc = 7;
     t.reset(new std::thread([&argc, &argv, &server]() {
         EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
     }));
