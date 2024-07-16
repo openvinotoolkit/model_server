@@ -67,9 +67,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= b80e30c4d7901175e1155f8d156252d350f00558  # 27 June main
-OV_CONTRIB_BRANCH ?= e6eb43a32c98a04162a921a80d89f82b30910973  # 13 June main
-OV_TOKENIZERS_BRANCH ?= 41cdfe36b725fc2b942e37fc4f07f5bb5f4eb4cf  # 28 June main
+OV_SOURCE_BRANCH ?= d3d4dd6771e7823d358f35d9534a927c27c63d11  # 2024-07-15 releases/2024/3
+OV_CONTRIB_BRANCH ?= e6eb43a32c98a04162a921a80d89f82b30910973  # 2024-06-13 releases/2024/3
+OV_TOKENIZERS_BRANCH ?= 2fb700042acfc3e734941fbbc332af2de17024a4  # 2024-07-10 releases/2024/3
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -155,11 +155,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),20.04)
         OS=ubuntu20
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.3.0.15840.b80e30c4d79_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.3.0.16028.f9b8184c3d4_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "23.22.26516"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.3.0.15840.b80e30c4d79_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.3.0.16028.f9b8184c3d4_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -174,7 +174,7 @@ ifeq ($(BASE_OS),redhat)
   endif	
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.3.0.15840.b80e30c4d79_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.3.0.16028.f9b8184c3d4_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
