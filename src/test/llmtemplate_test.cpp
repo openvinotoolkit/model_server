@@ -671,7 +671,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
             "prompt": "?"
         }
     )";
-    
+
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     EXPECT_CALL(writer, PartialReply(::testing::_))
         .WillRepeatedly([](std::string response) {

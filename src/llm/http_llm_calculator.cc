@@ -31,7 +31,6 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "../logging.hpp"
 #include "../profiler.hpp"
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
@@ -53,7 +52,6 @@ enum class Endpoint {
 
 using chat_entry_t = std::unordered_map<std::string, std::string>;
 using chat_t = std::vector<chat_entry_t>;
-using ovms::llm_calculator_logger;
 
 #define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
 

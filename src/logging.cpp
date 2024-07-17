@@ -87,7 +87,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
 #if (MEDIAPIPE_DISABLE == 0)
         mediapipe_logger->sinks().push_back(sink);
         llm_executor_logger->sinks().push_back(sink);
-        llm_calculator_logger->sinks().push_back(sink);    
+        llm_calculator_logger->sinks().push_back(sink);
 #endif
 #if (OV_TRACING == 1)
         ov_logger->sinks().push_back(sink);
