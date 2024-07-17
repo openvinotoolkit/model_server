@@ -1352,7 +1352,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
             getName(), getVersion());
         return status;
     }
-    status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
+    status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {
         SPDLOG_DEBUG("Deserialization of outputs failed for model {}, version {}", getName(), getVersion());
@@ -1465,7 +1465,7 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
             getName(), getVersion());
         return status;
     }
-    status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
+    status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {
         SPDLOG_DEBUG("Deserialization of outputs failed for model {}, version {}", getName(), getVersion());
