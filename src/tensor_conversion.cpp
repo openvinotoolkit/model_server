@@ -30,6 +30,7 @@
 
 #include <openvino/openvino.hpp>
 
+#include "capi_frontend/inferencetensor.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "logging.hpp"
 #include "opencv2/opencv.hpp"
@@ -500,6 +501,11 @@ static Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& s
     }
     return StatusCode::OK;
 }
+template <>
+Status convertNativeFileFormatRequestTensorToOVTensor(const ovms::InferenceTensor& src, ov::Tensor& tensor, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer) {
+        SPDLOG_ERROR("String conversion is not implemented for C-API");
+        return StatusCode::NOT_IMPLEMENTED;
+}
 
 static Status convertStringRequestFromBufferToOVTensor2D(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
     return StatusCode::NOT_IMPLEMENTED;
@@ -563,6 +569,15 @@ Status convertStringRequestToOVTensor2D(
     return StatusCode::OK;
 }
 
+template <>
+Status convertStringRequestToOVTensor2D(
+    const ovms::InferenceTensor& src,
+    ov::Tensor& tensor,
+    const std::string* buffer) {
+        SPDLOG_ERROR("String conversion is not implemented for C-API");
+        return StatusCode::NOT_IMPLEMENTED;
+}
+
 static Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
     return StatusCode::NOT_IMPLEMENTED;
 }
@@ -604,6 +619,11 @@ Status convertStringRequestToOVTensor(const TensorType& src, ov::Tensor& tensor,
     }
     return StatusCode::OK;
 }
+template <>
+Status convertStringRequestToOVTensor(const ovms::InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer) {
+    SPDLOG_ERROR("Tensor coversion is not supported for C-API");
+    return StatusCode::NOT_IMPLEMENTED;
+}
 
 template <typename TensorType>
 Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& dst) {
@@ -624,17 +644,26 @@ Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& d
     }
     return StatusCode::OK;
 }
+template <>
+Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, ovms::InferenceTensor& dst) {
+    SPDLOG_ERROR("Tensor coversion is not supported for C-API");
+    return StatusCode::NOT_IMPLEMENTED;
+}
 
 template Status convertStringRequestToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
 template Status convertStringRequestToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+template Status convertStringRequestToOVTensor<ovms::InferenceTensor>(const ovms::InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer);
 
 template Status convertNativeFileFormatRequestTensorToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer);
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer);
+template Status convertNativeFileFormatRequestTensorToOVTensor<ovms::InferenceTensor>(const ovms::InferenceTensor& src, ov::Tensor& tensor, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer);
 
 template Status convertStringRequestToOVTensor2D<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
 template Status convertStringRequestToOVTensor2D<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+template Status convertStringRequestToOVTensor2D<ovms::InferenceTensor>(const ovms::InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer);
 
 template Status convertOVTensor2DToStringResponse<tensorflow::TensorProto>(const ov::Tensor& tensor, tensorflow::TensorProto& dst);
 template Status convertOVTensor2DToStringResponse<::KFSResponse::InferOutputTensor>(const ov::Tensor& tensor, ::KFSResponse::InferOutputTensor& dst);
+template Status convertOVTensor2DToStringResponse<ovms::InferenceTensor>(const ov::Tensor& tensor, ovms::InferenceTensor& dst);
 
 }  // namespace ovms

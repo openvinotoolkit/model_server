@@ -32,6 +32,7 @@ template <typename RequestType>
 class EntryNode : public Node {
     const RequestType* request;
     const tensor_map_t inputsInfo;
+    const tensor_map_t outputsInfo; // TODO FIXME fix for C-API, outputs not supported for DAGS, those are empty now
 
 public:
     EntryNode(const RequestType* request,
