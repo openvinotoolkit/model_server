@@ -77,7 +77,11 @@ Status EntryNode<RequestType>::fetchResults(TensorWithSourceMap& outputs) {
     bool isPipeline = true;
     std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories;
     factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
-    return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline, factories);
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>>(*request, inputsInfo, inputSink, isPipeline, factories);
+    if (!status.ok()) {
+            return status;
+    }
+    return deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>, true>(*request, inputsInfo, outputsInfo, inputSink, isPipeline, factories);
 }
 
 template <>
