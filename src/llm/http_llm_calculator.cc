@@ -27,6 +27,7 @@
 #pragma GCC diagnostic pop
 
 #include <continuous_batching_pipeline.hpp>
+#include <fmt/ranges.h>
 #include <openvino/openvino.hpp>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -359,6 +360,49 @@ public:
     }
 };
 
+<<<<<<< HEAD
+=======
+// TODO: To be moved to CB library.
+class TextStreamer {
+    std::shared_ptr<Tokenizer> tokenizer;
+    std::vector<int64_t> tokenCache;
+    size_t printLen{0};
+
+public:
+    TextStreamer(std::shared_ptr<Tokenizer> tokenizer) :
+        tokenizer(std::move(tokenizer)) {}
+
+    std::optional<std::string> put(int64_t token) {
+        tokenCache.push_back(token);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokenCache);
+        std::string text = tokenizer->decode(tokenCache);
+
+        if (!text.empty() && '\n' == text.back() && text.size() > printLen) {
+            // The chunk is ready if the generated text ends with new line.
+            // Also, clear the cache.
+            std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
+            tokenCache.clear();
+            printLen = 0;
+            return chunk;
+        } else if (!isValidUtf8(text)) {
+            return std::nullopt;
+        } else if (text.size() > printLen) {
+            // The chunk is ready if the new text in the cache contains space.
+            // The chunk is constructed from the new text, however only up to the last space character (including it)
+            // Does not clear the cache.
+            auto lastSpacePos = text.rfind(' ');
+            if (lastSpacePos == std::string::npos || lastSpacePos < printLen) {
+                return std::nullopt;
+            }
+            std::string chunk = std::string{text.data() + printLen, lastSpacePos - printLen + 1};
+            printLen = lastSpacePos + 1;
+            return chunk;
+        }
+        return std::nullopt;
+    }
+};
+
+>>>>>>> 6260462ab (Fixes)
 using InputDataType = ovms::HttpPayload;
 using OutputDataType = std::string;
 
@@ -406,18 +450,18 @@ public:
 
     absl::Status Close(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Close";
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "LLMCalculator [Node: {} ] Close", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Open start";
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
         ovms::LLMNodeResourcesMap nodeResourcesMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::LLMNodeResourcesMap>();
         auto it = nodeResourcesMap.find(cc->NodeName());
         RET_CHECK(it != nodeResourcesMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
         nodeResources = it->second;
-        LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Open end";
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
     }
 
@@ -506,10 +550,8 @@ public:
                 if (generationOutput.size() == 1) {
                     std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
                     std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
-                    // TODO: Check if required and convert to std::string
-                    // SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Input tokens: {}", tokens);
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
                     std::string completion = tokenizer->decode(tokens);
-                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Decoded tokens: {} \n", completion);
 
                     std::string response = serializeUnaryResponse(completion, this->request->getEndpoint());
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
@@ -520,10 +562,9 @@ public:
                     for (GenerationOutput& out : generationOutput) {
                         std::vector<int64_t> tokens = out.generated_token_ids;
                         std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
-                        // TODO: Check if required and convert to std::string
-                        // SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Input tokens: {}", tokens);
+
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
                         std::string completion = tokenizer->decode(tokens);
-                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Decoded tokens: {} \n", completion);
                         completions.emplace_back(completion);
                     }
 

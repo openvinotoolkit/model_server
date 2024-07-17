@@ -61,7 +61,7 @@ struct LLMExecutor {
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
     void printMetrics() {
         PipelineMetrics metrics = pipe->get_metrics();
-        SPDLOG_LOGGER_DEBUG(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {:.1f}%;",
+        SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {:.1f}%;",
             metrics.requests, metrics.scheduled_requests, metrics.cache_usage * 100);
     }
 };
@@ -73,10 +73,16 @@ class LLMExecutorWrapper {
     std::atomic<bool> finishExecutorThread = false;
 
     static void run(LLMExecutor* llmExecutor, std::atomic<bool>* receivedEndSignal) {
+        const uint64_t printMetricsEveryNumberOfSteps = 10;
+        std::atomic_uint64_t stepCounter = 0;
         while (!(*receivedEndSignal)) {
             try {
-                llmExecutor->printMetrics();
+                if (stepCounter % printMetricsEveryNumberOfSteps == 0) {
+                    llmExecutor->printMetrics();
+                    stepCounter = 0;
+                }
                 if (llmExecutor->hasRequests()) {
+                    stepCounter++;
                     llmExecutor->step();
                 } else {
                     llmExecutor->waitForRequests(receivedEndSignal);
@@ -104,4 +110,5 @@ public:
         llmExecutor.notify();
     }
 };
+
 }  // namespace ovms
