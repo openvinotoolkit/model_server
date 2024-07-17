@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -73,11 +74,11 @@ class LLMExecutorWrapper {
     std::atomic<bool> finishExecutorThread = false;
 
     static void run(LLMExecutor* llmExecutor, std::atomic<bool>* receivedEndSignal) {
-        const uint64_t printMetricsEveryNumberOfSteps = 10;
-        std::atomic_uint64_t stepCounter = 0;
+        const uint8_t printMetricsEveryNumberOfSteps = 10;
+        uint8_t stepCounter = 0;
         while (!(*receivedEndSignal)) {
             try {
-                if (stepCounter % printMetricsEveryNumberOfSteps == 0) {
+                if (stepCounter == printMetricsEveryNumberOfSteps) {
                     llmExecutor->printMetrics();
                     stepCounter = 0;
                 }

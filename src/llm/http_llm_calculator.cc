@@ -374,13 +374,13 @@ public:
 
     std::optional<std::string> put(int64_t token) {
         tokenCache.push_back(token);
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokenCache);
         std::string text = tokenizer->decode(tokenCache);
 
         if (!text.empty() && '\n' == text.back() && text.size() > printLen) {
             // The chunk is ready if the generated text ends with new line.
             // Also, clear the cache.
             std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokenCache);
             tokenCache.clear();
             printLen = 0;
             return chunk;
@@ -396,6 +396,7 @@ public:
             }
             std::string chunk = std::string{text.data() + printLen, lastSpacePos - printLen + 1};
             printLen = lastSpacePos + 1;
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokenCache);
             return chunk;
         }
         return std::nullopt;
@@ -450,18 +451,18 @@ public:
 
     absl::Status Close(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "LLMCalculator [Node: {} ] Close", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {} ] Close", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
         ovms::LLMNodeResourcesMap nodeResourcesMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::LLMNodeResourcesMap>();
         auto it = nodeResourcesMap.find(cc->NodeName());
         RET_CHECK(it != nodeResourcesMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
         nodeResources = it->second;
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
     }
 
