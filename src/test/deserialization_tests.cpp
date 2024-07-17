@@ -153,7 +153,7 @@ TEST_F(CAPIPredictRequest, ShouldSuccessForSupportedPrecision) {
 
     std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories;
     factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
-    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, inputSink, isPipeline, factories);
+    auto status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(request, tensorMap, {}, inputSink, isPipeline, factories);
     EXPECT_TRUE(status.ok());
     auto tensor = inferRequest.get_tensor(CAPIPredictRequest::tensorName);
     EXPECT_EQ(PRECISION, ovElementTypeToOvmsPrecision(tensor.get_element_type()));
