@@ -409,9 +409,6 @@ public:
     absl::Status Close(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
         LOG(INFO) << "LLMCalculator [Node: " << cc->NodeName() << "] Close";
-        SPDLOG_TRACE("\n#######################################TRACE");
-        SPDLOG_DEBUG("\n#######################################DEBUG");
-        SPDLOG_INFO("\n#######################################INFO");
         return absl::OkStatus();
     }
 
@@ -430,9 +427,6 @@ public:
         OVMS_PROFILE_FUNCTION();
         RET_CHECK(this->nodeResources != nullptr);
 
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "\n#######################################TEST INFO");
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "\n#######################################TEST DEBUG ");
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "\n#######################################TEST TRACE ");
         // For cases where MediaPipe decides to trigger Process() when there are no inputs
         if (cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty() && cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty()) {
             return absl::OkStatus();
@@ -514,9 +508,10 @@ public:
                 if (generationOutput.size() == 1) {
                     std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
                     std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
-                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Input tokens: {}", tokens);
+                    // TODO: Check if required and convert to std::string
+                    // SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Input tokens: {}", tokens);
                     std::string completion = tokenizer->decode(tokens);
-                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Decoded tokens: {}", completion);
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Decoded tokens: {} \n", completion);
 
                     std::string response = serializeUnaryResponse(completion, this->request->getEndpoint());
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
@@ -527,9 +522,10 @@ public:
                     for (GenerationOutput& out : generationOutput) {
                         std::vector<int64_t> tokens = out.generated_token_ids;
                         std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
-                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Input tokens: {}", tokens);
+                        // TODO: Check if required and convert to std::string
+                        // SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Input tokens: {}", tokens);
                         std::string completion = tokenizer->decode(tokens);
-                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Decoded tokens: {}", completion);
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Decoded tokens: {} \n", completion);
                         completions.emplace_back(completion);
                     }
 
@@ -555,17 +551,17 @@ public:
                     if (chunk.has_value()) {
                         std::string response = packIntoServerSideEventMessage(
                             serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint()));
-                        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", response);
+                        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                     }
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
                 } else {
                     OVMS_PROFILE_SCOPE("Generation of last streaming response");
                     std::string response = packIntoServerSideEventMessage(serializeStreamingChunk(this->streamer->end(), true, this->request->getEndpoint()));
                     response += packIntoServerSideEventMessage("[DONE]");
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", response);
                     // Produce last message, but do not produce loopback packets anymore so this is last Process() call
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", response);
                 }
             }
         } catch (ov::AssertFailure& e) {
