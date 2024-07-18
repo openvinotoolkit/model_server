@@ -64,8 +64,8 @@ class OpenAIChatCompletionsRequest {
     bool stream{false};
     std::string model;
     std::optional<int> maxTokens{std::nullopt};
-    // float frequencyPenalty{0.0f};
-    // float presencePenalty{0.0f};
+    std::optional<float> frequencePenalty{std::nullopt};
+    std::optional<float> presencePenalty{std::nullopt};
     std::optional<float> diversityPenalty{std::nullopt};
     std::optional<float> repetitionPenalty{std::nullopt};
     std::optional<float> lengthPenalty{std::nullopt};
@@ -120,6 +120,10 @@ public:
             config.top_p = topP.value();
         if (seed.has_value())
             config.rng_seed = seed.value();
+        if (frequencePenalty.has_value())
+            config.frequence_penalty = frequencePenalty.value();
+        if (presencePenalty.has_value())
+            config.presence_penalty = presencePenalty.value();
         config.do_sample = config.temperature > 0.0f && config.group_size == 1;
 
         return config;
@@ -215,29 +219,26 @@ public:
                 this->maxTokens = IGNORE_EOS_MAX_TOKENS_LIMIT;
             }
         }
-        // TODO: Supported by OpenAI and vLLM, however unsupported by CB lib
-        // // frequency_penalty: float; optional - defaults to 0
-        // it = this->doc.FindMember("frequency_penalty");
-        // if (it != this->doc.MemberEnd()) {
-        //     return false;  // TODO: Unsupported by CB
-        //     if (!it->value.IsDouble())
-        //         return false;
-        //     this->frequencyPenalty = it->value.GetDouble();
-        //     if (this->frequencyPenalty < -2.0f || this->frequencyPenalty > 2.0f)
-        //         return false;
-        // }
 
-        // TODO: Supported by OpenAI and vLLM, however unsupported by CB lib
-        // // presence_penalty: float; optional - defaults to 0
-        // it = this->doc.FindMember("presence_penalty");
-        // if (it != this->doc.MemberEnd()) {
-        //     return false;  // TODO: Unsupported by CB
-        //     if (!it->value.IsDouble())
-        //         return false;
-        //     this->presencePenalty = it->value.GetDouble();
-        //     if (this->presencePenalty < -2.0f || this->presencePenalty > 2.0f)
-        //         return false;
-        // }
+        // frequence_penalty: float; optional - defaults to 0
+        it = this->doc.FindMember("frequence_penalty");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsDouble())
+                return absl::InvalidArgumentError("frequence_penalty is not a floating point number");
+            this->frequencePenalty = it->value.GetDouble();
+            if (this->frequencePenalty < -2.0f || this->frequencePenalty > 2.0f)
+                return absl::InvalidArgumentError("frequence_penalty out of range(-2.0, 2.0)");
+        }
+
+        // presence_penalty: float; optional - defaults to 0
+        it = this->doc.FindMember("presence_penalty");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsDouble())
+                return absl::InvalidArgumentError("presence_penalty is not a floating point number");
+            this->presencePenalty = it->value.GetDouble();
+            if (this->presencePenalty < -2.0f || this->presencePenalty > 2.0f)
+                return absl::InvalidArgumentError("presence_penalty out of range(-2.0, 2.0)");
+        }
 
         // repetition_penalty: float; optional - defaults to 1.0
         // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
