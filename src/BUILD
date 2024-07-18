@@ -1079,6 +1079,7 @@ cc_test(
         "test/prediction_service_test.cpp",
         "test/tfs_rest_parser_row_test.cpp",
         "test/tfs_rest_parser_column_test.cpp",
+        "test/text_streamer_test.cpp",
         "test/tfs_rest_parser_binary_inputs_test.cpp",
         "test/tfs_rest_parser_nonamed_test.cpp",
         "test/kfs_rest_parser_test.cpp",

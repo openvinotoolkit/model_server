@@ -32,7 +32,6 @@
 #include <rapidjson/writer.h>
 
 #include "../profiler.hpp"
-#include "../stringutils.hpp"
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
 #include "text_processor.hpp"
@@ -157,7 +156,7 @@ public:
                 return absl::InvalidArgumentError("Messages are not an array");
             this->messages.clear();
             this->messages.reserve(it->value.GetArray().Size());
-            for (int i = 0; i < it->value.GetArray().Size(); i++) {
+            for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
                 const auto& obj = it->value.GetArray()[i];
                 if (!obj.IsObject())
                     return absl::InvalidArgumentError("Message is not a JSON object");
@@ -352,45 +351,6 @@ public:
         // function_call TODO (deprecated)
         // functions TODO (deprecated)
         return absl::OkStatus();
-    }
-};
-
-// TODO: To be moved to CB library.
-class TextStreamer {
-    std::shared_ptr<Tokenizer> tokenizer;
-    std::vector<int64_t> tokenCache;
-    size_t printLen{0};
-
-public:
-    TextStreamer(std::shared_ptr<Tokenizer> tokenizer) :
-        tokenizer(std::move(tokenizer)) {}
-
-    std::optional<std::string> put(int64_t token) {
-        tokenCache.push_back(token);
-        std::string text = tokenizer->decode(tokenCache);
-
-        if (!text.empty() && '\n' == text.back() && text.size() > printLen) {
-            // The chunk is ready if the generated text ends with new line.
-            // Also, clear the cache.
-            std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
-            tokenCache.clear();
-            printLen = 0;
-            return chunk;
-        } else if (!isValidUtf8(text)) {
-            return std::nullopt;
-        } else if (text.size() > printLen) {
-            // The chunk is ready if the new text in the cache contains space.
-            // The chunk is constructed from the new text, however only up to the last space character (including it)
-            // Does not clear the cache.
-            auto lastSpacePos = text.rfind(' ');
-            if (lastSpacePos == std::string::npos || lastSpacePos < printLen) {
-                return std::nullopt;
-            }
-            std::string chunk = std::string{text.data() + printLen, lastSpacePos - printLen + 1};
-            printLen = lastSpacePos + 1;
-            return chunk;
-        }
-        return std::nullopt;
     }
 };
 
