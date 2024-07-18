@@ -165,7 +165,11 @@ public:
             }
             SPDLOG_TRACE("Received all: {} packets for: {}", receivedOutputs, outputStreamName);
         }
-        MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "grap wait until done", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        auto status = graph.WaitUntilDone();
+        if(status.code() == absl::StatusCode::kFailedPrecondition){
+            MP_RETURN_ON_FAIL(status, "graph wait until done", StatusCode::MEDIAPIPE_PRECONDITION_FAILED);
+        }
+        MP_RETURN_ON_FAIL(status, "graph wait until done", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
         if (outputPollers.size() != outputPollersWithReceivedPacket.size()) {
             SPDLOG_DEBUG("Mediapipe failed to execute. Failed to receive all output packets");
             return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Unknown error during mediapipe execution");
