@@ -210,8 +210,8 @@ public:
         // max_tokens: uint; optional
         it = this->doc.FindMember("max_tokens");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsUint()){
-                if(it->value.IsUint64())
+            if (!it->value.IsUint()) {
+                if (it->value.IsUint64())
                     return absl::InvalidArgumentError("max_tokens value can't be greater than 4294967295");
                 return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
             }

@@ -166,7 +166,7 @@ public:
             SPDLOG_TRACE("Received all: {} packets for: {}", receivedOutputs, outputStreamName);
         }
         auto status = graph.WaitUntilDone();
-        if(status.code() == absl::StatusCode::kFailedPrecondition){
+        if (status.code() == absl::StatusCode::kFailedPrecondition) {
             MP_RETURN_ON_FAIL(status, "graph wait until done", StatusCode::MEDIAPIPE_PRECONDITION_FAILED);
         }
         MP_RETURN_ON_FAIL(status, "graph wait until done", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
