@@ -657,7 +657,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
 
     ASSERT_EQ(response, "");
 
-    ASSERT_EQ(fullResponse, "\n\nThe first thing ");
+    ASSERT_EQ(fullResponse, "\n\nThe first thing that");
 }
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
@@ -696,5 +696,5 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
 
     ASSERT_EQ(response, "");
 
-    ASSERT_EQ(fullResponse, "\n\nThe first thing ");
+    ASSERT_EQ(fullResponse, "\n\nThe first thing that");
 }
