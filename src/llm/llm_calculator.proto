@@ -42,7 +42,7 @@ message LLMCalculatorOptions {
 
     optional string plugin_config = 9 [default = ""];
 
-    optional uint32 best_of_limit = 10 [default = 30];
+    optional uint32 best_of_limit = 10 [default = 20];
 
-    optional uint32 max_tokens_limit = 11 [default = 800];
+    optional uint32 max_tokens_limit = 11 [default = 4096];
 }

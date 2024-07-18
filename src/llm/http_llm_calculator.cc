@@ -204,7 +204,7 @@ public:
                 return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
             if (it->value.GetUint() == 0)
                 return absl::InvalidArgumentError("max_tokens value should be greater than 0");
-            if(!(it->value.GetUint() < maxTokensLimit))
+            if (!(it->value.GetUint() < maxTokensLimit))
                 return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit));
             this->maxTokens = it->value.GetUint();
         }
@@ -312,7 +312,7 @@ public:
                 return absl::InvalidArgumentError("best_of is not an unsigned integer");
             if (it->value.GetUint() == 0)
                 return absl::InvalidArgumentError("best_of value should be greater than 0");
-            if(!(it->value.GetUint() < bestOfLimit))
+            if (!(it->value.GetUint() < bestOfLimit))
                 return absl::InvalidArgumentError(absl::StrCat("best_of exceeds limit provided in graph config: ", bestOfLimit));
             this->bestOf = it->value.GetUint();
         }
