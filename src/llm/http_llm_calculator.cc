@@ -26,7 +26,7 @@
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
 
-#include <continuous_batching_pipeline.hpp>
+#include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <fmt/ranges.h>
 #include <openvino/openvino.hpp>
 #include <rapidjson/stringbuffer.h>
@@ -84,8 +84,8 @@ public:
         doc(doc),
         endpoint(endpoint) {}
 
-    GenerationConfig createGenerationConfig() const {
-        GenerationConfig config;
+    ov::genai::GenerationConfig createGenerationConfig() const {
+        ov::genai::GenerationConfig config;
 
         // Generic
         if (maxTokens.has_value())
@@ -95,9 +95,13 @@ public:
             config.ignore_eos = ignoreEOS.value();
 
         // Beam search specific
-        config.num_groups = 1;  // OpenAI hardcoded
+        config.num_beam_groups = 1;  // OpenAI hardcoded
+        config.num_beams = 1;  // OpenAI hardcoded
+        config.no_repeat_ngram_size = std::numeric_limits<size_t>::max();
+
         if (bestOf.has_value())
-            config.group_size = bestOf.value();
+            config.num_beams = bestOf.value();;
+        
         if (diversityPenalty.has_value())
             config.diversity_penalty = diversityPenalty.value();  // TODO: Not available in OpenAI nor vLLM
         // TODO: stop_criteria = ?
@@ -121,10 +125,10 @@ public:
         if (seed.has_value())
             config.rng_seed = seed.value();
         if (frequencePenalty.has_value())
-            config.frequence_penalty = frequencePenalty.value();
+            config.frequency_penalty = frequencePenalty.value();
         if (presencePenalty.has_value())
             config.presence_penalty = presencePenalty.value();
-        config.do_sample = config.temperature > 0.0f && config.group_size == 1;
+        config.do_sample = config.temperature > 0.0f;
 
         return config;
     }
@@ -376,7 +380,7 @@ static std::atomic<uint64_t> currentRequestId = 0;
 
 class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<ovms::LLMNodeResources> nodeResources;
-    GenerationHandle generationHandle;
+    ov::genai::GenerationHandle generationHandle;
     std::shared_ptr<OpenAIChatCompletionsRequest> request;
 
     // TODO: To be  moved to CB library
@@ -498,7 +502,7 @@ public:
             // Unary scenario
             if (!this->request->isStream()) {
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
-                std::vector<GenerationOutput> generationOutput = this->generationHandle->read_all();
+                std::vector<ov::genai::GenerationOutput> generationOutput = this->generationHandle->read_all();
                 RET_CHECK(generationOutput.size() >= 1);
                 std::sort(generationOutput.begin(), generationOutput.end(), [=](GenerationOutput& r1, GenerationOutput& r2) {
                     return r1.score > r2.score;
@@ -516,7 +520,7 @@ public:
                 } else {
                     // Beam search only supported for unary
                     std::vector<std::string> completions;
-                    for (GenerationOutput& out : generationOutput) {
+                    for (ov::genai::GenerationOutput& out : generationOutput) {
                         std::vector<int64_t> tokens = out.generated_token_ids;
                         std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
 
@@ -534,10 +538,10 @@ public:
                 // Streaming scenario
                 // Each iteration is single execution of Process() method
 
-                if (this->generationHandle->get_status() == GenerationStatus::RUNNING || this->generationHandle->can_read()) {
+                if (this->generationHandle->get_status() == ov::genai::GenerationStatus::RUNNING || this->generationHandle->can_read()) {
                     // Subsequent iteration
                     OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
-                    GenerationOutputs generationOutputs = this->generationHandle->read();
+                    ov::genai::GenerationOutputs generationOutputs = this->generationHandle->read();
                     RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
                     RET_CHECK(generationOutputs.begin()->second.generated_token_ids.size() == 1);
 

@@ -19,9 +19,8 @@ def llm_engine():
     llm_engine_repository(name="_llm_engine")
     new_git_repository(
         name = "llm_engine",
-        remote = "https://github.com/mzegla/openvino.genai",
-        #branch = "simple_metrics",
-        commit = "511431ab428409ae061639724b5008bdb9a40b52", # sampler optimization
+        remote = "https://github.com/openvinotoolkit/openvino.genai",
+        commit = "0c2b68e469008fcc33f53da884d3e3b87df8dad0", # rm .github/ISSUE_TEMPLATE (#646)
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
@@ -64,7 +63,7 @@ config_setting(
 
 filegroup(
     name = "all_srcs",
-    srcs = glob(["text_generation/causal_lm/cpp/continuous_batching/library/**"]),
+    srcs = glob(["**"]),
     visibility = ["//visibility:public"],
 )
 
@@ -99,11 +98,11 @@ cmake(
         "HTTPS_PROXY": "{https_proxy}",
     }},
     lib_source = ":all_srcs",
-    out_lib_dir = "{lib_path}",
-   
+    out_lib_dir = "runtime/{lib_path}/intel64",
+    out_include_dir = "runtime/include",
     # linking order
-    out_static_libs = [
-            "libopenvino_continuous_batching.a",
+    out_shared_libs = [
+            "libopenvino_genai.so",
         ],
     tags = ["requires-network"],
     alwayslink = False,

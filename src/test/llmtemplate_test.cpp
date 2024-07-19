@@ -17,7 +17,7 @@
 #include <memory>
 #include <string>
 
-#include <continuous_batching_pipeline.hpp>
+#include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <openvino/openvino.hpp>
