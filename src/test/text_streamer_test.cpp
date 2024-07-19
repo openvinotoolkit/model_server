@@ -48,10 +48,18 @@ public:
         nodeResources.reset();
         py::finalize_interpreter();
     }
+    void assertTokensValues(ov::Tensor generatedTokens, std::vector<int64_t> expectedTokens){
+        ASSERT_EQ(generatedTokens.get_size(), expectedTokens.size());
+        for(size_t i = 0; i < generatedTokens.get_size(); i++){
+            ASSERT_EQ(static_cast<int64_t*>(generatedTokens.data())[i], expectedTokens[i]);
+        }
+    }
 };
 
-TEST_F(TextStreamerTest, noValueReturned) {
+TEST_F(TextStreamerTest, noValueReturneStringWitoutNewLineOrSpace) {
     auto tokens = tokenizer->encode("TEST");
+    std::vector<int64_t> expectedTokens = {565, 4923};
+    assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> rval = this->streamer->put(static_cast<int64_t*>(tokens.data())[i]);
         EXPECT_FALSE(rval.has_value());
@@ -61,9 +69,11 @@ TEST_F(TextStreamerTest, noValueReturned) {
 TEST_F(TextStreamerTest, valueReturned) {
     std::string testPrompt = "TEST\n";
     auto tokens = tokenizer->encode(testPrompt);
+    std::vector<int64_t> expectedTokens = {565, 4923, 50118};
+    assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> rval = this->streamer->put(static_cast<int64_t*>(tokens.data())[i]);
-        if (i < tokens.get_size() - 1) {
+        if (i < tokens.get_size() - 1) { // No value returned until last token with new line passed to tokenizer
             EXPECT_FALSE(rval.has_value());
         } else {
             EXPECT_TRUE(rval.has_value());
@@ -75,12 +85,16 @@ TEST_F(TextStreamerTest, valueReturned) {
 TEST_F(TextStreamerTest, valueReturnedCacheNotCleared) {
     std::string testPrompt1 = "TEST";
     auto tokens = tokenizer->encode(testPrompt1);
+    std::vector<int64_t> expectedTokens = {565, 4923};
+    assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> rval = this->streamer->put(static_cast<int64_t*>(tokens.data())[i]);
         EXPECT_FALSE(rval.has_value());
     }
     std::string testPrompt2 = "TEST\n";
     tokens = tokenizer->encode(testPrompt2);
+    expectedTokens = {565, 4923, 50118};
+    assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> rval = this->streamer->put(static_cast<int64_t*>(tokens.data())[i]);
         if (i < tokens.get_size() - 1) {
@@ -95,6 +109,8 @@ TEST_F(TextStreamerTest, valueReturnedCacheNotCleared) {
 TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
     std::string testPrompt = "TEST\n";
     auto tokens = tokenizer->encode(testPrompt);
+    std::vector<int64_t> expectedTokens = {565, 4923, 50118};
+    assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> rval = this->streamer->put(static_cast<int64_t*>(tokens.data())[i]);
         if (i < tokens.get_size() - 1) {
@@ -119,9 +135,11 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
 TEST_F(TextStreamerTest, valueReturnedTextWithSpaces) {
     std::string testPrompt = "TEST TEST TEST TEST";
     auto tokens = tokenizer->encode(testPrompt);
+    std::vector<int64_t> expectedTokens = {565, 4923, 41759, 41759, 41759};
+    assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> rval = this->streamer->put(static_cast<int64_t*>(tokens.data())[i]);
-        size_t numberOfTokensBeforeValueReturned = 2;
+        size_t numberOfTokensBeforeValueReturned = 2; // No value returned until third token with space passed to tokenizer
         if (i < numberOfTokensBeforeValueReturned) {
             EXPECT_FALSE(rval.has_value());
         } else {
