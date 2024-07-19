@@ -164,10 +164,10 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
 
     loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
-    nodeResources->initiateGeneration();
-
     nodeResources->maxTokensLimit = nodeOptions.max_tokens_limit();
     nodeResources->bestOfLimit = nodeOptions.best_of_limit();
+
+    nodeResources->initiateGeneration();
 
     return StatusCode::OK;
 }
