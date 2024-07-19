@@ -48,9 +48,9 @@ public:
         nodeResources.reset();
         py::finalize_interpreter();
     }
-    void assertTokensValues(ov::Tensor generatedTokens, std::vector<int64_t> expectedTokens){
+    void assertTokensValues(ov::Tensor generatedTokens, std::vector<int64_t> expectedTokens) {
         ASSERT_EQ(generatedTokens.get_size(), expectedTokens.size());
-        for(size_t i = 0; i < generatedTokens.get_size(); i++){
+        for (size_t i = 0; i < generatedTokens.get_size(); i++) {
             ASSERT_EQ(static_cast<int64_t*>(generatedTokens.data())[i], expectedTokens[i]);
         }
     }
@@ -73,7 +73,7 @@ TEST_F(TextStreamerTest, valueReturned) {
     assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> rval = this->streamer->put(static_cast<int64_t*>(tokens.data())[i]);
-        if (i < tokens.get_size() - 1) { // No value returned until last token with new line passed to tokenizer
+        if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_FALSE(rval.has_value());
         } else {
             EXPECT_TRUE(rval.has_value());
@@ -139,7 +139,7 @@ TEST_F(TextStreamerTest, valueReturnedTextWithSpaces) {
     assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> rval = this->streamer->put(static_cast<int64_t*>(tokens.data())[i]);
-        size_t numberOfTokensBeforeValueReturned = 2; // No value returned until third token with space passed to tokenizer
+        size_t numberOfTokensBeforeValueReturned = 2;  // No value returned until third token with space passed to tokenizer
         if (i < numberOfTokensBeforeValueReturned) {
             EXPECT_FALSE(rval.has_value());
         } else {
