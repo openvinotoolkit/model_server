@@ -31,6 +31,6 @@ public:
      * Create tensor and intepret data ptr appropiately depending on the
      * factory type.
      */
-    virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) override;
+    ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) override;
 };
 }  // namespace ovms

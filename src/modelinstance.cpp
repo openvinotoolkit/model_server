@@ -28,6 +28,8 @@
 #include <dirent.h>
 #include <malloc.h>
 #include <openvino/runtime/compiled_model.hpp>
+#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#include <openvino/runtime/remote_tensor.hpp>
 #include <spdlog/spdlog.h>
 #include <sys/types.h>
 
@@ -45,6 +47,7 @@
 #include "model_metric_reporter.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
+#include "ocl_utils.hpp"
 #include "opencltensorfactory.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
@@ -73,8 +76,6 @@ enum : unsigned int {
 namespace ovms {
 
 const uint MAX_NIREQ_COUNT = 100000;
-class IOVTensorFactory;
-
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
 ModelInstance::~ModelInstance() = default;
@@ -716,13 +717,6 @@ Status ModelInstance::loadOVModelUsingCustomLoader() {
     return StatusCode::OK;
 }
 }  // namespace ovms
-//#include <CL/cl.h>
-//#include "openvino/runtime/intel_gpu/properties.hpp"
-//#include <openvino/runtime/intel_gpu/remote_properties.hpp>
-#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
-
-#include "ocl_utils.hpp"
-#include "openvino/runtime/remote_tensor.hpp"
 namespace ovms {
 void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
     OV_LOGGER("ov::Core: {}, ov::Model: {}, targetDevice: {}, ieCore.compile_model(model, targetDevice, pluginConfig", reinterpret_cast<void*>(&ieCore), reinterpret_cast<void*>(this->model.get()), this->targetDevice);
@@ -1239,11 +1233,11 @@ Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
 }
 
 template <typename RequestType>
-OVMS_InferenceResponseCompleteCallback_t getCallback(RequestType request) {
+static OVMS_InferenceResponseCompleteCallback_t getCallback(RequestType request) {
     return nullptr;
 }
 template <typename RequestType>
-void* getCallbackData(RequestType request) {
+static void* getCallbackData(RequestType request) {
     return nullptr;
 }
 
@@ -1374,7 +1368,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
     return status;
 }
 template <typename RequestType>
-void splitOutputs(const tensor_map_t& outputsInfo, const RequestType& request, std::set<std::string>& outputsInRequest, std::set<std::string>& outputsNotInRequest){};
+static void splitOutputs(const tensor_map_t& outputsInfo, const RequestType& request, std::set<std::string>& outputsInRequest, std::set<std::string>& outputsNotInRequest) {}
 
 template <>
 void splitOutputs<InferenceRequest>(const tensor_map_t& outputsInfo, const InferenceRequest& request, std::set<std::string>& outputsInRequest, std::set<std::string>& outputsNotInRequest) {

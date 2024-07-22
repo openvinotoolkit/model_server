@@ -20,7 +20,6 @@
 #include <thread>
 
 #include <CL/cl2.hpp>
-//#include <CL/opencl.hpp>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <openvino/core/type/element_type.hpp>
@@ -616,7 +615,6 @@ TEST(OpenVINO, SetTensorTest) {
             unblockSignal.emplace_back(callbackStruct[1].signal.get_future());
             auto start = std::chrono::high_resolution_clock::now();
             auto j = 0;
-            ;
             ov::Tensor inputOVTensor = inputs[j];
             ov::Tensor outputOVTensor = outputs[j];
             gpuInferRequest.set_tensor(input, inputs[j]);
@@ -1311,7 +1309,6 @@ TEST_F(OpenVINO2, UseCLContextForBuffersOVContextForInference) {
         ocl_context_c = ocl_context_cpp->get();
     }
     SPDLOG_ERROR("{}", (void*)ocl_context_c);
-    ;
     // opencltensorfactory.hpp
     auto inputTensor = ocl_context_cpp->create_tensor(type, shape, openCLCppInputBuffer);
     auto outputTensor = ocl_context_cpp->create_tensor(type, shape, openCLCppOutputBuffer);
