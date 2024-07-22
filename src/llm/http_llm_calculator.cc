@@ -537,10 +537,10 @@ public:
             if (!this->request->isStream()) {
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
                 std::vector<GenerationOutput> generationOutput = this->generationHandle->read_all();
+                RET_CHECK(generationOutput.size() >= 1);
                 std::sort(generationOutput.begin(), generationOutput.end(), [=](GenerationOutput& r1, GenerationOutput& r2) {
                     return r1.score > r2.score;
                 });
-                RET_CHECK(generationOutput.size() >= 1);
                 // legacy
                 if (generationOutput.size() == 1) {
                     std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
