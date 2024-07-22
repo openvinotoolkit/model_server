@@ -174,7 +174,7 @@ TEST(OpenVINO, SetTensorTest) {
     size_t tSize = 10;
     int iterations = 10;
     iterations = 1'000;
-    //std::vector<size_t> sizeSet{10, 10 * 10, 10 * 100, 10 * 1'000, 10 * 10'000, 10 * 100'000, 10 * 1'000'000};
+    // std::vector<size_t> sizeSet{10, 10 * 10, 10 * 100, 10 * 1'000, 10 * 10'000, 10 * 100'000, 10 * 1'000'000};
     std::vector<size_t> sizeSet{1'000'000};
     // load model
     Core core;
@@ -545,13 +545,13 @@ TEST(OpenVINO, SetTensorTest) {
             auto start = std::chrono::high_resolution_clock::now();
             for (auto i = 0; i < iterations; ++i) {
                 SPDLOG_INFO("iter start");
-                //std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
-                //inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[i % 2]));
-                //outputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[i % 2]));
+                // std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
+                // inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[i % 2]));
+                // outputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[i % 2]));
                 ov::Tensor inputOVTensor = inputs[i % 2];
                 ov::Tensor outputOVTensor = outputs[i % 2];
-                //gpuInferRequest.set_tensor(input,inputOVTensor);
-                //gpuInferRequest.set_tensor(output, outputOVTensor);
+                // gpuInferRequest.set_tensor(input,inputOVTensor);
+                // gpuInferRequest.set_tensor(output, outputOVTensor);
                 gpuInferRequest.set_tensor(input, inputs[i % 2]);
                 gpuInferRequest.set_tensor(output, outputs[i % 2]);
                 gpuInferRequest.set_callback([&gpuInferRequest, &callbackStruct](std::exception_ptr exception) {
@@ -581,7 +581,7 @@ TEST(OpenVINO, SetTensorTest) {
             SPDLOG_ERROR("finished GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS:{}", times[GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS][tSize]);
         }
 #ifdef TEST_VAAPI
-        // TODO:
+        // TODO
         // * no get_va_display function
         // * no allocate_image
         {  // GPU_OV_SET_VAA_BUF model loaded with ov context and vaapi tensors used
@@ -684,7 +684,7 @@ TEST(OpenVINO, SetTensorTest) {
     for (auto s : sizeSet) {
         for (auto t : {CPU_COPY, CPU_SET, GPU_OV_COPY_OV, GPU_OV_SET_OV, GPU_OCL_COPY, GPU_OCL_SET_OV, GPU_OCL_SET_OCL_IN_AND_OV_OUT, GPU_OCL_SET_OCL, /*GPU_OCL_DIFF_CONTEXT_INPUT_COPY, GPU_OV_SET_OCL_DIFF_CONTEXT,*/ GPU_OV_SET_OCL_SAME_CONTEXT, GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME, GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL, GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS, GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS_CONCUR}) {
             // times[ms] so we diide by 1000 to have per second
-            double fps = iterations / (times[t][s] / 1000.);  //FPS[Frame/second]
+            double fps = iterations / (times[t][s] / 1000.);  // FPS[Frame/second]
             std::cout << "" << fps * s << " \t\t ";
         }
         std::cout << std::endl;
@@ -748,8 +748,8 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputTensor) {
     ASSERT_EQ(std::string(DUMMY_MODEL_OUTPUT_NAME), outputName);
     EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
     EXPECT_EQ(dimCount, 2);
-    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);  // TODO ?
-    EXPECT_EQ(capiDeviceId, 0);                  // TODO?
+    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);  // TODO
+    EXPECT_EQ(capiDeviceId, 0);                  // TODO
     for (size_t i = 0; i < DUMMY_MODEL_SHAPE.size(); ++i) {
         EXPECT_EQ(DUMMY_MODEL_SHAPE[i], shape[i]) << "Different at:" << i << " place.";
     }
@@ -810,7 +810,7 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     cl_platform_id platformId;
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);
-    //cl::Context openCLCppContext(openCLCContext);
+    // cl::Context openCLCppContext(openCLCContext);
     cl::Context openCLCppContext(*contextFromModel, true);
     cl::Device device(deviceId);
     cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
@@ -846,7 +846,7 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     readEvents[0].wait();
     SPDLOG_ERROR("ER:{}", oclError);
     SPDLOG_ERROR("ER");
-    //TODO what to do if output set was not enough?
+    // TODO what to do if output set was not enough?
     uint32_t outputCount = 42;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
     ASSERT_EQ(outputCount, 1);
@@ -864,7 +864,7 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
     EXPECT_EQ(dimCount, 2);
     EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_OPENCL);  // TODO ?
-    EXPECT_EQ(capiDeviceId, 0);                     // TODO?
+    EXPECT_EQ(capiDeviceId, 0);                     // TODO ?
     for (size_t i = 0; i < DUMMY_MODEL_SHAPE.size(); ++i) {
         EXPECT_EQ(DUMMY_MODEL_SHAPE[i], shape[i]) << "Different at:" << i << " place.";
     }
@@ -905,7 +905,7 @@ TEST(CAPISyncWithCalback, DummyCallback) {
     cl_platform_id platformId;
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);  // THIS is required to get correct device Id needed for queue
-    //cl_context openCLCContext = contextFromModel;
+    // cl_context openCLCContext = contextFromModel;
     SPDLOG_ERROR("ER");
     SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXX :{}", (void*)contextFromModel);
     cl::Context openCLCppContext(*contextFromModel, true);
@@ -924,12 +924,12 @@ TEST(CAPISyncWithCalback, DummyCallback) {
     void* outputBufferData = out.data();
     size_t inputByteSize = sizeof(float) * in.size();
     SPDLOG_ERROR("ER");
-    //return;
+    // return;
     cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
     cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
     auto clErr = queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
     EXPECT_EQ(0, clErr);
-    // TODOto remove/investigate if this helps (2L below)
+    // TODO to remove/investigate if this helps (2L below)
     clErr = queue.enqueueWriteBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData);
     EXPECT_EQ(0, clErr);
     // start CAPI server
@@ -973,7 +973,7 @@ TEST(CAPISyncWithCalback, DummyCallback) {
     OVMS_ServerDelete(cserver);
 }
 
-//static void callbackMarkingItWasUsedWith42AndUnblocking(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
+// static void callbackMarkingItWasUsedWith42AndUnblocking(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
 static void callbackUnblockingAndFreeingRequest(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
 
@@ -1179,7 +1179,7 @@ TEST_F(CAPIGPUPerfComparison, Dummy) {
     // TODO check sync remote tensors
 
     OVMS_ServerDelete(cserver);
-    double fps = iterations / (times[1] / 1'000.);  //FPS[Frame/second]
+    double fps = iterations / (times[1] / 1'000.);  // FPS[Frame/second]
     std::cout << "" << fps * elementsCount << " \t\t ";
 }
 
@@ -1225,9 +1225,9 @@ TEST(OpenVINO, CallbacksTest) {
     cpuInferRequest.wait();
     ov::Tensor outOvTensor = cpuInferRequest.get_tensor("a");
     auto outAutoTensor = cpuInferRequest.get_tensor("a");
-    //EXPECT_TRUE(outOvTensor.is<ov::intel_gpu::ocl::ClBufferTensor>());
+    // EXPECT_TRUE(outOvTensor.is<ov::intel_gpu::ocl::ClBufferTensor>());
     EXPECT_TRUE(outOvTensor.is<ov::Tensor>());
-    //EXPECT_TRUE(outAutoTensor.is<ov::intel_gpu::ocl::ClBufferTensor>());
+    // EXPECT_TRUE(outAutoTensor.is<ov::intel_gpu::ocl::ClBufferTensor>());
     EXPECT_TRUE(outAutoTensor.is<ov::Tensor>());
     // TODO check what happens if output tensor is not correct
 }
