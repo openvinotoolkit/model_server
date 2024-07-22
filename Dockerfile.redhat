@@ -29,7 +29,7 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 ARG JOBS=8
 ARG VERBOSE_LOGS=OFF
 
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf search rapidjson && dnf install -y rapidjson-devel-1.1.0-14.el8 && dnf clean all && yum update -d6 -y && yum install -d6 -y \
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
             libuuid-devel \
             bc \
             cmake \
@@ -99,7 +99,7 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=40
 
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf search rapidjson && dnf install -y rapidjson-devel-1.1.0-14.el8 && dnf clean all && yum update -d6 -y && yum install -d6 -y \
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
             gdb \
             java-11-openjdk-devel \
             tzdata-java \

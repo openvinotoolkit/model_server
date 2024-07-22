@@ -33,6 +33,17 @@ bazel_skylib_workspace()
 load("@bazel_skylib//lib:versions.bzl", "versions")
 versions.check(minimum_bazel_version = "6.0.0")
 
+# RapidJSON
+# Version must match openvino.genai -> jinja2cpp -> rapidjson
+# git/Jinja2Cpp/thirdparty/internal_deps.cmake
+http_archive(
+    name = "com_github_tencent_rapidjson",
+    url = "https://github.com/Tencent/rapidjson/archive/973dc9c06dcd3d035ebd039cfb9ea457721ec213.tar.gz",
+    sha256 = "d0c9e52823d493206eb721d38cb3a669ca0212360862bd15a3c2f7d35ea7c6f7",
+    strip_prefix = "rapidjson-973dc9c06dcd3d035ebd039cfb9ea457721ec213",
+    build_file = "@//third_party/rapidjson:BUILD"
+)
+
 # overriding tensorflow serving bazel dependency
 # alternative would be to use cmake build of grpc and flag
 # to use system ssl instead

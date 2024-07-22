@@ -82,7 +82,7 @@ cmake(
     cache_entries = {{
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-        "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
+        "CMAKE_CXX_FLAGS": "-s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib"
     }} | select({{
            "//conditions:default": dict(
