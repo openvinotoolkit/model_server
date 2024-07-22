@@ -750,7 +750,6 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
         if (false) {  // use this only for test for now until we have config management
             cl_platform_id platformId;
             cl_device_id deviceId;
-            //auto ocl_context = getOCLContext();  // TODO use params from config, use device from config
             auto ocl_context = get_cl_context(platformId, deviceId);  // TODO use params from config, use device from config
             SPDLOG_ERROR("XXXXXXXX Loading model with context");
             this->ocl_context = ocl_context;
@@ -1391,7 +1390,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
 
     status = requestProcessor->release();
     SPDLOG_DEBUG("Calling user provided callback");  // TODO check if this shows
-    //handleCallback(requestProto, responseProto);
+    // handleCallback(requestProto, responseProto);
     return status;
 }
 template <typename RequestType>
@@ -1416,9 +1415,9 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
     // TODO FIXME we don't have response yet!
-    //auto requestProcessor = createRequestProcessor(requestProto, responseProto);  // request, response passed only to deduce type
-    //auto status = requestProcessor->extractRequestParameters(requestProto);
-    //if (!status.ok())
+    // auto requestProcessor = createRequestProcessor(requestProto, responseProto);  // request, response passed only to deduce type
+    // auto status = requestProcessor->extractRequestParameters(requestProto);
+    // if (!status.ok())
     //    return status;
     auto status = validate(requestProto);
     if (status.batchSizeChangeRequired() || status.reshapeRequired()) {
@@ -1430,7 +1429,7 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     }
     if (!status.ok())
         return status;
-    /*status = requestProcessor->prepare();
+    /* status = requestProcessor->prepare();
     if (!status.ok())
         return status;
 */
@@ -1446,7 +1445,8 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
         getName(), getVersion(), executingInferId, getInferRequestTime / 1000);
 
-    /*timer.start(PREPROCESS);
+    /*
+    timer.start(PREPROCESS);
     status = requestProcessor->preInferenceProcessing(inferRequest);
     timer.stop(PREPROCESS);
     if (!status.ok())

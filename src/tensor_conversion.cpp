@@ -503,8 +503,8 @@ static Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& s
 }
 template <>
 Status convertNativeFileFormatRequestTensorToOVTensor(const ovms::InferenceTensor& src, ov::Tensor& tensor, const std::shared_ptr<const TensorInfo>& tensorInfo, const std::string* buffer) {
-        SPDLOG_ERROR("String conversion is not implemented for C-API");
-        return StatusCode::NOT_IMPLEMENTED;
+    SPDLOG_ERROR("String conversion is not implemented for C-API");
+    return StatusCode::NOT_IMPLEMENTED;
 }
 
 static Status convertStringRequestFromBufferToOVTensor2D(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
@@ -574,8 +574,8 @@ Status convertStringRequestToOVTensor2D(
     const ovms::InferenceTensor& src,
     ov::Tensor& tensor,
     const std::string* buffer) {
-        SPDLOG_ERROR("String conversion is not implemented for C-API");
-        return StatusCode::NOT_IMPLEMENTED;
+    SPDLOG_ERROR("String conversion is not implemented for C-API");
+    return StatusCode::NOT_IMPLEMENTED;
 }
 
 static Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {

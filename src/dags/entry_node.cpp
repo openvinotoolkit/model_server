@@ -19,6 +19,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include "../capi_frontend/capi_utils.hpp"
@@ -79,7 +80,7 @@ Status EntryNode<RequestType>::fetchResults(TensorWithSourceMap& outputs) {
     factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>>(*request, inputsInfo, inputSink, isPipeline, factories);
     if (!status.ok()) {
-            return status;
+        return status;
     }
     return deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>, true>(*request, inputsInfo, outputsInfo, inputSink, isPipeline, factories);
 }

@@ -1013,7 +1013,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceAsync(OVMS_Server* serverPtr, OVMS_Inferen
         ExecutionContext::Interface::GRPC,
         ExecutionContext::Method::ModelInfer};
     if (pipelinePtr) {
-        //status = pipelinePtr->execute(executionContext);
+        // status = pipelinePtr->execute(executionContext);
         // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     } else {
         status = modelInstance->inferAsync<InferenceRequest, InferenceResponse>(req, modelInstanceUnloadGuard);
@@ -1112,7 +1112,7 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableContext(OVMS_Server* serverPtr, const ch
     }
     const cl_context* oclCContext = modelInstance->getOclCContext();
     *reinterpret_cast<cl_context**>(oclContext) = const_cast<cl_context*>(oclCContext);
-    //*oclContext = reinterpret_cast<void*>(oclCContext);
+    // *oclContext = reinterpret_cast<void*>(oclCContext);
     return nullptr;
 }
 
