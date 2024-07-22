@@ -93,7 +93,7 @@ TEST_F(TextStreamerTest, valueNotReturnedUntilNewLineDetected) {
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
-        if (i < tokens.get_size() - 1) { // No value returned until last token with new line passed to tokenizer
+        if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_FALSE(partialResponseText.has_value());
         } else {
             EXPECT_TRUE(partialResponseText.has_value());
@@ -108,7 +108,7 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
-        if (i < tokens.get_size() - 1) { // No value returned until last token with new line passed to tokenizer
+        if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_FALSE(partialResponseText.has_value());
         } else {
             EXPECT_TRUE(partialResponseText.has_value());
@@ -118,7 +118,7 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
     tokens = tokenizer->encode(testPrompt);
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
-        if (i < tokens.get_size() - 1) { // No value returned until last token with new line passed to tokenizer
+        if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_FALSE(partialResponseText.has_value());
         } else {
             EXPECT_TRUE(partialResponseText.has_value());
