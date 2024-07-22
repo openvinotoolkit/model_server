@@ -228,7 +228,6 @@ RUN dnf upgrade --setopt=install_weak_deps=0 -y ; \
     esac ; \
     echo "Installed opencl driver version:" ;\
     echo `rpm -qa | grep intel-opencl` ; \
-    
     if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
             rpm -ivh http://vault.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
     else  \
