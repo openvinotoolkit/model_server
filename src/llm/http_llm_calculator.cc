@@ -100,7 +100,7 @@ public:
         config.no_repeat_ngram_size = std::numeric_limits<size_t>::max();
 
         if (bestOf.has_value())
-            config.num_beams = bestOf.value();;
+            config.num_beams = bestOf.value();
         
         if (diversityPenalty.has_value())
             config.diversity_penalty = diversityPenalty.value();  // TODO: Not available in OpenAI nor vLLM
@@ -128,7 +128,7 @@ public:
             config.frequency_penalty = frequencePenalty.value();
         if (presencePenalty.has_value())
             config.presence_penalty = presencePenalty.value();
-        config.do_sample = config.temperature > 0.0f;
+        config.do_sample = config.temperature > 0.0f && config.num_beams == 1;
 
         return config;
     }

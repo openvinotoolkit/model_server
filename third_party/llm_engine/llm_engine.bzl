@@ -77,7 +77,7 @@ cmake(
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
         # there is no elegant paralell compilation support
         "VERBOSE=1",
-        "-j 4",
+        "-j 50",
     ],
     cache_entries = {{
         "BUILD_SHARED_LIBS": "OFF",
@@ -107,10 +107,15 @@ cmake(
     tags = ["requires-network"],
     alwayslink = False,
     visibility = ["//visibility:public"],
+    install = True,
+    lib_name = "libopenvino_genai.so.2430",
 )
 
 cc_library(
     name = "llm_engine",
+    srcs = glob([
+        "runtime/lib/intel64/libopenvino_genai.so.2430"
+    ]),
     deps = [
         ":llm_engine_cmake",
     ],

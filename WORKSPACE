@@ -191,6 +191,12 @@ new_local_repository(
 )
 
 new_local_repository(
+    name = "linux_openvino_genai",
+    build_file = "@//third_party/llm_engine:BUILD",
+    path = "/ovms/third_party/llm_engine",
+)
+
+new_local_repository(
     name = "linux_opencv",
     build_file = "@//third_party/opencv:BUILD",
     path = "/opt/opencv/",

@@ -37,6 +37,7 @@ cc_library(
         "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
         "@minitrace//:trace",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_github_tencent_rapidjson//:rapidjson",
         "@org_tensorflow//tensorflow/core:framework",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",

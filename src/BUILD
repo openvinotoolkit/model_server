@@ -360,6 +360,7 @@ cc_library(
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
                 "//src/llm:text_processor",
+                "@linux_openvino_genai//:lib",
             ],
             "//:disable_python": []
         }) + [
