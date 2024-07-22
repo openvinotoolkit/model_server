@@ -156,7 +156,7 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
     rapidjson::Document d;
     d.Parse(response.c_str());
     ASSERT_TRUE(d["choices"].IsArray());
-    ASSERT_EQ(d["choices"].Capacity(), 16);
+    ASSERT_EQ(d["choices"].Capacity(), 1);
     int i = 0;
     for (auto& choice : d["choices"].GetArray()) {
         ASSERT_EQ(choice["finish_reason"], "stop");
@@ -204,7 +204,7 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
     rapidjson::Document d;
     d.Parse(response.c_str());
     ASSERT_TRUE(d["choices"].IsArray());
-    ASSERT_EQ(d["choices"].Capacity(), 16);
+    ASSERT_EQ(d["choices"].Capacity(), 8);
     int i = 0;
     for (auto& choice : d["choices"].GetArray()) {
         ASSERT_EQ(choice["finish_reason"], "stop");
@@ -263,7 +263,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
     rapidjson::Document d;
     d.Parse(response.c_str());
     ASSERT_TRUE(d["choices"].IsArray());
-    ASSERT_EQ(d["choices"].Capacity(), 16);
+    ASSERT_EQ(d["choices"].Capacity(), 8);
     int i = 0;
     for (auto& choice : d["choices"].GetArray()) {
         ASSERT_EQ(choice["finish_reason"], "stop");
@@ -300,7 +300,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
     rapidjson::Document d;
     d.Parse(response.c_str());
     ASSERT_TRUE(d["choices"].IsArray());
-    ASSERT_EQ(d["choices"].Capacity(), 16);
+    ASSERT_EQ(d["choices"].Capacity(), 1);
     int i = 0;
     for (auto& choice : d["choices"].GetArray()) {
         ASSERT_EQ(choice["finish_reason"], "stop");

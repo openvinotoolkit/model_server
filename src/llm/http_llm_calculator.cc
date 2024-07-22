@@ -127,6 +127,7 @@ public:
     chat_t getMessages() const { return this->messages; }
     Endpoint getEndpoint() const { return this->endpoint; }
     std::optional<std::string> getPrompt() const { return this->prompt; }
+    std::optional<int> getNumReturnSequences() const { return this->numReturnSequences; }
 
     bool isStream() const { return this->stream; }
     std::string getModel() const { return this->model; }
@@ -616,7 +617,10 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     writer.String("choices");
     writer.StartArray();  // [
     int i = 0;
+    int n = this->request->getNumReturnSequences().value_or(1);
     for (const std::string& completeResponse : completeResponses) {
+        if (i >= n)
+            break;
         writer.StartObject();  // {
         // finish_reason: string; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)
         // "stop" => natural stop point due to stopping criteria <---------------- the only used so far, remaining are TODO
