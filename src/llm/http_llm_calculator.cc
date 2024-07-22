@@ -537,6 +537,9 @@ public:
             if (!this->request->isStream()) {
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
                 std::vector<GenerationOutput> generationOutput = this->generationHandle->read_all();
+                std::sort(generationOutput.begin(), generationOutput.end(), [=](GenerationOutput& r1, GenerationOutput& r2) {
+                    return r1.score > r2.score;
+                });
                 RET_CHECK(generationOutput.size() >= 1);
                 // legacy
                 if (generationOutput.size() == 1) {
