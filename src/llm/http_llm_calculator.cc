@@ -131,6 +131,7 @@ public:
     chat_t getMessages() const { return this->messages; }
     Endpoint getEndpoint() const { return this->endpoint; }
     std::optional<std::string> getPrompt() const { return this->prompt; }
+    std::optional<int> getNumReturnSequences() const { return this->numReturnSequences; }
 
     bool isStream() const { return this->stream; }
     std::string getModel() const { return this->model; }
@@ -503,6 +504,9 @@ public:
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
                 std::vector<GenerationOutput> generationOutput = this->generationHandle->read_all();
                 RET_CHECK(generationOutput.size() >= 1);
+                std::sort(generationOutput.begin(), generationOutput.end(), [=](GenerationOutput& r1, GenerationOutput& r2) {
+                    return r1.score > r2.score;
+                });
                 // legacy
                 if (generationOutput.size() == 1) {
                     std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
@@ -582,7 +586,10 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     writer.String("choices");
     writer.StartArray();  // [
     int i = 0;
+    int n = this->request->getNumReturnSequences().value_or(1);
     for (const std::string& completeResponse : completeResponses) {
+        if (i >= n)
+            break;
         writer.StartObject();  // {
         // finish_reason: string; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)
         // "stop" => natural stop point due to stopping criteria <---------------- the only used so far, remaining are TODO
@@ -696,10 +703,8 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
         }
         writer.EndObject();  // }
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        if (!stop) {
-            writer.String("text");
-            writer.String(chunkResponse.c_str());
-        }
+        writer.String("text");
+        writer.String(chunkResponse.c_str());
     }
     // TODO: tools_call
     // TODO: function_call (deprecated)
