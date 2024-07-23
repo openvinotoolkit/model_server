@@ -13,15 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-cc_library(
-    name = "openvino_genai_shared",
-    srcs = glob([
-        "runtime/lib/intel64/libopenvino_genai.so.2430",
-        "runtime/lib/intel64/libopenvino_genai.so"
-    ]),
-    visibility = ["//visibility:public"],
-    deps = [
-        "@llm_engine//:llm_engine",
-    ],
-)

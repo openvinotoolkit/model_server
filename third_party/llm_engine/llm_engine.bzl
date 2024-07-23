@@ -105,9 +105,7 @@ cmake(
             "libopenvino_genai.so.2430",
         ],
     tags = ["requires-network"],
-    alwayslink = True,
     visibility = ["//visibility:public"],
-    install = True,
     lib_name = "libopenvino_genai.so.2430",
 )
 
@@ -117,8 +115,6 @@ cc_library(
         ":llm_engine_cmake",
     ],
     visibility = ["//visibility:public"],
-    alwayslink = True,
-    linkstatic = False,
 )
 """
     repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy, lib_path=lib_path))

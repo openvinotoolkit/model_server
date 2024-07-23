@@ -34,6 +34,7 @@ load("@bazel_skylib//lib:versions.bzl", "versions")
 versions.check(minimum_bazel_version = "6.0.0")
 
 # RapidJSON
+# Must be defined earlier than tensorflow_serving because TFS is using older rapidjson
 # Version must match openvino.genai -> jinja2cpp -> rapidjson
 # git/Jinja2Cpp/thirdparty/internal_deps.cmake
 http_archive(
