@@ -25,6 +25,7 @@
 #include <continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <scheduler_config.hpp>
+#include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -34,6 +35,7 @@
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
 
+#include "../logging.hpp"
 #include "../stringutils.hpp"
 #include "src/python/utils.hpp"
 #include "text_processor.hpp"
@@ -57,6 +59,7 @@ public:
             // The chunk is ready if the generated text ends with new line.
             // Also, clear the cache.
             std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokenCache);
             tokenCache.clear();
             printLen = 0;
             return chunk;
@@ -72,6 +75,7 @@ public:
             }
             std::string chunk = std::string{text.data() + printLen, lastSpacePos - printLen + 1};
             printLen = lastSpacePos + 1;
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokenCache);
             return chunk;
         }
         return std::nullopt;
