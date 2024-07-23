@@ -102,10 +102,10 @@ cmake(
     out_include_dir = "runtime/include",
     # linking order
     out_shared_libs = [
-            "libopenvino_genai.so",
+            "libopenvino_genai.so.2430",
         ],
     tags = ["requires-network"],
-    alwayslink = False,
+    alwayslink = True,
     visibility = ["//visibility:public"],
     install = True,
     lib_name = "libopenvino_genai.so.2430",
@@ -113,14 +113,12 @@ cmake(
 
 cc_library(
     name = "llm_engine",
-    srcs = glob([
-        "runtime/lib/intel64/libopenvino_genai.so.2430"
-    ]),
     deps = [
         ":llm_engine_cmake",
     ],
     visibility = ["//visibility:public"],
-    alwayslink = False,
+    alwayslink = True,
+    linkstatic = False,
 )
 """
     repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy, lib_path=lib_path))

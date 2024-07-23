@@ -139,6 +139,14 @@ cc_shared_library(
     roots = ["//src:ovms_lib"],
 )
 
+cc_shared_library(
+    name = "openvino_genai_shared2",
+    dynamic_deps = [],
+    static_deps = [], 
+    features = [],
+    roots = ["@llm_engine//:llm_engine"],
+)
+
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 
 
@@ -360,7 +368,6 @@ cc_library(
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
                 "//src/llm:text_processor",
-                "@linux_openvino_genai//:lib",
             ],
             "//:disable_python": []
         }) + [

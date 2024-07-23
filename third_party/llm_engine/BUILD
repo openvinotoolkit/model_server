@@ -15,9 +15,10 @@
 #
 
 cc_library(
-    name = "lib",
+    name = "openvino_genai_shared",
     srcs = glob([
-        "runtime/lib/intel64/libopenvino_genai.so.2430"
+        "runtime/lib/intel64/libopenvino_genai.so.2430",
+        "runtime/lib/intel64/libopenvino_genai.so"
     ]),
     visibility = ["//visibility:public"],
     deps = [
