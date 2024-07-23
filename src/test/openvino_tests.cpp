@@ -37,7 +37,8 @@ using namespace ov;
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
-#include <openvino/runtime/intel_gpu/ocl/va.hpp>
+//#include <openvino/runtime/va/va.hpp>
+//#include <openvino/runtime/intel_gpu/ocl/va.hpp>
 
 cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
     cl_int err;

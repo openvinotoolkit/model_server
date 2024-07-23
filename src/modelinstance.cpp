@@ -1390,6 +1390,8 @@ Status ModelInstance::infer(const RequestType* requestProto,
 template <typename RequestType>
 static void splitOutputs(const tensor_map_t& outputsInfo, const RequestType& request, std::set<std::string>& outputsInRequest, std::set<std::string>& outputsNotInRequest) {}
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 template <>
 void splitOutputs<InferenceRequest>(const tensor_map_t& outputsInfo, const InferenceRequest& request, std::set<std::string>& outputsInRequest, std::set<std::string>& outputsNotInRequest) {
     for (auto& [name, info] : outputsInfo) {
@@ -1402,6 +1404,7 @@ void splitOutputs<InferenceRequest>(const tensor_map_t& outputsInfo, const Infer
         }
     }
 }
+#pragma GCC diagnostic pop
 template <typename RequestType, typename ResponseType>
 Status ModelInstance::inferAsync(const RequestType* requestProto,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
