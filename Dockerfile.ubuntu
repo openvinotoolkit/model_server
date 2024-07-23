@@ -350,7 +350,7 @@ RUN ./rununittest.sh
 # hadolint ignore=DL3059
 RUN apt-get update -y ; \
     apt-get install -y --no-install-recommends opencl-clhpp-headers intel-opencl-icd ocl-icd-libopencl1 && \
-    apt-get clean ; rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
+    apt-get clean ; rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;
 ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
 # WA for issue with linking with OpenCL library
 WORKDIR /usr/lib/x86_64-linux-gnu/
