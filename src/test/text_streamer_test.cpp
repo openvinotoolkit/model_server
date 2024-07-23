@@ -140,7 +140,8 @@ TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
         if (i < numberOfTokensBeforeValueReturned) {
             EXPECT_FALSE(partialResponseText.has_value());
         } else {
-            std::cout << "\n" << partialResponseText.value();
+            std::cout << "\n"
+                      << partialResponseText.value();
             EXPECT_TRUE(partialResponseText.has_value());
             EXPECT_EQ(partialResponseText.value().compare("TEST "), 0);
         }
