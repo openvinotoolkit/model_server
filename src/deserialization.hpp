@@ -17,6 +17,8 @@
 
 #include <memory>
 #include <string>
+#include <tuple>
+#include <unordered_map>
 
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
@@ -28,6 +30,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "capi_frontend/capi_utils.hpp"
 #include "capi_frontend/inferencerequest.hpp"
 #include "capi_frontend/inferencetensor.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
@@ -38,6 +41,10 @@
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
+// TODO
+#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+
+#include "openvino/runtime/remote_tensor.hpp"
 namespace ovms {
 
 #define RETURN_IF_ERR(X)   \
@@ -46,6 +53,8 @@ namespace ovms {
         if (!status.ok())  \
             return status; \
     }
+
+class IOVTensorFactory;
 
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo);
@@ -57,7 +66,7 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo);
 
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo);
+    const std::shared_ptr<const TensorInfo>& tensorInfo, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories);
 
 class ConcreteTensorProtoDeserializator {
 public:
@@ -227,7 +236,7 @@ public:
 
     static ov::Tensor deserializeTensorProto(
         const InferenceTensor& requestInput,
-        const std::shared_ptr<const TensorInfo>& tensorInfo) {
+        const std::shared_ptr<const TensorInfo>& tensorInfo, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
         OVMS_PROFILE_FUNCTION();
         switch (tensorInfo->getPrecision()) {
         case ovms::Precision::FP64:
@@ -243,7 +252,7 @@ public:
         case ovms::Precision::BOOL:
         case ovms::Precision::U1:
         case ovms::Precision::U8: {
-            return makeTensor(requestInput, tensorInfo);
+            return makeTensor(requestInput, tensorInfo, factories);
         }
         case ovms::Precision::CUSTOM:
         case ovms::Precision::UNDEFINED:
@@ -328,8 +337,8 @@ ov::Tensor deserializeTensorProto(
 template <class TensorProtoDeserializator>
 ov::Tensor deserializeTensorProto(
     const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo) {
-    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo);
+    const std::shared_ptr<const TensorInfo>& tensorInfo, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
+    return TensorProtoDeserializator::deserializeTensorProto(requestInput, tensorInfo, factories);
 }
 
 template <class Requester>
@@ -342,38 +351,185 @@ public:
     Status give(const std::string& name, ov::Tensor& tensor);
 };
 
+#define RETURN_IF_EMPTY_TENSOR()                                           \
+    do {                                                                   \
+        if (!tensor) {                                                     \
+            status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION; \
+            SPDLOG_DEBUG(status.string());                                 \
+            return status;                                                 \
+        }                                                                  \
+    } while (0)
+
+#define RETURN_IF_NOT_OK(fmt, ...)            \
+    do {                                      \
+        if (!status.ok()) {                   \
+            SPDLOG_DEBUG(fmt, ##__VA_ARGS__); \
+            return status;                    \
+        }                                     \
+    } while (0)
+
+// OV implementation the ov::Exception is not
+// a base class for all other exceptions thrown from OV.
+// OV can throw exceptions derived from std::logic_error.
+
+#define CATCH_AND_RETURN_ERROR()                                \
+    catch (const ov::Exception& e) {                            \
+        status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR; \
+        SPDLOG_DEBUG("{}: {}", status.string(), e.what());      \
+        return status;                                          \
+    }                                                           \
+    catch (std::logic_error & e) {                              \
+        status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR; \
+        SPDLOG_DEBUG("{}: {}", status.string(), e.what());      \
+        return status;                                          \
+    }
+
+enum class ExtractChoice {
+    EXTRACT_INPUT,
+    EXTRACT_OUTPUT,
+};
+
+template <typename Request, typename Tensor, ExtractChoice choice>
+class RequestTensorExtractor {
+public:
+    static Status extract(const Request& request, const std::string& name, const Tensor tensor);
+};
+
+template <>
+class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, ExtractChoice::EXTRACT_OUTPUT> {
+public:
+    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
+        SPDLOG_TRACE("Extracting output: {}", name);
+        return request.getOutput(name.c_str(), tensor);
+    }
+};
+
+template <>
+class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, ExtractChoice::EXTRACT_INPUT> {
+public:
+    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
+        SPDLOG_TRACE("Extracting input", name);
+        return request.getInput(name.c_str(), tensor);
+    }
+};
+
+template <typename Request>
+struct RequestTraits {
+    using TensorType = void;
+};
+
+template <>
+struct RequestTraits<::KFSRequest> {
+    using TensorType = ::KFSRequest::InferInputTensor;
+};
+
+template <>
+struct RequestTraits<ovms::InferenceRequest> {
+    using TensorType = ovms::InferenceTensor;
+};
+
+template <>
+struct RequestTraits<::TFSPredictRequest> {
+    using TensorType = ::tensorflow::TensorProto;
+};
+
+template <typename RequestType>
+static std::tuple<ovms::Status, const typename RequestTraits<RequestType>::TensorType*, const std::string*> getRequestTensorPtr(const RequestType& request, const std::string& name, ExtractChoice extractChoice) {
+    static_assert(!std::is_same<typename RequestTraits<RequestType>::TensorType, void>::value,
+        "RequestType is not supported. Please provide a specialization for RequestTraits with getRequestTensorPtr.");
+    return std::make_tuple(Status(StatusCode::NOT_IMPLEMENTED, "Failed to deserialize request"),
+        nullptr, nullptr);
+}
+// due to header included in many places function below is not used in all cpp files ...
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+template <>  // TODO separate for different choice
+std::tuple<ovms::Status, const typename RequestTraits<::TFSPredictRequest>::TensorType*, const std::string*> getRequestTensorPtr(const ::TFSPredictRequest& request, const std::string& name, ExtractChoice extractChoice) {
+    if (ExtractChoice::EXTRACT_OUTPUT == extractChoice) {
+        SPDLOG_TRACE("Defining output in TFS is not implemented");
+        return std::make_tuple(Status(StatusCode::NOT_IMPLEMENTED, "Failed to deserialize output in request"), nullptr, nullptr);
+    }
+    auto requestInputItr = request.inputs().find(name);
+    if (requestInputItr == request.inputs().end()) {
+        SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+        return std::make_tuple(Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize input in request"), nullptr, nullptr);
+    }
+    return std::make_tuple(Status(StatusCode::OK), &requestInputItr->second, nullptr);
+}
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+template <>  // TODO separate for different choice
+std::tuple<ovms::Status, const typename RequestTraits<::KFSRequest>::TensorType*, const std::string*> getRequestTensorPtr(const ::KFSRequest& request, const std::string& name, ExtractChoice extractChoice) {
+    if (ExtractChoice::EXTRACT_OUTPUT == extractChoice) {
+        SPDLOG_TRACE("Defining output in TFS is not implemented");
+        return std::make_tuple(Status(StatusCode::NOT_IMPLEMENTED, "Failed to deserialize output in request"), nullptr, nullptr);
+    }
+    bool deserializeFromSharedInputContents = request.raw_input_contents().size() > 0;
+    auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&name](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == name; });
+    if (requestInputItr == request.inputs().end()) {
+        SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+        return std::make_tuple(Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request"), nullptr, nullptr);
+    }
+    auto inputIndex = requestInputItr - request.inputs().begin();
+    auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
+    return std::make_tuple(Status(StatusCode::OK), &*requestInputItr, bufferLocation);
+}
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+template <>  // TODO separate for different choice
+std::tuple<ovms::Status, const typename RequestTraits<ovms::InferenceRequest>::TensorType*, const std::string*> getRequestTensorPtr(const ovms::InferenceRequest& request, const std::string& name, ExtractChoice extractChoice) {
+    const InferenceTensor* requestTensorPtr{nullptr};
+    ovms::Status status;
+    switch (extractChoice) {
+    case ExtractChoice::EXTRACT_INPUT: {
+        status = RequestTensorExtractor<InferenceRequest, const InferenceTensor**, ExtractChoice::EXTRACT_INPUT>::extract(request, name, &requestTensorPtr);
+        break;
+    }
+    case ExtractChoice::EXTRACT_OUTPUT: {
+        status = RequestTensorExtractor<InferenceRequest, const InferenceTensor**, ExtractChoice::EXTRACT_OUTPUT>::extract(request, name, &requestTensorPtr);
+        break;
+    }
+    }
+    if ((!status.ok() || requestTensorPtr == nullptr)) {
+        SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+        return std::make_tuple(Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request"), nullptr, nullptr);
+    }
+    return std::make_tuple(Status(StatusCode::OK), requestTensorPtr, nullptr);
+}
+#pragma GCC diagnostic pop
+
 template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const tensorflow::serving::PredictRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline) {
+    Sink& tensorSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
     OVMS_PROFILE_FUNCTION();
     Status status;
-    for (const auto& pair : inputMap) {
+    ov::Tensor tensor;
+    for (const auto& [name, tensorInfo] : inputMap) {
         try {
-            const auto& name = pair.first;
-            auto tensorInfo = pair.second;
-            auto requestInputItr = request.inputs().find(name);
-            if (requestInputItr == request.inputs().end()) {
-                SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+            auto [status, requestInputItr, bufferLocation] = getRequestTensorPtr(request, name, ExtractChoice::EXTRACT_INPUT);
+            if (!status.ok() || !requestInputItr) {
+                SPDLOG_ERROR("Failed to deserialize request. Validation of request failed");
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
-            auto& requestInput = requestInputItr->second;
-            ov::Tensor tensor;
-
-            if (requiresPreProcessing(requestInput)) {
+            if (requiresPreProcessing(*requestInputItr)) {
                 switch (tensorInfo->getPreProcessingHint()) {
                 case TensorInfo::ProcessingHint::STRING_NATIVE:
                     SPDLOG_DEBUG("Request contains input in native string format: {}", name);
-                    RETURN_IF_ERR(convertStringRequestToOVTensor(requestInput, tensor, nullptr));
+                    RETURN_IF_ERR(convertStringRequestToOVTensor(*requestInputItr, tensor, nullptr));
                     break;
                 case TensorInfo::ProcessingHint::STRING_2D_U8:
                     SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
-                    RETURN_IF_ERR(convertStringRequestToOVTensor2D(requestInput, tensor, nullptr));
+                    RETURN_IF_ERR(convertStringRequestToOVTensor2D(*requestInputItr, tensor, nullptr));
                     break;
                 case TensorInfo::ProcessingHint::IMAGE:
                     SPDLOG_DEBUG("Request contains input in native file format: {}", name);
-                    RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(requestInput, tensor, tensorInfo, nullptr));
+                    RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, nullptr));
                     break;
                 default:
                     SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
@@ -382,33 +538,14 @@ Status deserializePredictRequest(
                 }
             } else {
                 // Data Array Format
-                tensor = deserializeTensorProto<TensorProtoDeserializator>(
-                    requestInput, tensorInfo);
+                tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo);  // TODO
             }
-
-            if (!tensor) {
-                status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
-                SPDLOG_DEBUG(status.string());
-                return status;
-            }
+            RETURN_IF_EMPTY_TENSOR();
             const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();
-            status = inputSink.give(ovTensorName, tensor);
-            if (!status.ok()) {
-                SPDLOG_DEBUG("Feeding input:{} to inference performer failed:{}", ovTensorName, status.string());
-                return status;
-            }
-            // OV implementation the ov::Exception is not
-            // a base class for all other exceptions thrown from OV.
-            // OV can throw exceptions derived from std::logic_error.
-        } catch (const ov::Exception& e) {
-            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-            return status;
-        } catch (std::logic_error& e) {
-            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-            return status;
+            status = tensorSink.give(ovTensorName, tensor);
+            RETURN_IF_NOT_OK("Feeding input:{} to inference performer failed:{}", ovTensorName, status.string());
         }
+        CATCH_AND_RETURN_ERROR();
     }
     return status;
 }
@@ -417,24 +554,17 @@ template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const ::KFSRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline) {
+    Sink& tensorSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
     OVMS_PROFILE_FUNCTION();
     Status status;
-    bool deserializeFromSharedInputContents = request.raw_input_contents().size() > 0;
-    for (const auto& pair : inputMap) {
+    ov::Tensor tensor;
+    for (const auto& [name, tensorInfo] : inputMap) {
         try {
-            const auto& name = pair.first;
-            auto tensorInfo = pair.second;
-            auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&name](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == name; });
-            if (requestInputItr == request.inputs().end()) {
-                SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+            auto [status, requestInputItr, bufferLocation] = getRequestTensorPtr(request, name, ExtractChoice::EXTRACT_INPUT);
+            if (!status.ok() || !requestInputItr) {
+                SPDLOG_ERROR("Failed to deserialize request. Validation of request failed");
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
-            ov::Tensor tensor;
-
-            auto inputIndex = requestInputItr - request.inputs().begin();
-            auto bufferLocation = deserializeFromSharedInputContents ? &request.raw_input_contents()[inputIndex] : nullptr;
-
             if (requiresPreProcessing(*requestInputItr)) {
                 switch (tensorInfo->getPreProcessingHint()) {
                 case TensorInfo::ProcessingHint::STRING_NATIVE:
@@ -456,80 +586,113 @@ Status deserializePredictRequest(
                 }
             } else {
                 tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, bufferLocation);
-                if (!tensor) {
-                    status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
-                    SPDLOG_DEBUG(status.string());
-                    return status;
-                }
             }
-
+            RETURN_IF_EMPTY_TENSOR();
             const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();
-            status = inputSink.give(ovTensorName, tensor);
-            if (!status.ok()) {
-                SPDLOG_DEBUG("Feeding input:{} to inference performer failed:{}", ovTensorName, status.string());
-                return status;
-            }
-            // OV implementation the ov::Exception is not
-            // a base class for all other exceptions thrown from OV.
-            // OV can throw exceptions derived from std::logic_error.
-        } catch (const ov::Exception& e) {
-            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-            return status;
-        } catch (std::logic_error& e) {
-            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-            return status;
+            status = tensorSink.give(ovTensorName, tensor);
+            RETURN_IF_NOT_OK("Feeding input:{} to inference performer failed:{}", ovTensorName, status.string());
         }
+        CATCH_AND_RETURN_ERROR();
     }
     return status;
 }
+
+template <typename Request, typename Tensor>
+Status getTensor(const Request& request, const std::string& name, const Tensor tensor);
+
+template <typename Request>
+bool specifiesOutputs(const Request& request) {
+    return false;
+}
+
 template <class TensorProtoDeserializator, class Sink>
 Status deserializePredictRequest(
     const InferenceRequest& request,
+    const tensor_map_t& inputMap,  // add another entry for outputs
+    Sink& tensorSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
+    return StatusCode::OK;
+}
+
+template <class TensorProtoDeserializator, class Sink, bool isOkToSkip>
+static Status deserializePredictRequest2(
+    const KFSRequest& request,
     const tensor_map_t& inputMap,
-    Sink& inputSink, bool isPipeline) {
+    const tensor_map_t& outputMap,
+    Sink& tensorSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
+    return StatusCode::OK;
+}
+template <class TensorProtoDeserializator, class Sink, bool isOkToSkip>
+static Status deserializePredictRequest2(
+    const tensorflow::serving::PredictRequest& request,
+    const tensor_map_t& inputMap,
+    const tensor_map_t& outputMap,
+    Sink& tensorSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
+    return StatusCode::OK;
+}
+
+template <class TensorProtoDeserializator, class Sink, bool isOkToSkip>
+static Status deserializePredictRequest2(
+    const InferenceRequest& request,
+    const tensor_map_t& inputMap,
+    const tensor_map_t& outputMap,
+    Sink& tensorSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
     OVMS_PROFILE_FUNCTION();
     Status status;
+    ov::Tensor tensor;
     for (const auto& [name, tensorInfo] : inputMap) {
         try {
-            const InferenceTensor* requestInputPtr{nullptr};
-            auto status = request.getInput(name.c_str(), &requestInputPtr);
-            if (!status.ok() || requestInputPtr == nullptr) {
-                SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+            auto [status, requestInputItr, bufferLocation] = getRequestTensorPtr(request, name, ExtractChoice::EXTRACT_INPUT);
+            if (!status.ok() || !requestInputItr) {
+                SPDLOG_ERROR("Failed to deserialize request. Validation of request failed");
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
-            ov::Tensor tensor;
-            // binary input handling
-            /* if (requestInputPtr->getDataType() == "BYTES") {
-                SPDLOG_DEBUG("Request contains binary input: {}", name);
-                return StatusCode::NOT_IMPLEMENTED;
-            } else { */
-            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputPtr, tensorInfo);
-            if (!tensor) {
-                status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION;
-                SPDLOG_DEBUG(status.string());
-                return status;
+            // TODO move preprocessing to deserializeTensorProto
+            if (requiresPreProcessing(*requestInputItr)) {
+                switch (tensorInfo->getPreProcessingHint()) {
+                case TensorInfo::ProcessingHint::STRING_NATIVE:
+                    SPDLOG_DEBUG("Request contains input in native string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequestToOVTensor(*requestInputItr, tensor, nullptr));
+                    break;
+                case TensorInfo::ProcessingHint::STRING_2D_U8:
+                    SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
+                    RETURN_IF_ERR(convertStringRequestToOVTensor2D(*requestInputItr, tensor, nullptr));
+                    break;
+                case TensorInfo::ProcessingHint::IMAGE:
+                    SPDLOG_DEBUG("Request contains input in native file format: {}", name);
+                    RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, nullptr));
+                    break;
+                default:
+                    SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
+                        name, tensorInfo->getShape().size(), toString(tensorInfo->getPrecision()), tensorInfo->isInfluencedByDemultiplexer());
+                    return StatusCode::NOT_IMPLEMENTED;
+                }
+            } else {
+                tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, factories);
             }
-
+            RETURN_IF_EMPTY_TENSOR();
             const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();
-            status = inputSink.give(ovTensorName, tensor);
-            if (!status.ok()) {
-                SPDLOG_DEBUG("Feeding input:{} to inference performer failed:{}", ovTensorName, status.string());
-                return status;
-            }
-            // OV implementation the ov::Exception is not
-            // a base class for all other exceptions thrown from OV.
-            // OV can throw exceptions derived from std::logic_error.
-        } catch (const ov::Exception& e) {
-            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-            return status;
-        } catch (std::logic_error& e) {
-            status = StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR;
-            SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-            return status;
+            status = tensorSink.give(ovTensorName, tensor);
+            RETURN_IF_NOT_OK("Feeding input:{} to inference performer failed:{}", ovTensorName, status.string());
         }
+        CATCH_AND_RETURN_ERROR();
+    }
+    for (const auto& [name, tensorInfo] : outputMap) {
+        try {
+            auto [status, requestInputItr, bufferLocation] = getRequestTensorPtr(request, name, ExtractChoice::EXTRACT_OUTPUT);
+            if (!status.ok() || !requestInputItr) {
+                // TODO impose limits on what can be processed in deserialization on output eg. no binary handling
+                SPDLOG_TRACE("Skipping output name:{}", name);
+                // TODO possibly we could have passed here filtered output map
+                // instead of searching for each output and skipping
+                continue;
+            }
+            tensor = deserializeTensorProto<TensorProtoDeserializator>(*requestInputItr, tensorInfo, factories);
+            RETURN_IF_EMPTY_TENSOR();
+            const std::string ovTensorName = isPipeline ? name : tensorInfo->getName();
+            status = tensorSink.give(ovTensorName, tensor);
+            RETURN_IF_NOT_OK("Feeding input:{} to inference performer failed:{}", ovTensorName, status.string());
+        }
+        CATCH_AND_RETURN_ERROR();
     }
     return status;
 }

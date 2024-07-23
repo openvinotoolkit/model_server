@@ -19,6 +19,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include "../capi_frontend/capi_utils.hpp"
@@ -28,6 +29,7 @@
 #include "../ov_utils.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "../profiler.hpp"
+#include "../regularovtensorfactory.hpp"
 #include "../tensor_conversion.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "nodesession.hpp"
@@ -74,7 +76,13 @@ Status EntryNode<RequestType>::fetchResults(TensorWithSourceMap& outputs) {
     }
     InputSink<TensorWithSourceMap&> inputSink(outputs);
     bool isPipeline = true;
-    return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
+    std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories;
+    factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>>(*request, inputsInfo, inputSink, isPipeline, factories);
+    if (!status.ok()) {
+        return status;
+    }
+    return deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>, true>(*request, inputsInfo, outputsInfo, inputSink, isPipeline, factories);
 }
 
 template <>
