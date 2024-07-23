@@ -56,16 +56,18 @@ public:
     }
 };
 
-TEST_F(TextStreamerTest, noValueReturnedStringWithoutNewLineOrSpace) {
+TEST_F(TextStreamerTest, putDoesNotReturnValueStringWithoutNewLineOrSpace) {
     auto tokens = tokenizer->encode("TEST");
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
         EXPECT_FALSE(partialResponseText.has_value());
     }
+    std::string endOfMessage = this->streamer->end();
+    ASSERT_EQ(endOfMessage.compare("TEST"), 0);
 }
 
-TEST_F(TextStreamerTest, valueReturned) {
+TEST_F(TextStreamerTest, putReturnsValue) {
     std::string testPrompt = "TEST\n";
     auto tokens = tokenizer->encode(testPrompt);
     assertTokensValues(tokens, {565, 4923, 50118});
@@ -80,7 +82,7 @@ TEST_F(TextStreamerTest, valueReturned) {
     }
 }
 
-TEST_F(TextStreamerTest, noValueReturnedUntilNewLineDetected) {
+TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
     std::string testPrompt1 = "TEST";
     auto tokens = tokenizer->encode(testPrompt1);
     assertTokensValues(tokens, {565, 4923});
@@ -127,7 +129,7 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
     }
 }
 
-TEST_F(TextStreamerTest, valueReturnedTextWithSpaces) {
+TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
     std::string testPrompt = "TEST TEST TEST TEST";
     auto tokens = tokenizer->encode(testPrompt);
     std::vector<int64_t> expectedTokens = {565, 4923, 41759, 41759, 41759};
@@ -143,9 +145,11 @@ TEST_F(TextStreamerTest, valueReturnedTextWithSpaces) {
             EXPECT_EQ(partialResponseText.value().compare("TEST "), 0);
         }
     }
+    std::string endOfMessage = this->streamer->end();
+    ASSERT_EQ(endOfMessage.compare("TEST"), 0);
 }
 
-TEST_F(TextStreamerTest, valueReturnedTextWithNewLineInTheMiddle) {
+TEST_F(TextStreamerTest, putReturnsValueTextWithNewLineInTheMiddle) {
     std::string testPrompt = "TEST\nTEST";
     auto tokens = tokenizer->encode(testPrompt);
     std::vector<int64_t> expectedTokens = {565, 4923, 50118, 565, 4923};
