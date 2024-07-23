@@ -96,12 +96,12 @@ public:
 
         // Beam search specific
         config.num_beam_groups = 1;  // OpenAI hardcoded
-        config.num_beams = 1;  // OpenAI hardcoded
+        config.num_beams = 1;        // OpenAI hardcoded
         config.no_repeat_ngram_size = std::numeric_limits<size_t>::max();
 
         if (bestOf.has_value())
             config.num_beams = bestOf.value();
-        
+
         if (diversityPenalty.has_value())
             config.diversity_penalty = diversityPenalty.value();  // TODO: Not available in OpenAI nor vLLM
         // TODO: stop_criteria = ?
@@ -492,7 +492,7 @@ public:
                 }
                 nodeResources->notifyExecutorThread();
                 this->streamer = std::make_shared<TextStreamer>(
-                    nodeResources->cbPipe->get_tokenizer());
+                    std::make_shared<ov::genai::Tokenizer>(nodeResources->cbPipe->get_tokenizer()));
             }
 
             RET_CHECK(this->generationHandle != nullptr);
@@ -504,13 +504,13 @@ public:
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
                 std::vector<ov::genai::GenerationOutput> generationOutput = this->generationHandle->read_all();
                 RET_CHECK(generationOutput.size() >= 1);
-                std::sort(generationOutput.begin(), generationOutput.end(), [=](GenerationOutput& r1, GenerationOutput& r2) {
+                std::sort(generationOutput.begin(), generationOutput.end(), [=](ov::genai::GenerationOutput& r1, ov::genai::GenerationOutput& r2) {
                     return r1.score > r2.score;
                 });
                 // legacy
                 if (generationOutput.size() == 1) {
                     std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
-                    std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
+                    std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(nodeResources->cbPipe->get_tokenizer());
                     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
                     std::string completion = tokenizer->decode(tokens);
 
@@ -522,8 +522,7 @@ public:
                     std::vector<std::string> completions;
                     for (ov::genai::GenerationOutput& out : generationOutput) {
                         std::vector<int64_t> tokens = out.generated_token_ids;
-                        std::shared_ptr<Tokenizer> tokenizer = nodeResources->cbPipe->get_tokenizer();
-
+                        std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(nodeResources->cbPipe->get_tokenizer());
                         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
                         std::string completion = tokenizer->decode(tokens);
                         completions.emplace_back(completion);

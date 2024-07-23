@@ -88,7 +88,7 @@ public:
             std::vector<ov::genai::GenerationOutput> outputs = generation->read_all();
             // For greedy this sampling params, there's only one output
             // TODO: work with multiple outputs
-            std::string result = nodeResources->cbPipe->get_tokenizer()->decode(outputs[0].generated_token_ids);
+            std::string result = nodeResources->cbPipe->get_tokenizer().decode(outputs[0].generated_token_ids);
 
             LOG(INFO) << "Received response: " << result << std::endl;
             //--------------------------------------------

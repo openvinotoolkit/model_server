@@ -139,14 +139,6 @@ cc_shared_library(
     roots = ["//src:ovms_lib"],
 )
 
-cc_shared_library(
-    name = "openvino_genai_shared2",
-    dynamic_deps = [],
-    static_deps = [], 
-    features = [],
-    roots = ["@llm_engine//:llm_engine"],
-)
-
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 
 
@@ -1087,7 +1079,6 @@ cc_test(
         "test/prediction_service_test.cpp",
         "test/tfs_rest_parser_row_test.cpp",
         "test/tfs_rest_parser_column_test.cpp",
-        "test/text_streamer_test.cpp",
         "test/tfs_rest_parser_binary_inputs_test.cpp",
         "test/tfs_rest_parser_nonamed_test.cpp",
         "test/kfs_rest_parser_test.cpp",
@@ -1130,6 +1121,7 @@ cc_test(
                 # LLM logic uses Python for processing Jinja templates
                 "test/llmnode_test.cpp",
                 "test/llmtemplate_test.cpp",
+                "test/text_streamer_test.cpp",
             ],
             "//:disable_python" : [],
         }),

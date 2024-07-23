@@ -24,8 +24,8 @@
 
 #include <fmt/ranges.h>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
-#include <openvino/openvino.hpp>
 #include <openvino/genai/scheduler_config.hpp>
+#include <openvino/openvino.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -44,12 +44,12 @@ namespace ovms {
 
 // TODO: To be moved to CB library.
 class TextStreamer {
-    std::shared_ptr<Tokenizer> tokenizer;
+    std::shared_ptr<ov::genai::Tokenizer> tokenizer;
     std::vector<int64_t> tokenCache;
     size_t printLen{0};
 
 public:
-    TextStreamer(std::shared_ptr<Tokenizer> tokenizer) :
+    TextStreamer(std::shared_ptr<ov::genai::Tokenizer> tokenizer) :
         tokenizer(std::move(tokenizer)) {}
 
     std::optional<std::string> put(int64_t token) {

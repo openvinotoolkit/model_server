@@ -23,7 +23,7 @@ class TextStreamerTest : public ::testing::Test {
 public:
     ::mediapipe::CalculatorGraphConfig config;
     std::shared_ptr<ovms::LLMNodeResources> nodeResources = nullptr;
-    std::shared_ptr<Tokenizer> tokenizer;
+    std::shared_ptr<ov::genai::Tokenizer> tokenizer;
     std::shared_ptr<ovms::TextStreamer> streamer;
     std::string testPbtxt = R"(
     node: {
@@ -41,7 +41,7 @@ public:
         py::initialize_interpreter();
         ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
         ASSERT_EQ(ovms::LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), ovms::StatusCode::OK);
-        tokenizer = std::make_shared<Tokenizer>("/ovms/llm_testing/facebook/opt-125m");
+        tokenizer = std::make_shared<ov::genai::Tokenizer>("/ovms/llm_testing/facebook/opt-125m");
         streamer = std::make_shared<ovms::TextStreamer>(tokenizer);
     }
     void TearDown() {
@@ -56,8 +56,8 @@ public:
     }
 };
 
-TEST_F(TextStreamerTest, putDoesNotReturnValueStringWithoutNewLineOrSpace) {
-    auto tokens = tokenizer->encode("TEST");
+TEST_F(TextStreamerTest, noValueReturnedStringWithoutNewLineOrSpace) {
+    auto tokens = tokenizer->encode("TEST").input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
@@ -69,7 +69,7 @@ TEST_F(TextStreamerTest, putDoesNotReturnValueStringWithoutNewLineOrSpace) {
 
 TEST_F(TextStreamerTest, putReturnsValue) {
     std::string testPrompt = "TEST\n";
-    auto tokens = tokenizer->encode(testPrompt);
+    auto tokens = tokenizer->encode(testPrompt).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
@@ -84,14 +84,14 @@ TEST_F(TextStreamerTest, putReturnsValue) {
 
 TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
     std::string testPrompt1 = "TEST";
-    auto tokens = tokenizer->encode(testPrompt1);
+    auto tokens = tokenizer->encode(testPrompt1).input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
         EXPECT_FALSE(partialResponseText.has_value());
     }
     std::string testPrompt2 = "TEST\n";
-    tokens = tokenizer->encode(testPrompt2);
+    tokens = tokenizer->encode(testPrompt2).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
@@ -106,7 +106,7 @@ TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
 
 TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
     std::string testPrompt = "TEST\n";
-    auto tokens = tokenizer->encode(testPrompt);
+    auto tokens = tokenizer->encode(testPrompt).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
@@ -117,7 +117,7 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
             EXPECT_EQ(partialResponseText.value().compare(testPrompt), 0);
         }
     }
-    tokens = tokenizer->encode(testPrompt);
+    tokens = tokenizer->encode(testPrompt).input_ids;
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
         if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
@@ -131,7 +131,7 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
 
 TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
     std::string testPrompt = "TEST TEST TEST TEST";
-    auto tokens = tokenizer->encode(testPrompt);
+    auto tokens = tokenizer->encode(testPrompt).input_ids;
     std::vector<int64_t> expectedTokens = {565, 4923, 41759, 41759, 41759};
     assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
@@ -152,7 +152,7 @@ TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
 
 TEST_F(TextStreamerTest, putReturnsValueTextWithNewLineInTheMiddle) {
     std::string testPrompt = "TEST\nTEST";
-    auto tokens = tokenizer->encode(testPrompt);
+    auto tokens = tokenizer->encode(testPrompt).input_ids;
     std::vector<int64_t> expectedTokens = {565, 4923, 50118, 565, 4923};
     assertTokensValues(tokens, expectedTokens);
     std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[0]);
