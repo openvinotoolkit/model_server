@@ -23,6 +23,7 @@
 #include <vector>
 
 #include <continuous_batching_pipeline.hpp>
+#include <fmt/ranges.h>
 #include <openvino/openvino.hpp>
 #include <scheduler_config.hpp>
 #include <spdlog/spdlog.h>
