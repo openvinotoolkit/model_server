@@ -37,6 +37,7 @@ versions.check(minimum_bazel_version = "6.0.0")
 # Must be defined earlier than tensorflow_serving because TFS is using older rapidjson
 # Version must match openvino.genai -> jinja2cpp -> rapidjson
 # git/Jinja2Cpp/thirdparty/internal_deps.cmake
+# Date:   Tue May 9 21:31:22 2023 +0000 Avoid ptrdiff between pointers to different allocations
 http_archive(
     name = "com_github_tencent_rapidjson",
     url = "https://github.com/Tencent/rapidjson/archive/973dc9c06dcd3d035ebd039cfb9ea457721ec213.tar.gz",
