@@ -112,6 +112,7 @@ libraries = {
         'libopenvino_tensorflow_lite_frontend.so',
         'libopenvino_tokenizers.so',
         'libtbb.so',
+        'libopenvino_genai.so.2430',
     },
     OvmsBaseImageType.UBUNTU: {'libopenvino_intel_npu_plugin.so',},
     OvmsBaseImageType.UBUNTU20_PYTHON: set(),
