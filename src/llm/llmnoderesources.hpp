@@ -76,6 +76,16 @@ public:
         }
         return std::nullopt;
     }
+    std::string end() {
+        if(tokenCache.size() > 0){
+            std::string text = tokenizer->decode(tokenCache);
+            std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
+            tokenCache.clear();
+            printLen = 0;
+            return chunk;
+        }
+        return "";
+    }
 };
 
 class Status;

@@ -553,7 +553,7 @@ public:
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
                 } else {
                     OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                    std::string response = packIntoServerSideEventMessage(serializeStreamingChunk("", true, this->request->getEndpoint()));
+                    std::string response = packIntoServerSideEventMessage(serializeStreamingChunk(this->streamer->end(), true, this->request->getEndpoint()));
                     response += packIntoServerSideEventMessage("[DONE]");
                     // Produce last message, but do not produce loopback packets anymore so this is last Process() call
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);

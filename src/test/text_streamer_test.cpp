@@ -80,7 +80,7 @@ TEST_F(TextStreamerTest, valueReturned) {
     }
 }
 
-TEST_F(TextStreamerTest, valueNotReturnedUntilNewLineDetected) {
+TEST_F(TextStreamerTest, noValueReturnedUntilNewLineDetected) {
     std::string testPrompt1 = "TEST";
     auto tokens = tokenizer->encode(testPrompt1);
     assertTokensValues(tokens, {565, 4923});
@@ -138,6 +138,7 @@ TEST_F(TextStreamerTest, valueReturnedTextWithSpaces) {
         if (i < numberOfTokensBeforeValueReturned) {
             EXPECT_FALSE(partialResponseText.has_value());
         } else {
+            std::cout << "\n" << partialResponseText.value();
             EXPECT_TRUE(partialResponseText.has_value());
             EXPECT_EQ(partialResponseText.value().compare("TEST "), 0);
         }
@@ -160,4 +161,6 @@ TEST_F(TextStreamerTest, valueReturnedTextWithNewLineInTheMiddle) {
     EXPECT_FALSE(partialResponseText.has_value());
     partialResponseText = this->streamer->put(tokens.data<int64_t>()[4]);
     EXPECT_FALSE(partialResponseText.has_value());
+    std::string endOfMessage = this->streamer->end();
+    ASSERT_EQ(endOfMessage.compare("TEST"), 0);
 }
