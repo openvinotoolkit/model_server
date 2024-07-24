@@ -24,6 +24,8 @@ def llm_engine():
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
+        patch_args = ["-p1"],
+        patches = ["cb.patch"],
     )
     # when using local repository manually run: git submodule update --recursive 
     #native.new_local_repository(
@@ -44,7 +46,7 @@ def _impl(repository_ctx):
         lib_path = "lib"
         tbb_define = ""
     else: # for redhat
-        lib_path = "lib64"
+        lib_path = "lib"
         tbb_define = " -DTBB_DIR=/tmp/openvino_installer/oneapi-tbb-2021.13.0/lib/cmake/tbb/ "
 
     # Note we need to escape '{/}' by doubling them due to call to format
@@ -71,6 +73,7 @@ filegroup(
 
 build_release = {{"CMAKE_BUILD_TYPE": "Release"}}
 build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
+
 cmake(
     name = "llm_engine_cmake",
     build_args = [
@@ -81,6 +84,7 @@ cmake(
         "VERBOSE=1",
         "-j 50",
     ],
+    linkopts =["-ldl", "-lstdc++fs"],
     generate_args = ["{tbb_define}"],
     cache_entries = {{
         "BUILD_SHARED_LIBS": "OFF",
