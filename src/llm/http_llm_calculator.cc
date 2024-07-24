@@ -26,8 +26,8 @@
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
 
-#include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <fmt/ranges.h>
+#include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
