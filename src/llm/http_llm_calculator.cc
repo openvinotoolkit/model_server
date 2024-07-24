@@ -693,14 +693,12 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         writer.String("delta");
         writer.StartObject();  // {
-        if (!stop) {
-            writer.String("content");
-            // writer.String("role");
-            // writer.String("assistant");
-            // role: string; Role of the text producer
-            // Will make sense once we have chat templates? TODO(atobisze)
-            writer.String(chunkResponse.c_str());
-        }
+        writer.String("content");
+        // writer.String("role");
+        // writer.String("assistant");
+        // role: string; Role of the text producer
+        // Will make sense once we have chat templates? TODO(atobisze)
+        writer.String(chunkResponse.c_str());
         writer.EndObject();  // }
     } else if (endpoint == Endpoint::COMPLETIONS) {
         writer.String("text");
