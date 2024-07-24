@@ -171,7 +171,7 @@ TEST_F(TextStreamerTest, putReturnsValueTextWithNewLineInTheMiddle) {
 }
 
 TEST_F(TextStreamerTest, putReturnsValueAfterEndCalled) {
-    auto tokens = tokenizer->encode("TEST");
+    auto tokens = tokenizer->encode("TEST").input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
@@ -181,7 +181,7 @@ TEST_F(TextStreamerTest, putReturnsValueAfterEndCalled) {
     ASSERT_EQ(endOfMessage.compare("TEST"), 0);
 
     std::string testPrompt = "TEST\n";
-    tokens = tokenizer->encode(testPrompt);
+    tokens = tokenizer->encode(testPrompt).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
