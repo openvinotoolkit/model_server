@@ -24,7 +24,7 @@
 #include <thread>
 #include <utility>
 
-#include <continuous_batching_pipeline.hpp>
+#include <openvino/genai/continuous_batching_pipeline.hpp>
 
 #include "../profiler.hpp"
 
@@ -33,9 +33,9 @@ struct LLMExecutor {
     // For logging purposes we could have more information about graph and node here
     std::mutex mutex;
     std::condition_variable cv;
-    std::shared_ptr<ContinuousBatchingPipeline> pipe = nullptr;
+    std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe = nullptr;
 
-    LLMExecutor(std::shared_ptr<ContinuousBatchingPipeline> pipe) {
+    LLMExecutor(std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe) {
         this->pipe = std::move(pipe);
     }
 
@@ -61,7 +61,7 @@ struct LLMExecutor {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
     void printMetrics() {
-        PipelineMetrics metrics = pipe->get_metrics();
+        ov::genai::PipelineMetrics metrics = pipe->get_metrics();
         SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {:.1f}%;",
             metrics.requests, metrics.scheduled_requests, metrics.cache_usage * 100);
     }
@@ -96,7 +96,7 @@ class LLMExecutorWrapper {
     }
 
 public:
-    LLMExecutorWrapper(std::shared_ptr<ContinuousBatchingPipeline> pipe) :
+    LLMExecutorWrapper(std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe) :
         llmExecutor(std::move(pipe)) {
         llmExecutorThread = std::thread(LLMExecutorWrapper::run, &llmExecutor, &finishExecutorThread);
     }

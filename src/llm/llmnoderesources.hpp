@@ -22,11 +22,10 @@
 #include <utility>
 #include <vector>
 
-#include <continuous_batching_pipeline.hpp>
 #include <fmt/ranges.h>
+#include <openvino/genai/continuous_batching_pipeline.hpp>
+#include <openvino/genai/scheduler_config.hpp>
 #include <openvino/openvino.hpp>
-#include <scheduler_config.hpp>
-#include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -45,12 +44,12 @@ namespace ovms {
 
 // TODO: To be moved to CB library.
 class TextStreamer {
-    std::shared_ptr<Tokenizer> tokenizer;
+    std::shared_ptr<ov::genai::Tokenizer> tokenizer;
     std::vector<int64_t> tokenCache;
     size_t printLen{0};
 
 public:
-    TextStreamer(std::shared_ptr<Tokenizer> tokenizer) :
+    TextStreamer(std::shared_ptr<ov::genai::Tokenizer> tokenizer) :
         tokenizer(std::move(tokenizer)) {}
 
     std::optional<std::string> put(int64_t token) {
@@ -102,11 +101,11 @@ using plugin_config_t = std::map<std::string, ov::Any>;
 
 struct LLMNodeResources {
 public:
-    std::shared_ptr<ContinuousBatchingPipeline> cbPipe = nullptr;
+    std::shared_ptr<ov::genai::ContinuousBatchingPipeline> cbPipe = nullptr;
     std::string modelsPath;
     std::string device;
     plugin_config_t pluginConfig;
-    SchedulerConfig schedulerConfig;
+    ov::genai::SchedulerConfig schedulerConfig;
     TextProcessor textProcessor;
     int maxTokensLimit;
     int bestOfLimit;

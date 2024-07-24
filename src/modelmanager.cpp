@@ -787,7 +787,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         rapidjson::Document subconfigJson;
         rapidjson::IStreamWrapper isw(ifs);
         rapidjson::ParseResult parseResult = subconfigJson.ParseStream(isw);
-        if (!parseResult) {
+        if (parseResult.Code()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe: {} graph subconfig: {} file is not a valid JSON file. Error: {}",
                 mediapipeConfig.getGraphName(), subconfigPath, rapidjson::GetParseError_En(parseResult.Code()));
             return StatusCode::JSON_INVALID;
@@ -886,7 +886,7 @@ Status ModelManager::parseConfig(const std::string& jsonFilename, rapidjson::Doc
         auto configContent = config.str();
         md5 = FileSystem::getStringMD5(configContent);
         rapidjson::ParseResult parseResult = configJson.Parse(configContent.c_str());
-        if (!parseResult) {
+        if (parseResult.Code()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file. Error: {}",
                 rapidjson::GetParseError_En(parseResult.Code()));
             intermediateStatus = StatusCode::JSON_INVALID;

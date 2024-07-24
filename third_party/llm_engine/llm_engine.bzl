@@ -19,12 +19,13 @@ def llm_engine():
     llm_engine_repository(name="_llm_engine")
     new_git_repository(
         name = "llm_engine",
-        remote = "https://github.com/mzegla/openvino.genai",
-        #branch = "simple_metrics",
-        commit = "511431ab428409ae061639724b5008bdb9a40b52", # sampler optimization
+        remote = "https://github.com/openvinotoolkit/openvino.genai",
+        commit = "bc9224884963ff89c99b7c73b30404fd6e3b0f40", # releases/2024/3 add Readme for tests (#664)
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
+        patch_args = ["-p1"],
+        patches = ["cb.patch"],
     )
     # when using local repository manually run: git submodule update --recursive 
     #native.new_local_repository(
@@ -44,7 +45,7 @@ def _impl(repository_ctx):
     if ubuntu20_count == 1 or ubuntu22_count == 1:
         lib_path = "lib"
     else: # for redhat
-        lib_path = "lib64"
+        lib_path = "lib"
 
     # Note we need to escape '{/}' by doubling them due to call to format
     build_file_content = """
@@ -64,12 +65,13 @@ config_setting(
 
 filegroup(
     name = "all_srcs",
-    srcs = glob(["text_generation/causal_lm/cpp/continuous_batching/library/**"]),
+    srcs = glob(["**"]),
     visibility = ["//visibility:public"],
 )
 
 build_release = {{"CMAKE_BUILD_TYPE": "Release"}}
 build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
+
 cmake(
     name = "llm_engine_cmake",
     build_args = [
@@ -83,7 +85,7 @@ cmake(
     cache_entries = {{
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-        "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
+        "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib"
     }} | select({{
            "//conditions:default": dict(
@@ -99,15 +101,15 @@ cmake(
         "HTTPS_PROXY": "{https_proxy}",
     }},
     lib_source = ":all_srcs",
-    out_lib_dir = "{lib_path}",
-   
+    out_lib_dir = "runtime/{lib_path}/intel64",
+    out_include_dir = "runtime/include",
     # linking order
-    out_static_libs = [
-            "libopenvino_continuous_batching.a",
+    out_shared_libs = [
+            "libopenvino_genai.so.2430",
         ],
     tags = ["requires-network"],
-    alwayslink = False,
     visibility = ["//visibility:public"],
+    lib_name = "libopenvino_genai.so.2430",
 )
 
 cc_library(
@@ -116,7 +118,6 @@ cc_library(
         ":llm_engine_cmake",
     ],
     visibility = ["//visibility:public"],
-    alwayslink = False,
 )
 """
     repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy, lib_path=lib_path))

@@ -33,6 +33,19 @@ bazel_skylib_workspace()
 load("@bazel_skylib//lib:versions.bzl", "versions")
 versions.check(minimum_bazel_version = "6.0.0")
 
+# RapidJSON
+# Must be defined earlier than tensorflow_serving because TFS is using older rapidjson
+# Version must match openvino.genai -> jinja2cpp -> rapidjson
+# git/Jinja2Cpp/thirdparty/internal_deps.cmake
+# Date:   Tue May 9 21:31:22 2023 +0000 Avoid ptrdiff between pointers to different allocations
+http_archive(
+    name = "com_github_tencent_rapidjson",
+    url = "https://github.com/Tencent/rapidjson/archive/973dc9c06dcd3d035ebd039cfb9ea457721ec213.tar.gz",
+    sha256 = "d0c9e52823d493206eb721d38cb3a669ca0212360862bd15a3c2f7d35ea7c6f7",
+    strip_prefix = "rapidjson-973dc9c06dcd3d035ebd039cfb9ea457721ec213",
+    build_file = "@//third_party/rapidjson:BUILD"
+)
+
 # overriding tensorflow serving bazel dependency
 # alternative would be to use cmake build of grpc and flag
 # to use system ssl instead
@@ -362,15 +375,6 @@ http_archive(
     sha256 = "25b644a2bfa9c6704d723be51b026bc02420dfdee1277a49bfe5df3f19b0eaa4",
     strip_prefix = "cxxopts-3.1.1",
     build_file = "@//third_party/cxxopts:BUILD",
-)
-
-# RapidJSON
-http_archive(
-    name = "com_github_tencent_rapidjson",
-    url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.zip",
-    sha256 = "8e00c38829d6785a2dfb951bb87c6974fa07dfe488aa5b25deec4b8bc0f6a3ab",
-    strip_prefix = "rapidjson-1.1.0",
-    build_file = "@//third_party/rapidjson:BUILD"
 )
 
 # spdlog
