@@ -44,10 +44,8 @@ def _impl(repository_ctx):
 
     if ubuntu20_count == 1 or ubuntu22_count == 1:
         lib_path = "lib"
-        tbb_define = ""
     else: # for redhat
         lib_path = "lib"
-        tbb_define = " -DTBB_DIR=/tmp/openvino_installer/oneapi-tbb-2021.13.0/lib/cmake/tbb/ "
 
     # Note we need to escape '{/}' by doubling them due to call to format
     build_file_content = """
@@ -84,8 +82,6 @@ cmake(
         "VERBOSE=1",
         "-j 50",
     ],
-    linkopts =["-ldl", "-lstdc++fs"],
-    generate_args = ["{tbb_define}"],
     cache_entries = {{
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
@@ -124,7 +120,7 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 """
-    repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy, lib_path=lib_path, tbb_define=tbb_define))
+    repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy, lib_path=lib_path))
 
 llm_engine_repository = repository_rule(
     implementation = _impl,

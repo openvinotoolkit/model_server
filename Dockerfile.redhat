@@ -51,13 +51,14 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
 ####### Azure SDK needs new boost:
 WORKDIR /boost
 # hadolint ignore=DL3003
-RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.85.0/boost_1_85_0.tar.gz && \
-tar xf boost_1_85_0.tar.gz && cd boost_1_85_0 && ./bootstrap.sh && \
-    ./b2 -j ${JOBS} cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
-    --with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
-    --with-random --with-thread --with-atomic --with-regex \
-    --with-log --with-locale \
-    install
+RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz && \
+	if [ "$VERBOSE_LOGS" == "ON" ] ; then export BVERBOSE="-d+2" ; else export BVERBOSE="" ; fi && \
+	tar xf boost_1_68_0.tar.gz && cd boost_1_68_0 && ./bootstrap.sh && \
+	./b2 -j ${JOBS} cxxstd=17 link=static cxxflags='-fPIC' cflags='-fPIC' \
+		--with-chrono --with-date_time --with-filesystem --with-program_options --with-system \
+		--with-random --with-thread --with-atomic --with-regex \
+		--with-log --with-locale "$BVERBOSE" \
+		install
 
 COPY third_party /ovms/third_party/
 
