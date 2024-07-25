@@ -64,7 +64,7 @@ void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& node
 
             # Default chat template accepts only single message and outputs only it's 'content'
             # effectively turning it into a regular prompt. 
-            default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+            default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
 
             bos_token = ""
             eos_token = ""
