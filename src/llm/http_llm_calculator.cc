@@ -160,6 +160,8 @@ public:
                 return absl::InvalidArgumentError("Messages missing in request");
             if (!it->value.IsArray())
                 return absl::InvalidArgumentError("Messages are not an array");
+            if (it->value.GetArray().Size() == 0)
+                return absl::InvalidArgumentError("Messages array cannot be empty");
             this->messages.clear();
             this->messages.reserve(it->value.GetArray().Size());
             for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
@@ -172,8 +174,12 @@ public:
                         return absl::InvalidArgumentError("Invalid message structure");
                     if (!member->value.IsString())
                         return absl::InvalidArgumentError("Invalid message structure");
+                    if (std::string(member->name.GetString()) != std::string("role") || std::string(member->name.GetString()) != std::string("content"))
+                        return absl::InvalidArgumentError("Message object keys must only be \"role\" and \"content\"");
                     chat[member->name.GetString()] = member->value.GetString();
                 }
+                if (chat.size() != 2)
+                    return absl::InvalidArgumentError("Message object keys must be \"role\" or \"content\"");
             }
         }
 

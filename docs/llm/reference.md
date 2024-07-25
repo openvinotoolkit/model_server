@@ -122,7 +122,7 @@ If there are errors in loading or reading files or fields (they exist but are wr
 
 If no chat template has been specified, default template is applied. The template looks as follows:
 ```
-"{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+"{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
 ```
 
 When default template is loaded, servable accepts `/chat/completions` calls when `messages` list contains only single element (otherwise returns error) and treats `content` value of that single message as an input prompt for the model.

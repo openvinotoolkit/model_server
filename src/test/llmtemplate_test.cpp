@@ -91,7 +91,7 @@ public:
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
-    // default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     std::string finalPrompt = "";
@@ -104,7 +104,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
-    // default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     std::string finalPrompt = "";
@@ -120,10 +120,29 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
+TEST_F(LLMChatTemplateTest, ChatTemplateMessageWithEmptyObject) {
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
+    nodeResources->modelsPath = directoryPath;
+    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+
+    std::string finalPrompt = "";
+    std::string payloadBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": [{}]
+        }
+    )";
+    std::string errorOutput = "list object has no element 0";
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(finalPrompt, errorOutput);
+}
+
 TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
-    // default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     std::string finalPrompt = "";
@@ -140,7 +159,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
 TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
-    // default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     std::string finalPrompt = "";
@@ -157,7 +176,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
 TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
     nodeResources->modelsPath = directoryPath;
-    // default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
     LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     std::string finalPrompt = "";
@@ -551,6 +570,23 @@ TEST_F(LLMDefaultChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
     std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"chat.completion"})";
     // TODO: New output ASSERT_EQ(response.compare(0, expectedResponsePart1.length(), expectedResponsePart1), 0);
     // TODO: New output ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
+}
+
+TEST_F(LLMDefaultChatTemplateHttpTest, inferDefaultChatCompletionsUnaryMessageWithEmptyObject) {
+    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [{}]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
 }
 
 std::string fullResponse;
