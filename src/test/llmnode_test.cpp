@@ -942,7 +942,7 @@ TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyContent) {
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 }
 
 TEST_F(LLMHttpParametersValidationTest, MessagesWitMoreMessageFields) {
@@ -955,7 +955,7 @@ TEST_F(LLMHttpParametersValidationTest, MessagesWitMoreMessageFields) {
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 }
 
 class LLMConfigHttpTest : public ::testing::Test {

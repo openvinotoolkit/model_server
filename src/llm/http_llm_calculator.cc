@@ -174,12 +174,8 @@ public:
                         return absl::InvalidArgumentError("Invalid message structure");
                     if (!member->value.IsString())
                         return absl::InvalidArgumentError("Invalid message structure");
-                    if (std::string(member->name.GetString()) != std::string("role") && std::string(member->name.GetString()) != std::string("content"))
-                        return absl::InvalidArgumentError("Message object keys must only be \"role\" and \"content\"");
                     chat[member->name.GetString()] = member->value.GetString();
                 }
-                if (chat.size() != 2)
-                    return absl::InvalidArgumentError("Message object keys must be \"role\" or \"content\"");
             }
         }
 
@@ -481,6 +477,9 @@ public:
                     }
                     if (!TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
                         return absl::Status(absl::StatusCode::kInvalidArgument, finalPrompt);
+                    }
+                    if (finalPrompt.size() == 0) {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
                     }
                     break;
                 }
