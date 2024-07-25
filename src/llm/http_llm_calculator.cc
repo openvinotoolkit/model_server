@@ -160,6 +160,8 @@ public:
                 return absl::InvalidArgumentError("Messages missing in request");
             if (!it->value.IsArray())
                 return absl::InvalidArgumentError("Messages are not an array");
+            if (it->value.GetArray().Size() == 0)
+                return absl::InvalidArgumentError("Messages array cannot be empty");
             this->messages.clear();
             this->messages.reserve(it->value.GetArray().Size());
             for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
@@ -475,6 +477,9 @@ public:
                     }
                     if (!TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
                         return absl::Status(absl::StatusCode::kInvalidArgument, finalPrompt);
+                    }
+                    if (finalPrompt.size() == 0) {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
                     }
                     break;
                 }

@@ -64,7 +64,7 @@ void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& node
 
             # Default chat template accepts only single message and outputs only it's 'content'
             # effectively turning it into a regular prompt. 
-            default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+            default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
 
             bos_token = ""
             eos_token = ""
@@ -154,7 +154,8 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
     }
 
     try {
-        nodeResources->cbPipe = std::make_unique<ov::genai::ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig);
+        plugin_config_t tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
+        nodeResources->cbPipe = std::make_unique<ov::genai::ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig, tokenizerPluginConfig);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", basePath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
