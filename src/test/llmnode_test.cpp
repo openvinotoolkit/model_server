@@ -906,6 +906,19 @@ TEST_F(LLMHttpParametersValidationTest, MessagesWithEmptyObject) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_F(LLMHttpParametersValidationTest, EmptyPrompt) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "prompt": ""
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyRole) {
     std::string requestBody = R"(
         {
