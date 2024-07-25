@@ -115,7 +115,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
             "messages": []
         }
     )";
-    std::string errorOutput = "list object has no element 0";
+    std::string errorOutput = "This servable accepts only single message requests";
     ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, errorOutput);
 }
@@ -134,9 +134,8 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMessageWithEmptyObject) {
             "messages": [{}]
         }
     )";
-    std::string errorOutput = "list object has no element 0";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
-    ASSERT_EQ(finalPrompt, errorOutput);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(finalPrompt, "");
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
