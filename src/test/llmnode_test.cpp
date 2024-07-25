@@ -427,12 +427,12 @@ TEST_F(LLMHttpParametersValidationTest, maxTokensInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, maxTokensExceedsLimit) {
+TEST_F(LLMHttpParametersValidationTest, maxTokensExceedsUint32Size) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
             "stream": false,
-            "max_tokens": 40,
+            "max_tokens": 4294967296,
             "messages": [
             {
                 "role": "user",
