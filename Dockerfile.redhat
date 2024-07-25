@@ -140,10 +140,6 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
     chmod a+x /usr/local/bin/sccache && \
     curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 && \
-    curl -L https://github.com/ccache/ccache/releases/download/v4.3/ccache-4.3.tar.xz | tar xJv && \
-    mkdir -p ccache-4.3/build && cd ccache-4.3/build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DZSTD_FROM_INTERNET=ON -G Ninja .. && \
-    ninja -v install && \
     rm -rf /var/cache/yum
 
 ENV TF_SYSTEM_LIBS="curl"
@@ -334,6 +330,7 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 
 # OVMS
 # hadolint ignore=DL3059
+
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
 
 # hadolint ignore=DL3059
