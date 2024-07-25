@@ -879,6 +879,72 @@ TEST_F(LLMHttpParametersValidationTest, nGreaterThanBestOf) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_F(LLMHttpParametersValidationTest, MessagesEmpty) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "max_tokens": 1,
+            "messages": []
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, MessagesWithEmptyObject) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "messages": [{}]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyRole) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "messages": [{"role": "abc"}]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyContent) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "messages": [{"content": "def"}]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, MessagesWitMoreMessageFields) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "messages": [{"role": "123", "content": "def", "unexpected": "123"}]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 class LLMConfigHttpTest : public ::testing::Test {
 public:
     void SetUp() { py::initialize_interpreter(); }

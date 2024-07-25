@@ -174,7 +174,7 @@ public:
                         return absl::InvalidArgumentError("Invalid message structure");
                     if (!member->value.IsString())
                         return absl::InvalidArgumentError("Invalid message structure");
-                    if (std::string(member->name.GetString()) != std::string("role") || std::string(member->name.GetString()) != std::string("content"))
+                    if (std::string(member->name.GetString()) != std::string("role") && std::string(member->name.GetString()) != std::string("content"))
                         return absl::InvalidArgumentError("Message object keys must only be \"role\" and \"content\"");
                     chat[member->name.GetString()] = member->value.GetString();
                 }

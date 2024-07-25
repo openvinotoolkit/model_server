@@ -572,23 +572,6 @@ TEST_F(LLMDefaultChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
     // TODO: New output ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
 }
 
-TEST_F(LLMDefaultChatTemplateHttpTest, inferDefaultChatCompletionsUnaryMessageWithEmptyObject) {
-    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
-    std::string requestBody = R"(
-        {
-            "model": "llmDummyKFS",
-            "stream": false,
-            "seed" : 1,
-            "max_tokens": 5,
-            "messages": [{}]
-        }
-    )";
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-}
-
 std::string fullResponse;
 
 // static void ConcatenateResponse(const std::string& partial) {
