@@ -101,6 +101,7 @@ libraries = {
         'libopenvino_auto_batch_plugin.so',
         'libopenvino_auto_plugin.so',
         'libopenvino_c.so',
+        'libopenvino_genai.so',
         'libopenvino_hetero_plugin.so',
         'libopenvino_intel_cpu_plugin.so',
         'libopenvino_intel_gpu_plugin.so',
@@ -112,9 +113,9 @@ libraries = {
         'libopenvino_tensorflow_lite_frontend.so',
         'libopenvino_tokenizers.so',
         'libtbb.so',
-        'libopenvino_genai.so.2430',
     },
-    OvmsBaseImageType.UBUNTU: {'libopenvino_intel_npu_plugin.so',},
+    OvmsBaseImageType.UBUNTU: set(),
+    OvmsBaseImageType.UBUNTU22: {'libopenvino_intel_npu_plugin.so',},
     OvmsBaseImageType.UBUNTU20_PYTHON: set(),
     OvmsBaseImageType.UBUNTU22_PYTHON: set(),
     OvmsBaseImageType.REDHAT: {'libpugixml.so',},
@@ -123,7 +124,7 @@ libraries = {
 
 whitelisted_libraries = {
     OvmsImageType.UBUNTU20: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU]},
-    OvmsImageType.UBUNTU22: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU]},
+    OvmsImageType.UBUNTU22: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU] | libraries[OvmsBaseImageType.UBUNTU22]},
     OvmsImageType.UBUNTU22_GPU: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU]},
     OvmsImageType.UBUNTU22_NGINX: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU]},
     OvmsImageType.REDHAT: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.REDHAT]},
