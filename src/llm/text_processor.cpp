@@ -53,11 +53,11 @@ bool TextProcessor::applyChatTemplate(TextProcessor& textProcessor, std::string 
         std::string error = locals["error"].cast<std::string>();
 
         if (error != "") {
-            output = error;
+            output = std::move(error);
             return false;
         }
 
-        output = result;
+        output = std::move(result);
         return true;
     } catch (const pybind11::error_already_set& e) {
         LOG(INFO) << "Error occurred when applying chat template: " << e.what();

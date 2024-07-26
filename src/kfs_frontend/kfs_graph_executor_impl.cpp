@@ -159,7 +159,7 @@ static Status receiveAndSerializePacket(const ::mediapipe::Packet& packet, KFSRe
 template <>
 Status receiveAndSerializePacket<tensorflow::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
-        auto received = packet.Get<tensorflow::Tensor>();
+        auto& received = packet.Get<tensorflow::Tensor>();
         auto* output = response.add_outputs();
         output->set_name(outputStreamName);
         output->set_datatype(
