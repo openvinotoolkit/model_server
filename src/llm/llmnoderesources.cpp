@@ -87,7 +87,9 @@ void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& node
                 f = open(templates_directory + "/tokenizer_config.json")
                 data = json.load(f)
                 bos_token = data.get("bos_token", "")
+                bos_token = bos_token if isinstance(bos_token, str) else ""  # tokenizer_config.json allows for different types than string
                 eos_token = data.get("eos_token", "")
+                eos_token = eos_token if isinstance(eos_token, str) else ""  # tokenizer_config.json allows for different types than string
                 chat_template = data.get("chat_template", default_chat_template)
 
             if template is None:
@@ -102,6 +104,12 @@ void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& node
         nodeResources->textProcessor.eosToken = locals["eos_token"].cast<std::string>();
         nodeResources->textProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
     } catch (const pybind11::error_already_set& e) {
+        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
+        SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
+    } catch (const pybind11::cast_error& e) {
+        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
+        SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
+    } catch (const pybind11::key_error& e) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
     } catch (...) {
