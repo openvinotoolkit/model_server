@@ -287,7 +287,6 @@ It can be demonstrated using benchmarking app from vLLM repository:
 ```bash
 git clone https://github.com/vllm-project/vllm
 cd vllm
-pip3 install wheel packaging ninja "setuptools>=49.4.0" numpy
 pip3 install -r requirements-cpu.txt
 cd benchmarks
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
