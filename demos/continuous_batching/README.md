@@ -38,7 +38,7 @@ pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/hugging
 Run optimum-cli to download and quantize the model:
 ```bash
 cd demos/continuous_batching
-optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 Meta-Llama-3-8B-Instruct
+optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 Meta-Llama-3-8B-Instruct
 convert_tokenizer -o Meta-Llama-3-8B-Instruct --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens meta-llama/Meta-Llama-3-8B-Instruct
 ```
 
@@ -289,10 +289,7 @@ git clone https://github.com/vllm-project/vllm
 cd vllm
 pip3 install wheel packaging ninja "setuptools>=49.4.0" numpy
 pip3 install -r requirements-cpu.txt
-export VLLM_TARGET_DEVICE=cpu
-python setup.py install
 cd benchmarks
-sed -i -e 's|v1/chat/completions|v3/chat/completions|g' backend_request_func.py  # allows calls to endpoint with v3 instead of v1 like in vLLM
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
 python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate 1
 
@@ -301,22 +298,21 @@ Traffic request rate: 1.0
 100%|██████████████████████████████████████████████████| 1000/1000 [17:17<00:00,  1.04s/it]
 ============ Serving Benchmark Result ============
 Successful requests:                     1000
-Benchmark duration (s):                  1037.78
-Total input tokens:                      245995
-Total generated tokens:                  195504
-Request throughput (req/s):              0.96
-Input token throughput (tok/s):          237.04
-Output token throughput (tok/s):         188.39
+Benchmark duration (s):                  447.62
+Total input tokens:                      215201
+Total generated tokens:                  198588
+Request throughput (req/s):              2.23
+Input token throughput (tok/s):          480.76
+Output token throughput (tok/s):         443.65
 ---------------Time to First Token----------------
-Mean TTFT (ms):                          693.63
-Median TTFT (ms):                        570.60
-P99 TTFT (ms):                           2187.77
+Mean TTFT (ms):                          171999.94
+Median TTFT (ms):                        170699.21
+P99 TTFT (ms):                           360941.40
 -----Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          132.96
-Median TPOT (ms):                        143.28
-P99 TPOT (ms):                           234.14
+Mean TPOT (ms):                          211.31
+Median TPOT (ms):                        223.79
+P99 TPOT (ms):                           246.48
 ==================================================
-
 ```
 
 ## RAG with Model Server
