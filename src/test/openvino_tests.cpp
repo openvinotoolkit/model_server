@@ -38,13 +38,20 @@ using namespace ov;
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
 //#include <openvino/runtime/va/va.hpp>
-//#include <openvino/runtime/intel_gpu/ocl/va.hpp>
+#include <openvino/runtime/intel_gpu/ocl/va.hpp>
+//#include <va.va.h>a
+#include <va/va_drm.h>
+//
+typedef void* VADisplay;
+VADisplay get_va_display() {
+    return nullptr;  // FIXME TODO
+}
 
 cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
-    cl_int err;
+    cl_int clError;
     cl_uint numPlatforms = 0;
-    err = clGetPlatformIDs(0, nullptr, &numPlatforms);
-    if (err != CL_SUCCESS) {
+    clError = clGetPlatformIDs(0, nullptr, &numPlatforms);
+    if (clError != CL_SUCCESS) {
         std::cerr << "Error getting number of platforms\n";
         throw 1;
     }
@@ -52,8 +59,8 @@ cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
     clGetPlatformIDs(1, &platformId, nullptr);
     cl_uint numDevices = 0;
     // query how many devices there are
-    err = clGetDeviceIDs(platformId, CL_DEVICE_TYPE_GPU, 0, nullptr, &numDevices);
-    if (err != CL_SUCCESS) {
+    clError = clGetDeviceIDs(platformId, CL_DEVICE_TYPE_GPU, 0, nullptr, &numDevices);
+    if (clError != CL_SUCCESS) {
         std::cerr << "Error getting number of devices\n";
         throw 1;
     }
@@ -62,21 +69,23 @@ cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
         throw 1;
     }
     cl_uint numberOfDevicesInContext = 1;
-    err = clGetDeviceIDs(platformId, CL_DEVICE_TYPE_GPU, numberOfDevicesInContext, &deviceId, nullptr);
-    if (err != CL_SUCCESS) {
+    clError = clGetDeviceIDs(platformId, CL_DEVICE_TYPE_GPU, numberOfDevicesInContext, &deviceId, nullptr);
+    if (clError != CL_SUCCESS) {
         std::cerr << "Error getting GPU deviceId\n";
         throw 1;
     }
     // since we only use 1 device we can use address of deviceId
-    cl_context openCLCContext = clCreateContext(nullptr, numberOfDevicesInContext, &deviceId, nullptr, nullptr, &err);
-    if (err != CL_SUCCESS) {
+    cl_context openCLCContext = clCreateContext(nullptr, numberOfDevicesInContext, &deviceId, nullptr, nullptr, &clError);
+    if (clError != CL_SUCCESS) {
         std::cerr << "Error creating context\n";
         throw 1;
     }
     return openCLCContext;
 }
-
+constexpr bool queueReadWriteBlockingTrue = true;
+constexpr bool retainCLContextOwnership = true;
 TEST(OpenVINO, ExtractContextFromModel) {
+    // TODO split
     Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
     auto input = model->get_parameters().at(0);
@@ -91,34 +100,77 @@ TEST(OpenVINO, ExtractContextFromModel) {
     cl_device_id deviceId;
     auto nonused = get_cl_context(platformId, deviceId);
     auto compiledModel = core.compile_model(model, "GPU", config);
-    auto gpu_context = compiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
-    cl_context ctxFromModel = gpu_context.get();
-    cl::Context openCLCppContext(ctxFromModel);
-    cl_int err;
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err);
-    auto inputOVOCLBufferTensor = gpu_context.create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
-    auto outputOVOCLBufferTensor = gpu_context.create_tensor(output->get_element_type(), output->get_shape(), openCLCppOutputBuffer);
+    auto ovGpuOclContext = compiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
+    cl_context ctxFromModel = ovGpuOclContext.get();
+    cl::Context openCLCppContext(ctxFromModel, retainCLContextOwnership);
+    cl_int clError;
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(NULL, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError);
+    EXPECT_EQ(NULL, clError);
+    auto inputOVOCLBufferTensor = ovGpuOclContext.create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
+    auto outputOVOCLBufferTensor = ovGpuOclContext.create_tensor(output->get_element_type(), output->get_shape(), openCLCppOutputBuffer);
     // we will put data into input buffer
     std::vector<float> in(10, 0.1);
     void* inputBufferData = in.data();
     cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
     cl::Device device(deviceId);
     auto queue = cl::CommandQueue(openCLCppContext, device);
-    queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     auto inferRequest = compiledModel.create_infer_request();
     inferRequest.set_tensor(input, inputOVOCLBufferTensor);
     inferRequest.set_tensor(output, outputOVOCLBufferTensor);
     inferRequest.infer();
     std::vector<float> out(10);
     void* buffer_out = out.data();
-    queue.enqueueReadBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, outputByteSize, buffer_out);
+    EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, outputByteSize, buffer_out));
     for (size_t i = 0; i < inputByteSize / sizeof(float); ++i) {
         // different precision on GPU vs CPU
         EXPECT_NEAR(in[i] + 1, out[i], 0.0004) << "i:" << i;
     }
 }
 
+class OpenVINOContextFromModel : public ::testing::Test {
+protected:
+    Core core;
+    std::shared_ptr<ov::Model> model;
+    std::shared_ptr<ov::CompiledModel> compiledModel;
+    std::shared_ptr<ov::InferRequest> inferRequest;
+    std::shared_ptr<ov::intel_gpu::ocl::ClContext> ovGpuOclContext;
+    std::shared_ptr<cl::Context> oclCppContextFromModel;
+    std::shared_ptr<cl::CommandQueue> queueFromModelContext;
+    cl_context ctxFromModel;
+    uint32_t inputSecondDim = 100;
+    void SetUp() {
+        Core core;
+        this->model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
+        auto input = model->get_parameters().at(0);
+        auto inputByteSize = ov::shape_size(input->get_shape());
+        auto output = model->get_results().at(0);
+        auto outputByteSize = ov::shape_size(output->get_shape());
+        inputByteSize *= sizeof(float);
+        outputByteSize *= sizeof(float);
+        ov::AnyMap config = {ov::hint::performance_mode(ov::hint::PerformanceMode::THROUGHPUT),
+            ov::auto_batch_timeout(0)};
+        cl_platform_id platformId;
+        cl_device_id deviceId;
+        auto nonused = get_cl_context(platformId, deviceId);
+        ov::Shape ovShape;
+        ovShape.emplace_back(1);
+        ovShape.emplace_back(inputSecondDim);
+        std::map<std::string, ov::PartialShape> inputShapes;
+        inputShapes[DUMMY_MODEL_INPUT_NAME] = ovShape;
+        model->reshape(inputShapes);
+        this->compiledModel = std::make_shared<ov::CompiledModel>(core.compile_model(model, "GPU", config));
+        this->ovGpuOclContext = std::make_shared<ov::intel_gpu::ocl::ClContext>(compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>());
+        this->ctxFromModel = ovGpuOclContext->get();
+        this->inferRequest = std::make_shared<ov::InferRequest>(compiledModel->create_infer_request());
+        this->oclCppContextFromModel = std::make_shared<cl::Context>(this->ctxFromModel, retainCLContextOwnership);
+        cl::Device device(deviceId);
+        this->queueFromModelContext = std::make_shared<cl::CommandQueue>(*this->oclCppContextFromModel, device);
+    }
+    void TearDown() {}
+};
 TEST(OpenVINO, LoadModelWithPrecreatedContext) {
     Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
@@ -138,9 +190,11 @@ TEST(OpenVINO, LoadModelWithPrecreatedContext) {
     auto compiledModel = core.compile_model(model, remote_context);
     // now we create buffers
     cl::Context openCLCppContext(openCLCContext);
-    cl_int err;
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err);
+    cl_int clError;
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
     // create tensors and perform inference
     // wrap in and out buffers into RemoteTensor and set them to infer request
     auto inputOVOCLBufferTensor = remote_context.create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
@@ -150,14 +204,14 @@ TEST(OpenVINO, LoadModelWithPrecreatedContext) {
     void* inputBufferData = in.data();
     cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
     auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties);
-    queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     auto inferRequest = compiledModel.create_infer_request();
     inferRequest.set_tensor(input, inputOVOCLBufferTensor);
     inferRequest.set_tensor(output, outputOVOCLBufferTensor);
     inferRequest.infer();
     std::vector<float> out(10);
     void* buffer_out = out.data();
-    queue.enqueueReadBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, outputByteSize, buffer_out);
+    EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, outputByteSize, buffer_out));
     for (size_t i = 0; i < inputByteSize / sizeof(float); ++i) {
         // different precision on GPU vs CPU
         EXPECT_NEAR(in[i] + 1, out[i], 0.0004) << "i:" << i;
@@ -169,6 +223,88 @@ struct CallbackUnblockingStruct {
     void* bufferAddr = nullptr;
     cl::CommandQueue* queue = nullptr;
 };
+#ifndef TEST_VAAPI
+TEST(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasTest) {
+    ov::element::Type_t dtype = ov::element::Type_t::f32;
+    Core core;
+    //auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
+    auto model = core.read_model("/ovms/src/test/face_detection_adas/1/face-detection-adas-0001.xml");
+
+    ov::preprocess::PrePostProcessor ppp(model);
+    std::string input_tensor_name{"data"};
+    std::string outputName{"detection_out"};
+    if (true) {  // VAAPI decode
+        // https://docs.openvino.ai/latest/openvino_docs_OV_UG_supported_plugins_GPU_RemoteTensor_API.html#direct-nv12-video-surface-input
+        ppp.input()
+            .tensor()
+            .set_element_type(ov::element::u8)
+            .set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"})
+            .set_memory_type(ov::intel_gpu::memory_type::surface);
+        ppp.input().preprocess().convert_color(ov::preprocess::ColorFormat::BGR);
+        ppp.input().model().set_layout("NCHW");
+    } else {  // CPU decode
+        ppp.input(input_tensor_name).tensor().set_layout({"NHWC"}).set_element_type(ov::element::u8);
+        //ppp.input(input_tensor_name).model().set_layout(inputLayout);
+    }
+    model = ppp.build();
+    //GTEST_SKIP() << "Need working sample with VAAPI";
+    //auto gpuCompiledModel = core.compile_model(model, "GPU");
+    //auto gpuInferRequest = gpuCompiledModel.create_infer_request();
+    int drmFd = open("/dev/dri/renderD128", O_RDWR);
+    if (drmFd < 0) {
+        perror("Cannot open DRM device");
+        ASSERT_TRUE(false);
+    }
+    VADisplay vaDisplay = vaGetDisplayDRM(drmFd);
+    if (vaDisplay == NULL) {
+        SPDLOG_INFO("Failed to get DRM VADisplay");
+        close(drmFd);
+        ASSERT_TRUE(false);
+    }
+    int majorVersion, minorVersion;
+    VAStatus status = vaInitialize(vaDisplay, &majorVersion, &minorVersion);
+    if (status != VA_STATUS_SUCCESS) {
+        SPDLOG_INFO("Failed to initialize VA API");
+        vaTerminate(vaDisplay);
+        close(drmFd);
+        ASSERT_TRUE(false);
+    }
+    SPDLOG_INFO("ER");
+    ov::intel_gpu::ocl::VAContext vaGpuContext(core, vaDisplay);
+    int y_plane_size = 384;
+    int uv_plane_size = 672;
+    VASurfaceAttrib surface_attrib;
+    surface_attrib.type = VASurfaceAttribPixelFormat;
+    surface_attrib.flags = VA_SURFACE_ATTRIB_SETTABLE;
+    surface_attrib.value.type = VAGenericValueTypeFloat;  // VAGenericValueTypeInteger;
+    surface_attrib.value.value.i = VA_FOURCC_NV12;        // Specify the desired pixel format
+
+    SPDLOG_INFO("ER");
+    // Create the VA surface
+    VASurfaceID va_surface;
+    status = vaCreateSurfaces(vaDisplay, VA_RT_FORMAT_YUV420, y_plane_size, uv_plane_size, &va_surface, 1, &surface_attrib, 1);
+    if (status != VA_STATUS_SUCCESS) {
+        SPDLOG_INFO("vaCreateSurdaces failed: {}", status);
+        vaTerminate(vaDisplay);
+        close(drmFd);
+        ASSERT_TRUE(false);
+    }
+    SPDLOG_INFO("ER");
+    //auto remote_tensor = vaGpuContext.create_tensor_nv12(y_plane_surface, uv_plane_surface);
+    auto remote_tensor = vaGpuContext.create_tensor_nv12(y_plane_size, uv_plane_size, va_surface);
+    //SPDLOG_ERROR("finished GPU_OV_SET_VAA_BUF:{}", times[GPU_OV_SET_VAA_BUF][tSize]);
+    SPDLOG_INFO("ER");
+    // TODO replace int with names
+    //auto gpuCompiledModel = core.compile_model(model, vaGpuContext);
+    auto gpuCompiledModel = core.compile_model(model, "GPU");
+    auto gpuInferRequest = gpuCompiledModel.create_infer_request();
+    gpuInferRequest.set_input_tensor(0, remote_tensor.first);
+    gpuInferRequest.set_input_tensor(1, remote_tensor.second);
+    SPDLOG_INFO("ER");
+    gpuInferRequest.infer();
+    SPDLOG_INFO("ER");
+}
+#endif
 
 TEST(OpenVINO, SetTensorTest) {
     size_t tSize = 10;
@@ -235,7 +371,7 @@ TEST(OpenVINO, SetTensorTest) {
         inputByteSize *= sizeof(float);
         outputByteSize *= sizeof(float);
 
-        cl_int err;
+        cl_int clError;
         std::vector<float> outputData(tSize, 0);
         {  // GPU_OCL_COPY model loaded with OCL context, using ov::Tensors on input & output (copy)
             cl_platform_id platformId;
@@ -270,8 +406,10 @@ TEST(OpenVINO, SetTensorTest) {
             auto oclInferRequest = oclCompiledModel.create_infer_request();
             // prepare tensors
             std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextDifferent, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextDifferent, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextDifferent, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextDifferent, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
             std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
             inputs.emplace_back(ovWrappedOCLContextDifferent.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
             inputs.emplace_back(ovWrappedOCLContextDifferent.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
@@ -297,10 +435,14 @@ TEST(OpenVINO, SetTensorTest) {
             auto oclInferRequest = oclCompiledModel.create_infer_request();
             // prepare tensors
             std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
             std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
             inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
             inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
@@ -328,10 +470,14 @@ TEST(OpenVINO, SetTensorTest) {
             auto oclInferRequest = oclCompiledModel.create_infer_request();
             // prepare tensors
             std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
             std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
             inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
             inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
@@ -421,10 +567,14 @@ TEST(OpenVINO, SetTensorTest) {
             auto ovWrappedOCLContext = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
             // prepare tensors
             std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
             std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
             inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
             inputs.emplace_back(ovWrappedOCLContext.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
@@ -448,10 +598,14 @@ TEST(OpenVINO, SetTensorTest) {
             auto ovWrappedOCLContextFromModel = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
             // prepare tensors
             std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
             std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
             inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
             inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
@@ -470,14 +624,17 @@ TEST(OpenVINO, SetTensorTest) {
         {  // GPU_OV_SET_OCL_SAME_CONTEXT load model with target device and use context from model to create tensors
             auto ovWrappedOCLContextFromModel = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
             cl_context openCLCContextFromModel = ovWrappedOCLContextFromModel.get();
-            bool retainObject = true;  // we need to retain here since its OV that will clean up
-            cl::Context openCLCppContextFromModel(openCLCContextFromModel, retainObject);
+            cl::Context openCLCppContextFromModel(openCLCContextFromModel, retainCLContextOwnership);
             // prepare tensors
             std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContextFromModel, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
             std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
             inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
             inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
@@ -501,10 +658,14 @@ TEST(OpenVINO, SetTensorTest) {
             auto ovWrappedOCLContextFromModel = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
             // prepare tensors
             std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
             std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
             inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
             inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
@@ -531,10 +692,14 @@ TEST(OpenVINO, SetTensorTest) {
             auto ovWrappedOCLContextFromModel = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
             // prepare tensors
             std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
             std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
             inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
             inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
@@ -544,7 +709,7 @@ TEST(OpenVINO, SetTensorTest) {
             auto unblockSignal = callbackStruct.signal.get_future();
             auto start = std::chrono::high_resolution_clock::now();
             for (auto i = 0; i < iterations; ++i) {
-                SPDLOG_INFO("iter start");
+                // SPDLOG_INFO("iter start");
                 // std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
                 // inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[i % 2]));
                 // outputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(output->get_element_type(), output->get_shape(), outputsBuffers[i % 2]));
@@ -555,23 +720,23 @@ TEST(OpenVINO, SetTensorTest) {
                 gpuInferRequest.set_tensor(input, inputs[i % 2]);
                 gpuInferRequest.set_tensor(output, outputs[i % 2]);
                 gpuInferRequest.set_callback([&gpuInferRequest, &callbackStruct](std::exception_ptr exception) {
-                    SPDLOG_INFO("entered callback");
+                    // SPDLOG_INFO("entered callback");
                     gpuInferRequest.set_callback([](std::exception_ptr exception) {});
-                    SPDLOG_INFO("callback start");
+                    // SPDLOG_INFO("callback start");
                     callbackStruct.signal.set_value(42);
-                    SPDLOG_INFO("callback end");
+                    // SPDLOG_INFO("callback end");
                 });
-                SPDLOG_INFO("callback end");
+                // SPDLOG_INFO("callback end");
                 gpuInferRequest.start_async();
-                SPDLOG_INFO("waiting to unblock");
+                // SPDLOG_INFO("waiting to unblock");
                 unblockSignal.get();
-                SPDLOG_INFO("Unblocked thread");
+                // SPDLOG_INFO("Unblocked thread");
                 callbackStruct.signal = std::promise<uint32_t>();
-                SPDLOG_INFO("reset promise");
+                // SPDLOG_INFO("reset promise");
                 unblockSignal = callbackStruct.signal.get_future();
-                SPDLOG_INFO("reset future");
+                // SPDLOG_INFO("reset future");
                 // gpuInferRequest.wait(); // TODO probably not required
-                SPDLOG_INFO("iter end");
+                // SPDLOG_INFO("iter end");
             }
             auto stop = std::chrono::high_resolution_clock::now();
             SPDLOG_ERROR("Log plugin");
@@ -585,12 +750,52 @@ TEST(OpenVINO, SetTensorTest) {
         // * no get_va_display function
         // * no allocate_image
         {  // GPU_OV_SET_VAA_BUF model loaded with ov context and vaapi tensors used
-            VADisplay display = get_va_display();
-            ov::intel_gpu::ocl::VAContext va_gpu_context(core, display);
-            cl::Image2D y_plane_surface = allocate_image(y_plane_size);
-            cl::Image2D uv_plane_surface = allocate_image(uv_plane_size);
-            auto remote_tensor = gpu_context.create_tensor_nv12(y_plane_surface, uv_plane_surface);
+            int drmFd = open("/dev/dri/renderD128", O_RDWR);
+            if (drmFd < 0) {
+                perror("Cannot open DRM device");
+                ASSERT_TRUE(false);
+            }
+            VADisplay vaDisplay = vaGetDisplayDRM(drmFd);
+            if (vaDisplay == NULL) {
+                SPDLOG_INFO("Failed to get DRM VADisplay");
+                close(drmFd);
+                ASSERT_TRUE(false);
+            }
+            int majorVersion, minorVersion;
+            VAStatus status = vaInitialize(vaDisplay, &majorVersion, &minorVersion);
+            if (status != VA_STATUS_SUCCESS) {
+                SPDLOG_INFO("Failed to initialize VA API");
+                vaTerminate(vaDisplay);
+                close(drmFd);
+                ASSERT_TRUE(false);
+            }
+            SPDLOG_INFO("ER");
+            ov::intel_gpu::ocl::VAContext vaGpuContext(core, vaDisplay);
+            int y_plane_size = 200;
+            int uv_plane_size = 200;
+            VASurfaceAttrib surface_attrib;
+            surface_attrib.type = VASurfaceAttribPixelFormat;
+            surface_attrib.flags = VA_SURFACE_ATTRIB_SETTABLE;
+            surface_attrib.value.type = VAGenericValueTypeFloat;  // VAGenericValueTypeInteger;
+            surface_attrib.value.value.i = VA_FOURCC_NV12;        // Specify the desired pixel format
+
+            SPDLOG_INFO("ER");
+            // Create the VA surface
+            VASurfaceID va_surface;
+            status = vaCreateSurfaces(vaDisplay, VA_RT_FORMAT_YUV420, y_plane_size, uv_plane_size, &va_surface, 1, &surface_attrib, 1);
+            if (status != VA_STATUS_SUCCESS) {
+                SPDLOG_INFO("vaCreateSurdaces failed: {}", status);
+                vaTerminate(vaDisplay);
+                close(drmFd);
+                ASSERT_TRUE(false);
+            }
+            SPDLOG_INFO("ER");
+            //auto remote_tensor = vaGpuContext.create_tensor_nv12(y_plane_surface, uv_plane_surface);
+            auto remote_tensor = vaGpuContext.create_tensor_nv12(y_plane_size, uv_plane_size, va_surface);
             SPDLOG_ERROR("finished GPU_OV_SET_VAA_BUF:{}", times[GPU_OV_SET_VAA_BUF][tSize]);
+            SPDLOG_INFO("ER");
+            gpuInferRequest.set_tensor(input, remote_tensor.second);
+            gpuInferRequest.infer();
         }
 #endif
         {  // GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS model loaded with ov context and different ocl context used to create ocl tensors
@@ -601,10 +806,14 @@ TEST(OpenVINO, SetTensorTest) {
             auto ovWrappedOCLContextFromModel = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
             // prepare tensors
             std::vector<cl::Buffer> inputsBuffers, outputsBuffers;
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
-            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err));
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            inputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
+            outputsBuffers.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError));
+            EXPECT_EQ(0, clError);
             std::vector<ov::intel_gpu::ocl::ClBufferTensor> inputs, outputs;
             inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[0]));
             inputs.emplace_back(ovWrappedOCLContextFromModel.create_tensor(input->get_element_type(), input->get_shape(), inputsBuffers[1]));
@@ -704,10 +913,12 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputTensor) {
     std::vector<float> in(10, 42);
     void* inputBufferData = in.data();
     size_t inputByteSize = sizeof(float) * in.size();
-    cl_int err;  // TODO not ignore
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    cl_int clError;
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     // start CAPI server
     // TODO load model with passed in context
     std::string port = "9000";
@@ -777,12 +988,14 @@ TEST(OpenCL, UseDifferentContextWhenReadingAndWritingToBuffer) {
     std::vector<float> out(10, 13.1);
     void* outputBufferData = out.data();
     size_t inputByteSize = sizeof(float) * in.size();
-    cl_int err;  // TODO not ignore
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    cl_int clError;
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    queue2.enqueueReadBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData);
+    EXPECT_EQ(0, queue2.enqueueReadBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, outputBufferData));
     const float* outputData = reinterpret_cast<const float*>(outputBufferData);
     for (size_t i = 0; i < 10; ++i) {
         SPDLOG_ERROR("ER:{}", *(outputData + i));
@@ -810,7 +1023,7 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);
     // cl::Context openCLCppContext(openCLCContext);
-    cl::Context openCLCppContext(*contextFromModel, true);
+    cl::Context openCLCppContext(*contextFromModel, retainCLContextOwnership);
     cl::Device device(deviceId);
     cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
     auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties);
@@ -820,10 +1033,12 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     std::vector<float> out(10, 13.1);
     void* outputBufferData = out.data();
     size_t inputByteSize = sizeof(float) * in.size();
-    cl_int err;  // TODO not ignore
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    cl_int clError;
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     // prepare request
     OVMS_InferenceRequest* request{nullptr};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
@@ -840,10 +1055,9 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     SPDLOG_ERROR("ER");
     cl::vector<cl::Event> readEvents;
     SPDLOG_ERROR("ER");
-    auto oclError = queue.enqueueReadBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData, &readEvents);
+    EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, outputBufferData, &readEvents));
     SPDLOG_ERROR("ER");
     readEvents[0].wait();
-    SPDLOG_ERROR("ER:{}", oclError);
     SPDLOG_ERROR("ER");
     // TODO what to do if output set was not enough?
     uint32_t outputCount = 42;
@@ -907,15 +1121,16 @@ TEST(CAPISyncWithCalback, DummyCallback) {
     // cl_context openCLCContext = contextFromModel;
     SPDLOG_ERROR("ER");
     SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXX :{}", (void*)contextFromModel);
-    cl::Context openCLCppContext(*contextFromModel, true);
+    cl::Context openCLCppContext(*contextFromModel, retainCLContextOwnership);
     SPDLOG_ERROR("ER");
     cl::Device device(deviceId);
     SPDLOG_ERROR("ER");
     cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
-    cl_int err;
-    auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties, &err);
-    SPDLOG_ERROR("QUEUE CREATION CODE:{} --------------------------------------------", err);
-    EXPECT_EQ(0, err);
+    cl_int clError;
+    auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties, &clError);
+    EXPECT_EQ(0, clError);
+    SPDLOG_ERROR("QUEUE CREATION CODE:{} --------------------------------------------", clError);
+    EXPECT_EQ(0, clError);
     // create OpenCL buffers
     std::vector<float> in(10, INITIAL_VALUE);
     void* inputBufferData = in.data();
@@ -924,13 +1139,13 @@ TEST(CAPISyncWithCalback, DummyCallback) {
     size_t inputByteSize = sizeof(float) * in.size();
     SPDLOG_ERROR("ER");
     // return;
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    auto clErr = queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
-    EXPECT_EQ(0, clErr);
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     // TODO to remove/investigate if this helps (2L below)
-    clErr = queue.enqueueWriteBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData);
-    EXPECT_EQ(0, clErr);
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, outputBufferData));
     // start CAPI server
     // TODO load model with passed in context
     // prepare request
@@ -992,10 +1207,12 @@ TEST(CAPIAsyncWithCallback, DummyCallback) {
     std::vector<float> out(10, GARBAGE_VALUE);
     void* outputBufferData = out.data();
     size_t inputByteSize = sizeof(float) * in.size();
-    cl_int err;  // TODO not ignore
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    cl_int clError;
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     // start CAPI server
     // TODO load model with passed in context
     std::string port = "9000";
@@ -1030,7 +1247,7 @@ TEST(CAPIAsyncWithCallback, DummyCallback) {
     // check
     auto callbackReturnValue = unblockSignal.get();
 
-    queue.enqueueReadBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData);
+    EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, outputBufferData));
     const float* outputData = reinterpret_cast<const float*>(outputBufferData);
     for (size_t i = 0; i < data.size(); ++i) {
         EXPECT_NEAR(in[i] + 1, outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
@@ -1114,15 +1331,19 @@ TEST_F(CAPIGPUPerfComparison, Dummy) {
     std::vector<float> out(elementsCount, GARBAGE_VALUE);
     void* outputBufferData = out.data();
     size_t inputByteSize = sizeof(float) * in.size();
-    cl_int err;  // TODO not ignore
+    cl_int clError;
     std::vector<cl::Buffer> openCLCppInputBuffer;
-    openCLCppInputBuffer.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-    openCLCppInputBuffer.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
+    openCLCppInputBuffer.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+    EXPECT_EQ(0, clError);
+    openCLCppInputBuffer.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+    EXPECT_EQ(0, clError);
     std::vector<cl::Buffer> openCLCppOutputBuffer;
-    openCLCppOutputBuffer.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-    openCLCppOutputBuffer.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err));
-    queue.enqueueWriteBuffer(openCLCppInputBuffer[0], /*blocking*/ true, 0, inputByteSize, inputBufferData);
-    queue.enqueueWriteBuffer(openCLCppInputBuffer[1], /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    openCLCppOutputBuffer.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+    EXPECT_EQ(0, clError);
+    openCLCppOutputBuffer.emplace_back(cl::Buffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError));
+    EXPECT_EQ(0, clError);
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer[0], queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer[1], queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     // start CAPI server
     SetUpConfig(dummyConfigContentWithReplacableShape, elementsCount);
     createConfigFileWithContent(ovmsConfig, configFilePath);
@@ -1231,47 +1452,7 @@ TEST(OpenVINO, CallbacksTest) {
     // TODO check what happens if output tensor is not correct
 }
 
-class OpenVINO2 : public ::testing::Test {
-protected:
-    Core core;
-    std::shared_ptr<ov::Model> model;
-    std::shared_ptr<ov::CompiledModel> compiledModel;
-    std::shared_ptr<ov::InferRequest> inferRequest;
-    std::shared_ptr<ov::intel_gpu::ocl::ClContext> gpu_context;
-    std::shared_ptr<cl::CommandQueue> queue;
-    cl_context ctxFromModel;
-    uint32_t inputSecondDim = 100;
-    void SetUp() {
-        Core core;
-        this->model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
-        auto input = model->get_parameters().at(0);
-        auto inputByteSize = ov::shape_size(input->get_shape());
-        auto output = model->get_results().at(0);
-        auto outputByteSize = ov::shape_size(output->get_shape());
-        inputByteSize *= sizeof(float);
-        outputByteSize *= sizeof(float);
-        ov::AnyMap config = {ov::hint::performance_mode(ov::hint::PerformanceMode::THROUGHPUT),
-            ov::auto_batch_timeout(0)};
-        cl_platform_id platformId;
-        cl_device_id deviceId;
-        auto nonused = get_cl_context(platformId, deviceId);
-        ov::Shape ovShape;
-        ovShape.emplace_back(1);
-        ovShape.emplace_back(inputSecondDim);
-        std::map<std::string, ov::PartialShape> inputShapes;
-        inputShapes[DUMMY_MODEL_INPUT_NAME] = ovShape;
-        model->reshape(inputShapes);
-        this->compiledModel = std::make_shared<ov::CompiledModel>(core.compile_model(model, "GPU", config));
-        this->gpu_context = std::make_shared<ov::intel_gpu::ocl::ClContext>(compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>());
-        this->ctxFromModel = gpu_context->get();
-        this->inferRequest = std::make_shared<ov::InferRequest>(compiledModel->create_infer_request());
-        cl::Context openCLCppContext(ctxFromModel);
-        cl::Device device(deviceId);
-        this->queue = std::make_shared<cl::CommandQueue>(openCLCppContext, device);
-    }
-    void TearDown() {}
-};
-TEST_F(OpenVINO2, UseCLContextForBuffersOVContextForInference) {
+TEST_F(OpenVINOContextFromModel, UseCLContextForBuffersOVContextForInference) {
     cl_platform_id platformId;
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);
@@ -1285,10 +1466,12 @@ TEST_F(OpenVINO2, UseCLContextForBuffersOVContextForInference) {
     std::vector<float> out(10, 13.1);
     void* outputBufferData = out.data();
     size_t inputByteSize = sizeof(float) * in.size();
-    cl_int err;  // TODO not ignore
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    queue.enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    cl_int clError;
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     // here perform inf with OV
     ov::Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
@@ -1317,37 +1500,38 @@ TEST_F(OpenVINO2, UseCLContextForBuffersOVContextForInference) {
     request.set_tensor("a", outputTensor);
     request.start_async();
     request.wait();
-    queue.enqueueReadBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, inputByteSize, outputBufferData);
+    EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, outputBufferData));
     const float* outputData = reinterpret_cast<const float*>(outputBufferData);
     for (size_t i = 0; i < 10; ++i) {
         SPDLOG_ERROR("ER:{}", *(outputData + i));
     }
 }
 
-TEST_F(OpenVINO2, OutputTensorHasBiggerUnderlyingOCLBufferThanNeededPass) {
-    bool retain = true;
-    cl::Context openCLCppContext(ctxFromModel, retain);
-    cl_int err;
+TEST_F(OpenVINOContextFromModel, OutputTensorHasBiggerUnderlyingOCLBufferThanNeededPass) {
+    cl::Context openCLCppContext(ctxFromModel, retainCLContextOwnership);
+    cl_int clError;
     auto input = model->get_parameters().at(0);
     auto inputByteSize = ov::shape_size(input->get_shape());
     auto output = model->get_results().at(0);
     auto outputByteSize = ov::shape_size(output->get_shape());
     inputByteSize *= sizeof(float);
     outputByteSize *= sizeof(float);
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize * 2, NULL, &err);
-    auto inputOVOCLBufferTensor = gpu_context->create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
-    auto outputOVOCLBufferTensor = gpu_context->create_tensor(output->get_element_type(), output->get_shape(), openCLCppOutputBuffer);
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize * 2, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    auto inputOVOCLBufferTensor = ovGpuOclContext->create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
+    auto outputOVOCLBufferTensor = ovGpuOclContext->create_tensor(output->get_element_type(), output->get_shape(), openCLCppOutputBuffer);
     // we will put data into input buffer
     std::vector<float> in(100, 0.1);
     void* inputBufferData = in.data();
-    queue->enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    EXPECT_EQ(0, queueFromModelContext->enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     inferRequest->set_tensor(input, inputOVOCLBufferTensor);
     inferRequest->set_tensor(output, outputOVOCLBufferTensor);
     inferRequest->infer();
     std::vector<float> out(100, GARBAGE_VALUE);
     void* buffer_out = out.data();
-    queue->enqueueReadBuffer(openCLCppOutputBuffer, /*blocking*/ true, 0, outputByteSize, buffer_out);
+    EXPECT_EQ(0, queueFromModelContext->enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, outputByteSize, buffer_out));
     const float* outputData = reinterpret_cast<const float*>(buffer_out);
     for (size_t i = 0; i < out.size(); ++i) {
         EXPECT_NEAR(in[i] + 1, outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
@@ -1362,50 +1546,51 @@ TEST_F(OpenVINO2, OutputTensorHasBiggerUnderlyingOCLBufferThanNeededPass) {
     EXPECT_TRUE(outAutoTensor.is<ov::intel_gpu::ocl::ClBufferTensor>());
     EXPECT_TRUE(outAutoTensor.is<ov::Tensor>());
 }
-TEST_F(OpenVINO2, OutputTensorHasBiggerShapeAndOCLBufferThanNeededThrowsOnSetTensor) {
-    bool retain = true;
-    cl::Context openCLCppContext(ctxFromModel, retain);
-    cl_int err;
+TEST_F(OpenVINOContextFromModel, OutputTensorHasBiggerShapeAndOCLBufferThanNeededThrowsOnSetTensor) {
+    cl::Context openCLCppContext(ctxFromModel, retainCLContextOwnership);
+    cl_int clError;
     auto input = model->get_parameters().at(0);
     auto inputByteSize = ov::shape_size(input->get_shape());
     auto output = model->get_results().at(0);
     auto outputByteSize = ov::shape_size(output->get_shape());
     inputByteSize *= sizeof(float);
     outputByteSize *= sizeof(float);
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize * 2, NULL, &err);
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize * 2, NULL, &clError);
+    EXPECT_EQ(0, clError);
     ov::Shape ovShape;
     ovShape.emplace_back(1);
     ovShape.emplace_back(inputSecondDim * 2);
-    auto inputOVOCLBufferTensor = gpu_context->create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
-    auto outputOVOCLBufferTensor = gpu_context->create_tensor(output->get_element_type(), ovShape, openCLCppOutputBuffer);
+    auto inputOVOCLBufferTensor = ovGpuOclContext->create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
+    auto outputOVOCLBufferTensor = ovGpuOclContext->create_tensor(output->get_element_type(), ovShape, openCLCppOutputBuffer);
     // we will put data into input buffer
     std::vector<float> in(100, 0.1);
     void* inputBufferData = in.data();
-    queue->enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    EXPECT_EQ(0, queueFromModelContext->enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     inferRequest->set_tensor(input, inputOVOCLBufferTensor);
     EXPECT_THROW(inferRequest->set_tensor(output, outputOVOCLBufferTensor), ov::Exception);
 }
-TEST_F(OpenVINO2, OutputTensorHasSmallerUnderlyingOCLBufferThanNeededThrowsOnCreateRemoteTensor) {
-    bool retain = true;
-    cl::Context openCLCppContext(ctxFromModel, retain);
-    cl_int err;
+TEST_F(OpenVINOContextFromModel, OutputTensorHasSmallerUnderlyingOCLBufferThanNeededThrowsOnCreateRemoteTensor) {
+    cl::Context openCLCppContext(ctxFromModel, retainCLContextOwnership);
+    cl_int clError;
     auto input = model->get_parameters().at(0);
     auto inputByteSize = ov::shape_size(input->get_shape());
     auto output = model->get_results().at(0);
     auto outputByteSize = ov::shape_size(output->get_shape());
     inputByteSize *= sizeof(float);
     outputByteSize *= sizeof(float);
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize / 2, NULL, &err);
-    auto inputOVOCLBufferTensor = gpu_context->create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
-    EXPECT_THROW(gpu_context->create_tensor(output->get_element_type(), output->get_shape(), openCLCppOutputBuffer), ov::Exception);
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize / 2, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    auto inputOVOCLBufferTensor = ovGpuOclContext->create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
+    EXPECT_THROW(ovGpuOclContext->create_tensor(output->get_element_type(), output->get_shape(), openCLCppOutputBuffer), ov::Exception);
     // we will put data into input buffer
 }
-TEST_F(OpenVINO2, OutputTensorHasSmallerShapeAndUnderlyingOCLBufferThanNeededThrowsOnSetTensor) {
-    bool retain = true;
-    cl::Context openCLCppContext(ctxFromModel, retain);
-    cl_int err;
+TEST_F(OpenVINOContextFromModel, OutputTensorHasSmallerShapeAndUnderlyingOCLBufferThanNeededThrowsOnSetTensor) {
+    cl::Context openCLCppContext(ctxFromModel, retainCLContextOwnership);
+    cl_int clError;
     auto input = model->get_parameters().at(0);
     auto inputByteSize = ov::shape_size(input->get_shape());
     auto output = model->get_results().at(0);
@@ -1413,24 +1598,25 @@ TEST_F(OpenVINO2, OutputTensorHasSmallerShapeAndUnderlyingOCLBufferThanNeededThr
     inputByteSize *= sizeof(float);
     outputByteSize *= sizeof(float);
     float divisionFactor = 2;
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize / divisionFactor, NULL, &err);
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize / divisionFactor, NULL, &clError);
+    EXPECT_EQ(0, clError);
     ov::Shape ovShape;
     ovShape.emplace_back(1);
     ovShape.emplace_back(inputSecondDim / divisionFactor);
-    auto inputOVOCLBufferTensor = gpu_context->create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
-    auto outputOVOCLBufferTensor = gpu_context->create_tensor(output->get_element_type(), ovShape, openCLCppOutputBuffer);
+    auto inputOVOCLBufferTensor = ovGpuOclContext->create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
+    auto outputOVOCLBufferTensor = ovGpuOclContext->create_tensor(output->get_element_type(), ovShape, openCLCppOutputBuffer);
     // we will put data into input buffer
     std::vector<float> in(100, 0.1);
     void* inputBufferData = in.data();
-    queue->enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    EXPECT_EQ(0, queueFromModelContext->enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     inferRequest->set_tensor(input, inputOVOCLBufferTensor);
     EXPECT_THROW(inferRequest->set_tensor(output, outputOVOCLBufferTensor), ov::Exception);
 }
-TEST_F(OpenVINO2, OutputTensorHasSmallerShapeAndAppropriateOCLBufferThanNeededThrowsOnSetTensor) {
-    bool retain = true;
-    cl::Context openCLCppContext(ctxFromModel, retain);
-    cl_int err;
+TEST_F(OpenVINOContextFromModel, OutputTensorHasSmallerShapeAndAppropriateOCLBufferThanNeededThrowsOnSetTensor) {
+    cl::Context openCLCppContext(ctxFromModel, retainCLContextOwnership);
+    cl_int clError;
     auto input = model->get_parameters().at(0);
     auto inputByteSize = ov::shape_size(input->get_shape());
     auto output = model->get_results().at(0);
@@ -1438,17 +1624,18 @@ TEST_F(OpenVINO2, OutputTensorHasSmallerShapeAndAppropriateOCLBufferThanNeededTh
     inputByteSize *= sizeof(float);
     outputByteSize *= sizeof(float);
     float divisionFactor = 2;
-    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &err);
-    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &err);
+    cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
+    EXPECT_EQ(0, clError);
+    cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, outputByteSize, NULL, &clError);
     ov::Shape ovShape;
     ovShape.emplace_back(1);
     ovShape.emplace_back(inputSecondDim / divisionFactor);
-    auto inputOVOCLBufferTensor = gpu_context->create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
-    auto outputOVOCLBufferTensor = gpu_context->create_tensor(output->get_element_type(), ovShape, openCLCppOutputBuffer);
+    auto inputOVOCLBufferTensor = ovGpuOclContext->create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
+    auto outputOVOCLBufferTensor = ovGpuOclContext->create_tensor(output->get_element_type(), ovShape, openCLCppOutputBuffer);
     // we will put data into input buffer
     std::vector<float> in(100, 0.1);
     void* inputBufferData = in.data();
-    queue->enqueueWriteBuffer(openCLCppInputBuffer, /*blocking*/ true, 0, inputByteSize, inputBufferData);
+    EXPECT_EQ(0, queueFromModelContext->enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     inferRequest->set_tensor(input, inputOVOCLBufferTensor);
     EXPECT_THROW(inferRequest->set_tensor(output, outputOVOCLBufferTensor), ov::Exception);
 }
@@ -1507,8 +1694,8 @@ static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnes
     std::vector<float> out(10, GARBAGE_VALUE);
     void* buffer_out = out.data();
     SPDLOG_INFO("Queue address in callback:{}", (void*)callbackUnblockingStruct->queue);  // DEBUG does not work in callback
-    auto clErr = callbackUnblockingStruct->queue->enqueueReadBuffer(*openCLCppOutputBuffer, /*blocking*/ true, 0, expectedShape[1] * sizeof(float), buffer_out);
-    EXPECT_EQ(0, clErr);
+    auto clError = callbackUnblockingStruct->queue->enqueueReadBuffer(*openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, expectedShape[1] * sizeof(float), buffer_out);
+    EXPECT_EQ(0, clError);
     std::vector<float> expectedData(expectedShape[1], INITIAL_VALUE + 1);
 
     const float* outputData = reinterpret_cast<const float*>(buffer_out);
@@ -1641,6 +1828,10 @@ TEST(FilteredMapTest, MapIntInt) {
     TEST_FILTER(original, filter13);
     TEST_FILTER(original, filter23);
     TEST_FILTER(original, filter123);
+}
+
+TEST_F(OpenVINOContextFromModel, Some) {
+    SPDLOG_ERROR("ER");
 }
 // TODO
 // test inference with CPU with callback

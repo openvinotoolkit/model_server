@@ -1122,7 +1122,6 @@ cc_test(
         "test/modelmanager_test.cpp",
         "test/modelversionstatus_test.cpp",
         "test/nodesessionmetadata_test.cpp",
-        "test/openvino_tests.cpp",
         "test/ovmsconfig_test.cpp",
         "test/ovinferrequestqueue_test.cpp",
         "test/ov_utils_test.cpp",
@@ -1150,9 +1149,6 @@ cc_test(
         "test/systeminfo_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
-        "test/test_utils.cpp",
-        "test/test_utils.hpp",
-        "test/stress_test_utils.hpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
@@ -1168,6 +1164,7 @@ cc_test(
             "//:disable_mediapipe" : [],
         }) + select({
             "//:not_disable_python": [
+                "test/text_streamer_test.cpp",
                 "test/pythonnode_test.cpp",
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
@@ -1287,6 +1284,8 @@ cc_test(
         "-lssl",
     ],
     deps = [
+    	":openvino_test",
+    	":test_utils",
         "//src:ovms_lib",
         "//src:custom_nodes_common_lib",
         "//src:libsampleloader.so",
@@ -1318,6 +1317,94 @@ cc_test(
             "//:disable_python": []
         }),
     copts = COPTS_TESTS,
+)
+
+cc_library(
+    name = "test_utils",
+    linkstatic = 1,
+    hdrs = [
+        "test/c_api_test_utils.hpp",
+        "test/test_utils.hpp",
+        "test/stress_test_utils.hpp",
+        ],
+    srcs = [
+        "test/test_utils.cpp",
+        ],
+    data = [
+    ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+        "-lssl",
+    ],
+    deps = [
+        "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS, # + ["-isystem /usr/include"],
+)
+
+cc_library(
+    name = "openvino_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = [
+        "test/openvino_tests.cpp",
+        ],
+    data = [
+        "test/add_two_inputs_model/1/add.xml",
+        "test/add_two_inputs_model/1/add.bin",
+        "test/binaryutils/grayscale.jpg",
+        "test/binaryutils/rgb.jpg",
+        "test/binaryutils/rgb2x2.jpg",
+        "test/binaryutils/rgb4x4.jpg",
+        "test/c_api/config.json",
+        "test/c_api/config_benchmark.json",
+        "test/c_api/config_dummy_dag.json",
+        "test/c_api/config_dummy_dynamic_entry_dag.json",
+        "test/c_api/config_metadata_all.json",
+        "test/c_api/config_standard_dummy.json",
+        "test/c_api/config_standard_scalar.json",
+        "test/configs/config_dummy_dynamic_shape.json",
+        "test/configs/emptyConfigWithMetrics.json",
+        "test/llm/graphkfspass.pbtxt",
+        "test/dummy/1/dummy.xml",
+        "test/dummy/1/dummy.bin",
+        "test/dummy_fp64/1/saved_model.xml",
+        "test/dummy_fp64/1/saved_model.bin",
+        "test/dummy_saved_model/1/saved_model.pb",
+        "test/dummy_tflite/1/dummy.tflite",
+        "test/dummyUppercase/1/dummy.xml",
+        "test/dummyUppercase/1/dummy.bin",
+        "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
+        "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
+        "test/passthrough/1/passthrough.xml",
+        "test/passthrough/1/passthrough.bin",
+        "test/passthrough_string/1/passthrough.xml",
+        "test/passthrough_string/1/passthrough.bin",
+        "test/summator/1/summator.xml",
+        "test/summator/1/summator.bin",
+        "test/scalar/1/saved_model.xml",
+        "test/scalar/1/saved_model.bin",
+    ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+        "-lssl",
+	# lib va
+	"-lva",
+	"-lva-drm",
+    ],
+    deps = [
+        ":test_utils",
+        "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS, # + ["-isystem /usr/include"],
 )
 
 filegroup(
