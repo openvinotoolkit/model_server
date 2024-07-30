@@ -46,7 +46,7 @@ python3 classification_using_paddlepaddle_model.py --grpc_port 9000 --image_inpu
 ```
 Exemplary result of running the demo:
 
-```
+```bash
 probability: 0.74 => Labrador_retriever
 probability: 0.05 => Staffordshire_bullterrier
 probability: 0.05 => flat-coated_retriever
