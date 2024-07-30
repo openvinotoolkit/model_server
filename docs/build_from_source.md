@@ -119,22 +119,22 @@ make release_image JOBS=2
 ```
 <hr />
 
+### `PYTHON_DISABLE`
+
+When set to `0`, OpenVINO&trade Model Server will be built with [Python Nodes](python_support/quickstart.md) support. Default value: `0`.
+
+Example:
+```bash
+make release_image PYTHON_DISABLE=1
+```
+
 ### `MEDIAPIPE_DISABLE`
 
 When set to `0`, OpenVINO&trade Model Server will be built with [MediaPipe](mediapipe.md) support. Default value: `0`.
 
 Example:
 ```bash
-make release_image MEDIAPIPE_DISABLE=1
-```
-
-### `PYTHON_DISABLE`
-
-When set to `0`, OpenVINO&trade Model Server will be built with [Python Nodes](python_support/quickstart.md) support. Default value: `0`. 
-
-Example:
-```bash
-make release_image PYTHON_DISABLE=1
+make release_image MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
 ```
 
  > **Note**: In order to build the image with python nodes support (PYTHON_DISABLE=0) mediapipe have to be enabled (MEDIAPIPE_DISABLE=0)
