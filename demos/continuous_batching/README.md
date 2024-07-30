@@ -290,10 +290,10 @@ cd vllm
 pip3 install -r requirements-cpu.txt
 cd benchmarks
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
-python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate 1
+python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate inf
 
-Namespace(backend='openai-chat', version='N/A', base_url=None, host='localhost', port=8000, endpoint='/v3/chat/completions', dataset='ShareGPT_V3_unfiltered_cleaned_split.json', model='meta-llama/Meta-Llama-3-8B-Instruct', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, request_rate=1.0, seed=0, trust_remote_code=False, disable_tqdm=False, save_result=False)
-Traffic request rate: 1.0
+Namespace(backend='openai-chat', version='N/A', base_url=None, host='localhost', port=8000, endpoint='/v3/chat/completions', dataset='ShareGPT_V3_unfiltered_cleaned_split.json', model='meta-llama/Meta-Llama-3-8B-Instruct', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, request_rate=inf.0, seed=0, trust_remote_code=False, disable_tqdm=False, save_result=False)
+Traffic request rate: inf
 100%|██████████████████████████████████████████████████| 1000/1000 [17:17<00:00,  1.04s/it]
 ============ Serving Benchmark Result ============
 Successful requests:                     1000
