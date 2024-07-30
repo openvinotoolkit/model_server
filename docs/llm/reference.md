@@ -114,6 +114,32 @@ In node configuration we set `models_path` indicating location of the directory 
 
 Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing.
 
+This model directory can be created based on the models from Hugging Faces Hub or from the Pytorch model stored on the local filesystem. Exporting the models to Intermediate Representation format is one time operations and can speedup the loading time and reduce the storage volume if this is combined with quantization and compression.
+
+In your python environment install required dependencies:
+```
+pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git@7a224c2419240d5fb58f2f75c2e29f179ed6da28 openvino-tokenizers
+```
+
+Because there is very dynamic development in optimum-intel and openvino, it is recommended to use the latest versions of the dependencies:
+```
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
+pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
+```
+
+LLM model can be exported with a command:
+```
+optimum-cli export openvino --disable-convert-tokenizer --model {LLM model in HF hub or Pytorch model folder} --weight-format {fp32/fp16/int8/int4/int4_sym_g128/int4_asym_g128/int4_sym_g64/int4_asym_g64} {target folder name}
+```
+Precision parameter is important and can influence performance, accuracy and memory usage. It is recommended to start experiments with `fp16`. The precision `int8` can reduce the memory consumption and improve latency with low impact on accuracy. Try int4 to maximize memory usage reduction and check various algorithm to achieve optimal results. 
+
+Export the tokenizer model with a command:
+```
+convert_tokenizer -o {target folder name} --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens {tokenizer model in HF hub or Pytorch model folder}
+```
+
+Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models).
+
 ### Chat template
 
 Chat template is used only on `/chat/completions` endpoint. Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`. 
@@ -123,7 +149,7 @@ Loading chat template proceeds as follows:
 2. If there is no `tokenizer.jinja` and `tokenizer_config.json` exists, try to read template from its `chat_template` field. If it's not present, use default template.
 3. If `tokenizer_config.json` exists try to read `eos_token` and `bos_token` fields. If they are not present, both values are set to empty string. 
 
-**Note**: If both `template.jinja` file and `chat_completion` field from `tokenizer_config.json` are successfully loaded `template.jinja` takes precedence over `tokenizer_config.json`.
+**Note**: If both `template.jinja` file and `chat_completion` field from `tokenizer_config.json` are successfully loaded, `template.jinja` takes precedence over `tokenizer_config.json`.
 
 If there are errors in loading or reading files or fields (they exist but are wrong) no template is loaded and servable will not respond to `/chat/completions` calls. 
 
@@ -137,11 +163,14 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 
 ## Limitations
 
-As it's in preview, this feature has set of limitations:
+LLM calculator is a preview feature. It runs a range of accuracy, stability and performance test but the next releases targets production grade quality. It has now a set of known issues:
 
-- Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and kvcache usage. 
+- Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. 
 - Models using in the template empty bos_token require updating the tokenizer config with a command: `sed -i '/"bos_token": null,/d' tokenizer_config.json` The known models which require such workaround are `Qwen1.5-7B-Chat` and `allenai/OLMo-1.7-7B-hf`. It won't be needed in the next release. This issue is not impacting `completions` endpoint.
-- llama3.1 models observe accuracy issues and overlong responses - this is investigated. 
+- llama3.1 models observe accuracy issues and overlong responses - this is investigated.
+- in rare cases when the model generates non valid utf8 sequence, it will be returned to the client without replacing it with � unicode replacement character. Use this code `text.decode("utf-8",errors='replace')` to make the replacement on the client side.
+- multi modal models are not supported yet. Images can't be sent now as the context.
+- Disconnected clients don't break the generation flow on the server. It is finished when eos and max_tokens is reached.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
