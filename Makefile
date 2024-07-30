@@ -278,7 +278,7 @@ cppclean: venv-style
 	@echo "Checking cppclean..."
 	@bash -c "./ci/cppclean.sh"
 
-style: venv-style clang-format-check cpplint cppclean
+style: venv-style spell clang-format-check cpplint cppclean
 
 hadolint:
 	@echo "Checking SDL requirements..."
