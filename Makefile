@@ -62,6 +62,11 @@ GPU ?= 0
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
 PYTHON_DISABLE ?= 0
+ifeq ($(MEDIAPIPE_DISABLE),1)
+ifeq ($(PYTHON_DISABLE),0)
+$(error PYTHON_DISABLE cannot be 0 when MEDIAPIPE_DISABLE is 1)
+endif
+endif
 FUZZER_BUILD ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
