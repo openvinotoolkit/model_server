@@ -165,8 +165,6 @@ cc_library(
     name = "ovms_lib",
     hdrs = ["ovms.h"],
     srcs = [
-        "capi_frontend/buffer.cpp",
-        "capi_frontend/buffer.hpp",
         "capi_frontend/capi.cpp",
         "capi_frontend/capi_utils.cpp",
         "capi_frontend/capi_utils.hpp",

@@ -77,12 +77,8 @@ Status EntryNode<RequestType>::fetchResults(TensorWithSourceMap& outputs) {
     InputSink<TensorWithSourceMap&> inputSink(outputs);
     bool isPipeline = true;
     std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories;
-    factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>>(*request, inputsInfo, inputSink, isPipeline, factories);
-    if (!status.ok()) {
-        return status;
-    }
-    return deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>, true>(*request, inputsInfo, outputsInfo, inputSink, isPipeline, factories);
+    factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());  // TODO enable dag with remote tensors?
+    return deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>>(*request, inputsInfo, outputsInfo, inputSink, isPipeline, factories);
 }
 
 template <>

@@ -551,8 +551,8 @@ static void performPrediction(const std::string modelName,
 
     std::unordered_map<int, std::shared_ptr<ovms::IOVTensorFactory>> factories;
     factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<ovms::RegularOVTensorFactory>());
-    auto status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(request, modelInstance->getInputsInfo(), inputSink, isPipeline, factories);
-    status = ovms::deserializePredictRequest2<ovms::ConcreteTensorProtoDeserializator, ovms::InputSink<ov::InferRequest&>, true>(request, modelInstance->getInputsInfo(), modelInstance->getOutputsInfo(), inputSink, isPipeline, factories);
+    auto status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator, ovms::InputSink<ov::InferRequest&>>(request, modelInstance->getInputsInfo(), modelInstance->getOutputsInfo(), inputSink, isPipeline, factories);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
     status = modelInstance->performInference(inferRequest);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     size_t outputSize = requestBatchSize * extractDummyOutputSize(request);

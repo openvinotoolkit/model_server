@@ -251,7 +251,7 @@ public:
         bool isPipeline = false;
         std::unordered_map<int, std::shared_ptr<ovms::IOVTensorFactory>> factories;
         factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<ovms::RegularOVTensorFactory>());
-        status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, factories);
+        status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, factories);
         if (!status.ok())
             return status;
         timer.stop(DESERIALIZE);
