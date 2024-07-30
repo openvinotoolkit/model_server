@@ -23,7 +23,7 @@ When creating a Python-based client application, you can use OpenAI client libra
 
 Alternatively, it is possible to use just a `curl` command or `requests` python library.
 
-Along with the prompt, you can send parameters described here [for chat completions endpoint](../../docs/model_server_rest_api_chat.md#Request) and here [for completions endpoint](../../docs/model_server_rest_api_completions.md#Request).
+Along with the prompt, you can send parameters described here [for chat completions endpoint](./model_server_rest_api_chat.md#Request) and here [for completions endpoint](./model_server_rest_api_completions.md#Request).
 > **NOTE**:
 OpenAI python client supports a limited list of parameters. Those native to OpenVINO Model Server, can be passed inside a generic container parameter `extra_body`. Below is an example how to encapsulated `top_k` value.
 ```bash
