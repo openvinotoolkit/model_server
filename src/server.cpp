@@ -240,7 +240,7 @@ Status Server::startModules(ovms::Config& config) {
     // GRPC depends on SERVABLE
     // SERVABLE depends on metrics, python
     // while we want to start the server as quickly as possible to respond with liveness probe
-    // thats why we delay starting the servable until the very end while we need to create it before
+    // that's why we delay starting the servable until the very end while we need to create it before
     // GRPC & REST
     Status status;
     bool inserted = false;

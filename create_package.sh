@@ -33,7 +33,7 @@ cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.s
 rm -f /ovms_release/lib/libssl.so
 rm -f /ovms_release/lib/libsampleloader*
 
-# Remove coverage libaries
+# Remove coverage libraries
 if [ -f /ovms_release/lib/libjava.so ] ; then cd /ovms_release/lib/ && \
     rm -rf  libatk-wrapper.so libattach.so libawt_headless.so libawt.so libawt_xawt.so libdt_socket.so libfreetype.so \
 	libextnet.so libfontmanager.so libinstrument.so libj2gss.so libj2pcsc.so libj2pkcs11.so libjaas.so \

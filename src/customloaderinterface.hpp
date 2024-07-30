@@ -32,7 +32,7 @@ enum class CustomLoaderStatus {
 
 /**
      * @brief This class is the custom loader interface base class.
-     * Custom Loader implementation shall derive from this base calss
+     * Custom Loader implementation shall derive from this base class
      * and implement interface functions and define the virtual functions. 
      * Based on the config file, OVMS loads a model using specified  custom loader
      */

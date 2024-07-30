@@ -91,7 +91,7 @@ bool TFSRestParser::parseSequenceControlInput(rapidjson::Value& doc, tensorflow:
 }
 
 bool TFSRestParser::parseSpecialInput(rapidjson::Value& doc, tensorflow::TensorProto& proto, const std::string& tensorName) {
-    // Special tensors are given in 1 dimentional array
+    // Special tensors are given in 1 dimensional array
     if (doc.GetArray()[0].IsArray())
         return false;
 
@@ -260,7 +260,7 @@ Status TFSRestParser::parseRowFormat(rapidjson::Value& node) {
         auto inputsIterator = requestProto.mutable_inputs()->begin();
         if (inputsIterator == requestProto.mutable_inputs()->end()) {
             const std::string details = "Failed to parse row formatted request.";
-            SPDLOG_ERROR("Internal error occured: {}", details);
+            SPDLOG_ERROR("Internal error occurred: {}", details);
             return Status(StatusCode::INTERNAL_ERROR, details);
         }
         if (!parseArray(node, 0, inputsIterator->second, inputsIterator->first)) {
@@ -407,7 +407,7 @@ Status TFSRestParser::parseColumnFormat(rapidjson::Value& node) {
         auto inputsIterator = requestProto.mutable_inputs()->begin();
         if (inputsIterator == requestProto.mutable_inputs()->end()) {
             const std::string details = "Failed to parse column formatted request.";
-            SPDLOG_ERROR("Internal error occured: {}", details);
+            SPDLOG_ERROR("Internal error occurred: {}", details);
             return Status(StatusCode::INTERNAL_ERROR, details);
         }
         if (!parseArray(node, 0, inputsIterator->second, inputsIterator->first)) {

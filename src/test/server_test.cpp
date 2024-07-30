@@ -122,7 +122,7 @@ static void requestServerAlive(const char* grpcPort, grpc::StatusCode status = g
 static void requestServerReady(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
     std::string address = std::string("localhost") + ":" + grpcPort;
-    SPDLOG_INFO("Veryfying if server is ready on address: {}", address);
+    SPDLOG_INFO("Verifying if server is ready on address: {}", address);
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
     client.verifyReady(status, expectedStatus);
 }

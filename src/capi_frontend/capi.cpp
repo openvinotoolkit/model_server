@@ -684,7 +684,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceResponseOutput(OVMS_InferenceResponse* res
     *dimCount = tensor->getShape().size();
     *bufferType = buffer->getBufferType();
     *deviceId = buffer->getDeviceId().value_or(0);
-    // possibly it is not neccessary to discriminate
+    // possibly it is not necessary to discriminate
     *data = buffer->data();
     *bytesize = buffer->getByteSize();
     if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {

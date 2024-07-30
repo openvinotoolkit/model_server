@@ -38,7 +38,7 @@ class OVEmbeddings(BaseModel, Embeddings):
     tokenizer: Any  #: :meta private:
     """Huggingface tokenizer model."""
     do_norm: bool
-    """Whether normlizing the output of model"""
+    """Whether normalizing the output of model"""
     num_stream: int
     """Number of stream."""
     encode_kwargs: Dict[str, Any] = Field(default_factory=dict)

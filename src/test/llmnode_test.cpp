@@ -113,7 +113,7 @@ std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 // with user defined one to do that.
 // TODO: Test bad message or sampling configuration that would cause errors in add_request() phase. Need to replace hardcoded generation config
 // with user defined one to do that.
-// TODO: Consider stress testing - exisitng model server under heavy load to check notifications work us expected.
+// TODO: Consider stress testing - existing model server under heavy load to check notifications work us expected.
 //
 
 TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
@@ -311,7 +311,7 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsUnary) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
-    // Assertion split in two parts to avoid timestamp missmatch
+    // Assertion split in two parts to avoid timestamp mismatch
     // const size_t timestampLength = 10;
     std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"\nOpenVINO is","role":"assistant"}}],"created":)";
     std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"chat.completion"})";
@@ -333,7 +333,7 @@ TEST_F(LLMFlowHttpTest, inferCompletionsUnary) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
-    // Assertion split in two parts to avoid timestamp missmatch
+    // Assertion split in two parts to avoid timestamp mismatch
     // const size_t timestampLength = 10;
     std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"text":"\nOpenVINO is"}],"created":)";
     std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"text_completion"})";

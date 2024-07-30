@@ -40,7 +40,7 @@ std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request)
 
 /**
  * This is specific check required for passing KFS API related info
- * which informs how response should be formated. Therefore return value should not have an impact for
+ * which informs how response should be formatted. Therefore return value should not have an impact for
  * any other frontend.
  */
 bool useSharedOutputContentFn(const tensorflow::serving::PredictRequest* request);

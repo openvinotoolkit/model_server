@@ -101,7 +101,7 @@ By default, OpenVINO Model Server will enable CPU threads pinning for better per
 
 While using REST API, you can adjust the data format to optimize the communication and deserialization from json format. Here are some tips to effectively use REST interface when working with OpenVINO Model Server:
 
-- use [binary data format](binary_input.md) when possible(for TFS API binary data format is support ony for JPEG/PNG inputs, for KFS API there are no such limitations ) - binary data representation is smaller in terms of request size and easier to process on the server side. 
+- use [binary data format](binary_input.md) when possible(for TFS API binary data format is support only for JPEG/PNG inputs, for KFS API there are no such limitations ) - binary data representation is smaller in terms of request size and easier to process on the server side. 
 - when working with images, consider sending JPEG/PNG directly - compressed data will greatly reduce the traffic and speed up the communication.
 - with JPEG/PNG it is the most efficient to send the images with the resolution of the configured model. It will avoid image resizing on the server to fit the model.
 - if you decide to send data inside JSON object, try to adjust the numerical data type to reduce the message size i.e. reduce the numbers precisions in the json message with a command similar to `np.round(imgs.astype(np.float),decimals=2)`. 

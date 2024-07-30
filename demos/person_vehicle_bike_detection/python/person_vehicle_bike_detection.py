@@ -264,8 +264,8 @@ def main():
                 ip_addr, port_no, disp_buf, SRC_TYPE[1], video_files[i - num_cam]))
     thr[i].start()
 
-  # For whatever reasons, cv2.imshow() doesnt work from threads. Hence we shove the
-  # infered data to the main thread to display.
+  # For whatever reasons, cv2.imshow() doesn't work from threads. Hence we shove the
+  # inferred data to the main thread to display.
   global exit_ok
   while exit_ok == False:
     for i in range(num_cam + len(video_files)):

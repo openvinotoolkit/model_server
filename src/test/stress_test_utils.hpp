@@ -1343,7 +1343,7 @@ public:
             }
             EXPECT_TRUE(allowedLoadResults.find(retCode) != allowedLoadResults.end()) << "Ret code:"
                                                                                       << static_cast<uint>(retCode) << " message: " << ovms::Status(retCode).string()
-                                                                                      << " was not allowed in test but occured during load";
+                                                                                      << " was not allowed in test but occurred during load";
         }
     }
     void checkActiveNireqSmallerThanTotal() {

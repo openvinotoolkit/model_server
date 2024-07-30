@@ -282,7 +282,7 @@ Inputs will be provided to the `execute` function, but outputs must be prepared 
 
 - `datatype` (*optional*): a string defining the type of the data. This value is directly assigned to `datatype` attribute of the `Tensor`. By default, `datatype` attribute is inherited from the `data` object. Providing `datatype` to the constructor will override inherited value, so use it only if you know what you are doing.
 
-**Note**: `shape` and `datatype` arguments do not modify internal structure of the data - there are no reshapes and type conversions. They only override `Tensor.shape` and `Tensor.datatype` attributes, so the user can provide custom context to the next node or server response. It means they can be completely detached from the data buffer properties and it's user's reponsibility to correctly interpret these attributes while reading the `Tensor` in the next node or the server response on the client side.
+**Note**: `shape` and `datatype` arguments do not modify internal structure of the data - there are no reshapes and type conversions. They only override `Tensor.shape` and `Tensor.datatype` attributes, so the user can provide custom context to the next node or server response. It means they can be completely detached from the data buffer properties and it's user's responsibility to correctly interpret these attributes while reading the `Tensor` in the next node or the server response on the client side.
 
 ```python
 import numpy as np
@@ -342,7 +342,7 @@ The same mapping is applied the other way around when creating `Tensor` from ano
 In some cases, users may work with more complex types that are not listed above and model server also allows that.
 
 #### BYTES datatype
-If `datatype` "BYTES" is specified and data is located in bytes_contents field of input(for gRPC) or in JSON body(for REST) OVMS converts it to `pyovms.Tensor` buffer according to the format where every input is preceeded by four bytes of its size.
+If `datatype` "BYTES" is specified and data is located in bytes_contents field of input(for gRPC) or in JSON body(for REST) OVMS converts it to `pyovms.Tensor` buffer according to the format where every input is preceded by four bytes of its size.
 
 For example this gRPC request:
  bytes_content: [<240 byte element>, <1024 byte element>, <567 byte element>]
@@ -614,7 +614,7 @@ Learn more about how [MediaPipe flow works in OpenVINO Model Server](../mediapip
 For inference, data can be send both via [gRPC API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#grpc) and [KServe API](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#httprest)(only for unary calls). If the graph has a `OvmsPyTensor` output stream, then the data in the KServe response can be found in `raw_output_contents` field (even if data in the request has been placed in `InferTensorContents`).
 
 The data passed in the request is accessible in `execute` method of the node connected to graph input via `data` attribute of [`pyovms.Tensor`](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#python-tensor) object.
-For data of type BYTES send in bytes_contents field of input(for gRPC) or in JSON body(for REST) OVMS converts it to `pyovms.Tensor` buffer according to the format where every input is preceeded by four bytes of its size.
+For data of type BYTES send in bytes_contents field of input(for gRPC) or in JSON body(for REST) OVMS converts it to `pyovms.Tensor` buffer according to the format where every input is preceded by four bytes of its size.
 
 Inputs and outputs also define `shape` and `datatype` parameters. Those values are also accessible in `pyovms.Tensor`. For outputs, `datatype` and `shape` are by default read from the underlying buffer, but it is possible to overwrite them (see [`pyovms.Tensor constructor`](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#creating-output-tensors). If you specify `datatype` as `BYTES` in your requests, make sure to review [datatype considerations](https://docs.openvino.ai/2024/ovms_docs_python_support_reference.html#datatype-considerations), since this type is treated differently than the others.
 

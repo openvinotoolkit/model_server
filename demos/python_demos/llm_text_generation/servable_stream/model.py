@@ -44,7 +44,7 @@ def default_partial_text_processor(partial_text: str, new_text: str):
     helper for updating partially generated answer, used by de
 
     Params:
-      partial_text: text buffer for storing previosly generated text
+      partial_text: text buffer for storing previously generated text
       new_text: text update for the current step
     Returns:
       updated text string

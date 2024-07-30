@@ -30,7 +30,7 @@ class Status;
 class TensorWithSource;
 
 // This class encapsulates input tensor gathering and preprocessing before node execution.
-// It is resposible for gathering multiple tensors into one (in case of demultiplexers)
+// It is responsible for gathering multiple tensors into one (in case of demultiplexers)
 // and taking care of source tensor lifetime if source tensor is present.
 class NodeInputHandler {
 protected:

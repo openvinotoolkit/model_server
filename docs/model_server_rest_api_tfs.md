@@ -210,7 +210,7 @@ Besides numerical values, it is possible to pass JPEG / PNG encoded images as bi
 
 On the server side, the binary encoded data is loaded using OpenCV which then converts it to OpenVINO-friendly data format for inference.
 
-Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) for more informations.
+Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) for more information.
 
 Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#predict-api-1)
 
