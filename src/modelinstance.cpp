@@ -744,23 +744,27 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
         if (false) {  // use this only for test for now until we have config management
             cl_platform_id platformId;
             cl_device_id deviceId;
-            auto ocl_context = get_cl_context(platformId, deviceId);  // TODO use params from config, use device from config
-            SPDLOG_ERROR("XXXXXXXX Loading model with context");
-            this->ocl_context = ocl_context;
-            this->ocl_context_cpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(ieCore, ocl_context);
-            ov::intel_gpu::ocl::ClContext ov_context(ieCore, ocl_context);
-            compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->ocl_context_cpp, pluginConfig));
+            auto oclContext = get_cl_context(platformId, deviceId);  // TODO use params from config, use device from config
+            this->oclContextC = oclContext;
+            this->oclContextCpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(this->ieCore, this->oclContextC);
+            ov::intel_gpu::ocl::ClContext ov_context(this->ieCore, this->oclContextC);
+            compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->oclContextCpp, pluginConfig));
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
         } else {
             compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
-            const auto ocl_context = compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
-            this->ocl_context_cpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(ocl_context);
-            this->ocl_context = this->ocl_context_cpp->get();
-            SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXX :{}", (void*)&this->ocl_context);
+            const auto oclContext = compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
+            auto vaContext = compiledModel->get_context().as<ov::intel_gpu::ocl::VAContext>();
+            this->oclContextCpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(oclContext);
+            this->vaContext = std::make_unique<ov::intel_gpu::ocl::VAContext>(vaContext);
+            this->oclContextC = this->oclContextCpp->get();
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
         }
     } else {
         compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
         // TODO reset contexts
-        this->ocl_context_cpp.reset();
+        this->oclContextCpp.reset();
+        this->vaContext.reset();
+        this->oclContextC = NULL;  // TODO FIXME add checking for context extraction from non-GPU device
     }
 }
 
@@ -890,7 +894,7 @@ void ModelInstance::loadTensorFactories() {
     using std::make_shared;
     this->tensorFactories.emplace(OVMS_BUFFERTYPE_CPU, make_shared<RegularOVTensorFactory>());
     if (this->targetDevice.find("GPU") != std::string::npos)
-        this->tensorFactories.emplace(OVMS_BUFFERTYPE_OPENCL, make_shared<OpenCLTensorFactory>(*this->ocl_context_cpp));
+        this->tensorFactories.emplace(OVMS_BUFFERTYPE_OPENCL, make_shared<OpenCLTensorFactory>(*this->oclContextCpp));
     // TODO test MULTI/AUTO/HETERO
 }
 
@@ -1339,13 +1343,8 @@ Status ModelInstance::infer(const RequestType* requestProto,
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, this->tensorFactories);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Deserialization of inputs failed for model {}, version {}",
-            getName(), getVersion());
-        return status;
-    }
-    status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
+    //status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {
         SPDLOG_DEBUG("Deserialization of outputs failed for model {}, version {}", getName(), getVersion());
@@ -1455,14 +1454,8 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
     SPDLOG_ERROR("ER");
-    RegularOVTensorFactory regFactory;
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline, this->tensorFactories);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Deserialization of inputs failed for model {}, version {}",
-            getName(), getVersion());
-        return status;
-    }
-    status = deserializePredictRequest2<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>, true>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
+    //using TenType = typename RequestTraits<RequestType>::TensorType;
+    status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {
         SPDLOG_DEBUG("Deserialization of outputs failed for model {}, version {}", getName(), getVersion());

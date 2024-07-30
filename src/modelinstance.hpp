@@ -41,6 +41,7 @@
 
 // TODO
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#include <openvino/runtime/intel_gpu/ocl/va.hpp>
 
 #include "openvino/runtime/remote_tensor.hpp"
 
@@ -105,14 +106,15 @@ protected:
          */
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
-    cl_context ocl_context;
+    cl_context oclContextC;
 
 public:
     // TODO const correctness & ownership & thread safety
-    const cl_context* getOclCContext() const { return &ocl_context; }
+    const cl_context* getOclCContext() const { return &oclContextC; }
 
 protected:
-    std::unique_ptr<ov::intel_gpu::ocl::ClContext> ocl_context_cpp;
+    std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;
+    std::unique_ptr<ov::intel_gpu::ocl::VAContext> vaContext;
     std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> tensorFactories;
     /**
          * @brief Model name
