@@ -16,6 +16,7 @@
 #include "text_processor.hpp"
 
 #include <string>
+#include <utility>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
