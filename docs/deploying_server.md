@@ -47,8 +47,8 @@ docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_serv
 ##### 2.2 Download input files: an image and a label mapping file
 
 ```bash
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/zebra.jpeg
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/classes.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2024/3/demos/common/static/images/zebra.jpeg
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2024/3/demos/common/python/classes.py
 ```
 
 ##### 2.3 Install the Python-based ovmsclient package
@@ -116,7 +116,7 @@ sudo apt -y install libpython3.8
 :sync: ubuntu-22-04
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.2/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.3/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
 or build it yourself:
@@ -147,7 +147,7 @@ sudo apt -y install libpython3.10
 :sync: ubuntu-24-04
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.2/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.3/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
 or build it yourself:
@@ -178,7 +178,7 @@ sudo apt -y install libpython3.10
 :sync: rhel-8-10
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.2/ovms_redhat.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.3/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
 or build it yourself:
@@ -205,7 +205,7 @@ sudo yum install -y python39-libs
 :sync: rhel-9.4
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.2/ovms_redhat.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.3/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
 or build it yourself:

@@ -50,12 +50,12 @@ docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -u $(i
 > **NOTE**:
 > The public docker image includes the OpenCL drivers for GPU in version 22.28 (RedHat) and 22.35 (Ubuntu).
 
-If you need to build the OpenVINO Model Server with different driver version, refer to the [building from sources](https://github.com/openvinotoolkit/model_server/blob/main/docs/build_from_source.md)
+If you need to build the OpenVINO Model Server with different driver version, refer to the [building from sources](https://github.com/openvinotoolkit/model_server/blob/releases/2024/3/docs/build_from_source.md)
 
 ## Using Multi-Device Plugin
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
-It distributes Inference requests among multiple devices, balancing out the load. For more detailed information read OpenVINO’s [Multi-Device plugin documentation](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/multi-device.html) documentation.
+It distributes Inference requests among multiple devices, balancing out the load. For more detailed information read OpenVINO’s [Multi-Device plugin documentation](https://docs.openvino.ai/2024/documentation/legacy-features/multi-device.html) documentation.
 
 To use this feature in OpenVINO Model Server, you can choose one of two ways:
 
@@ -173,7 +173,7 @@ cd model_server
 make docker_build NVIDIA=1 OV_USE_BINARY=0
 cd ..
 ```
-Check also [building from sources](https://github.com/openvinotoolkit/model_server/blob/main/docs/build_from_source.md).
+Check also [building from sources](https://github.com/openvinotoolkit/model_server/blob/releases/2024/3/docs/build_from_source.md).
 
 Example command to run container with NVIDIA support:
 

@@ -4,7 +4,7 @@
 
 Check the following new demos:
 - [text generation with OpenAI API and continuous batching](../../continuous_batching/README.md)
-- [RAG with chat/completions endpoint and continuous batching](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
+- [RAG with chat/completions endpoint and continuous batching](https://github.com/openvinotoolkit/model_server/blob/releases/2024/3/demos/continuous_batching/rag/rag_demo.ipynb)
 
 ---
 
@@ -34,13 +34,13 @@ Building the image with all required python dependencies is required. Follow the
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image BASE_OS=redhat OVMS_CPP_DOCKER_IMAGE=registry.connect.redhat.com/intel/openvino-model-server OVMS_CPP_IMAGE_TAG=2024.2
+make python_image BASE_OS=redhat OVMS_CPP_DOCKER_IMAGE=registry.connect.redhat.com/intel/openvino-model-server OVMS_CPP_IMAGE_TAG=2024.3
 ```
 It will create an image called `registry.connect.redhat.com/intel/openvino-model-server:py`
 
 You can also build Ubuntu 22.04 image:
 ```
-make python_image BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=openvino/model_server OVMS_CPP_IMAGE_TAG=2024.2
+make python_image BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=openvino/model_server OVMS_CPP_IMAGE_TAG=2024.3
 ```
 It will create an image called `openvino/model_server:py`
 
