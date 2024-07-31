@@ -166,7 +166,7 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 LLM calculator is a preview feature. It runs a set of accuracy, stability and performance tests, but the next releases targets production grade quality. It has now a set of known issues:
 
 - Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. 
-- Models using in the template empty bos_token require updating the tokenizer config with a command: `sed -i '/"bos_token": null,/d' tokenizer_config.json` The known models which require such workaround are `Qwen1.5-7B-Chat` and `allenai/OLMo-1.7-7B-hf`. It won't be needed in the next release. This issue is not impacting `completions` endpoint.
+- If `bos_token` or `eos_token` is not a string, the `tokenizer_config.json` needs to be modified, for example with a command: `sed -i '/"bos_token": null,/d' tokenizer_config.json` and `sed -i '/"eos_token": null,/d' tokenizer_config.json` if those are `null`. The known models which require such workaround are `Qwen1.5-7B-Chat` and `allenai/OLMo-1.7-7B-hf`. It won't be needed in the next release. This issue is not impacting `completions` endpoint.
 - Llama3.1 models observe accuracy issues and overlong responses - this is investigated.
 - In rare cases when the model generates non valid utf8 sequence, it will be returned to the client without replacing it with � unicode replacement character. Use this code `text.decode("utf-8",errors='replace')` to make the replacement on the client side.
 - Multi modal models are not supported yet. Images can't be sent now as the context.
