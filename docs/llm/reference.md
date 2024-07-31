@@ -84,11 +84,18 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
 -    `optional string device` - device to load models to. Supported values: "CPU" [default = "CPU"]
 -    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = ""]
--    `optional uint32 best_of_limit` - max value of best_of parameter accepted by OVMS [default = 20];
--    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by OVMS [default = 4096];
+-    `optional uint32 best_of_limit` - max value of best_of parameter accepted by endpoint [default = 20];
+-    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint [default = 4096];
 
 
-The value of `cache_size` might have performance  implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
+The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
+You can track the actual usage of the cache in the server logs. You can observe in the logs output like below:
+```
+[2024-07-30 14:28:02.536][624][llm_executor][info][llm_executor.hpp:65] All requests: 50; Scheduled requests: 25; Cache usage 23.9%;
+```
+Consider increasing the `cache_size` parameter in case the logs report the usage getting close to 100%. When the cache is consumed, some of the running requests might be preempted to free cache for other requests to finish their generations (preemption will likely have negative impact on performance since preempted request cache will need to be recomputed when it gets processed again). When preemption is not possible i.e. `cache size` is very small and there is a single, long running request that consumes it all, then the request gets terminated when no more cache can be assigned to it, even before reaching stopping criteria. 
+
+The LLM calculator config can also restrict the range of sampling parameters in the client requests. If needed change the default values for  `max_tokens_limit` and `best_of_limit`. It is meant to avoid the result of memory overconsumption by invalid requests.
 
 ## Models Directory
 
@@ -107,6 +114,32 @@ In node configuration we set `models_path` indicating location of the directory 
 
 Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing.
 
+This model directory can be created based on the models from Hugging Face Hub or from the PyTorch model stored on the local filesystem. Exporting the models to Intermediate Representation format is one time operation and can speed up the loading time and reduce the storage volume, if it's combined with quantization and compression.
+
+In your python environment install required dependencies:
+```
+pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git@7a224c2419240d5fb58f2f75c2e29f179ed6da28 openvino-tokenizers
+```
+
+Because there is very dynamic development in optimum-intel and openvino, it is recommended to use the latest versions of the dependencies:
+```
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
+pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
+```
+
+LLM model can be exported with a command:
+```
+optimum-cli export openvino --disable-convert-tokenizer --model {LLM model in HF hub or Pytorch model folder} --weight-format {fp32/fp16/int8/int4/int4_sym_g128/int4_asym_g128/int4_sym_g64/int4_asym_g64} {target folder name}
+```
+Precision parameter is important and can influence performance, accuracy and memory usage. It is recommended to start experiments with `fp16`. The precision `int8` can reduce the memory consumption and improve latency with low impact on accuracy. Try `int4` to minimize memory usage and check various algorithm to achieve optimal results. 
+
+Export the tokenizer model with a command:
+```
+convert_tokenizer -o {target folder name} --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens {tokenizer model in HF hub or Pytorch model folder}
+```
+
+Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models).
+
 ### Chat template
 
 Chat template is used only on `/chat/completions` endpoint. Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`. 
@@ -116,7 +149,7 @@ Loading chat template proceeds as follows:
 2. If there is no `tokenizer.jinja` and `tokenizer_config.json` exists, try to read template from its `chat_template` field. If it's not present, use default template.
 3. If `tokenizer_config.json` exists try to read `eos_token` and `bos_token` fields. If they are not present, both values are set to empty string. 
 
-**Note**: If both `template.jinja` file and `chat_completion` field from `tokenizer_config.json` are successfully loaded `template.jinja` takes precedence over `tokenizer_config.json`.
+**Note**: If both `template.jinja` file and `chat_completion` field from `tokenizer_config.json` are successfully loaded, `template.jinja` takes precedence over `tokenizer_config.json`.
 
 If there are errors in loading or reading files or fields (they exist but are wrong) no template is loaded and servable will not respond to `/chat/completions` calls. 
 
@@ -130,12 +163,14 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 
 ## Limitations
 
-As it's in preview, this feature has set of limitations:
+LLM calculator is a preview feature. It runs a set of accuracy, stability and performance tests, but the next releases targets production grade quality. It has now a set of known issues:
 
-- Limited support for [API parameters](../model_server_rest_api_chat.md#request),
-- Only one node with LLM calculator can be deployed at once,
-- Metrics related to text generation - they are planned to be added later,
-- Improvements in stability and recovery mechanisms are also expected
+- Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. 
+- If `bos_token` or `eos_token` is not a string, the `tokenizer_config.json` needs to be modified, for example with a command: `sed -i '/"bos_token": null,/d' tokenizer_config.json` and `sed -i '/"eos_token": null,/d' tokenizer_config.json` if those are `null`. The known models which require such workaround are `Qwen1.5-7B-Chat` and `allenai/OLMo-1.7-7B-hf`. It won't be needed in the next release. This issue is not impacting `completions` endpoint.
+- Llama3.1 models observe accuracy issues and overlong responses - this is investigated.
+- In rare cases when the model generates non valid utf8 sequence, it will be returned to the client without replacing it with � unicode replacement character. Use this code `text.decode("utf-8",errors='replace')` to make the replacement on the client side.
+- Multi modal models are not supported yet. Images can't be sent now as the context.
+- Disconnected clients don't break the generation flow on the server. It is finished when eos token is generated or `max_tokens` is reached.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
