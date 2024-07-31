@@ -254,6 +254,54 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerDefault) {
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
+TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerBosNull) {
+    std::string tokenizerJson = R"({
+    "bos_token": null,
+    "eos_token": "</s>"
+    })";
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
+    nodeResources->modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+
+    std::string finalPrompt = "";
+    std::string payloadBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": [{"role": "user", "content": "hello"}]
+        }
+    )";
+    std::string expectedOutput = "hello";
+    // Expect no issues with chat template since non string bos token is ignored
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(finalPrompt, expectedOutput);
+}
+
+TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerEosNull) {
+    std::string tokenizerJson = R"({
+    "bos_token": "</s>",
+    "eos_token": null
+    })";
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
+    nodeResources->modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+
+    std::string finalPrompt = "";
+    std::string payloadBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": [{"role": "user", "content": "hello"}]
+        }
+    )";
+    std::string expectedOutput = "hello";
+    // Expect no issues with chat template since non string eos token is ignored
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(finalPrompt, expectedOutput);
+}
+
 TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerException) {
     std::string tokenizerJson = R"({
     "bos_token": "</s>",
