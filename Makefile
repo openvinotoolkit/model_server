@@ -258,6 +258,10 @@ venv-style:$(ACTIVATE_STYLE)
 	@echo $(BUILD_ARGS)
 	@echo -n "Using venv "
 	@python3 --version
+spell: venv-style
+	@pip install codespell
+	@{ git ls-files; git diff --name-only --cached; } | sort | uniq | xargs codespell --skip "spelling-whitelist.txt" | grep -vFf spelling-whitelist.txt; if [ $$? != 1 ]; then exit 1; fi
+	@echo "Spelling check completed."
 
 $(ACTIVATE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
@@ -279,7 +283,7 @@ cppclean: venv-style
 	@echo "Checking cppclean..."
 	@bash -c "./ci/cppclean.sh"
 
-style: venv-style clang-format-check cpplint cppclean
+style: venv-style spell clang-format-check cpplint cppclean
 
 hadolint:
 	@echo "Checking SDL requirements..."
@@ -319,8 +323,8 @@ clang-format: venv-style
 
 clang-format-check: clang-format
 	@echo "Checking if clang-format changes were committed ..."
-	@git diff --exit-code || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
-	@git diff --exit-code --staged || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
+	@git diff --exit-code || (echo "clang-format changes not committed. Commit those changes first"; exit 1)
+	@git diff --exit-code --staged || (echo "clang-format changes not committed. Commit those changes first"; exit 1)
 
 .PHONY: docker_build
 docker_build: ovms_builder_image targz_package ovms_release_images

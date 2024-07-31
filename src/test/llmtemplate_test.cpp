@@ -611,7 +611,7 @@ TEST_F(LLMDefaultChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
-    // Assertion split in two parts to avoid timestamp missmatch
+    // Assertion split in two parts to avoid timestamp mismatch
     // const size_t timestampLength = 10;
     std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"\nOpenVINO is","role":"assistant"}}],"created":)";
     std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"chat.completion"})";
@@ -656,7 +656,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsUnary) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
-    // Assertion split in two parts to avoid timestamp missmatch
+    // Assertion split in two parts to avoid timestamp mismatch
     // const size_t timestampLength = 10;
     std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"\nOpenVINO is","role":"assistant"}}],"created":)";
     std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"chat.completion"})";
@@ -679,7 +679,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsUnary) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
-    // Assertion split in two parts to avoid timestamp missmatch
+    // Assertion split in two parts to avoid timestamp mismatch
     // const size_t timestampLength = 10;
     std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"text":"\n\nThe first thing"}],"created":)";
     std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"text_completion"})";

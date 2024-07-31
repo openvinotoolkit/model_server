@@ -311,7 +311,7 @@ class BaseClient(metaclass=abc.ABCMeta):
                                        f"is smaller then required batches {self.batchsizes} " +
                                        f"with --dataset_length {self.dataset_length}")
                 else:
-                    self.print_warning(f"Not enought data in create all batches. " +
+                    self.print_warning(f"Not enough data in create all batches. " +
                                        f"Cannot fill batch of size {batch_length}. " +
                                        f"Created {len(self.xdata[input_name])} batches. ")
                 return None
@@ -589,7 +589,7 @@ class BaseClient(metaclass=abc.ABCMeta):
                     self.print_error(info)
 
                 if errors_limit != 0 and fail_counter > int(errors_limit):
-                    info = f"Limit of erros {errors_limit} is reached!"
+                    info = f"Limit of errors {errors_limit} is reached!"
                     self.print_error(info)
                     break
             counter += 1

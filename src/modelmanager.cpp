@@ -1219,7 +1219,7 @@ void ModelManager::getVersionsToChange(
                 versionsToReload->push_back(version);
             }
         } catch (std::out_of_range& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occured during versions update. Could not found version. Details: {}", e.what());
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occurred during versions update. Could not found version. Details: {}", e.what());
         }
     }
 
@@ -1236,7 +1236,7 @@ void ModelManager::getVersionsToChange(
                 return modelVersionsInstances.at(version)->getStatus().willEndUnloaded();
             });
     } catch (std::out_of_range& e) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occured during versions update. Could not found version. Details: {}", e.what());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occurred during versions update. Could not found version. Details: {}", e.what());
     }
     versionsToRetire->resize(it - versionsToRetire->begin());
 

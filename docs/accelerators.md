@@ -101,7 +101,7 @@ The [HETERO plugin](https://docs.openvino.ai/2024/openvino-workflow/running-infe
 among several computing devices. That way different parts of the deep learning network can be executed by devices best suited to their type of calculations. 
 OpenVINO automatically divides the network to optimize the process.
 
-The Heterogenous plugin can be configured using the `--target_device` parameter with the pattern of: `HETERO:<DEVICE_1>,<DEVICE_2>`. 
+The Heterogeneous plugin can be configured using the `--target_device` parameter with the pattern of: `HETERO:<DEVICE_1>,<DEVICE_2>`. 
 The order of devices will define their priority, in this case making `device_1` the primary and `device_2` the fallback one.
 
 Here is a config example using heterogeneous plugin with GPU as the primary device and CPU as a fallback.

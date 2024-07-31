@@ -215,7 +215,7 @@ public:
                 if (!generatorFinished()) {
                     generate(cc, outputTimestamp);
                 } else {
-                    LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] finished generating. Reseting the generator.";
+                    LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] finished generating. Resetting the generator.";
                     resetGenerator();
                 }
             } else {

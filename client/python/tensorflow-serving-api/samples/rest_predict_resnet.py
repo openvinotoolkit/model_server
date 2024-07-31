@@ -176,7 +176,7 @@ while iteration <= iterations:
             keyname = "predictions"
             if type(result_dict[keyname][0]) is dict:  # are multiple outputs
                 output = []
-                for row in result_dict[keyname]:  # iternate over all results in the batch
+                for row in result_dict[keyname]:  # iterate over all results in the batch
                     output.append(row[args['output_name']])
             else:
                 output = result_dict[keyname]

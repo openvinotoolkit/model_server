@@ -157,7 +157,7 @@ def default_partial_text_processor(partial_text: str, new_text: str):
     helper for updating partially generated answer, used by default
 
     Params:
-      partial_text: text buffer for storing previosly generated text
+      partial_text: text buffer for storing previously generated text
       new_text: text update for the current step
     Returns:
       updated text string
@@ -311,7 +311,7 @@ class OvmsPythonModel:
             text_splitter = TEXT_SPLITERS[spliter_name](chunk_size=chunk_size, chunk_overlap=chunk_overlap)
             print("Splitting documents...", flush=True)
             self.texts = text_splitter.split_documents(documents)
-            print("Documents splitted", self.texts, flush=True)
+            print("Documents split", self.texts, flush=True)
             if self.db is not None:
                 self.db.delete_collection()
             self.db = Chroma.from_documents(self.texts, self.embedding)

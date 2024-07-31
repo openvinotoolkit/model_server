@@ -15,7 +15,7 @@ It is now integrated into OpenVINO Model Server providing efficient way to run g
 Check out the [quickstart guide](quickstart.md) for a simple example that shows how to use this feature.
 
 ## LLM Calculator
-As you can see in the quickstart above, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) solutions. The calculator is designed to run in cycles and return the chunks of reponses to the client.
+As you can see in the quickstart above, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) solutions. The calculator is designed to run in cycles and return the chunks of responses to the client.
 
 On the input it expects a HttpPayload struct passed by the Model Server frontend:
 ```cpp

@@ -346,7 +346,7 @@ public:
 
         // use_beam_search: bool; optional - defaults to false
         // Extension from vLLM, unsupported by OpenAI API, not available directly in CB lib
-        // Use best_of>1 to steer into beams earch
+        // Use best_of>1 to steer into beams search
         // it = this->doc.FindMember("use_beam_search");
         // if (it != this->doc.MemberEnd()) {
         //     if (!it->value.IsBool())

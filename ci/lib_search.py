@@ -138,6 +138,7 @@ def check_dir(start_dir):
         "pugixml_v1.13_flags.patch",
         "rag_demo.ipynb",
         ".bazelversion",
+        "spelling-whitelist.txt",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']

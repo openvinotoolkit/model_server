@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-# preprare initial folders structure
+# prepare initial folders structure
 mkdir -p mediapipe/mediapipe/modules/hand_landmark/
 mkdir -p ovms
 # copy a text file for hand landmark module
