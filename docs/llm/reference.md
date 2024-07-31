@@ -93,9 +93,9 @@ You can track the actual usage of the cache in the server logs. You can observe 
 ```
 [2024-07-30 14:28:02.536][624][llm_executor][info][llm_executor.hpp:65] All requests: 50; Scheduled requests: 25; Cache usage 23.9%;
 ```
-Consider increasing the `cache_size` parameter in case the logs report the usage getting close to 100%. When the cache is consumed, running requests might be terminated to get the cache released. 
+Consider increasing the `cache_size` parameter in case the logs report the usage getting close to 100%. When the cache is consumed, some of the running requests might be preempted to free cache for other requests to finish their generations (preemption will likely have negative impact on performance since preempted request cache will need to be recomputed when it gets processed again). When preemption is not possible i.e. `cache size` is very small and there is a single, long running request that consumes it all, then the request gets terminated when no more cache can be assigned to it, even before reaching stopping criteria. 
 
-The LLM calculator config can also restrict the range of sampling parameters in the client requests. If needed change the default values for  `max_tokens_limit` and `best_of_limit`. It is meant to avoid the result of memory over consumption by invalid requests.
+The LLM calculator config can also restrict the range of sampling parameters in the client requests. If needed change the default values for  `max_tokens_limit` and `best_of_limit`. It is meant to avoid the result of memory overconsumption by invalid requests.
 
 ## Models Directory
 
@@ -114,7 +114,7 @@ In node configuration we set `models_path` indicating location of the directory 
 
 Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing.
 
-This model directory can be created based on the models from Hugging Faces Hub or from the Pytorch model stored on the local filesystem. Exporting the models to Intermediate Representation format is one time operations and can speedup the loading time and reduce the storage volume if this is combined with quantization and compression.
+This model directory can be created based on the models from Hugging Face Hub or from the PyTorch model stored on the local filesystem. Exporting the models to Intermediate Representation format is one time operation and can speed up the loading time and reduce the storage volume, if it's combined with quantization and compression.
 
 In your python environment install required dependencies:
 ```
@@ -131,7 +131,7 @@ LLM model can be exported with a command:
 ```
 optimum-cli export openvino --disable-convert-tokenizer --model {LLM model in HF hub or Pytorch model folder} --weight-format {fp32/fp16/int8/int4/int4_sym_g128/int4_asym_g128/int4_sym_g64/int4_asym_g64} {target folder name}
 ```
-Precision parameter is important and can influence performance, accuracy and memory usage. It is recommended to start experiments with `fp16`. The precision `int8` can reduce the memory consumption and improve latency with low impact on accuracy. Try int4 to maximize memory usage reduction and check various algorithm to achieve optimal results. 
+Precision parameter is important and can influence performance, accuracy and memory usage. It is recommended to start experiments with `fp16`. The precision `int8` can reduce the memory consumption and improve latency with low impact on accuracy. Try `int4` to minimize memory usage and check various algorithm to achieve optimal results. 
 
 Export the tokenizer model with a command:
 ```
@@ -163,14 +163,14 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 
 ## Limitations
 
-LLM calculator is a preview feature. It runs a range of accuracy, stability and performance test but the next releases targets production grade quality. It has now a set of known issues:
+LLM calculator is a preview feature. It runs a set of accuracy, stability and performance tests, but the next releases targets production grade quality. It has now a set of known issues:
 
 - Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. 
 - Models using in the template empty bos_token require updating the tokenizer config with a command: `sed -i '/"bos_token": null,/d' tokenizer_config.json` The known models which require such workaround are `Qwen1.5-7B-Chat` and `allenai/OLMo-1.7-7B-hf`. It won't be needed in the next release. This issue is not impacting `completions` endpoint.
-- llama3.1 models observe accuracy issues and overlong responses - this is investigated.
-- in rare cases when the model generates non valid utf8 sequence, it will be returned to the client without replacing it with � unicode replacement character. Use this code `text.decode("utf-8",errors='replace')` to make the replacement on the client side.
-- multi modal models are not supported yet. Images can't be sent now as the context.
-- Disconnected clients don't break the generation flow on the server. It is finished when eos and max_tokens is reached.
+- Llama3.1 models observe accuracy issues and overlong responses - this is investigated.
+- In rare cases when the model generates non valid utf8 sequence, it will be returned to the client without replacing it with � unicode replacement character. Use this code `text.decode("utf-8",errors='replace')` to make the replacement on the client side.
+- Multi modal models are not supported yet. Images can't be sent now as the context.
+- Disconnected clients don't break the generation flow on the server. It is finished when eos token is generated or `max_tokens` is reached.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
