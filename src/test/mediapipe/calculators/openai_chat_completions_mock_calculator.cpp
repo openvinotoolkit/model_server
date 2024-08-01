@@ -42,6 +42,7 @@ class OpenAIChatCompletionsMockCalculator : public CalculatorBase {
 
     mediapipe::Timestamp timestamp{0};
     std::string body;
+    std::shared_ptr<ovms::Client> client;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -74,6 +75,7 @@ public:
                 this->body += header.second;
             }
             this->body += data.body;
+            this->client = data.client;
             if (data.parsedJson != NULL) {
                 rapidjson::StringBuffer buffer;
                 buffer.Clear();
@@ -81,6 +83,10 @@ public:
                 data.parsedJson->Accept(writer);
                 this->body += buffer.GetString();
             }
+        }
+
+        if (client->isDisconnected()) {
+            return absl::OkStatus();
         }
 
         this->body += std::to_string(timestamp.Value());

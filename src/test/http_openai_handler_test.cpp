@@ -134,6 +134,7 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(9);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    EXPECT_CALL(writer, IsDisconnected()).Times(9);
 
     ASSERT_EQ(
         handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer),
@@ -148,6 +149,7 @@ TEST_F(HttpOpenAIHandlerTest, BodyNotAJson) {
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
     auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
@@ -160,6 +162,7 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
     auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
@@ -177,6 +180,7 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldMissing) {
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
     auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
@@ -195,6 +199,7 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldNotAString) {
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
     auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
@@ -213,6 +218,7 @@ TEST_F(HttpOpenAIHandlerTest, StreamFieldNotABoolean) {
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
     auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
@@ -231,6 +237,7 @@ TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
     EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
     EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
     auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);

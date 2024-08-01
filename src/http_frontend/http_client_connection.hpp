@@ -15,23 +15,25 @@
 //*****************************************************************************
 #pragma once
 
-#include <string>
-#include <utility>
-#include <vector>
-#include <memory>
-
-#include <rapidjson/document.h>
-
 #include "../client_connection.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
+#pragma GCC diagnostic pop
 
 namespace ovms {
 
-struct HttpPayload {
-    std::string uri;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::string body;                 // always
-    rapidjson::Document* parsedJson;  // pre-parsed body             = null
-    std::shared_ptr<ClientConnection> client;
+class HttpClientConnection : public ClientConnection {
+    tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter;
+public:
+    HttpClientConnection(tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) :
+        serverReaderWriter(serverReaderWriter) {}
+
+    bool isDisconnected() const override {
+        return this->serverReaderWriter->IsDisconnected();
+    }
 };
 
-}  // namespace ovms
+}

@@ -43,6 +43,7 @@
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpcservermodule.hpp"
+#include "http_frontend/http_client_connection.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "metric_module.hpp"
@@ -486,6 +487,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         request.body = request_body;
         request.parsedJson = &doc;
         request.uri = std::string(uri);
+        request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
     }
     if (streamFieldVal == false) {
         ServableMetricReporter* smr = nullptr;                                                         // Unused

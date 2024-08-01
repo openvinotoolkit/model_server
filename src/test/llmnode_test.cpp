@@ -360,6 +360,7 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStream) {
     // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(3);
     // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    // TODO: New output EXPECT_CALL(writer, IsDisconnected()).Times(6);  // more than partial reply because of text streamer not always returning chunk of ready data
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
@@ -379,6 +380,112 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
 
     // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(3);
+    // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    // TODO: New output EXPECT_CALL(writer, IsDisconnected()).Times(6);  // more than partial reply because of text streamer not always returning chunk of ready data
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(response, "");
+}
+
+TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedImmediately) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(writer, IsDisconnected())
+        .WillOnce(::testing::Return(true));
+
+    // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);  // no results
+    // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(response, "");
+}
+
+TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedImmediately) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);  // no results
+    // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    // TODO: New output EXPECT_CALL(writer, IsDisconnected())
+    // TODO: New output     .WillOnce(::testing::Return(true));
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(response, "");
+}
+
+TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedAfterFirstIteration) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(writer, IsDisconnected())
+        .WillOnce(::testing::Return(false))
+        .WillOnce(::testing::Return(true));
+
+    // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(1);  // 1 result
+    // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(response, "");
+}
+
+TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedAfterFirstIteration) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    // TODO: New output EXPECT_CALL(writer, IsDisconnected())
+    // TODO: New output     .WillOnce(::testing::Return(false))
+    // TODO: New output     .WillOnce(::testing::Return(true));
+
+    // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(1);  // 1 result
     // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),

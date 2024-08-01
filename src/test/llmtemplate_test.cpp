@@ -626,6 +626,9 @@ std::string fullResponse;
 // }
 
 class LLMJinjaChatTemplateHttpTest : public LLMChatTemplateHttpTest {
+protected:
+    std::unique_ptr<CleanupFilesGuard> cleanupGuard;
+
     void SetUp() {
         fullResponse = "";
         TestWithTempDir::SetUp();
@@ -633,11 +636,13 @@ class LLMJinjaChatTemplateHttpTest : public LLMChatTemplateHttpTest {
         std::string jinjaTemplate = R"({{"What is OpenVINO" + messages[0]['content']}})";
         ASSERT_EQ(CreateConfig(jinjaTemplate, jinjaConfigFilePath), true);
         LLMChatTemplateHttpTest::SetUp();
+
+        cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
     }
 };
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsUnary) {
-    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
+    //std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -665,7 +670,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsUnary) {
 }
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsUnary) {
-    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
+    //std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -688,7 +693,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsUnary) {
 }
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
-    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
+    //std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -714,8 +719,10 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
                 auto modelOutput = choices.GetObject()["text"].GetString();
                 ConcatenateResponse(modelOutput);
             }
-        }); */
+        });
+    */
     // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    // TODO: New output EXPECT_CALL(writer, IsDisconnected()).Times(7);
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -727,7 +734,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
 }
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
-    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
+    //std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -753,8 +760,11 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
                 auto modelOutput = choices.GetObject()["text"].GetString();
                 ConcatenateResponse(modelOutput);
             }
-        }); */
+        });
+    */
     // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    // TODO: New output EXPECT_CALL(writer, IsDisconnected()).Times(7);
+
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -764,3 +774,5 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
 
     // ASSERT_EQ(fullResponse, "\n\nThe first thing ");
 }
+
+

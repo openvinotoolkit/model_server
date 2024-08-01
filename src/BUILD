@@ -446,6 +446,19 @@ cc_library(
 )
 
 cc_library(
+    name = "libhttpclientconnection",
+    hdrs = ["client_connection.hpp", "http_frontend/http_client_connection.hpp"],
+    deps = [
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
     name = "libovmsprecision",
     hdrs = ["precision.hpp"],
     srcs = ["precision.cpp",],
