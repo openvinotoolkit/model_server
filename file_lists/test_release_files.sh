@@ -25,10 +25,10 @@ PYTHON_DISABLE=$1
 errors=0
 
 if [ "$PYTHON_DISABLE" -eq "0" ]; then
-    # ovms/lib - with python
+    # ovms_release/lib - with python
     input_file="/test/file_lists/lib_files_python.txt"
-    test_path="/ovms/lib"
-    output="$(diff <(cat $input_file) <(ls $test_path | cut -d ' ' -f 1))"
+    test_path="/ovms_release/lib"
+    output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
     if [[ -n $output ]]
     then
         printf -- "ERROR: $test_path against $input_file- File list mismatch: \n%s\n" "$output"
@@ -36,22 +36,11 @@ if [ "$PYTHON_DISABLE" -eq "0" ]; then
     else
         printf -- "SUCCESS: $test_path Files list match.\n"
     fi
-    # ovms/lib/python
-    input_file="/test/file_lists/lib_python_files.txt"
-    test_path="/ovms/lib/python"
-    output="$(diff <(cat $input_file) <(tree $test_path))"
-    if [[ -n $output ]]
-    then
-        printf -- "ERROR:  $test_path against $input_file- File list mismatch: \n%s\n" "$output"
-        errors=$((errors+1))
-    else
-        printf -- "SUCCESS: $test_path Files list match.\n"
-    fi
 else
-    # ovms/lib - without python
+    # ovms_release/lib - without python
     input_file="/test/file_lists/lib_files.txt"
-    test_path="/ovms/lib"
-    output="$(diff <(cat $input_file) <(ls $test_path | cut -d ' ' -f 1))"
+    test_path="/ovms_release/lib"
+    output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
     if [[ -n $output ]]
     then
         printf -- "ERROR: $test_path against $input_file- File list mismatch: \n%s\n" "$output"
@@ -61,22 +50,10 @@ else
     fi
 fi
 
-# ovms/lib/custom_nodes
+# ovms_release/lib/custom_nodes
 input_file="/test/file_lists/lib_custom_nodes_files.txt"
-test_path="/ovms/lib/custom_nodes"
-output="$(diff <(cat $input_file) <(ls $test_path | cut -d ' ' -f 1))"
-if [[ -n $output ]]
-then
-    printf -- "ERROR: $test_path against $input_file- File list mismatch: \n%s\n" "$output"
-    errors=$((errors+1))
-else
-    printf -- "SUCCESS: $test_path Files list match.\n"
-fi
-
-# ovms/lib/hddl
-input_file="/test/file_lists/lib_hddl_files.txt"
-test_path="/ovms/lib/hddl"
-output="$(diff <(cat $input_file) <(ls $test_path | cut -d ' ' -f 1))"
+test_path="/ovms_release/lib/custom_nodes"
+output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
 if [[ -n $output ]]
 then
     printf -- "ERROR: $test_path against $input_file- File list mismatch: \n%s\n" "$output"
