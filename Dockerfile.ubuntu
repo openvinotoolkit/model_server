@@ -372,6 +372,13 @@ RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_rele
 # Remove capi library
 RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; fi ;
 
+WORKDIR /test
+COPY file_lists /test/
+RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else /test/test_release_files.sh 0 ; fi ; \
+    /test/test_release_files.sh 1
+    
+WORKDIR /
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM $BASE_IMAGE as release
@@ -394,7 +401,7 @@ COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,SC2164
 RUN     apt-get update -y ; \
-    apt-get install -y curl ca-certificates tree --no-install-recommends && \
+    apt-get install -y curl ca-certificates --no-install-recommends && \
         if [ "$GPU" == "1" ] ; then \
             apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
                 case $INSTALL_DRIVER_VERSION in \
@@ -505,12 +512,6 @@ RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit
 
 ENV LD_LIBRARY_PATH=/ovms/lib
 
-WORKDIR /test
-COPY file_lists /test/
-RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else /test/file_lists/test_release_files.sh 0 ; fi ; \
-    /test/file_lists/test_release_files.sh 1
-    
-WORKDIR /
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
