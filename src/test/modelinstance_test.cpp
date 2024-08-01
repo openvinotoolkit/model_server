@@ -213,6 +213,7 @@ TEST_F(TestLoadModel, ShouldFailWithEmptyInputs) {
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     EXPECT_EQ(status, StatusCode::OV_NO_INPUTS) << status.string();
     EXPECT_EQ(ovms::ModelVersionState::LOADING, mockModelInstance.getStatus().getState());
+    EXPECT_EQ(ovms::ModelVersionStatusErrorCode::UNKNOWN, mockModelInstance.getStatus().getErrorCode());
 }
 TEST_F(TestLoadModel, ShouldFailWithEmptyOutputs) {
     MockModelInstanceEmptyOutputs mockModelInstance(*ieCore);
@@ -221,6 +222,7 @@ TEST_F(TestLoadModel, ShouldFailWithEmptyOutputs) {
     auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
     EXPECT_EQ(status, StatusCode::OV_NO_OUTPUTS) << status.string();
     EXPECT_EQ(ovms::ModelVersionState::LOADING, mockModelInstance.getStatus().getState());
+    EXPECT_EQ(ovms::ModelVersionStatusErrorCode::UNKNOWN, mockModelInstance.getStatus().getErrorCode());
 }
 
 class MockModelInstanceWithRTMap : public ovms::ModelInstance {
