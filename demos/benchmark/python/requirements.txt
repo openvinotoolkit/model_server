@@ -1,6 +1,6 @@
 grpcio
 requests
-tensorflow~=2.11.1
+tensorflow==2.13.1
 tensorflow-serving-api
 pymongo
 retry
