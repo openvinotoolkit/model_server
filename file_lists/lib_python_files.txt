@@ -1,0 +1,249 @@
+/ovms/lib/python
+|-- CMakeLists.txt
+|-- openvino
+|   |-- __init__.py
+|   |-- _offline_transformations
+|   |   `-- __init__.py
+|   |-- _pyopenvino.cpython-310-x86_64-linux-gnu.so
+|   |-- frontend
+|   |   |-- __init__.py
+|   |   |-- frontend.py
+|   |   |-- jax
+|   |   |   |-- __init__.py
+|   |   |   |-- jaxpr_decoder.py
+|   |   |   `-- utils.py
+|   |   |-- onnx
+|   |   |   |-- __init__.py
+|   |   |   `-- py_onnx_frontend.cpython-310-x86_64-linux-gnu.so
+|   |   |-- paddle
+|   |   |   |-- __init__.py
+|   |   |   `-- py_paddle_frontend.cpython-310-x86_64-linux-gnu.so
+|   |   |-- pytorch
+|   |   |   |-- __init__.py
+|   |   |   |-- fx_decoder.py
+|   |   |   |-- gptq.py
+|   |   |   |-- module_extension.py
+|   |   |   |-- patch_model.py
+|   |   |   |-- py_pytorch_frontend.cpython-310-x86_64-linux-gnu.so
+|   |   |   |-- torchdynamo
+|   |   |   |   |-- backend.py
+|   |   |   |   |-- backend_utils.py
+|   |   |   |   |-- compile.py
+|   |   |   |   |-- decompositions.py
+|   |   |   |   |-- execute.py
+|   |   |   |   |-- op_support.py
+|   |   |   |   `-- partition.py
+|   |   |   |-- ts_decoder.py
+|   |   |   `-- utils.py
+|   |   `-- tensorflow
+|   |       |-- __init__.py
+|   |       |-- graph_iterator.py
+|   |       |-- node_decoder.py
+|   |       |-- py_tensorflow_frontend.cpython-310-x86_64-linux-gnu.so
+|   |       `-- utils.py
+|   |-- helpers
+|   |   |-- __init__.py
+|   |   `-- packing.py
+|   |-- preprocess
+|   |   |-- README.md
+|   |   |-- __init__.py
+|   |   `-- torchvision
+|   |       |-- __init__.py
+|   |       |-- preprocess_converter.py
+|   |       |-- requirements.txt
+|   |       `-- torchvision_preprocessing.py
+|   |-- properties
+|   |   |-- __init__.py
+|   |   |-- _properties.py
+|   |   |-- device
+|   |   |   `-- __init__.py
+|   |   |-- hint
+|   |   |   `-- __init__.py
+|   |   |-- intel_auto
+|   |   |   `-- __init__.py
+|   |   |-- intel_cpu
+|   |   |   `-- __init__.py
+|   |   |-- intel_gpu
+|   |   |   |-- __init__.py
+|   |   |   `-- hint
+|   |   |       `-- __init__.py
+|   |   |-- log
+|   |   |   `-- __init__.py
+|   |   `-- streams
+|   |       `-- __init__.py
+|   |-- runtime
+|   |   |-- __init__.py
+|   |   |-- exceptions.py
+|   |   |-- ie_api.py
+|   |   |-- op
+|   |   |   |-- __init__.py
+|   |   |   `-- util
+|   |   |       `-- __init__.py
+|   |   |-- opset1
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset10
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset11
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset12
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset13
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset14
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset15
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset2
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset3
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset4
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset5
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset6
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset7
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset8
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset9
+|   |   |   |-- __init__.py
+|   |   |   `-- ops.py
+|   |   |-- opset_utils.py
+|   |   |-- passes
+|   |   |   |-- __init__.py
+|   |   |   |-- graph_rewrite.py
+|   |   |   `-- manager.py
+|   |   |-- properties
+|   |   |   |-- __init__.py
+|   |   |   `-- hint
+|   |   |       `-- __init__.py
+|   |   `-- utils
+|   |       |-- __init__.py
+|   |       |-- broadcasting.py
+|   |       |-- data_helpers
+|   |       |   |-- __init__.py
+|   |       |   |-- data_dispatcher.py
+|   |       |   `-- wrappers.py
+|   |       |-- decorators.py
+|   |       |-- input_validation.py
+|   |       |-- node_factory.py
+|   |       |-- reduction.py
+|   |       `-- types.py
+|   |-- test_utils
+|   |   `-- __init__.py
+|   |-- tools
+|   |   |-- __init__.py
+|   |   `-- ovc
+|   |       |-- __init__.py
+|   |       |-- __main__.py
+|   |       |-- cli_parser.py
+|   |       |-- convert.py
+|   |       |-- convert_data_type.py
+|   |       |-- convert_impl.py
+|   |       |-- environment_setup_utils.py
+|   |       |-- error.py
+|   |       |-- get_ov_update_message.py
+|   |       |-- help.py
+|   |       |-- logger.py
+|   |       |-- main.py
+|   |       |-- moc_frontend
+|   |       |   |-- __init__.py
+|   |       |   |-- analysis.py
+|   |       |   |-- check_config.py
+|   |       |   |-- extractor.py
+|   |       |   |-- jax_frontend_utils.py
+|   |       |   |-- layout_utils.py
+|   |       |   |-- moc_emit_ir.py
+|   |       |   |-- offline_transformations.py
+|   |       |   |-- paddle_frontend_utils.py
+|   |       |   |-- pipeline.py
+|   |       |   |-- preprocessing.py
+|   |       |   |-- pytorch_frontend_utils.py
+|   |       |   |-- shape_utils.py
+|   |       |   `-- type_utils.py
+|   |       |-- ovc.py
+|   |       |-- telemetry_params.py
+|   |       |-- telemetry_stub.py
+|   |       |-- telemetry_utils.py
+|   |       |-- utils.py
+|   |       `-- version.py
+|   |-- torch
+|   |   `-- __init__.py
+|   `-- utils.py
+|-- openvino-2024.3.dist-info
+|   `-- METADATA
+|-- pyovms.so
+|-- requirements.txt
+`-- unit_tests
+    |-- __init__.py
+    |-- moc_tf_fe
+    |   |-- __init__.py
+    |   |-- check_info_messages_test.py
+    |   |-- conversion_basic_models_test.py
+    |   |-- conversion_incorrect_models_test.py
+    |   |-- conversion_with_checkpoint_v1_test.py
+    |   |-- test_models
+    |   |   |-- ctc_model_based.pbtxt
+    |   |   |-- fake.pb
+    |   |   |-- future_op.pbtxt
+    |   |   |-- model_add_with_undefined_constant.pbtxt
+    |   |   |-- model_add_with_undefined_constant.py
+    |   |   |-- model_bool.pbtxt
+    |   |   |-- model_bool.py
+    |   |   |-- model_bool2.pbtxt
+    |   |   |-- model_bool2.py
+    |   |   |-- model_fp32.frozen
+    |   |   |-- model_fp32.pbtxt
+    |   |   |-- model_fp32.py
+    |   |   |-- model_int32.pbtxt
+    |   |   |-- model_int32.py
+    |   |   |-- model_mul_with_undefined_constant.pbtxt
+    |   |   |-- model_mul_with_undefined_constant.py
+    |   |   |-- model_oneshot_iterator.pbtxt
+    |   |   |-- model_switch_merge.pbtxt
+    |   |   |-- model_switch_merge.py
+    |   |   |-- model_three_inputs.pbtxt
+    |   |   |-- model_three_inputs.py
+    |   |   |-- model_with_convolution_dynamic_rank.pbtxt
+    |   |   |-- model_with_convolution_dynamic_rank.py
+    |   |   |-- model_with_if.pbtxt
+    |   |   |-- model_with_if.py
+    |   |   |-- model_with_variable_v1.pbtxt
+    |   |   |-- mul_with_unknown_rank_y.pbtxt
+    |   |   |-- mul_with_unknown_rank_y.py
+    |   |   |-- placeholder_with_default.pbtxt
+    |   |   `-- placeholder_with_default.py
+    |   `-- utils.py
+    `-- ovc
+        |-- __init__.py
+        |-- bom_test.py
+        |-- convert
+        |   |-- import_from_mo_test.py
+        |   |-- meta_data_test.py
+        |   |-- meta_data_test_actual.py
+        |   `-- utils.py
+        |-- main_test_error_log.py
+        |-- package_BOM.txt
+        |-- unit_test_with_mocked_telemetry.py
+        `-- utils
+            |-- __init__.py
+            |-- cli_parser_test.py
+            `-- error_test.py
+
+56 directories, 190 files
