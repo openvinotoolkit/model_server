@@ -138,6 +138,9 @@ def check_dir(start_dir):
         "pugixml_v1.13_flags.patch",
         "rag_demo.ipynb",
         ".bazelversion",
+        "lib_files.txt",
+        "lib_files_python.txt",
+        "lib_custom_nodes_files",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
@@ -225,9 +228,6 @@ def check_func(start_dir):
         "iris_tracking.pbtxt",
         "internal_tests",
         ".bazelversion",
-        "tests/file_lists/lib_files.txt",
-        "tests/file_lists/lib_files_python.txt",
-        "tests/file_lists/lib_custom_nodes_files",
     ]
 
     exclude_directories = ['/dist/']
