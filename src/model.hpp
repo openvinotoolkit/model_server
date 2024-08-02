@@ -45,7 +45,7 @@ class Status;
 class Model {
 private:
     /**
-     * @brief Mutex for protecting concurrent modfying and accessing modelVersions
+     * @brief Mutex for protecting concurrent modifying and accessing modelVersions
      */
     mutable std::shared_mutex modelVersionsMtx;
 

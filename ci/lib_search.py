@@ -141,6 +141,7 @@ def check_dir(start_dir):
         "lib_files.txt",
         "lib_files_python.txt",
         "lib_custom_nodes_files",
+        "spelling-whitelist.txt",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']

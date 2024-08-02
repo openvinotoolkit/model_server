@@ -23,7 +23,7 @@ NGINX_EXIT_CODE=
 
 # Pass SIGINT from user to Model Server:
 function sigint_handler() {
-    echo "SigInt hanlder"
+    echo "SigInt handler"
     SIGINT_HANDLER_CALLED=1
     MODEL_SERVER_PID=$(cat /tmp/model_server_pid)
     echo "Stopping Model Server, PID: $MODEL_SERVER_PID"

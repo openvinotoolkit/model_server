@@ -28,11 +28,11 @@ find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "*params" ! -name
 mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/
 cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
-cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2430 ; ln -s libopenvino_genai.so.2024.3.0.0 libopenvino_genai.so.2430 
+if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2430 ; ln -s libopenvino_genai.so.2024.3.0.0 libopenvino_genai.so.2430 ; fi
 rm -f /ovms_release/lib/libssl.so
 rm -f /ovms_release/lib/libsampleloader*
 
-# Remove coverage libaries
+# Remove coverage libraries
 if [ -f /ovms_release/lib/libjava.so ] ; then cd /ovms_release/lib/ && \
     rm -rf  libatk-wrapper.so libattach.so libawt_headless.so libawt.so libawt_xawt.so libdt_socket.so libfreetype.so \
 	libextnet.so libfontmanager.so libinstrument.so libj2gss.so libj2pcsc.so libj2pkcs11.so libjaas.so \

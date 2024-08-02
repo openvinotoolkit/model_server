@@ -60,7 +60,7 @@ bool TextProcessor::applyChatTemplate(TextProcessor& textProcessor, std::string 
         output = result;
         return true;
     } catch (const pybind11::error_already_set& e) {
-        LOG(INFO) << "Error occured when applying chat template: " << e.what();
+        LOG(INFO) << "Error occurred when applying chat template: " << e.what();
         output = "Unexpected error occurred when applying chat template";
     } catch (...) {
         LOG(INFO) << "Unexpected error occurred when applying chat template";

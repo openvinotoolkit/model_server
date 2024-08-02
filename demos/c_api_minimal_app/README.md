@@ -149,7 +149,7 @@ Usage:
 
 ## Available modes
 
-- INFERENCE_ONLY (default), measures only the time it takes to preform inferences using C-API
+- INFERENCE_ONLY (default), measures only the time it takes to perform inferences using C-API
 - RESET_BUFFER, include time it takes to recreate inference request data buffer
 - RESET_REQUEST, include time it takes to recreate whole inference request 
 

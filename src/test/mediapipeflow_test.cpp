@@ -170,7 +170,7 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
     preparePredictRequest(request, inputsMeta, requestData1);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
+    // Checking that KFSPASS calculator copies requestData1 to the response so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
@@ -301,7 +301,7 @@ TEST_F(MediapipeTensorTest, DummyInfer) {
 
 TEST_F(MediapipeTfLiteTensorTest, DummyInfer) {
     GTEST_SKIP() << "OVMS calculator doesn't handle TfLite on output. Only vector of TfLite"
-                 << "OVMS deserialization & serialization of TfLiteTensors is not finised as well";
+                 << "OVMS deserialization & serialization of TfLiteTensors is not finished as well";
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;

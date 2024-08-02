@@ -945,7 +945,7 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
 
 // Required for unary/streaming where it is OVMS who creates the request but it is not the packet type and we have to clean up.
 // In case when passing ownership is not required (unary-unary or first request of streaming) it is enough to pass shared_ptr with no-op destructor.
-// Specializations are for special case when the request itsef is the packet and we need to ensure there is no double free.
+// Specializations are for special case when the request itself is the packet and we need to ensure there is no double free.
 template <typename T>
 class HolderWithRequestOwnership : public ::mediapipe::packet_internal::Holder<T> {
     std::shared_ptr<const KFSRequest> req;
@@ -1149,7 +1149,7 @@ Status deserializeInputSidePacketsFromFirstRequestImpl(
     for (const auto& [name, valueChoice] : request.parameters()) {
         SPDLOG_DEBUG("Found: {}; parameter in request for: {};", name, request.model_name());
         if (name == TIMESTAMP_PARAMETER_NAME) {
-            SPDLOG_DEBUG("Ignored: {}; parameter in request for: {}; Paremeter is reserved for MediaPipe input packet timestamps", name, request.model_name());
+            SPDLOG_DEBUG("Ignored: {}; parameter in request for: {}; Parameter is reserved for MediaPipe input packet timestamps", name, request.model_name());
             continue;
         }
         if (name == PYTHON_SESSION_SIDE_PACKET_TAG) {

@@ -153,7 +153,7 @@ static const char* configWithModelNonExistingPath = R"(
         {
             "config": {
                 "name": "dummy",
-                "base_path": "/non/exisiting"
+                "base_path": "/non/existing"
             }
         }
     ]

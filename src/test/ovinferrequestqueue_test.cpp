@@ -93,7 +93,7 @@ static void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& 
 }
 
 TEST(OVInferRequestQueue, MultiThread) {
-    int nireq = 10;            // represnet queue size
+    int nireq = 10;            // represent queue size
     int number_clients = 100;  // represent number of serving clients
     ov::Core ieCore;
     auto model = ieCore.read_model(DUMMY_MODEL_PATH);

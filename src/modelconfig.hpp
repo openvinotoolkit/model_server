@@ -179,7 +179,7 @@ private:
     static const char shapeRight = ')';
 
     /**
-         * @brief Shape delimeter in string format
+         * @brief Shape delimiter in string format
          */
     static const char shapeDelimeter = ',';
 

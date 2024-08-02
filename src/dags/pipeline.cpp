@@ -106,7 +106,7 @@ Status Pipeline::execute(ExecutionContext context) {
     }
     auto entrySessionKey = meta.getSessionKey();
     startedSessions.emplace(entry.getName() + entrySessionKey);
-    ovms::Status status = entry.execute(std::move(entrySessionKey), finishedNodeQueue);  // first node will triger first message
+    ovms::Status status = entry.execute(std::move(entrySessionKey), finishedNodeQueue);  // first node will trigger first message
     if (!status.ok()) {
         SPDLOG_LOGGER_WARN(dag_executor_logger, "Executing pipeline: {} node: {} failed with: {}",
             getName(), entry.getName(), status.string());
@@ -158,7 +158,7 @@ Status Pipeline::execute(ExecutionContext context) {
             /*
                 Try to schedule node sessions that are following the currently finished session.
                 Defer next node sessions which are ready, but stream id is not ready yet.
-                Save defered node sessions to temporary container which will be later merged into global container.
+                Save deferred node sessions to temporary container which will be later merged into global container.
             */
             OVMS_PROFILE_SYNC_BEGIN("Try next nodes");
             DeferredNodeSessions tmpDeferredNodeSessions;
@@ -254,7 +254,7 @@ Status Pipeline::execute(ExecutionContext context) {
                 }
             }
             // else scope could be executed always however it seems most reasonable at the time to
-            // free blocked inferRequests from exeuction first rather than free models for reloading
+            // free blocked inferRequests from execution first rather than free models for reloading
             OVMS_PROFILE_SYNC_BEGIN("Try deferred nodes");
             for (auto it = deferredNodeSessions.begin(); it != deferredNodeSessions.end();) {
                 auto& [nodeRef, sessionKey] = *it;

@@ -122,7 +122,7 @@ std::string NodeSessionMetadata::getSessionKey(const std::set<std::string>& igno
 
 std::pair<NodeSessionMetadata, CollapseDetails> NodeSessionMetadata::getCollapsedSessionMetadata(const std::set<std::string>& ignoredNodeNames) const {
     if (ignoredNodeNames.size() == 0) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse subsession with emtpy set");
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Tried to collapse subsession with empty set");
         throw std::logic_error("Tried to collapse sessions with empty set");
     }
     if (std::any_of(

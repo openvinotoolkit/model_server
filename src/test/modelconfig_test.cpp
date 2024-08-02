@@ -213,7 +213,7 @@ TEST(ModelConfig, shape) {
     EXPECT_EQ((gs1["first"].shape), (ovms::Shape{1, 2, 3}));
     EXPECT_EQ((gs1["second"].shape), (ovms::Shape{6, 6, 200, 300}));
 
-    // mutli shape
+    // multi shape
     config.setShapes(shapeMap);
     config.addShape("third", s3);
 

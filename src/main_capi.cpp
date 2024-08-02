@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
         const char* details = 0;
         OVMS_StatusCode(res, &code);
         OVMS_StatusDetails(res, &details);
-        std::cout << "Error occured during inference. Code:" << code
+        std::cout << "Error occurred during inference. Code:" << code
                   << ", details:" << details << std::endl;
         OVMS_StatusDelete(res);
         OVMS_InferenceRequestDelete(request);

@@ -94,10 +94,10 @@ Status DLNode::fetchResults(TensorWithSourceMap& outputs, ov::InferRequest& infe
     try {
         inferRequest.wait();
     } catch (const ov::Exception& e) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} IE exception occured during infer request wait: {}", getName(), sessionKey, e.what());
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} IE exception occurred during infer request wait: {}", getName(), sessionKey, e.what());
         return StatusCode::INTERNAL_ERROR;
     } catch (std::exception& e) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} exception occured during infer request wait: {}", getName(), sessionKey, e.what());
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} exception occurred during infer request wait: {}", getName(), sessionKey, e.what());
         return StatusCode::INTERNAL_ERROR;
     }
     double ovInferTime = this->getNodeSession(sessionKey).getTimer().elapsed<std::chrono::microseconds>(EXECUTE);

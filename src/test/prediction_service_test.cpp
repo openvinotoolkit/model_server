@@ -334,7 +334,7 @@ public:
         KFSOutputTensorIteratorType it;
         size_t bufferId;
         auto status = getOutput(response, outputName, it, bufferId);
-        ASSERT_TRUE(status.ok()) << "Couln't find output:" << outputName;
+        ASSERT_TRUE(status.ok()) << "Couldn't find output:" << outputName;
         if (response.raw_output_contents().size() > 0) {
             float* buffer = reinterpret_cast<float*>(const_cast<char*>(response.raw_output_contents(bufferId).data()));
             ASSERT_EQ(0, std::memcmp(buffer, expectedValues.data(), expectedValues.size() * sizeof(float)))
@@ -354,7 +354,7 @@ public:
         KFSOutputTensorIteratorType it;
         size_t bufferId;
         auto status = getOutput(response, outputName, it, bufferId);
-        ASSERT_TRUE(status.ok()) << "Couln't find output:" << outputName;
+        ASSERT_TRUE(status.ok()) << "Couldn't find output:" << outputName;
         if (checkRaw) {
             ASSERT_GT(response.raw_output_contents().size(), 0);
             uint8_t* buffer = reinterpret_cast<uint8_t*>(const_cast<char*>(response.raw_output_contents(bufferId).data()));
@@ -1107,7 +1107,7 @@ TYPED_TEST(TestPredict, ReshapeViaRequestAndConfigChange) {
     // Cannot do the inference with (1,12)
     ASSERT_EQ(this->performInferenceWithShape(response, {1, 12}), ovms::StatusCode::INVALID_SHAPE);
 
-    // Successfull inference with (1,11)
+    // Successful inference with (1,11)
     ASSERT_EQ(this->performInferenceWithShape(response, {1, 11}), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 11});
 
@@ -1151,7 +1151,7 @@ TYPED_TEST(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
     // Cannot do the inference with (3,10)
     ASSERT_EQ(this->performInferenceWithBatchSize(response, 3), ovms::StatusCode::INVALID_BATCH_SIZE);
 
-    // Successfull inference with (4,10)
+    // Successful inference with (4,10)
     ASSERT_EQ(this->performInferenceWithBatchSize(response, 4), ovms::StatusCode::OK);
     this->checkOutputShape(response, {4, 10});
 
@@ -1464,10 +1464,10 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
     this->checkOutputValues(response, {37.0, 37.0, 28.0, 28.0, 238.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 }
 
-/* Scenario - perform inference with binary input with witdth exceeding shape range when model shape is dynamic. Check results.
+/* Scenario - perform inference with binary input with width exceeding shape range when model shape is dynamic. Check results.
  *
  * 1. Load model with dynamic shape and input layout=nhwc, initial internal layout: nchw
- * 2. Do the inference with single binary image tensor with witdth exceeding shape range - expect status OK and reshaped output tensor
+ * 2. Do the inference with single binary image tensor with width exceeding shape range - expect status OK and reshaped output tensor
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
@@ -1493,7 +1493,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
 /* Scenario - perform inference with binary input of batch 0 when model shape is dynamic. Check results.
  *
  * 1. Load model with dynamic shape and input layout=nhwc, initial internal layout: nchw
- * 2. Do the inference with 0 binary image tensors with witdth exceeding shape range - expect status OK and reshaped output tensor
+ * 2. Do the inference with 0 binary image tensors with width exceeding shape range - expect status OK and reshaped output tensor
  */
 TYPED_TEST(TestPredict, PerformInferenceWithZeroBinaryInputsAndShapeDynamic) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
@@ -1602,7 +1602,7 @@ TYPED_TEST(TestPredict, ChangeBatchSizeViaRequestAndConfigChangeArbitraryPositio
     // Cannot do the inference with (1,30)
     ASSERT_EQ(this->performInferenceWithBatchSize(response, 30, ovms::Precision::FP32, batchSizePosition), ovms::StatusCode::INVALID_BATCH_SIZE);
 
-    // Successfull inference with (1,4)
+    // Successful inference with (1,4)
     ASSERT_EQ(this->performInferenceWithBatchSize(response, 4, ovms::Precision::FP32, batchSizePosition), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 4});
 
