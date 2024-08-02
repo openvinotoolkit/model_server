@@ -26,7 +26,7 @@ Alternatively, it is possible to use just a `curl` command or `requests` python 
 Along with the prompt, you can send parameters described here [for chat completions endpoint](./model_server_rest_api_chat.md#Request) and here [for completions endpoint](./model_server_rest_api_completions.md#Request).
 > **NOTE**:
 OpenAI python client supports a limited list of parameters. Those native to OpenVINO Model Server, can be passed inside a generic container parameter `extra_body`. Below is an example how to encapsulated `top_k` value.
-```bash
+```{code} bash
 response = client.chat.completions.create(
     model=model,
     messages=[{"role": "user", "content": "hello"}],
@@ -38,7 +38,7 @@ response = client.chat.completions.create(
 
 ### Install the Package
 
-```bash
+```{code} bash
 pip3 install openai
 pip3 install requests
 ```
