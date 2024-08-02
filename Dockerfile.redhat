@@ -378,7 +378,8 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 
 WORKDIR /test
 COPY tests/file_lists /test/
-RUN if ! [ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]; then true ; else /test/test_release_files.sh 0 ; fi ; \
+# hadolint ignore=SC3010
+RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else /test/test_release_files.sh 0 ; fi ; \
     /test/test_release_files.sh 1
     
 WORKDIR /
