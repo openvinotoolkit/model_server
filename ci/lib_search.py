@@ -225,6 +225,9 @@ def check_func(start_dir):
         "iris_tracking.pbtxt",
         "internal_tests",
         ".bazelversion",
+        "lib_files.txt",
+        "lib_files_python.txt",
+        "lib_custom_nodes_files",
     ]
 
     exclude_directories = ['/dist/']
