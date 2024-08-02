@@ -1377,7 +1377,7 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
             return true;
         });
     status = impl.ModelStreamInferImpl(nullptr, &newStream);
-    ASSERT_EQ(status, StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_PRECONDITION_FAILED) << status.string();
 }
 
 TEST_F(MediapipeStreamFlowAddTest, NegativeShouldNotReachInferDueToRetiredGraph) {

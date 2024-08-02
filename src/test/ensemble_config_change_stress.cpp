@@ -645,8 +645,9 @@ TEST_F(StressMediapipeChanges, RemoveModelDuringPredictLoad) {
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
-        StatusCode::MEDIAPIPE_EXECUTION_ERROR};                  // we expect to stop creating pipelines
+        StatusCode::MEDIAPIPE_PRECONDITION_FAILED,};                  // we expect to stop creating pipelines
     std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MEDIAPIPE_EXECUTION_ERROR,
         StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM,  // Can happen when OVMSSessionCalculator fails to create side input packet
     };
     performStressTest(

@@ -297,7 +297,8 @@ public:
             {
                 OVMS_PROFILE_SCOPE("MediaPipe waiting until done");
                 SPDLOG_DEBUG("Graph {}: Closed all packet sources. Waiting until done...", this->name);
-                MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "waiting until done", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+                auto status = graph.WaitUntilDone();
+                MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
                 SPDLOG_DEBUG("Graph {}: Done execution", this->name);
             }
             return StatusCode::OK;
