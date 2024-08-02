@@ -24,9 +24,10 @@ fi
 PYTHON_DISABLE=$1
 errors=0
 
+printf --  "Using PYTHON_DISABLE=$PYTHON_DISABLE.\n"
 if [ "$PYTHON_DISABLE" -eq "0" ]; then
     # ovms_release/lib - with python
-    input_file="/test/file_lists/lib_files_python.txt"
+    input_file="/test/lib_files_python.txt"
     test_path="/ovms_release/lib"
     output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
     if [[ -n $output ]]
@@ -38,7 +39,7 @@ if [ "$PYTHON_DISABLE" -eq "0" ]; then
     fi
 else
     # ovms_release/lib - without python
-    input_file="/test/file_lists/lib_files.txt"
+    input_file="/test/lib_files.txt"
     test_path="/ovms_release/lib"
     output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
     if [[ -n $output ]]
@@ -51,7 +52,7 @@ else
 fi
 
 # ovms_release/lib/custom_nodes
-input_file="/test/file_lists/lib_custom_nodes_files.txt"
+input_file="/test/lib_custom_nodes_files.txt"
 test_path="/ovms_release/lib/custom_nodes"
 output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
 if [[ -n $output ]]
