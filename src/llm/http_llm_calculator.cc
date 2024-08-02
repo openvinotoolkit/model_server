@@ -399,8 +399,7 @@ class HttpLLMCalculator : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
 
-    std::string serializeUnaryResponse(const std::string& completeResponse, Endpoint endpoint);
-    std::string serializeUnaryResponse(const std::vector<std::string>& completeResponse, Endpoint endpoint);
+    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, Endpoint endpoint);
     std::string serializeStreamingChunk(const std::string& chunkResponse, bool stop, Endpoint endpoint);
 
 public:
@@ -555,10 +554,9 @@ public:
                         completions.emplace_back(completion);
                     }
 
-                    std::string response = serializeUnaryResponse(completions, this->request->getEndpoint());
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
-                }
+                std::string response = serializeUnaryResponse(generationOutputs, this->request->getEndpoint());
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             } else {
                 OVMS_PROFILE_SCOPE("Stream generation cycle");
                 // Streaming scenario
@@ -605,11 +603,7 @@ public:
     }
 };
 
-std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& completeResponse, Endpoint endpoint) {
-    return serializeUnaryResponse(std::vector<std::string>{completeResponse}, endpoint);
-}
-
-std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::string>& completeResponses, Endpoint endpoint) {
+std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, Endpoint endpoint) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -621,9 +615,24 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     writer.StartArray();  // [
     int i = 0;
     int n = this->request->getNumReturnSequences().value_or(1);
-    for (const std::string& completeResponse : completeResponses) {
+    for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
         if (i >= n)
             break;
+
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_token_ids);
+        std::string completeResponse = nodeResources->cbPipe->get_tokenizer().decode(generationOutput.generated_token_ids);
+        std::string finishReason;
+        switch (generationOutput.finish_reason) {
+            case ov::genai::GenerationFinishReason::STOP:
+                finishReason = "stop";
+                break;
+            case ov::genai::GenerationFinishReason::LENGTH:
+                finishReason = "length";
+                break;
+            default:
+                finishReason = "null";
+        }
+
         writer.StartObject();  // {
         // finish_reason: string; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)
         // "stop" => natural stop point due to stopping criteria <---------------- the only used so far, remaining are TODO
@@ -632,7 +641,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
         // "tool_calls" => generation stopped and waiting for tool output
         // "function_call" => deprecated
         writer.String("finish_reason");
-        writer.String("stop");
+        writer.String(finishReason.c_str());
         // index: integer; Choice index, only n=1 supported anyway
         writer.String("index");
         writer.Int(i++);
