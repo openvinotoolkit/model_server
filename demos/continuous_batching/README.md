@@ -31,7 +31,7 @@ Here, we will also define the LLM engine parameters inside the `graph.pbtxt`.
 
 Install python dependencies for the conversion script:
 ```bash
-pip3 install -r requirements.txt 
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2024/3/demos/continuous_batching/requirements.txt
 ```
 
 Run optimum-cli to download and quantize the model:
