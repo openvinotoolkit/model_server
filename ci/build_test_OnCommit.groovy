@@ -65,7 +65,7 @@ pipeline {
           parallel {
             stage("Run unit tests") {
               steps {
-                  sh "make run_unit_tests BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
             }
 

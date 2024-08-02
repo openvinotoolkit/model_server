@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-#include <continuous_batching_pipeline.hpp>
+#include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
@@ -36,15 +36,16 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "src/llm/llm_calculator.pb.h"
 #include "src/llm/llm_executor.hpp"
+#include "src/llm/text_processor.hpp"
 
 namespace ovms {
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
 
-static void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources) {
+void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources, const std::string& chatTemplateDirectory) {
     py::gil_scoped_acquire acquire;
     try {
-        auto locals = py::dict("models_path"_a = nodeResources->modelsPath);
+        auto locals = py::dict("templates_directory"_a = chatTemplateDirectory);
         py::exec(R"(
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/25245ec26dc29bcf6102e1b4ddd0dfd02e720cf5/src/transformers/tokenization_utils_base.py#L1837
@@ -63,7 +64,7 @@ static void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources) 
 
             # Default chat template accepts only single message and outputs only it's 'content'
             # effectively turning it into a regular prompt. 
-            default_chat_template = "{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+            default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
 
             bos_token = ""
             eos_token = ""
@@ -72,21 +73,23 @@ static void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources) 
             template = None
 
             # Try to read template from template.jinja file
-            jinja_file = Path(models_path + "/template.jinja")
+            jinja_file = Path(templates_directory + "/template.jinja")
             if jinja_file.is_file():
-                template_loader = jinja2.FileSystemLoader(searchpath=models_path)
+                template_loader = jinja2.FileSystemLoader(searchpath=templates_directory)
                 jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, loader=template_loader)
                 jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
                 jinja_env.globals["raise_exception"] = raise_exception
                 template = jinja_env.get_template("template.jinja")
 
             # Try to read data from tokenizer_config.json
-            tokenizer_config_file = Path(models_path + "/tokenizer_config.json")
+            tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")
             if tokenizer_config_file.is_file():
-                f = open(models_path + "/tokenizer_config.json")
+                f = open(templates_directory + "/tokenizer_config.json")
                 data = json.load(f)
                 bos_token = data.get("bos_token", "")
+                bos_token = bos_token if isinstance(bos_token, str) else ""  # tokenizer_config.json allows for different types than string
                 eos_token = data.get("eos_token", "")
+                eos_token = eos_token if isinstance(eos_token, str) else ""  # tokenizer_config.json allows for different types than string
                 chat_template = data.get("chat_template", default_chat_template)
 
             if template is None:
@@ -101,6 +104,12 @@ static void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources) 
         nodeResources->textProcessor.eosToken = locals["eos_token"].cast<std::string>();
         nodeResources->textProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
     } catch (const pybind11::error_already_set& e) {
+        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
+        SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
+    } catch (const pybind11::cast_error& e) {
+        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
+        SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
+    } catch (const pybind11::key_error& e) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
     } catch (...) {
@@ -136,16 +145,9 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
 
-    // temporary fix for wrong cache size calculation on in GenAI
-    size_t cache_size;
-    if (nodeOptions.cache_size() % 2)
-        cache_size = nodeOptions.cache_size() / 2 + 1;
-    else
-        cache_size = nodeOptions.cache_size() / 2;
-
     nodeResources->schedulerConfig = {
         .max_num_batched_tokens = nodeOptions.max_num_batched_tokens(),
-        .cache_size = cache_size,
+        .cache_size = nodeOptions.cache_size(),
         .block_size = nodeOptions.block_size(),
         .dynamic_split_fuse = nodeOptions.dynamic_split_fuse(),
         .max_num_seqs = nodeOptions.max_num_seqs(),
@@ -160,7 +162,8 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
     }
 
     try {
-        nodeResources->cbPipe = std::make_unique<ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig);
+        plugin_config_t tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
+        nodeResources->cbPipe = std::make_unique<ov::genai::ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig, tokenizerPluginConfig);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", basePath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
@@ -169,7 +172,10 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
-    loadTextProcessor(nodeResources);
+    loadTextProcessor(nodeResources, nodeResources->modelsPath);
+
+    nodeResources->maxTokensLimit = nodeOptions.max_tokens_limit();
+    nodeResources->bestOfLimit = nodeOptions.best_of_limit();
 
     nodeResources->initiateGeneration();
 

@@ -2706,7 +2706,7 @@ TEST_F(PythonFlowTest, Negative_BufferTooSmall) {
         req.set_model_name("mediaDummy");
         prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const std::string>{{1, 1}, datatype}, std::vector<float>{}, false);
 
-        // Make the metdata larger than actual buffer
+        // Make the metadata larger than actual buffer
         auto& inputMeta = *req.mutable_inputs()->begin();
         inputMeta.clear_shape();
         inputMeta.add_shape(1);
@@ -2727,7 +2727,7 @@ TEST_F(PythonFlowTest, Negative_BufferTooLarge) {
         req.set_model_name("mediaDummy");
         prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const std::string>{{1, 4}, datatype}, std::vector<float>{}, false);
 
-        // Make the metdata smaller than actual buffer
+        // Make the metadata smaller than actual buffer
         auto& inputMeta = *req.mutable_inputs()->begin();
         inputMeta.clear_shape();
         inputMeta.add_shape(1);
@@ -2748,9 +2748,9 @@ TEST_F(PythonFlowTest, Positive_BufferTooSmall_Custom) {
     req.set_model_name("mediaDummy");
 
     const std::vector<float> data{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, -5.0f};
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden to "my custom type" below*/}, data, false);
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overridden to "my custom type" below*/}, data, false);
 
-    // Make the metdata larger than actual buffer
+    // Make the metadata larger than actual buffer
     auto& inputMeta = *req.mutable_inputs()->begin();
     inputMeta.clear_shape();
     inputMeta.add_shape(1);
@@ -2794,9 +2794,9 @@ TEST_F(PythonFlowTest, Positive_BufferTooLarge_Custom) {
     req.set_model_name("mediaDummy");
 
     const std::vector<float> data{1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, 1.0f, 20.0f, 3.0f, -5.0f};
-    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overriden to "my custom type" below*/}, data, false);
+    prepareKFSInferInputTensor(req, "input", std::tuple<ovms::signed_shape_t, const ovms::Precision>{{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Precision::FP32 /*Overridden to "my custom type" below*/}, data, false);
 
-    // Make the metdata smaller than actual buffer
+    // Make the metadata smaller than actual buffer
     auto& inputMeta = *req.mutable_inputs()->begin();
     inputMeta.clear_shape();
     inputMeta.add_shape(1);

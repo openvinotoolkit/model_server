@@ -4,17 +4,18 @@
 
 This document gives information and steps to run and debug tests. It gives information about following points :
 
-1. [Set up the Development Environment](#set-up-the-development-environment)
-2. [Prepare environment to use the tests](#prepare-environment-to-use-the-tests)
-3. [Run the tests of your choice](#run-the-tests)
-	* Inference test
-	* Functional tests
-	* Performance tests
-	* Tests on a Python image
-	* Tests on an OpenVINO Model Server binary file
-4. [Learn to debug](#debug)
-	* How to use `gdb` to debug in Docker
-	* How to debug functional tests
+- [OpenVINO™ Model Server Developer Guide](#openvino-model-server-developer-guide)
+	- [Introduction](#introduction)
+	- [Set up the Development Environment](#set-up-the-development-environment)
+	- [Prepare Environment to Use the Tests](#prepare-environment-to-use-the-tests)
+		- [Step 1: Compile source code](#step-1-compile-source-code)
+		- [Step 2: Install software](#step-2-install-software)
+	- [Run the Tests](#run-the-tests)
+	- [Run unit tests](#run-unit-tests)
+	- [Debugging](#debugging)
+		- [Option 1. Use OpenVINO Model Server build image.](#option-1-use-openvino-model-server-build-image)
+		- [Option 2. Build OVMS image with minitrace enabled](#option-2-build-ovms-image-with-minitrace-enabled)
+		- [Profiling macros](#profiling-macros)
 
 ## Set up the Development Environment
 
@@ -279,6 +280,17 @@ export LD_LIBRARY_PATH="'${PWD}'/dist/<os_name>/ovms/lib"
 
 > **NOTE**: For additional problems, see the [debugging section](#debugging).
 
+
+## Run unit tests
+
+Executing the unit tests require building the ovms build image. All unit tests are expected to be started in a container using model server build image. Some unit tests require test models to be pulled and attached to the container.
+The following commands create the build image and start the unit tests:
+
+```
+make ovms_builder_image
+make run_unit_tests
+```
+
 ## Debugging
 
 Debugging options are available. Click on the required option :
@@ -290,6 +302,8 @@ Debugging options are available. Click on the required option :
 	```bash
 	make docker_build BAZEL_BUILD_TYPE=dbg
 	```
+
+	> **NOTE**: You can build also the debug version of the major dependencies like OpenVINO Runtime using extra flag `CMAKE_BUILD_TYPE=Debug`.
 
 2. Run the container :
 	```bash

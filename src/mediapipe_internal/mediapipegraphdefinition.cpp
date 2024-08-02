@@ -388,7 +388,7 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
             return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
         }
     }
-    SPDLOG_DEBUG("Succesfully waited for mediapipe definition: {}", getName());
+    SPDLOG_DEBUG("Successfully waited for mediapipe definition: {}", getName());
     return StatusCode::OK;
 }
 

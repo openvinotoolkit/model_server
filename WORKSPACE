@@ -33,6 +33,19 @@ bazel_skylib_workspace()
 load("@bazel_skylib//lib:versions.bzl", "versions")
 versions.check(minimum_bazel_version = "6.0.0")
 
+# RapidJSON
+# Must be defined earlier than tensorflow_serving because TFS is using older rapidjson
+# Version must match openvino.genai -> jinja2cpp -> rapidjson
+# git/Jinja2Cpp/thirdparty/internal_deps.cmake
+# Date:   Tue May 9 21:31:22 2023 +0000 Avoid ptrdiff between pointers to different allocations
+http_archive(
+    name = "com_github_tencent_rapidjson",
+    url = "https://github.com/Tencent/rapidjson/archive/973dc9c06dcd3d035ebd039cfb9ea457721ec213.tar.gz",
+    sha256 = "d0c9e52823d493206eb721d38cb3a669ca0212360862bd15a3c2f7d35ea7c6f7",
+    strip_prefix = "rapidjson-973dc9c06dcd3d035ebd039cfb9ea457721ec213",
+    build_file = "@//third_party/rapidjson:BUILD"
+)
+
 # overriding tensorflow serving bazel dependency
 # alternative would be to use cmake build of grpc and flag
 # to use system ssl instead
@@ -103,7 +116,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "193d4089f2511ba11c918c1861f9f79b3da24c23", # Fix leak (#72)
+    commit = "2587216be4b37d4d4e7b7e5c17730a199dcdcba6", # Return proper status when loading model failed (#80)
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -364,15 +377,6 @@ http_archive(
     build_file = "@//third_party/cxxopts:BUILD",
 )
 
-# RapidJSON
-http_archive(
-    name = "com_github_tencent_rapidjson",
-    url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.zip",
-    sha256 = "8e00c38829d6785a2dfb951bb87c6974fa07dfe488aa5b25deec4b8bc0f6a3ab",
-    strip_prefix = "rapidjson-1.1.0",
-    build_file = "@//third_party/rapidjson:BUILD"
-)
-
 # spdlog
 http_archive(
     name = "com_github_gabime_spdlog",
@@ -407,7 +411,7 @@ new_git_repository(
     name = "model_api",
     remote = "https:///github.com/openvinotoolkit/model_api/",
     build_file = "@_model-api//:BUILD",
-    commit = "03a6cee5d486ee9eabb625e4388e69fe9c50ef20"
+    commit = "eb9fcfb1e1eebc047ff144707f76203b132e1aa6" # master Jun 24 15:02:17 2024 [cpp] Fix num classes check
 )
 
 new_local_repository(

@@ -17,6 +17,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <optional>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"

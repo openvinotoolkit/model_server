@@ -31,14 +31,7 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 cc_library(
     name = "llm_engine",
     srcs = [],
-    deps = select({
-            "//:ubuntu_build": [
-                "@llm_engine//:llm_engine_ubuntu",
-            ],
-            "//:redhat_build": [
-                "@llm_engine//:llm_engine_redhat",
-            ],
-        }),
+    deps =  ["@llm_engine//:llm_engine"],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
@@ -57,8 +50,10 @@ cc_library(
         ":llm_engine",
         ":llmnoderesources",
         ":httppayload",
+        ":text_processor",
     ],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
@@ -90,6 +85,7 @@ cc_library(
         "llmcalculator_cc_proto",
         ":llm_engine",
         "//src/python:utils",
+        ":text_processor",
     ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -100,10 +96,24 @@ cc_library(
 
 cc_library(
     name = "httppayload",
-    srcs = ["http_payload.hpp",],
+    hdrs = ["http_payload.hpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
     ],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "text_processor",
+    hdrs = ["text_processor.hpp"],
+    srcs = ["text_processor.cpp"],
+    deps = ["@mediapipe//mediapipe/framework:calculator_framework",
+            "//src:libovmslogging",
+            "//src/python:utils",
+    ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,

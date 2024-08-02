@@ -68,7 +68,7 @@ class TFS_Client(BaseClient):
         self.print_info(f"try to send request to endpoint: {status_url}")
         response = requests.get(url=status_url, params={})
         self.print_info(f"received status code is {response.status_code}.")
-        message = "It seems to REST service is not runnig or OVMS version is too old!"
+        message = "It seems to REST service is not running or OVMS version is too old!"
         assert response.status_code == HTTPStatus.OK.value, message
         self.print_info("found models and their status:")
         for model, status in response.json().items():
@@ -191,6 +191,6 @@ class TFS_Client(BaseClient):
             self.requests.append((batch_length, request))
         del self.xdata
 
-    # ovrride
+    # override
     def predict(self, request, timeout):
         return self.stub.Predict(request, int(timeout))

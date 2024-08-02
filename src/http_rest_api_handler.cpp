@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -237,30 +238,8 @@ Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComp
     if (!status.ok()) {
         return StatusCode::INTERNAL_ERROR;
     }
-    response = output;
+    response = std::move(output);
     return StatusCode::OK;
-}
-
-void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
-    Value::ConstMemberIterator itr = scope.FindMember("parameters");
-    if (itr != scope.MemberEnd()) {
-        for (Value::ConstMemberIterator i = scope["parameters"].MemberBegin(); i != scope["parameters"].MemberEnd(); ++i) {
-            Value param(rapidjson::kObjectType);
-            if (i->value.IsInt64()) {
-                Value value(i->value.GetInt64());
-                param.AddMember("int64_param", value, doc.GetAllocator());
-            }
-            if (i->value.IsString()) {
-                Value value(i->value.GetString(), doc.GetAllocator());
-                param.AddMember("string_param", value, doc.GetAllocator());
-            }
-            if (i->value.IsBool()) {
-                Value value(i->value.GetBool());
-                param.AddMember("bool_param", value, doc.GetAllocator());
-            }
-            scope["parameters"].GetObject()[i->name.GetString()] = param;
-        }
-    }
 }
 
 static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {

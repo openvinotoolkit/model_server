@@ -17,6 +17,7 @@
 
 #include <functional>
 #include <map>
+#include <optional>
 #include <regex>
 #include <string>
 #include <utility>
@@ -104,7 +105,6 @@ public:
         const std::vector<std::pair<std::string, std::string>>& headers = {});
 
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
-    static void parseParams(rapidjson::Value&, rapidjson::Document&);
     static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
 
     void registerHandler(RequestType type, HandlerCallbackFn);

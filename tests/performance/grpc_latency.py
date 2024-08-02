@@ -112,7 +112,7 @@ while args.batchsize >= imgs.shape[0]:
 
 if args.iterations < 0:
     print("Argument '--iterations' can't be lower than 0")
-    print("Exitting")
+    print("Exiting")
     sys.exit(1)
 elif args.iterations == 0:
     iterations = int(imgs.shape[0] // args.batchsize)
@@ -152,7 +152,7 @@ while iteration <= iterations:
         duration = (end_time - start_time).total_seconds() * 1000
         processing_times = np.append(processing_times, np.array([duration]))
         
-        # If we want to check accurracy
+        # If we want to check accuracy
         if accurracy_measuring_mode:
             output = np.array(make_ndarray(result.outputs[args.output_name]))
             if args.model_name == "dummy":
@@ -170,7 +170,7 @@ while iteration <= iterations:
                   f'Current latency: {round(duration, 2):.2f}ms; '
                   f'Average latency: {round(np.average(processing_times), 2):.2f}ms')
 
-# Latency and accurracy
+# Latency and accuracy
 if accurracy_measuring_mode:
     accuracy = 100 * matches_count / total_count
     print(f"[{args.id:2}] "

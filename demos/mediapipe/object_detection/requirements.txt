@@ -3,3 +3,4 @@ tritonclient[all]==2.45.0
 requests==2.32.0
 grpcio
 opencv-python
+numpy<2.0.0

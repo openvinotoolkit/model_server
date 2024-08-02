@@ -11,7 +11,7 @@ The endpoint is exposed via a path:
 
 ### Example request
 
-```bash
+```
 curl http://localhost/v3/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -124,6 +124,6 @@ curl http://localhost/v3/completions \
 
 [Code snippets](./clients_openai.md)
 
-[LLM calculator](./llm_calculator.md)
+[LLM calculator](./llm/reference.md#llm-calculator)
 
 [Developer guide for writing custom calculators with REST API extension](./mediapipe.md)

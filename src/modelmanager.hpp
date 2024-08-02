@@ -461,9 +461,9 @@ public:
      *
      * @param modelVersionsInstances map with currently served versions
      * @param requestedVersions container with requested versions
-     * @param versionsToRetireIn cointainer for versions to retire
-     * @param versionsToReloadIn cointainer for versions to reload
-     * @param versionsToStartIn cointainer for versions to start
+     * @param versionsToRetireIn container for versions to retire
+     * @param versionsToReloadIn container for versions to reload
+     * @param versionsToStartIn container for versions to start
      */
     static void getVersionsToChange(
         const ModelConfig& newModelConfig,

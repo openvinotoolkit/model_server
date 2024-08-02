@@ -55,7 +55,7 @@ If you need to build the OpenVINO Model Server with different driver version, re
 ## Using Multi-Device Plugin
 
 If you have multiple inference devices available (e.g. Myriad VPUs and CPU) you can increase inference throughput by enabling the Multi-Device Plugin. 
-It distributes Inference requests among multiple devices, balancing out the load. For more detailed information read OpenVINO’s [Multi-Device plugin documentation](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/multi-device.html) documentation.
+It distributes Inference requests among multiple devices, balancing out the load. For more detailed information read OpenVINO’s [Multi-Device plugin documentation](https://docs.openvino.ai/2024/documentation/legacy-features/multi-device.html) documentation.
 
 To use this feature in OpenVINO Model Server, you can choose one of two ways:
 
@@ -101,7 +101,7 @@ The [HETERO plugin](https://docs.openvino.ai/2024/openvino-workflow/running-infe
 among several computing devices. That way different parts of the deep learning network can be executed by devices best suited to their type of calculations. 
 OpenVINO automatically divides the network to optimize the process.
 
-The Heterogenous plugin can be configured using the `--target_device` parameter with the pattern of: `HETERO:<DEVICE_1>,<DEVICE_2>`. 
+The Heterogeneous plugin can be configured using the `--target_device` parameter with the pattern of: `HETERO:<DEVICE_1>,<DEVICE_2>`. 
 The order of devices will define their priority, in this case making `device_1` the primary and `device_2` the fallback one.
 
 Here is a config example using heterogeneous plugin with GPU as the primary device and CPU as a fallback.

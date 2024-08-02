@@ -29,7 +29,7 @@ enum class StatusCode {
     PATH_INVALID,        /*!< The provided path is invalid or doesn't exists */
     FILE_INVALID,        /*!< File not found or cannot open */
     CONFIG_FILE_INVALID, /*!< Config file not found or cannot open */
-    FILESYSTEM_ERROR,    /*!< Underlaying filesystem error */
+    FILESYSTEM_ERROR,    /*!< Underlying filesystem error */
     MODEL_NOT_LOADED,
     JSON_INVALID,             /*!< The file/content is not valid json */
     JSON_SERIALIZATION_ERROR, /*!< Data serialization to json format failed */
@@ -107,10 +107,10 @@ enum class StatusCode {
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */
-    OV_INTERNAL_DESERIALIZATION_ERROR,        /*!< Error occured during deserialization */
+    OV_INTERNAL_DESERIALIZATION_ERROR,        /*!< Error occurred during deserialization */
 
     // Inference
-    OV_INTERNAL_INFERENCE_ERROR, /*!< Error occured during inference */
+    OV_INTERNAL_INFERENCE_ERROR, /*!< Error occurred during inference */
 
     // Serialization
     OV_UNSUPPORTED_SERIALIZATION_PRECISION, /*!< Unsupported serializaton precision */
@@ -261,6 +261,7 @@ enum class StatusCode {
     MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE,
     MEDIAPIPE_INCORRECT_SERVABLE_NAME,
     MEDIAPIPE_INCORRECT_SERVABLE_VERSION,
+    MEDIAPIPE_PRECONDITION_FAILED,
 
     // Python Nodes
     PYTHON_NODE_NAME_ALREADY_EXISTS,

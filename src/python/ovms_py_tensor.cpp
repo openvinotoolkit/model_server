@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <vector>
 

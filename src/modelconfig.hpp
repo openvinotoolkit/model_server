@@ -18,6 +18,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -178,7 +179,7 @@ private:
     static const char shapeRight = ')';
 
     /**
-         * @brief Shape delimeter in string format
+         * @brief Shape delimiter in string format
          */
     static const char shapeDelimeter = ',';
 

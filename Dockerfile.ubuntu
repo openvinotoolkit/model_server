@@ -111,8 +111,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             python3-pip \
             unzip \
             gdb \
-            vim \
-            xz-utils && \
+            vim && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/* && \
     python3 -m pip install "numpy<2.0.0" --no-cache-dir  && \
@@ -146,13 +145,11 @@ RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"PYTHON_DISABLE=
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/extras && \
     mkdir -p /opt/intel/openvino && \
-    ln -s /openvino/inference-engine/temp/opencv_*_ubuntu20/opencv /opt/intel/openvino/extras && \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
     ln -s /opt/intel/openvino /opt/intel/openvino_2024
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/Release/python /opt/intel/openvino/
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/${CMAKE_BUILD_TYPE}/python /opt/intel/openvino/
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
 
 ################## END OF OPENVINO SOURCE BUILD ######################
@@ -170,6 +167,13 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2024
 
+# update oneTBB
+RUN wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.13.0/oneapi-tbb-2021.13.0-lin.tgz && \
+    tar -zxf oneapi-tbb-2021.13.0-lin.tgz && \
+    rm /opt/intel/openvino/runtime/3rdparty/tbb/lib/*.so* && \
+    cp -vP oneapi-tbb-2021.13.0/lib/intel64/gcc4.8/*.so* /opt/intel/openvino/runtime/3rdparty/tbb/lib/ && \
+    rm -f /opt/intel/openvino/oneapi-tbb-2021.13.0-lin.tgz
+
 WORKDIR /
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
@@ -182,7 +186,7 @@ ARG ov_tokenizers_branch=master
 # hadolint ignore=DL3003
 RUN if [[ "$tokenizers" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 WORKDIR /openvino_tokenizers/build
-RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
+RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
@@ -232,7 +236,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /opt/intel/openvino/runtime/lib/intel64/plugins.xml
 
 # Set up Bazel
-ENV BAZEL_VERSION 6.0.0
+ENV BAZEL_VERSION 6.1.1
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
@@ -242,7 +246,7 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
-COPY .bazelrc WORKSPACE /ovms/
+COPY .bazelrc .bazelversion WORKSPACE /ovms/
 COPY external /ovms/external/
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
@@ -283,12 +287,12 @@ WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
 RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2024.2.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.2' > /opt/intel/openvino/python/openvino-2024.2.dist-info/METADATA
+    mkdir -p /opt/intel/openvino/python/openvino-2024.3.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.3' > /opt/intel/openvino/python/openvino-2024.3.dist-info/METADATA
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2024.2"
+ARG PROJECT_VERSION="2024.3"
 ARG PROJECT_NAME="OpenVINO Model Server"
 LABEL description=${PROJECT_NAME}
 ARG minitrace_flags
@@ -345,7 +349,7 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-FROM $BUILD_IMAGE as pkg
+FROM build as pkg
 
 RUN mkdir /patchelf
 WORKDIR /patchelf
@@ -390,7 +394,7 @@ COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,SC2164
 RUN     apt-get update -y ; \
-    apt-get install -y curl ca-certificates libpugixml1v5 --no-install-recommends && \
+    apt-get install -y curl ca-certificates --no-install-recommends && \
         if [ "$GPU" == "1" ] ; then \
             apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
                 case $INSTALL_DRIVER_VERSION in \
@@ -501,6 +505,6 @@ RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit
 
 ENV LD_LIBRARY_PATH=/ovms/lib
 
-RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
+RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]

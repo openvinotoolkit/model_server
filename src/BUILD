@@ -359,6 +359,7 @@ cc_library(
                 # Jinja template processing is done in Python
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
+                "//src/llm:text_processor",
             ],
             "//:disable_python": []
         }) + [
@@ -871,14 +872,8 @@ cc_library( # make ovms_lib dependent, use share doptions
     srcs = [
             "s3filesystem.cpp",
     ],
-    deps = select({
-            "//:ubuntu_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
-            ],
-            "//:redhat_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
-            ],
-        }) + [
+    deps = [
+        "@aws-sdk-cpp//:aws-sdk-cpp",
         "libovmsfilesystem",
         "libovmslogging",
         "libovmsstring_utils",
@@ -1125,6 +1120,8 @@ cc_test(
                 # "test/python/ovms_py_tensor_test.cpp",
                 # LLM logic uses Python for processing Jinja templates
                 "test/llmnode_test.cpp",
+                "test/llmtemplate_test.cpp",
+                "test/text_streamer_test.cpp",
             ],
             "//:disable_python" : [],
         }),

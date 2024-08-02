@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "rest_utils.hpp"
 
+#include <optional>
 #include <set>
 
 #include <rapidjson/document.h>

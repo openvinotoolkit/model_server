@@ -196,7 +196,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_DESERIALIZATION_ERROR, "Failed to deserialize tensor for mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_START_ERROR, "Failed to start mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, "Failed to read protobuf graph configuration file"},
-    {StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, "Failed to initalize mediapipe graph"},
+    {StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, "Failed to initialize mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, "Failed to add mediapipe graph output stream"},
     {StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, "Failed to close mediapipe graph input stream"},
     {StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Failed to add packet to mediapipe graph input stream"},
@@ -216,6 +216,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE, "Client disconnected during reading first streaming request"},
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME, "Subsequent request with incorrect servable name"},
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION, "Subsequent request with incorrect servable version"},
+    {StatusCode::MEDIAPIPE_PRECONDITION_FAILED, "Mediapipe graph precondition failed"},
 
     // Python Nodes
     {StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS, "The Python Node name is already present in nodes list"},

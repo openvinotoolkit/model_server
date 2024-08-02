@@ -37,20 +37,12 @@ cc_library(
         "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
         "@minitrace//:trace",
         "@com_github_grpc_grpc//:grpc++",
-        "@org_tensorflow//tensorflow/core:framework",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "@org_tensorflow//tensorflow/core:framework",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
-        ] + select({
-            "//:ubuntu_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
-                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_ubuntu",
-            ],
-            "//:redhat_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
-                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_redhat",
-            ],
-        }) + [
+        "@aws-sdk-cpp//:aws-sdk-cpp",
+        "@aws-sdk-cpp//:aws-sdk-cpp_cmake",
         "@azure//:storage",
         "@cpprest//:sdk",
         "@boost//:lib",

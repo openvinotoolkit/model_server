@@ -213,7 +213,7 @@ TEST(ModelConfig, shape) {
     EXPECT_EQ((gs1["first"].shape), (ovms::Shape{1, 2, 3}));
     EXPECT_EQ((gs1["second"].shape), (ovms::Shape{6, 6, 200, 300}));
 
-    // mutli shape
+    // multi shape
     config.setShapes(shapeMap);
     config.addShape("third", s3);
 
@@ -935,7 +935,7 @@ TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
 
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -972,7 +972,7 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatArray) {
 
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -1004,7 +1004,7 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatString) {
 
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -1041,7 +1041,7 @@ TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
 
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -1170,7 +1170,7 @@ TEST_P(ModelConfigParseModel, SetWithStateful) {
     std::string config = testPair.first;
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());

@@ -21,8 +21,8 @@
 
 #include <memory>
 
-#include <continuous_batching_pipeline.hpp>
-#include <generation_handle.hpp>
+#include <openvino/genai/continuous_batching_pipeline.hpp>
+#include <openvino/genai/generation_handle.hpp>
 #include <openvino/openvino.hpp>
 
 #include "llmnoderesources.hpp"
@@ -83,12 +83,12 @@ public:
             std::string prompt = std::string(data.begin(), data.end());
             LOG(INFO) << "Received prompt: " << prompt << std::endl;
 
-            GenerationHandle generation = nodeResources->cbPipe->add_request(0, prompt, GenerationConfig::greedy());
+            ov::genai::GenerationHandle generation = nodeResources->cbPipe->add_request(0, std::move(prompt), ov::genai::GenerationConfig());
             nodeResources->notifyExecutorThread();
-            std::vector<GenerationOutput> outputs = generation->read_all();
+            std::vector<ov::genai::GenerationOutput> outputs = generation->read_all();
             // For greedy this sampling params, there's only one output
             // TODO: work with multiple outputs
-            std::string result = nodeResources->cbPipe->get_tokenizer()->decode(outputs[0].generated_token_ids);
+            std::string result = nodeResources->cbPipe->get_tokenizer().decode(outputs[0].generated_token_ids);
 
             LOG(INFO) << "Received response: " << result << std::endl;
             //--------------------------------------------

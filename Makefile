@@ -56,25 +56,31 @@ BASE_OS_TAG_REDHAT ?= 8.10
 INSTALL_RPMS_FROM_URL ?=
 
 CHECK_COVERAGE ?=0
-RUN_TESTS ?= 1
+RUN_TESTS ?= 0
 NVIDIA ?=0
 GPU ?= 0
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
 PYTHON_DISABLE ?= 0
+ifeq ($(MEDIAPIPE_DISABLE),1)
+ifeq ($(PYTHON_DISABLE),0)
+$(error PYTHON_DISABLE cannot be 0 when MEDIAPIPE_DISABLE is 1)
+endif
+endif
 FUZZER_BUILD ?= 0
 
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 5c0f38f83f62fdabcdc980fa6dc3ed1ea16c8a05  # 29 May releases/2024/2
-OV_CONTRIB_BRANCH ?= 7be7327aa186fc297a9b63ad6161963c16380298  # 29 May releases/2024/2
-OV_TOKENIZERS_BRANCH ?= 0b406fd6080f930a0d4a7c068dae7372046daa9d  # 29 May releases/2024/2
+OV_SOURCE_BRANCH ?= 884cebf258a7d9aa29b057dedc1d5dd58790595d  # 2024-07-19 releases/2024/3
+OV_CONTRIB_BRANCH ?= e6eb43a32c98a04162a921a80d89f82b30910973  # 2024-06-13 releases/2024/3
+OV_TOKENIZERS_BRANCH ?= 04795c1b78c61e3294d1744c78a8ebb5e129256c  # 2024-07-16 releases/2024/3
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
 
 TOKENIZERS ?= 1
+TEST_LLM_PATH ?= "/tmp/llm_testing"
 
 OV_USE_BINARY ?= 0
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -154,11 +160,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),20.04)
         OS=ubuntu20
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.2.0.15519.5c0f38f83f6_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.3.0.16041.1e3b88e4e3f_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "23.22.26516"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.2.0.15519.5c0f38f83f6_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.3.0.16041.1e3b88e4e3f_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -170,10 +176,10 @@ ifeq ($(BASE_OS),redhat)
   else
     BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
 	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
-  endif	
+  endif
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.2.0.15519.5c0f38f83f6_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.3.0.16041.1e3b88e4e3f_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -189,7 +195,7 @@ endif
 OVMS_PYTHON_IMAGE_TAG ?= py
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2024.2"
+PRODUCT_VERSION ?= "2024.3"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
@@ -206,6 +212,8 @@ PYTHON_CLIENT_TEST_CONTAINER_NAME ?= python-client-test$(shell date +%Y-%m-%d-%H
 TEST_PATH ?= tests/functional/
 
 BUILD_CUSTOM_NODES ?= false
+
+VERBOSE_LOGS ?= OFF
 
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
@@ -233,7 +241,8 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg GPU=$(GPU)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
 	--build-arg JOBS=$(JOBS)\
-	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)
+	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
+	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)
 
 
 .PHONY: default docker_build \
@@ -249,6 +258,10 @@ venv-style:$(ACTIVATE_STYLE)
 	@echo $(BUILD_ARGS)
 	@echo -n "Using venv "
 	@python3 --version
+spell: venv-style
+	@pip install codespell
+	@{ git ls-files; git diff --name-only --cached; } | sort | uniq | xargs codespell --skip "spelling-whitelist.txt" | grep -vFf spelling-whitelist.txt; if [ $$? != 1 ]; then exit 1; fi
+	@echo "Spelling check completed."
 
 $(ACTIVATE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
@@ -270,7 +283,7 @@ cppclean: venv-style
 	@echo "Checking cppclean..."
 	@bash -c "./ci/cppclean.sh"
 
-style: venv-style clang-format-check cpplint cppclean
+style: venv-style spell clang-format-check cpplint cppclean
 
 hadolint:
 	@echo "Checking SDL requirements..."
@@ -310,8 +323,8 @@ clang-format: venv-style
 
 clang-format-check: clang-format
 	@echo "Checking if clang-format changes were committed ..."
-	@git diff --exit-code || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
-	@git diff --exit-code --staged || (echo "clang-format changes not commited. Commit those changes first"; exit 1)
+	@git diff --exit-code || (echo "clang-format changes not committed. Commit those changes first"; exit 1)
+	@git diff --exit-code --staged || (echo "clang-format changes not committed. Commit those changes first"; exit 1)
 
 .PHONY: docker_build
 docker_build: ovms_builder_image targz_package ovms_release_images
@@ -382,7 +395,7 @@ endif
 targz_package:
 	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
-		--build-arg BUILD_IMAGE=$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		--build-arg BUILD_IMAGE=build \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--target=pkg && \
 	rm -vrf dist/$(OS) && mkdir -p dist/$(OS) && \
@@ -390,7 +403,6 @@ targz_package:
 	docker cp $$ID:/ovms_pkg/$(OS) dist/ && \
 	docker rm $$ID
 	cd dist/$(OS) && sha256sum --check ovms.tar.gz.sha256
-	cd dist/$(OS) && sha256sum --check ovms.tar.xz.sha256
 
 ovms_release_images:
 ifeq ($(USE_BUILDX),true)
@@ -648,6 +660,5 @@ cpu_extension:
 	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${OS}
 
 run_unit_tests:
-	docker run -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh > test.log 2>&1 ; exit_status=$?
-	tail -200 test.log
-	exit $(exit_status)
+	./prepare_llm_models.sh ${TEST_LLM_PATH}
+	docker run -v $(realpath ${TEST_LLM_PATH}):/ovms/llm_testing:ro -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh > test.log 2>&1 ; exit_status=$$? ; tail -200 test.log ; exit $$exit_status

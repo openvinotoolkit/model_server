@@ -17,6 +17,7 @@
 #include <functional>
 #include <limits>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -303,7 +304,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
     // input  (differentOps    dummy   chooseMax ) XN    output
     //  O-----(----->O---------->O------->O------>...----->O
     const uint demultiplicationLayersCount = 10;
-    // values choosen in a way that first choosen different ops result will be addition. all following ones will be multiplications
+    // values chosen in a way that first chosen different ops result will be addition. all following ones will be multiplications
     const std::vector<float> inputValues{0.2, 0.7, -0.4, -0.1, 0.0001, -0.8, 0.7, 0.8, 0.9, 0.1};
     const std::vector<float> inputFactors{1, -1, 2, 2};
     parameters_t parameters{
@@ -317,7 +318,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
                 if (iterations == 0) {
                     f += inputFactors[0];
                 } else {
-                    f *= inputFactors[2];  // different ops mutliply will be choosen
+                    f *= inputFactors[2];  // different ops multiply will be chosen
                 }
                 f += 1;  // dummy
             }
@@ -375,7 +376,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
     // input  (differentOps dummy)xN   chooseMax xN    output
     //  O-----(----->O------->O---...----->O---->...----->O
     const uint demultiplicationLayersCount = 4;
-    // values choosen in a way that first choosen different ops result will be addition. all following ones will be multiplications
+    // values chosen in a way that first chosen different ops result will be addition. all following ones will be multiplications
     const std::vector<float> inputValues{0.2, 0.7, -0.4, -0.1, 0.0001, -0.8, 0.7, 0.8, 0.9, 0.1};
     const std::vector<float> inputFactors{1, -1, 2, 2};
     parameters_t parameters{
@@ -389,7 +390,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
                 if (iterations == 0) {
                     f += inputFactors[0];
                 } else {
-                    f *= inputFactors[2];  // different ops mutliply will be choosen
+                    f *= inputFactors[2];  // different ops multiply will be chosen
                 }
                 f += 1;  // dummy
             }
@@ -1147,7 +1148,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeDeinitialize
         {"custom_node", {{customNodeOutputName, pipelineOutputName}}}};
 
     std::unique_ptr<Pipeline> pipeline;
-    // creating definition, pipeline and then executing works propely due to correct initialization
+    // creating definition, pipeline and then executing works properly due to correct initialization
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
     ASSERT_EQ(factory.create(pipeline, "my_new_pipeline", &request, &response, manager), StatusCode::OK);
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);

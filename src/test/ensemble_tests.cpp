@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <cstdio>
 #include <memory>
+#include <optional>
 #include <sstream>
 
 #include <gmock/gmock.h>
@@ -3285,7 +3286,7 @@ TEST_F(EnsembleFlowTest, ErrorHandlingSkipsDeferredNodesExecutionIfExecutionFail
 
     // Expected result - have pipeline cancelled with proper error code
 
-    // Manger with dummy model and nireq=1
+    // Manager with dummy model and nireq=1
     ConstructorEnabledModelManager managerWithDummyModel;
     config.setNireq(1);
     managerWithDummyModel.reloadModelWithVersions(config);
@@ -4129,7 +4130,7 @@ TEST_F(EnsembleFlowTest, EnablingDynamicParametersAndRemovingPipeline) {
     /*
         This test modifies config.json to enable dynamic parameters for model used in pipeline.
         In the same time, we remove pipeline from config file.
-        Test ensures such change is valid and model will be reloaded and dynamic parmeters will be applied.
+        Test ensures such change is valid and model will be reloaded and dynamic parameters will be applied.
         Test ensures pipeline gets retired.
     */
     std::string fileToReload = directoryPath + "/config.json";

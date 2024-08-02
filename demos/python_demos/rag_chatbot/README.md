@@ -1,5 +1,13 @@
 # LLM-powered RAG chatbot serving via Python Calculator in MediaPipe Graph {#ovms_demo_python_rag_chatbot}
 
+> **NOTE** This RAG demo is considered as deprecated and is replaced with improved implementation using OpenAI API endpoint with continuous batching text generation.
+
+Check the following new demos:
+- [text generation with OpenAI API and continuous batching](../../continuous_batching/README.md)
+- [RAG with chat/completions endpoint and continuous batching](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
+
+---
+
 This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models based on attached documents.
 The demo explains how to serve MediaPipe Graph with Python node that implements demo logic using Python libraries like Hugging Face Optimum with OpenVINO Runtime as execution engine and LangChain Retrieval QA pipeline that wraps entire processing.
 
@@ -26,20 +34,20 @@ Building the image with all required python dependencies is required. Follow the
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make python_image BASE_OS=redhat OVMS_CPP_DOCKER_IMAGE=registry.connect.redhat.com/intel/openvino-model-server OVMS_CPP_IMAGE_TAG=2024.1
+make python_image BASE_OS=redhat OVMS_CPP_DOCKER_IMAGE=registry.connect.redhat.com/intel/openvino-model-server OVMS_CPP_IMAGE_TAG=2024.2
 ```
 It will create an image called `registry.connect.redhat.com/intel/openvino-model-server:py`
 
 You can also build Ubuntu 22.04 image:
 ```
-make python_image BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=openvino/model_server OVMS_CPP_IMAGE_TAG=2024.1
+make python_image BASE_OS=ubuntu OVMS_CPP_DOCKER_IMAGE=openvino/model_server OVMS_CPP_IMAGE_TAG=2024.2
 ```
 It will create an image called `openvino/model_server:py`
 
 ## OpenVINO Model Server deployment with online models pulling from Hugging Face Hub
 
 In this demo, OpenVINO Model Server has an option to pull the required models from Hugging Face Hub.
-It's a simple deployment option because it doesn't require models preparation which have to be attached to the container. Just the demo scripts and configation files are required in the container at startup.
+It's a simple deployment option because it doesn't require models preparation which have to be attached to the container. Just the demo scripts and configuration files are required in the container at startup.
 
 What needs to be prepared is a list of documents, which should give context of RAG analysis. It is provided in a format of text file containing URLs of the documents sources:
 
