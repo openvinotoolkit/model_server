@@ -20,18 +20,18 @@ HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
-OVMS_CPP_IMAGE_TAG ?= 2024.1
+OVMS_CPP_IMAGE_TAG ?= 2024.3
 BASE_OS ?= ubuntu22
 
 ifeq ($(BASE_OS),ubuntu22)
   BASE_OS_TAG_UBUNTU ?= 22.04
-  PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2024.1/ovms_ubuntu22.tar.gz"
+  PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2024.3/ovms_ubuntu22.tar.gz"
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   DIST_OS=ubuntu
 endif
 ifeq ($(BASE_OS),redhat)
-  BASE_OS_TAG_REDHAT ?= 8.8
-  PACKAGE_URL ="https://github.com/openvinotoolkit/model_server/releases/download/v2024.1/ovms_redhat.tar.gz"
+  BASE_OS_TAG_REDHAT ?= 8.10
+  PACKAGE_URL ="https://github.com/openvinotoolkit/model_server/releases/download/v2024.3/ovms_redhat.tar.gz"
   BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
 endif
