@@ -83,7 +83,7 @@ node: {
 cp graph.pbtxt Meta-Llama-3-8B-Instruct/
 
 tree Meta-Llama-3-8B-Instruct/
-Meta-Llama-3-8B-Instruct
+Meta-Llama-3-8B-Instruct/
 ├── config.json
 ├── generation_config.json
 ├── graph.pbtxt
@@ -95,9 +95,7 @@ Meta-Llama-3-8B-Instruct
 ├── openvino_tokenizer.xml
 ├── special_tokens_map.json
 ├── tokenizer_config.json
-├── tokenizer.json
-└── tokenizer.model
-
+└── tokenizer.json
 
 ```
 
@@ -292,7 +290,7 @@ cd benchmarks
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
 python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate inf
 
-Namespace(backend='openai-chat', version='N/A', base_url=None, host='localhost', port=8000, endpoint='/v3/chat/completions', dataset='ShareGPT_V3_unfiltered_cleaned_split.json', model='meta-llama/Meta-Llama-3-8B-Instruct', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, request_rate=inf.0, seed=0, trust_remote_code=False, disable_tqdm=False, save_result=False)
+Namespace(backend='openai-chat', base_url=None, host='localhost', port=8000, endpoint='/v3/chat/completions', dataset='ShareGPT_V3_unfiltered_cleaned_split.json', dataset_name='sharegpt', dataset_path=None, model='meta-llama/Meta-Llama-3-8B-Instruct', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, sharegpt_output_len=None, sonnet_input_len=550, sonnet_output_len=150, sonnet_prefix_len=200, random_input_len=1024, random_output_len=128, random_range_ratio=1.0, request_rate=inf, seed=0, trust_remote_code=False, disable_tqdm=False, save_result=False, metadata=None, result_dir=None, result_filename=None)
 Traffic request rate: inf
 100%|██████████████████████████████████████████████████| 1000/1000 [17:17<00:00,  1.04s/it]
 ============ Serving Benchmark Result ============
