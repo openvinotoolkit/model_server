@@ -663,6 +663,12 @@ TEST_F(LLMHttpParametersValidationTest, lengthPenaltyValid) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
+    
+    requestBody = validRequestBodyWithParameter("length_penalty", "2");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
 }
 
 TEST_F(LLMHttpParametersValidationTest, lengthPenaltyInvalid) {
@@ -675,6 +681,18 @@ TEST_F(LLMHttpParametersValidationTest, lengthPenaltyInvalid) {
 
 TEST_F(LLMHttpParametersValidationTest, temperatureValid) {
     std::string requestBody = validRequestBodyWithParameter("temperature", "1.5");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    
+    requestBody = validRequestBodyWithParameter("temperature", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+
+    requestBody = validRequestBodyWithParameter("temperature", "2");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
@@ -703,6 +721,12 @@ TEST_F(LLMHttpParametersValidationTest, frequencePenaltyValid) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
+
+    requestBody = validRequestBodyWithParameter("frequence_penalty", "1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
 }
 
 TEST_F(LLMHttpParametersValidationTest, frequencePenaltyInvalid) {
@@ -727,6 +751,12 @@ TEST_F(LLMHttpParametersValidationTest, presencePenaltyValid) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
+    
+    std::string requestBody = validRequestBodyWithParameter("presence_penalty", "1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
 }
 
 TEST_F(LLMHttpParametersValidationTest, presencePenaltyInvalid) {
@@ -747,6 +777,12 @@ TEST_F(LLMHttpParametersValidationTest, presencePenaltyOutOfRange) {
 
 TEST_F(LLMHttpParametersValidationTest, topPValid) {
     std::string requestBody = validRequestBodyWithParameter("top_p", "0.5");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    
+    requestBody = validRequestBodyWithParameter("top_p", "1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
