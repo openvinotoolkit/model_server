@@ -12,7 +12,8 @@ KServe API <ovms_docs_clients_kfs>
 OpenVINO Model Server C-API <ovms_docs_c_api>
 ```
 
-OpenVINO&trade; Model Server exposes three sets of APIs:
+OpenVINO&trade; Model Server supports multiple APIs, for easy integration with systems using one of them for inference.
+The APIs are:
 
 * one compatible with TensorFlow Serving,
 * KServe API for inference
@@ -21,7 +22,6 @@ OpenVINO&trade; Model Server exposes three sets of APIs:
 Both TFS and KServe APIs work on gRPC and REST interfaces.
 The OpenAI API `chat/completion` endpoint supports REST API calls with and without streamed responses.
 
-Supporting multiple APIs makes OpenVINO Model Server easier to plug into existing systems that already use one of these APIs for inference.
 Check the following articles to learn more about the supported APIs:
 
 - [TensorFlow Serving gRPC API](./model_server_grpc_api_tfs.md)
