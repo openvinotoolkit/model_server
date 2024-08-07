@@ -274,7 +274,7 @@ public:
         // Extension, unsupported by OpenAI API however supported by vLLM and CB lib
         it = this->doc.FindMember("length_penalty");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsDouble() $$ !it->value.IsInt())
+            if (!it->value.IsDouble() && !it->value.IsInt())
                 return absl::InvalidArgumentError("length_penalty is not a valid number");
             this->lengthPenalty = it->value.GetDouble();
         }
