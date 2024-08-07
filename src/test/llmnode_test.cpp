@@ -752,7 +752,7 @@ TEST_F(LLMHttpParametersValidationTest, presencePenaltyValid) {
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
 
-    std::string requestBody = validRequestBodyWithParameter("presence_penalty", "1");
+    reinterpret_cast = validRequestBodyWithParameter("presence_penalty", "1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
