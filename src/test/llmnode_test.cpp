@@ -631,6 +631,12 @@ TEST_F(LLMHttpParametersValidationTest, repetitionPenaltyValid) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
+
+    requestBody = validRequestBodyWithParameter("repetition_penalty", "1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
 }
 
 TEST_F(LLMHttpParametersValidationTest, repetitionPenaltyInvalid) {
