@@ -235,8 +235,8 @@ public:
         // frequence_penalty: float; optional - defaults to 0
         it = this->doc.FindMember("frequence_penalty");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("frequence_penalty is not a floating point number");
+            if (!it->value.IsDouble() && !it->value.IsInt())
+                return absl::InvalidArgumentError("frequence_penalty is not a valid number");
             this->frequencePenalty = it->value.GetDouble();
             if (this->frequencePenalty < -2.0f || this->frequencePenalty > 2.0f)
                 return absl::InvalidArgumentError("frequence_penalty out of range(-2.0, 2.0)");
@@ -245,8 +245,8 @@ public:
         // presence_penalty: float; optional - defaults to 0
         it = this->doc.FindMember("presence_penalty");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("presence_penalty is not a floating point number");
+            if (!it->value.IsDouble() && !it->value.IsInt())
+                return absl::InvalidArgumentError("presence_penalty is not a valid number");
             this->presencePenalty = it->value.GetDouble();
             if (this->presencePenalty < -2.0f || this->presencePenalty > 2.0f)
                 return absl::InvalidArgumentError("presence_penalty out of range(-2.0, 2.0)");
@@ -256,8 +256,8 @@ public:
         // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
         it = this->doc.FindMember("repetition_penalty");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("repetition_penalty is not a floating point number");
+            if (!it->value.IsDouble() && !it->value.IsInt())
+                return absl::InvalidArgumentError("repetition_penalty is not a valid number");
             this->repetitionPenalty = it->value.GetDouble();
         }
 
@@ -265,8 +265,8 @@ public:
         // Extension, unsupported by OpenAI API and vLLM, however available in CB lib
         it = this->doc.FindMember("diversity_penalty");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("diversity_penalty is not a floating point number");
+            if (!it->value.IsDouble() && !it->value.IsInt())
+                return absl::InvalidArgumentError("diversity_penalty is not a valid number");
             this->diversityPenalty = it->value.GetDouble();
         }
 
@@ -274,16 +274,16 @@ public:
         // Extension, unsupported by OpenAI API however supported by vLLM and CB lib
         it = this->doc.FindMember("length_penalty");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("length_penalty is not a floating point number");
+            if (!it->value.IsDouble() && !it->value.IsInt())
+                return absl::InvalidArgumentError("length_penalty is not a valid number");
             this->lengthPenalty = it->value.GetDouble();
         }
 
         // temperature: float; optional - defaults to 0.0 (different than OpenAI which is 1.0)
         it = this->doc.FindMember("temperature");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("temperature is not a floating point number");
+            if (!it->value.IsDouble() && !it->value.IsInt())
+                return absl::InvalidArgumentError("temperature is not a valid number");
             this->temperature = it->value.GetDouble();
             if (this->temperature < 0.0f || this->temperature > 2.0f)
                 return absl::InvalidArgumentError("temperature out of range(0.0, 2.0)");
@@ -292,8 +292,8 @@ public:
         // top_p: float; optional - defaults to 1
         it = this->doc.FindMember("top_p");
         if (it != this->doc.MemberEnd()) {
-            if (!it->value.IsDouble())
-                return absl::InvalidArgumentError("top_p is not a floating point number");
+            if (!it->value.IsDouble() && !it->value.IsInt())
+                return absl::InvalidArgumentError("top_p is not a valid number");
             this->topP = it->value.GetDouble();
             if (this->topP < 0.0f || this->topP > 1.0f)
                 return absl::InvalidArgumentError("top_p out of range(0.0, 1.0)");
