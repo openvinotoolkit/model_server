@@ -51,19 +51,24 @@ In-case of problems, see [Debugging](#debugging).
 
    > **Note**: docker_build target accepts the same set of parameters as release_image target described here: [build_from_source.md](./build_from_source.md)
 
-2. Mount the source code in the Docker container :
+2. Download test LLM models
+   ```bash
+   ./prepare_llm_models.sh llm_testing
+   ```
+
+3. Mount the source code in the Docker container :
 	```bash
 	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest
 	```
 
-3. In the docker container context compile the source code via :
+4. In the docker container context compile the source code via :
 	```bash
-	bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
+	bazel build --define PYTHON_DISABLE=0 --cxxopt=-DPYTHON_DISABLE=0 //src:ovms
 	```
 
-4. From the container, run a single unit test :
+5. From the container, run a single unit test :
 	```bash
-	bazel test --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --test_env PYTHONPATH=${PYTHONPATH} --define PYTHON_DISABLE=0 --cxxopt=-DPYTHON_DISABLE=0 --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |
