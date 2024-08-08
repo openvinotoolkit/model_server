@@ -1,5 +1,5 @@
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
-index c8d0501b..089e876e 100644
+index c8d0501b..2c83b549 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
 @@ -17,6 +17,8 @@ limitations under the License.
@@ -20,12 +20,13 @@ index c8d0501b..089e876e 100644
  #include "absl/strings/match.h"
  #include "absl/strings/string_view.h"
  #include "absl/types/span.h"
-@@ -118,18 +122,47 @@ bool ParsedEvRequest::decode() {
+@@ -118,18 +122,52 @@ bool ParsedEvRequest::decode() {
    return true;
  }
  
 +static void connection_close_callback(struct evhttp_connection *conn, void *arg) {
 +  EvHTTPRequest* req = (EvHTTPRequest*)arg;
++  NET_LOG(ERROR, "connection_close_callback %ld %d", req->Id(), req->IsDisconnected());
 +  req->FlagDisconnected();
 +  req->ExecuteDisconnectionCallback();
 +}
@@ -37,18 +38,22 @@ index c8d0501b..089e876e 100644
 -      output_buf(nullptr) {}
 +      output_buf(nullptr) {
 +
-+  struct evhttp_connection *conn = evhttp_request_get_connection(parsed_request_->request);
-+  evhttp_connection_set_closecb(conn, connection_close_callback, (void*)this);
++  NET_LOG(ERROR, "EvHTTPRequest::EvHTTPRequest %ld %d", this->Id(), this->IsDisconnected());
 +
-+  struct bufferevent *bev = evhttp_connection_get_bufferevent(conn);
-+  bufferevent_enable(bev, EV_READ);
++  //struct evhttp_connection *conn = evhttp_request_get_connection(parsed_request_->request);
++  //evhttp_connection_set_closecb(conn, connection_close_callback, (void*)this);
++//
++  //struct bufferevent *bev = evhttp_connection_get_bufferevent(conn);
++  //bufferevent_enable(bev, EV_READ);
 +}
  
  EvHTTPRequest::~EvHTTPRequest() {
-+  struct evhttp_connection *conn = evhttp_request_get_connection(parsed_request_->request);
-+  if (conn != NULL) {
-+    evhttp_connection_set_closecb(conn, NULL, NULL);
-+  }
++  NET_LOG(ERROR, "EvHTTPRequest::~EvHTTPRequest %ld %d", this->Id(), this->IsDisconnected());
++
++ //struct evhttp_connection *conn = evhttp_request_get_connection(parsed_request_->request);
++ //if (conn != NULL) {
++ //  evhttp_connection_set_closecb(conn, NULL, NULL);
++ //}
 +
    if (output_buf != nullptr) {
      evbuffer_free(output_buf);
@@ -69,7 +74,7 @@ index c8d0501b..089e876e 100644
  absl::string_view EvHTTPRequest::uri_path() const {
    return parsed_request_->path_and_query;
  }
-@@ -342,8 +375,14 @@ void EvHTTPRequest::PartialReplyWithStatus(HTTPStatusCode status) {
+@@ -342,8 +380,14 @@ void EvHTTPRequest::PartialReplyWithStatus(HTTPStatusCode status) {
    NET_LOG(FATAL, "PartialReplyWithStatus not implemented.");
  }
  
@@ -86,11 +91,14 @@ index c8d0501b..089e876e 100644
  }
  
  ServerRequestInterface::CallbackStatus
-@@ -371,6 +410,25 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
+@@ -371,6 +415,28 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
    delete this;
  }
  
 +void EvHTTPRequest::EvPartialSendReply(std::string data) {
++  if (this->is_disconnected_)
++    return;
++  NET_LOG(ERROR, "EvHTTPRequest::EvPartialSendReply %ld %d", this->Id(), this->IsDisconnected());
 +  if (!this->is_reply_started_) {
 +    evhttp_send_reply_start(parsed_request_->request, HTTP_OK, "reply start");
 +    this->is_reply_started_ = true;
@@ -112,7 +120,7 @@ index c8d0501b..089e876e 100644
  void EvHTTPRequest::Reply() { ReplyWithStatus(HTTPStatusCode::OK); }
  
  // Treats this as 500 for now and let libevent decide what to do
-@@ -381,6 +439,16 @@ void EvHTTPRequest::Abort() {
+@@ -381,6 +447,16 @@ void EvHTTPRequest::Abort() {
    delete this;
  }
  
@@ -130,7 +138,7 @@ index c8d0501b..089e876e 100644
  }  // namespace serving
  }  // namespace tensorflow
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
-index 2f8e601d..f09ef396 100644
+index 2f8e601d..5550e8a2 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
 @@ -21,6 +21,7 @@ limitations under the License.
@@ -150,7 +158,7 @@ index 2f8e601d..f09ef396 100644
  
    CallbackStatus PartialReplyWithFlushCallback(
        std::function<void()> callback) override;
-@@ -104,9 +105,16 @@ class EvHTTPRequest final : public ServerRequestInterface {
+@@ -104,16 +105,27 @@ class EvHTTPRequest final : public ServerRequestInterface {
  
    void Abort() override;
  
@@ -167,8 +175,10 @@ index 2f8e601d..f09ef396 100644
    // Keeps a reference to the registered RequestHandlerOptions
    void SetHandlerOptions(const RequestHandlerOptions& handler_options) {
      this->handler_options_ = &handler_options;
-@@ -114,6 +122,8 @@ class EvHTTPRequest final : public ServerRequestInterface {
+   }
  
++  int64_t Id() { return (int64_t)((int*)this); }
++
   private:
    void EvSendReply(HTTPStatusCode status);
 +  void EvPartialSendReply(std::string data);
@@ -176,7 +186,7 @@ index 2f8e601d..f09ef396 100644
  
    // Returns true if the data needs be uncompressed
    bool NeedUncompressGzipContent();
-@@ -133,6 +143,12 @@ class EvHTTPRequest final : public ServerRequestInterface {
+@@ -133,6 +145,12 @@ class EvHTTPRequest final : public ServerRequestInterface {
    std::unique_ptr<ParsedEvRequest> parsed_request_;
  
    evbuffer* output_buf;  // owned by this

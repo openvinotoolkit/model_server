@@ -558,6 +558,7 @@ public:
                 // Streaming scenario
                 // Each iteration is single execution of Process() method
 
+                //SPDLOG_INFO("AAAAAAAA");
                 if (this->client->isDisconnected()) {
                     return absl::CancelledError();
                 }
