@@ -26,6 +26,7 @@
 #include "../execution_context.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
+#include "../model_metric_reporter.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -69,6 +70,8 @@ class MediapipeGraphExecutor {
 
     ::mediapipe::Timestamp currentStreamTimestamp;
 
+    ServableMetricReporter* servableMetricReporter;
+
 public:
     static const std::string PYTHON_SESSION_SIDE_PACKET_TAG;
     static const std::string LLM_SESSION_SIDE_PACKET_TAG;
@@ -80,12 +83,14 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
         const LLMNodeResourcesMap& llmNodeResourcesMap,
-        PythonBackend* pythonBackend);
+        PythonBackend* pythonBackend,
+        ServableMetricReporter* servableMetricReporter);
 
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", this->name);
+        reporterOut = this->servableMetricReporter;
         ::mediapipe::CalculatorGraph graph;
         MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
         std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;

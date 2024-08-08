@@ -28,6 +28,7 @@
 #include "../execution_context.hpp"
 #include "../filesystem.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../metric.hpp"
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
@@ -185,7 +186,8 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     PythonBackend* pythonBackend) :
     name(name),
     status(SCHEDULER_CLASS_NAME, this->name),
-    pythonBackend(pythonBackend) {
+    pythonBackend(pythonBackend),
+    reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, name, VERSION)) {
     mgconfig = config;
     passKfsRequestFlag = false;
 }
@@ -253,7 +255,8 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
+        this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend, this->reporter.get());
     return status;
 }
 
