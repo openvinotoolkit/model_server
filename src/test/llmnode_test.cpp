@@ -138,6 +138,65 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
     ASSERT_EQ(d["choices"].Capacity(), 1);
     int i = 0;
     for (auto& choice : d["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        ASSERT_EQ(choice["index"], i++);
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["text"].IsString());
+    }
+    ASSERT_EQ(d["model"], "llmDummyKFS");
+    ASSERT_EQ(d["object"], "text_completion");
+}
+
+TEST_F(LLMFlowHttpTest, unaryCompletionsJsonFinishReasonLength) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "ignore_eos": true,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    d.Parse(response.c_str());
+    ASSERT_TRUE(d["choices"].IsArray());
+    ASSERT_EQ(d["choices"].Capacity(), 1);
+    int i = 0;
+    for (auto& choice : d["choices"].GetArray()) {
+        ASSERT_EQ(choice["finish_reason"], "length");
+        ASSERT_EQ(choice["index"], i++);
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["text"].IsString());
+    }
+    ASSERT_EQ(d["model"], "llmDummyKFS");
+    ASSERT_EQ(d["object"], "text_completion");
+}
+
+// This test can be sensitive to underlying hardware as well as model and runtime updates since it relies on model execution output
+TEST_F(LLMFlowHttpTest, unaryCompletionsJsonFinishReasonStop) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "ignore_eos": false,
+            "max_tokens": 4096,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    d.Parse(response.c_str());
+    ASSERT_TRUE(d["choices"].IsArray());
+    ASSERT_EQ(d["choices"].Capacity(), 1);
+    int i = 0;
+    for (auto& choice : d["choices"].GetArray()) {
         ASSERT_EQ(choice["finish_reason"], "stop");
         ASSERT_EQ(choice["index"], i++);
         ASSERT_FALSE(choice["logprobs"].IsObject());
@@ -186,7 +245,7 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
     ASSERT_EQ(d["choices"].Capacity(), 8);
     int i = 0;
     for (auto& choice : d["choices"].GetArray()) {
-        ASSERT_EQ(choice["finish_reason"], "stop");
+        ASSERT_TRUE(choice["finish_reason"].IsString());
         ASSERT_EQ(choice["index"], i++);
         ASSERT_FALSE(choice["logprobs"].IsObject());
         ASSERT_TRUE(choice["text"].IsString());
@@ -245,7 +304,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
     ASSERT_EQ(d["choices"].Capacity(), 8);
     int i = 0;
     for (auto& choice : d["choices"].GetArray()) {
-        ASSERT_EQ(choice["finish_reason"], "stop");
+        ASSERT_TRUE(choice["finish_reason"].IsString());
         ASSERT_EQ(choice["index"], i++);
         ASSERT_FALSE(choice["logprobs"].IsObject());
         ASSERT_TRUE(choice["message"].IsObject());
@@ -264,6 +323,81 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
             "seed" : 1,
             "best_of" : 16,
             "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    d.Parse(response.c_str());
+    ASSERT_TRUE(d["choices"].IsArray());
+    ASSERT_EQ(d["choices"].Capacity(), 1);
+    int i = 0;
+    for (auto& choice : d["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        ASSERT_EQ(choice["index"], i++);
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        ASSERT_EQ(choice["message"]["role"], "assistant");
+    }
+    ASSERT_EQ(d["model"], "llmDummyKFS");
+    ASSERT_EQ(d["object"], "chat.completion");
+}
+
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonFinishReasonLength) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "ignore_eos": true,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    d.Parse(response.c_str());
+    ASSERT_TRUE(d["choices"].IsArray());
+    ASSERT_EQ(d["choices"].Capacity(), 1);
+    int i = 0;
+    for (auto& choice : d["choices"].GetArray()) {
+        ASSERT_EQ(choice["finish_reason"], "length");
+        ASSERT_EQ(choice["index"], i++);
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        ASSERT_EQ(choice["message"]["role"], "assistant");
+    }
+    ASSERT_EQ(d["model"], "llmDummyKFS");
+    ASSERT_EQ(d["object"], "chat.completion");
+}
+
+// This test can be sensitive to underlying hardware as well as model and runtime updates since it relies on model execution output
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonFinishReasonStop) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "ignore_eos": false,
+            "max_tokens": 4096,
             "messages": [
             {
                 "role": "user",
