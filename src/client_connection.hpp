@@ -14,11 +14,14 @@
 // limitations under the License.
 #pragma once
 
+#include <functional>
+
 namespace ovms {
 
 class ClientConnection {
 public:
     virtual bool isDisconnected() const = 0;
+    virtual void installDisconnectionCallback(std::function<void()> fn) = 0;
 };
 
-}
+}  // namespace ovms

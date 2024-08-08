@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <atomic>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -388,6 +389,36 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
     ASSERT_EQ(response, "");
 }
 
+// /v3/chat/completions endpoint
+// unary, gready search
+// Correct payload, however disconnection immediately
+TEST_F(LLMFlowHttpTest, inferChatCompletionsUnaryClientDisconnectedImmediately) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "What is OpenVINO?"
+                }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(writer, RegisterDisconnectionCallback(::testing::_)).WillOnce([](std::function<void()> fn) {
+        fn();  // disconnect immediately, even before read_all is called
+    });
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+// /v3/chat/completions endpoint
+// streaming
+// Correct payload, however disconnection immediately
 TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedImmediately) {
     std::string requestBody = R"(
         {
@@ -396,10 +427,10 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedImmediately)
             "seed" : 1,
             "max_tokens": 5,
             "messages": [
-            {
-                "role": "user",
-                "content": "What is OpenVINO?"
-            }
+                {
+                    "role": "user",
+                    "content": "What is OpenVINO?"
+                }
             ]
         }
     )";
@@ -407,16 +438,24 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedImmediately)
     EXPECT_CALL(writer, IsDisconnected())
         .WillOnce(::testing::Return(true));
 
-    // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);  // no results
-    // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    std::atomic<int> i = 0;
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).WillOnce([this, &i](std::string partialResponse) {
+        i++;
+        ASSERT_EQ(partialResponse, "{\"error\": \"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: \"}");
+    });  // no results
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(i, 1);
     ASSERT_EQ(response, "");
 }
 
+// /v3/completions endpoint
+// streaming
+// Correct payload, however disconnection immediately
 TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedImmediately) {
     std::string requestBody = R"(
         {
@@ -428,17 +467,27 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedImmediately) {
         }
     )";
 
-    // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);  // no results
-    // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
-    // TODO: New output EXPECT_CALL(writer, IsDisconnected())
-    // TODO: New output     .WillOnce(::testing::Return(true));
+    EXPECT_CALL(writer, IsDisconnected())
+        .WillOnce(::testing::Return(true));
+
+    std::atomic<int> i = 0;
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).WillOnce([this, &i](std::string partialResponse) {
+        i++;
+        ASSERT_EQ(partialResponse, "{\"error\": \"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: \"}");
+    });  // no results
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(i, 1);
     ASSERT_EQ(response, "");
 }
 
+// /v3/chat/completions endpoint
+// streaming
+// Correct payload, however disconnection after first step
 TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedAfterFirstIteration) {
     std::string requestBody = R"(
         {
@@ -447,28 +496,36 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedAfterFirstIt
             "seed" : 1,
             "max_tokens": 5,
             "messages": [
-            {
-                "role": "user",
-                "content": "What is OpenVINO?"
-            }
+                {
+                    "role": "user",
+                    "content": "What is OpenVINO?"
+                }
             ]
         }
     )";
 
     EXPECT_CALL(writer, IsDisconnected())
-        .WillOnce(::testing::Return(false))
-        .WillOnce(::testing::Return(true));
+        .WillOnce(::testing::Return(false))  // let first iteration happen
+        .WillOnce(::testing::Return(true));  // stop at second iteration
 
-    // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(1);  // 1 result
-    // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    std::atomic<int> numberOfMatchingErrorMessages = 0;
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).WillRepeatedly([this, &numberOfMatchingErrorMessages](std::string partialResponse) {
+        if (partialResponse == "{\"error\": \"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: \"}")
+            numberOfMatchingErrorMessages++;
+    });
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(numberOfMatchingErrorMessages, 1);
     ASSERT_EQ(response, "");
 }
 
+// /v3/completions endpoint
+// streaming
+// Correct payload, however disconnection after first step
 TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedAfterFirstIteration) {
     std::string requestBody = R"(
         {
@@ -480,16 +537,22 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedAfterFirstIterat
         }
     )";
 
-    // TODO: New output EXPECT_CALL(writer, IsDisconnected())
-    // TODO: New output     .WillOnce(::testing::Return(false))
-    // TODO: New output     .WillOnce(::testing::Return(true));
+    EXPECT_CALL(writer, IsDisconnected())
+        .WillOnce(::testing::Return(false))  // let first iteration happen
+        .WillOnce(::testing::Return(true));  // stop at second iteration
 
-    // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(1);  // 1 result
-    // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    std::atomic<int> numberOfMatchingErrorMessages = 0;
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).WillRepeatedly([this, &numberOfMatchingErrorMessages](std::string partialResponse) {
+        if (partialResponse == "{\"error\": \"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: \"}")
+            numberOfMatchingErrorMessages++;
+    });
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(numberOfMatchingErrorMessages, 1);
     ASSERT_EQ(response, "");
 }
 

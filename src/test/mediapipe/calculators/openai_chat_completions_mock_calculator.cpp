@@ -42,7 +42,7 @@ class OpenAIChatCompletionsMockCalculator : public CalculatorBase {
 
     mediapipe::Timestamp timestamp{0};
     std::string body;
-    std::shared_ptr<ovms::Client> client;
+    std::shared_ptr<ovms::ClientConnection> client;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {

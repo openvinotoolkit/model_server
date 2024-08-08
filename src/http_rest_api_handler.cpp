@@ -43,7 +43,6 @@
 #include "filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpcservermodule.hpp"
-#include "http_frontend/http_client_connection.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "metric_module.hpp"
@@ -64,6 +63,7 @@
 #include "timer.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
+#include "http_frontend/http_client_connection.hpp"
 #include "http_frontend/http_graph_executor_impl.hpp"
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif

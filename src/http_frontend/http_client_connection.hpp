@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <utility>
+
 #include "../client_connection.hpp"
 
 #pragma GCC diagnostic push
@@ -27,6 +29,7 @@ namespace ovms {
 
 class HttpClientConnection : public ClientConnection {
     tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter;
+
 public:
     HttpClientConnection(tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) :
         serverReaderWriter(serverReaderWriter) {}
@@ -34,6 +37,10 @@ public:
     bool isDisconnected() const override {
         return this->serverReaderWriter->IsDisconnected();
     }
+
+    void installDisconnectionCallback(std::function<void()> fn) override {
+        serverReaderWriter->RegisterDisconnectionCallback(std::move(fn));
+    }
 };
 
-}
+}  // namespace ovms
