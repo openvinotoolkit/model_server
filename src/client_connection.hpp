@@ -21,7 +21,7 @@ namespace ovms {
 class ClientConnection {
 public:
     virtual bool isDisconnected() const = 0;
-    virtual void installDisconnectionCallback(std::function<void()> fn) = 0;
+    virtual void registerDisconnectionCallback(std::function<void()> fn) = 0;
 };
 
 }  // namespace ovms

@@ -496,10 +496,20 @@ public:
 
                 {
                     OVMS_PROFILE_SCOPE("pipeline->add_request()");
+
+                    // Check if client disconnected while waiting in HTTP requests queue
+                    if (this->client->isDisconnected()) {
+                        return absl::CancelledError();
+                    }
+
                     this->generationHandle = nodeResources->cbPipe->add_request(
                         currentRequestId++, /*to be removed from API?*/
                         finalPrompt,
                         this->request->createGenerationConfig());
+
+                    this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
+                        genHandle->drop();
+                    });
                 }
                 nodeResources->notifyExecutorThread();
                 this->streamer = std::make_shared<TextStreamer>(
@@ -514,10 +524,6 @@ public:
             // Unary scenario
             if (!this->request->isStream()) {
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
-
-                this->client->installDisconnectionCallback([genHandle = this->generationHandle]() {
-                    genHandle->drop();
-                });
 
                 std::vector<ov::genai::GenerationOutput> generationOutput = this->generationHandle->read_all();
                 if (this->generationHandle->get_status() == ov::genai::GenerationStatus::DROPPED_BY_HANDLE) {
@@ -558,8 +564,7 @@ public:
                 // Streaming scenario
                 // Each iteration is single execution of Process() method
 
-                //SPDLOG_INFO("AAAAAAAA");
-                if (this->client->isDisconnected()) {
+                if (this->generationHandle->get_status() == ov::genai::GenerationStatus::DROPPED_BY_HANDLE) {
                     return absl::CancelledError();
                 }
 
