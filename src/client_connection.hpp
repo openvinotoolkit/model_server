@@ -12,26 +12,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//*****************************************************************************
 #pragma once
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include <rapidjson/document.h>
-
-#include "../client_connection.hpp"
+#include <functional>
 
 namespace ovms {
 
-struct HttpPayload {
-    std::string uri;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::string body;                 // always
-    rapidjson::Document* parsedJson;  // pre-parsed body             = null
-    std::shared_ptr<ClientConnection> client;
+class ClientConnection {
+public:
+    virtual bool isDisconnected() const = 0;
+    virtual void registerDisconnectionCallback(std::function<void()> fn) = 0;
 };
 
 }  // namespace ovms

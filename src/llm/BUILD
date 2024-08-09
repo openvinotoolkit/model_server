@@ -99,6 +99,7 @@ cc_library(
     hdrs = ["http_payload.hpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:libhttpclientconnection"
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,

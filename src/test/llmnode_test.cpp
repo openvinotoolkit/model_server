@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <atomic>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -360,6 +361,7 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStream) {
     // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(3);
     // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    // TODO: New output EXPECT_CALL(writer, IsDisconnected()).Times(6);  // more than partial reply because of text streamer not always returning chunk of ready data
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
@@ -380,9 +382,106 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
     // TODO: New output EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     // TODO: New output EXPECT_CALL(writer, PartialReply(::testing::_)).Times(3);
     // TODO: New output EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+    // TODO: New output EXPECT_CALL(writer, IsDisconnected()).Times(6);  // more than partial reply because of text streamer not always returning chunk of ready data
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(response, "");
+}
+
+// /v3/chat/completions endpoint
+// unary, gready search
+// Correct payload, however disconnection immediately
+TEST_F(LLMFlowHttpTest, inferChatCompletionsUnaryClientDisconnectedImmediately) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "What is OpenVINO?"
+                }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(writer, RegisterDisconnectionCallback(::testing::_)).WillOnce([](std::function<void()> fn) {
+        fn();  // disconnect immediately, even before read_all is called
+    });
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+// /v3/chat/completions endpoint
+// streaming
+// Correct payload, however disconnection immediately
+TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedImmediately) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "What is OpenVINO?"
+                }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(writer, IsDisconnected())
+        .WillOnce(::testing::Return(true));
+
+    std::atomic<int> i = 0;
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).WillOnce([this, &i](std::string partialResponse) {
+        i++;
+        ASSERT_EQ(partialResponse, "{\"error\": \"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: \"}");
+    });  // no results
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(i, 1);
+    ASSERT_EQ(response, "");
+}
+
+// /v3/completions endpoint
+// streaming
+// Correct payload, however disconnection immediately
+TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedImmediately) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    EXPECT_CALL(writer, IsDisconnected())
+        .WillOnce(::testing::Return(true));
+
+    std::atomic<int> i = 0;
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(writer, PartialReply(::testing::_)).WillOnce([this, &i](std::string partialResponse) {
+        i++;
+        ASSERT_EQ(partialResponse, "{\"error\": \"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: \"}");
+    });  // no results
+    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(i, 1);
     ASSERT_EQ(response, "");
 }
 

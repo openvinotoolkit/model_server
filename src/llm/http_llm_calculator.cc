@@ -387,6 +387,7 @@ class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<ovms::LLMNodeResources> nodeResources;
     ov::genai::GenerationHandle generationHandle;
     std::shared_ptr<OpenAIChatCompletionsRequest> request;
+    std::shared_ptr<ClientConnection> client;
 
     // TODO: To be  moved to CB library
     std::shared_ptr<TextStreamer> streamer;
@@ -447,6 +448,7 @@ public:
                 RET_CHECK(this->request == nullptr);
                 RET_CHECK(this->generationHandle == nullptr);
                 RET_CHECK(this->streamer == nullptr);
+                RET_CHECK(this->client == nullptr);
 
                 // Register resource creation time
                 this->created = std::chrono::system_clock::now();
@@ -463,6 +465,7 @@ public:
                     return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v3/chat/completions, /v3/completions");
                 }
                 this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson, endpoint);
+                this->client = payload.client;
 
                 // TODO: Support chat scenario once atobisze adds that to CB library
                 auto status = this->request->parse(nodeResources->maxTokensLimit, nodeResources->bestOfLimit);
@@ -493,10 +496,20 @@ public:
 
                 {
                     OVMS_PROFILE_SCOPE("pipeline->add_request()");
+
+                    // Check if client disconnected while waiting in HTTP requests queue
+                    if (this->client->isDisconnected()) {
+                        return absl::CancelledError();
+                    }
+
                     this->generationHandle = nodeResources->cbPipe->add_request(
                         currentRequestId++, /*to be removed from API?*/
                         finalPrompt,
                         this->request->createGenerationConfig());
+
+                    this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
+                        genHandle->drop();
+                    });
                 }
                 nodeResources->notifyExecutorThread();
                 this->streamer = std::make_shared<TextStreamer>(
@@ -506,15 +519,21 @@ public:
             RET_CHECK(this->generationHandle != nullptr);
             RET_CHECK(this->request != nullptr);
             RET_CHECK(this->streamer != nullptr);
+            RET_CHECK(this->client != nullptr);
 
             // Unary scenario
             if (!this->request->isStream()) {
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
+
                 std::vector<ov::genai::GenerationOutput> generationOutput = this->generationHandle->read_all();
+                if (this->generationHandle->get_status() == ov::genai::GenerationStatus::DROPPED_BY_HANDLE) {
+                    return absl::CancelledError();
+                }
                 RET_CHECK(generationOutput.size() >= 1);
-                std::sort(generationOutput.begin(), generationOutput.end(), [=](ov::genai::GenerationOutput& r1, ov::genai::GenerationOutput& r2) {
+                std::sort(generationOutput.begin(), generationOutput.end(), [](ov::genai::GenerationOutput& r1, ov::genai::GenerationOutput& r2) {
                     return r1.score > r2.score;
                 });
+
                 // legacy
                 if (generationOutput.size() == 1) {
                     std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
@@ -544,6 +563,10 @@ public:
                 OVMS_PROFILE_SCOPE("Stream generation cycle");
                 // Streaming scenario
                 // Each iteration is single execution of Process() method
+
+                if (this->generationHandle->get_status() == ov::genai::GenerationStatus::DROPPED_BY_HANDLE) {
+                    return absl::CancelledError();
+                }
 
                 if (this->generationHandle->get_status() == ov::genai::GenerationStatus::RUNNING || this->generationHandle->can_read()) {
                     // Subsequent iteration

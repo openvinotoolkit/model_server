@@ -63,6 +63,7 @@
 #include "timer.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
+#include "http_frontend/http_client_connection.hpp"
 #include "http_frontend/http_graph_executor_impl.hpp"
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
@@ -486,6 +487,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         request.body = request_body;
         request.parsedJson = &doc;
         request.uri = std::string(uri);
+        request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
     }
     if (streamFieldVal == false) {
         ServableMetricReporter* smr = nullptr;                                                         // Unused

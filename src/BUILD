@@ -392,6 +392,7 @@ cc_library(
                 "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
                 "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
                 "//src/llm:httppayload",
+                "//src:libhttpclientconnection",
             ],
             "//:disable_mediapipe" : [],
         }),
@@ -437,6 +438,19 @@ cc_library(
     deps = [
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "libhttpclientconnection",
+    hdrs = ["client_connection.hpp", "http_frontend/http_client_connection.hpp"],
+    deps = [
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
