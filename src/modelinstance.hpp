@@ -279,14 +279,19 @@ private:
          * @param config
          */
     Status loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
-
-    Status gatherReshapeInfo(bool isBatchingModeAuto, const DynamicModelParameter& parameter, bool& isReshapeRequired, std::map<std::string, ov::PartialShape>& modelShapes);
     /**
          * @brief Internal method for loading outputs
          *
          * @param config
          */
     Status loadOutputTensors(const ModelConfig& config);
+
+protected:
+    virtual Status loadOutputTensorsImpl(const ModelConfig& config);
+    virtual Status loadInputTensorsImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
+
+private:
+    Status gatherReshapeInfo(bool isBatchingModeAuto, const DynamicModelParameter& parameter, bool& isReshapeRequired, std::map<std::string, ov::PartialShape>& modelShapes);
 
     /**
       * @brief Flag determining if cache is disabled

@@ -74,6 +74,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_BATCH_DIMENSION, "Invalid batch dimension in shape"},
     {StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE, "Layout incompatible with given shape"},
     {StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED, "Batching set to AUTO but model contains scalar tensor"},
+    {StatusCode::OV_NO_INPUTS, "Cannot load model with no inputs"},
+    {StatusCode::OV_NO_OUTPUTS, "Cannnot load model with no outputs"},
     {StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER, "allow_cache is set to true with custom loader usage"},
     {StatusCode::UNKNOWN_ERROR, "Unknown error"},
 

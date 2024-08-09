@@ -60,6 +60,8 @@ enum class StatusCode {
     ALLOW_CACHE_WITH_CUSTOM_LOADER,
     LAYOUT_INCOMPATIBLE_WITH_SHAPE,
     MODEL_WITH_SCALAR_AUTO_UNSUPPORTED,
+    OV_NO_INPUTS,
+    OV_NO_OUTPUTS,
 
     // Model management
     MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */
