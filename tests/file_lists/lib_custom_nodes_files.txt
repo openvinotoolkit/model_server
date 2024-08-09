@@ -1,0 +1,7 @@
+
+libcustom_node_add_one.so
+libcustom_node_east_ocr.so
+libcustom_node_face_blur.so
+libcustom_node_horizontal_ocr.so
+libcustom_node_image_transformation.so
+libcustom_node_model_zoo_intel_object_detection.so

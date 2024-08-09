@@ -366,6 +366,7 @@ WORKDIR /
 ARG BASE_OS=redhat
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
+ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=redhat"
 COPY create_package.sh /
 RUN ./create_package.sh
 
@@ -374,6 +375,14 @@ RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --ui
 RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
 # Remove capi library
 RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; else exit 0 ; fi ;
+
+WORKDIR /test
+COPY tests/file_lists /test/
+# hadolint ignore=SC3010
+RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else /test/test_release_files.sh 1 ; fi ; \
+    /test/test_release_files.sh 0
+    
+WORKDIR /
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
