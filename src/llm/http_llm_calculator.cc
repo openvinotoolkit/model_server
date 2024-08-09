@@ -543,7 +543,7 @@ public:
 
                     std::string response = serializeUnaryResponse(completion, this->request->getEndpoint());
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
+                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                 } else {
                     // Beam search only supported for unary
                     std::vector<std::string> completions;
@@ -557,7 +557,7 @@ public:
 
                     std::string response = serializeUnaryResponse(completions, this->request->getEndpoint());
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
+                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                 }
             } else {
                 OVMS_PROFILE_SCOPE("Stream generation cycle");
