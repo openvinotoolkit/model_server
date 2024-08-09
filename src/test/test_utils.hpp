@@ -775,6 +775,8 @@ public:
     MOCK_METHOD(void, Reply, (), (override));
     MOCK_METHOD(void, Abort, (), (override));
     MOCK_METHOD(void, PartialReplyEnd, (), (override));
+    MOCK_METHOD(bool, IsDisconnected, (), (const override));
+    MOCK_METHOD(void, RegisterDisconnectionCallback, (std::function<void()>), (override));
 };
 
 /**
