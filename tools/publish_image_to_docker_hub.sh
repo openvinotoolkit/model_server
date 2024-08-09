@@ -35,7 +35,7 @@ do
             shift;
 done
 if [ "$HELP" = true ] ; then
-    echo 'Example usage: publish_image_to_docker_hub.sh --image registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu22_main --image_gpu registry.toolbox.iotg.sclab.intel.com/openvino/model_server-gpu:ubuntu22_main --release_tag 2023.2'
+    echo 'Example usage: publish_image_to_docker_hub.sh --image registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu22_main --image_gpu registry.toolbox.iotg.sclab.intel.com/openvino/model_server-gpu:ubuntu22_main --release_tag 2024.3'
     exit 1
 fi
 
@@ -51,14 +51,38 @@ echo "release_tag: $RELEASE_TAG";
 
 docker pull $IMAGE;
 docker tag $IMAGE openvino/model_server:$RELEASE_TAG;
+docker run openvino/model_server:$RELEASE_TAG --version;
+echo "Press y to continue..."
+read
+if [ "$REPLY" != "y" ] ; then
+    exit 1
+fi
 docker push openvino/model_server:$RELEASE_TAG;
 
 docker tag $IMAGE openvino/model_server:latest;
+docker run openvino/model_server:latest --version;
+echo "Press y to continue..."
+read
+if [ "$REPLY" != "y" ] ; then
+    exit 1
+fi
 docker push openvino/model_server:latest;
 
 docker pull $IMAGE_GPU;
 docker tag $IMAGE_GPU openvino/model_server:$RELEASE_TAG-gpu;
+docker run openvino/model_server:$RELEASE_TAG-gpu --version;
+echo "Press y to continue..."
+read
+if [ "$REPLY" != "y" ] ; then
+    exit 1
+fi
 docker push openvino/model_server:$RELEASE_TAG-gpu;
 
 docker tag $IMAGE_GPU openvino/model_server:latest-gpu;
+docker run openvino/model_server:latest-gpu --version;
+echo "Press y to continue..."
+read
+if [ "$REPLY" != "y" ] ; then
+    exit 1
+fi
 docker push openvino/model_server:latest-gpu;
