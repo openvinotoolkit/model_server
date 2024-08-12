@@ -459,15 +459,15 @@ static Status deserializePredictRequest(
                 switch (tensorInfo->getPreProcessingHint()) {
                 case TensorInfo::ProcessingHint::STRING_NATIVE:
                     SPDLOG_DEBUG("Request contains input in native string format: {}", name);
-                    RETURN_IF_ERR(convertStringRequestToOVTensor(*requestInputItr, tensor, nullptr));
+                    RETURN_IF_ERR(convertStringRequestToOVTensor(*requestInputItr, tensor, bufferLocation));
                     break;
                 case TensorInfo::ProcessingHint::STRING_2D_U8:
                     SPDLOG_DEBUG("Request contains input in 2D string format: {}", name);
-                    RETURN_IF_ERR(convertStringRequestToOVTensor2D(*requestInputItr, tensor, nullptr));
+                    RETURN_IF_ERR(convertStringRequestToOVTensor2D(*requestInputItr, tensor, bufferLocation));
                     break;
                 case TensorInfo::ProcessingHint::IMAGE:
                     SPDLOG_DEBUG("Request contains input in native file format: {}", name);
-                    RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, nullptr));
+                    RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation));
                     break;
                 default:
                     SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",
