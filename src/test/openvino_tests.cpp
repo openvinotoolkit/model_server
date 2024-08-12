@@ -305,8 +305,8 @@ TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasTest) {
     //SPDLOG_ERROR("finished GPU_OV_SET_VAA_BUF:{}", times[GPU_OV_SET_VAA_BUF][tSize]);
     SPDLOG_INFO("ER");
     // TODO replace int with names
-    //auto gpuCompiledModel = core.compile_model(model, vaGpuContext);
-    auto gpuCompiledModel = core.compile_model(model, "GPU");
+    auto gpuCompiledModel = core.compile_model(model, vaGpuContext);
+    //auto gpuCompiledModel = core.compile_model(model, "GPU");
     auto gpuInferRequest = gpuCompiledModel.create_infer_request();
     gpuInferRequest.set_input_tensor(0, remote_tensor.first);
     gpuInferRequest.set_input_tensor(1, remote_tensor.second);
@@ -320,8 +320,8 @@ TEST_F(OpenVINO, SetTensorTest) {
     size_t tSize = 10;
     int iterations = 10;
     iterations = 1'000;
-    // std::vector<size_t> sizeSet{10, 10 * 10, 10 * 100, 10 * 1'000, 10 * 10'000, 10 * 100'000, 10 * 1'000'000};
-    std::vector<size_t> sizeSet{1'000'000};
+    std::vector<size_t> sizeSet{10, 10 * 10, 10 * 100, 10 * 1'000, 10 * 10'000, 10 * 100'000, 10 * 1'000'000};
+    //std::vector<size_t> sizeSet{1'000'000};
     // load model
     Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
