@@ -503,7 +503,7 @@ TEST_F(OpenVINO, SetTensorTest) {
             times[GPU_OCL_SET_OCL_IN_AND_OV_OUT][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
             SPDLOG_ERROR("finished GPU_OCL_SET_OCL_IN_AND_OV_OUT");
         }
-        {  // GPU_OCL_SET_OV model loaded on gpu with both outpu & input being ov::Tensor
+        {  // GPU_OCL_SET_OV model loaded on gpu with both output & input being ov::Tensor
             cl_platform_id platformId;
             cl_device_id deviceId;
             cl_context openCLCContext = get_cl_context(platformId, deviceId);
@@ -1852,7 +1852,7 @@ TEST(FilteredMapTest, MapIntInt) {
 // replan
 // test negative paths with set callback
 // add negative result signaling with callback
-// split tests betwen files
+// split tests between files
 // refactor tests
 // test one input/output on device, one on cpu
 // ensure callback & output tensor is reset after inference

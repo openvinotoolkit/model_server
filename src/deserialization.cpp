@@ -130,8 +130,8 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
     // write test
     auto it = factories.find(requestInput.getBuffer()->getBufferType());
     if (it == factories.end()) {
-        SPDLOG_ERROR("Could not find appropiate tensor factory for buffer type:{}", requestInput.getBuffer()->getBufferType());
-        throw std::runtime_error("Could not find appropiate tensor factory");
+        SPDLOG_ERROR("Could not find appropriate tensor factory for buffer type:{}", requestInput.getBuffer()->getBufferType());
+        throw std::runtime_error("Could not find appropriate tensor factory");
     }
     IOVTensorFactory* factory = it->second.get();
     return factory->create(precision, shape, requestInput.getBuffer()->data());

@@ -22,7 +22,7 @@ namespace ovms {
 class IOVTensorFactory {
 public:
     /**
-     * Create tensor and intepret data ptr appropiately depending on the
+     * Create tensor and interpret data ptr appropriately depending on the
      * factory type.
      */
     virtual ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) = 0;

@@ -23,7 +23,7 @@ class RegularOVTensorFactory : public IOVTensorFactory {
 public:
     RegularOVTensorFactory() = default;
     /**
-     * Create tensor and intepret data ptr appropiately depending on the
+     * Create tensor and interpret data ptr appropriately depending on the
      * factory type.
      */
     ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) override;

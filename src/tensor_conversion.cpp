@@ -621,7 +621,7 @@ Status convertStringRequestToOVTensor(const TensorType& src, ov::Tensor& tensor,
 }
 template <>
 Status convertStringRequestToOVTensor(const ovms::InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer) {
-    SPDLOG_ERROR("Tensor coversion is not supported for C-API");
+    SPDLOG_ERROR("Tensor conversion is not supported for C-API");
     return StatusCode::NOT_IMPLEMENTED;
 }
 
@@ -646,7 +646,7 @@ Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& d
 }
 template <>
 Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, ovms::InferenceTensor& dst) {
-    SPDLOG_ERROR("Tensor coversion is not supported for C-API");
+    SPDLOG_ERROR("Tensor conversion is not supported for C-API");
     return StatusCode::NOT_IMPLEMENTED;
 }
 
