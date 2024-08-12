@@ -370,20 +370,16 @@ Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLa
             return status;
         }
     }
-    SPDLOG_ERROR("ER");
     status = loadInputTensors(config, parameter);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during loading input tensors");
         return status;
     }
-    SPDLOG_ERROR("ER");
     status = loadOutputTensors(config);
-    SPDLOG_ERROR("ER");
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during loading output tensors");
         return status;
     }
-    SPDLOG_ERROR("ER");
     return StatusCode::OK;
 }
 
@@ -436,16 +432,13 @@ Status ModelInstance::gatherReshapeInfo(bool isBatchingModeAuto, const DynamicMo
 }
 
 Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
-    SPDLOG_ERROR("ER");
     auto status = loadInputTensorsImpl(config, parameter);
-    SPDLOG_ERROR("ER:{}", this->inputsInfo.size());
     if (!status.ok())
         return status;
     if (this->inputsInfo.empty()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Tried to load model:{}, version: {} with no inputs", getName(), getVersion());
         return StatusCode::OV_NO_INPUTS;
     }
-    SPDLOG_ERROR("ER");
     return status;
 }
 Status ModelInstance::loadInputTensorsImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
