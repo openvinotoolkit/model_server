@@ -557,7 +557,7 @@ OVMS_Status* OVMS_InferenceAsync(OVMS_Server* server, OVMS_InferenceRequest* req
 // // TODO how to use that in MP
 //
 // \param response resp
-// \param flag Flag specyfying if the response is final response for request
+// \param flag Flag specifying if the response is final response for request
 // \param userStruct Data provided to callback, set in OVMS_InferenceRequestSetCompleteCallback
 typedef void (* OVMS_InferenceResponseCompleteCallback_t)(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 
