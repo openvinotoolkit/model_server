@@ -391,7 +391,7 @@ static void addReadyVersions(Model& model,
     for (auto& [modelVersion, modelInstance] : modelVersions) {
         // even if we have modelUnloadGuard model can have already state set to LOADING/UNLOADING
         // here we make choice to report it as AVAILABLE even if it is already in different state
-        // since we achieved to gain guard. Model could change state after sending response anyway.
+        // since we managed to obtain guard. Model could change state after sending response anyway.
         // Otherwise we could respond with metadata of one version but in response send information
         // that different version is ready
         if ((modelVersion == versionAvailableDuringInitialCheck) || (modelInstance.getStatus().getState() == ModelVersionState::AVAILABLE))
