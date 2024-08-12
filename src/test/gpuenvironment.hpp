@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,15 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
-#include "environment.hpp"
-#include "gpuenvironment.hpp"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    ::testing::InitGoogleMock(&argc, argv);
-    ::testing::AddGlobalTestEnvironment(new Environment);
-    ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
-    ::testing::FLAGS_gtest_death_test_style = "threadsafe";
-    return RUN_ALL_TESTS();
-}
+class GPUEnvironment : public testing::Environment {
+public:
+    void SetUp() override;
+    static bool gpuTestsEnabled;
+    static void skipWithoutGPU();
+};

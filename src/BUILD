@@ -1093,7 +1093,6 @@ cc_test(
         "test/ensemble_mapping_config_tests.cpp",
         "test/ensemble_metadata_test.cpp",
         "test/ensemble_config_change_stress.cpp",
-        "test/environment.hpp",
         "test/gather_node_test.cpp",
         "test/gcsfilesystem_test.cpp",
         "test/get_model_metadata_response_test.cpp",
@@ -1162,13 +1161,12 @@ cc_test(
             "//:disable_mediapipe" : [],
         }) + select({
             "//:not_disable_python": [
-                "test/text_streamer_test.cpp",
-                "test/pythonnode_test.cpp",
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
                 # LLM logic uses Python for processing Jinja templates
                 "test/llmnode_test.cpp",
                 "test/llmtemplate_test.cpp",
+                "test/pythonnode_test.cpp",
                 "test/text_streamer_test.cpp",
             ],
             "//:disable_python" : [],
@@ -1282,7 +1280,9 @@ cc_test(
         "-lssl",
     ],
     deps = [
-    	":openvino_test",
+    	":openvino_tests",
+	":libtest_environment",
+	":libtest_gpuenvironment",
     	":test_utils",
         "//src:ovms_lib",
         "//src:custom_nodes_common_lib",
@@ -1345,7 +1345,43 @@ cc_library(
 )
 
 cc_library(
-    name = "openvino_test",
+    name = "libtest_environment",
+    linkstatic = 1,
+    alwayslink = True,
+    hdrs = [
+        "test/environment.hpp",
+        ],
+    srcs = [
+        "test/environment.cpp",
+        ],
+    linkopts = [],
+    deps = [
+	"libovmslogging",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+)
+
+cc_library(
+    name = "libtest_gpuenvironment",
+    linkstatic = 1,
+    alwayslink = True,
+    hdrs = [
+        "test/gpuenvironment.hpp",
+        ],
+    srcs = [
+        "test/gpuenvironment.cpp",
+        ],
+    linkopts = [],
+    deps = [
+	"libovmslogging",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+)
+
+cc_library(
+    name = "openvino_tests",
     linkstatic = 1,
     alwayslink = True,
     srcs = [
@@ -1354,50 +1390,25 @@ cc_library(
     data = [
         "test/add_two_inputs_model/1/add.xml",
         "test/add_two_inputs_model/1/add.bin",
-        "test/binaryutils/grayscale.jpg",
-        "test/binaryutils/rgb.jpg",
-        "test/binaryutils/rgb2x2.jpg",
-        "test/binaryutils/rgb4x4.jpg",
         "test/c_api/config.json",
         "test/c_api/config_benchmark.json",
-        "test/c_api/config_dummy_dag.json",
         "test/c_api/config_dummy_dynamic_entry_dag.json",
-        "test/c_api/config_metadata_all.json",
         "test/c_api/config_standard_dummy.json",
         "test/c_api/config_standard_scalar.json",
         "test/configs/config_dummy_dynamic_shape.json",
-        "test/configs/emptyConfigWithMetrics.json",
-        "test/llm/graphkfspass.pbtxt",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
-        "test/dummy_fp64/1/saved_model.xml",
-        "test/dummy_fp64/1/saved_model.bin",
-        "test/dummy_saved_model/1/saved_model.pb",
-        "test/dummy_tflite/1/dummy.tflite",
-        "test/dummyUppercase/1/dummy.xml",
-        "test/dummyUppercase/1/dummy.bin",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
-        "test/passthrough/1/passthrough.xml",
-        "test/passthrough/1/passthrough.bin",
-        "test/passthrough_string/1/passthrough.xml",
-        "test/passthrough_string/1/passthrough.bin",
-        "test/summator/1/summator.xml",
-        "test/summator/1/summator.bin",
-        "test/scalar/1/saved_model.xml",
-        "test/scalar/1/saved_model.bin",
     ],
     linkopts = [
-        "-lxml2",
-        "-luuid",
         "-lstdc++fs",
-        "-lcrypto",
-        "-lssl",
 	# lib va
 	"-lva",
 	"-lva-drm",
     ],
     deps = [
+	":libtest_gpuenvironment",
         ":test_utils",
         "//src:ovms_lib",
         "@com_google_googletest//:gtest",
