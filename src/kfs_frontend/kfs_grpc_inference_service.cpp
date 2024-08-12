@@ -305,7 +305,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
             if (!status.ok()) {
                 return status;
             }
-            status = executor->infer(request, response, executionContext, reporterOut);
+            status = executor->infer(request, response, executionContext);//, reporterOut);
             INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, status.ok()));
             return status;
 #else

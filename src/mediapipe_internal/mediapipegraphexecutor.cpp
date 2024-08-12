@@ -41,7 +41,8 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     const PythonNodeResourcesMap& pythonNodeResourcesMap,
     const LLMNodeResourcesMap& llmNodeResourcesMap,
     PythonBackend* pythonBackend,
-    ServableMetricReporter* servableMetricReporter) :
+    //ServableMetricReporter* servableMetricReporter,
+    MediapipeServableMetricReporter* mediapipeServableMetricReporter_) :
     name(name),
     version(version),
     config(config),
@@ -53,7 +54,8 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     llmNodeResourcesMap(llmNodeResourcesMap),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(STARTING_TIMESTAMP),
-    servableMetricReporter(servableMetricReporter) {}
+    //servableMetricReporter(servableMetricReporter),
+    mediapipeServableMetricReporter(mediapipeServableMetricReporter_) {}
 
 const std::string MediapipeGraphExecutor::PYTHON_SESSION_SIDE_PACKET_TAG = "py";
 const std::string MediapipeGraphExecutor::LLM_SESSION_SIDE_PACKET_TAG = "llm";

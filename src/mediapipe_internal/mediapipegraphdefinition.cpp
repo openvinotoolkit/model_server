@@ -187,7 +187,8 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     name(name),
     status(SCHEDULER_CLASS_NAME, this->name),
     pythonBackend(pythonBackend),
-    reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, name, VERSION)) {
+    //reporter(std::make_unique<ServableMetricReporter>(metricConfig, registry, name, VERSION)),  // TODO: Remove
+    reporter_(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
     mgconfig = config;
     passKfsRequestFlag = false;
 }
@@ -256,7 +257,8 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
         this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
-        this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend, this->reporter.get());
+        this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend,// this->reporter.get(),
+        this->reporter_.get());
     return status;
 }
 

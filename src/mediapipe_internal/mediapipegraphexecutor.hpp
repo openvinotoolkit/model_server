@@ -70,7 +70,8 @@ class MediapipeGraphExecutor {
 
     ::mediapipe::Timestamp currentStreamTimestamp;
 
-    ServableMetricReporter* servableMetricReporter;
+    //ServableMetricReporter* servableMetricReporter;
+    MediapipeServableMetricReporter* mediapipeServableMetricReporter;
 
 public:
     static const std::string PYTHON_SESSION_SIDE_PACKET_TAG;
@@ -84,13 +85,25 @@ public:
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
         const LLMNodeResourcesMap& llmNodeResourcesMap,
         PythonBackend* pythonBackend,
-        ServableMetricReporter* servableMetricReporter);
+        //ServableMetricReporter* servableMetricReporter,
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter_);
+
+    class MetricGaugeGuard {
+        MetricGauge* metric;
+    public:
+        MetricGaugeGuard(MetricGauge* metric) : metric(metric) {
+            INCREMENT_IF_ENABLED(metric);
+        }
+        ~MetricGaugeGuard() {
+            DECREMENT_IF_ENABLED(metric);
+        }
+    };
 
     template <typename RequestType, typename ResponseType>
-    Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) {
+    Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {//, ServableMetricReporter*& reporterOut) {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", this->name);
-        reporterOut = this->servableMetricReporter;
+        MetricGaugeGuard currentGraphs(this->mediapipeServableMetricReporter->currentGraphs.get());
         ::mediapipe::CalculatorGraph graph;
         MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
         std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
@@ -189,6 +202,7 @@ public:
         SPDLOG_DEBUG("Start MediapipeGraphExecutor::inferEx mediapipe graph: {} execution", this->name);
         std::mutex sendMutex;
         try {
+            MetricGaugeGuard currentGraphs(this->mediapipeServableMetricReporter->currentGraphs.get());
             ::mediapipe::CalculatorGraph graph;
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph initialization");

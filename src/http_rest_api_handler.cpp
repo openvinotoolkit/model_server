@@ -490,9 +490,9 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
     }
     if (streamFieldVal == false) {
-        ServableMetricReporter* smr = nullptr;                                                         // Unused
+        //ServableMetricReporter* smr = nullptr;                                                         // Unused
         ExecutionContext ec{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};  // Unused
-        return executor->infer(&request, &response, ec, smr);
+        return executor->infer(&request, &response, ec);//, smr);
     } else {
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");

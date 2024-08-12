@@ -36,6 +36,9 @@ extern const std::string METRIC_NAME_CURRENT_REQUESTS;
 extern const std::string METRIC_NAME_REQUEST_TIME;
 extern const std::string METRIC_NAME_WAIT_FOR_INFER_REQ_TIME;
 
+extern const std::string METRIC_NAME_CURRENT_GRAPHS;
+
+
 class Status;
 /**
      * @brief This class represents metrics configuration
@@ -83,6 +86,7 @@ private:
         {METRIC_NAME_REQUEST_TIME},
         {METRIC_NAME_STREAMS},
         {METRIC_NAME_INFERENCE_TIME},
-        {METRIC_NAME_WAIT_FOR_INFER_REQ_TIME}};
+        //{METRIC_NAME_WAIT_FOR_INFER_REQ_TIME}};
+        {METRIC_NAME_CURRENT_GRAPHS}};
 };
 }  // namespace ovms

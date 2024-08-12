@@ -44,6 +44,7 @@ class MediapipeGraphDefinitionUnloadGuard;
 class MetricConfig;
 class MetricRegistry;
 class ServableMetricReporter;
+class MediapipeServableMetricReporter;
 class ModelManager;
 class MediapipeGraphExecutor;
 class Status;
@@ -160,7 +161,8 @@ private:
 
     PythonBackend* pythonBackend;
 
-    std::unique_ptr<ServableMetricReporter> reporter;
+    //std::unique_ptr<ServableMetricReporter> reporter;
+    std::unique_ptr<MediapipeServableMetricReporter> reporter_;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

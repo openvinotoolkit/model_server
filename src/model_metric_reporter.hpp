@@ -152,4 +152,12 @@ public:
     ModelMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
 };
 
+class MediapipeServableMetricReporter {
+    MetricRegistry* registry;
+public:
+    std::unique_ptr<MetricGauge> currentGraphs;
+
+    MediapipeServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& graphName);
+};
+
 }  // namespace ovms

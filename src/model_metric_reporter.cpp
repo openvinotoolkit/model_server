@@ -323,4 +323,28 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
     }
 }
 
+MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& graphName) :
+    registry(registry) {
+    if (!registry) {
+        return;
+    }
+
+    if (!metricConfig || !metricConfig->metricsEnabled) {
+        return;
+    }
+
+    auto familyName = METRIC_NAME_CURRENT_GRAPHS;
+    if (metricConfig->isFamilyEnabled(familyName)) {
+        auto family = registry->createFamily<MetricGauge>(familyName,
+            "Number of MediaPipe graphs in process.");
+        THROW_IF_NULL(family, "cannot create family");
+        this->currentGraphs = family->addMetric(
+            {{"name", graphName}});
+        THROW_IF_NULL(this->currentGraphs, "cannot create metric");
+    } else {
+        SPDLOG_INFO("DISABLED {}", METRIC_NAME_CURRENT_GRAPHS);
+    }
+}
+
+
 }  // namespace ovms

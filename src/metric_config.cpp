@@ -44,6 +44,9 @@ const std::string METRIC_NAME_CURRENT_REQUESTS = "ovms_current_requests";
 const std::string METRIC_NAME_REQUEST_TIME = "ovms_request_time_us";
 const std::string METRIC_NAME_WAIT_FOR_INFER_REQ_TIME = "ovms_wait_for_infer_req_time_us";
 
+const std::string METRIC_NAME_CURRENT_GRAPHS = "ovms_current_graphs";
+
+
 bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");
     return std::regex_match(endpoint, valid_endpoint_regex);
