@@ -28,6 +28,7 @@
 #include "../ov_utils.hpp"
 #include "../status.hpp"
 #include "c_api_test_utils.hpp"
+#include "gpuenvironment.hpp"
 #include "ocl_utils.hpp"
 #include "test_utils.hpp"
 
@@ -82,9 +83,17 @@ cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
     }
     return openCLCContext;
 }
+
+class OpenVINO : public ::testing::Test {
+public:
+    void SetUp() override {
+        GPUEnvironment::skipWithoutGPU();
+    }
+};
+
 constexpr bool queueReadWriteBlockingTrue = true;
 constexpr bool retainCLContextOwnership = true;
-TEST(OpenVINO, ExtractContextFromModel) {
+TEST_F(OpenVINO, ExtractContextFromModel) {
     // TODO split
     Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
@@ -130,7 +139,7 @@ TEST(OpenVINO, ExtractContextFromModel) {
     }
 }
 
-class OpenVINOContextFromModel : public ::testing::Test {
+class OpenVINOContextFromModel : public OpenVINO {
 protected:
     Core core;
     std::shared_ptr<ov::Model> model;
@@ -142,6 +151,7 @@ protected:
     cl_context ctxFromModel;
     uint32_t inputSecondDim = 100;
     void SetUp() {
+        OpenVINO::SetUp();
         Core core;
         this->model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
         auto input = model->get_parameters().at(0);
@@ -171,7 +181,7 @@ protected:
     }
     void TearDown() {}
 };
-TEST(OpenVINO, LoadModelWithPrecreatedContext) {
+TEST_F(OpenVINO, LoadModelWithPrecreatedContext) {
     Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
     auto input = model->get_parameters().at(0);
@@ -224,7 +234,7 @@ struct CallbackUnblockingStruct {
     cl::CommandQueue* queue = nullptr;
 };
 #ifndef TEST_VAAPI
-TEST(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasTest) {
+TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasTest) {
     ov::element::Type_t dtype = ov::element::Type_t::f32;
     Core core;
     //auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
@@ -306,7 +316,7 @@ TEST(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasTest) {
 }
 #endif
 
-TEST(OpenVINO, SetTensorTest) {
+TEST_F(OpenVINO, SetTensorTest) {
     size_t tSize = 10;
     int iterations = 10;
     iterations = 1'000;
@@ -831,16 +841,12 @@ TEST(OpenVINO, SetTensorTest) {
             gpuInferRequest.set_tensor(output, outputs[j]);
             SPDLOG_INFO("set_callback");
             gpuInferRequest.set_callback([&gpuInferRequest, &callbackStruct, j](std::exception_ptr exception) {
-                SPDLOG_INFO("entered callback");
                 gpuInferRequest.set_callback([](std::exception_ptr exception) {});
-                SPDLOG_INFO("callback start");
                 callbackStruct[j].signal.set_value(42);
-                SPDLOG_INFO("callback end");
             });
             SPDLOG_INFO("start async");
             gpuInferRequest.start_async();
             for (auto i = 0; i < iterations; ++i) {
-                SPDLOG_INFO("iter start");
                 auto j = (i + 1) % 2;
                 auto& gpuInferRequest = gpuInferRequests[j];
 
@@ -848,34 +854,21 @@ TEST(OpenVINO, SetTensorTest) {
                 ov::Tensor outputOVTensor = outputs[j];
                 gpuInferRequest.set_tensor(input, inputs[j]);
                 gpuInferRequest.set_tensor(output, outputs[j]);
-                SPDLOG_INFO("set_callback");
                 gpuInferRequest.set_callback([&gpuInferRequest, &callbackStruct, j](std::exception_ptr exception) {
-                    SPDLOG_INFO("entered callback");
                     gpuInferRequest.set_callback([](std::exception_ptr exception) {});
-                    SPDLOG_INFO("callback start");
                     callbackStruct[j].signal.set_value(42);
-                    SPDLOG_INFO("callback end");
                 });
-                SPDLOG_INFO("start async");
                 gpuInferRequest.start_async();
                 // as we scheduled next infer we receive results from previous
                 j = i % 2;
-                SPDLOG_INFO("waiting to unblock");
                 auto callbackReturnValue = unblockSignal[j].get();
-                SPDLOG_INFO("Unblocked thread");
                 callbackStruct[j].signal = std::promise<uint32_t>();
-                SPDLOG_INFO("reset promise");
                 unblockSignal[j] = callbackStruct[j].signal.get_future();
-                SPDLOG_INFO("reset future");
-                SPDLOG_INFO("iter end");
             }
-            SPDLOG_ERROR("ER");
             auto callbackReturnValue = unblockSignal[iterations % 2].get();
-            SPDLOG_ERROR("ER");
             auto stop = std::chrono::high_resolution_clock::now();
             SPDLOG_ERROR("Log plugin");
             ovms::logOVPluginConfig([&gpuCompiledModel](const std::string& key) { return gpuCompiledModel.get_property(key); }, " {someAuthor} ", " {some details} ");
-            SPDLOG_ERROR("Log plugin end");
             times[GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS_CONCUR][tSize] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;  // ms
             SPDLOG_ERROR("finished GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS_CONCUR:{}", times[GPU_OV_SET_OCL_BUFF_DIFF_TENS_SAME_FULL_OVMS_CONCUR][tSize]);
         }
@@ -901,7 +894,14 @@ TEST(OpenVINO, SetTensorTest) {
 
 #include "../ocl_utils.hpp"
 
-TEST(CAPINonCopy, SetOpenCLBufferAsInputTensor) {
+class CAPINonCopy : public ::testing::Test {
+public:
+    void SetUp() override {
+        GPUEnvironment::skipWithoutGPU();
+    }
+};
+
+TEST_F(CAPINonCopy, SetOpenCLBufferAsInputTensor) {
     cl_platform_id platformId;
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);
@@ -971,7 +971,14 @@ TEST(CAPINonCopy, SetOpenCLBufferAsInputTensor) {
     OVMS_ServerDelete(cserver);
 }
 
-TEST(OpenCL, UseDifferentContextWhenReadingAndWritingToBuffer) {
+class OpenCL : public ::testing::Test {
+public:
+    void SetUp() override {
+        GPUEnvironment::skipWithoutGPU();
+    }
+};
+
+TEST_F(OpenCL, UseDifferentContextWhenReadingAndWritingToBuffer) {
     cl_platform_id platformId;
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);
@@ -1002,7 +1009,7 @@ TEST(OpenCL, UseDifferentContextWhenReadingAndWritingToBuffer) {
     }
 }
 
-TEST(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
+TEST_F(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     // start CAPI server
     std::string port = "9000";
     randomizePort(port);
@@ -1098,7 +1105,7 @@ const float INITIAL_VALUE{0.13666};
 const float GARBAGE_VALUE = 42.66613;
 const float FLOAT_TOLLERANCE{0.001};
 
-TEST(CAPISyncWithCalback, DummyCallback) {
+TEST_F(CAPINonCopy, SyncWithCallbackDummy) {
     std::string port = "9000";
     randomizePort(port);
     OVMS_ServerSettings* serverSettings = nullptr;
@@ -1193,7 +1200,7 @@ static void callbackUnblockingAndFreeingRequest(OVMS_InferenceResponse* response
 
 cl::CommandQueue* globalQueue = nullptr;
 
-TEST(CAPIAsyncWithCallback, DummyCallback) {
+TEST_F(CAPINonCopy, AsyncWithCallbackDummy) {
     cl_platform_id platformId;
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);
@@ -1286,6 +1293,10 @@ protected:
     OVMS_Server* cserver;
 
 public:
+    void SetUp() override {
+        GPUEnvironment::skipWithoutGPU();
+        TestWithTempDir::SetUp();
+    }
     void SetUpConfig(const std::string& configContent, size_t elementsCount) {
         ovmsConfig = configContent;
         const std::string STRING_TO_REPLACE{"SECOND_DIM_TO_REPLACE"};
@@ -1294,8 +1305,8 @@ public:
             ovmsConfig.replace(it, STRING_TO_REPLACE.size(), std::to_string(elementsCount));
         }
         configFilePath = directoryPath + "/ovms_config.json";
-        SPDLOG_ERROR("ConfigConternt:{}", ovmsConfig);
-        SPDLOG_ERROR("ConfigConternt:{}", configFilePath);
+        SPDLOG_INFO("ConfigContent:{}", ovmsConfig);
+        SPDLOG_INFO("config path:{}", configFilePath);
     }
 };
 
@@ -1403,7 +1414,7 @@ TEST_F(CAPIGPUPerfComparison, Dummy) {
     std::cout << "" << fps * elementsCount << " \t\t ";
 }
 
-TEST(OpenVINO, CallbacksTest) {
+TEST_F(OpenVINO, CallbacksTest) {
     Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
     const std::string inputName{"b"};
@@ -1830,9 +1841,6 @@ TEST(FilteredMapTest, MapIntInt) {
     TEST_FILTER(original, filter123);
 }
 
-TEST_F(OpenVINOContextFromModel, Some) {
-    SPDLOG_ERROR("ER");
-}
 // TODO
 // test inference with CPU with callback
 // test inferene with GPU with different context than from model
@@ -1846,7 +1854,6 @@ TEST_F(OpenVINOContextFromModel, Some) {
 // add negative result signaling with callback
 // split tests betwen files
 // refactor tests
-// rebase
 // test one input/output on device, one on cpu
 // ensure callback & output tensor is reset after inference
 // add tests after capi with output tensors set on the same ov::InferReq

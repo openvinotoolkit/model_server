@@ -15,20 +15,10 @@
 //*****************************************************************************
 #pragma once
 
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../logging.hpp"
-
 class Environment : public testing::Environment {
 public:
-    ~Environment() override {}
-
-    void SetUp() override {
-        ovms::configure_logger("TRACE", "");
-    }
-
-    void TearDown() override {}
+    void SetUp() override;
 };
