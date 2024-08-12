@@ -524,35 +524,14 @@ public:
             if (!this->request->isStream()) {
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
 
-                std::vector<ov::genai::GenerationOutput> generationOutput = this->generationHandle->read_all();
+                std::vector<ov::genai::GenerationOutput> generationOutputs = this->generationHandle->read_all();
                 if (this->generationHandle->get_status() == ov::genai::GenerationStatus::DROPPED_BY_HANDLE) {
                     return absl::CancelledError();
                 }
-                RET_CHECK(generationOutput.size() >= 1);
-                std::sort(generationOutput.begin(), generationOutput.end(), [](ov::genai::GenerationOutput& r1, ov::genai::GenerationOutput& r2) {
+                RET_CHECK(generationOutputs.size() >= 1);
+                std::sort(generationOutputs.begin(), generationOutputs.end(), [](ov::genai::GenerationOutput& r1, ov::genai::GenerationOutput& r2) {
                     return r1.score > r2.score;
                 });
-
-                // legacy
-                if (generationOutput.size() == 1) {
-                    std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
-                    std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(nodeResources->cbPipe->get_tokenizer());
-                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
-                    std::string completion = tokenizer->decode(tokens);
-
-                    std::string response = serializeUnaryResponse(completion, this->request->getEndpoint());
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
-                } else {
-                    // Beam search only supported for unary
-                    std::vector<std::string> completions;
-                    for (ov::genai::GenerationOutput& out : generationOutput) {
-                        std::vector<int64_t> tokens = out.generated_token_ids;
-                        std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(nodeResources->cbPipe->get_tokenizer());
-                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
-                        std::string completion = tokenizer->decode(tokens);
-                        completions.emplace_back(completion);
-                    }
 
                 std::string response = serializeUnaryResponse(generationOutputs, this->request->getEndpoint());
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);

@@ -183,7 +183,7 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonFinishReasonStop) {
             "model": "llmDummyKFS",
             "stream": false,
             "ignore_eos": false,
-            "max_tokens": 4096,
+            "max_tokens": 4095,
             "prompt": "What is OpenVINO?"
         }
     )";
@@ -397,7 +397,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonFinishReasonStop) {
             "stream": false,
             "seed" : 1,
             "ignore_eos": false,
-            "max_tokens": 4096,
+            "max_tokens": 4095,
             "messages": [
             {
                 "role": "user",

@@ -29,8 +29,7 @@ node {
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
           models_path: "/ovms/llm_testing/facebook/opt-125m",
-          plugin_config: "{\"INFERENCE_PRECISION_HINT\":\"f32\"}",
-          max_tokens_limit: 4096
+          plugin_config: "{\"INFERENCE_PRECISION_HINT\":\"f32\"}"
         }
     }
     input_stream_handler {
