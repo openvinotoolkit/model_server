@@ -399,9 +399,8 @@ class HttpLLMCalculator : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
 
-    std::string serializeUnaryResponse(const std::string& completeResponse, Endpoint endpoint);
-    std::string serializeUnaryResponse(const std::vector<std::string>& completeResponse, Endpoint endpoint);
-    std::string serializeStreamingChunk(const std::string& chunkResponse, bool stop, Endpoint endpoint);
+    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, Endpoint endpoint);
+    std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason, Endpoint endpoint);
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -525,40 +524,18 @@ public:
             if (!this->request->isStream()) {
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
 
-                std::vector<ov::genai::GenerationOutput> generationOutput = this->generationHandle->read_all();
+                std::vector<ov::genai::GenerationOutput> generationOutputs = this->generationHandle->read_all();
                 if (this->generationHandle->get_status() == ov::genai::GenerationStatus::DROPPED_BY_HANDLE) {
                     return absl::CancelledError();
                 }
-                RET_CHECK(generationOutput.size() >= 1);
-                std::sort(generationOutput.begin(), generationOutput.end(), [](ov::genai::GenerationOutput& r1, ov::genai::GenerationOutput& r2) {
+                RET_CHECK(generationOutputs.size() >= 1);
+                std::sort(generationOutputs.begin(), generationOutputs.end(), [](ov::genai::GenerationOutput& r1, ov::genai::GenerationOutput& r2) {
                     return r1.score > r2.score;
                 });
 
-                // legacy
-                if (generationOutput.size() == 1) {
-                    std::vector<int64_t> tokens = generationOutput[0].generated_token_ids;
-                    std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(nodeResources->cbPipe->get_tokenizer());
-                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
-                    std::string completion = tokenizer->decode(tokens);
-
-                    std::string response = serializeUnaryResponse(completion, this->request->getEndpoint());
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
-                } else {
-                    // Beam search only supported for unary
-                    std::vector<std::string> completions;
-                    for (ov::genai::GenerationOutput& out : generationOutput) {
-                        std::vector<int64_t> tokens = out.generated_token_ids;
-                        std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(nodeResources->cbPipe->get_tokenizer());
-                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
-                        std::string completion = tokenizer->decode(tokens);
-                        completions.emplace_back(completion);
-                    }
-
-                    std::string response = serializeUnaryResponse(completions, this->request->getEndpoint());
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
-                }
+                std::string response = serializeUnaryResponse(generationOutputs, this->request->getEndpoint());
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             } else {
                 OVMS_PROFILE_SCOPE("Stream generation cycle");
                 // Streaming scenario
@@ -578,20 +555,23 @@ public:
                     // TODO(dkalinow): Move this logic to CB library
                     int64_t token = generationOutputs.begin()->second.generated_token_ids[0];
                     auto chunk = this->streamer->put(token);
-                    if (chunk.has_value()) {
-                        std::string response = packIntoServerSideEventMessage(
-                            serializeStreamingChunk(chunk.value(), false, this->request->getEndpoint()));
-                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", response);
+                    ov::genai::GenerationFinishReason finishReason = generationOutputs.begin()->second.finish_reason;
+                    if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
+                        if (chunk.has_value()) {
+                            std::string response = packIntoServerSideEventMessage(
+                                serializeStreamingChunk(chunk.value(), finishReason, this->request->getEndpoint()));
+                            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", response);
+                            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
+                        }
+                        cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
+                    } else {  // finish generation
+                        OVMS_PROFILE_SCOPE("Generation of last streaming response");
+                        std::string response = packIntoServerSideEventMessage(serializeStreamingChunk(this->streamer->end(), finishReason, this->request->getEndpoint()));
+                        response += packIntoServerSideEventMessage("[DONE]");
+                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", response);
+                        // Produce last message, but do not produce loopback packets anymore so this is last Process() call
                         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                     }
-                    cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
-                } else {
-                    OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                    std::string response = packIntoServerSideEventMessage(serializeStreamingChunk(this->streamer->end(), true, this->request->getEndpoint()));
-                    response += packIntoServerSideEventMessage("[DONE]");
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", response);
-                    // Produce last message, but do not produce loopback packets anymore so this is last Process() call
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                 }
             }
         } catch (ov::AssertFailure& e) {
@@ -605,11 +585,7 @@ public:
     }
 };
 
-std::string HttpLLMCalculator::serializeUnaryResponse(const std::string& completeResponse, Endpoint endpoint) {
-    return serializeUnaryResponse(std::vector<std::string>{completeResponse}, endpoint);
-}
-
-std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::string>& completeResponses, Endpoint endpoint) {
+std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, Endpoint endpoint) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -621,9 +597,12 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     writer.StartArray();  // [
     int i = 0;
     int n = this->request->getNumReturnSequences().value_or(1);
-    for (const std::string& completeResponse : completeResponses) {
+    for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
         if (i >= n)
             break;
+
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_token_ids);
+        std::string completeResponse = nodeResources->cbPipe->get_tokenizer().decode(generationOutput.generated_token_ids);
         writer.StartObject();  // {
         // finish_reason: string; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)
         // "stop" => natural stop point due to stopping criteria <---------------- the only used so far, remaining are TODO
@@ -632,7 +611,16 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
         // "tool_calls" => generation stopped and waiting for tool output
         // "function_call" => deprecated
         writer.String("finish_reason");
-        writer.String("stop");
+        switch (generationOutput.finish_reason) {
+        case ov::genai::GenerationFinishReason::STOP:
+            writer.String("stop");
+            break;
+        case ov::genai::GenerationFinishReason::LENGTH:
+            writer.String("length");
+            break;
+        default:
+            writer.Null();
+        }
         // index: integer; Choice index, only n=1 supported anyway
         writer.String("index");
         writer.Int(i++);
@@ -694,7 +682,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<std::str
     return buffer.GetString();
 }
 
-std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkResponse, bool stop, Endpoint endpoint) {
+std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason, Endpoint endpoint) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -714,10 +702,16 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     // "function_call" => deprecated
     // null - natural scenario when the generation has not completed yet
     writer.String("finish_reason");
-    if (stop)
+    switch (finishReason) {
+    case ov::genai::GenerationFinishReason::STOP:
         writer.String("stop");
-    else
+        break;
+    case ov::genai::GenerationFinishReason::LENGTH:
+        writer.String("length");
+        break;
+    default:
         writer.Null();
+    }
     // index: integer; Choice index, only n=1 supported anyway
     writer.String("index");
     writer.Int(0);
