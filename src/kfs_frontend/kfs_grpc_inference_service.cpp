@@ -385,10 +385,16 @@ Status KFSInferenceServiceImpl::buildResponse(
 #endif
 
 static void addReadyVersions(Model& model,
+    model_version_t versionAvailableDuringInitialCheck,
     KFSModelMetadataResponse* response) {
     auto modelVersions = model.getModelVersionsMapCopy();
     for (auto& [modelVersion, modelInstance] : modelVersions) {
-        if (modelInstance.getStatus().getState() == ModelVersionState::AVAILABLE)
+        // even if we have modelUnloadGuard model can have already state set to LOADING/UNLOADING
+        // here we make choice to report it as AVAILABLE even if it is already in different state
+        // since we managed to obtain guard. Model could change state after sending response anyway.
+        // Otherwise we could respond with metadata of one version but in response send information
+        // that different version is ready
+        if ((modelVersion == versionAvailableDuringInitialCheck) || (modelInstance.getStatus().getState() == ModelVersionState::AVAILABLE))
             response->add_versions(std::to_string(modelVersion));
     }
 }
@@ -408,7 +414,7 @@ Status KFSInferenceServiceImpl::buildResponse(
 
     response->Clear();
     response->set_name(instance.getName());
-    addReadyVersions(model, response);
+    addReadyVersions(model, instance.getVersion(), response);
     response->set_platform(PLATFORM);
 
     for (const auto& input : instance.getInputsInfo()) {
