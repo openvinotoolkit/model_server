@@ -254,12 +254,8 @@ TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasTest) {
         ppp.input().model().set_layout("NCHW");
     } else {  // CPU decode
         ppp.input(input_tensor_name).tensor().set_layout({"NHWC"}).set_element_type(ov::element::u8);
-        //ppp.input(input_tensor_name).model().set_layout(inputLayout);
     }
     model = ppp.build();
-    //GTEST_SKIP() << "Need working sample with VAAPI";
-    //auto gpuCompiledModel = core.compile_model(model, "GPU");
-    //auto gpuInferRequest = gpuCompiledModel.create_infer_request();
     int drmFd = open("/dev/dri/renderD128", O_RDWR);
     if (drmFd < 0) {
         perror("Cannot open DRM device");
@@ -289,7 +285,6 @@ TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasTest) {
     surface_attrib.value.type = VAGenericValueTypeFloat;  // VAGenericValueTypeInteger;
     surface_attrib.value.value.i = VA_FOURCC_NV12;        // Specify the desired pixel format
 
-    SPDLOG_INFO("ER");
     // Create the VA surface
     VASurfaceID va_surface;
     status = vaCreateSurfaces(vaDisplay, VA_RT_FORMAT_YUV420, y_plane_size, uv_plane_size, &va_surface, 1, &surface_attrib, 1);
@@ -299,20 +294,18 @@ TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasTest) {
         close(drmFd);
         ASSERT_TRUE(false);
     }
-    SPDLOG_INFO("ER");
-    //auto remote_tensor = vaGpuContext.create_tensor_nv12(y_plane_surface, uv_plane_surface);
-    auto remote_tensor = vaGpuContext.create_tensor_nv12(y_plane_size, uv_plane_size, va_surface);
-    //SPDLOG_ERROR("finished GPU_OV_SET_VAA_BUF:{}", times[GPU_OV_SET_VAA_BUF][tSize]);
-    SPDLOG_INFO("ER");
     // TODO replace int with names
     auto gpuCompiledModel = core.compile_model(model, vaGpuContext);
     //auto gpuCompiledModel = core.compile_model(model, "GPU");
+    SPDLOG_INFO("ER");
+    auto ovWrappedVAContext = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::VAContext>();
+    SPDLOG_INFO("ER");
     auto gpuInferRequest = gpuCompiledModel.create_infer_request();
+    //auto remote_tensor = vaGpuContext.create_tensor_nv12(y_plane_size, uv_plane_size, va_surface);
+    auto remote_tensor = ovWrappedVAContext.create_tensor_nv12(y_plane_size, uv_plane_size, va_surface);
     gpuInferRequest.set_input_tensor(0, remote_tensor.first);
     gpuInferRequest.set_input_tensor(1, remote_tensor.second);
-    SPDLOG_INFO("ER");
     gpuInferRequest.infer();
-    SPDLOG_INFO("ER");
 }
 #endif
 
@@ -320,8 +313,8 @@ TEST_F(OpenVINO, SetTensorTest) {
     size_t tSize = 10;
     int iterations = 10;
     iterations = 1'000;
-    std::vector<size_t> sizeSet{10, 10 * 10, 10 * 100, 10 * 1'000, 10 * 10'000, 10 * 100'000, 10 * 1'000'000};
-    //std::vector<size_t> sizeSet{1'000'000};
+    //std::vector<size_t> sizeSet{10, 10 * 10, 10 * 100, 10 * 1'000, 10 * 10'000, 10 * 100'000, 10 * 1'000'000};
+    std::vector<size_t> sizeSet{1'000'000};
     // load model
     Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
@@ -800,7 +793,6 @@ TEST_F(OpenVINO, SetTensorTest) {
                 ASSERT_TRUE(false);
             }
             SPDLOG_INFO("ER");
-            //auto remote_tensor = vaGpuContext.create_tensor_nv12(y_plane_surface, uv_plane_surface);
             auto remote_tensor = vaGpuContext.create_tensor_nv12(y_plane_size, uv_plane_size, va_surface);
             SPDLOG_ERROR("finished GPU_OV_SET_VAA_BUF:{}", times[GPU_OV_SET_VAA_BUF][tSize]);
             SPDLOG_INFO("ER");
