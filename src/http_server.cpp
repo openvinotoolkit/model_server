@@ -34,6 +34,7 @@
 #pragma GCC diagnostic pop
 
 #include "http_rest_api_handler.hpp"
+#include "http_metric_rest_api_handler.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -241,6 +242,79 @@ private:
     std::unique_ptr<HttpRestApiHandler> handler_;
 };
 
+class MetricApiRequestDispatcher {
+public:
+    MetricApiRequestDispatcher(ovms::Server& ovmsServer, int timeout_in_ms) {
+        handler_ = std::make_unique<HttpMetricRestApiHandler>(ovmsServer, timeout_in_ms);
+    }
+
+    net_http::RequestHandler dispatch(net_http::ServerRequestInterface* req) {
+        return [this](net_http::ServerRequestInterface* req) {
+            try {
+                //this->processMetrics()
+                this->processRequest(req);
+                SPDLOG_INFO(" -------------------------------- Metric endpoint reached");
+            } catch (...) {
+                SPDLOG_DEBUG("Exception caught in REST request handler");
+                req->ReplyWithStatus(net_http::HTTPStatusCode::ERROR);
+            }
+        };
+    }
+
+private:
+    void parseHeaders(const net_http::ServerRequestInterface* req, std::vector<std::pair<std::string, std::string>>* headers) {
+        if (req->GetRequestHeader("Inference-Header-Content-Length").size() > 0) {
+            std::pair<std::string, std::string> header{"Inference-Header-Content-Length", req->GetRequestHeader("Inference-Header-Content-Length")};
+            headers->emplace_back(header);
+        }
+    }
+    void processRequest(net_http::ServerRequestInterface* req) {
+        SPDLOG_DEBUG("REST request {}", req->uri_path());
+        std::string body;
+        int64_t num_bytes = 0;
+        auto request_chunk = req->ReadRequestBytes(&num_bytes);
+        while (request_chunk != nullptr) {
+            body.append(std::string_view(request_chunk.get(), num_bytes));
+            request_chunk = req->ReadRequestBytes(&num_bytes);
+        }
+
+        std::vector<std::pair<std::string, std::string>> headers;
+        parseHeaders(req, &headers);
+        std::string output;
+        SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
+            req->http_method(),
+            req->uri_path(),
+            body.size());
+        HttpResponseComponents responseComponents;
+        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, req);
+        if (status == StatusCode::PARTIAL_END) {
+            // No further messaging is required.
+            // Partial responses were delivered via "req" object.
+            return;
+        }
+        if (!status.ok() && output.empty()) {
+            output.append("{\"error\": \"" + status.string() + "\"}");
+        }
+        const auto http_status = http(status);
+        if (responseComponents.inferenceHeaderContentLength.has_value()) {
+            std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
+            headers.emplace_back(header);
+        }
+        for (const auto& kv : headers) {
+            req->OverwriteResponseHeader(kv.first, kv.second);
+        }
+        req->WriteResponseString(output);
+        if (http_status != net_http::HTTPStatusCode::OK && http_status != net_http::HTTPStatusCode::CREATED) {
+            SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
+                req->http_method(),
+                req->uri_path(),
+                status.string());
+        }
+        req->ReplyWithStatus(http_status);
+    }
+    std::unique_ptr<HttpMetricRestApiHandler> handler_;
+};
+
 std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
     auto options = std::make_unique<net_http::ServerOptions>();
     options->AddPort(static_cast<uint32_t>(port));
@@ -270,4 +344,35 @@ std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address
 
     return nullptr;
 }
+
+std::unique_ptr<http_server> createAndStartMetricServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
+    auto options = std::make_unique<net_http::ServerOptions>();
+    options->AddPort(static_cast<uint32_t>(port));
+    options->SetAddress(address);
+    options->SetExecutor(std::make_unique<RequestExecutor>(num_threads));
+
+    auto server = net_http::CreateEvHTTPServer(std::move(options));
+    if (server == nullptr) {
+        SPDLOG_ERROR("Failed to create http server");
+        return nullptr;
+    }
+
+    std::shared_ptr<MetricApiRequestDispatcher> dispatcher =
+        std::make_shared<MetricApiRequestDispatcher>(ovmsServer, timeout_in_ms);
+
+    net_http::RequestHandlerOptions handler_options;
+    server->RegisterRequestDispatcher(
+        [dispatcher](net_http::ServerRequestInterface* req) {
+            return dispatcher->dispatch(std::move(req));
+        },
+        handler_options);
+
+    if (server->StartAcceptingRequests()) {
+        SPDLOG_INFO("REST server listening on port {} with {} threads", port, num_threads);
+        return server;
+    }
+
+    return nullptr;
+}
+
 }  // namespace ovms

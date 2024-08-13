@@ -38,4 +38,7 @@ using http_server = tensorflow::serving::net_http::HTTPServerInterface;
  * @return std::unique_ptr<http_server> 
  */
 std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
+
+std::unique_ptr<http_server> createAndStartMetricServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
+
 }  // namespace ovms

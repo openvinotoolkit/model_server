@@ -30,10 +30,8 @@
 
 #include "rest_parser.hpp"
 #include "status.hpp"
+#include "rest_api_handler_common.hpp"
 
-namespace tensorflow::serving::net_http {
-class ServerRequestInterface;
-}
 
 namespace ovms {
 class ServableMetricReporter;
@@ -42,37 +40,6 @@ class GetModelMetadataImpl;
 class Server;
 class ModelManager;
 
-enum RequestType { Predict,
-    GetModelStatus,
-    GetModelMetadata,
-    ConfigReload,
-    ConfigStatus,
-    KFS_GetModelReady,
-    KFS_Infer,
-    KFS_GetModelMetadata,
-    KFS_GetServerReady,
-    KFS_GetServerLive,
-    KFS_GetServerMetadata,
-    V3,
-    Metrics };
-
-struct HttpRequestComponents {
-    RequestType type;
-    std::string_view http_method;
-    std::string model_name;
-    std::optional<int64_t> model_version;
-    std::optional<std::string_view> model_version_label;
-    std::string processing_method;
-    std::string model_subresource;
-    std::optional<int> inferenceHeaderContentLength;
-    std::vector<std::pair<std::string, std::string>> headers;
-};
-
-struct HttpResponseComponents {
-    std::optional<int> inferenceHeaderContentLength;
-};
-
-using HandlerCallbackFn = std::function<Status(const std::string_view, const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&, tensorflow::serving::net_http::ServerRequestInterface*)>;
 
 class HttpRestApiHandler {
 public:

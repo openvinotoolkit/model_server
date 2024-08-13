@@ -265,9 +265,12 @@ cc_library(
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
         "http_rest_api_handler.cpp",
+        "http_metric_rest_api_handler.cpp",
         "http_server.cpp",
         "httpservermodule.cpp",
+        "rest_api_handler_common.hpp",
         "http_rest_api_handler.hpp",
+        "http_metric_rest_api_handler.hpp",
         "http_server.hpp",
         "httpservermodule.hpp",
         "kfs_frontend/kfs_grpc_inference_service.cpp",
@@ -719,12 +722,15 @@ cc_library(
 cc_library( # TODO split dependencies
     name = "libovmshttpservermodule",
     hdrs = [
+        "rest_api_handler_common.hpp",
         "http_rest_api_handler.hpp",
+        "http_metric_rest_api_handler.hpp",
         "http_server.hpp",
         "httpservermodule.hpp",
     ],
     srcs = [
         "http_rest_api_handler.cpp",
+        "http_metric_rest_api_handler.cpp",
         "http_server.cpp",
         "httpservermodule.cpp",
     ],

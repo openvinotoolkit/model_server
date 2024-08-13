@@ -43,20 +43,39 @@ Status HTTPServerModule::start(const ovms::Config& config) {
         SPDLOG_ERROR(status.string());
         return status;
     }
+    metricServer = ovms::createAndStartMetricServer(config.restBindAddress(), config.restPort()-1, 20, this->ovmsServer);
+    if (server == nullptr) {
+        std::stringstream ss;
+        ss << "at " << server_address;
+        auto status = Status(StatusCode::FAILED_TO_START_REST_SERVER, ss.str());
+        SPDLOG_ERROR(status.string());
+        return status;
+    }
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", HTTP_SERVER_MODULE_NAME);
     SPDLOG_INFO("Started REST server at {}", server_address);
     return StatusCode::OK;
 }
 void HTTPServerModule::shutdown() {
-    if (server == nullptr)
+    if (server == nullptr && metricServer == nullptr)
         return;
-    SPDLOG_INFO("{} shutting down", HTTP_SERVER_MODULE_NAME);
-    state = ModuleState::STARTED_SHUTDOWN;
-    server->Terminate();
-    server->WaitForTermination();
-    server.reset();
-    SPDLOG_INFO("Shutdown HTTP server");
+    SPDLOG_INFO("{} shutting down HTTP server", HTTP_SERVER_MODULE_NAME);
+    if (server != nullptr) {
+        state = ModuleState::STARTED_SHUTDOWN;
+        server->Terminate();
+        server->WaitForTermination();
+        server.reset();
+        SPDLOG_INFO("Shutdown HTTP server");
+        state = ModuleState::SHUTDOWN;
+    }
+    if (metricServer != nullptr) {
+        SPDLOG_INFO("{} shutting down Metric server", HTTP_SERVER_MODULE_NAME);
+        state = ModuleState::STARTED_SHUTDOWN;
+        metricServer->Terminate();
+        metricServer->WaitForTermination();
+        metricServer.reset();
+        SPDLOG_INFO("Shutdown Metrics server");
+    }
     state = ModuleState::SHUTDOWN;
 }
 

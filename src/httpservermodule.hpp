@@ -26,6 +26,7 @@ class Config;
 class Server;
 class HTTPServerModule : public Module {
     std::unique_ptr<ovms::http_server> server;
+    std::unique_ptr<ovms::http_server> metricServer;
     Server& ovmsServer;
 
 public:
