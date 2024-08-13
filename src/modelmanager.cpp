@@ -206,7 +206,7 @@ Status ModelManager::startFromConfig() {
 
     // Reading metric config only once per server start
     if (!this->metricConfigLoadedOnce) {
-        status = this->metricConfig.loadFromCLIString(config.metricsEnabled(), config.metricsList());
+        status = this->metricConfig.loadFromCLIString(config.metricsPort(), config.metricsList());
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start.");
 
         this->metricConfigLoadedOnce = true;
@@ -672,13 +672,13 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     const auto itr2 = configJson.FindMember("monitoring");
     auto& config = ovms::Config::instance();
     if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
-        if (config.metricsEnabled()) {
-            return this->metricConfig.loadFromCLIString(true, config.metricsList());
+        if (config.metricsPort()) {
+            return this->metricConfig.loadFromCLIString(config.metricsPort(), config.metricsList());
         }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
         return StatusCode::OK;
     } else {
-        if (config.metricsEnabled()) {
+        if (config.metricsPort()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metrics configuration duplicated in configuration file and CLI parameters");
             return StatusCode::CONFIG_FILE_INVALID;
         }

@@ -122,15 +122,14 @@ bool Config::validate() {
         return false;
     }
 
-    // metrics on rest port
-    if (metricsEnabled() && restPort() == 0) {
-        std::cerr << "rest_port setting is missing, metrics are enabled on rest port" << std::endl;
+    if (metricsPort() && metricsPort() > MAX_PORT_NUMBER) {
+        std::cerr << "metrics_port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
         return false;
     }
 
-    // metrics_list without metrics_enable
-    if (!metricsEnabled() && !metricsList().empty()) {
-        std::cerr << "metrics_enable setting is missing, required when metrics_list is provided" << std::endl;
+    // metrics_list without metrics_port specified
+    if (metricsPort() > 0 && !metricsList().empty()) {
+        std::cerr << "metrics_port setting is missing, required when metrics_list is provided" << std::endl;
         return false;
     }
 
@@ -147,6 +146,18 @@ bool Config::validate() {
     // port and rest_port cannot be the same
     if (port() == restPort()) {
         std::cerr << "port and rest_port cannot have the same values" << std::endl;
+        return false;
+    }
+
+    // rest_port and metrics_port cannot be the same
+    if (restPort() == metricsPort()) {
+        std::cerr << "rest_port and metrics_port cannot have the same values" << std::endl;
+        return false;
+    }
+
+    // port and metrics_port cannot be the same
+    if (port() == metricsPort()) {
+        std::cerr << "port and metrics_port cannot have the same values" << std::endl;
         return false;
     }
 
@@ -196,7 +207,7 @@ const std::string& Config::targetDevice() const {
 }
 const std::string& Config::Config::pluginConfig() const { return this->modelsSettings.pluginConfig; }
 bool Config::stateful() const { return this->modelsSettings.stateful.value_or(false); }
-bool Config::metricsEnabled() const { return this->serverSettings.metricsEnabled; }
+uint32_t Config::metricsPort() const { return this->serverSettings.metricsPort; }
 std::string Config::metricsList() const { return this->serverSettings.metricsList; }
 bool Config::idleSequenceCleanup() const { return this->modelsSettings.idleSequenceCleanup.value_or(true); }
 uint32_t Config::maxSequenceNumber() const { return this->modelsSettings.maxSequenceNumber.value_or(DEFAULT_MAX_SEQUENCE_NUMBER); }

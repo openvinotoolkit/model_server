@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,13 +62,6 @@
 #include "stringutils.hpp"
 #include "timer.hpp"
 
-#if (MEDIAPIPE_DISABLE == 0)
-#include "http_frontend/http_client_connection.hpp"
-#include "http_frontend/http_graph_executor_impl.hpp"
-#include "mediapipe_internal/mediapipegraphexecutor.hpp"
-#endif
-
-
 
 namespace ovms {
 const std::string HttpMetricRestApiHandler::metricsRegexExp = R"((.?)\/metrics(\?(.*))?)";
@@ -99,7 +92,7 @@ Status HttpMetricRestApiHandler::processMetrics(const HttpRequestComponents& req
     }
     auto& metricConfig = this->modelManager.getMetricConfig();
 
-    if (!metricConfig.metricsEnabled) {
+    if (!metricConfig.metricsPort) {
         return StatusCode::REST_INVALID_URL;
     }
 

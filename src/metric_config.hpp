@@ -45,27 +45,27 @@ class Status;
      */
 class MetricConfig {
 public:
-    bool metricsEnabled;
+    uint32_t metricsPort;
     std::string endpointsPath;
 
     Status parseMetricsConfig(const rapidjson::Value& v, bool forceFailureIfMetricsAreEnabled = false);
     bool isFamilyEnabled(const std::string& family) const;
 
     void setDefaultMetricsTo(bool enabled);
-    Status loadFromCLIString(bool isEnabled, const std::string& metricsList);
+    Status loadFromCLIString(uint32_t metricsPort, const std::string& metricsList);
 
     MetricConfig() {
-        metricsEnabled = false;
+        metricsPort = 0;
         endpointsPath = "/metrics";
 
-        setDefaultMetricsTo(metricsEnabled);
+        setDefaultMetricsTo(metricsPort > 0);
     }
 
-    MetricConfig(bool enabled) {
-        metricsEnabled = enabled;
+    MetricConfig(uint32_t port) {
+        metricsPort = port;
         endpointsPath = "/metrics";
 
-        setDefaultMetricsTo(metricsEnabled);
+        setDefaultMetricsTo(port > 0);
     }
 
 protected:

@@ -224,11 +224,11 @@ public:
     bool stateful() const;
 
     /**
-     * @brief Get metrics enabled flag
+     * @brief Get metrics port
      *
-     * @return bool
+     * @return uint32_t
      */
-    bool metricsEnabled() const;
+    uint32_t metricsPort() const;
 
     /**
         * @brief Get metrics list

@@ -98,10 +98,10 @@ void CLIParser::parse(int argc, char** argv) {
                 "Overrides model cache directory. By default cache files are saved into /opt/cache if the directory is present. When enabled, first model load will produce cache files.",
                 cxxopts::value<std::string>(),
                 "CACHE_DIR")
-            ("metrics_enable",
-                "Flag enabling metrics endpoint on rest_port.",
-                cxxopts::value<bool>()->default_value("false"),
-                "METRICS")
+            ("metrics_port",
+                "Enabling metrics endpoint on separate port.",
+                cxxopts::value<uint32_t>()->default_value("0"),
+                "METRICS_PORT")
             ("metrics_list",
                 "Comma separated list of metrics. If unset, only default metrics will be enabled. Default metrics: ovms_requests_success, ovms_requests_fail, ovms_request_time_us, ovms_streams, ovms_inference_time_us, ovms_wait_for_infer_req_time_us. When set, only the listed metrics will be enabled. Optional metrics: ovms_infer_req_queue_size, ovms_infer_req_active.",
                 cxxopts::value<std::string>()->default_value(""),
@@ -260,7 +260,7 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (result->count("stateful"))
         modelsSettings->stateful = result->operator[]("stateful").as<bool>();
 
-    serverSettings->metricsEnabled = result->operator[]("metrics_enable").as<bool>();
+    serverSettings->metricsPort = result->operator[]("metrics_port").as<uint32_t>();
     serverSettings->metricsList = result->operator[]("metrics_list").as<std::string>();
 
     if (result->count("idle_sequence_cleanup"))

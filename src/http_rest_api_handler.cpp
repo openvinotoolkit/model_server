@@ -518,7 +518,7 @@ Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_c
     }
     auto& metricConfig = this->modelManager.getMetricConfig();
 
-    if (!metricConfig.metricsEnabled) {
+    if (!metricConfig.metricsPort) {
         return StatusCode::REST_INVALID_URL;
     }
 

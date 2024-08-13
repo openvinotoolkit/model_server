@@ -44,7 +44,7 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
         return;
     }
 
-    if (!metricConfig || !metricConfig->metricsEnabled) {
+    if (!metricConfig || !metricConfig->metricsPort) {
         return;
     }
 
@@ -256,7 +256,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
         return;
     }
 
-    if (!metricConfig || !metricConfig->metricsEnabled) {
+    if (!metricConfig || !metricConfig->metricsPort) {
         return;
     }
 
@@ -329,7 +329,7 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
         return;
     }
 
-    if (!metricConfig || !metricConfig->metricsEnabled) {
+    if (!metricConfig || !metricConfig->metricsPort) {
         return;
     }
 

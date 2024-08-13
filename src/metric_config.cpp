@@ -60,13 +60,13 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics, bool fo
 
     const auto& v = metrics["metrics"].GetObject();
 
-    if (v.HasMember("enable")) {
-        this->metricsEnabled = v["enable"].GetBool();
+    if (v.HasMember("port")) {
+        this->metricsPort = v["port"].GetUint64();
     } else {
-        this->metricsEnabled = false;
+        this->metricsPort = 0;
     }
 
-    if (metricsEnabled && forceFailureIfMetricsAreEnabled) {
+    if (this->metricsPort > 0 && forceFailureIfMetricsAreEnabled) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "CLI parameter rest_port is not defined. It must be set to enable metrics on the REST interface");
         return StatusCode::METRICS_REST_PORT_MISSING;
     }
@@ -83,10 +83,10 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics, bool fo
     if (v.HasMember("metrics_list")) {
         status = parseMetricsArray(v["metrics_list"]);
     } else {
-        setDefaultMetricsTo(this->metricsEnabled);
+        setDefaultMetricsTo(this->metricsPort > 0);
     }
 
-    if (status == StatusCode::OK && this->metricsEnabled) {
+    if (status == StatusCode::OK && this->metricsPort > 0) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Metrics enabled.");
 
         std::stringstream ss;
@@ -139,7 +139,7 @@ void MetricConfig::setDefaultMetricsTo(bool enabled) {
     }
 }
 
-Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metricsList) {
+Status MetricConfig::loadFromCLIString(uint32_t metricsPort, const std::string& metricsList) {
     using namespace rapidjson;
     Document document;
     document.SetObject();
@@ -147,7 +147,7 @@ Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metric
 
     Value metrics(kObjectType);
     metrics.SetObject();
-    metrics.AddMember("enable", isEnabled, allocator);
+    metrics.AddMember("port", metricsPort, allocator);
 
     // Create metrics array
     if (metricsList != "") {

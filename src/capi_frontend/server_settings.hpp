@@ -28,7 +28,7 @@ struct ServerSettingsImpl {
     std::optional<uint32_t> restWorkers;
     std::optional<uint32_t> grpcMaxThreads;
     std::string restBindAddress = "0.0.0.0";
-    bool metricsEnabled = false;
+    uint32_t metricsPort = 0;
     std::string metricsList;
     std::string cpuExtensionLibraryPath;
     std::string logLevel = "INFO";
