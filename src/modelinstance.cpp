@@ -583,11 +583,6 @@ Status ModelInstance::loadOutputTensorsImpl(const ModelConfig& config) {
             return StatusCode::UNKNOWN_ERROR;
         }
     }
-    if (this->outputsInfo.empty()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Tried to load model:{}, version: {} with no outputs", getName(), getVersion());
-        return StatusCode::OV_NO_OUTPUTS;
-    }
-
     return StatusCode::OK;
 }
 
