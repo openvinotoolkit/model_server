@@ -87,11 +87,16 @@ class PersonVehicleBikeDetection(UseCase):
                         local_file = None
 
                     # upload the file to Google Cloud Storage
+                    logging_severity = "INFO"
                     if 'PERSON_DETECTION_GCS_BUCKET' in os.environ and 'PERSON_DETECTION_GCS_FOLDER' in os.environ:
                         gcs_folder_date_hour = (f"{formatted_datetime.split('_')[0]}/"
                                                 f"{formatted_datetime.split('_')[1].split('-')[0]}")
                         blob_name = f"{os.environ.get('PERSON_DETECTION_GCS_FOLDER')}/{gcs_folder_date_hour}/{filename}"
-                        gs_path = upload_blob(os.environ.get('PERSON_DETECTION_GCS_BUCKET'), local_file, blob_name)
+                        try:
+                            gs_path = upload_blob(os.environ.get('PERSON_DETECTION_GCS_BUCKET'), local_file, blob_name)
+                        except Exception as ex:
+                            gs_path = f"Error uploading file: {ex}"
+                            logging_severity = "WARNING"
                     else:
                         gs_path = None
 
@@ -101,7 +106,8 @@ class PersonVehicleBikeDetection(UseCase):
                             'picture': local_file,
                             'uploaded_destination': gs_path,
                             'camera_id': os.environ.get('PERSON_DETECTION_CAMERA_ID', 'debug'),
-                        }
+                        },
+                        logging_severity
                     )
 
 
@@ -120,7 +126,7 @@ else:
     gcp_logger = None
 
 
-def log_sampled(log_dict: dict):
+def log_sampled(log_dict: dict, severity="INFO"):
     """Write logs to cloud logging and optionally the terminal
 
     :param log_dict: the dict must be serializable
@@ -140,7 +146,7 @@ def log_sampled(log_dict: dict):
         if 'PERSON_DETECTION_DEBUG' in os.environ:
             print(str(log_dict))
         if gcp_logger:
-            gcp_logger.log_struct(log_dict, severity="INFO")
+            gcp_logger.log_struct(log_dict, severity=severity)
         last_logged_datetime = current_datetime
 
 
