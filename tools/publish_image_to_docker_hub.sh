@@ -48,6 +48,11 @@ echo "Given parameters: ";
 echo "image: $IMAGE";
 echo "image_gpu: $IMAGE_GPU";
 echo "release_tag: $RELEASE_TAG";
+echo "Press y to continue..."
+read
+if [ "$REPLY" != "y" ] ; then
+    exit 1
+fi
 
 docker pull $IMAGE;
 docker tag $IMAGE openvino/model_server:$RELEASE_TAG;
