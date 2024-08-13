@@ -432,6 +432,16 @@ Status ModelInstance::gatherReshapeInfo(bool isBatchingModeAuto, const DynamicMo
 }
 
 Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
+    auto status = loadInputTensorsImpl(config, parameter);
+    if (!status.ok())
+        return status;
+    if (this->inputsInfo.empty()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Tried to load model:{}, version: {} with no inputs", getName(), getVersion());
+        return StatusCode::OV_NO_INPUTS;
+    }
+    return status;
+}
+Status ModelInstance::loadInputTensorsImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     this->inputsInfo.clear();
 
     std::map<std::string, ov::PartialShape> modelShapes;
@@ -513,6 +523,17 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
 }
 
 Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
+    auto status = loadOutputTensorsImpl(config);
+    if (!status.ok())
+        return status;
+    if (this->outputsInfo.empty()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Tried to load model:{}, version: {} with no outputs", getName(), getVersion());
+        return StatusCode::OV_NO_OUTPUTS;
+    }
+    return status;
+}
+
+Status ModelInstance::loadOutputTensorsImpl(const ModelConfig& config) {
     this->outputsInfo.clear();
 
     OV_LOGGER("ov::Model model: {}, model->outputs()", reinterpret_cast<void*>(model.get()));
@@ -562,7 +583,6 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
             return StatusCode::UNKNOWN_ERROR;
         }
     }
-
     return StatusCode::OK;
 }
 

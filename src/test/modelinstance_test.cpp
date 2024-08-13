@@ -188,6 +188,43 @@ protected:
     }
 };
 
+using ovms::Status;
+using ovms::StatusCode;
+using testing::_;
+namespace {
+class MockModelInstanceEmptyInputs : public ovms::ModelInstance {
+public:
+    MockModelInstanceEmptyInputs(ov::Core& ieCore) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
+    MOCK_METHOD(ovms::Status, loadInputTensorsImpl, (const ovms::ModelConfig&, const ovms::DynamicModelParameter&), (override));
+};
+class MockModelInstanceEmptyOutputs : public ovms::ModelInstance {
+public:
+    MockModelInstanceEmptyOutputs(ov::Core& ieCore) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
+    MOCK_METHOD(ovms::Status, loadOutputTensorsImpl, (const ovms::ModelConfig&), (override));
+};
+}  // namespace
+
+TEST_F(TestLoadModel, ShouldFailWithEmptyInputs) {
+    MockModelInstanceEmptyInputs mockModelInstance(*ieCore);
+    EXPECT_CALL(mockModelInstance, loadInputTensorsImpl(_, _))
+        .WillOnce(Return(Status(StatusCode::OK)));
+    auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+    EXPECT_EQ(status, StatusCode::OV_NO_INPUTS) << status.string();
+    EXPECT_EQ(ovms::ModelVersionState::LOADING, mockModelInstance.getStatus().getState());
+    EXPECT_EQ(ovms::ModelVersionStatusErrorCode::UNKNOWN, mockModelInstance.getStatus().getErrorCode());
+}
+TEST_F(TestLoadModel, ShouldFailWithEmptyOutputs) {
+    MockModelInstanceEmptyOutputs mockModelInstance(*ieCore);
+    EXPECT_CALL(mockModelInstance, loadOutputTensorsImpl(_))
+        .WillOnce(Return(Status(StatusCode::OK)));
+    auto status = mockModelInstance.loadModel(DUMMY_MODEL_CONFIG);
+    EXPECT_EQ(status, StatusCode::OV_NO_OUTPUTS) << status.string();
+    EXPECT_EQ(ovms::ModelVersionState::LOADING, mockModelInstance.getStatus().getState());
+    EXPECT_EQ(ovms::ModelVersionStatusErrorCode::UNKNOWN, mockModelInstance.getStatus().getErrorCode());
+}
+
 class MockModelInstanceWithRTMap : public ovms::ModelInstance {
 private:
     ov::RTMap inputRtMap;
