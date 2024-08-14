@@ -40,7 +40,7 @@ class PythonBackend;
 class ServableMetricReporter;
 
 inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
-    if (code == absl::StatusCode::kFailedPrecondition) {
+    if (code == absl::StatusCode::kFailedPrecondition) { // ovms session calculator returns this status code when loading model fails
         return StatusCode::MEDIAPIPE_PRECONDITION_FAILED;
     }
     return StatusCode::MEDIAPIPE_EXECUTION_ERROR;
