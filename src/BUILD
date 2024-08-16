@@ -352,7 +352,12 @@ cc_library(
                 "http_frontend/http_graph_executor_impl.hpp",
             ],
             "//:disable_mediapipe" : [],
-        }),
+        }) + select({
+	    "//:not_disable_mediapipe": [
+		    "embeddings/embeddings_calculator.cc",
+	    ],
+            "//:disable_mediapipe" : [],
+	}),
         deps = select({
             "//:not_disable_python": [
                 "//src/python:libovmspythonmodule",
