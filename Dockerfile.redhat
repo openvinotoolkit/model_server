@@ -29,7 +29,8 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 ARG JOBS=8
 ARG VERBOSE_LOGS=OFF
 
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
+RUN echo "max_parallel_downloads=8" >> /etc/dnf/dnf.conf && \
+   dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf update -d6 -y && dnf install -d6 -y \
             libuuid-devel \
             bc \
             cmake \
@@ -44,9 +45,8 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             patch \
             pkg-config \
             wget \
-            yum-utils \
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
-            yum clean all
+            dnf clean all
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
@@ -99,7 +99,8 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=40
 
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf update -d6 -y && dnf install -d6 -y \
+            ccache \
             gdb \
             java-11-openjdk-devel \
             tzdata-java \
@@ -108,13 +109,13 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             libtool \
             openssl-devel \
             which \
-            yum-utils \
             unzip \
             vim \
             xz \
             python39-devel \
+            https://vault.centos.org/centos/8/BaseOS/x86_64/os/Packages/libzstd-devel-1.4.4-1.el8.x86_64.rpm \
             https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
-            yum clean all
+            dnf clean all
 
 RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
     python3 --version && python3 -m pip install "Jinja2==3.1.4" --no-cache-dir
@@ -123,24 +124,20 @@ ARG NVIDIA=0
 # Add Nvidia dev tool if needed
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms ; \
-    yum -y module disable python36 && \
-    yum -y install libzstd-devel ; \
-    yum install -y  \
-        cuda-nvcc-11-8 libcublas-11-8 libcublas-devel-11-8 \
+    dnf -y module disable python36 && \
+    dnf -y install cuda-nvcc-11-8 libcublas-11-8 libcublas-devel-11-8 \
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcudnn8-devel-8.6.0.163-1.cuda11.8 \
         libcutensor1-1.6.1.5-1 \
         libcutensor-devel-1.6.1.5-1 \
         cuda-cudart-devel-11-8 && \
     # ignore errors on hosts with older nvidia drivers
-    yum install -y cuda-11-8 || true && \
-    yum install -y python38-Cython && \
+    dnf install -y cuda-11-8 || true && \
+    dnf install -y python38-Cython && \
     curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin && \
     curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
     chmod a+x /usr/local/bin/sccache && \
-    curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 && \
-    rm -rf /var/cache/yum
+    dnf clean all
 
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
@@ -160,11 +157,11 @@ RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https:/
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
-RUN yum install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
+# hadolint ignore=DL3003
+RUN dnf install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
     http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-2.2.2-1.el8.x86_64.rpm \
     https://dl.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/j/json-devel-3.6.1-2.el8.x86_64.rpm && \
-    rm -rf /var/cache/yum
-# hadolint ignore=DL3003
+    dnf clean all
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; pip3 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
@@ -257,7 +254,7 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
-RUN  yum install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && yum clean all
+RUN dnf install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && dnf clean all
 
 WORKDIR /ovms
 
@@ -400,8 +397,8 @@ WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,DL3041,SC2164
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
-        $DNF_TOOL upgrade --setopt=install_weak_deps=0 -y ; \
-        $DNF_TOOL install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+        $DNF_TOOL upgrade --setopt=install_weak_deps=0 --setopt=max_parallel_downloads=8 -y ; \
+        $DNF_TOOL install --nodocs -y pkg-config https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
         if [ "$GPU" == "1" ] ; then \
                 case $INSTALL_DRIVER_VERSION in \
                 "21.38.21026") \
@@ -474,18 +471,18 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
         fi ; \
         # For image with Python enabled install Python library
         if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
-            $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0; \
-            mkdir -p /ovms/lib/openvino-4.dist-info && \
+            $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0 --nodocs; \
+            mkdir -p /ovms/lib/openvino-2024.4.dist-info && \
             echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.4' > /ovms/lib/openvino-2024.4.dist-info/METADATA ; \
         fi ; \
-        $DNF_TOOL install -y shadow-utils; \
+        $DNF_TOOL clean all ; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
         groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 # for NVIDIA
-RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda yum package"; \
-    dnf install -y  \
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda rpm packages"; \
+    dnf install --nodocs -y \
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcutensor1-1.6.1.5-1 && \
         dnf clean all
