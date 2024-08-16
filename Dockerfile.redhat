@@ -399,6 +399,7 @@ WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,DL3041,SC2164
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
+        chmod 0644 /etc/yum.repos.d/* ; \
         $DNF_TOOL upgrade --setopt=install_weak_deps=0 --setopt=max_parallel_downloads=8 -y ; \
         $DNF_TOOL install --nodocs -y pkg-config https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
         if [ "$GPU" == "1" ] ; then \
