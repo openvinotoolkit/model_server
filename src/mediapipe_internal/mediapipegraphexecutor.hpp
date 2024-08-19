@@ -39,6 +39,13 @@ namespace ovms {
 class PythonBackend;
 class ServableMetricReporter;
 
+inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
+    if (code == absl::StatusCode::kFailedPrecondition) {  // ovms session calculator returns this status code when loading model fails
+        return StatusCode::MEDIAPIPE_PRECONDITION_FAILED;
+    }
+    return StatusCode::MEDIAPIPE_EXECUTION_ERROR;
+}
+
 #define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)             \
     {                                                                    \
         auto status = code;                                              \
@@ -139,7 +146,8 @@ public:
         // we wait idle since some calculators could hold ownership on packet content while nodes further down the graph
         // can be still processing those. Closing packet sources triggers Calculator::Close() on nodes that do not expect
         // new packets
-        MP_RETURN_ON_FAIL(graph.WaitUntilIdle(), "graph wait until idle", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        auto status = graph.WaitUntilIdle();
+        MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
 
         MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
         for (auto& [outputStreamName, poller] : outputPollers) {
@@ -165,11 +173,8 @@ public:
             }
             SPDLOG_TRACE("Received all: {} packets for: {}", receivedOutputs, outputStreamName);
         }
-        auto status = graph.WaitUntilDone();
-        if (status.code() == absl::StatusCode::kFailedPrecondition) {
-            MP_RETURN_ON_FAIL(status, "graph wait until done", StatusCode::MEDIAPIPE_PRECONDITION_FAILED);
-        }
-        MP_RETURN_ON_FAIL(status, "graph wait until done", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        status = graph.WaitUntilDone();
+        MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
         if (outputPollers.size() != outputPollersWithReceivedPacket.size()) {
             SPDLOG_DEBUG("Mediapipe failed to execute. Failed to receive all output packets");
             return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Unknown error during mediapipe execution");
@@ -292,7 +297,8 @@ public:
             {
                 OVMS_PROFILE_SCOPE("MediaPipe waiting until done");
                 SPDLOG_DEBUG("Graph {}: Closed all packet sources. Waiting until done...", this->name);
-                MP_RETURN_ON_FAIL(graph.WaitUntilDone(), "waiting until done", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+                auto status = graph.WaitUntilDone();
+                MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
                 SPDLOG_DEBUG("Graph {}: Done execution", this->name);
             }
             return StatusCode::OK;
