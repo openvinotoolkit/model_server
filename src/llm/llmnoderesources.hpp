@@ -84,6 +84,7 @@ public:
         if (tokenCache.size() > 0) {
             std::string text = tokenizer->decode(tokenCache);
             std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokenCache);
             tokenCache.clear();
             printLen = 0;
             return chunk;
