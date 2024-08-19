@@ -372,6 +372,14 @@ RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_rele
 # Remove capi library
 RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; fi ;
 
+WORKDIR /test
+COPY tests/file_lists /test/
+# hadolint ignore=SC3010
+RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else /test/test_release_files.sh 1 ; fi ; \
+    /test/test_release_files.sh 0
+    
+WORKDIR /
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM $BASE_IMAGE as release

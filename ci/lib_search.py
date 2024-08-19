@@ -138,6 +138,9 @@ def check_dir(start_dir):
         "pugixml_v1.13_flags.patch",
         "rag_demo.ipynb",
         ".bazelversion",
+        "lib_files.txt",
+        "lib_files_python.txt",
+        "lib_custom_nodes_files",
         "spelling-whitelist.txt",
         ]
 
