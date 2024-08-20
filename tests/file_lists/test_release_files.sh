@@ -17,15 +17,15 @@
 # This script should be used inside the release image to check expected file contents
 
 if [ "$#" -ne 1 ]; then
-    printf --  "ERROR: Missing script argument PYTHON_DISABLE. Please pass 0 or 1 to the script.\n"
+    printf --  "ERROR: Missing script argument debug_bazel_flags. Please pass it to the script.\n"
     exit 1
 fi
 
-PYTHON_DISABLE=$1
+debug_bazel_flags=$1
 errors=0
 
-printf --  "Using PYTHON_DISABLE=$PYTHON_DISABLE.\n"
-if [ "$PYTHON_DISABLE" -eq "0" ]; then
+printf --  "Using debug_bazel_flags=$debug_bazel_flags.\n"
+if [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then
     # ovms_release/lib - with python
     input_file="/test/lib_files_python.txt"
     test_path="/ovms_release/lib"

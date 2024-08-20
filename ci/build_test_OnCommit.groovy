@@ -69,6 +69,12 @@ pipeline {
               }
             }
 
+            stage("Run lib files test") {
+              steps {
+                  sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+              }
+            }
+
             stage("Internal tests") {
               steps {
                 script {

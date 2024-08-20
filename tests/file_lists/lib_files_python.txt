@@ -81,3 +81,4 @@ libopenvino_tokenizers.so
 libtbb.so->libtbb.so.12
 libtbb.so.12->libtbb.so.12.13
 libtbb.so.12.13
+python
