@@ -17,18 +17,18 @@
 # This script should be used inside the release image to check expected file contents
 
 if [ "$#" -ne 1 ]; then
-    printf --  "ERROR: Missing script argument PYTHON_DISABLE. Please pass 0 or 1 to the script.\n"
+    printf --  "ERROR: Missing script argument debug bazel flags. Please pass it to the script to configure building options for example to build without Python support run: ./test_release_files.sh PYTHON_DISABLE=1 .\n"
     exit 1
 fi
 
-PYTHON_DISABLE=$1
+debug_bazel_flags=$1
 errors=0
 
-printf --  "Using PYTHON_DISABLE=$PYTHON_DISABLE.\n"
-if [ "$PYTHON_DISABLE" -eq "0" ]; then
-    # ovms_release/lib - with python
+printf --  "Searching for PYTHON_DISABLE=0 in debug_bazel_flags=$debug_bazel_flags.\n"
+if [[ $debug_bazel_flags == *"PYTHON_DISABLE=0"* ]]; then
+    # /ovms/lib - with python
     input_file="/test/lib_files_python.txt"
-    test_path="/ovms_release/lib"
+    test_path="/ovms/lib"
     output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
     if [[ -n $output ]]
     then
@@ -38,9 +38,9 @@ if [ "$PYTHON_DISABLE" -eq "0" ]; then
         printf -- "SUCCESS: $test_path Files list match.\n"
     fi
 else
-    # ovms_release/lib - without python
+    # /ovms/lib - without python
     input_file="/test/lib_files.txt"
-    test_path="/ovms_release/lib"
+    test_path="/ovms/lib"
     output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
     if [[ -n $output ]]
     then
@@ -51,9 +51,9 @@ else
     fi
 fi
 
-# ovms_release/lib/custom_nodes
+# /ovms/lib/custom_nodes
 input_file="/test/lib_custom_nodes_files.txt"
-test_path="/ovms_release/lib/custom_nodes"
+test_path="/ovms/lib/custom_nodes"
 output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
 if [[ -n $output ]]
 then
