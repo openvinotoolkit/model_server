@@ -151,7 +151,7 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         .block_size = nodeOptions.block_size(),
         .dynamic_split_fuse = nodeOptions.dynamic_split_fuse(),
         .max_num_seqs = nodeOptions.max_num_seqs(),
-        .enable_prefix_caching = true // Setting it explicitly, but this will be a default setting in GenAI and removed from scheduler config
+        .enable_prefix_caching = true  // Setting it explicitly, but this will be a default setting in GenAI and removed from scheduler config
     };
 
     nodeResources->device = nodeOptions.device();
