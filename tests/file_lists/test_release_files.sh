@@ -25,7 +25,7 @@ debug_bazel_flags=$1
 errors=0
 
 printf --  "Using debug_bazel_flags=$debug_bazel_flags.\n"
-if [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then
+if [[ $debug_bazel_flags == *"PYTHON_DISABLE=0"* ]]; then
     # ovms_release/lib - with python
     input_file="/test/lib_files_python.txt"
     test_path="/ovms_release/lib"
