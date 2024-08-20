@@ -56,7 +56,6 @@ pipeline {
           when { expression { image_build_needed == "true" } }
           steps {
                 sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                sh "make targz_package RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
         }
