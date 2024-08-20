@@ -31,8 +31,8 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "../profiler.hpp"
 #include "../logging.hpp"
+#include "../profiler.hpp"
 
 using namespace rapidjson;
 using namespace ovms;
@@ -42,14 +42,12 @@ namespace mediapipe {
 using InputDataType = std::string;
 using OutputDataType = std::string;
 
-
 class EmbeddingsCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
 
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
-
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {

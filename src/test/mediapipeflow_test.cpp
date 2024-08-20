@@ -148,10 +148,9 @@ public:
 
 class MediapipeEmbeddingsTest : public MediapipeFlowTest {
 public:
-   void SetUp() {
+    void SetUp() {
         SetUpServer("/ovms/src/test/embeddings/config_embeddings.json");
-   }
-
+    }
 };
 
 template <class W, class R>
@@ -167,7 +166,7 @@ TEST_F(MediapipeEmbeddingsTest, test) {
     auto start = std::chrono::high_resolution_clock::now();
     const int timeout = 5;
     while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-       (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
     }
 }
 
