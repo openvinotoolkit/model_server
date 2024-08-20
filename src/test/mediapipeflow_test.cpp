@@ -3432,7 +3432,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "DetectionSerializationCalculator",
         "DetectionsToRectsCalculator",
         "DetectionsToRenderDataCalculator",
-	"EmbeddingsCalculator",
+        "EmbeddingsCalculator",
         "EmptyLabelCalculator",
         "EmptyLabelClassificationCalculator",
         "EmptyLabelDetectionCalculator",
