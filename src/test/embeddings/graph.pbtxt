@@ -16,13 +16,7 @@ input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
     name: "embeddingsNode1"
-    calculator: "HttpEmbeddingsCalculator"
-    input_stream: "LOOPBACK:loopback"
-    input_stream: "HTTP_REQUEST_PAYLOAD:input"
-    output_stream: "LOOPBACK:loopback"
-    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
-    input_stream_info: {
-      tag_index: 'LOOPBACK:0',
-      back_edge: true
-    }
+    calculator: "EmbeddingsCalculator"
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
 }

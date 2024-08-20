@@ -77,8 +77,8 @@ public:
         return absl::OkStatus();
     }
 };
-const std::string EmbeddingsCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
-const std::string EmbeddingsCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
+const std::string EmbeddingsCalculator::INPUT_TAG_NAME{"REQUEST_PAYLOAD"};
+const std::string EmbeddingsCalculator::OUTPUT_TAG_NAME{"RESPONSE_PAYLOAD"};
 
 REGISTER_CALCULATOR(EmbeddingsCalculator);
 

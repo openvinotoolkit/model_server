@@ -162,12 +162,19 @@ public:
     MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
 };
 
-TEST_F(MediapipeEmbeddingsTest, test) {
+TEST_F(MediapipeEmbeddingsTest, startup) {
     auto start = std::chrono::high_resolution_clock::now();
     const int timeout = 5;
     while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
     }
+
+    const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+    ASSERT_TRUE(servableModule != nullptr);
+    ModelManager* manager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
+    auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName("embeddings");
+    ASSERT_TRUE(mediapipeGraphDefinition != nullptr);
+    ASSERT_TRUE(mediapipeGraphDefinition->getStatus().isAvailable());
 }
 
 TEST_F(MediapipeFlowKfsTest, Infer) {
@@ -3425,6 +3432,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "DetectionSerializationCalculator",
         "DetectionsToRectsCalculator",
         "DetectionsToRenderDataCalculator",
+	"EmbeddingsCalculator",
         "EmptyLabelCalculator",
         "EmptyLabelClassificationCalculator",
         "EmptyLabelDetectionCalculator",
