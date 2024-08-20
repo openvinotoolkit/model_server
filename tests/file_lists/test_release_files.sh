@@ -17,7 +17,7 @@
 # This script should be used inside the release image to check expected file contents
 
 if [ "$#" -ne 1 ]; then
-    printf --  "ERROR: Missing script argument debug_bazel_flags. Please pass it to the script to determine PYTHON_DISABLE=0 value.\n"
+    printf --  "ERROR: Missing script argument debug_bazel_flags. Please pass it to the script to determine PYTHON_DISABLE value or trigger it via `make run_lib_files_test` target..\n"
     exit 1
 fi
 
