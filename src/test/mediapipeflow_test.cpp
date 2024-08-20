@@ -146,6 +146,14 @@ public:
     }
 };
 
+class MediapipeEmbeddingsTest : public MediapipeFlowTest {
+public:
+   void SetUp() {
+        SetUpServer("/ovms/src/test/embeddings/config_embeddings.json");
+   }
+
+};
+
 template <class W, class R>
 class MockedServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<W, R> {
 public:
@@ -154,6 +162,14 @@ public:
     MOCK_METHOD(bool, Read, (R * msg), (override));
     MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
 };
+
+TEST_F(MediapipeEmbeddingsTest, test) {
+    auto start = std::chrono::high_resolution_clock::now();
+    const int timeout = 5;
+    while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+       (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
+    }
+}
 
 TEST_F(MediapipeFlowKfsTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);

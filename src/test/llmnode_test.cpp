@@ -63,47 +63,6 @@
 
 using namespace ovms;
 
-class EmbeddingsFlowHttpTest : public ::testing::Test {
-protected:
-    static std::unique_ptr<std::thread> t;
-
-public:
-    std::unique_ptr<ovms::HttpRestApiHandler> handler;
-
-    std::vector<std::pair<std::string, std::string>> headers;
-    ovms::HttpRequestComponents comp;
-    MockedServerRequestInterface writer;
-    std::string response;
-    ovms::HttpResponseComponents responseComponents;
-
-    static void SetUpTestSuite() {
-        std::string port = "9173";
-        ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, "/ovms/src/test/embeddings/config_embeddings_dummy_kfs.json");
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
-    }
-
-    void SetUp() {
-        ovms::Server& server = ovms::Server::instance();
-        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
-    }
-
-    static void TearDownTestSuite() {
-        ovms::Server& server = ovms::Server::instance();
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
-    }
-
-    void TearDown() {
-        handler.reset();
-    }
-};
-
 class LLMFlowHttpTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
@@ -148,9 +107,6 @@ public:
     }
 };
 std::unique_ptr<std::thread> LLMFlowHttpTest::t;
-std::unique_ptr<std::thread> EmbeddingsFlowHttpTest::t;
-TEST_F(EmbeddingsFlowHttpTest, test) {
-}
 
 // --------------------------------------- OVMS LLM nodes tests
 

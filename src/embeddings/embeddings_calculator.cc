@@ -34,10 +34,6 @@
 #include "../profiler.hpp"
 #include "../logging.hpp"
 
-// Python execution for template processing
-#include <pybind11/embed.h>  // everything needed for embedding
-#include <pybind11/stl.h>
-
 using namespace rapidjson;
 using namespace ovms;
 
@@ -50,7 +46,6 @@ using OutputDataType = std::string;
 class EmbeddingsCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
-    static const std::string LOOPBACK_TAG_NAME;
 
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
@@ -61,23 +56,21 @@ public:
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<InputDataType>();
-        cc->Inputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<OutputDataType>();
-        cc->Outputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "LLMCalculator [Node: {} ] Close", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator [Node: {} ] Close", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator  [Node: {}] Open start", cc->NodeName());
 
-        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
     }
 
@@ -88,7 +81,6 @@ public:
 };
 const std::string EmbeddingsCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
 const std::string EmbeddingsCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
-const std::string EmbeddingsCalculator::LOOPBACK_TAG_NAME{"LOOPBACK"};
 
 REGISTER_CALCULATOR(EmbeddingsCalculator);
 
