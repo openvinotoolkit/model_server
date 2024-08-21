@@ -481,7 +481,7 @@ Status ModelInstance::loadInputTensorsImpl(const ModelConfig& config, const Dyna
     configureBatchSize(this->config, parameter);
     if (true) {  // VAAPI preproc TODO FIXME how to switch on off?
 
-        SPDLOG_ERROR("Addin va preproc");
+        SPDLOG_ERROR("Adding va preproc");
         ov::preprocess::PrePostProcessor ppp(this->model);
         // https://docs.openvino.ai/latest/openvino_docs_OV_UG_supported_plugins_GPU_RemoteTensor_API.html#direct-nv12-video-surface-input
         ppp.input()
