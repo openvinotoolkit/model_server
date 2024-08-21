@@ -54,10 +54,10 @@ enum class Endpoint {
 struct CompletionUsageStatistics {
     size_t promptTokens = 0;
     size_t completionTokens = 0;
-    
+
     size_t calculateTotalTokens() {
         return promptTokens + completionTokens;
-    } 
+    }
 };
 
 using chat_entry_t = std::unordered_map<std::string, std::string>;
