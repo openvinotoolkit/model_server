@@ -54,7 +54,10 @@ enum class Endpoint {
 struct CompletionUsageStatistics {
     size_t promptTokens = 0;
     size_t completionTokens = 0;
-    size_t totalTokens = 0;
+    
+    size_t calculateTotalTokens() {
+        return promptTokens + completionTokens;
+    } 
 };
 
 using chat_entry_t = std::unordered_map<std::string, std::string>;
@@ -561,7 +564,6 @@ public:
                     ov::genai::GenerationOutputs generationOutputs = this->generationHandle->read();
                     RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
                     RET_CHECK(generationOutputs.begin()->second.generated_token_ids.size() == 1);
-                    usage.completionTokens++;
 
                     // TODO(dkalinow): Move this logic to CB library
                     int64_t token = generationOutputs.begin()->second.generated_token_ids[0];
@@ -687,7 +689,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::gena
     writer.String("completion_tokens");
     writer.Int(usage.completionTokens);
     writer.String("total_tokens");
-    writer.Int(usage.promptTokens + usage.completionTokens);
+    writer.Int(usage.calculateTotalTokens());
     writer.EndObject();
 
     // TODO
