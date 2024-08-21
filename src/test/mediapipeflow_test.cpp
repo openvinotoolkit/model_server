@@ -3334,7 +3334,6 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "PyTensorOvTensorConverterCalculator",   // integral OVMS calculator
         "PythonExecutorCalculator",  // integral OVMS calculator
         "HttpLLMCalculator",  // integral OVMS calculator
-        "LLMCalculator",  // integral OVMS calculator
 #endif
         "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
         "AddHeaderCalculator",
