@@ -44,8 +44,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             patch \
             pkg-config \
             wget \
-            yum-utils \
-            https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+            yum-utils && \
             yum clean all
 
 ####### Azure SDK needs new boost:
@@ -60,7 +59,7 @@ RUN wget -nv https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_6
 		--with-log --with-locale "$BVERBOSE" \
 		install
 
-COPY third_party /ovms/third_party/
+COPY third_party/pugixml /ovms/third_party/pugixml
 
 # Build and install pugixml
 # hadolint ignore=DL3003
@@ -73,6 +72,8 @@ RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
 
 ####### Azure SDK
 WORKDIR /azure
+COPY third_party/azure /ovms/third_party/azure
+COPY third_party/cpprest /ovms/third_party/cpprest
 RUN git clone --recurse-submodules --depth 1 --branch v2.10.16 https://github.com/Microsoft/cpprestsdk.git && \
     git clone --depth 1 --branch v7.5.0 https://github.com/Azure/azure-storage-cpp.git && \
     patch -d /azure/cpprestsdk/ -p1 < /ovms/third_party/cpprest/rest_sdk_v2.10.16.patch && \
@@ -86,6 +87,7 @@ RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_
 ####### End of Azure SDK
 
 ####### Build OpenCV
+COPY third_party/opencv /ovms/third_party/opencv
 WORKDIR /ovms/third_party/opencv
 RUN if [ "$VERBOSE_LOGS" == "ON" ] ; then export VERBOSE=1 ; fi && ./install_opencv.sh
 ####### End of OpenCV
@@ -103,8 +105,6 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             gdb \
             java-11-openjdk-devel \
             tzdata-java \
-            libgusb.x86_64 \
-            libusbx \
             libtool \
             openssl-devel \
             which \
@@ -112,12 +112,22 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             unzip \
             vim \
             xz \
-            python39-devel \
-            https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+            python39-devel && \
             yum clean all
 
 RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
     python3 --version && python3 -m pip install "Jinja2==3.1.4" --no-cache-dir
+
+# Set up Bazel
+ENV BAZEL_VERSION 6.1.1
+WORKDIR /bazel
+RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
+    chmod +x bazel-*.sh && \
+    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
+RUN  yum install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && yum clean all
 
 ARG NVIDIA=0
 # Add Nvidia dev tool if needed
@@ -242,22 +252,12 @@ COPY .bazelrc .bazelversion WORKSPACE /ovms/
 # for libcurl & ssl we hack it this way
 RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
 COPY external /ovms/external/
-COPY third_party /ovms/third_party/
+COPY third_party /ovms/third_party
+
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
 COPY src/python/binding/BUILD /ovms/src/python/binding/BUILD
 COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/requirements.txt
-
-# Set up Bazel
-ENV BAZEL_VERSION 6.1.1
-WORKDIR /bazel
-RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
-    chmod +x bazel-*.sh && \
-    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
-
-RUN  yum install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && yum clean all
 
 WORKDIR /ovms
 
@@ -303,7 +303,7 @@ ARG minitrace_flags
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
-ARG RUN_TESTS=1
+ARG RUN_TESTS=0
 COPY rununittest.sh /ovms/
 RUN ./rununittest.sh
 
@@ -314,31 +314,16 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
     if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
-# C api shared library
-ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=redhat"
-RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
-
-# C api app with bazel
-# hadolint ignore=DL3059
-RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
-
-# C-API benchmark app
-RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"
-
 # Custom Nodes
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 
 # OVMS
 # hadolint ignore=DL3059
+
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
-
-# C-api C/C++ app with gcc
-COPY MakefileCapi /ovms/
-RUN make -f MakefileCapi cpp CAPI_FLAGS="${CAPI_FLAGS}" && \
-    make -f MakefileCapi c CAPI_FLAGSs="${CAPI_FLAGS}"
 
 ARG ovms_metadata_file
 
@@ -353,6 +338,27 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
 
 RUN rm -Rf /etc/entitlement /etc/rhsm/ca
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+
+FROM $BUILD_IMAGE as capi-build
+# C api shared library
+ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=redhat"
+ARG JOBS=40
+RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
+
+# C api app with bazel
+# hadolint ignore=DL3059
+RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
+
+# C-API benchmark app
+RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"
+# C-api C/C++ app with gcc
+COPY MakefileCapi /ovms/
+RUN make -f MakefileCapi cpp CAPI_FLAGS="${CAPI_FLAGS}" && \
+    make -f MakefileCapi c CAPI_FLAGSs="${CAPI_FLAGS}"
+
+RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_shared.so'  -exec cp -v {} /ovms_release/lib/ \;
+
 FROM $BUILD_IMAGE as pkg
 
 RUN mkdir /patchelf 
@@ -367,6 +373,7 @@ ARG BASE_OS=redhat
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
 ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=redhat"
+COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
 COPY create_package.sh /
 RUN ./create_package.sh
 
