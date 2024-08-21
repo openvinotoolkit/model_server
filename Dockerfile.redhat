@@ -199,6 +199,7 @@ tar -zxf oneapi-tbb-2021.13.0-lin.tgz && \
 rm /opt/intel/openvino/runtime/3rdparty/tbb/lib/*.so* && \
 cp -vP oneapi-tbb-2021.13.0/lib/intel64/gcc4.8/*.so* /opt/intel/openvino/runtime/3rdparty/tbb/lib/ && \
 rm -f /opt/intel/openvino/oneapi-tbb-2021.13.0-lin.tgz
+ENV TBB_DIR=/tmp/openvino_installer/oneapi-tbb-2021.13.0/lib/cmake/tbb
 
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
@@ -206,6 +207,8 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 
 # OpenVINO Tokenizers extension
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+
 ARG ov_tokenizers_branch=master
 # hadolint ignore=DL3003
 RUN if [[ "$tokenizers" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
@@ -260,8 +263,6 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 RUN  yum install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && yum clean all
 
 WORKDIR /ovms
-
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 # hadolint ignore=DL3059
 

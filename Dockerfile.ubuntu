@@ -460,7 +460,6 @@ RUN     apt-get update -y ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/libigdgmm12_22.3.0_amd64.deb ; \
                         dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
-
                 *) \
                         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
                         apt-get update && apt-get -y --no-install-recommends install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
