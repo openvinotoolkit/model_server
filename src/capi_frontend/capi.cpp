@@ -559,8 +559,8 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest*
     if (inputName == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
     }
-    if (data == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data"));
+    if (data == nullptr) {  // TODO FIXME - it is legal for VAAPI to pass 0 as it is surface id, not a pointer
+        //return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->setInputBuffer(inputName, data, bufferSize, bufferType, deviceId);
@@ -1313,6 +1313,14 @@ DLL_PUBLIC void OVMS_ServableMetadataDelete(OVMS_ServableMetadata* metadata) {
     if (metadata == nullptr)
         return;
     delete reinterpret_cast<ovms::ServableMetadata*>(metadata);
+}
+
+OVMS_Status* OVMS_ServerInitilizeGlobalVADisplay(void* vaDisplay) {
+    // TODO
+    // * allow to initializze only if server not started
+    // * check for nullptr
+    ovms::globalVaDisplay = vaDisplay;
+    return nullptr;
 }
 
 #ifdef __cplusplus

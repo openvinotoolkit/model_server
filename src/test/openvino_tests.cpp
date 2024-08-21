@@ -22,6 +22,7 @@
 #include <CL/cl2.hpp>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <opencv2/opencv.hpp>
 #include <openvino/core/type/element_type.hpp>
 #include <openvino/openvino.hpp>
 
@@ -38,15 +39,10 @@ using namespace ov;
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
-//#include <openvino/runtime/va/va.hpp>
 #include <openvino/runtime/intel_gpu/ocl/va.hpp>
-//#include <va.va.h>a
 #include <va/va_drm.h>
-//
+
 typedef void* VADisplay;
-VADisplay get_va_display() {
-    return nullptr;  // FIXME TODO
-}
 
 cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
     cl_int clError;
@@ -131,8 +127,8 @@ TEST_F(OpenVINO, ExtractContextFromModel) {
     inferRequest.set_tensor(output, outputOVOCLBufferTensor);
     inferRequest.infer();
     std::vector<float> out(10);
-    void* buffer_out = out.data();
-    EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, outputByteSize, buffer_out));
+    void* bufferOut = out.data();
+    EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, outputByteSize, bufferOut));
     for (size_t i = 0; i < inputByteSize / sizeof(float); ++i) {
         // different precision on GPU vs CPU
         EXPECT_NEAR(in[i] + 1, out[i], 0.0004) << "i:" << i;
@@ -196,8 +192,8 @@ TEST_F(OpenVINO, LoadModelWithPrecreatedContext) {
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);
     cl::Device device(deviceId);
-    auto remote_context = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
-    auto compiledModel = core.compile_model(model, remote_context);
+    auto remoteContext = ov::intel_gpu::ocl::ClContext(core, openCLCContext, 0);
+    auto compiledModel = core.compile_model(model, remoteContext);
     // now we create buffers
     cl::Context openCLCppContext(openCLCContext);
     cl_int clError;
@@ -207,8 +203,8 @@ TEST_F(OpenVINO, LoadModelWithPrecreatedContext) {
     EXPECT_EQ(0, clError);
     // create tensors and perform inference
     // wrap in and out buffers into RemoteTensor and set them to infer request
-    auto inputOVOCLBufferTensor = remote_context.create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
-    auto outputOVOCLBufferTensor = remote_context.create_tensor(output->get_element_type(), output->get_shape(), openCLCppOutputBuffer);
+    auto inputOVOCLBufferTensor = remoteContext.create_tensor(input->get_element_type(), input->get_shape(), openCLCppInputBuffer);
+    auto outputOVOCLBufferTensor = remoteContext.create_tensor(output->get_element_type(), output->get_shape(), openCLCppOutputBuffer);
     // we will put data into input buffer
     std::vector<float> in(10, 0.1);
     void* inputBufferData = in.data();
@@ -220,8 +216,8 @@ TEST_F(OpenVINO, LoadModelWithPrecreatedContext) {
     inferRequest.set_tensor(output, outputOVOCLBufferTensor);
     inferRequest.infer();
     std::vector<float> out(10);
-    void* buffer_out = out.data();
-    EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, outputByteSize, buffer_out));
+    void* bufferOut = out.data();
+    EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, outputByteSize, bufferOut));
     for (size_t i = 0; i < inputByteSize / sizeof(float); ++i) {
         // different precision on GPU vs CPU
         EXPECT_NEAR(in[i] + 1, out[i], 0.0004) << "i:" << i;
@@ -233,52 +229,176 @@ struct CallbackUnblockingStruct {
     void* bufferAddr = nullptr;
     cl::CommandQueue* queue = nullptr;
 };
+class CAPINonCopy : public ::testing::Test {
+public:
+    void SetUp() override {
+        GPUEnvironment::skipWithoutGPU();
+    }
+};
+
 #ifndef TEST_VAAPI
-TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasTest) {
+// https://docs.openvino.ai/latest/openvino_docs_OV_UG_supported_plugins_GPU_RemoteTensor_API.html#direct-nv12-video-surface-input
+// TODO utility for downloading required models for VAAPI tests
+class VAHelper {
+    int drmFiledescriptor = 0;
+    VADisplay vaDisplay = nullptr;
+
+public:
+    VADisplay getVADisplay() { return vaDisplay; }
+    VAHelper(const std::string deviceFilepath = "/dev/dri/renderD128") {
+        drmFiledescriptor = open(deviceFilepath.c_str(), O_RDWR);
+        if (drmFiledescriptor < 0) {
+            EXPECT_TRUE(false) << "failed to open DRM device:" << deviceFilepath;
+            throw std::runtime_error("failed to open DRM device");
+        }
+        vaDisplay = vaGetDisplayDRM(drmFiledescriptor);
+        if (vaDisplay == nullptr) {
+            close(drmFiledescriptor);
+            EXPECT_TRUE(false) << "failed to get VA DRM display";
+            throw std::runtime_error("failed to get VA DRM display");
+            return;
+        }
+        int majorVersion, minorVersion;
+        VAStatus status = vaInitialize(vaDisplay, &majorVersion, &minorVersion);
+        if (status != VA_STATUS_SUCCESS) {
+            vaTerminate(vaDisplay);
+            close(drmFiledescriptor);
+            EXPECT_TRUE(false) << "Failed to initialize VA API with error:" << status;
+            throw std::runtime_error("Failed to initialize VA API");
+        }
+        this->vaDisplay = vaDisplay;
+        SPDLOG_TRACE("Initialized VADisplay: {}, with DRM device: {}, version:  {}.{}", (int)vaDisplay, drmFiledescriptor, majorVersion, minorVersion);
+    }
+    ~VAHelper() {
+        if (vaDisplay) {
+            SPDLOG_TRACE("Terminating vaDisplay:{}", (int)vaDisplay);
+            vaTerminate(vaDisplay);
+        }
+        if (drmFiledescriptor) {
+            SPDLOG_TRACE("Closing  drmFiledescriptor:{}", drmFiledescriptor);
+            close(drmFiledescriptor);
+        }
+    }
+    VAHelper(const VAHelper&) = delete;
+    VAHelper& operator=(const VAHelper&) = delete;
+};
+
+const std::shared_ptr<ov::Model> preprocessModel(const std::shared_ptr<ov::Model>& model) {
+    ov::preprocess::PrePostProcessor preprocessor(model);
+    preprocessor.input()
+        .tensor()
+        .set_element_type(ov::element::u8)
+        .set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"})
+        .set_memory_type(ov::intel_gpu::memory_type::surface);
+    preprocessor.input().preprocess().convert_color(ov::preprocess::ColorFormat::BGR);
+    preprocessor.input().model().set_layout("NCHW");
+    return preprocessor.build();
+}
+
+const std::string FACE_DETECTION_ADAS_MODEL_CONFIG_JSON{"/ovms/src/test/configs/config_gpu_face_detection_adas.json"};
+const std::string FACE_DETECTION_ADAS_MODEL_PATH{"/ovms/src/test/face_detection_adas/1/face-detection-adas-0001.xml"};
+const std::string FACE_DETECTION_ADAS_MODEL_NAME{"face_detection_adas"};
+const std::string FACE_DETECTION_ADAS_INPUT_NAME{"data"};
+const std::string FACE_DETECTION_ADAS_OUTPUT_NAME{"detection_out"};
+const std::vector<int64_t> FACE_DETECTION_ADAS_INPUT_SHAPE{1, 3, 384, 672};
+
+TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasWithPreprocTest) {
     ov::element::Type_t dtype = ov::element::Type_t::f32;
     Core core;
-    //auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
-    auto model = core.read_model("/ovms/src/test/face_detection_adas/1/face-detection-adas-0001.xml");
+    auto model = core.read_model(FACE_DETECTION_ADAS_MODEL_PATH);
 
-    ov::preprocess::PrePostProcessor ppp(model);
-    std::string input_tensor_name{"data"};
     std::string outputName{"detection_out"};
-    if (true) {  // VAAPI decode
-        // https://docs.openvino.ai/latest/openvino_docs_OV_UG_supported_plugins_GPU_RemoteTensor_API.html#direct-nv12-video-surface-input
-        ppp.input()
-            .tensor()
-            .set_element_type(ov::element::u8)
-            .set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"})
-            .set_memory_type(ov::intel_gpu::memory_type::surface);
-        ppp.input().preprocess().convert_color(ov::preprocess::ColorFormat::BGR);
-        ppp.input().model().set_layout("NCHW");
-    } else {  // CPU decode
-        ppp.input(input_tensor_name).tensor().set_layout({"NHWC"}).set_element_type(ov::element::u8);
+    model = preprocessModel(model);
+    for (const ov::Output<ov::Node>& input : model->inputs()) {
+        SPDLOG_INFO("input name: {}", input.get_any_name());
+        SPDLOG_INFO("shape: {}", ovms::Shape(input.get_partial_shape()).toString());
     }
-    model = ppp.build();
-    int drmFd = open("/dev/dri/renderD128", O_RDWR);
-    if (drmFd < 0) {
-        perror("Cannot open DRM device");
-        ASSERT_TRUE(false);
+    for (const ov::Output<ov::Node>& output : model->outputs()) {
+        SPDLOG_INFO("output name: {}", output.get_any_name());
+        SPDLOG_INFO("shape: {}", ovms::Shape(output.get_partial_shape()).toString());
     }
-    VADisplay vaDisplay = vaGetDisplayDRM(drmFd);
-    if (vaDisplay == NULL) {
-        SPDLOG_INFO("Failed to get DRM VADisplay");
-        close(drmFd);
-        ASSERT_TRUE(false);
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+    ov::intel_gpu::ocl::VAContext vaGpuContext(core, vaHelper.getVADisplay());
+    long unsigned int width = FACE_DETECTION_ADAS_INPUT_SHAPE[2];
+    long unsigned int height = FACE_DETECTION_ADAS_INPUT_SHAPE[3];
+    VASurfaceAttrib surface_attrib;
+    surface_attrib.type = VASurfaceAttribPixelFormat;
+    surface_attrib.flags = VA_SURFACE_ATTRIB_SETTABLE;
+    surface_attrib.value.type = VAGenericValueTypeFloat;  // VAGenericValueTypeInteger; // TODO does it work with both
+    surface_attrib.value.value.i = VA_FOURCC_NV12;        // Specify the desired pixel format TODO
+
+    // Create the VA surface
+    VASurfaceID vaSurface;
+    auto status = vaCreateSurfaces(vaHelper.getVADisplay(), VA_RT_FORMAT_YUV420, width, height, &vaSurface, 1, &surface_attrib, 1);
+    ASSERT_EQ(VA_STATUS_SUCCESS, status) << "vaCreateSurfaces failed: " << status;
+    // this would not work since OV is not ale to create VADisplay
+    //auto gpuCompiledModel = core.compile_model(model, "GPU");
+    auto gpuCompiledModel = core.compile_model(model, vaGpuContext);
+    auto ovWrappedVAContext = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::VAContext>();
+    auto gpuInferRequest = gpuCompiledModel.create_infer_request();
+    // alternatively we could use create_tensor_nv12 but that would require deserialization of two inputs at once
+    // in OVMS which is not how it is implemented
+    //auto remoteTensor = ovWrappedVAContext.create_tensor_nv12(width, height, vaSurface);
+    AnyMap tensorParams = {{ov::intel_gpu::shared_mem_type.name(), ov::intel_gpu::SharedMemType::VA_SURFACE},
+        //{ov::intel_gpu::dev_object_handle.name(), vaSurface},
+        {ov::intel_gpu::dev_object_handle.name(), vaSurface},
+        {ov::intel_gpu::va_plane.name(), uint32_t(0)}};
+    ov::Tensor firstTensor = ovWrappedVAContext.create_tensor(element::u8, {1, width, height, 1}, tensorParams);
+    tensorParams[ov::intel_gpu::va_plane.name()] = uint32_t(1);
+    ov::Tensor secondTensor = ovWrappedVAContext.create_tensor(element::u8, {1, width / 2, height / 2, 2}, tensorParams);
+    gpuInferRequest.set_tensor(FACE_DETECTION_ADAS_INPUT_NAME + "/y", firstTensor);
+    gpuInferRequest.set_tensor(FACE_DETECTION_ADAS_INPUT_NAME + "/uv", secondTensor);
+    gpuInferRequest.infer();
+    auto outputTensor = gpuInferRequest.get_tensor(FACE_DETECTION_ADAS_OUTPUT_NAME);
+    auto data = outputTensor.data();
+    auto shape = outputTensor.get_shape();
+    for (auto d : shape) {
+        SPDLOG_ERROR("Dim:{}", d);
     }
-    int majorVersion, minorVersion;
-    VAStatus status = vaInitialize(vaDisplay, &majorVersion, &minorVersion);
-    if (status != VA_STATUS_SUCCESS) {
-        SPDLOG_INFO("Failed to initialize VA API");
-        vaTerminate(vaDisplay);
-        close(drmFd);
-        ASSERT_TRUE(false);
+    float* val = (float*)data;
+    SPDLOG_ERROR("Dumping output data");
+    for (int i = 0; i < 10; i++) {
+        std::string row;
+        row += std::to_string(i);
+        row += " [";
+        for (int j = 0; j < 7; j++) {
+            row += std::to_string(*(val + i * 7 + j));
+            row += ",";
+        }
+        row += "]";
+        SPDLOG_ERROR(row);
     }
-    SPDLOG_INFO("ER");
-    ov::intel_gpu::ocl::VAContext vaGpuContext(core, vaDisplay);
-    int y_plane_size = 384;
-    int uv_plane_size = 672;
+}
+TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasNoPreprocTest) {
+    GTEST_SKIP() << "It seems there is no way to use VAAPI without preprocessing";
+}
+
+TEST_F(CAPINonCopy, VAContextGlobalPreprocHardcodedInput) {  // TODO rename
+    std::string port = "9000";
+    randomizePort(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_MODEL_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    // TODO requires model mgmt otherwise
+    // we need to set up global VA Context before we start the server
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerInitilizeGlobalVADisplay(vaHelper.getVADisplay()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    // prepare request
+    OVMS_InferenceRequest* request{nullptr};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, FACE_DETECTION_ADAS_MODEL_NAME.c_str(), 1));
+    const std::string inputName_y = FACE_DETECTION_ADAS_INPUT_NAME + "/y";
+    const std::string inputName_uv = FACE_DETECTION_ADAS_INPUT_NAME + "/uv";
+    // prepare input
+    int width = 384;  // FP32
+    int height = 672;
     VASurfaceAttrib surface_attrib;
     surface_attrib.type = VASurfaceAttribPixelFormat;
     surface_attrib.flags = VA_SURFACE_ATTRIB_SETTABLE;
@@ -286,26 +406,47 @@ TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasTest) {
     surface_attrib.value.value.i = VA_FOURCC_NV12;        // Specify the desired pixel format
 
     // Create the VA surface
-    VASurfaceID va_surface;
-    status = vaCreateSurfaces(vaDisplay, VA_RT_FORMAT_YUV420, y_plane_size, uv_plane_size, &va_surface, 1, &surface_attrib, 1);
-    if (status != VA_STATUS_SUCCESS) {
-        SPDLOG_INFO("vaCreateSurdaces failed: {}", status);
-        vaTerminate(vaDisplay);
-        close(drmFd);
-        ASSERT_TRUE(false);
+    VASurfaceID vaSurface;
+    SPDLOG_ERROR("ZZZ vaSurface: {}", cl_uint(vaSurface));
+    auto status = vaCreateSurfaces(vaHelper.getVADisplay(), VA_RT_FORMAT_YUV420, width, height, &vaSurface, 1, &surface_attrib, 1);
+    SPDLOG_ERROR("ZZZ vaSurface: {}", cl_uint(vaSurface));
+    ASSERT_EQ(VA_STATUS_SUCCESS, status) << "vaCreateSurfaces failed: " << status;
+    const std::vector<int64_t> inputShape{1, 3, 384, 672};
+    const std::vector<int64_t> inputShape_y{1, 384, 672, 1};
+    const std::vector<int64_t> inputShape_uv{1, 384 / 2, 672 / 2, 2};
+    constexpr size_t inputBytesize = 1 * 3 * 384 * 672;
+    constexpr size_t inputBytesize_y = 1 * 1 * 384 * 672;
+    constexpr size_t inputBytesize_uv = 1 * 2 * 384 / 2 * 672 / 2;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, inputName_y.c_str(), OVMS_DATATYPE_U8, inputShape_y.data(), inputShape_y.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, inputName_y.c_str(), reinterpret_cast<void*>(vaSurface), inputBytesize_y * sizeof(uint8_t), OVMS_BUFFERTYPE_VASURFACE_Y, 1));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, inputName_uv.c_str(), OVMS_DATATYPE_U8, inputShape_uv.data(), inputShape_uv.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, inputName_uv.c_str(), reinterpret_cast<void*>(vaSurface), inputBytesize_uv * sizeof(uint8_t), OVMS_BUFFERTYPE_VASURFACE_UV, 1));
+    OVMS_InferenceResponse* response = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
+    const void* voutputData{nullptr};
+    size_t bytesize = 42;
+    uint32_t outputId = 0;
+    OVMS_DataType datatype = (OVMS_DataType)199;
+    const int64_t* shape{nullptr};
+    size_t dimCount = 42;
+    OVMS_BufferType bufferType = (OVMS_BufferType)199;
+    uint32_t deviceId = 42;
+    const char* outputName{nullptr};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+    SPDLOG_ERROR("Name: {}, bytesize:{}", outputName, bytesize);
+    float* val = (float*)voutputData;
+    SPDLOG_ERROR("Dumping output data");
+    for (int i = 0; i < 10; i++) {
+        std::string row;
+        row += std::to_string(i);
+        row += " [";
+        for (int j = 0; j < 7; j++) {
+            row += std::to_string(*(val + i * 7 + j));
+            row += ",";
+        }
+        row += "]";
+        SPDLOG_ERROR(row);
     }
-    // TODO replace int with names
-    auto gpuCompiledModel = core.compile_model(model, vaGpuContext);
-    //auto gpuCompiledModel = core.compile_model(model, "GPU");
-    SPDLOG_INFO("ER");
-    auto ovWrappedVAContext = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::VAContext>();
-    SPDLOG_INFO("ER");
-    auto gpuInferRequest = gpuCompiledModel.create_infer_request();
-    //auto remote_tensor = vaGpuContext.create_tensor_nv12(y_plane_size, uv_plane_size, va_surface);
-    auto remote_tensor = ovWrappedVAContext.create_tensor_nv12(y_plane_size, uv_plane_size, va_surface);
-    gpuInferRequest.set_input_tensor(0, remote_tensor.first);
-    gpuInferRequest.set_input_tensor(1, remote_tensor.second);
-    gpuInferRequest.infer();
 }
 #endif
 
@@ -753,50 +894,25 @@ TEST_F(OpenVINO, SetTensorTest) {
         // * no get_va_display function
         // * no allocate_image
         {  // GPU_OV_SET_VAA_BUF model loaded with ov context and vaapi tensors used
-            int drmFd = open("/dev/dri/renderD128", O_RDWR);
-            if (drmFd < 0) {
-                perror("Cannot open DRM device");
-                ASSERT_TRUE(false);
-            }
-            VADisplay vaDisplay = vaGetDisplayDRM(drmFd);
-            if (vaDisplay == NULL) {
-                SPDLOG_INFO("Failed to get DRM VADisplay");
-                close(drmFd);
-                ASSERT_TRUE(false);
-            }
-            int majorVersion, minorVersion;
-            VAStatus status = vaInitialize(vaDisplay, &majorVersion, &minorVersion);
-            if (status != VA_STATUS_SUCCESS) {
-                SPDLOG_INFO("Failed to initialize VA API");
-                vaTerminate(vaDisplay);
-                close(drmFd);
-                ASSERT_TRUE(false);
-            }
-            SPDLOG_INFO("ER");
-            ov::intel_gpu::ocl::VAContext vaGpuContext(core, vaDisplay);
-            int y_plane_size = 200;
-            int uv_plane_size = 200;
+            VADisplay vaDisplay = createVADisplay();
+            VAHelper vaHelper;
+            ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+            ov::intel_gpu::ocl::VAContext vaGpuContext(core, vaHelper.getVADisplay());
+            int width = 200;
+            int height = 200;
             VASurfaceAttrib surface_attrib;
             surface_attrib.type = VASurfaceAttribPixelFormat;
             surface_attrib.flags = VA_SURFACE_ATTRIB_SETTABLE;
             surface_attrib.value.type = VAGenericValueTypeFloat;  // VAGenericValueTypeInteger;
             surface_attrib.value.value.i = VA_FOURCC_NV12;        // Specify the desired pixel format
 
-            SPDLOG_INFO("ER");
             // Create the VA surface
-            VASurfaceID va_surface;
-            status = vaCreateSurfaces(vaDisplay, VA_RT_FORMAT_YUV420, y_plane_size, uv_plane_size, &va_surface, 1, &surface_attrib, 1);
-            if (status != VA_STATUS_SUCCESS) {
-                SPDLOG_INFO("vaCreateSurdaces failed: {}", status);
-                vaTerminate(vaDisplay);
-                close(drmFd);
-                ASSERT_TRUE(false);
-            }
-            SPDLOG_INFO("ER");
-            auto remote_tensor = vaGpuContext.create_tensor_nv12(y_plane_size, uv_plane_size, va_surface);
+            VASurfaceID vaSurface;
+            status = vaCreateSurfaces(vaHelper.getVADisplay(), VA_RT_FORMAT_YUV420, width, height, &vaSurface, 1, &surface_attrib, 1);
+            ASSERT_EQ(VA_STATUS_SUCCESS, status) << "vaCreateSurfaces failed: " << status;
+            auto remoteTensor = vaGpuContext.create_tensor_nv12(width, height, vaSurface);
             SPDLOG_ERROR("finished GPU_OV_SET_VAA_BUF:{}", times[GPU_OV_SET_VAA_BUF][tSize]);
-            SPDLOG_INFO("ER");
-            gpuInferRequest.set_tensor(input, remote_tensor.second);
+            gpuInferRequest.set_tensor(input, remoteTensor.second);
             gpuInferRequest.infer();
         }
 #endif
@@ -885,13 +1001,6 @@ TEST_F(OpenVINO, SetTensorTest) {
 }
 
 #include "../ocl_utils.hpp"
-
-class CAPINonCopy : public ::testing::Test {
-public:
-    void SetUp() override {
-        GPUEnvironment::skipWithoutGPU();
-    }
-};
 
 TEST_F(CAPINonCopy, SetOpenCLBufferAsInputTensor) {
     cl_platform_id platformId;
@@ -997,7 +1106,7 @@ TEST_F(OpenCL, UseDifferentContextWhenReadingAndWritingToBuffer) {
     EXPECT_EQ(0, queue2.enqueueReadBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, outputBufferData));
     const float* outputData = reinterpret_cast<const float*>(outputBufferData);
     for (size_t i = 0; i < 10; ++i) {
-        SPDLOG_ERROR("ER:{}", *(outputData + i));
+        SPDLOG_INFO("OutputData[{}]:{}", i, *(outputData + i));
     }
 }
 
@@ -1015,7 +1124,6 @@ TEST_F(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
     cl_context* contextFromModel;
-    SPDLOG_ERROR("ER");
     ASSERT_CAPI_STATUS_NULL(OVMS_GetServableContext(cserver, "dummy", 1, reinterpret_cast<void**>(&contextFromModel)));
 
     cl_platform_id platformId;
@@ -1049,15 +1157,10 @@ TEST_F(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));     // device id ?? TODO
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputSetData(request, DUMMY_MODEL_OUTPUT_NAME, reinterpret_cast<void*>(&openCLCppOutputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));  // device id ?? TODO
     OVMS_InferenceResponse* response = nullptr;
-    SPDLOG_ERROR("ER");
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
-    SPDLOG_ERROR("ER");
     cl::vector<cl::Event> readEvents;
-    SPDLOG_ERROR("ER");
     EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, outputBufferData, &readEvents));
-    SPDLOG_ERROR("ER");
     readEvents[0].wait();
-    SPDLOG_ERROR("ER");
     // TODO what to do if output set was not enough?
     uint32_t outputCount = 42;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
@@ -1086,9 +1189,7 @@ TEST_F(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     }*/
     // TODO FIXME add output checking
     // TODO cleanup settings
-    SPDLOG_ERROR("ER");
     OVMS_ServerDelete(cserver);
-    SPDLOG_ERROR("ER");
 }
 static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
@@ -1110,25 +1211,18 @@ TEST_F(CAPINonCopy, SyncWithCallbackDummy) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
     cl_context* contextFromModel;
-    SPDLOG_ERROR("ER");
     ASSERT_CAPI_STATUS_NULL(OVMS_GetServableContext(cserver, "dummy", 1, reinterpret_cast<void**>(&contextFromModel)));
-    SPDLOG_ERROR("ER");
 
     cl_platform_id platformId;
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);  // THIS is required to get correct device Id needed for queue
     // cl_context openCLCContext = contextFromModel;
-    SPDLOG_ERROR("ER");
     SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXX :{}", (void*)contextFromModel);
     cl::Context openCLCppContext(*contextFromModel, retainCLContextOwnership);
-    SPDLOG_ERROR("ER");
     cl::Device device(deviceId);
-    SPDLOG_ERROR("ER");
     cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
     cl_int clError;
     auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties, &clError);
-    EXPECT_EQ(0, clError);
-    SPDLOG_ERROR("QUEUE CREATION CODE:{} --------------------------------------------", clError);
     EXPECT_EQ(0, clError);
     // create OpenCL buffers
     std::vector<float> in(10, INITIAL_VALUE);
@@ -1136,28 +1230,23 @@ TEST_F(CAPINonCopy, SyncWithCallbackDummy) {
     std::vector<float> out(10, GARBAGE_VALUE);
     void* outputBufferData = out.data();
     size_t inputByteSize = sizeof(float) * in.size();
-    SPDLOG_ERROR("ER");
-    // return;
     cl::Buffer openCLCppInputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
     EXPECT_EQ(0, clError);
     cl::Buffer openCLCppOutputBuffer(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, NULL, &clError);
     EXPECT_EQ(0, clError);
     EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
-    // TODO to remove/investigate if this helps (2L below)
     EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, outputBufferData));
     // start CAPI server
-    // TODO load model with passed in context
     // prepare request
     OVMS_InferenceRequest* request{nullptr};
-    SPDLOG_ERROR("ER");
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddOutput(request, DUMMY_MODEL_OUTPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
     SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)openCLCppInputBuffer);
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));     // device id ?? TODO
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputSetData(request, DUMMY_MODEL_OUTPUT_NAME, reinterpret_cast<void*>(&openCLCppOutputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));  // device id ?? TODO
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputSetData(request, DUMMY_MODEL_OUTPUT_NAME, reinterpret_cast<void*>(&openCLCppOutputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));
     OVMS_InferenceResponse* response = nullptr;
     // set callback
     uint32_t callbackUsed = 31;
@@ -1165,28 +1254,18 @@ TEST_F(CAPINonCopy, SyncWithCallbackDummy) {
     CallbackUnblockingStruct callbackStruct;
     SPDLOG_ERROR("ER:{}", (void*)&callbackStruct.signal);
     auto unblockSignal = callbackStruct.signal.get_future();
-    SPDLOG_ERROR("ER");
-    //   callbackStruct.signal.set_value(42);
-    SPDLOG_ERROR("ER");
-    // callbackStruct.signal.set_value(42);
-    SPDLOG_ERROR("ER");
     callbackStruct.bufferAddr = &openCLCppOutputBuffer;
-    SPDLOG_ERROR("ER");
     callbackStruct.queue = &queue;
     SPDLOG_ERROR("ER:{}", (void*)&callbackStruct);
 
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompleteCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness, reinterpret_cast<void*>(&callbackStruct)));
-    SPDLOG_ERROR("ER");
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
     // check is done in callback
-    SPDLOG_ERROR("ER");
     auto callbackReturnValue = unblockSignal.get();
-    SPDLOG_ERROR("ER");
     SPDLOG_INFO("Using callbacks!");
     OVMS_ServerDelete(cserver);
 }
 
-// static void callbackMarkingItWasUsedWith42AndUnblocking(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
 static void callbackUnblockingAndFreeingRequest(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
 
@@ -1213,7 +1292,6 @@ TEST_F(CAPINonCopy, AsyncWithCallbackDummy) {
     EXPECT_EQ(0, clError);
     EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     // start CAPI server
-    // TODO load model with passed in context
     std::string port = "9000";
     randomizePort(port);
     OVMS_ServerSettings* serverSettings = nullptr;
@@ -1392,9 +1470,7 @@ TEST_F(CAPIGPUPerfComparison, Dummy) {
         callbackStruct[i % 2].signal = std::promise<uint32_t>();
         unblockSignal[i % 2] = callbackStruct[i % 2].signal.get_future();
     }
-    SPDLOG_ERROR("ER");
     auto callbackReturnValue = unblockSignal[iterations % 2].get();
-    SPDLOG_ERROR("ER");
     auto stop = std::chrono::high_resolution_clock::now();
     times[1] = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0;
     // TODO check non-remote tensors async
@@ -1488,17 +1564,17 @@ TEST_F(OpenVINOContextFromModel, UseCLContextForBuffersOVContextForInference) {
     shape.emplace_back(1);
     shape.emplace_back(10);
     // we need context from OV modelinstance.cpp
-    std::unique_ptr<ov::intel_gpu::ocl::ClContext> ocl_context_cpp;
-    cl_context ocl_context_c;
+    std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;
+    cl_context oclContextC;
     {
-        auto ocl_context = compiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
-        ocl_context_cpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(ocl_context);
-        ocl_context_c = ocl_context_cpp->get();
+        auto oclContext = compiledModel.get_context().as<ov::intel_gpu::ocl::ClContext>();
+        oclContextCpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(oclContext);
+        oclContextC = oclContextCpp->get();
     }
-    SPDLOG_ERROR("{}", (void*)ocl_context_c);
+    SPDLOG_ERROR("{}", (void*)oclContextC);
     // opencltensorfactory.hpp
-    auto inputTensor = ocl_context_cpp->create_tensor(type, shape, openCLCppInputBuffer);
-    auto outputTensor = ocl_context_cpp->create_tensor(type, shape, openCLCppOutputBuffer);
+    auto inputTensor = oclContextCpp->create_tensor(type, shape, openCLCppInputBuffer);
+    auto outputTensor = oclContextCpp->create_tensor(type, shape, openCLCppOutputBuffer);
     request.set_tensor("b", inputTensor);
     request.set_tensor("a", outputTensor);
     request.start_async();
@@ -1533,9 +1609,9 @@ TEST_F(OpenVINOContextFromModel, OutputTensorHasBiggerUnderlyingOCLBufferThanNee
     inferRequest->set_tensor(output, outputOVOCLBufferTensor);
     inferRequest->infer();
     std::vector<float> out(100, GARBAGE_VALUE);
-    void* buffer_out = out.data();
-    EXPECT_EQ(0, queueFromModelContext->enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, outputByteSize, buffer_out));
-    const float* outputData = reinterpret_cast<const float*>(buffer_out);
+    void* bufferOut = out.data();
+    EXPECT_EQ(0, queueFromModelContext->enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, outputByteSize, bufferOut));
+    const float* outputData = reinterpret_cast<const float*>(bufferOut);
     for (size_t i = 0; i < out.size(); ++i) {
         EXPECT_NEAR(in[i] + 1, outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
     }
@@ -1650,15 +1726,6 @@ static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse* response, uin
     *usedFlag = 42;
     OVMS_InferenceResponseDelete(response);
 }
-/*static void callbackMarkingItWasUsedWith42AndUnblocking(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
-    SPDLOG_INFO("Using callback: callbackMarkingItWasUsedWith42AndUnblocking!");
-    std::cout << __LINE__ << "Calling set callback" << std::endl;
-    CallbackUnblockingStruct* callbackUnblockingStruct = reinterpret_cast<CallbackUnblockingStruct*>(userStruct);
-    callbackUnblockingStruct->signal.set_value(42);
-    uint32_t outputCount = 42;
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
-    ASSERT_EQ(outputCount, 1);
-}*/
 
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
     SPDLOG_INFO("Using callback: callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness!");
@@ -1666,7 +1733,6 @@ static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnes
     SPDLOG_ERROR("ER:{}", userStruct);
     SPDLOG_ERROR("ER:{}", (void*)&callbackUnblockingStruct->signal);
     callbackUnblockingStruct->signal.set_value(42);
-    SPDLOG_ERROR("ER");
     uint32_t outputCount = 42;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
     ASSERT_EQ(outputCount, 1);
@@ -1695,13 +1761,13 @@ static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnes
     EXPECT_EQ(callbackUnblockingStruct->bufferAddr, voutputData);
     const cl::Buffer* openCLCppOutputBuffer = reinterpret_cast<const cl::Buffer*>(voutputData);
     std::vector<float> out(10, GARBAGE_VALUE);
-    void* buffer_out = out.data();
+    void* bufferOut = out.data();
     SPDLOG_INFO("Queue address in callback:{}", (void*)callbackUnblockingStruct->queue);  // DEBUG does not work in callback
-    auto clError = callbackUnblockingStruct->queue->enqueueReadBuffer(*openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, expectedShape[1] * sizeof(float), buffer_out);
+    auto clError = callbackUnblockingStruct->queue->enqueueReadBuffer(*openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, expectedShape[1] * sizeof(float), bufferOut);
     EXPECT_EQ(0, clError);
     std::vector<float> expectedData(expectedShape[1], INITIAL_VALUE + 1);
 
-    const float* outputData = reinterpret_cast<const float*>(buffer_out);
+    const float* outputData = reinterpret_cast<const float*>(bufferOut);
     for (size_t i = 0; i < out.size(); ++i) {
         EXPECT_NEAR(expectedData[i], outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
     }

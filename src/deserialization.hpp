@@ -375,7 +375,7 @@ template <>
 class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, ExtractChoice::EXTRACT_INPUT> {
 public:
     static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
-        SPDLOG_TRACE("Extracting input", name);
+        SPDLOG_TRACE("Extracting input: {}", name);
         return request.getInput(name.c_str(), tensor);
     }
 };

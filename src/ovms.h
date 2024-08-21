@@ -81,6 +81,8 @@ typedef enum OVMS_BufferType_enum {
     OVMS_BUFFERTYPE_CPU_PINNED,
     OVMS_BUFFERTYPE_GPU,
     OVMS_BUFFERTYPE_OPENCL,
+    OVMS_BUFFERTYPE_VASURFACE_Y,
+    OVMS_BUFFERTYPE_VASURFACE_UV,
     OVMS_BUFFERTYPE_HDDL,
 } OVMS_BufferType;
 
@@ -631,6 +633,17 @@ OVMS_Status* OVMS_ServableMetadataOutput(OVMS_ServableMetadata* metadata, uint32
 // \param info The ptr to the ov::AnyMap*
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServableMetadataInfo(OVMS_ServableMetadata* metadata, const void** info);
+
+// EXPERIMENTAL
+// Set global VADisplay for OpenVINO model compile phase
+// this triggers ov::Core::compile_model to use OpenVINO VAContext which enables
+// usage of VA Surfaces in inferences on models loaded on GPU.
+// This needs to be called before server start.
+// Ensure availability of VA Display during server usage.
+//
+// \param vaDisplay VADisplay that will be used to compile models
+// TODO should we accept server argument as well?
+OVMS_Status* OVMS_ServerInitilizeGlobalVADisplay(void* vaDisplay);
 
 // Deallocates a status object.
 //
