@@ -881,14 +881,16 @@ cc_library( # make ovms_lib dependent, use share doptions
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
-# TODO
-cc_library( # make ovms_lib dependent, use share doptions
+# TODO split
+cc_library(
     name = "libovmstensorfactory",
     hdrs = ["itensorfactory.hpp",
-            "opencltensorfactory.hpp", # TODO depends on image?
+            "opencltensorfactory.hpp",
+            "vaapitensorfactory.hpp",
             "regularovtensorfactory.hpp",],
     srcs = ["regularovtensorfactory.cpp",
-            "opencltensorfactory.cpp", # TODO depends on image?
+            "opencltensorfactory.cpp",
+            "vaapitensorfactory.cpp",
     ],
     deps = ["@linux_openvino//:openvino",
             "libovmscapibuffer",

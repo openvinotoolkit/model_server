@@ -60,6 +60,7 @@
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
+#include "vaapitensorfactory.hpp"
 
 namespace {
 enum : unsigned int {
@@ -74,6 +75,8 @@ enum : unsigned int {
 }  // namespace
 
 namespace ovms {
+
+void* globalVaDisplay = nullptr;
 
 const uint MAX_NIREQ_COUNT = 100000;
 const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
@@ -476,7 +479,20 @@ Status ModelInstance::loadInputTensorsImpl(const ModelConfig& config, const Dyna
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
     }
     configureBatchSize(this->config, parameter);
+    if (true) {  // VAAPI preproc TODO FIXME how to switch on off?
 
+        SPDLOG_ERROR("Addin va preproc");
+        ov::preprocess::PrePostProcessor ppp(this->model);
+        // https://docs.openvino.ai/latest/openvino_docs_OV_UG_supported_plugins_GPU_RemoteTensor_API.html#direct-nv12-video-surface-input
+        ppp.input()
+            .tensor()
+            .set_element_type(ov::element::u8)
+            .set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"})
+            .set_memory_type(ov::intel_gpu::memory_type::surface);
+        ppp.input().preprocess().convert_color(ov::preprocess::ColorFormat::BGR);
+        ppp.input().model().set_layout("NCHW");
+        this->model = ppp.build();
+    }
     OV_LOGGER("ov::Model: {}, model->inputs()", reinterpret_cast<void*>(model.get()));
     for (const ov::Output<ov::Node>& input : this->model->inputs()) {
         try {
@@ -751,10 +767,9 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
             compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->oclContextCpp, pluginConfig));
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
         } else {
-            compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
-            const auto oclContext = compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
             try {
-                auto vaContext = compiledModel->get_context().as<ov::intel_gpu::ocl::VAContext>();
+                // auto vaContext = compiledModel->get_context().as<ov::intel_gpu::ocl::VAContext>();
+                ov::intel_gpu::ocl::VAContext vaContext(this->ieCore, globalVaDisplay);
                 this->vaContext = std::make_unique<ov::intel_gpu::ocl::VAContext>(vaContext);
             } catch (std::exception& e) {
                 SPDLOG_ERROR("Creation of VA context failed: {}", e.what());
@@ -763,6 +778,10 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
                 SPDLOG_ERROR("Creation of VA context failed.");
                 // TODO FIXME throw;
             }
+            //compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
+            // TODO if target device == GPU:VAAPI
+            compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->vaContext, pluginConfig));
+            const auto oclContext = compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
             this->oclContextCpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(oclContext);
             this->oclContextC = this->oclContextCpp->get();
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
@@ -774,6 +793,8 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
         this->vaContext.reset();
         this->oclContextC = NULL;  // TODO FIXME add checking for context extraction from non-GPU device
     }
+    for (auto [k, info] : this->inputsInfo)
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Input {}", info->asString());
 }
 
 plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& config) {
@@ -901,8 +922,12 @@ void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicM
 void ModelInstance::loadTensorFactories() {
     using std::make_shared;
     this->tensorFactories.emplace(OVMS_BUFFERTYPE_CPU, make_shared<RegularOVTensorFactory>());
-    if (this->targetDevice.find("GPU") != std::string::npos)
+    if (this->targetDevice.find("GPU") != std::string::npos) {
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_OPENCL, make_shared<OpenCLTensorFactory>(*this->oclContextCpp));
+        // TODO what to do if display was not initialized? not allow in validation? but here we don't have the information about vacontext unless it is global
+        this->tensorFactories.emplace(OVMS_BUFFERTYPE_VASURFACE_Y, make_shared<VAAPITensorFactory>(*this->vaContext, OVMS_BUFFERTYPE_VASURFACE_Y));
+        this->tensorFactories.emplace(OVMS_BUFFERTYPE_VASURFACE_UV, make_shared<VAAPITensorFactory>(*this->vaContext, OVMS_BUFFERTYPE_VASURFACE_UV));
+    }
     // TODO test MULTI/AUTO/HETERO
 }
 

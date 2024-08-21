@@ -56,6 +56,8 @@ class Status;
 template <typename T1, typename T2>
 struct RequestProcessor;
 
+extern void* globalVaDisplay;
+
 class DynamicModelParameter {
 public:
     DynamicModelParameter() :
