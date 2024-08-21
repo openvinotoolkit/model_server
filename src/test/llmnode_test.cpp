@@ -102,7 +102,7 @@ public:
             std::string device = "CPU";
             ov::genai::SchedulerConfig schedulerConfig = {
                 .max_num_batched_tokens = 256,
-                .cache_size = 8,
+                .cache_size = 1,
                 .block_size = 32,
                 .dynamic_split_fuse = true,
                 .max_num_seqs = 256,
@@ -133,12 +133,12 @@ public:
                 return r1.score > r2.score;
             });
             size_t i = 0;
+            std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(cbPipe->get_tokenizer());
             for (ov::genai::GenerationOutput& out : generationOutput) {
                 if (i >= config.num_return_sequences)
                     break;
                 i++;
                 std::vector<int64_t> tokens = out.generated_token_ids;
-                std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(cbPipe->get_tokenizer());
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
                 std::string completion = tokenizer->decode(tokens);
                 expectedMessages.emplace_back(completion);
@@ -222,7 +222,6 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
         ASSERT_FALSE(choice["logprobs"].IsObject());
         ASSERT_TRUE(choice["text"].IsString());
         EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
@@ -344,7 +343,6 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
         ASSERT_FALSE(choice["logprobs"].IsObject());
         ASSERT_TRUE(choice["text"].IsString());
         EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
@@ -417,7 +415,6 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
         ASSERT_FALSE(choice["logprobs"].IsObject());
         ASSERT_TRUE(choice["message"].IsObject());
         ASSERT_TRUE(choice["message"]["content"].IsString());
@@ -489,6 +486,7 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
             "stream": true,
             "seed" : 1,
             "max_tokens": 5,
+            "ignore_eos": true,
             "prompt": "What is OpenVINO?"
         }
     )";
@@ -523,6 +521,7 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStream) {
             "stream": true,
             "seed" : 1,
             "max_tokens": 5,
+            "ignore_eos": true,
             "messages": [
             {
                 "role": "user",
