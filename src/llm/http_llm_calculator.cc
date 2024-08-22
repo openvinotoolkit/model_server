@@ -51,6 +51,15 @@ enum class Endpoint {
     COMPLETIONS,
 };
 
+struct CompletionUsageStatistics {
+    size_t promptTokens = 0;
+    size_t completionTokens = 0;
+
+    size_t calculateTotalTokens() const {
+        return promptTokens + completionTokens;
+    }
+};
+
 using chat_entry_t = std::unordered_map<std::string, std::string>;
 using chat_t = std::vector<chat_entry_t>;
 
@@ -392,6 +401,8 @@ class HttpLLMCalculator : public CalculatorBase {
     // TODO: To be  moved to CB library
     std::shared_ptr<TextStreamer> streamer;
 
+    CompletionUsageStatistics usage;
+
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
     static const std::string LOOPBACK_TAG_NAME;
@@ -399,7 +410,7 @@ class HttpLLMCalculator : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
 
-    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, Endpoint endpoint);
+    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, Endpoint endpoint, CompletionUsageStatistics usage);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason, Endpoint endpoint);
 
 public:
@@ -466,7 +477,6 @@ public:
                 this->request = std::make_shared<OpenAIChatCompletionsRequest>(*payload.parsedJson, endpoint);
                 this->client = payload.client;
 
-                // TODO: Support chat scenario once atobisze adds that to CB library
                 auto status = this->request->parse(nodeResources->maxTokensLimit, nodeResources->bestOfLimit);
                 if (status != absl::OkStatus())
                     return status;
@@ -501,9 +511,12 @@ public:
                         return absl::CancelledError();
                     }
 
+                    ov::Tensor finalPromptIds = nodeResources->cbPipe->get_tokenizer().encode(finalPrompt).input_ids;
+                    usage.promptTokens = finalPromptIds.get_size();
+
                     this->generationHandle = nodeResources->cbPipe->add_request(
                         currentRequestId++, /*to be removed from API?*/
-                        finalPrompt,
+                        finalPromptIds,
                         this->request->createGenerationConfig());
 
                     this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
@@ -533,7 +546,7 @@ public:
                     return r1.score > r2.score;
                 });
 
-                std::string response = serializeUnaryResponse(generationOutputs, this->request->getEndpoint());
+                std::string response = serializeUnaryResponse(generationOutputs, this->request->getEndpoint(), usage);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{response}, timestamp);
             } else {
@@ -585,7 +598,7 @@ public:
     }
 };
 
-std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, Endpoint endpoint) {
+std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, Endpoint endpoint, CompletionUsageStatistics usage) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -597,18 +610,20 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::gena
     writer.StartArray();  // [
     int i = 0;
     int n = this->request->getNumReturnSequences().value_or(1);
+    usage.completionTokens = 0;
     for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
         if (i >= n)
             break;
 
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_token_ids);
+        usage.completionTokens += generationOutput.generated_token_ids.size();
         std::string completeResponse = nodeResources->cbPipe->get_tokenizer().decode(generationOutput.generated_token_ids);
         writer.StartObject();  // {
         // finish_reason: string; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)
-        // "stop" => natural stop point due to stopping criteria <---------------- the only used so far, remaining are TODO
-        // "length" => due to reaching max_tokens parameter TODO
-        // "content_filter" => when produced restricted output
-        // "tool_calls" => generation stopped and waiting for tool output
+        // "stop" => natural stop point due to stopping criteria
+        // "length" => due to reaching max_tokens parameter
+        // "content_filter" => when produced restricted output (not supported)
+        // "tool_calls" => generation stopped and waiting for tool output (not supported)
         // "function_call" => deprecated
         writer.String("finish_reason");
         switch (generationOutput.finish_reason) {
@@ -667,6 +682,16 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::gena
         writer.String("text_completion");
     }
 
+    writer.String("usage");
+    writer.StartObject();
+    writer.String("prompt_tokens");
+    writer.Int(usage.promptTokens);
+    writer.String("completion_tokens");
+    writer.Int(usage.completionTokens);
+    writer.String("total_tokens");
+    writer.Int(usage.calculateTotalTokens());
+    writer.EndObject();
+
     // TODO
     // id: string; A unique identifier for the chat completion.
 
@@ -674,15 +699,12 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::gena
     // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
-    // TODO
-    // usage: object; Usage statistics for the completion request.
-    // Might be crucial - possibly required for benchmarking purposes?
-
     writer.EndObject();  // }
     return buffer.GetString();
 }
 
-std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason, Endpoint endpoint) {
+std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason,
+    Endpoint endpoint) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -695,10 +717,10 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     writer.StartArray();   // [
     writer.StartObject();  // {
     // finish_reason: string or null; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)/null
-    // "stop" => natural stop point due to stopping criteria <---------------- the only used so far, remaining are TODO
-    // "length" => due to reaching max_tokens parameter TODO
-    // "content_filter" => when produced restricted output
-    // "tool_calls" => generation stopped and waiting for tool output
+    // "stop" => natural stop point due to stopping criteria
+    // "length" => due to reaching max_tokens parameter
+    // "content_filter" => when produced restricted output (not supported)
+    // "tool_calls" => generation stopped and waiting for tool output (not supported)
     // "function_call" => deprecated
     // null - natural scenario when the generation has not completed yet
     writer.String("finish_reason");

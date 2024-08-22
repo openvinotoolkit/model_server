@@ -145,6 +145,12 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
     }
     ASSERT_EQ(d["model"], "llmDummyKFS");
     ASSERT_EQ(d["object"], "text_completion");
+
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(d["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
 }
 
 TEST_F(LLMFlowHttpTest, unaryCompletionsJsonFinishReasonLength) {
@@ -252,6 +258,11 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
     }
     ASSERT_EQ(d["model"], "llmDummyKFS");
     ASSERT_EQ(d["object"], "text_completion");
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(d["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
 }
 
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonNFail) {
@@ -313,6 +324,12 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
     }
     ASSERT_EQ(d["model"], "llmDummyKFS");
     ASSERT_EQ(d["object"], "chat.completion");
+
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(d["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
 }
 
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
@@ -350,6 +367,12 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
     }
     ASSERT_EQ(d["model"], "llmDummyKFS");
     ASSERT_EQ(d["object"], "chat.completion");
+
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(d["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
 }
 
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonFinishReasonLength) {
