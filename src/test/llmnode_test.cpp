@@ -212,14 +212,12 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
         EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
         ASSERT_EQ(choice["index"], i++);
     }
-    ASSERT_EQ(d["model"], "llmDummyKFS");
-    ASSERT_EQ(d["object"], "text_completion");
 
-    ASSERT_TRUE(d["usage"].IsObject());
-    ASSERT_TRUE(d["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(d["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(d["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(d["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
     EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
 }
@@ -333,13 +331,11 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
         EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
         ASSERT_EQ(choice["index"], i++);
     }
-    ASSERT_EQ(d["model"], "llmDummyKFS");
-    ASSERT_EQ(d["object"], "text_completion");
-    ASSERT_TRUE(d["usage"].IsObject());
-    ASSERT_TRUE(d["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(d["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(d["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(d["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
     EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
 }
@@ -407,14 +403,12 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
         ASSERT_EQ(choice["index"], i++);
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
     }
-    ASSERT_EQ(d["model"], "llmDummyKFS");
-    ASSERT_EQ(d["object"], "chat.completion");
 
-    ASSERT_TRUE(d["usage"].IsObject());
-    ASSERT_TRUE(d["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(d["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(d["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(d["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
     EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
@@ -452,14 +446,12 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
         ASSERT_TRUE(choice["message"]["content"].IsString());
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
     }
-    ASSERT_EQ(d["model"], "llmDummyKFS");
-    ASSERT_EQ(d["object"], "chat.completion");
 
-    ASSERT_TRUE(d["usage"].IsObject());
-    ASSERT_TRUE(d["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(d["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(d["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(d["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
     EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
