@@ -151,21 +151,6 @@ public:
         return 0;
     }
 
-    int parsePartialReply(std::string response, rapidjson::Document& d) {
-        size_t pos = response.find("{");
-        if (pos == response.npos)
-            return -1;
-        response.erase(0, pos);
-        pos = response.find_last_of("}");
-        if (pos == response.npos)
-            return -1;
-        response.erase(pos + 1, response.size());
-        rapidjson::ParseResult parsingSucceeded = d.Parse(response.c_str());
-        if (parsingSucceeded.Code() != 0)
-            return -1;
-        return 0;
-    }
-
     void SetUp() {
         ovms::Server& server = ovms::Server::instance();
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
@@ -492,7 +477,12 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
     )";
     ON_CALL(writer, PartialReply).WillByDefault([this](std::string response) {
         rapidjson::Document d;
-        ASSERT_EQ(parsePartialReply(response, d), 0);
+        std::string dataPrefix = "data:";
+        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+        size_t pos = response.find("\n");
+        ASSERT_NE(pos, response.npos);
+        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
         ASSERT_TRUE(d["choices"].IsArray());
         ASSERT_EQ(d["choices"].Capacity(), 1);
         int i = 0;
@@ -532,7 +522,12 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStream) {
     )";
     ON_CALL(writer, PartialReply).WillByDefault([this](std::string response) {
         rapidjson::Document d;
-        ASSERT_EQ(parsePartialReply(response, d), 0);
+        std::string dataPrefix = "data:";
+        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+        size_t pos = response.find("\n");
+        ASSERT_NE(pos, response.npos);
+        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
         ASSERT_TRUE(d["choices"].IsArray());
         ASSERT_EQ(d["choices"].Capacity(), 1);
         int i = 0;
