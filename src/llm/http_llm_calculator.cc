@@ -419,14 +419,14 @@ static std::string packIntoServerSideEventMessage(const std::string& message) {
 
 static std::string packPromptTokens(const ov::Tensor& input) {
     std::stringstream ss = "prompt_token_ids: [";
-    if(tensor.get_element_type() != ov::element::f64) {
+    if (tensor.get_element_type() != ov::element::f64) {
         ss << "Warning: expected ov::element::f64 and got " << tensor.get_element_type() << "for input tokens.]";
         return ss.str();
     }
 
     auto data_ptr = finalPromptIds.input_ids.data<int64_t>();
     for (size_t i = 0; i < input.get_size(); i++) {
-        if (i==0)
+        if (i == 0)
             ss << data_ptr;
         else
             ss << ", " << data_ptr[i];
