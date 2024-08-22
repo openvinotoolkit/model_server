@@ -26,8 +26,7 @@ OpenCLTensorFactory::OpenCLTensorFactory(ov::intel_gpu::ocl::ClContext& ovOclCon
 }
 
 ov::Tensor OpenCLTensorFactory::create(ov::element::Type_t type, const ov::Shape& shape, const void* data) {
-    SPDLOG_ERROR("ER");
-    SPDLOG_TRACE("create ov::Tensor from context with buffer: {}", data);  // TODO OVTRACING
+    SPDLOG_TRACE("create ov::Tensor from context with buffer: {}", data);
     OV_LOGGER("ov::intel_gpu::ocl::ClContext: {}, ov::intel_gpu::ocl::ClContext::create_tensor(type:{}, shape:{}, data:{})", (void*)&ovOclContext, type, (void*)&shape, data);
     return ovOclContext.create_tensor(type, shape, *(reinterpret_cast<const cl::Buffer*>(data)));
 }
