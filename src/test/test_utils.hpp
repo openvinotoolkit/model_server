@@ -749,7 +749,6 @@ protected:
     }
 
     void TearDown() override {
-        SPDLOG_ERROR("ER:{}", directoryPath);
         std::filesystem::remove_all(directoryPath);
     }
 

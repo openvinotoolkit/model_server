@@ -173,37 +173,6 @@ Status serializePredictResponse(
     }
     return status;
 }
-/*template<typename RequestType>
-class BufferSources {
-    public:
-        BufferSources(const RequestType& request)
-        void* getBuffer(const std::string& name, ov::Tensor& tensor) {
-            return tensor.data();
-        }
-    private:
-        const RequestType& request;
-    };
-
-template<>
-class BufferSources<InferenceRequest> {
-    public:
-        BufferSources(const InferenceRequest& request)
-        void* getBuffer(const std::string& name, ov::Tensor& tensor) {
-            const InferenceTensor* capiTensor;
-            auto status = request.getOutput(name.c_str(), capiTensor);
-            if (!status.ok()) {
-                return nullptr;
-            }
-            Buffer* buffer = capiTensor->getBuffer();
-            if (!buffer) {
-                return nullptr;
-            }
-            return buffer->data();
-        }
-    private:
-        const InferenceRequest& request;
-    };
-*/
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
