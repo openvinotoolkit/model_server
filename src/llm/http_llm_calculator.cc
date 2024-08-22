@@ -55,7 +55,7 @@ struct CompletionUsageStatistics {
     size_t promptTokens = 0;
     size_t completionTokens = 0;
 
-    size_t calculateTotalTokens() {
+    size_t calculateTotalTokens() const {
         return promptTokens + completionTokens;
     }
 };
