@@ -420,15 +420,15 @@ static std::string packIntoServerSideEventMessage(const std::string& message) {
 static std::string packPromptTokens(const ov::Tensor& input) {
     std::stringstream ss;
     ss << "prompt_token_ids: [";
-    if (input.get_element_type() != ov::element::f64) {
-        ss << "Warning: expected ov::element::f64 and got " << input.get_element_type() << "for input tokens.]";
+    if (input.get_element_type() != ov::element::i64) {
+        ss << "Warning: expected ov::element::i64 and got " << input.get_element_type() << " for input tokens.]";
         return ss.str();
     }
 
-    auto data_ptr = input.data<int64_t>();
+    int64_t* data_ptr = input.data<int64_t>();
     for (size_t i = 0; i < input.get_size(); i++) {
         if (i == 0)
-            ss << data_ptr;
+            ss << data_ptr[i];
         else
             ss << ", " << data_ptr[i];
     }
