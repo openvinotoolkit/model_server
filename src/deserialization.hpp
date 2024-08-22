@@ -107,11 +107,6 @@ static std::tuple<ovms::Status, const typename RequestTraits<RequestType>::Tenso
 template <typename Request, typename Tensor>
 Status getTensor(const Request& request, const std::string& name, const Tensor tensor);
 
-template <typename Request>
-bool specifiesOutputs(const Request& request) {
-    return false;
-}
-
 //////
 //
 // Move to tfs

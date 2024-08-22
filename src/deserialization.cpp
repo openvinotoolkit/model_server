@@ -138,11 +138,6 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
 }
 
 template <>
-bool specifiesOutputs(const InferenceRequest& request) {
-    return true;  // TODO FIXME
-}
-
-template <>
 Status getTensor(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
     return request.getInput(name.c_str(), tensor);
 }

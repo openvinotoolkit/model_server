@@ -16,7 +16,7 @@
 #pragma once
 
 #include <openvino/openvino.hpp>
-#include <openvino/runtime/intel_gpu/va/va.hpp>
+#include <openvino/runtime/intel_gpu/ocl/va.hpp>
 #include "itensorfactory.hpp"
 #include "./ovms.h"
 namespace ov::intel_gpu::ocl {
