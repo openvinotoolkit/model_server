@@ -427,7 +427,7 @@ OVMS_Status* OVMS_GetServableContext(OVMS_Server* server, const char* servableNa
 OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, OVMS_Server* server, const char* servableName, int64_t servableVersion);
 void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
 
-// Set the data of the input buffer. Ownership of data needs to be maintained during inference.
+// Add input to the request
 //
 // \param request The request object
 // \param inputName The name of the input
@@ -448,21 +448,21 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* request, const char* inputName, const void* data, size_t byteSize, OVMS_BufferType bufferType, uint32_t deviceId);
 
-// Set the data of the input buffer. Ownership of data needs to be maintained during inference.
+// Add output to the request. This can be used to be able to specify buffers to avoid copying data after the inference.
 //
 // \param request The request object
-// \param inputName The name of the input
+// \param outputName The name of the output
 // \param datatype The data type of the input
 // \param shape The shape of the input (ignored for scalars)
 // \param dimCount The number of dimensions of the shape
 // \return OVMS_Status object in case of failure
-OVMS_Status* OVMS_InferenceRequestAddOutput(OVMS_InferenceRequest* request, const char* inputName, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
+OVMS_Status* OVMS_InferenceRequestAddOutput(OVMS_InferenceRequest* request, const char* outputName, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
 
-// Set the data of the input buffer. Ownership of data needs to be maintained during inference.
+// Set the data of the output buffer. Ownership of data needs to be maintained during inference.
 //
 // \param request The request object
-// \param inputName The name of the input with data to be set
-// \param data The data of the input
+// \param inputName The name of the output with data to be set
+// \param data The data of the output
 // \param byteSize The byte size of the data
 // \param bufferType The buffer type of the data
 // \param deviceId The device id of the data memory buffer

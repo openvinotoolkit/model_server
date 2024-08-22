@@ -1094,7 +1094,6 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableContext(OVMS_Server* serverPtr, const ch
     SPDLOG_DEBUG("Processing C-API context request for servable: {}; version: {}",
         servableName,
         servableVersion);
-    // TODO metrics
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     ModelManager* modelManager{nullptr};
     auto status = getModelManager(server, &modelManager);
@@ -1102,18 +1101,14 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableContext(OVMS_Server* serverPtr, const ch
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
     std::shared_ptr<ovms::ModelInstance> modelInstance = modelManager->findModelInstance(servableName, servableVersion);
-    // TODO FIXME guard
+    // TODO FIXME guard or dispose this from API if not needed
 
     if (!status.ok()) {
-        if (modelInstance) {
-            //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
-        }
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
     const cl_context* oclCContext = modelInstance->getOclCContext();
     *reinterpret_cast<cl_context**>(oclContext) = const_cast<cl_context*>(oclCContext);
-    // *oclContext = reinterpret_cast<void*>(oclCContext);
     return nullptr;
 }
 

@@ -36,7 +36,7 @@ VAAPITensorFactory::VAAPITensorFactory(ov::intel_gpu::ocl::VAContext& vaContext,
 }
 
 ov::Tensor VAAPITensorFactory::create(ov::element::Type_t type, const ov::Shape& shape, const void* data) {
-    SPDLOG_TRACE("create ov::Tensor from context with buffer: {}", data);  // TODO OVTRACING
+    SPDLOG_TRACE("create ov::Tensor from context with buffer: {}", data);
     OV_LOGGER("ov::AnyMap() {{{{{}, {}}}, {{{}, {}}}, {{{}, {}}}}}",
         ov::intel_gpu::shared_mem_type.name(), ov::intel_gpu::SharedMemType::VA_SURFACE,
         ov::intel_gpu::dev_object_handle.name(), static_cast<cl_uint>(reinterpret_cast<intptr_t>(data)),
@@ -45,8 +45,6 @@ ov::Tensor VAAPITensorFactory::create(ov::element::Type_t type, const ov::Shape&
         {ov::intel_gpu::shared_mem_type.name(), ov::intel_gpu::SharedMemType::VA_SURFACE},
         {ov::intel_gpu::dev_object_handle.name(), static_cast<cl_uint>(reinterpret_cast<intptr_t>(data))},
         {ov::intel_gpu::va_plane.name(), this->vaPlaneId}};
-    // auto y_tensor = create_tensor(element::u8, {1, height, width, 1}, tensor_params);
-    SPDLOG_ERROR("ZZZ {}, {}, {}, {}", shape[0], shape[1], shape[2], shape[3]);
     OV_LOGGER("ov::intel_gpu::ocl::VAContext: {}, ov::intel_gpu::ocl::VAContext::create_tensor(element::type: {}, shape: {}, data: {})", (void*)&vaContext, type, (void*)&shape, data);
     return vaContext.create_tensor(type, shape, tensor_params);
 }
