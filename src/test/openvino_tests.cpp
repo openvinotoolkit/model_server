@@ -320,8 +320,9 @@ TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasWithPreprocTest
     VAHelper vaHelper;
     ASSERT_NE(vaHelper.getVADisplay(), nullptr);
     ov::intel_gpu::ocl::VAContext vaGpuContext(core, vaHelper.getVADisplay());
-    long unsigned int width = FACE_DETECTION_ADAS_INPUT_SHAPE[2];
-    long unsigned int height = FACE_DETECTION_ADAS_INPUT_SHAPE[3];
+    // long unsigned int width = FACE_DETECTION_ADAS_INPUT_SHAPE[2];
+    uint32_t width = FACE_DETECTION_ADAS_INPUT_SHAPE[2];
+    uint32_t height = FACE_DETECTION_ADAS_INPUT_SHAPE[3];
     VASurfaceAttrib surface_attrib;
     surface_attrib.type = VASurfaceAttribPixelFormat;
     surface_attrib.flags = VA_SURFACE_ATTRIB_SETTABLE;
@@ -333,15 +334,14 @@ TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasWithPreprocTest
     auto status = vaCreateSurfaces(vaHelper.getVADisplay(), VA_RT_FORMAT_YUV420, width, height, &vaSurface, 1, &surface_attrib, 1);
     ASSERT_EQ(VA_STATUS_SUCCESS, status) << "vaCreateSurfaces failed: " << status;
     // this would not work since OV is not ale to create VADisplay
-    //auto gpuCompiledModel = core.compile_model(model, "GPU");
+    // auto gpuCompiledModel = core.compile_model(model, "GPU");
     auto gpuCompiledModel = core.compile_model(model, vaGpuContext);
     auto ovWrappedVAContext = gpuCompiledModel.get_context().as<ov::intel_gpu::ocl::VAContext>();
     auto gpuInferRequest = gpuCompiledModel.create_infer_request();
     // alternatively we could use create_tensor_nv12 but that would require deserialization of two inputs at once
     // in OVMS which is not how it is implemented
-    //auto remoteTensor = ovWrappedVAContext.create_tensor_nv12(width, height, vaSurface);
+    // auto remoteTensor = ovWrappedVAContext.create_tensor_nv12(width, height, vaSurface);
     AnyMap tensorParams = {{ov::intel_gpu::shared_mem_type.name(), ov::intel_gpu::SharedMemType::VA_SURFACE},
-        //{ov::intel_gpu::dev_object_handle.name(), vaSurface},
         {ov::intel_gpu::dev_object_handle.name(), vaSurface},
         {ov::intel_gpu::va_plane.name(), uint32_t(0)}};
     ov::Tensor firstTensor = ovWrappedVAContext.create_tensor(element::u8, {1, width, height, 1}, tensorParams);
@@ -456,7 +456,7 @@ TEST_F(OpenVINO, SetTensorTest) {
     size_t tSize = 10;
     int iterations = 10;
     iterations = 1'000;
-    //std::vector<size_t> sizeSet{10, 10 * 10, 10 * 100, 10 * 1'000, 10 * 10'000, 10 * 100'000, 10 * 1'000'000};
+    // std::vector<size_t> sizeSet{10, 10 * 10, 10 * 100, 10 * 1'000, 10 * 10'000, 10 * 100'000, 10 * 1'000'000};
     std::vector<size_t> sizeSet{1'000'000};
     // load model
     Core core;

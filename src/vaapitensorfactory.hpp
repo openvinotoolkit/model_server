@@ -16,9 +16,9 @@
 #pragma once
 
 #include <openvino/openvino.hpp>
-//#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#include <openvino/runtime/intel_gpu/va/va.hpp>
 #include "itensorfactory.hpp"
-#include "ovms.h"
+#include "./ovms.h"
 namespace ov::intel_gpu::ocl {
 class VAContext;
 }

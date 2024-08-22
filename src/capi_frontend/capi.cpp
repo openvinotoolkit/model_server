@@ -560,7 +560,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest*
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
     }
     if (data == nullptr) {  // TODO FIXME - it is legal for VAAPI to pass 0 as it is surface id, not a pointer
-        //return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data"));
+        // return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->setInputBuffer(inputName, data, bufferSize, bufferType, deviceId);
@@ -999,7 +999,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceAsync(OVMS_Server* serverPtr, OVMS_Inferen
 
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", req->getServableName());
-        // TODO FIXME status DAG not working
+        status = getPipeline(server, req, res.get(), pipelinePtr);
     }
     if (!status.ok()) {
         if (modelInstance) {
@@ -1013,7 +1013,8 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceAsync(OVMS_Server* serverPtr, OVMS_Inferen
         ExecutionContext::Interface::GRPC,
         ExecutionContext::Method::ModelInfer};
     if (pipelinePtr) {
-        // status = pipelinePtr->execute(executionContext);
+        SPDLOG_DEBUG("Async inference for DAG is not implemented");  // TODO add negative test
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NOT_IMPLEMENTED));
         // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     } else {
         status = modelInstance->inferAsync<InferenceRequest, InferenceResponse>(req, modelInstanceUnloadGuard);

@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "gpuenvironment.hpp"
 
+#include <string>
+
 #include "../logging.hpp"
 
 void GPUEnvironment::SetUp() {
