@@ -318,3 +318,6 @@ The service deployed above can be used in RAG chain using `langchain` library wi
 
 Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
 
+## Scaling the Model Server
+
+Check this simple [text generation scaling demo](./scaling/README.md).
