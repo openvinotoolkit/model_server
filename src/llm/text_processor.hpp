@@ -15,9 +15,12 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <sstream>
 
+#include <openvino/openvino.hpp>
 // Python execution for template processing
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
@@ -34,5 +37,40 @@ public:
 
     static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output);
 };
+
+template< typename T>
+static std::string packPromptTokens(T * input, size_t size) {
+    std::stringstream ss;
+    ss << "prompt_token_ids: [";
+    for (size_t i = 0; i < size; i++) {
+        if (i == 0)
+            ss << input[i];
+        else
+            ss << ", " << input[i];
+    }
+    ss << "]";
+    return ss.str();
+}
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+static std::string getPromptTokensString(const ov::Tensor& tensor) {
+    if (tensor.get_element_type() == ov::element::i32) {
+        return packPromptTokens(tensor.data<int>(), tensor.get_size());
+    } else if (tensor.get_element_type() == ov::element::i16) {
+        return packPromptTokens(tensor.data<int16_t>(), tensor.get_size());
+    } else if (tensor.get_element_type() == ov::element::i64) {
+        return packPromptTokens(tensor.data<int64_t>(), tensor.get_size());
+    } else if (tensor.get_element_type() == ov::element::f32) {
+        return packPromptTokens(tensor.data<float>(), tensor.get_size());
+    } else if (tensor.get_element_type() == ov::element::f64) {
+        return packPromptTokens(tensor.data<double>(), tensor.get_size());
+    }
+
+    std::stringstream ss;
+    ss << "Warning: unsupported ov::element::Type - got " << tensor.get_element_type() << " for input tokens.";
+    return ss.str();
+}
+#pragma GCC diagnostic pop
 
 }  // namespace ovms

@@ -417,25 +417,6 @@ static std::string packIntoServerSideEventMessage(const std::string& message) {
     return ss.str();
 }
 
-static std::string packPromptTokens(const ov::Tensor& input) {
-    std::stringstream ss;
-    ss << "prompt_token_ids: [";
-    if (input.get_element_type() != ov::element::i64) {
-        ss << "Warning: expected ov::element::i64 and got " << input.get_element_type() << " for input tokens.]";
-        return ss.str();
-    }
-
-    int64_t* data_ptr = input.data<int64_t>();
-    for (size_t i = 0; i < input.get_size(); i++) {
-        if (i == 0)
-            ss << data_ptr[i];
-        else
-            ss << ", " << data_ptr[i];
-    }
-    ss << "]";
-    return ss.str();
-}
-
 // CB lib internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
 
@@ -561,7 +542,7 @@ public:
 
                     ov::Tensor finalPromptIds = nodeResources->cbPipe->get_tokenizer().encode(finalPrompt).input_ids;
                     usage.promptTokens = finalPromptIds.get_size();
-                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", packPromptTokens(finalPromptIds));
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(finalPromptIds));
 
                     this->generationHandle = nodeResources->cbPipe->add_request(
                         currentRequestId++, /*to be removed from API?*/
