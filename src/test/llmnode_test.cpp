@@ -29,7 +29,9 @@
 
 #include "../http_rest_api_handler.hpp"
 #include "../llm/llmnoderesources.hpp"
+#include "../llm/llm_executor.hpp"
 #include "../server.hpp"
+#include "json_parser.hpp"
 #include "opencv2/opencv.hpp"
 #include "rapidjson/document.h"
 #include "test_utils.hpp"
