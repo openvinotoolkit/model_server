@@ -33,6 +33,7 @@
 #include "../server.hpp"
 #include "json_parser.hpp"
 #include "opencv2/opencv.hpp"
+#include "ov_utils.hpp"
 #include "rapidjson/document.h"
 #include "test_utils.hpp"
 
@@ -2119,4 +2120,111 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
+}
+
+class GetPromptTokensString : public ::testing::Test {
+public:
+    std::string expectedTokensString;
+    std::vector<std::vector<size_t>> shapes{{10}};
+    void SetUp() {
+        expectedTokensString = "prompt_token_ids: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]";
+    }
+};
+
+TEST_F(GetPromptTokensString, typesTestF32) {
+    std::vector<ov::element::Type_t> precisions{ov::element::Type_t::f32};
+    std::vector<float> tensorsDataF{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    for (auto precision : precisions) {
+        std::stringstream ss;
+        ss << "Testing precision: " << precision << std::endl;
+        std::cout << ss.str();
+        ov::Tensor tensor = createTensorWithNoDataOwnership(precision, shapes[0], tensorsDataF.data());
+        ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
+    }
+}
+
+TEST_F(GetPromptTokensString, typesTestF64) {
+    std::vector<ov::element::Type_t> precisions{ov::element::Type_t::f64};
+    std::vector<double> tensorsDataD{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+    for (auto precision : precisions) {
+        std::stringstream ss;
+        ss << "Testing precision: " << precision << std::endl;
+        std::cout << ss.str();
+        ov::Tensor tensor = createTensorWithNoDataOwnership(precision, shapes[0], tensorsDataD.data());
+        ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
+    }
+}
+
+TEST_F(GetPromptTokensString, typesTestI32) {
+    std::vector<ov::element::Type_t> precisions{ov::element::Type_t::i32};
+    std::vector<int> tensorsDataI{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+    for (auto precision : precisions) {
+        std::stringstream ss;
+        ss << "Testing precision: " << precision << std::endl;
+        std::cout << ss.str();
+        ov::Tensor tensor = createTensorWithNoDataOwnership(precision, shapes[0], tensorsDataI.data());
+        ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
+    }
+}
+
+TEST_F(GetPromptTokensString, typesTestI64) {
+    std::vector<ov::element::Type_t> precisions{ov::element::Type_t::i64};
+    std::vector<int64_t> tensorsDataI64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+    for (auto precision : precisions) {
+        std::stringstream ss;
+        ss << "Testing precision: " << precision << std::endl;
+        std::cout << ss.str();
+        ov::Tensor tensor = createTensorWithNoDataOwnership(precision, shapes[0], tensorsDataI64.data());
+        ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
+    }
+}
+
+TEST_F(GetPromptTokensString, typesTestI16) {
+    std::vector<ov::element::Type_t> precisions{ov::element::Type_t::i16};
+    std::vector<int16_t> tensorsDataI16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+    for (auto precision : precisions) {
+        std::stringstream ss;
+        ss << "Testing precision: " << precision << std::endl;
+        std::cout << ss.str();
+        ov::Tensor tensor = createTensorWithNoDataOwnership(precision, shapes[0], tensorsDataI16.data());
+        ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
+    }
+}
+
+class GetPromptTokensStringNegative : public GetPromptTokensString {
+public:
+    void SetUp() {
+        expectedTokensString = "Could not pack input tokens for element type: f16";
+    }
+};
+
+TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestF16) {
+    std::vector<ov::element::Type_t> precisions{ov::element::Type_t::f16};
+    std::vector<float> tensorsDataF{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+    for (auto precision : precisions) {
+        std::stringstream ss;
+        ss << "Testing precision: " << precision << std::endl;
+        std::cout << ss.str();
+        ov::Tensor tensor = createTensorWithNoDataOwnership(precision, shapes[0], tensorsDataF.data());
+        ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
+    }
+}
+
+TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
+    std::vector<ov::element::Type_t> precisions{ov::element::Type_t::boolean};
+    std::vector<float> tensorsDataF{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    expectedTokensString = "Could not pack input tokens for element type: boolean";
+
+    for (auto precision : precisions) {
+        std::stringstream ss;
+        ss << "Testing precision: " << precision << std::endl;
+        std::cout << ss.str();
+        ov::Tensor tensor = createTensorWithNoDataOwnership(precision, shapes[0], tensorsDataF.data());
+        ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
+    }
 }

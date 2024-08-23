@@ -112,6 +112,7 @@ cc_library(
     hdrs = ["text_processor.hpp"],
     srcs = ["text_processor.cpp"],
     deps = ["@mediapipe//mediapipe/framework:calculator_framework",
+            "@linux_openvino//:openvino",
             "//src:libovmslogging",
             "//src/python:utils",
     ] + PYBIND_DEPS,
