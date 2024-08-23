@@ -833,8 +833,6 @@ std::string HttpLLMCalculator::prepareStreamingUsageChunk(Endpoint endpoint, Com
 
     writer.StartObject();  // {
 
-    // choices: array of size N, where N is related to n request parameter
-    // Can also be empty for the last chunk if you set stream_options: {"include_usage": true} TODO
     writer.String("choices");
     writer.StartArray();  // [
     writer.EndArray();    // ]
