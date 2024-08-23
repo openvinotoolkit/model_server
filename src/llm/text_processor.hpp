@@ -68,7 +68,7 @@ static std::string getPromptTokensString(const ov::Tensor& tensor) {
     }
 
     std::stringstream ss;
-    ss << "Warning: unsupported ov::element::Type - got " << tensor.get_element_type() << " for input tokens.";
+    ss << "Could not print input tokens for element type: " << tensor.get_element_type();
     return ss.str();
 }
 #pragma GCC diagnostic pop
