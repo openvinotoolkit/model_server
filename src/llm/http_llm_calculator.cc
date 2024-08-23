@@ -176,11 +176,17 @@ public:
                 return absl::InvalidArgumentError("stream_options is not an object");
             auto streamOptionsObj = it->value.GetObject();
 
+            int streamOptionsFound = 0;
             it = streamOptionsObj.FindMember("include_usage");
             if (it != streamOptionsObj.MemberEnd()) {
                 if (!it->value.IsBool())
                     return absl::InvalidArgumentError("stream_options.include_usage is not a boolean");
                 this->streamOptions.includeUsage = it->value.GetBool();
+                streamOptionsFound++;
+            }
+
+            if (streamOptionsObj.MemberCount() > streamOptionsFound) {
+                return absl::InvalidArgumentError("Found unexpected stream options. Properties accepted in stream_options: include_usage");
             }
         }
 
@@ -433,8 +439,8 @@ class HttpLLMCalculator : public CalculatorBase {
     std::chrono::time_point<std::chrono::system_clock> created;
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, Endpoint endpoint, CompletionUsageStatistics usage);
-    std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason, Endpoint endpoint);
-    std::string prepareStreamingUsageChunk(Endpoint endpoint, CompletionUsageStatistics usage);
+    std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason, Endpoint endpoint, bool includeUsage);
+    std::string serializeStreamingUsageChunk(Endpoint endpoint, CompletionUsageStatistics usage);
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -596,33 +602,24 @@ public:
                     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
                         if (chunk.has_value()) {
                             std::string response = packIntoServerSideEventMessage(
-                                serializeStreamingChunk(chunk.value(), finishReason, this->request->getEndpoint()));
+                                serializeStreamingChunk(chunk.value(), finishReason, this->request->getEndpoint(), this->request->getStreamOptions().includeUsage));
                             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", response);
                             cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                         }
                         cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
                     } else {  // finish generation
                         OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                        std::string response = packIntoServerSideEventMessage(serializeStreamingChunk(this->streamer->end(), finishReason, this->request->getEndpoint()));
+                        std::string response = packIntoServerSideEventMessage(serializeStreamingChunk(this->streamer->end(), finishReason, this->request->getEndpoint(),
+                            this->request->getStreamOptions().includeUsage));
 
-                        // If usage statistics are not supposed to be included, then this is the last chunk
-                        if (!this->request->getStreamOptions().includeUsage)
-                            response += packIntoServerSideEventMessage("[DONE]");
+                        if (this->request->getStreamOptions().includeUsage)
+                            response += packIntoServerSideEventMessage(serializeStreamingUsageChunk(this->request->getEndpoint(), this->usage));
+
+                        response += packIntoServerSideEventMessage("[DONE]");
 
                         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", response);
-
-                        // If usage statisctics are included, we trigger next iteration to send additional chunk with usage information
-                        if (this->request->getStreamOptions().includeUsage)
-                            cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
                     }
-                } else if (this->request->getStreamOptions().includeUsage) {
-                    // If generation is no longer running and we have read all the tokens (or can't read any more for some reason)
-                    // and include_usage is set in the streaming_options, then we send additional, last chunk with usage statistics.
-                    std::string response = packIntoServerSideEventMessage(prepareStreamingUsageChunk(this->request->getEndpoint(), this->usage));
-                    response += packIntoServerSideEventMessage("[DONE]");
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated response with usage statistics: {}", response);
                 }
             }
         } catch (ov::AssertFailure& e) {
@@ -742,7 +739,7 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::gena
 }
 
 std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason,
-    Endpoint endpoint) {
+    Endpoint endpoint, bool includeUsage) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -812,8 +809,10 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
         writer.String("text_completion.chunk");
     }
 
-    writer.String("usage");
-    writer.Null();
+    if (includeUsage) {
+        writer.String("usage");
+        writer.Null();
+    }
 
     // TODO
     // id: string; A unique identifier for the chat completion. Each chunk has the same ID.
@@ -826,7 +825,7 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     return buffer.GetString();
 }
 
-std::string HttpLLMCalculator::prepareStreamingUsageChunk(Endpoint endpoint, CompletionUsageStatistics usage) {
+std::string HttpLLMCalculator::serializeStreamingUsageChunk(Endpoint endpoint, CompletionUsageStatistics usage) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);

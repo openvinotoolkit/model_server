@@ -694,11 +694,10 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsUsage) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);  // last chunk with usage stats
+    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
     ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
     ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
-    responses.pop_back();
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);  // second to last chunk with generation finish reason
+    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
 }
 
 TEST_F(LLMFlowHttpTest, streamCompletionsUsage) {
@@ -724,14 +723,13 @@ TEST_F(LLMFlowHttpTest, streamCompletionsUsage) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);  // last chunk with usage stats
+    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
     ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
     ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
-    responses.pop_back();
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);  // second to last chunk with generation finish reason
+    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
 }
 
-TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStreamOptions) {
+TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStreamOptionsBadType) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -759,7 +757,7 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStreamOptions) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsBadStreamOptions) {
+TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadType) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -775,6 +773,58 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadStreamOptions) {
     EXPECT_CALL(writer, PartialReply(::testing::_))
         .WillOnce([this](std::string response) {
             ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stream_options is not an object\"}");
+        });
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+//---
+TEST_F(LLMFlowHttpTest, streamChatCompletionsStreamOptionsBadContent) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "stream_options": { "option": "A" },
+            "ignore_eos": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReply(::testing::_))
+        .WillOnce([this](std::string response) {
+            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
+        });
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadContent) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "stream_options": { "include_usage": true, "option": "A" },
+            "ignore_eos": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReply(::testing::_))
+        .WillOnce([this](std::string response) {
+            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
         });
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
