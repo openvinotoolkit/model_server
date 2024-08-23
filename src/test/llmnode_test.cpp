@@ -30,7 +30,6 @@
 #include "../http_rest_api_handler.hpp"
 #include "../llm/llmnoderesources.hpp"
 #include "../server.hpp"
-
 #include "opencv2/opencv.hpp"
 #include "rapidjson/document.h"
 #include "test_utils.hpp"
@@ -514,6 +513,45 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStream) {
         ovms::StatusCode::PARTIAL_END);
 }
 
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsStreamOptionsSetFail) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "stream_options": { "include_usage": true },
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMFlowHttpTest, unaryCompletionsStreamOptionsSetFail) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "stream_options": { "include_usage": true },
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 // This test can be sensitive to underlying hardware as well as model and runtime updates since it relies on model execution output
 TEST_F(LLMFlowHttpTest, streamChatCompletionsFinishReasonStop) {
     std::string requestBody = R"(
@@ -654,11 +692,11 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsUsage) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos); // last chunk with usage stats
+    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);  // last chunk with usage stats
     ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
     ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
     responses.pop_back();
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos); // second to last chunk with generation finish reason
+    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);  // second to last chunk with generation finish reason
 }
 
 TEST_F(LLMFlowHttpTest, streamCompletionsUsage) {
@@ -684,19 +722,19 @@ TEST_F(LLMFlowHttpTest, streamCompletionsUsage) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos); // last chunk with usage stats
+    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);  // last chunk with usage stats
     ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
     ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
     responses.pop_back();
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos); // second to last chunk with generation finish reason
+    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);  // second to last chunk with generation finish reason
 }
 
-TEST_F(LLMFlowHttpTest, streamChatCompletionsUsageWithStreamFalse) {
+TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStreamOptions) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
-            "stream": false,
-            "stream_options": { "include_usage": true },
+            "stream": true,
+            "stream_options": ["include_usage"],
             "ignore_eos": true,
             "seed" : 1,
             "max_tokens": 5,
@@ -709,11 +747,9 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsUsageWithStreamFalse) {
         }
     )";
 
-    std::vector<std::string> responses;
-
     EXPECT_CALL(writer, PartialReply(::testing::_))
         .WillOnce([this](std::string response) {
-            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stream_options provided, but stream not set to true\"}");
+            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stream_options is not an object\"}");
         });
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
@@ -721,12 +757,12 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsUsageWithStreamFalse) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsUsageWithStreamFalse) {
+TEST_F(LLMFlowHttpTest, streamCompletionsBadStreamOptions) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
-            "stream": false,
-            "stream_options": { "include_usage": true },
+            "stream": true,
+            "stream_options": ["include_usage"],
             "ignore_eos": true,
             "seed" : 1,
             "max_tokens": 5,
@@ -736,7 +772,58 @@ TEST_F(LLMFlowHttpTest, streamCompletionsUsageWithStreamFalse) {
 
     EXPECT_CALL(writer, PartialReply(::testing::_))
         .WillOnce([this](std::string response) {
-            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stream_options provided, but stream not set to true\"}");
+            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stream_options is not an object\"}");
+        });
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_F(LLMFlowHttpTest, streamChatCompletionsBadIncludeUsage) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "stream_options": { "include_usage": 123 },
+            "ignore_eos": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReply(::testing::_))
+        .WillOnce([this](std::string response) {
+            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stream_options.include_usage is not a boolean\"}");
+        });
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeUsage) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "stream_options": { "include_usage": 123 },
+            "ignore_eos": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReply(::testing::_))
+        .WillOnce([this](std::string response) {
+            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stream_options.include_usage is not a boolean\"}");
         });
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
@@ -1175,30 +1262,30 @@ TEST_F(LLMHttpParametersValidationTest, temperatureOutOfRange) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, frequencePenaltyValid) {
-    std::string requestBody = validRequestBodyWithParameter("frequence_penalty", "1.5");
+TEST_F(LLMHttpParametersValidationTest, frequencyPenaltyValid) {
+    std::string requestBody = validRequestBodyWithParameter("frequency_penalty", "1.5");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
 
-    requestBody = validRequestBodyWithParameter("frequence_penalty", "1");
+    requestBody = validRequestBodyWithParameter("frequency_penalty", "1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMHttpParametersValidationTest, frequencePenaltyInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("frequence_penalty", "\"INVALID\"");
+TEST_F(LLMHttpParametersValidationTest, frequencyPenaltyInvalid) {
+    std::string requestBody = validRequestBodyWithParameter("frequency_penalty", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, frequencePenaltyOutOfRange) {
-    std::string requestBody = validRequestBodyWithParameter("frequence_penalty", "3.0");
+TEST_F(LLMHttpParametersValidationTest, frequencyPenaltyOutOfRange) {
+    std::string requestBody = validRequestBodyWithParameter("frequency_penalty", "3.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),

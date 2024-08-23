@@ -78,7 +78,7 @@ class OpenAIChatCompletionsRequest {
     StreamOptions streamOptions;
     std::string model;
     std::optional<int> maxTokens{std::nullopt};
-    std::optional<float> frequencePenalty{std::nullopt};
+    std::optional<float> frequencyPenalty{std::nullopt};
     std::optional<float> presencePenalty{std::nullopt};
     std::optional<float> diversityPenalty{std::nullopt};
     std::optional<float> repetitionPenalty{std::nullopt};
@@ -138,8 +138,8 @@ public:
             config.top_p = topP.value();
         if (seed.has_value())
             config.rng_seed = seed.value();
-        if (frequencePenalty.has_value())
-            config.frequency_penalty = frequencePenalty.value();
+        if (frequencyPenalty.has_value())
+            config.frequency_penalty = frequencyPenalty.value();
         if (presencePenalty.has_value())
             config.presence_penalty = presencePenalty.value();
         config.do_sample = config.temperature > 0.0f && config.num_beams == 1;
@@ -263,14 +263,14 @@ public:
             }
         }
 
-        // frequence_penalty: float; optional - defaults to 0
-        it = this->doc.FindMember("frequence_penalty");
+        // frequency_penalty: float; optional - defaults to 0
+        it = this->doc.FindMember("frequency_penalty");
         if (it != this->doc.MemberEnd()) {
             if (!it->value.IsDouble() && !it->value.IsInt())
-                return absl::InvalidArgumentError("frequence_penalty is not a valid number");
-            this->frequencePenalty = it->value.GetDouble();
-            if (this->frequencePenalty < -2.0f || this->frequencePenalty > 2.0f)
-                return absl::InvalidArgumentError("frequence_penalty out of range(-2.0, 2.0)");
+                return absl::InvalidArgumentError("frequency_penalty is not a valid number");
+            this->frequencyPenalty = it->value.GetDouble();
+            if (this->frequencyPenalty < -2.0f || this->frequencyPenalty > 2.0f)
+                return absl::InvalidArgumentError("frequency_penalty out of range(-2.0, 2.0)");
         }
 
         // presence_penalty: float; optional - defaults to 0
@@ -606,16 +606,15 @@ public:
                         std::string response = packIntoServerSideEventMessage(serializeStreamingChunk(this->streamer->end(), finishReason, this->request->getEndpoint()));
 
                         // If usage statistics are not supposed to be included, then this is the last chunk
-                        if (!this->request->getStreamOptions().includeUsage) 
+                        if (!this->request->getStreamOptions().includeUsage)
                             response += packIntoServerSideEventMessage("[DONE]");
 
                         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", response);
 
                         // If usage statisctics are included, we trigger next iteration to send additional chunk with usage information
-                        if (this->request->getStreamOptions().includeUsage) 
+                        if (this->request->getStreamOptions().includeUsage)
                             cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
-                        
                     }
                 } else if (this->request->getStreamOptions().includeUsage) {
                     // If generation is no longer running and we have read all the tokens (or can't read any more for some reason)
@@ -722,14 +721,14 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::gena
     }
 
     writer.String("usage");
-    writer.StartObject(); // {
+    writer.StartObject();  // {
     writer.String("prompt_tokens");
     writer.Int(usage.promptTokens);
     writer.String("completion_tokens");
     writer.Int(usage.completionTokens);
     writer.String("total_tokens");
     writer.Int(usage.calculateTotalTokens());
-    writer.EndObject(); // }
+    writer.EndObject();  // }
 
     // TODO
     // id: string; A unique identifier for the chat completion.
@@ -827,7 +826,6 @@ std::string HttpLLMCalculator::serializeStreamingChunk(const std::string& chunkR
     return buffer.GetString();
 }
 
-
 std::string HttpLLMCalculator::prepareStreamingUsageChunk(Endpoint endpoint, CompletionUsageStatistics usage) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
@@ -838,8 +836,8 @@ std::string HttpLLMCalculator::prepareStreamingUsageChunk(Endpoint endpoint, Com
     // choices: array of size N, where N is related to n request parameter
     // Can also be empty for the last chunk if you set stream_options: {"include_usage": true} TODO
     writer.String("choices");
-    writer.StartArray();   // [
-    writer.EndArray(); // ]
+    writer.StartArray();  // [
+    writer.EndArray();    // ]
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
     writer.String("created");
@@ -859,15 +857,14 @@ std::string HttpLLMCalculator::prepareStreamingUsageChunk(Endpoint endpoint, Com
     }
 
     writer.String("usage");
-    writer.StartObject(); // {
+    writer.StartObject();  // {
     writer.String("prompt_tokens");
     writer.Int(usage.promptTokens);
     writer.String("completion_tokens");
     writer.Int(usage.completionTokens);
     writer.String("total_tokens");
     writer.Int(usage.calculateTotalTokens());
-    writer.EndObject(); // }
-
+    writer.EndObject();  // }
 
     writer.EndObject();  // }
     return buffer.GetString();
