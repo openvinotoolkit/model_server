@@ -2197,7 +2197,7 @@ TEST_F(GetPromptTokensString, typesTestI16) {
 class GetPromptTokensStringNegative : public GetPromptTokensString {
 public:
     void SetUp() {
-        expectedTokensString = "Warning: unsupported ov::element::Type - got f16 for input tokens.";
+        expectedTokensString = "Could not print input tokens for element type: f16";
     }
 };
 
@@ -2217,7 +2217,7 @@ TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestF16) {
 TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
     std::vector<ov::element::Type_t> precisions{ov::element::Type_t::boolean};
     std::vector<float> tensorsDataF{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    expectedTokensString = "Warning: unsupported ov::element::Type - got boolean for input tokens.";
+    expectedTokensString = "Could not print input tokens for element type: boolean";
 
     for (auto precision : precisions) {
         std::stringstream ss;

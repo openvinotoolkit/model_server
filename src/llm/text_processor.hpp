@@ -55,21 +55,24 @@ static std::string packPromptTokens(T* input, size_t size) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 static std::string getPromptTokensString(const ov::Tensor& tensor) {
-    if (tensor.get_element_type() == ov::element::i32) {
-        return packPromptTokens(tensor.data<int>(), tensor.get_size());
-    } else if (tensor.get_element_type() == ov::element::i16) {
-        return packPromptTokens(tensor.data<int16_t>(), tensor.get_size());
-    } else if (tensor.get_element_type() == ov::element::i64) {
-        return packPromptTokens(tensor.data<int64_t>(), tensor.get_size());
-    } else if (tensor.get_element_type() == ov::element::f32) {
-        return packPromptTokens(tensor.data<float>(), tensor.get_size());
-    } else if (tensor.get_element_type() == ov::element::f64) {
-        return packPromptTokens(tensor.data<double>(), tensor.get_size());
+    size_t size = tensor.get_size();
+    switch (tensor.get_element_type()) {
+    case ov::element::i32:
+        return packPromptTokens(tensor.data<int>(), size);
+    case ov::element::i16:
+        return packPromptTokens(tensor.data<int16_t>(), size);
+    case ov::element::i64:
+        return packPromptTokens(tensor.data<int64_t>(), size);
+    case ov::element::f32:
+        return packPromptTokens(tensor.data<float>(), size);
+    case ov::element::f64:
+        return packPromptTokens(tensor.data<double>(), size);
+    default: {
+        std::stringstream ss;
+        ss << "Could not print input tokens for element type: " << tensor.get_element_type();
+        return ss.str();
     }
-
-    std::stringstream ss;
-    ss << "Could not print input tokens for element type: " << tensor.get_element_type();
-    return ss.str();
+    }
 }
 #pragma GCC diagnostic pop
 
