@@ -350,14 +350,10 @@ cc_library(
                 "kfs_frontend/kfs_graph_executor_impl.hpp",
                 "http_frontend/http_graph_executor_impl.cpp",
                 "http_frontend/http_graph_executor_impl.hpp",
+		"embeddings/embeddings_calculator.cc",
             ],
             "//:disable_mediapipe" : [],
-        }) + select({
-	    "//:not_disable_mediapipe": [
-		    "embeddings/embeddings_calculator.cc",
-	    ],
-            "//:disable_mediapipe" : [],
-	}),
+        }),
         deps = select({
             "//:not_disable_python": [
                 "//src/python:libovmspythonmodule",
