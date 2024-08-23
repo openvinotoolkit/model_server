@@ -69,7 +69,7 @@ static std::string getPromptTokensString(const ov::Tensor& tensor) {
         return packPromptTokens(tensor.data<double>(), size);
     default: {
         std::stringstream ss;
-        ss << "Could not print input tokens for element type: " << tensor.get_element_type();
+        ss << "Could not pack input tokens for element type: " << tensor.get_element_type();
         return ss.str();
     }
     }
