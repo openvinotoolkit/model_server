@@ -314,6 +314,7 @@ COPY rununittest.sh /ovms/
 RUN ./rununittest.sh
 
 # Custom Nodes
+# hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes; fi;
 
 # OVMS
@@ -335,11 +336,12 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM $BUILD_IMAGE as capi-build
-
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 # C api shared library
 # hadolint ignore=DL3059
 ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
 ARG JOBS=40
+ARG FUZZER_BUILD=0
 RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
 
 # C-API benchmark app
