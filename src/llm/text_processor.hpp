@@ -17,8 +17,8 @@
 
 #include <cstdint>
 #include <memory>
-#include <string>
 #include <sstream>
+#include <string>
 
 #include <openvino/openvino.hpp>
 // Python execution for template processing
@@ -38,8 +38,8 @@ public:
     static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output);
 };
 
-template< typename T>
-static std::string packPromptTokens(T * input, size_t size) {
+template <typename T>
+static std::string packPromptTokens(T* input, size_t size) {
     std::stringstream ss;
     ss << "prompt_token_ids: [";
     for (size_t i = 0; i < size; i++) {
