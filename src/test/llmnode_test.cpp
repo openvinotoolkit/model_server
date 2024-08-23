@@ -33,6 +33,7 @@
 #include "../server.hpp"
 #include "json_parser.hpp"
 #include "opencv2/opencv.hpp"
+#include "ov_utils.hpp"
 #include "rapidjson/document.h"
 #include "test_utils.hpp"
 
