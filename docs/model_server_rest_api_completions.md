@@ -35,7 +35,12 @@ curl http://localhost/v3/completions \
   ],
   "created": 1716825108,
   "model": "llama3",
-  "object": "text_completion"
+  "object": "text_completion",
+  "usage": {
+        "completion_tokens": 14,
+        "prompt_tokens": 17,
+        "total_tokens": 31
+  }
 }
 ```
 

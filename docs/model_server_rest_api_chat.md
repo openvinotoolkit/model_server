@@ -47,7 +47,12 @@ curl http://localhost/v3/chat/completions \
   ],
   "created": 1716825108,
   "model": "llama3",
-  "object": "chat.completion"
+  "object": "chat.completion",
+  "usage": {
+        "completion_tokens": 38,
+        "prompt_tokens": 22,
+        "total_tokens": 60
+  }
 }
 ```
 
