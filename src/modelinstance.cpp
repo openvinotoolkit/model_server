@@ -1410,23 +1410,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
     // handleCallback(requestProto, responseProto);
     return status;
 }
-template <typename RequestType>
-static void splitOutputs(const tensor_map_t& outputsInfo, const RequestType& request, std::set<std::string>& outputsInRequest, std::set<std::string>& outputsNotInRequest) {}
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-template <>
-void splitOutputs<InferenceRequest>(const tensor_map_t& outputsInfo, const InferenceRequest& request, std::set<std::string>& outputsInRequest, std::set<std::string>& outputsNotInRequest) {
-    for (auto& [name, info] : outputsInfo) {
-        const InferenceTensor* tensor{nullptr};
-        auto status = request.getOutput(name.c_str(), &tensor);
-        if (status.ok() && tensor != nullptr) {
-            outputsInRequest.emplace(name);
-        } else {
-            outputsNotInRequest.emplace(name);
-        }
-    }
-}
 #pragma GCC diagnostic pop
 template <typename RequestType, typename ResponseType>
 Status ModelInstance::inferAsync(const RequestType* requestProto,
@@ -1512,9 +1496,6 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
         OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
         try {
             // TODO created filter based on what is in request, then perform casual serialization for what was NOT in request, and rewrite tensors from request to response for those that were
-            std::set<std::string> outputsInRequest;
-            std::set<std::string> outputsNotInRequest;
-            splitOutputs(getOutputsInfo(), requestProto, outputsInRequest, outputsNotInRequest);
             auto status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), requestProto, res.get(), getTensorInfoName, useSharedOutputContentFn(requestProto));  // TODO FIXME handle status
         } catch (std::exception& e) {
             SPDLOG_DEBUG("caught exception in ov::InferRequest callback: {}", e.what());

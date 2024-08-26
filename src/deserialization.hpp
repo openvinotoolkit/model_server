@@ -21,7 +21,6 @@
 #include <unordered_map>
 
 #include <openvino/openvino.hpp>
-#include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
