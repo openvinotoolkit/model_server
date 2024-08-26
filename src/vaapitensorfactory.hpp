@@ -17,8 +17,9 @@
 
 #include <openvino/openvino.hpp>
 #include <openvino/runtime/intel_gpu/ocl/va.hpp>
-#include "itensorfactory.hpp"
+
 #include "./ovms.h"
+#include "itensorfactory.hpp"
 namespace ov::intel_gpu::ocl {
 class VAContext;
 }

@@ -999,7 +999,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceAsync(OVMS_Server* serverPtr, OVMS_Inferen
 
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", req->getServableName());
-        status = getPipeline(server, req, res.get(), pipelinePtr);
+        status = getPipeline(server, req, nullptr, pipelinePtr);
     }
     if (!status.ok()) {
         if (modelInstance) {

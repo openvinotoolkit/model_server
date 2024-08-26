@@ -295,8 +295,6 @@ cc_library(
         "ov_utils.cpp",
         "ov_utils.hpp",
         "ovms.h",
-        "ocl_utils.cpp",
-        "ocl_utils.hpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
         "prediction_service_utils.hpp",
@@ -378,6 +376,7 @@ cc_library(
             "libovmsstring_utils",
             "libovmsazurefilesystem",
             "libovmsmodelversioning",
+	    "libovmsoclutils",
             "libovmstensorfactory",
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
@@ -401,7 +400,7 @@ cc_library(
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED + ["-lOpenCL",],
+    linkopts = LINKOPTS_ADJUSTED,
     data = select({
         "//:not_disable_python": [
             "//src/python/binding:pyovms.so",
@@ -915,6 +914,22 @@ cc_library( # make ovms_lib dependent, use share doptions
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + ["-lOpenCL",],
+)
+cc_library( # make ovms_lib dependent, use share doptions
+    name = "libovmsoclutils",
+    hdrs = ["ocl_utils.hpp",
+    ],
+    srcs = [
+        "ocl_utils.cpp",
+    ],
+    deps = [
+            "@linux_openvino//:openvino",
+            "libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
 
@@ -1343,7 +1358,7 @@ cc_library(
         "//src:ovms_lib",
         "@com_google_googletest//:gtest",
     ],
-    copts = COPTS_TESTS, # + ["-isystem /usr/include"],
+    copts = COPTS_TESTS,
 )
 
 cc_library(
@@ -1390,18 +1405,11 @@ cc_library(
         "test/openvino_tests.cpp",
         ],
     data = [
-        "test/add_two_inputs_model/1/add.xml",
-        "test/add_two_inputs_model/1/add.bin",
-        "test/c_api/config.json",
-        "test/c_api/config_benchmark.json",
-        "test/c_api/config_dummy_dynamic_entry_dag.json",
         "test/c_api/config_standard_dummy.json",
-        "test/c_api/config_standard_scalar.json",
-        "test/configs/config_dummy_dynamic_shape.json",
+        "test/c_api/config_gpu_dummy.json",
+        "test/configs/config_gpu_face_detection_adas.json",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
-        "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
-        "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
     ],
     linkopts = [
         "-lstdc++fs",
@@ -1413,6 +1421,7 @@ cc_library(
 	":libtest_gpuenvironment",
         ":test_utils",
         "//src:ovms_lib",
+	":libovmsoclutils",
         "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS, # + ["-isystem /usr/include"],

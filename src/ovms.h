@@ -552,10 +552,18 @@ void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 // \param response The response object. In case of success, caller takes the ownership of the response
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
+
+// Execyte asynchronous inference
+//
+// Setting completion callback with OVMS_InferenceRequestSetCompleteCallback is required to receive a reply.
+//
+// \param server The server object
+// \param request The request object
+// \return OVMS_Status object in case of failure to schedule inference
 OVMS_Status* OVMS_InferenceAsync(OVMS_Server* server, OVMS_InferenceRequest* request);
 
 // Type of function called when response is completed and set with OVMS_InferenceRequestSetCompleteCallback. Callback function takes ownership of OVMS_InferenceResponse object.
-// Flag specifies if the response is final coming from inference request.
+// Flag specifies if the response is final coming from inference request, and if there were errors in execution
 // // TODO how to use that in MP
 //
 // \param response resp

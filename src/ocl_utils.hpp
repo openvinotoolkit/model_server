@@ -14,21 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <algorithm>
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <set>
-#include <string>
-#include <thread>
-#include <utility>
-
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
-#include <spdlog/spdlog.h>
-#include <sys/types.h>
-
-#include "logging.hpp"
-#include "openvino/runtime/remote_tensor.hpp"
 namespace ovms {
 cl_context getOCLContext();
 cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId);

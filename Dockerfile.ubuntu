@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             curl \
             ca-certificates \
             git \
+            gpg \
             libcurl4-openssl-dev \
             libssl-dev \
             libxml2-dev \
@@ -122,7 +123,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     python3 -m pip install "Jinja2==3.1.4" --no-cache-dir
 
 # GPU testing in build img
-RUN install_gpu_drivers.sh && \
+COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
+RUN /tmp/install_gpu_drivers.sh && \
     groupadd --gid 5000 ovms ; useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 # GPU testing in build img
 

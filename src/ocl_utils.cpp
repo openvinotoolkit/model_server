@@ -16,8 +16,10 @@
 #include "ocl_utils.hpp"
 
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#include <openvino/runtime/remote_tensor.hpp>
 
-#include "openvino/runtime/remote_tensor.hpp"
+#include "logging.hpp"
+
 namespace ovms {
 cl_context getOCLContext() {
     cl_int err;
