@@ -114,7 +114,10 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             xz \
             python39-devel && \
             yum clean all
-
+COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
+RUN install_gpu_drivers.sh && \
+    groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
+    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
     python3 --version && python3 -m pip install "Jinja2==3.1.4" --no-cache-dir
 
@@ -214,51 +217,6 @@ ENV TBB_DIR=/tmp/openvino_installer/oneapi-tbb-2021.13.0/lib/cmake/tbb
 # install sample apps including benchmark_app
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
-### gpu drivers for gpu gtest begin
-RUN dnf upgrade --setopt=install_weak_deps=0 -y ; \
-    dnf install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
-    case $INSTALL_DRIVER_VERSION in \
-    "23.22.26516") \
-            dnf install -y libedit ; \
-            rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-gmmlib-22.3.7-i678.el8_6.x86_64.rpm ; \
-            rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-core-1.0.14062.14-682.el8_6.x86_64.rpm ; \
-            rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-opencl-1.0.14062.14-682.el8_6.x86_64.rpm ; \
-            rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-opencl-23.22.26516.25-682.el8_6.x86_64.rpm ; \
-            rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-level-zero-gpu-1.3.26516.25-682.el8_6.x86_64.rpm ; \
-            rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/l/level-zero-1.11.0-674.el8_6.x86_64.rpm ; \
-    ;; \
-
-            *) \
-            echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
-            exit 1 ; \
-    esac ; \
-    echo "Installed opencl driver version:" ;\
-    echo `rpm -qa | grep intel-opencl` ; \
-    if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
-            rpm -ivh http://vault.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
-    else  \
-            dnf install -y tar gzip; \
-            mkdir /tmp_ovms ; \
-            cd /tmp_ovms ; \
-            curl -L --fail -o deps.tar.xz "$INSTALL_RPMS_FROM_URL" ; \
-            tar -xf deps.tar.xz ; \
-            ls -Rahl . ; \
-            rpm -vi pkg/bin/*.rpm ; \
-            cd / ; \
-            rm -rf /tmp_ovms ; \
-            dnf remove -y tar gzip; \
-    fi ; \
-    # For image with Python enabled install Python library
-    if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
-        dnf install -y python39-libs --setopt=install_weak_deps=0; \
-        mkdir -p /ovms/lib/openvino-2024.3.dist-info && \
-        echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.3' > /ovms/lib/openvino-2024.3.dist-info/METADATA ; \
-    fi ; \
-    dnf install -y shadow-utils; \
-    cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
-    groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
-    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
-### gpu drivers for gpu gtest end
 
 # OpenVINO Tokenizers extension
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
@@ -422,8 +380,7 @@ COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
 COPY create_package.sh /
 RUN ./create_package.sh
 
-RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
-    chown -R ovms:ovms /ovms_release
+RUN chown -R ovms:ovms /ovms_release
 RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
 # Remove capi library
 RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; else exit 0 ; fi ;
@@ -452,64 +409,12 @@ ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,DL3041,SC2164
+COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
         $DNF_TOOL upgrade --setopt=install_weak_deps=0 -y ; \
         $DNF_TOOL install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
         if [ "$GPU" == "1" ] ; then \
-                case $INSTALL_DRIVER_VERSION in \
-                "21.38.21026") \
-                        mkdir /tmp/gpu_deps ; \
-                        curl -L --output /tmp/gpu_deps/intel-igc-core-1.0.8708-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02870435-intel-igc/intel-igc-core-1.0.8708-1.el8.x86_64.rpm ; \
-                        curl -L --output /tmp/gpu_deps/intel-opencl-21.38.21026-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02871549-intel-opencl/intel-opencl-21.38.21026-1.el8.x86_64.rpm ; \
-                        curl -L --output /tmp/gpu_deps/intel-igc-opencl-devel-1.0.8708-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02870435-intel-igc/intel-igc-opencl-devel-1.0.8708-1.el8.x86_64.rpm ; \
-                        curl -L --output /tmp/gpu_deps/intel-igc-opencl-1.0.8708-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02870435-intel-igc/intel-igc-opencl-1.0.8708-1.el8.x86_64.rpm ; \
-                        curl -L --output /tmp/gpu_deps/intel-gmmlib-21.2.1-1.el7.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02320646-intel-gmmlib/intel-gmmlib-21.2.1-1.el8.x86_64.rpm ; \
-                        curl -L --output /tmp/gpu_deps/intel-gmmlib-devel-21.2.1-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02320646-intel-gmmlib/intel-gmmlib-devel-21.2.1-1.el8.x86_64.rpm ; \
-                        cd /tmp/gpu_deps && rpm -iv *.rpm && rm -Rf /tmp/gpu_deps ; \
-                ;; \
-                "22.10.22597") \
-                        $DNF_TOOL install -y libedit ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.0.3-i699.3.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.10409-i699.3.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/level-zero-1.7.9-i699.3.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-opencl-1.0.10409-i699.3.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-ocloc-22.10.22597-i699.3.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-opencl-22.10.22597-i699.3.el8.x86_64.rpm ; \
-                ;; \
-                "22.28.23726") \
-                        $DNF_TOOL install -y libedit ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.1.7-i419.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.11485-i419.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-opencl-1.0.11485-i419.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-opencl-22.28.23726.1-i419.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5-devel/intel-level-zero-gpu-1.3.23453-i392.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5-devel/level-zero-1.8.1-i392.el8.x86_64.rpm ; \
-                ;; \
-                "22.43.24595") \
-                        $DNF_TOOL install -y libedit ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-gmmlib-22.3.1-i529.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-igc-core-1.0.12504.6-i537.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-igc-opencl-1.0.12504.6-i537.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-opencl-22.43.24595.35-i538.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-level-zero-gpu-1.3.24595.35-i538.el8.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/level-zero-1.8.8-i524.el8.x86_64.rpm ; \
-                ;; \
-                "23.22.26516") \
-                        $DNF_TOOL install -y libedit ; \
-                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-gmmlib-22.3.7-i678.el8_6.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-core-1.0.14062.14-682.el8_6.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-opencl-1.0.14062.14-682.el8_6.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-opencl-23.22.26516.25-682.el8_6.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-level-zero-gpu-1.3.26516.25-682.el8_6.x86_64.rpm ; \
-                        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/l/level-zero-1.11.0-674.el8_6.x86_64.rpm ; \
-                ;; \
-
-                        *) \
-                        echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
-                        exit 1 ; \
-                esac ; \
-                echo "Installed opencl driver version:" ;\
-                echo `rpm -qa | grep intel-opencl` ; \
+		install_gpu_drivers.sh && rm -rf ./install_gpu_drivers.sh \
         fi ; \
         if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
                 rpm -ivh http://vault.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
