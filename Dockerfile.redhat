@@ -105,6 +105,9 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             gdb \
             java-11-openjdk-devel \
             tzdata-java \
+            libgusb.x86_64 \
+            libusbx \
+            libva-devel \
             libtool \
             openssl-devel \
             which \
