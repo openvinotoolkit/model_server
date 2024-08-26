@@ -503,7 +503,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
         auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
         if (!status.ok()) {
-            sendErrorImpl(status.string(), *serverReaderWriter);
+            sendErrorImplWithCode(status.string(), 400, *serverReaderWriter);
         }
         serverReaderWriter->PartialReplyEnd();
         return StatusCode::PARTIAL_END;

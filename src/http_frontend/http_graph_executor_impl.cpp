@@ -117,6 +117,14 @@ Status sendErrorImpl(
     return StatusCode::OK;
 }
 
+Status sendErrorImplWithCode(
+    const std::string& message,
+    const int code,
+    HttpReaderWriter& serverReaderWriter) {
+    serverReaderWriter.PartialReplyWithStatus("{\"error\": \"" + message + "\"}", code);
+    return StatusCode::OK;
+}
+
 bool waitForNewRequest(
     HttpReaderWriter& serverReaderWriter,
     HttpPayload& newRequest) {

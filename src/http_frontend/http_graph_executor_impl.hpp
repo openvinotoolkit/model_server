@@ -126,6 +126,11 @@ Status sendErrorImpl(
     const std::string& message,
     HttpReaderWriter& serverReaderWriter);
 
+Status sendErrorImplWithCode(
+    const std::string& message,
+    const int code,
+    HttpReaderWriter& serverReaderWriter);
+
 // Imitation of stream.Read(...) in gRPC stream API
 // Required for inferStream only.
 bool waitForNewRequest(
