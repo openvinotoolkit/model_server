@@ -96,38 +96,6 @@ public:
         PythonBackend* pythonBackend,
         MediapipeServableMetricReporter* mediapipeServableMetricReporter);
 
-    // TODO: Probably move to metric.hpp/cpp
-    // Increments upon construction, decrements upon destruction.
-    class MetricGaugeGuard {
-        MetricGauge* metric;
-
-    public:
-        MetricGaugeGuard(MetricGauge* metric) :
-            metric(metric) {
-            INCREMENT_IF_ENABLED(metric);
-        }
-        ~MetricGaugeGuard() {
-            DECREMENT_IF_ENABLED(metric);
-        }
-    };
-
-    // Increments upon destruction, however can be disabled to do so.
-    class MetricCounterGuard {
-        bool active = true;
-        MetricCounter* metric;
-
-    public:
-        MetricCounterGuard(MetricCounter* metric) :
-            metric(metric) {
-        }
-        void disable() { active = false; }
-        ~MetricCounterGuard() {
-            if (active) {
-                INCREMENT_IF_ENABLED(metric);
-            }
-        }
-    };
-
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();

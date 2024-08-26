@@ -159,43 +159,24 @@ class MediapipeServableMetricReporter {
 public:
     std::unique_ptr<MetricGauge> currentGraphs;
 
-    // TFS
-    // std::unique_ptr<MetricCounter> requestSuccessGrpcPredict;
-    // std::unique_ptr<MetricCounter> requestSuccessGrpcGetModelMetadata;
-    // std::unique_ptr<MetricCounter> requestSuccessGrpcGetModelStatus;
-
-    // std::unique_ptr<MetricCounter> requestSuccessRestPredict;
-    // std::unique_ptr<MetricCounter> requestSuccessRestGetModelMetadata;
-    // std::unique_ptr<MetricCounter> requestSuccessRestGetModelStatus;
-
-    // std::unique_ptr<MetricCounter> requestFailGrpcPredict;
-    // std::unique_ptr<MetricCounter> requestFailGrpcGetModelMetadata;
-    // std::unique_ptr<MetricCounter> requestFailGrpcGetModelStatus;
-
-    // std::unique_ptr<MetricCounter> requestFailRestPredict;
-    // std::unique_ptr<MetricCounter> requestFailRestGetModelMetadata;
-    // std::unique_ptr<MetricCounter> requestFailRestGetModelStatus;
-
     // KFS
     std::unique_ptr<MetricCounter> requestAcceptedGrpcModelInfer;
     std::unique_ptr<MetricCounter> requestAcceptedGrpcModelInferStream;
+
+    // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
     // std::unique_ptr<MetricCounter> requestSuccessGrpcModelMetadata;
     // std::unique_ptr<MetricCounter> requestSuccessGrpcModelReady;
 
     std::unique_ptr<MetricCounter> requestAcceptedRestModelInfer;
-    // std::unique_ptr<MetricCounter> requestSuccessRestModelInferStream;
+
+    // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
     // std::unique_ptr<MetricCounter> requestSuccessRestModelMetadata;
     // std::unique_ptr<MetricCounter> requestSuccessRestModelReady;
 
     std::unique_ptr<MetricCounter> requestRejectedGrpcModelInfer;
     std::unique_ptr<MetricCounter> requestRejectedGrpcModelInferStream;
-    // std::unique_ptr<MetricCounter> requestFailGrpcModelMetadata;
-    // std::unique_ptr<MetricCounter> requestFailGrpcModelReady;
 
     std::unique_ptr<MetricCounter> requestRejectedRestModelInfer;
-    // std::unique_ptr<MetricCounter> requestFailRestModelInferStream;
-    // std::unique_ptr<MetricCounter> requestFailRestModelMetadata;
-    // std::unique_ptr<MetricCounter> requestFailRestModelReady;
 
     // V3
     std::unique_ptr<MetricCounter> requestAcceptedRestV3Unary;
@@ -207,29 +188,12 @@ public:
     // KFS
     std::unique_ptr<MetricCounter> responseGrpcModelInfer;
     std::unique_ptr<MetricCounter> responseGrpcModelInferStream;
-    // std::unique_ptr<MetricCounter> responseSuccessGrpcModelMetadata;
-    // std::unique_ptr<MetricCounter> responseSuccessGrpcModelReady;
 
     std::unique_ptr<MetricCounter> responseRestModelInfer;
-    // std::unique_ptr<MetricCounter> responseSuccessRestModelInferStream;
-    // std::unique_ptr<MetricCounter> responseSuccessRestModelMetadata;
-    // std::unique_ptr<MetricCounter> responseSuccessRestModelReady;
-
-    // std::unique_ptr<MetricCounter> responseRejectedGrpcModelInfer;
-    // std::unique_ptr<MetricCounter> responseRejectedGrpcModelInferStream;
-    // std::unique_ptr<MetricCounter> responseFailGrpcModelMetadata;
-    // std::unique_ptr<MetricCounter> responseFailGrpcModelReady;
-
-    // std::unique_ptr<MetricCounter> responseRejectedRestModelInfer;
-    // std::unique_ptr<MetricCounter> responseFailRestModelInferStream;
-    // std::unique_ptr<MetricCounter> responseFailRestModelMetadata;
-    // std::unique_ptr<MetricCounter> responseFailRestModelReady;
 
     // V3
     std::unique_ptr<MetricCounter> responseRestV3Unary;
     std::unique_ptr<MetricCounter> responseRestV3Stream;
-    // std::unique_ptr<MetricCounter> responseRejectedRestV3Unary;
-    // std::unique_ptr<MetricCounter> responseRejectedRestV3Stream;
 
     inline MetricCounter* getRequestsMetric(const ExecutionContext& context, bool success = true) {
         if (context.interface == ExecutionContext::Interface::GRPC) {
@@ -237,6 +201,7 @@ public:
                 return success ? this->requestAcceptedGrpcModelInfer.get() : this->requestRejectedGrpcModelInfer.get();
             if (context.method == ExecutionContext::Method::ModelInferStream)
                 return success ? this->requestAcceptedGrpcModelInferStream.get() : this->requestRejectedGrpcModelInferStream.get();
+            // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
             // if (context.method == ExecutionContext::Method::ModelMetadata)
             //     return success ? this->requestAcceptedGrpcModelMetadata.get() : this->requestRejectedGrpcModelMetadata.get();
             // if (context.method == ExecutionContext::Method::ModelReady)
@@ -245,8 +210,7 @@ public:
         } else if (context.interface == ExecutionContext::Interface::REST) {
             if (context.method == ExecutionContext::Method::ModelInfer)
                 return success ? this->requestAcceptedRestModelInfer.get() : this->requestRejectedRestModelInfer.get();
-            // if (context.method == ExecutionContext::Method::ModelInferStream)
-            //    return success ? this->requestAcceptedRestModelInferStream.get() : this->requestRejectedRestModelInferStream.get();
+            // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
             // if (context.method == ExecutionContext::Method::ModelMetadata)
             //     return success ? this->requestAcceptedRestModelMetadata.get() : this->requestRejectedRestModelMetadata.get();
             // if (context.method == ExecutionContext::Method::ModelReady)
@@ -268,20 +232,10 @@ public:
                 return this->responseGrpcModelInfer.get();
             if (context.method == ExecutionContext::Method::ModelInferStream)
                 return this->responseGrpcModelInferStream.get();
-            // if (context.method == ExecutionContext::Method::ModelMetadata)
-            //     return success ? this->responseAcceptedGrpcModelMetadata.get() : this->responseGrpcModelMetadata.get();
-            // if (context.method == ExecutionContext::Method::ModelReady)
-            //     return success ? this->responseAcceptedGrpcModelReady.get() : this->responseGrpcModelReady.get();
             return nullptr;  // TODO: Throw?
         } else if (context.interface == ExecutionContext::Interface::REST) {
             if (context.method == ExecutionContext::Method::ModelInfer)
                 return this->responseRestModelInfer.get();
-            // if (context.method == ExecutionContext::Method::ModelInferStream)
-            //    return success ? this->responseAcceptedRestModelInferStream.get() : this->responseRestModelInferStream.get();
-            // if (context.method == ExecutionContext::Method::ModelMetadata)
-            //     return success ? this->responseAcceptedRestModelMetadata.get() : this->responseRestModelMetadata.get();
-            // if (context.method == ExecutionContext::Method::ModelReady)
-            //     return success ? this->responseAcceptedRestModelReady.get() : this->responseRestModelReady.get();
             if (context.method == ExecutionContext::Method::V3Unary)
                 return this->responseRestV3Unary.get();
             if (context.method == ExecutionContext::Method::V3Stream)

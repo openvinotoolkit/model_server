@@ -17,6 +17,7 @@
 
 #include <optional>
 #include <set>
+#include <sstream>
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -55,9 +56,10 @@ enum : unsigned int {
 namespace ovms {
 
 static Status checkValField(const size_t& fieldSize, const size_t& expectedElementsNumber) {
-    if (fieldSize != expectedElementsNumber){
-        SPDLOG_ERROR("Expected: {}, actual: {}", expectedElementsNumber, fieldSize);
-        return StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE;
+    if (fieldSize != expectedElementsNumber) {
+        std::stringstream ss;
+        ss << "Expected val field elements number: " << expectedElementsNumber << "; actual: " << fieldSize;
+        return Status(StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE, ss.str());
     }
     return StatusCode::OK;
 }
@@ -339,10 +341,8 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
     writer.StartArray();
 
     bool seekDataInValField = false;
-    if (response_proto.raw_output_contents_size() == 0) {
-        SPDLOG_INFO("Raw output contents is 0.");
+    if (response_proto.raw_output_contents_size() == 0)
         seekDataInValField = true;
-    }
     int tensor_it = 0;
     for (const auto& tensor : response_proto.outputs()) {
         size_t dataTypeSize = KFSDataTypeSize(tensor.datatype());
@@ -355,8 +355,9 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         size_t expectedElementsNumber = dataTypeSize > 0 ? expectedContentSize / dataTypeSize : 0;
 
         if (!seekDataInValField && (tensor.datatype() != "BYTES" && response_proto.raw_output_contents(tensor_it).size() != expectedContentSize)) {
-            SPDLOG_ERROR("Tensor content has invalid size");
-            return StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE;
+            std::stringstream ss;
+            ss << "Expected raw output content size: " << expectedContentSize << "; actual: " << response_proto.raw_output_contents(tensor_it).size();
+            return Status(StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, ss.str());
         }
         writer.StartObject();
         writer.Key("name");
@@ -399,15 +400,15 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         } else if (tensor.datatype() == "BYTES") {
             PARSE_OUTPUT_DATA_STRING(bytes_contents, String)
         } else {
-            SPDLOG_ERROR("Unsupported precision: {}", tensor.datatype());
-            return StatusCode::REST_UNSUPPORTED_PRECISION;
+            std::stringstream ss;
+            ss << "Unsupported precision" << tensor.datatype();
+            return Status(StatusCode::REST_UNSUPPORTED_PRECISION, ss.str());
         }
         if (!binaryOutput) {
             writer.EndArray();
         }
         auto status = parseOutputParameters(tensor, writer, binaryOutput ? expectedContentSize : 0);
         if (!status.ok()) {
-            SPDLOG_ERROR("Error parsing output parameters");
             return status;
         }
         writer.EndObject();
@@ -443,7 +444,6 @@ Status makeJsonFromPredictResponse(
 
     auto status = parseResponseParameters(response_proto, writer);
     if (!status.ok()) {
-        SPDLOG_ERROR("Parsing response parameters failed.");
         return status;
     }
 
@@ -455,7 +455,6 @@ Status makeJsonFromPredictResponse(
     std::string binaryOutputsBuffer;
     status = parseOutputs(response_proto, writer, binaryOutputsBuffer, requestedBinaryOutputsNames);
     if (!status.ok()) {
-        SPDLOG_ERROR("Parsing outputs failed.");
         return status;
     }
 

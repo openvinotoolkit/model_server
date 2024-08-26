@@ -364,7 +364,7 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
             {"interface", "gRPC"}});
         THROW_IF_NULL(this->requestAcceptedGrpcModelInfer, "cannot create metric");
 
-        // TODO: ModelMetadata/ModelReady Not supported in MediaPipe?
+        // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
         // this->requestAcceptedGrpcModelMetadata = family->addMetric({{"name", graphName},
         //     {"api", "KServe"},
         //     {"method", "ModelMetadata"},
@@ -383,7 +383,7 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
             {"interface", "REST"}});
         THROW_IF_NULL(this->requestAcceptedRestModelInfer, "cannot create metric");
 
-        // TODO: ModelMetadata/ModelReady Not supported in MediaPipe?
+        // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
         // this->requestAcceptedRestModelMetadata = family->addMetric({{"name", graphName},
         //     {"api", "KServe"},
         //     {"method", "ModelMetadata"},
@@ -428,37 +428,11 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
             {"interface", "gRPC"}});
         THROW_IF_NULL(this->requestRejectedGrpcModelInfer, "cannot create metric");
 
-        // TODO: ModelMetadata/ModelReady Not supported in MediaPipe? Those calls probably can't fail
-        // this->requestRejectedGrpcModelMetadata = family->addMetric({{"name", graphName},
-        //     {"api", "KServe"},
-        //     {"method", "ModelMetadata"},
-        //     {"interface", "gRPC"}});
-        // THROW_IF_NULL(this->requestRejectedGrpcModelMetadata, "cannot create metric");
-
-        // this->requestRejectedGrpcModelReady = family->addMetric({{"name", graphName},
-        //     {"api", "KServe"},
-        //     {"method", "ModelReady"},
-        //     {"interface", "gRPC"}});
-        // THROW_IF_NULL(this->requestRejectedGrpcModelReady, "cannot create metric");
-
         this->requestRejectedRestModelInfer = family->addMetric({{"name", graphName},
             {"api", "KServe"},
             {"method", "ModelInfer"},
             {"interface", "REST"}});
         THROW_IF_NULL(this->requestRejectedRestModelInfer, "cannot create metric");
-
-        // TODO: ModelMetadata/ModelReady Not supported in MediaPipe? Those calls probably can't fail
-        // this->requestRejectedRestModelMetadata = family->addMetric({{"name", graphName},
-        //     {"api", "KServe"},
-        //     {"method", "ModelMetadata"},
-        //     {"interface", "REST"}});
-        // THROW_IF_NULL(this->requestRejectedRestModelMetadata, "cannot create metric");
-
-        // this->requestRejectedRestModelReady = family->addMetric({{"name", graphName},
-        //     {"api", "KServe"},
-        //     {"method", "ModelReady"},
-        //     {"interface", "REST"}});
-        // THROW_IF_NULL(this->requestRejectedRestModelReady, "cannot create metric");
 
         this->requestRejectedRestV3Unary = family->addMetric({{"name", graphName},
             {"api", "V3"},

@@ -89,7 +89,7 @@ public:
                 this->body += buffer.GetString();
             }
 
-            // Mock fails
+            // Mock failing scenario
             if (data.body.find("ReturnError") != std::string::npos) {
                 return absl::InvalidArgumentError("Returned error");
             }

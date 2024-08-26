@@ -129,13 +129,11 @@ static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChoos
 #if (MEDIAPIPE_DISABLE == 0)
 template <>
 void mediaexec<KFSRequest, KFSResponse>(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, KFSRequest& request, KFSResponse& response, ovms::Status& status) {
-    //ServableMetricReporter* ptr{nullptr};
     status = executorPtr->infer(&request,
         &response,
         ovms::ExecutionContext(
             ovms::ExecutionContext::Interface::GRPC,
             ovms::ExecutionContext::Method::Predict));
-    //ptr);
 }
 
 template <>

@@ -2942,8 +2942,7 @@ protected:
         ASSERT_EQ(modelManager.createPipeline(executor, this->request.model_name()), ovms::StatusCode::OK);
         using ovms::ExecutionContext;
         ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer};
-        //ServableMetricReporter* reporter = nullptr;
-        auto status = executor->infer(&this->request, &response, executionContext);  //, reporter);
+        auto status = executor->infer(&this->request, &response, executionContext);
         EXPECT_EQ(status, expectedStatus) << status.string();
         if (expectedStatus == ovms::StatusCode::OK) {
             ASSERT_EQ(response.outputs_size(), 1);

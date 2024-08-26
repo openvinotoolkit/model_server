@@ -81,7 +81,7 @@ static void checkMediapipeRequestsCounter(const std::string& collectedMetricData
     for (std::string _interface : std::set<std::string>{"gRPC", "REST"}) {
         for (std::string _api : std::set<std::string>{"KServe", "V3"}) {
             if (_api == "KServe") {
-                for (std::string _method : std::set<std::string>{"ModelInfer", "ModelInferStream"}) {//, "ModelMetadata", "ModelReady"}) {
+                for (std::string _method : std::set<std::string>{"ModelInfer", "ModelInferStream"}) {  //, "ModelMetadata", "ModelReady"}) {
                     if (_interface == "REST")
                         continue;
                     std::stringstream ss;
@@ -359,7 +359,6 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
     }
 
-
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelInfer", "KServe", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelInfer", "KServe", numberOfSuccessRequests);                                             // ran by real request
 
@@ -413,7 +412,7 @@ TEST_F(MetricFlowTest, GrpcModelInferStream) {
                 return false;
             preparePredictRequest(*req, correctInputsMeta);
             req->mutable_model_name()->assign(this->mpName);
-            counter++; 
+            counter++;
             return true;
         });
     ON_CALL(stream, Write(_, _)).WillByDefault(Return(1));
@@ -427,7 +426,7 @@ TEST_F(MetricFlowTest, GrpcModelInferStream) {
                 return false;
             preparePredictRequest(*req, wrongInputsMeta);
             req->mutable_model_name()->assign(this->mpName);
-            counter++; 
+            counter++;
             return true;
         });
     ON_CALL(stream, Write(_, _)).WillByDefault(Return(1));
@@ -605,8 +604,6 @@ TEST_F(MetricFlowTest, RestModelInfer) {
         ASSERT_EQ(handler.processInferKFSRequest(components, response, request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
     }
 
-    // TODO: Binary outputs for REST MediaPipe do not work when used with Passthrough calculator.
-    // TODO: REST for MediaPipe does not work AT ALL for Passthrough calculator.
     for (int i = 0; i < numberOfAcceptedRequests; i++) {
         components.model_name = mpName;
         std::string request = R"({"inputs":[{"name":"in","shape":[3,1,10],"datatype":"FP32","data":[1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10]}], "parameters":{"binary_data_output":true}})";
@@ -633,7 +630,6 @@ TEST_F(MetricFlowTest, RestModelInfer) {
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, mpName, "REST", "ModelInfer", "KServe", numberOfRejectedRequests);
 
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, mpName, "REST", "ModelInfer", "KServe", numberOfAcceptedRequests);
-
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
