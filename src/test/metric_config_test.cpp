@@ -269,10 +269,28 @@ TEST_F(MetricsConfigTest, MetricsAllEnabledTest) {
     const auto& metricConfig = manager.getMetricConfig();
     ASSERT_EQ(metricConfig.metricsEnabled, true);
     ASSERT_EQ(metricConfig.endpointsPath, "/metrics");
-    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_SUCCESS));
-    // Non default metric
-    ASSERT_EQ(metricConfig.isFamilyEnabled(METRIC_NAME_INFER_REQ_QUEUE_SIZE), false);
-    ASSERT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_FAIL));
+
+    for (const auto& metricName : std::unordered_set<std::string>{
+             {METRIC_NAME_CURRENT_REQUESTS},         // single & dag
+             {METRIC_NAME_REQUESTS_SUCCESS},         // single & dag
+             {METRIC_NAME_REQUESTS_FAIL},            // single & dag
+             {METRIC_NAME_REQUEST_TIME},             // single & dag
+             {METRIC_NAME_STREAMS},                  // single & dag
+             {METRIC_NAME_INFERENCE_TIME},           // single & dag
+             {METRIC_NAME_WAIT_FOR_INFER_REQ_TIME},  // single & dag
+             {METRIC_NAME_CURRENT_GRAPHS},           // mediapipe
+             {METRIC_NAME_REQUESTS_ACCEPTED},        // mediapipe
+             {METRIC_NAME_REQUESTS_REJECTED},        // mediapipe
+             {METRIC_NAME_RESPONSES}}) {             // mediapipe
+        ASSERT_TRUE(metricConfig.isFamilyEnabled(metricName));
+    }
+
+    // Non default metric are disabled
+    for (const auto& metricName : std::unordered_set<std::string>{
+             {METRIC_NAME_INFER_REQ_QUEUE_SIZE},  // single & dag
+             {METRIC_NAME_INFER_REQ_ACTIVE}}) {   // single & dag
+        ASSERT_FALSE(metricConfig.isFamilyEnabled(metricName));
+    }
 }
 
 static const char* modelMetricsBadEndpoint = R"(

@@ -36,8 +36,13 @@ struct ExecutionContext {
 
         // KServe
         ModelInfer,
+        ModelInferStream,
         ModelReady,
         ModelMetadata,
+
+        // V3
+        V3Unary,
+        V3Stream,
     };
 
     Interface interface;

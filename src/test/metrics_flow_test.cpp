@@ -41,6 +41,7 @@ using namespace ovms;
 using testing::HasSubstr;
 using testing::Not;
 
+// This is for Single Model and DAG.
 // This checks for counter to be present with exact value and other remaining metrics of the family to be 0.
 static void checkRequestsCounter(const std::string& collectedMetricData, const std::string& metricName, const std::string& endpointName, std::optional<model_version_t> endpointVersion, const std::string& interfaceName, const std::string& method, const std::string& api, int value) {
     for (std::string _interface : std::set<std::string>{"gRPC", "REST"}) {
@@ -64,6 +65,36 @@ static void checkRequestsCounter(const std::string& collectedMetricData, const s
                     if (_method != "GetModelStatus") {
                         ss << ",version=\"" << endpointVersion.value() << "\"";
                     }
+                    ss << "}";
+                    int expectedValue = interfaceName == _interface && method == _method && api == _api ? value : 0;
+                    ss << " " << expectedValue << "\n";
+                    ASSERT_THAT(collectedMetricData, HasSubstr(ss.str()));
+                }
+            }
+        }
+    }
+}
+
+// This is for MediaPipe.
+// This checks for counter to be present with exact value and other remaining metrics of the family to be 0.
+static void checkMediapipeRequestsCounter(const std::string& collectedMetricData, const std::string& metricName, const std::string& endpointName, const std::string& interfaceName, const std::string& method, const std::string& api, int value) {
+    for (std::string _interface : std::set<std::string>{"gRPC", "REST"}) {
+        for (std::string _api : std::set<std::string>{"KServe", "V3"}) {
+            if (_api == "KServe") {
+                for (std::string _method : std::set<std::string>{"ModelInfer", "ModelInferStream"}) {//, "ModelMetadata", "ModelReady"}) {
+                    if (_interface == "REST")
+                        continue;
+                    std::stringstream ss;
+                    ss << metricName << "{api=\"" << _api << "\",interface=\"" << _interface << "\",method=\"" << _method << "\",name=\"" << endpointName << "\"";
+                    ss << "}";
+                    int expectedValue = interfaceName == _interface && method == _method && api == _api ? value : 0;
+                    ss << " " << expectedValue << "\n";
+                    ASSERT_THAT(collectedMetricData, HasSubstr(ss.str()));
+                }
+            } else if (_interface == "REST") {  // V3 - only REST
+                for (std::string _method : std::set<std::string>{"Unary", "Stream"}) {
+                    std::stringstream ss;
+                    ss << metricName << "{api=\"" << _api << "\",interface=\"" << _interface << "\",method=\"" << _method << "\",name=\"" << endpointName << "\"";
                     ss << "}";
                     int expectedValue = interfaceName == _interface && method == _method && api == _api ? value : 0;
                     ss << " " << expectedValue << "\n";
@@ -113,6 +144,8 @@ protected:
 
     const int numberOfSuccessRequests = 5;
     const int numberOfFailedRequests = 7;
+    const int numberOfAcceptedRequests = 11;
+    const int numberOfRejectedRequests = 13;
     const int64_t dynamicBatch = 3;
 
     const Precision correctPrecision = Precision::FP32;
@@ -120,6 +153,7 @@ protected:
 
     const std::string modelName = "dummy";
     const std::string dagName = "dummy_demux";
+    const std::string mpName = "dummy_mp";  // TODO: Have graph that use dummy model?
 
     std::optional<int64_t> modelVersion = std::nullopt;
     std::optional<std::string_view> modelVersionLabel{std::nullopt};
@@ -307,11 +341,35 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
     }
 
+    for (int i = 0; i < numberOfAcceptedRequests; i++) {
+        request.Clear();
+        response.Clear();
+        inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, correctPrecision}}};
+        preparePredictRequest(request, inputsMeta);
+        request.mutable_model_name()->assign(mpName);
+        ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    }
+
+    for (int i = 0; i < numberOfRejectedRequests; i++) {
+        request.Clear();
+        response.Clear();
+        inputs_info_t inputsMeta{{"wrong_name", {DUMMY_MODEL_SHAPE, wrongPrecision}}};
+        preparePredictRequest(request, inputsMeta);
+        request.mutable_model_name()->assign(mpName);
+        ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
+    }
+
+
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelInfer", "KServe", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelInfer", "KServe", numberOfSuccessRequests);                                             // ran by real request
 
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "gRPC", "ModelInfer", "KServe", numberOfFailedRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "gRPC", "ModelInfer", "KServe", numberOfFailedRequests);    // ran by real request
+
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, mpName, "gRPC", "ModelInfer", "KServe", numberOfAcceptedRequests);
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, mpName, "gRPC", "ModelInfer", "KServe", numberOfRejectedRequests);
+
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, mpName, "gRPC", "ModelInfer", "KServe", numberOfAcceptedRequests);
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
@@ -329,6 +387,55 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
+}
+
+template <class W, class R>
+class MockedServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<W, R> {
+public:
+    MOCK_METHOD(void, SendInitialMetadata, (), (override));
+    MOCK_METHOD(bool, NextMessageSize, (uint32_t * sz), (override));
+    MOCK_METHOD(bool, Read, (R * msg), (override));
+    MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
+};
+
+TEST_F(MetricFlowTest, GrpcModelInferStream) {
+    KFSInferenceServiceImpl impl(server);
+    MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+
+    using ::testing::_;
+    using ::testing::Return;
+
+    int counter = 0;
+    inputs_info_t correctInputsMeta{{"in", {DUMMY_MODEL_SHAPE, correctPrecision}}};
+    EXPECT_CALL(stream, Read(_))
+        .WillRepeatedly([this, correctInputsMeta, &counter](::inference::ModelInferRequest* req) {
+            if (counter >= this->numberOfAcceptedRequests)
+                return false;
+            preparePredictRequest(*req, correctInputsMeta);
+            req->mutable_model_name()->assign(this->mpName);
+            counter++; 
+            return true;
+        });
+    ON_CALL(stream, Write(_, _)).WillByDefault(Return(1));
+    ASSERT_EQ(impl.ModelStreamInferImpl(nullptr, &stream), ovms::StatusCode::OK);
+
+    counter = 0;
+    inputs_info_t wrongInputsMeta{{"wrong_name", {DUMMY_MODEL_SHAPE, correctPrecision}}};
+    EXPECT_CALL(stream, Read(_))
+        .WillRepeatedly([this, wrongInputsMeta, &counter](::inference::ModelInferRequest* req) {
+            if (counter >= this->numberOfRejectedRequests)
+                return false;
+            preparePredictRequest(*req, wrongInputsMeta);
+            req->mutable_model_name()->assign(this->mpName);
+            counter++; 
+            return true;
+        });
+    ON_CALL(stream, Write(_, _)).WillByDefault(Return(1));
+    ASSERT_EQ(impl.ModelStreamInferImpl(nullptr, &stream), ovms::StatusCode::OK);
+
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, mpName, "gRPC", "ModelInferStream", "KServe", numberOfAcceptedRequests);
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, mpName, "gRPC", "ModelInferStream", "KServe", numberOfRejectedRequests);
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, mpName, "gRPC", "ModelInferStream", "KServe", numberOfAcceptedRequests);
 }
 
 TEST_F(MetricFlowTest, GrpcModelMetadata) {
@@ -498,11 +605,35 @@ TEST_F(MetricFlowTest, RestModelInfer) {
         ASSERT_EQ(handler.processInferKFSRequest(components, response, request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
     }
 
+    // TODO: Binary outputs for REST MediaPipe do not work when used with Passthrough calculator.
+    // TODO: REST for MediaPipe does not work AT ALL for Passthrough calculator.
+    for (int i = 0; i < numberOfAcceptedRequests; i++) {
+        components.model_name = mpName;
+        std::string request = R"({"inputs":[{"name":"in","shape":[3,1,10],"datatype":"FP32","data":[1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10]}], "parameters":{"binary_data_output":true}})";
+        std::string response;
+        std::optional<int> inferenceHeaderContentLength;
+        ASSERT_EQ(handler.processInferKFSRequest(components, response, request, inferenceHeaderContentLength), ovms::StatusCode::OK);
+    }
+
+    for (int i = 0; i < numberOfRejectedRequests; i++) {
+        components.model_name = mpName;
+        std::string request = R"({"inputs":[{"name":"wrong_name","shape":[3,1,10],"datatype":"FP32","data":[1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10]}], "parameters":{"binary_data_output":true}})";
+        std::string response;
+        std::optional<int> inferenceHeaderContentLength;
+        ASSERT_EQ(handler.processInferKFSRequest(components, response, request, inferenceHeaderContentLength), ovms::StatusCode::INVALID_UNEXPECTED_INPUT);
+    }
+
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelInfer", "KServe", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelInfer", "KServe", numberOfSuccessRequests);                                             // ran by real request
 
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "REST", "ModelInfer", "KServe", numberOfFailedRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "REST", "ModelInfer", "KServe", numberOfFailedRequests);    // ran by real request
+
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, mpName, "REST", "ModelInfer", "KServe", numberOfAcceptedRequests);
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, mpName, "REST", "ModelInfer", "KServe", numberOfRejectedRequests);
+
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, mpName, "REST", "ModelInfer", "KServe", numberOfAcceptedRequests);
+
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
@@ -583,6 +714,66 @@ TEST_F(MetricFlowTest, ModelReady) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
 }
 
+TEST_F(MetricFlowTest, RestV3Unary) {
+    HttpRestApiHandler handler(server, 0);
+    MockedServerRequestInterface stream;
+
+    EXPECT_CALL(stream, IsDisconnected())
+        .WillRepeatedly(::testing::Return(false));
+
+    for (int i = 0; i < numberOfAcceptedRequests; i++) {
+        std::string request = R"({"model": "dummy_gpt", "prompt": "Hello World"})";
+        std::string response;
+        HttpRequestComponents comps;
+        auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
+        ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    }
+
+    // There is currently no possible scenario that V3 request get rejected.
+    // Everything is pushed to graph once its executor is created.
+    // for (int i = 0; i < numberOfRejectedRequests; i++) {
+    //     std::string request = R"({"model": "dummy_gpt", "prompt": "ReturnError"})";
+    //     std::string response;
+    //     HttpRequestComponents comps;
+    //     auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
+    //     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    // }
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests);
+    // checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, "dummy_gpt", "REST", "Unary", "V3", numberOfRejectedRequests);
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests);
+}
+
+TEST_F(MetricFlowTest, RestV3Stream) {
+    HttpRestApiHandler handler(server, 0);
+    MockedServerRequestInterface stream;
+
+    EXPECT_CALL(stream, IsDisconnected())
+        .WillRepeatedly(::testing::Return(false));
+
+    for (int i = 0; i < numberOfAcceptedRequests; i++) {
+        std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "Hello World"})";
+        std::string response;
+        HttpRequestComponents comps;
+        auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
+        ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
+    }
+
+    // There is currently no possible scenario that V3 request get rejected.
+    // Everything is pushed to graph once its executor is created.
+    // for (int i = 0; i < numberOfRejectedRequests; i++) {
+    //     std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "ReturnError"})";
+    //     std::string response;
+    //     HttpRequestComponents comps;
+    //     auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
+    //     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    // }
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, "dummy_gpt", "REST", "Stream", "V3", numberOfAcceptedRequests);
+    // checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, "dummy_gpt", "REST", "Stream", "V3", numberOfRejectedRequests);
+    const int numberOfMockedChunksPerRequest = 9;  // Defined in openai_chat_completions_mock_calculator.cpp
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Stream", "V3", numberOfAcceptedRequests * numberOfMockedChunksPerRequest);
+    SPDLOG_ERROR(server.collect());
+}
+
 std::string MetricFlowTest::prepareConfigContent() {
     return std::string{R"({
         "monitoring": {
@@ -598,6 +789,10 @@ std::string MetricFlowTest::prepareConfigContent() {
            R"(",")" + METRIC_NAME_STREAMS +
            R"(",")" + METRIC_NAME_INFERENCE_TIME +
            R"(",")" + METRIC_NAME_WAIT_FOR_INFER_REQ_TIME +
+           R"(",")" + METRIC_NAME_CURRENT_GRAPHS +
+           R"(",")" + METRIC_NAME_REQUESTS_ACCEPTED +
+           R"(",")" + METRIC_NAME_REQUESTS_REJECTED +
+           R"(",")" + METRIC_NAME_RESPONSES +
            R"("]
             }
         },
@@ -634,6 +829,16 @@ std::string MetricFlowTest::prepareConfigContent() {
                             "node_name": "dummy-node",
                             "data_item": "a"}}
                 ]
+            }
+        ],
+        "mediapipe_config_list": [
+            {
+                "name":"dummy_mp",
+                "graph_path":"/ovms/src/test/mediapipe/graphkfspass.pbtxt"
+            },
+            {
+                "name": "dummy_gpt",
+                "graph_path": "/ovms/src/test/mediapipe/graph_gpt.pbtxt"
             }
         ]
     }
