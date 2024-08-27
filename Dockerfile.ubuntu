@@ -376,7 +376,7 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 
 FROM $BASE_IMAGE as release
 ARG INSTALL_RPMS_FROM_URL=
-ARG INSTALL_DRIVER_VERSION="23.22.26516"
+ARG INSTALL_DRIVER_VERSION="24.26.30049"
 ARG GPU=0
 ARG NPU=0
 ARG NVIDIA=0
@@ -399,24 +399,6 @@ RUN     apt-get update -y ; \
         if [ "$GPU" == "1" ] ; then \
             apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
                 case $INSTALL_DRIVER_VERSION in \
-                "21.48.21782") \
-                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-gmmlib_21.3.3_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-core_1.0.9441_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-opencl_1.0.9441_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-opencl-icd_21.48.21782_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-level-zero-gpu_1.2.21782_amd64.deb ; \
-                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
-                ;; \
-                "22.10.22597") \
-                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-gmmlib_22.0.2_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-core_1.0.10409_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-opencl_1.0.10409_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-opencl-icd_22.10.22597_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-level-zero-gpu_1.3.22597_amd64.deb ; \
-                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
-                ;; \
                 "22.35.24055") \
                         apt-get update && apt-get install -y --no-install-recommends gpg gpg-agent && \
                         curl https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
@@ -459,6 +441,16 @@ RUN     apt-get update -y ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/libigdgmm12_22.3.0_amd64.deb ; \
                         dpkg -i ./*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
+                "24.26.30049") \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/24.26.30049.6/intel-level-zero-gpu_1.3.30049.6_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/24.26.30049.6/intel-opencl-icd_24.26.30049.6_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/24.26.30049.6/libigdgmm12_22.3.20_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17193.4/intel-igc-core_1.0.17193.4_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17193.4/intel-igc-opencl_1.0.17193.4_amd64.deb ; \
+
+                        dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
+                ;; \                
                 *) \
                         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
                         apt-get update && apt-get -y --no-install-recommends install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
