@@ -3573,6 +3573,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "ToImageCalculator",
         "TrackedDetectionManagerCalculator",
         "Tvl1OpticalFlowCalculator",
+        "TwoInputCalculator",
         "UpdateFaceLandmarksCalculator",
         "VideoPreStreamCalculator",
         "VisibilityCopyCalculator",
