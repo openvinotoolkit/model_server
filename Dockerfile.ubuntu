@@ -468,6 +468,7 @@ RUN     apt-get update -y ; \
         fi ; \
         if [ "$NPU" == "1" ] ; then \
             mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
+            apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
             curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-driver-compiler-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
             curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-fw-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
             curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-level-zero-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
