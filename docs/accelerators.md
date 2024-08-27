@@ -170,7 +170,7 @@ The docker image of OpenVINO Model Server including support for NVIDIA can be bu
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make docker_build NVIDIA=1 OV_USE_BINARY=0
+make docker_build NVIDIA=1
 cd ..
 ```
 Check also [building from sources](https://github.com/openvinotoolkit/model_server/blob/main/docs/build_from_source.md).
@@ -199,7 +199,7 @@ The docker image of OpenVINO Model Server including support for NVIDIA can be bu
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make release_image NPU=1 OV_USE_BINARY=1
+make release_image NPU=1
 cd ..
 ```
 
