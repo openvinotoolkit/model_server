@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "inferencerequest.hpp"
 
+#include <optional>
+
 #include "../status.hpp"
 
 namespace ovms {

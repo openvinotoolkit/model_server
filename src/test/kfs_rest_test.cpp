@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -130,39 +131,6 @@ public:
     }
 };
 
-class HttpRestApiHandlerWithMediapipe : public ::testing::TestWithParam<std::string> {
-protected:
-    ovms::Server& server = ovms::Server::instance();
-    std::unique_ptr<HttpRestApiHandler> handler;
-
-    std::unique_ptr<std::thread> t;
-    std::string port = "9173";
-
-    void SetUpServer(const char* configPath) {
-        ::SetUpServer(this->t, this->server, this->port, configPath);
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
-
-        handler = std::make_unique<HttpRestApiHandler>(server, 5);
-    }
-
-    void TearDown() {
-        handler.reset();
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
-    }
-};
-
-class HttpRestApiHandlerWithMediapipeForkTest : public HttpRestApiHandlerWithMediapipe {
-public:
-    void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_summator.json");
-    }
-};
-
 class HttpRestApiHandlerWithDynamicModelTest : public HttpRestApiHandlerTest {
 public:
     static void SetUpTestSuite() {
@@ -224,7 +192,41 @@ public:
 std::unique_ptr<MockedServer> HttpRestApiHandlerTest::server = nullptr;
 std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
 
-static void testInference(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler) {
+#if (PYTHON_DISABLE == 0)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnarrowing"
+
+static void testInference(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler, const std::string endpoint = "/v2/models/mediapipeAdd/versions/1/infer") {
+    std::vector<std::pair<std::string, std::string>> headers;
+    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", std::to_string(headerLength)};
+    headers.emplace_back(binaryInputsHeader);
+
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
+
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_EQ(doc.HasParseError(), false);
+
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    ASSERT_EQ(output.Size(), 10);
+    auto datatype = doc["outputs"].GetArray()[0].GetObject()["datatype"].GetString();
+    for (auto& data : output) {
+        if (strcmp(datatype, "BOOL") == 0) {
+            ASSERT_EQ(data.GetBool(), true);
+        } else {
+            ASSERT_EQ(data.GetFloat(), 2);
+        }
+    }
+}
+
+static void testInferenceNegative(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler, ovms::Status processorStatus) {
     std::string request = "/v2/models/mediapipeAdd/versions/1/infer";
 
     std::vector<std::pair<std::string, std::string>> headers;
@@ -237,29 +239,108 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
 
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
-
-    rapidjson::Document doc;
-    doc.Parse(response.c_str());
-    ASSERT_EQ(doc.HasParseError(), false);
-
-    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
-    ASSERT_EQ(output.Size(), 10);
-
-    for (auto& data : output) {
-        ASSERT_EQ(data.GetFloat(), 2);
-    }
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), processorStatus);
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wnarrowing"
+class HttpRestApiHandlerWithMediapipe : public ::testing::TestWithParam<std::string> {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<HttpRestApiHandler> handler;
 
-TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP32) {
+    std::unique_ptr<std::thread> t;
+    std::string port = "9173";
+
+    void SetUpServer(const char* configPath) {
+        ::SetUpServer(this->t, this->server, this->port, configPath);
+        auto start = std::chrono::high_resolution_clock::now();
+        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+        }
+
+        handler = std::make_unique<HttpRestApiHandler>(server, 5);
+    }
+
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_python_summator.json");
+    }
+
+    void TearDown() {
+        handler.reset();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
+class HttpRestApiHandlerWithMediapipePassthrough : public HttpRestApiHandlerWithMediapipe {
+protected:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/config_mp_pytensor_passthrough.json");
+    }
+};
+
+TEST_P(HttpRestApiHandlerWithMediapipe, inferRequestWithSupportedPrecision) {
+    std::string datatype = GetParam();
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"" + datatype + "\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"" + datatype + "\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInference(headerLength, request_body, handler);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP16) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+    // Supported only when data is in binary extension
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestBF16) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"BF16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"BF16\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+    // Supported only when data is in binary extension
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestBOOL) {
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"BOOL\", \"data\": [true,true,true,true,true,true,true,true,true,true]}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"BOOL\", \"data\": [true,true,true,true,true,true,true,true,true,true]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    testInference(headerLength, request_body, handler);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32DataInJsonAndBinaryExtension) {
     // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
     std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
 
     std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
-    std::string param = ",\"parameters\":{\"binary_data_output\":true}";
+    std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
+
+    std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
+    int headerLength = request_body.length();
+
+    request_body += binaryData;
+    request_body += binaryData;
+
+    testInferenceNegative(headerLength, request_body, handler, ovms::StatusCode::INVALID_MESSAGE_STRUCTURE);
+}
+
+TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32BinaryExtension) {
+    std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
+
+    std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
     std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
 
     std::string request_body = "{\"inputs\":[" + tensor1 + ", " + tensor2 + "]}";
@@ -271,7 +352,43 @@ TEST_F(HttpRestApiHandlerWithMediapipeForkTest, inferRequestFP32) {
     testInference(headerLength, request_body, handler);
 }
 
+std::vector<std::string> supportedDatatypes = {"FP32", "FP64", "INT8", "UINT8", "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64"};
+
+INSTANTIATE_TEST_SUITE_P(
+    TestDeserialize,
+    HttpRestApiHandlerWithMediapipe,
+    ::testing::ValuesIn(supportedDatatypes),
+    [](const ::testing::TestParamInfo<HttpRestApiHandlerWithMediapipe::ParamType>& info) {
+        return info.param;
+    });
+
+TEST_F(HttpRestApiHandlerWithMediapipePassthrough, inferRequestBYTES) {
+    std::string request = "/v2/models/mpPytensorPassthrough/versions/1/infer";
+    std::string request_body = "{\"inputs\":[{\"name\":\"in\",\"shape\":[3],\"datatype\":\"BYTES\", \"data\": [\"abc\", \"def\", \"ghi\"]}]}";
+    ovms::HttpRequestComponents comp;
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    ASSERT_TRUE(doc["outputs"][0].GetObject().HasMember("data"));
+    ASSERT_TRUE(doc["outputs"][0].GetObject()["data"].IsArray());
+    auto output = doc["outputs"].GetArray()[0].GetObject()["data"].GetArray();
+    std::vector<std::string> expectedStrings{"abc", "def", "ghi"};
+    ASSERT_EQ(output.Size(), expectedStrings.size());
+    for (size_t i = 0; i < expectedStrings.size(); i++) {
+        ASSERT_TRUE(output[i].IsString());
+        ASSERT_EQ(output[i].GetString(), expectedStrings[i]);
+    }
+}
+
 #pragma GCC diagnostic pop
+#endif
 
 TEST_F(HttpRestApiHandlerTest, MetricsParameters) {
     std::string request = "/metrics?test=test";
@@ -435,14 +552,15 @@ TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
     ovms::HttpRequestComponents comp;
     int c = 0;
 
-    handler->registerHandler(KFS_GetModelMetadata, [&](const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components) {
+    handler->registerHandler(KFS_GetModelMetadata, [&](const std::string_view uri, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) {
         c++;
         return ovms::StatusCode::OK;
     });
     comp.type = ovms::KFS_GetModelMetadata;
     std::string discard;
     ovms::HttpResponseComponents responseComponents;
-    handler->dispatchToProcessor(std::string(), &discard, comp, responseComponents);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    handler->dispatchToProcessor("", std::string(), &discard, comp, responseComponents, writer);
 
     ASSERT_EQ(c, 1);
 }
@@ -452,14 +570,15 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
     ovms::HttpRequestComponents comp;
     int c = 0;
 
-    handler->registerHandler(KFS_GetModelReady, [&](const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components) {
+    handler->registerHandler(KFS_GetModelReady, [&](const std::string_view, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) {
         c++;
         return ovms::StatusCode::OK;
     });
     comp.type = ovms::KFS_GetModelReady;
     std::string discard;
     ovms::HttpResponseComponents responseComponents;
-    handler->dispatchToProcessor(std::string(), &discard, comp, responseComponents);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    handler->dispatchToProcessor("", std::string(), &discard, comp, responseComponents, writer);
 
     ASSERT_EQ(c, 1);
 }
@@ -471,7 +590,8 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     handler->parseRequestComponents(comp, "GET", request);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(std::string(), &response, comp, responseComponents), ovms::StatusCode::OK);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", std::string(), &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -501,7 +621,8 @@ TEST_F(HttpRestApiHandlerWithScalarModelTest, modelMetadataRequest) {
     handler->parseRequestComponents(comp, "GET", request);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(std::string(), &response, comp, responseComponents), ovms::StatusCode::OK);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", std::string(), &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -526,7 +647,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -546,7 +668,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -568,7 +691,8 @@ TEST_F(HttpRestApiHandlerWithScalarModelTest, inferRequestScalar) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -590,7 +714,8 @@ TEST_F(HttpRestApiHandlerWithDynamicModelTest, inferRequestZeroBatch) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -613,7 +738,8 @@ TEST_F(HttpRestApiHandlerWithDynamicModelTest, inferRequestZeroDim) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -1159,7 +1285,8 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidPrecision) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
 TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape) {
@@ -1170,7 +1297,8 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::INVALID_VALUE_COUNT);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
 TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_noData) {
@@ -1181,7 +1309,8 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_noData) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::INVALID_VALUE_COUNT);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
 TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_emptyData) {
@@ -1192,7 +1321,8 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_emptyData) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::INVALID_VALUE_COUNT);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
 void assertStringMetadataOutput(rapidjson::Document& doc) {
@@ -1226,7 +1356,8 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, positivePassthrough) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ASSERT_EQ(handler->dispatchToProcessor(request_body, &response, comp, responseComponents), ovms::StatusCode::OK);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -1275,7 +1406,8 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, positivePassthrough_binaryInput) {
     };
     ovms::HttpResponseComponents responseComponents;
     std::string output;
-    ASSERT_EQ(handler->processRequest("POST", request, request_body, &headers, &output, responseComponents), ovms::StatusCode::OK);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ASSERT_EQ(handler->processRequest("POST", request, request_body, &headers, &output, responseComponents, writer), ovms::StatusCode::OK);
     ASSERT_TRUE(responseComponents.inferenceHeaderContentLength.has_value());
     ASSERT_EQ(responseComponents.inferenceHeaderContentLength.value(), 272);
 
@@ -1301,7 +1433,8 @@ TEST_F(HttpRestApiHandlerTest, serverReady) {
     std::string request;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ovms::Status status = handler->dispatchToProcessor(request, &response, comp, responseComponents);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
 }
@@ -1312,7 +1445,8 @@ TEST_F(HttpRestApiHandlerTest, serverLive) {
     std::string request;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ovms::Status status = handler->dispatchToProcessor(request, &response, comp, responseComponents);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
 }
@@ -1323,7 +1457,8 @@ TEST_F(HttpRestApiHandlerTest, serverMetadata) {
     std::string request;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    ovms::Status status = handler->dispatchToProcessor(request, &response, comp, responseComponents);
+    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());

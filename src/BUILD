@@ -346,16 +346,25 @@ cc_library(
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_internal/packettypes.hpp",
+                "kfs_frontend/kfs_graph_executor_impl.cpp",
+                "kfs_frontend/kfs_graph_executor_impl.hpp",
+                "http_frontend/http_graph_executor_impl.cpp",
+                "http_frontend/http_graph_executor_impl.hpp",
             ],
             "//:disable_mediapipe" : [],
         }),
         deps = select({
             "//:not_disable_python": [
                 "//src/python:libovmspythonmodule",
+                # Jinja template processing is done in Python
+                "//src/llm:llmcalculator",
+                "//src/llm:llmnoderesources",
+                "//src/llm:text_processor",
             ],
             "//:disable_python": []
         }) + [
             "cpp_headers",
+            "libmodelconfigjsonparser",
             "libovmsfilesystem",
             "libovmsfilesystemfactory",
             "libovmslocalfilesystem", # indirectly & directly through factory
@@ -382,6 +391,8 @@ cc_library(
                 "@mediapipe//mediapipe/calculators/geti/utils:utils",
                 "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
                 "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
+                "//src/llm:httppayload",
+                "//src:libhttpclientconnection",
             ],
             "//:disable_mediapipe" : [],
         }),
@@ -427,6 +438,19 @@ cc_library(
     deps = [
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "libhttpclientconnection",
+    hdrs = ["client_connection.hpp", "http_frontend/http_client_connection.hpp"],
+    deps = [
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -862,14 +886,8 @@ cc_library( # make ovms_lib dependent, use share doptions
     srcs = [
             "s3filesystem.cpp",
     ],
-    deps = select({
-            "//:ubuntu_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
-            ],
-            "//:redhat_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
-            ],
-        }) + [
+    deps = [
+        "@aws-sdk-cpp//:aws-sdk-cpp",
         "libovmsfilesystem",
         "libovmslogging",
         "libovmsstring_utils",
@@ -921,6 +939,22 @@ cc_library(
             "libovmss3filesystem",
             "libovmslocalfilesystem",
             "libovmslogging"],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "libmodelconfigjsonparser",
+    hdrs = [
+        "json_parser.hpp",
+    ],
+    srcs = ["json_parser.cpp"],
+    deps = ["cpp_headers",
+            "@com_github_tencent_rapidjson//:rapidjson",
+            "@linux_openvino//:openvino",
+            "@com_github_gabime_spdlog//:spdlog"],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
@@ -1084,6 +1118,7 @@ cc_test(
         "test/unit_tests.cpp",
         ] + select({
             "//:not_disable_mediapipe": [
+                "test/http_openai_handler_test.cpp",
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/mediapipeflow_test.cpp",
@@ -1097,6 +1132,10 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
+                # LLM logic uses Python for processing Jinja templates
+                "test/llmnode_test.cpp",
+                "test/llmtemplate_test.cpp",
+                "test/text_streamer_test.cpp",
             ],
             "//:disable_python" : [],
         }),
@@ -1116,6 +1155,7 @@ cc_test(
         "test/c_api/config_standard_scalar.json",
         "test/configs/config_dummy_dynamic_shape.json",
         "test/configs/emptyConfigWithMetrics.json",
+        "test/llm/graphkfspass.pbtxt",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
         "test/dummy_fp64/1/saved_model.xml",
@@ -1126,6 +1166,7 @@ cc_test(
         "test/dummyUppercase/1/dummy.bin",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.xml",
         "test/increment_1x3x4x5/1/increment_1x3x4x5.bin",
+        "test/mediapipe/config_mediapipe_openai_chat_completions_mock.json",
         "test/mediapipe/config_mediapipe_add_adapter_full.json",
         "test/mediapipe/config_mediapipe_all_graphs_adapter_full.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json",
@@ -1143,6 +1184,7 @@ cc_test(
         "test/mediapipe/config_standard_dummy.json",
         "test/mediapipe/graph_two_inputs_model.pbtxt",
         "test/mediapipe/config_mediapipe_pytensor_ovtensor_converter.json",
+        "test/mediapipe/graph_gpt.pbtxt",
         "test/mediapipe/graphadd.pbtxt",
         "test/mediapipe/graphaddadapterfull.pbtxt",
         "test/mediapipe/graphdummy_tf.pbtxt",
@@ -1230,6 +1272,11 @@ cc_test(
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
             "//:disable_mediapipe" : [],
+        }) +select({
+            "//:not_disable_python": [
+                "//src/llm:llmnoderesources",
+            ],
+            "//:disable_python": []
         }),
     copts = COPTS_TESTS,
 )

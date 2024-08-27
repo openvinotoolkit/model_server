@@ -8,6 +8,8 @@ The script below is downloading a public MobileNet model trained on the ImageNet
 This is a very handy functionality because it allows us to export the model with the included pre/post processing functions as the model layers. The client just receives the string data with the label name for the classified image.
 
 ```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/image_classification_with_string_output
 pip install -r requirements.txt
 python3 download_model.py
 rm model/1/fingerprint.pb
@@ -31,7 +33,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd):/workspace -p 8000:8000 openvino/mo
 ## Send request
 Use example client to send requests containing images via KServ REST API:
 ```bash
-python3 image_classification_with_string_output.py 
+python3 image_classification_with_string_output.py --http_port 8000
 ```
 Request may be sent also using other APIs (KServ GRPC, TFS). In this sections you can find short code samples how to do this:
 - [TensorFlow Serving API](../../docs/clients_tfs.md)

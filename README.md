@@ -21,8 +21,9 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
 ### Key features:
-- **[NEW]** [Python code execution](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html)
-- **[NEW]** [gRPC streaming](https://docs.openvino.ai/nightly/ovms_docs_streaming_endpoints.html)
+- **[NEW]** [Efficient Text Generation via OpenAI API - preview](https://docs.openvino.ai/nightly/ovms_docs_llm_reference.html)
+- [Python code execution](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html)
+- [gRPC streaming](https://docs.openvino.ai/nightly/ovms_docs_streaming_endpoints.html)
 - [MediaPipe graphs serving](https://docs.openvino.ai/nightly/ovms_docs_mediapipe.html) 
 - Model management - including [model versioning](https://docs.openvino.ai/nightly/ovms_docs_model_version_policy.html) and [model updates in runtime](https://docs.openvino.ai/nightly/ovms_docs_online_config_changes.html)
 - [Dynamic model inputs](https://docs.openvino.ai/nightly/ovms_docs_shape_batch_layout.html)
@@ -72,7 +73,7 @@ For more information on using Model Server in various scenarios you can check th
 
 * [RESTful API](https://restfulapi.net/)
 
-* [Benchmarking results](https://docs.openvino.ai/nightly/openvino_docs_performance_benchmarks.html)
+* [Benchmarking results](https://docs.openvino.ai/nightly/about-openvino/performance-benchmarks.html)
 
 * [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - webinar recording
 

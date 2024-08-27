@@ -39,12 +39,13 @@ infer_input = serialize_prompts(args['prompt'])
 start_time = datetime.datetime.now()
 results = client.infer("python_model", [infer_input], client_timeout=10*60)  # 10 minutes
 endtime = datetime.datetime.now()
-if len(args['prompt']) == 1:
-    print(f"Question:\n{args['prompt'][0]}\n\nCompletion:\n{results.as_numpy('completion').tobytes().decode()}\n")
-else:
-    for i, arr in enumerate(deserialize_bytes_tensor(results._result.raw_output_contents[0])):
+for i, arr in enumerate(results.as_numpy("completion")):
+    if i < len(args['prompt']):
         print(f"==== Prompt: {args['prompt'][i]} ====")
         print(arr.decode())
-        print()
+    print()
+print("Number of tokens ", results.as_numpy("token_count")[0])
+print("Generated tokens per second ", round(results.as_numpy("token_count")[0] / int((endtime - start_time).total_seconds()), 2))
+print("Time per generated token ", round(int((endtime - start_time).total_seconds()) / results.as_numpy("token_count")[0] * 1000, 2), "ms")
 
 print("Total time", int((endtime - start_time).total_seconds() * 1000), "ms")

@@ -55,7 +55,7 @@ public:
 
     // Exit nodes have no dependants
     void addDependant(Node& node) override {
-        throw std::logic_error("This node cannot have dependant");
+        throw std::logic_error("This node cannot have dependent");
     }
 
     std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override;

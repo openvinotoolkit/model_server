@@ -6,16 +6,16 @@ In addition to [gRPC APIs](./model_server_grpc_api_tfs.md) OpenVINO&trade; model
 > **Note** : Only numerical data type is supported.
 
 This document covers the following API:
-* <a href="#model-status">Model Status API</a>
-* <a href="#model-metadata">Model MetaData API </a>
-* <a href="#predict">Predict API </a>
-* <a href="#config-reload">Config Reload API </a>
-* <a href="#config-status">Config Status API </a>
+* [Model Status API](#model-status-api)
+* [Model MetaData API](#model-metadata-api)
+* [Predict API](#predict-api)
+* [Config Reload API](#config-reload-api)
+* [Config Status API](#config-status-api)
 
 
 > **NOTE** : The implementations for Predict, GetModelMetadata and GetModelStatus function calls are currently available. These are the most generic function calls and should address most of the usage scenarios.
 
-## Model Status API <a name="model-status"></a>
+## Model Status API
 **Description**
 
 Get information about the status of served models.
@@ -55,10 +55,10 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1
 {
   'model_version_status':[
     {
-      'version': '1', 
-      'state': 'AVAILABLE', 
+      'version': '1',
+      'state': 'AVAILABLE',
       'status': {
-        'error_code': 'OK', 
+        'error_code': 'OK',
         'error_message': ''
       }
     }
@@ -67,7 +67,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1
 ```
 Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-status-api-1)
 
-## Model Metadata API <a name="model-metadata"></a>
+## Model Metadata API
 **Description**
 
 Get the metadata of a model in the model server.
@@ -150,7 +150,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
 
 Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-metadata-api-1)
 
-## Predict API <a name="predict"></a>
+## Predict API
 **Description**
 
 Endpoint for running an inference with loaded models or [DAGs](./dag_scheduler.md).
@@ -172,7 +172,7 @@ POST http://${REST_URL}:${REST_PORT}/v1/models/${MODEL_NAME}/versions/${MODEL_VE
   "instances": <value>|<(nested)list>|<list-of-objects>
   "inputs": <value>|<(nested)list>|<object>
 }
-``` 
+```
 
 Read [How to specify input tensors in row format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_row_format) and [How to specify input tensors in column format](https://www.tensorflow.org/tfx/serving/api_rest#specifying_input_tensors_in_column_format) for more details.
 
@@ -210,17 +210,17 @@ Besides numerical values, it is possible to pass JPEG / PNG encoded images as bi
 
 On the server side, the binary encoded data is loaded using OpenCV which then converts it to OpenVINO-friendly data format for inference.
 
-Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) for more informations.
+Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) for more information.
 
 Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#predict-api-1)
 
-## Config Reload API <a name="config-reload"></a>
+## Config Reload API
 **Description**
 
 Sends requests via RESTful API to trigger config reloading and gets models and [DAGs](./dag_scheduler.md) statuses as a response. This endpoint can be used with disabled automatic config reload to ensure configuration changes are applied in a specific time and also to get confirmation about reload operation status. Typically this option is to be used when OVMS is started with a parameter `--file_system_poll_wait_seconds 0`.
 Reload operation does not pass new configuration to OVMS server. The configuration file changes need to be applied by the OVMS administrator. The REST API call just initiate applying the configuration file which is already present.
 
-**URL** 
+**URL**
 ```
 POST http://${REST_URL}:${REST_PORT}/v1/config/reload
 ```
@@ -243,37 +243,37 @@ curl --request POST http://${REST_URL}:${REST_PORT}/v1/config/reload
 
 **Response**
 
-In case of config reload success, the response contains JSON with aggregation of getModelStatus responses for all models and DAGs after reload is finished, along with operation status: 
+In case of config reload success, the response contains JSON with aggregation of getModelStatus responses for all models and DAGs after reload is finished, along with operation status:
 ```JSON
-{ 
-"<model name>": 
-{ 
-  "model_version_status": [     
-  { 
+{
+"<model name>":
+{
+  "model_version_status": [
+  {
      "version": <model version>|<string>,
-     "state": <model state>|<string>, 
+     "state": <model state>|<string>,
      "status":
-      { 
-        "error_code": <error code>|<string>, 
-        "error_message": <error message>|<string>       
-      } 
-  }, 
-  ...  
-  ] 
-}, 
-... 
-} 
+      {
+        "error_code": <error code>|<string>,
+        "error_message": <error message>|<string>
+      }
+  },
+  ...
+  ]
+},
+...
+}
 ```
 
-In case of any failure during execution: 
- 
+In case of any failure during execution:
+
 ```JSON
-{ 
-  "error": <error message>|<string> 
-} 
+{
+  "error": <error message>|<string>
+}
 ```
 When an operation succeeds HTTP response status code is
-  - `201` when config(config file or model version) was reloaded 
+  - `201` when config(config file or model version) was reloaded
   - `200` when reload was not required, already applied or OVMS was started in single model mode
 
 When an operation fails another status code is returned.
@@ -315,52 +315,52 @@ Possible messages returned on error:
 
 Even if one of models reload failed other may be working properly. To check state of loaded models use [Config Status API](#config-status-api). To detect exact cause of errors described above analyzing sever logs may be necessary.
 
-## Config Status API <a name="config-status"></a>
+## Config Status API
 **Description**
 
 Sends requests via RESTful API to get a response that contains an aggregation of getModelStatus responses for all models and [DAGs](./dag_scheduler.md).
 
-**URL** 
+**URL**
 ```
 GET http://${REST_URL}:${REST_PORT}/v1/config
 ```
-**Request**  
+**Request**
 To trigger this API HTTP GET request should be sent on a given URL. Example `curl` command:
 
 ```
 curl --request GET http://${REST_URL}:${REST_PORT}/v1/config
 ```
 
-**Response**  
-In case of success, the response contains JSON with aggregation of getModelStatus responses for all models and DAGs, along with operation status: 
+**Response**
+In case of success, the response contains JSON with aggregation of getModelStatus responses for all models and DAGs, along with operation status:
 
 ```JSON
-{ 
-"<model name>": 
-{ 
-  "model_version_status": [     
-  { 
+{
+"<model name>":
+{
+  "model_version_status": [
+  {
      "version": <model version>|<string>,
-     "state": <model state>|<string>, 
+     "state": <model state>|<string>,
      "status":
-      { 
-        "error_code": <error code>|<string>, 
-        "error_message": <error message>|<string>       
-      } 
-  }, 
-  ...  
-  ] 
-}, 
-... 
-} 
+      {
+        "error_code": <error code>|<string>,
+        "error_message": <error message>|<string>
+      }
+  },
+  ...
+  ]
+},
+...
+}
 ```
 
 In case of any failure during execution:
- 
+
 ```JSON
-{ 
-  "error": <error message>|<string> 
-} 
+{
+  "error": <error message>|<string>
+}
 ```
 When operation succeeded HTTP response status code is 200, otherwise, another code is returned.
 Possible messages returned on error:

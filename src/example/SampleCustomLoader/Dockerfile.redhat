@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM registry.access.redhat.com/ubi8/ubi:8.9
+FROM registry.access.redhat.com/ubi8/ubi:8.10
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && yum update -d6 -y && yum install -d6 -y gcc-c++ wget make unzip
 COPY Makefile /src/example/SampleCustomLoader/
 COPY sampleCustLoader.cpp /src/example/SampleCustomLoader/

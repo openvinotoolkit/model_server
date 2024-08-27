@@ -294,15 +294,15 @@ Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, ov::I
         OVMS_PROFILE_SYNC_END("ov::InferRequest::start_async");
         OVMS_PROFILE_ASYNC_BEGIN("async inference", this);
     } catch (const ov::Exception& e) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occured when starting async inference or setting completion callback on model: {}, error: {}",
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occurred when starting async inference or setting completion callback on model: {}, error: {}",
             getName(), getModelName(), e.what());
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     } catch (const std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occured when starting async inference or setting completion callback on  model: {}, error: {}",
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occurred when starting async inference or setting completion callback on  model: {}, error: {}",
             getName(), getModelName(), e.what());
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     } catch (...) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Unknown exception occured when starting async inference or setting completion callback on model: {}",
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Unknown exception occurred when starting async inference or setting completion callback on model: {}",
             getName(), getModelName());
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     }

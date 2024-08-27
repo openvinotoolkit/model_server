@@ -21,29 +21,40 @@ COPY ./cov-analysis-linux64-2022.12.2 /cov
 
 RUN apt-get remove --yes cmake && apt-get update && apt-get install -y rapidjson-dev && pip3 install cmake
 
-WORKDIR /example_cpp_client/cpp
-RUN bazel build @org_tensorflow//tensorflow/core:framework
+#WORKDIR /example_cpp_client/cpp
+#RUN bazel build @org_tensorflow//tensorflow/core:framework
 
 WORKDIR /ovms/
 RUN /cov/bin/cov-configure --gcc --config coverity_config.xml && \
     /cov/bin/cov-configure --comptype gcc --compiler /usr/bin/gcc && \
-    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:static_analysis && cmake /client/cpp/kserve-api && make --jobs=$(nproc) && \
-    cd /ovms/src/custom_nodes/tokenizer && \
-    mkdir -p build && cd build && \
-    cmake .. && make --jobs=$(nproc) && \
-    cd /example_cpp_client/cpp && \
-    bazel build --spawn_strategy=standalone //src:all'
+    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:static_analysis && cmake /client/cpp/kserve-api && make --jobs=$(nproc)'
+#    cd /example_cpp_client/cpp && \
+#    bazel build --spawn_strategy=standalone //src:all'
 
 WORKDIR /ovms/
 RUN tar czvf /model_server.tgz cov-int 
 
-ARG ENV_COVERITY_PROJECT
+RUN apt update && apt install -y jq
 ARG ENV_COVERITY_TOKEN
-ARG ENV_BUILD_VERSION=3
+ARG ENV_COVERITY_VERSION=3
 WORKDIR /
-RUN curl --form token=$ENV_COVERITY_TOKEN \
-  --form email=dariusz.trawinski@intel.com \
-  --form file=@model_server.tgz \
-  --form version=$ENV_BUILD_VERSION \
-  --form description="SDL build" \
-  https://scan.coverity.com/builds?project=$ENV_COVERITY_PROJECT
+
+RUN curl -X POST \
+    -d version="$ENV_COVERITY_VERSION" \
+    -d description="SDL build" \
+    -d email=dariusz.trawinski@intel.com \
+    -d token=$ENV_COVERITY_TOKEN \
+    -d file_name="model_server.tgz" \
+    https://scan.coverity.com/projects/26904/builds/init \
+    | tee response
+RUN upload_url=$(jq -r '.url' response) && \
+    build_id=$(jq -r '.build_id' response) && \
+    curl -X PUT \
+    --header 'Content-Type: application/json' \
+    --upload-file /model_server.tgz \
+    $upload_url && \
+    curl -X PUT \
+    -d token=$ENV_COVERITY_TOKEN \
+    https://scan.coverity.com/projects/26904/builds/$build_id/enqueue
+
+

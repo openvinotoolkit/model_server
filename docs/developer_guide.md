@@ -1,28 +1,29 @@
-# OpenVINO&trade; Model Server Developer Guide 
+# OpenVINO&trade; Model Server Developer Guide
 
 ## Introduction
 
 This document gives information and steps to run and debug tests. It gives information about following points :
 
-1. <a href="#set-env">Set up the Development Environment</a>
-2. <a href="#test-prep">Prepare environment to use the tests</a>
-3. <a href="#test-run">Run the tests of your choice</a>
-	* Inference test
-	* Functional tests
-	* Performance tests
-	* Tests on a Python image
-	* Tests on an OpenVINO Model Server binary file
-4. <a href="#debug">Learn to debug</a>
-	* How to use `gdb` to debug in Docker
-	* How to debug functional tests
+- [OpenVINO™ Model Server Developer Guide](#openvino-model-server-developer-guide)
+	- [Introduction](#introduction)
+	- [Set up the Development Environment](#set-up-the-development-environment)
+	- [Prepare Environment to Use the Tests](#prepare-environment-to-use-the-tests)
+		- [Step 1: Compile source code](#step-1-compile-source-code)
+		- [Step 2: Install software](#step-2-install-software)
+	- [Run the Tests](#run-the-tests)
+	- [Run unit tests](#run-unit-tests)
+	- [Debugging](#debugging)
+		- [Option 1. Use OpenVINO Model Server build image.](#option-1-use-openvino-model-server-build-image)
+		- [Option 2. Build OVMS image with minitrace enabled](#option-2-build-ovms-image-with-minitrace-enabled)
+		- [Profiling macros](#profiling-macros)
 
-## Set up the Development Environment <a name="set-env"></a>
+## Set up the Development Environment
 
-The tests in this guide are written in Python. Therefore, to complete the functional tests, Python 3.8 must be installed. 
+The tests in this guide are written in Python. Therefore, to complete the functional tests, Python 3.8 must be installed.
 
-In-case of problems, see <a href="#debug">Debugging</a>.
+In-case of problems, see [Debugging](#debugging).
 
-## Prepare Environment to Use the Tests <a name="test-prep"></a>
+## Prepare Environment to Use the Tests
 
    ```bash
    git clone https://github.com/openvinotoolkit/model_server.git
@@ -50,19 +51,24 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 
    > **Note**: docker_build target accepts the same set of parameters as release_image target described here: [build_from_source.md](./build_from_source.md)
 
-2. Mount the source code in the Docker container :
+2. Download test LLM models
+   ```bash
+   ./prepare_llm_models.sh llm_testing
+   ```
+
+3. Mount the source code in the Docker container :
 	```bash
-	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest 
+	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest
 	```
 
-3. In the docker container context compile the source code via :
+4. In the docker container context compile the source code via :
 	```bash
-	bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
+	bazel build --define PYTHON_DISABLE=0 --cxxopt=-DPYTHON_DISABLE=0 //src:ovms
 	```
 
-4. From the container, run a single unit test :
+5. From the container, run a single unit test :
 	```bash
-	bazel test --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --test_env PYTHONPATH=${PYTHONPATH} --define PYTHON_DISABLE=0 --cxxopt=-DPYTHON_DISABLE=0 --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |
@@ -70,16 +76,16 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 | `test`       | builds and runs the specified test target       |
 | `--test_summary=detailed`   |   the output includes failure information       |
 | `--test_output=all` | log all tests |
-| `--test_filter='ModelVersionStatus.*'` | limits the tests run to the indicated test  | 
+| `--test_filter='ModelVersionStatus.*'` | limits the tests run to the indicated test  |
 | `//src:ovms_test` | the test source |
 > **NOTE**: For more information, see the [bazel command-line reference](https://docs.bazel.build/versions/master/command-line-reference.html)
 
 
-	
+
 5. Select one of these options to change the target image name or network port to be used in tests. It might be helpful on a shared development host:
 
 	* With a Docker cache :
-	
+
 	```
 	OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make docker_build
     OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make test_functional
@@ -96,7 +102,7 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 ### Step 2: Install software
 
 1. Install Python release 3.8.
- 
+
 > **NOTE**: Python is only necessary to complete the functional tests in this guide.
 
 2. Install the `virtualenv` package :
@@ -107,9 +113,9 @@ In-case of problems, see <a href="#debug">Debugging</a>.
 
 Now the tests can be run.
 
-## Run the Tests <a name="test-run"></a>
+## Run the Tests
 
-Use the tests below depending on the requirement. 
+Use the tests below depending on the requirement.
 
 Click the test that needs to be run:
 
@@ -121,7 +127,7 @@ Click the test that needs to be run:
 	source tests/performance/download_model.sh
 	```
 
-	The script stores the model in the user home folder. 
+	The script stores the model in the user home folder.
 
 2. Start OVMS docker container with downloaded model
 
@@ -147,23 +153,23 @@ Where:
 | `images_numpy_path tests/performance/imgs.npy`  | The path to a numpy array. `imgs.npy` is the numpy array with a batch of input data.|
 | `labels_numpy_path tests/performance/labels.npy`| Includes a numpy array  named labels.npy. This array has image classification results       |
 | `iteration 1000` | Run the data 1000 times |
-| `batchsize 1` | Batch size to be used in the inference request | 
+| `batchsize 1` | Batch size to be used in the inference request |
 | `report_every 10` | Number of iterations followed by results summary report|
-| `input_name 0` | Name of the deployed model input called "0" | 
+| `input_name 0` | Name of the deployed model input called "0" |
 | `output_name 1463` | Name of the deployed model output called "1463"|
 
 </details>
 
 <details><summary>Run functional tests</summary>
 
-The functional tests are written in Python. Therefore, to complete the tests in this section, Python 3.6 - 3.8 must be installed. 
-> **NOTE**: In-case of additional problems, see the <a href="#debug">debugging section</a>.
+The functional tests are written in Python. Therefore, to complete the tests in this section, Python 3.6 - 3.8 must be installed.
+> **NOTE**: In-case of additional problems, see the [debugging section](#debugging).
 
 1. Run command
 
 ```bash
 make test_functional
-``` 
+```
 
 - Configuration options are :
 
@@ -172,9 +178,9 @@ make test_functional
 | `IMAGE`  | Docker image name for the tests.|
 | `TEST_DIR_CACHE`| Location from which models and test data are downloaded.|
 | `TEST_DIR` | Location to which models and test data are copied during tests.|
-| `TEST_DIR_CLEANUP` | Set to `True` to remove the directory under `TEST_DIR` after the tests.| 
+| `TEST_DIR_CLEANUP` | Set to `True` to remove the directory under `TEST_DIR` after the tests.|
 | `LOG_LEVEL` | The log level.|
-| `BUILD_LOGS` | Path to save artifacts.| 
+| `BUILD_LOGS` | Path to save artifacts.|
 | `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container.|
 | `CONTAINER_LOG_LINE` | The log line in the container that confirms the container started properly.|
 
@@ -195,9 +201,9 @@ os.environ["IMAGE"] = "openvino/model_server"
 
 <details><summary>Run performance tests</summary>
 
-Automated tests are configured to use the ResNet50 model.    
+Automated tests are configured to use the ResNet50 model.
 
-1. Execute command to run latency test 
+1. Execute command to run latency test
 ```bash
 make test_perf
 ```
@@ -215,9 +221,9 @@ Running latency test
 [--] Iteration   800/ 1000; Current latency: 10.70ms; Average latency: 10.83ms
 [--] Iteration   900/ 1000; Current latency: 11.09ms; Average latency: 10.85ms
 [--] Iterations:  1000; Final average latency: 10.86ms; Classification accuracy: 100.0%
-``` 
+```
 
-2. Execute command to run throughput test 
+2. Execute command to run throughput test
 ```bash
 make test_throughput
 ```
@@ -240,15 +246,15 @@ real	0m13.397s
 user	1m22.277s
 sys	0m39.333s
 1076 FPS
-``` 
+```
 </details>
 
 <details><summary>Run tests on an OpenVINO Model Server binary file</summary>
 
-1. To run tests on an OpenVINO Model Server binary file, use export to specify the following variable in `user_config.py` or in the environment. 
+1. To run tests on an OpenVINO Model Server binary file, use export to specify the following variable in `user_config.py` or in the environment.
 Replace `"/home/<example_path>/dist/<os_name>/ovms/bin/ovms"` with the path to your binary file:
 
-```bash 
+```bash
 tar -xvzf dist/<os_name>/ovms.tar.gz -C dist/<os_name>/
 ```
 
@@ -277,9 +283,20 @@ export LD_LIBRARY_PATH="'${PWD}'/dist/<os_name>/ovms/lib"
 
 </details>
 
-> **NOTE**: For additional problems, see the <a href="#debug">debugging section</a>. 
+> **NOTE**: For additional problems, see the [debugging section](#debugging).
 
-## Debugging <a name="debug"></a>
+
+## Run unit tests
+
+Executing the unit tests require building the ovms build image. All unit tests are expected to be started in a container using model server build image. Some unit tests require test models to be pulled and attached to the container.
+The following commands create the build image and start the unit tests:
+
+```
+make ovms_builder_image
+make run_unit_tests
+```
+
+## Debugging
 
 Debugging options are available. Click on the required option :
 
@@ -290,6 +307,8 @@ Debugging options are available. Click on the required option :
 	```bash
 	make docker_build BAZEL_BUILD_TYPE=dbg
 	```
+
+	> **NOTE**: You can build also the debug version of the major dependencies like OpenVINO Runtime using extra flag `CMAKE_BUILD_TYPE=Debug`.
 
 2. Run the container :
 	```bash
@@ -337,7 +356,7 @@ make docker_build
 
 2. Start the container.
 ```bash
-docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest 
+docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest
 ```
 
 3. Build OVMS with minitrace enabled.
@@ -367,7 +386,7 @@ make docker_build MINITRACE=ON
 mkdir traces
 chmod -R 777 traces
 
-docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/traces/trace.json 
+docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/traces/trace.json
 ```
 
 3. During app exit, the trace info will be saved into `${PWD}/traces/trace.json`.
@@ -408,7 +427,7 @@ Use OpenVINO Model Server build image because it installs the necessary tools.
 	```bash
 	make test_functional TEST_PATH=tests/functional/test_batching.py::TestBatchModelInference::test_run_inference_rest IMAGE=openvino/model_server-build:latest
 	```
-	
+
 5. Open a second terminal.
 
 6. In this terminal identify the ID/hash of a running Docker container:

@@ -20,6 +20,7 @@
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <unordered_map>
 #include <utility>
@@ -221,7 +222,7 @@ Status ModelManager::startFromConfig() {
 
     ModelConfig& modelConfig = it->second;
 
-    status = modelConfig.parsePluginConfig(config.pluginConfig());
+    status = modelConfig.parsePluginConfig(config.pluginConfig(), modelConfig.getPluginConfig());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse plugin config");
         return status;
@@ -710,7 +711,7 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
         }
         modelConfig.setCacheDir(this->modelCacheDirectory);
 
-        const auto modelName = modelConfig.getName();
+        const auto& modelName = modelConfig.getName();
         if (pipelineDefinitionExists(modelName)) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by pipeline definition.", modelName);
@@ -786,7 +787,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         rapidjson::Document subconfigJson;
         rapidjson::IStreamWrapper isw(ifs);
         rapidjson::ParseResult parseResult = subconfigJson.ParseStream(isw);
-        if (!parseResult) {
+        if (parseResult.Code()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe: {} graph subconfig: {} file is not a valid JSON file. Error: {}",
                 mediapipeConfig.getGraphName(), subconfigPath, rapidjson::GetParseError_En(parseResult.Code()));
             return StatusCode::JSON_INVALID;
@@ -885,7 +886,7 @@ Status ModelManager::parseConfig(const std::string& jsonFilename, rapidjson::Doc
         auto configContent = config.str();
         md5 = FileSystem::getStringMD5(configContent);
         rapidjson::ParseResult parseResult = configJson.Parse(configContent.c_str());
-        if (!parseResult) {
+        if (parseResult.Code()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file. Error: {}",
                 rapidjson::GetParseError_En(parseResult.Code()));
             intermediateStatus = StatusCode::JSON_INVALID;
@@ -1218,7 +1219,7 @@ void ModelManager::getVersionsToChange(
                 versionsToReload->push_back(version);
             }
         } catch (std::out_of_range& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occured during versions update. Could not found version. Details: {}", e.what());
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occurred during versions update. Could not found version. Details: {}", e.what());
         }
     }
 
@@ -1235,7 +1236,7 @@ void ModelManager::getVersionsToChange(
                 return modelVersionsInstances.at(version)->getStatus().willEndUnloaded();
             });
     } catch (std::out_of_range& e) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occured during versions update. Could not found version. Details: {}", e.what());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occurred during versions update. Could not found version. Details: {}", e.what());
     }
     versionsToRetire->resize(it - versionsToRetire->begin());
 
@@ -1463,7 +1464,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     if (versionsToReload->size() > 0) {
         auto status = reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
         if (!status.ok()) {
-            blocking_status = status;
+            blocking_status = std::move(status);
         }
     }
 
@@ -1542,11 +1543,9 @@ const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() cons
 }
 
 Status ModelManager::createPipeline(std::shared_ptr<MediapipeGraphExecutor>& graph,
-    const std::string& name,
-    const KFSRequest* request,
-    KFSResponse* response) {
+    const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
-    return this->mediapipeFactory.create(graph, name, request, response, *this);
+    return this->mediapipeFactory.create(graph, name, *this);
 #else
     SPDLOG_ERROR("Mediapipe support was disabled during build process...");
     return StatusCode::INTERNAL_ERROR;

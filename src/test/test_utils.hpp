@@ -19,6 +19,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -41,6 +42,7 @@
 #include "../config.hpp"
 #include "../dags/node_library.hpp"
 #include "../execution_context.hpp"
+#include "../http_server.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
@@ -753,6 +755,30 @@ protected:
     std::string directoryPath;
 };
 
+class MockedServerRequestInterface final : public tensorflow::serving::net_http::ServerRequestInterface {
+public:
+    MOCK_METHOD(absl::string_view, uri_path, (), (const, override));
+    MOCK_METHOD(absl::string_view, http_method, (), (const, override));
+    MOCK_METHOD(void, WriteResponseBytes, (const char*, int64_t), (override));
+    MOCK_METHOD(void, WriteResponseString, (absl::string_view), (override));
+    MOCK_METHOD((std::unique_ptr<char[], tensorflow::serving::net_http::ServerRequestInterface::BlockDeleter>), ReadRequestBytes, (int64_t*), (override));
+    MOCK_METHOD(absl::string_view, GetRequestHeader, (absl::string_view), (const, override));
+    MOCK_METHOD((std::vector<absl::string_view>), request_headers, (), (const, override));
+    MOCK_METHOD(void, OverwriteResponseHeader, (absl::string_view, absl::string_view), (override));
+    MOCK_METHOD(void, AppendResponseHeader, (absl::string_view, absl::string_view), (override));
+    MOCK_METHOD(void, PartialReplyWithStatus, (tensorflow::serving::net_http::HTTPStatusCode), (override));
+    MOCK_METHOD(void, PartialReply, (std::string), (override));
+    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::CallbackStatus, PartialReplyWithFlushCallback, ((std::function<void()>)), (override));
+    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, response_body_status, (), (override));
+    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, request_body_status, (), (override));
+    MOCK_METHOD(void, ReplyWithStatus, (tensorflow::serving::net_http::HTTPStatusCode), (override));
+    MOCK_METHOD(void, Reply, (), (override));
+    MOCK_METHOD(void, Abort, (), (override));
+    MOCK_METHOD(void, PartialReplyEnd, (), (override));
+    MOCK_METHOD(bool, IsDisconnected, (), (const override));
+    MOCK_METHOD(void, RegisterDisconnectionCallback, (std::function<void()>), (override));
+};
+
 /**
  * Wait until ModelManager::configFileReloadNeeded returns false or timeout is reached
  */
@@ -1000,6 +1026,15 @@ public:
         }
     }
 #endif
+
+    ovms::LLMNodeResources* getLLMNodeResources(const std::string& nodeName) {
+        auto it = this->llmNodeResourcesMap.find(nodeName);
+        if (it == std::end(llmNodeResourcesMap)) {
+            return nullptr;
+        } else {
+            return it->second.get();
+        }
+    }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,

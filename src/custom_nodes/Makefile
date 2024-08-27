@@ -18,11 +18,31 @@ HEADER_FILE_PATH ?= ../custom_node_interface.h
 OPENCV_BUILD_FLAGS ?= ../../third_party/opencv/opencv_cmake_flags.txt
 OPENCV_INSTALL_SCRIPT ?= ../../third_party/opencv/install_opencv.sh
 
-BASE_OS ?= ubuntu
-BASE_IMAGE ?= ubuntu:20.04 
+BASE_OS ?= ubuntu22
+
+BASE_OS_TAG_UBUNTU ?= 22.04
+BASE_OS_TAG_REDHAT ?= 8.10
+
 
 NODES ?= add_one east_ocr face_blur horizontal_ocr image_transformation model_zoo_intel_object_detection
 NODE_TYPE ?= cpp
+
+ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+  BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
+  ifeq ($(BASE_OS),ubuntu22)
+	BASE_OS_TAG=22.04
+  endif
+  ifeq ($(BASE_OS),ubuntu20)
+	BASE_OS_TAG=20.04
+  endif
+  BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
+  DIST_OS=ubuntu
+endif
+ifeq ($(BASE_OS),redhat)
+  BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
+  DIST_OS=redhat
+endif
+BASE_IMAGE=$(DIST_OS):$(BASE_OS_TAG)
 
 .PHONY: all
 
@@ -46,7 +66,7 @@ endif
 		  docker_cache_param= ; \
 		fi ; \
 		echo $$docker_cache_param ; \
-		docker build $$docker_cache_param -f Dockerfile.$(BASE_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg BASE_IMAGE=$(BASE_IMAGE) --build-arg NODE_NAME=$$NODE_NAME --build-arg NODE_TYPE=$(NODE_TYPE) . || exit 1 ; \
+		docker build $$docker_cache_param -f Dockerfile.$(DIST_OS) -t custom_node_build_image:latest --build-arg http_proxy=${http_proxy} --build-arg https_proxy=${https_proxy} --build-arg no_proxy=${no_proxy} --build-arg BASE_IMAGE=$(BASE_IMAGE) --build-arg NODE_NAME=$$NODE_NAME --build-arg NODE_TYPE=$(NODE_TYPE) . || exit 1 ; \
 		mkdir -p ./lib/$(BASE_OS) ; \
 		docker cp $$(docker create --rm custom_node_build_image:latest):/custom_nodes/lib/libcustom_node_$$NODE_NAME.so ./lib/$(BASE_OS)/ || exit 1 ; \
 		echo "Built $$NODE_NAME" ; \

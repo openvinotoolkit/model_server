@@ -32,6 +32,7 @@
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
 #if (PYTHON_DISABLE == 0)
+#include "../llm/llmnoderesources.hpp"
 #include "../python/pythonnoderesources.hpp"
 #endif
 #include "../serialization.hpp"
@@ -50,6 +51,7 @@ MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
 const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonExecutorCalculator"};
+const std::string MediapipeGraphDefinition::LLM_NODE_CALCULATOR_NAME{"LLMCalculator"};
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
@@ -115,6 +117,10 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
 Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
     if (!this->pythonNodeResourcesMap.empty()) {
+        SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    if (!this->llmNodeResourcesMap.empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
@@ -237,7 +243,7 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
     return StatusCode::OK;
 }
 
-Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline, const KFSRequest* request, KFSResponse* response) {
+Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>& pipeline) {
     std::unique_ptr<MediapipeGraphDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
     if (!status.ok()) {
@@ -247,7 +253,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResourcesMap, this->pythonBackend);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend);
     return status;
 }
 
@@ -322,11 +328,13 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
     }
     this->mgconfig = config;
     this->pythonNodeResourcesMap.clear();
+    this->llmNodeResourcesMap.clear();
     return validate(manager);
 }
 
 void MediapipeGraphDefinition::retire(ModelManager& manager) {
     this->pythonNodeResourcesMap.clear();
+    this->llmNodeResourcesMap.clear();
     this->status.handle(RetireEvent());
 }
 
@@ -380,19 +388,21 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
             return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
         }
     }
-    SPDLOG_DEBUG("Succesfully waited for mediapipe definition: {}", getName());
+    SPDLOG_DEBUG("Successfully waited for mediapipe definition: {}", getName());
     return StatusCode::OK;
 }
 
 #if (PYTHON_DISABLE == 0)
-struct PythonResourcesCleaningGuard {
+template <typename T>
+class ResourcesCleaningGuard {
+public:
     bool shouldCleanup{true};
-    std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>& resource;
-    PythonResourcesCleaningGuard(std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>& resource) :
-        resource(resource) {}
-    ~PythonResourcesCleaningGuard() {
+    T& resources;
+    ResourcesCleaningGuard(T& resources) :
+        resources(resources) {}
+    ~ResourcesCleaningGuard() {
         if (shouldCleanup) {
-            resource.clear();
+            resources.clear();
         }
     }
     void disableCleaning() {
@@ -402,11 +412,11 @@ struct PythonResourcesCleaningGuard {
 #endif
 
 Status MediapipeGraphDefinition::initializeNodes() {
-#if (PYTHON_DISABLE == 0)
-    PythonResourcesCleaningGuard pythonResourcesCleaningGuard(this->pythonNodeResourcesMap);
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {
+#if (PYTHON_DISABLE == 0)
         if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
+            ResourcesCleaningGuard<PythonNodeResourcesMap> pythonResourcesCleaningGuard(this->pythonNodeResourcesMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node missing options in graph: {}. ", this->name);
                 return StatusCode::PYTHON_NODE_MISSING_OPTIONS;
@@ -422,17 +432,45 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
 
             std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-            Status status = PythonNodeResources::createPythonNodeResources(nodeResources, config.node(i), pythonBackend);
+            Status status = PythonNodeResources::createPythonNodeResources(nodeResources, config.node(i), pythonBackend, mgconfig.getBasePath());
             if (nodeResources == nullptr || !status.ok()) {
                 SPDLOG_ERROR("Failed to process python node graph {}", this->name);
                 return status;
             }
 
             this->pythonNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<PythonNodeResources>>(nodeName, std::move(nodeResources)));
+            pythonResourcesCleaningGuard.disableCleaning();
         }
-    }
-    pythonResourcesCleaningGuard.disableCleaning();
+        // Passed to both calculators that require LLM Engine (gRPC KServe & HTTP OpenAI)
+        if (endsWith(config.node(i).calculator(), LLM_NODE_CALCULATOR_NAME)) {
+            ResourcesCleaningGuard<LLMNodeResourcesMap> llmResourcesCleaningGuard(this->llmNodeResourcesMap);
+            if (!config.node(i).node_options().size()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node missing options in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_OPTIONS;
+            }
+            if (config.node(i).name().empty()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name is missing in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_NAME;
+            }
+            std::string nodeName = config.node(i).name();
+            if (this->llmNodeResourcesMap.find(nodeName) != this->llmNodeResourcesMap.end()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name: {} already used in graph: {}. ", nodeName, this->name);
+                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
+            }
+
+            std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
+            Status status = LLMNodeResources::createLLMNodeResources(nodeResources, config.node(i), mgconfig.getBasePath());
+            if (nodeResources == nullptr || !status.ok()) {
+                SPDLOG_ERROR("Failed to process LLM node graph {}", this->name);
+                return status;
+            }
+
+            this->llmNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<LLMNodeResources>>(nodeName, std::move(nodeResources)));
+            llmResourcesCleaningGuard.disableCleaning();
+        }
 #endif
+    }
+
     return StatusCode::OK;
 }
 

@@ -25,7 +25,7 @@ pipeline {
                 if (matched){
                   image_build_needed = "true"
               }
-              matched = (git_diff =~ /client/)
+              matched = (git_diff =~ /(\n|^)client/)
                 if (matched){
                   client_test_needed = "true"
               }
@@ -65,7 +65,13 @@ pipeline {
           parallel {
             stage("Run unit tests") {
               steps {
-                  sh "make run_unit_tests BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+              }
+            }
+
+            stage("Run lib files test") {
+              steps {
+                  sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
             }
 

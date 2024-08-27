@@ -24,7 +24,7 @@ from constants import MODEL_SERVICE, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA, N
 from config import target_device, skip_nginx_test
 from conftest import devices_not_supported_for_test
 from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
-from utils.grpc import create_channel, get_model_metadata, model_metadata_response, \
+from utils.grpc import create_channel, get_model_metadata_request, get_model_metadata, model_metadata_response, \
     get_model_status
 import logging
 from utils.models_utils import ModelVersionState, ErrorCode, \
@@ -69,10 +69,10 @@ class TestModelVerPolicy:
             logger.info("Getting info about model version: {}".format(versions[x]))
             expected_input_metadata = expected_inputs_metadata[x]
             expected_output_metadata = expected_outputs_metadata[x]
-            request = get_model_metadata(model_name=model_name,
-                                         version=versions[x])
+            request = get_model_metadata_request(model_name=model_name, 
+                                                 version=versions[x])
             if not throw_error[x]:
-                response = stub.GetModelMetadata(request, 10)
+                response = get_model_metadata(stub, request)
                 input_metadata, output_metadata = model_metadata_response(
                     response=response)
 
@@ -84,7 +84,7 @@ class TestModelVerPolicy:
                 assert expected_output_metadata == output_metadata
             else:
                 with pytest.raises(Exception) as e:
-                    stub.GetModelMetadata(request, 10)
+                    get_model_metadata(stub, request)
                 assert "Model with requested version is not found" in str(e.value)
 
     @pytest.mark.parametrize("model_name, throw_error", [
@@ -107,7 +107,7 @@ class TestModelVerPolicy:
             request = get_model_status(model_name=model_name,
                                        version=versions[x])
             if not throw_error[x]:
-                response = stub.GetModelStatus(request, 10)
+                response = stub.GetModelStatus(request, 60)
                 versions_statuses = response.model_version_status
                 version_status = versions_statuses[0]
                 assert version_status.version == versions[x]
@@ -117,13 +117,13 @@ class TestModelVerPolicy:
                     ModelVersionState.AVAILABLE][ErrorCode.OK]
             else:
                 with pytest.raises(Exception) as e:
-                    stub.GetModelStatus(request, 10)
+                    stub.GetModelStatus(request, 60)
                 assert "Model with requested version is not found" in str(e.value)
 
         #   aggregated results check
         if model_name == 'all':
             request = get_model_status(model_name=model_name)
-            response = stub.GetModelStatus(request, 10)
+            response = stub.GetModelStatus(request, 60)
             versions_statuses = response.model_version_status
             assert len(versions_statuses) == 3
             for version_status in versions_statuses:

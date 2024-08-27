@@ -15,10 +15,12 @@
 //*****************************************************************************
 #include <chrono>
 #include <mutex>
+#include <optional>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
@@ -84,18 +86,20 @@ public:
 };
 #endif
 
+static const std::string TIMESTAMP_PARAMETER_NAME{"OVMS_MP_TIMESTAMP"};
+
 static void setRequestTimestamp(KFSRequest& request, const std::string& value) {
     request.clear_parameters();
     auto intOpt = ovms::stoi64(value);
     if (intOpt.has_value()) {
-        request.mutable_parameters()->operator[](MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).set_int64_param(intOpt.value());
+        request.mutable_parameters()->operator[](TIMESTAMP_PARAMETER_NAME).set_int64_param(intOpt.value());
     } else {
-        request.mutable_parameters()->operator[](MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).set_string_param(value);
+        request.mutable_parameters()->operator[](TIMESTAMP_PARAMETER_NAME).set_string_param(value);
     }
 }
 // TODO what to do if several inputs have different timestamp
 static int64_t getResponseTimestamp(const KFSResponse& response) {
-    return response.parameters().at(MediapipeGraphExecutor::TIMESTAMP_PARAMETER_NAME).int64_param();
+    return response.parameters().at(TIMESTAMP_PARAMETER_NAME).int64_param();
 }
 
 static void prepareRequest(::inference::ModelInferRequest& request, const std::vector<std::tuple<std::string, float>>& content, std::optional<int64_t> timestamp = std::nullopt, const std::string& servableName = "", const std::string& servableVersion = "") {
@@ -328,7 +332,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::KFS_REQUEST}},
         {{"out", mediapipe_packet_type_enum::KFS_RESPONSE}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     // Mock receiving 3 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
@@ -384,7 +388,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     // Mock receiving 3 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}});  // no timestamp specified, server will assign one
@@ -439,7 +443,7 @@ TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSep
     std::shared_ptr<MediapipeGraphExecutor> executor;
     KFSRequest request;
     KFSResponse response;
-    auto status = manager.createPipeline(executor, name, &request, &response);
+    auto status = manager.createPipeline(executor, name);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
     // Mock receiving 1 request with not all inputs (client)
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);
@@ -469,7 +473,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     // Mock receiving 3 requests with manually (client) assigned ascending order of timestamp and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);  // first request with timestamp 3
@@ -514,7 +518,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     // Mock only 1 request and disconnect immediately
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
@@ -562,7 +566,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -622,7 +626,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -662,7 +666,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -725,7 +729,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -779,7 +783,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     std::mutex mtx;
@@ -839,7 +843,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -901,7 +905,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -966,7 +970,7 @@ node_options: {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -1018,7 +1022,7 @@ node_options: {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -1054,7 +1058,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -1086,7 +1090,7 @@ node {
     ASSERT_EQ(mediapipeDummy.validate(*this->manager), StatusCode::OK);
 
     std::shared_ptr<MediapipeGraphExecutor> pipeline;
-    ASSERT_EQ(mediapipeDummy.create(pipeline, nullptr, nullptr), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
     this->pythonModule->releaseGILFromThisThread();
@@ -1130,7 +1134,7 @@ node {
             {"out3", mediapipe_packet_type_enum::OVTENSOR}},
         {"in1", "in2", "in3"},
         {"out1", "out2", "out3"},
-        {}, nullptr};
+        {}, {}, nullptr};
 
     std::mutex mtx;
     const int64_t timestamp = 64;
@@ -1181,7 +1185,7 @@ node {
             {"out3", mediapipe_packet_type_enum::OVTENSOR}},
         {"in1", "in2", "in3"},
         {"out1", "out2", "out3"},
-        {}, nullptr};
+        {}, {}, nullptr};
 
     std::mutex mtx;
     const int64_t timestamp = 64;
@@ -1215,7 +1219,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     std::mutex mtx;
 
@@ -1248,7 +1252,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"wrong_name"}, {}, nullptr};  // cannot install observer due to wrong output name (should never happen due to validation)
+        {"in"}, {"wrong_name"}, {}, {}, nullptr};  // cannot install observer due to wrong output name (should never happen due to validation)
 
     EXPECT_CALL(this->stream, Read(_)).Times(0);
     EXPECT_CALL(this->stream, Write(_, _)).Times(0);
@@ -1273,7 +1277,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     prepareRequest(this->firstRequest, {});
     EXPECT_CALL(this->stream, Read(_))
@@ -1301,7 +1305,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     std::mutex mtx;
 
@@ -1336,7 +1340,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
@@ -1359,7 +1363,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     // Invalid request - missing data in buffer
     prepareInvalidRequest(this->firstRequest, {"in"});  // no timestamp specified, server will assign one
@@ -1393,7 +1397,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     std::mutex mtx[3];
 
@@ -1436,7 +1440,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);
     EXPECT_CALL(this->stream, Read(_))
@@ -1464,7 +1468,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     setRequestTimestamp(this->firstRequest, std::string("not an int"));
@@ -1498,7 +1502,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     // Timestamps not allowed in stream
     // Expect continuity of operation and response with error message
@@ -1539,7 +1543,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     // Allowed in stream
     for (auto timestamp : std::vector<::mediapipe::Timestamp>{
@@ -1573,7 +1577,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     std::mutex mtx[2];
 
@@ -1609,7 +1613,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     // Mock receiving 3 requests and disconnection
     prepareRequestWithParam(this->firstRequest, {{"in", 3.5f}}, {"val", 65});  // request with parameter val
@@ -1645,7 +1649,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     // Mock receiving the invalid request and disconnection
     // Request with invalid param py (special pythons session side packet)
@@ -1674,7 +1678,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});  // missing required request param
     EXPECT_CALL(this->stream, Read(_)).Times(0);
@@ -1700,7 +1704,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     // Mock receiving 2 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, std::nullopt, this->name, this->version);  // no timestamp specified, server will assign one
@@ -1733,7 +1737,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr};
 
     std::mutex mtx;
     // Mock receiving 2 requests and disconnection

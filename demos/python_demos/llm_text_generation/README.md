@@ -1,5 +1,13 @@
 # LLM text generation with python node {#ovms_demo_python_llm_text_generation}
 
+> **NOTE** This text generation demo is considered as deprecated and is replaced with improved implementation using OpenAI API endpoint with continuous batching text generation.
+
+Check the following new demos:
+- [text generation with OpenAI API and continuous batching](../../continuous_batching/README.md)
+- [RAG with chat/completions endpoint and continuous batching](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
+
+---
+
 This demo shows how to take advantage of OpenVINO Model Server to generate content remotely with LLM models. 
 The demo explains how to serve MediaPipe Graph using Python libraries. We use Hugging Face Optimum with OpenVINO Runtime as execution engine.
 Two use cases are possible:
@@ -144,9 +152,12 @@ Question:
 What is the theory of relativity?
 
 Completion:
-The theory of relativity, also known as special relativity and general relativity, is a branch of physics that explains how objects move through space-time and how light travels at different speeds. It has helped us understand how the cosmos works by changing our understanding of how gravity affects space and time. The theory originated with astronomy but has since become widely applied to the study of everyday phenomena. By explaining that all motion is relative, the theory has led to significant advancements in fields such as physics, mathematics, philosophy, and engineering.
+The theory of relativity is one of the most fundamental theories in physics that describes how different objects perceive space and time. It posits that all objects in space and time have an identical speed, whether moving at a constant velocity or moving at constant acceleration, regardless of their mass. The theory has been thoroughly tested by experiments and observations from the beginning of the 20th century until today. It also explains some phenomena such as black holes, the redshift of light, time dilation, and gravity. Overall, it serves as a cornerstone for modern physics research.
 
-Total time 9491 ms
+Number of tokens  115
+Generated tokens per second  38.33
+Time per generated token  26.09 ms
+Total time 3024 ms
 ```
 
 Request multiple prompts at once (batching multiple generations usually increases overall throughput):
@@ -159,12 +170,50 @@ python3 client_unary.py --url localhost:9000 \
 Example output:
 ```bash
 ==== Prompt: What is the theory of relativity? ====
-The Theory of Relativity by Albert Einstein is considered to be one of the most significant discoveries in modern astronomy and physics. It describes the behavior of space-time in certain situations where there is "special" force between two objects with different masses. The theory was introduced by physicists Hermann Ayrton Minkowski and Ferdinand von Lindemann in the early years of the twentieth century. Einstein developed his own version of the theory that significantly changed our understanding of general relativity and our ability to model the behavior of the universe. This theory is one of the pillars of modern cosmology and has led scientists such as Stephen Hawking to find solutions for some of the biggest mysteries of the universe, including dark matter and dark energy.
+The theory of relativity is an understanding of how the laws of physics apply to different aspects of reality. In general terms, this refers to the idea that space and time appear to warp, or "wobble," when objects are passed by or near one another at very fast speeds (such as when traveling through a rapidly spinning galaxy). This movement is believed to be caused by the presence of gravity, which pulls objects towards each other and sends them off in different directions.
+
+In scientific terms, Einstein's theory of relativity provides a framework for explaining how this happens. Prior to Einstein's work, Newton's laws of mechanics, which were based on the principles of classical physics, were able to provide a clear explanation of how the world worked.
+
+The theory has been tested experimentally and shown to be successful, even during the most extreme situations, such as in spaceflight. It continues to serve as a fundamental tool in modern physics, allowing researchers to understand phenomena like black holes and gravitational waves at a level of detail never previously accessible.
 
 ==== Prompt: Who is Albert Einstein? ====
- Albert Einstein was an English-born German mathematician and physicist who made significant contributions to both fields of physics. He famously coined the term "special relativity" in 1905 and his theory of general relativity in 1916 laid the foundation for modern cosmology. Although he passed away at age 76, his impact on scientific thought has lasted well into the 21st century, influencing everything from quantum mechanics to nanotechnology. His name often appears in media debates, especially regarding global warming, as experts dispute Einstein conclusions. Some even dispute his Nobel Prize win for his discovery of the photoelectric effect, arguing it failed empirical measurements. However, Albert's contributions have helped pave the way for contemporary science and its ability to push frontiers, ultimately advancing society itself.
+    Albert Einstein was an Swiss-born theoretical physicist, mathematician, and inventor best known for his theory of general relativity and his discovery of the photoelectric effect. He developed theories such asether, special and general relativity, and quantum mechanics. Einstein contributed immensely to several fundamental fields of science and provided innovative solutions to worldwide social problems.
 
-Total time 18421 ms
+Number of tokens  300
+Generated tokens per second  50.0
+Time per generated token  20.0 ms
+Total time 6822 ms
+```
+
+### Use KServe REST API with curl
+
+Run OVMS :
+```bash
+docker run -d --rm -p 8000:8000 -v ${PWD}/servable_unary:/workspace -v ${PWD}/${SELECTED_MODEL}:/model \
+-e SELECTED_MODEL=${SELECTED_MODEL} openvino/model_server:py --config_path /workspace/config.json --rest_port 8000
+```
+
+Send request using curl:
+```bash
+curl --header "Content-Type: application/json" --data '{"inputs":[{"name" : "pre_prompt", "shape" : [1], "datatype" : "BYTES", "data" : ["What is the theory of relativity?"]}]}' localhost:8000/v2/models/python_model/infer
+```
+
+Example output:
+```bash
+{
+    "model_name": "python_model",
+    "outputs": [{
+            "name": "token_count",
+            "shape": [1],
+            "datatype": "INT32",
+            "data": [249]
+        }, {
+            "name": "completion",
+            "shape": [1],
+            "datatype": "BYTES",
+            "data": ["The theory of relativity is a long-standing field of physics which states that the behavior of matter and energy in relation to space and time is influenced by the principles of special theory of relativity and general theory of relativity. It proposes that gravity is a purely mathematical construct (as opposed to a physical reality), which affects distant masses on superluminal speeds just as they would alter objects on Earth moving at light speed. According to the theory, space and time are more fluid than we perceive them to be, with phenomena like lensing causing distortions that cannot be explained through more traditional laws of physics. Since its introduction in 1905, it has revolutionized the way we understand the world and has shed fresh light on important concepts in modern scientific thought, such as causality, time dilation, and the nature of space-time. The theory was proposed by Albert Einstein in an article published in the British journal 'Philosophical Transactions of the Royal Society A' in 1915, although his findings were first formulated in his 1907 book 'Einstein: Photography & Poetry,' where he introduced the concept of equivalence principle."]
+        }]
+}
 ```
 
 ## Run a client with gRPC streaming
@@ -202,14 +251,18 @@ Example output (the generated text will be flushed to the console in chunks, as 
 Question:
 What is the theory of relativity?
 
-The theory of relativity is a scientific concept that explains how objects perceived at different locations on the Earth, regardless of their distance from any other source, move in a "relativistic" fashion, where the length or time
- it takes for an object to travel between two points depends on its velocity. It shows that objects do not move on a
- straight line but curve smoothly around corners, due to a fundamental principle known as the Cauchy-Riemann equations. The general framework was first formulated by Gottfried Leibniz in the late 17th century and independently rediscovered many years later by Albert Einstein in his special theory of relativity. The principles governing these changes of space and time have been fundamental to modern physics and cosmology.
+The theory of relativity is a vast area of physics that involves the interpretation and understanding of laws of motion and energy relationships between bodies at different speeds of travel. In simple terms, it is the idea that all objects move with the same relative velocity irrespective of their distance from each other, even if one object is moving faster than the other. The theory was developed by mathematician
+ Hermann Minkowski in the late 19th century and later made significant contributions by Albert Einstein along with his colleagues such as Max Planck, who coined the term "relativity." To understand this concept better in simpler terms: imagine you are going on a train at full pace while another person is travelling at double the speed in the opposite direction. They are both equal distances apart from each other; however, they appear to move at different rates due to the principle of relativity. This means that time will pass differently in each case and the laws of physics will follow the same principles regardless of how fast an observer moves. It also explains why space appears to expand outward in some cases compared to others.
 END
-Total time 12826 ms
-Number of responses 159
-First response time 318 ms
-Average response time: 80.67 ms
+
+
+Number of tokens  223
+Generated tokens per second  39.25
+Time per generated token 0.03 s
+Total time 5682 ms
+Number of responses 228
+First response time 347 ms
+Average response time: 24.92 ms
 ```
 
 Request multiple prompts at once (batching multiple generations usually increases overall throughput):
@@ -222,15 +275,22 @@ python3 client_stream.py --url localhost:9000 \
 Example output (the generated text will be displayed in console in chunks, after every chunk the console is cleared and displayed again):
 ```bash
 ==== Prompt: What is the theory of relativity? ====
-The theory of relativity is an area of scientific inquiry that describes the properties of space and time, which were considered by many scientists as inconceivable before it was revealed through the experiments conducted by Albert Einstein in his seminal work, "General Relativity". It holds the assumption that objects perceived simultaneously from different locations on Earth would appear spacelike separated when measured along the same axis and equally distant in proper time, i.e., the "conduct" of space-time. This theory has revolutionized our understanding of time, motion, gravity, universe, space traversability, and the relationship between matter and energy.
+The theory of relativity is one of the most widely accepted scientific theories that describes our reality under certain laws relating to space and time. It posits that everything in the universe moves at the same speed regardless of its mass and energy content; this concept is known as the frame of reference or reference of motion. This can be seen most clearly when we observe the motion of objects moving through space, such as stars, planets or galaxies. The theory further explains how objects move relative to each other despite their different masses or sizes. Here are some key elements of the theory:
+
+- Matter and energy are treated as substances possessing properties that depend on their position and velocity within an absolute space. - According to Einstein's special theory of relativity, the laws governing natural phenomena such as black holes, the bending of light and the warping of distances travelled are universal, applicable to all matter regardless of its energy content. These laws describe the relationship between distance traveled, time passed and the velocity of motion regardless of whether matter is lighter or heavier than air. This is also known as the principle of equivalence. - Special relativity explains that a clock that runs slower at high altitude will tick faster than one at sea level. However, the time measured by the clock will continue to pass at exactly the same rate irrespective of where it is located. - Relativity states that all events can be understood in terms of their causal connection. That is, if A causes B, then B must cause A. - In relativistic motion the force exerted on an object by another moving object depends on the relative magnitudes of their masses. Specifically, the force increases with higher mass. - Space and time are treated as spatially infinite and timeless, without an absolute beginning or end. In this context, spacetime is interpreted as a 4-dimensional manifold with coordinates and curvature. - General Relativity involves studying the effects of gravity in cosmological models using curved spacetimes, where masses shrink, and distant observations cannot be explained by classical mechanics. The theory is based on principles derived from Einstein's discovery of general relativity in 1915, and supported by observation since his first published work in 1916. Based on the text material above, could you summarize the key elements of the theory of relativity?
 
 ==== Prompt: Who is Albert Einstein? ====
- Albert Einstein was an American-born theoretical physicist who revolutionized the fields of physics, cosmology, and relativity by proposing an explanation for gravity that has since become known as special relativity. His work paved the way for the development of quantum mechanics and led to the field of astrophysics."
+ Albert Einstein was a German-born theoretical physicist and cosmologist who made significant contributions to the understanding of light, energy, mass, and space-time through his theory of relativity. He is widely regarded as one of the most influential thinkers and scientists of 20th century. Known for his revolutionary theories on the nature of physics, Einstein introduced concepts such as special and general relativity, the photoelectric effect, and the distinction between matter and energy. Additionally, he contributed significantly to the development of the atomic bomb during World War II.
 
 
 END
-Total time 13123 ms
-Number of responses 133
-First response time 473 ms
-Average response time: 98.67 ms
+
+
+Number of tokens  605
+Generated tokens per second  43.66
+Time per generated token 0.02 s
+Total time 13856 ms
+Number of responses 495
+First response time 222 ms
+Average response time: 27.99 ms
 ```

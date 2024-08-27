@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <optional>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -445,7 +447,7 @@ TEST(EnsembleMetadata, TwoParallelModelsDemultiplyEntryLayoutIntersection) {
 
 TEST(EnsembleMetadata, MultipleNodesOnDifferentLevelsUsingTheSamePipelineInputs) {
     /*
-        This test creates pipeline definition with multiple connections refering to entry node.
+        This test creates pipeline definition with multiple connections referring to entry node.
         This way we use the same input tensors in nodes on different levels of depth.
         Test ensures that metadata returned by PipelineDefinition::getInptusInfo/getOutptusInfo does not return duplicated information.
     */
@@ -566,7 +568,7 @@ TEST(EnsembleMetadata, EmptyPipelineReturnsCorrectInputAndOutputInfo) {
 
 TEST(EnsembleMetadata, ParallelDLModelNodesReferingToManyPipelineInputs) {
     /*
-        This test creates pipeline definition with 4 parallel DL model nodes, all refering to entry node.
+        This test creates pipeline definition with 4 parallel DL model nodes, all referring to entry node.
         All nodes require 2 inputs, all from different sources, so in total we need 8 different pipeline inputs.
         Test ensures that metadata returned by PipelineDefinition::getInptusInfo contains all 8 required inputs and one output.
     */

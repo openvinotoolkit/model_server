@@ -101,7 +101,7 @@ By default, OpenVINO Model Server will enable CPU threads pinning for better per
 
 While using REST API, you can adjust the data format to optimize the communication and deserialization from json format. Here are some tips to effectively use REST interface when working with OpenVINO Model Server:
 
-- use [binary data format](binary_input.md) when possible(for TFS API binary data format is support ony for JPEG/PNG inputs, for KFS API there are no such limitations ) - binary data representation is smaller in terms of request size and easier to process on the server side. 
+- use [binary data format](binary_input.md) when possible(for TFS API binary data format is support only for JPEG/PNG inputs, for KFS API there are no such limitations ) - binary data representation is smaller in terms of request size and easier to process on the server side. 
 - when working with images, consider sending JPEG/PNG directly - compressed data will greatly reduce the traffic and speed up the communication.
 - with JPEG/PNG it is the most efficient to send the images with the resolution of the configured model. It will avoid image resizing on the server to fit the model.
 - if you decide to send data inside JSON object, try to adjust the numerical data type to reduce the message size i.e. reduce the numbers precisions in the json message with a command similar to `np.round(imgs.astype(np.float),decimals=2)`. 
@@ -199,3 +199,10 @@ It is recommended to compare accuracy results versus OpenVINO benchmark app.
 
 It is possible to enforce a specific runtime precision by using a plugin config parameter `INFERENCE_PRECISION_HINT`. For example:  
  `--plugin_config '{"INFERENCE_PRECISION_HINT": "f32"}'`.
+
+
+## Text generation using LLM calculator with continuous batching
+
+There are a few special consideration for tuning the serving of LLM models via OpenAI API endpoint.
+ - choose the correct cache size to match the used model and expected level of concurrency. The recommendation is to start from a value like 10GB and observe the consumption in the server logs during normal load.
+ - Text generation is done in a scope of a single NUMA node on the multi socket servers. To get the best performance it is recommended to turn off virtual NUMA nodes. In results there will be a single NUMA node per CPU socket and the text generation will consume all cores form one CPU socket.

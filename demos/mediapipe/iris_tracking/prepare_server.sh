@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-# preprare initial folders structure
+# prepare initial folders structure
 mkdir -p ovms/irisTracking
 # copy ovms config including a graph definition
 cp config_iris.json ovms/

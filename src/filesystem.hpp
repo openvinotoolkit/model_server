@@ -20,6 +20,7 @@
 #include <regex>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "logging.hpp"
@@ -195,7 +196,7 @@ public:
         std::string currentWorkingDir = std::filesystem::current_path();
         if (givenPath.size() > 1 && givenPath.find_last_of("/\\") != std::string::npos) {
             auto configDirectory = givenPath.substr(0, givenPath.find_last_of("/\\") + 1);
-            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = configDirectory;
+            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = std::move(configDirectory);
         } else {
             rootDirectoryPath = currentWorkingDir + "/";
         }

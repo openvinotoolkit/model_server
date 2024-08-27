@@ -21,7 +21,7 @@ from constants import ERROR_SHAPE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_S
 from config import skip_nginx_test
 from conftest import devices_not_supported_for_test
 from model.models_information import ResnetBS8, AgeGender
-from utils.grpc import create_channel, infer, get_model_metadata, model_metadata_response
+from utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, model_metadata_response
 import logging
 from utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_metadata_response_rest
 
@@ -122,8 +122,8 @@ class TestBatchModelInference:
         logger.info("Getting info about {} model".format(ResnetBS8.name))
         expected_input_metadata = {ResnetBS8.input_name: {'dtype': 1, 'shape': list(ResnetBS8.input_shape)}}
         expected_output_metadata = {ResnetBS8.output_name: {'dtype': 1, 'shape': list(ResnetBS8.output_shape)}}
-        request = get_model_metadata(model_name=ResnetBS8.name)
-        response = stub.GetModelMetadata(request, 10)
+        request = get_model_metadata_request(model_name=ResnetBS8.name)
+        response = get_model_metadata(stub, request)
         input_metadata, output_metadata = model_metadata_response(response=response)
         logger.info("Input metadata: {}".format(input_metadata))
         logger.info("Output metadata: {}".format(output_metadata))

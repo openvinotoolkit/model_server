@@ -38,6 +38,7 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
+#include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
@@ -169,7 +170,7 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
     preparePredictRequest(request, inputsMeta, requestData1);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
+    // Checking that KFSPASS calculator copies requestData1 to the response so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
@@ -300,7 +301,7 @@ TEST_F(MediapipeTensorTest, DummyInfer) {
 
 TEST_F(MediapipeTfLiteTensorTest, DummyInfer) {
     GTEST_SKIP() << "OVMS calculator doesn't handle TfLite on output. Only vector of TfLite"
-                 << "OVMS deserialization & serialization of TfLiteTensors is not finised as well";
+                 << "OVMS deserialization & serialization of TfLiteTensors is not finished as well";
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -1120,10 +1121,12 @@ TEST_P(MediapipeFlowAddTest, Infer) {
     std::vector<float> requestData1{0., 0., 0., 0., 0., 0., 0, 0., 0., 0};
     std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0, 0., 0., 0};
     preparePredictRequest(request, inputsMeta, requestData1);
+    request.set_id("my_id");
     request.mutable_model_name()->assign(modelName);
     auto status = impl.ModelInfer(nullptr, &request, &response);
     ASSERT_EQ(status.error_code(), grpc::StatusCode::OK) << status.error_message();
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+    ASSERT_EQ(response.id(), "my_id");
 }
 
 const std::vector<std::string> mediaGraphsDummy{"mediaDummy",
@@ -1374,7 +1377,7 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
             return true;
         });
     status = impl.ModelStreamInferImpl(nullptr, &newStream);
-    ASSERT_EQ(status, StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_PRECONDITION_FAILED) << status.string();
 }
 
 TEST_F(MediapipeStreamFlowAddTest, NegativeShouldNotReachInferDueToRetiredGraph) {
@@ -2162,7 +2165,7 @@ public:
         std::shared_ptr<MediapipeGraphExecutor> executor;
         Request request;
         Response response;
-        auto status = manager.createPipeline(executor, mgdName, &request, &response);
+        auto status = manager.createPipeline(executor, mgdName);
         EXPECT_EQ(status, code) << status.string();
     }
 };
@@ -2391,20 +2394,17 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 0);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
 }
+
 class MediapipeSerialization : public ::testing::Test {
     class MockedMediapipeGraphExecutor : public ovms::MediapipeGraphExecutor {
     public:
-        Status serializePacket(const std::string& name, ::inference::ModelInferResponse& response, const ::mediapipe::Packet& packet) const {
-            return ovms::MediapipeGraphExecutor::serializePacket(name, response, packet);
-        }
-
         MockedMediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
             stream_types_mapping_t inputTypes,
             stream_types_mapping_t outputTypes,
             std::vector<std::string> inputNames, std::vector<std::string> outputNames,
             const PythonNodeResourcesMap& pythonNodeResourcesMap,
             PythonBackend* pythonBackend) :
-            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, pythonBackend) {}
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, pythonBackend) {}
     };
 
 protected:
@@ -2434,7 +2434,7 @@ TEST_F(MediapipeSerialization, KFSResponse) {
     std::vector<float> data = {1.0f};
     response.add_raw_output_contents()->assign(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<KFSResponse>(response);
-    ASSERT_EQ(executor->serializePacket("kfs_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(onPacketReadySerializeImpl("1", "name", "1", "name", mediapipe_packet_type_enum::KFS_RESPONSE, packet, mp_response), StatusCode::OK);
     ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2450,7 +2450,8 @@ TEST_F(MediapipeSerialization, TFTensor) {
     tensorflow::Tensor response(TFSDataType::DT_FLOAT, {1});
     response.flat<float>()(0) = 1.0f;
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<tensorflow::Tensor>(response);
-    ASSERT_EQ(executor->serializePacket("tf_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(onPacketReadySerializeImpl("1", "tf_response", "1", "tf_response", mediapipe_packet_type_enum::TFTENSOR, packet, mp_response), StatusCode::OK);
+    ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2466,7 +2467,8 @@ TEST_F(MediapipeSerialization, OVTensor) {
     ov::element::Type type(ov::element::Type_t::f32);
     ov::Tensor response(type, {1}, data.data());
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<ov::Tensor>(response);
-    ASSERT_EQ(executor->serializePacket("ov_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(onPacketReadySerializeImpl("1", "ov_response", "1", "ov_response", mediapipe_packet_type_enum::OVTENSOR, packet, mp_response), StatusCode::OK);
+    ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2481,7 +2483,8 @@ TEST_F(MediapipeSerialization, MPTensor) {
     mediapipe::Tensor response(mediapipe::Tensor::ElementType::kFloat32, {1});
     response.GetCpuWriteView().buffer<float>()[0] = 1.0f;
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<mediapipe::Tensor>(std::move(response));
-    ASSERT_EQ(executor->serializePacket("mp_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(onPacketReadySerializeImpl("1", "mp_response", "1", "mp_response", mediapipe_packet_type_enum::MPTENSOR, packet, mp_response), StatusCode::OK);
+    ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs(0).datatype(), "FP32");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2498,7 +2501,8 @@ TEST_F(MediapipeSerialization, MPImageTensor) {
     response.MutablePixelData()[1] = (char)1;
     response.MutablePixelData()[2] = (char)1;
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<mediapipe::ImageFrame>(std::move(response));
-    ASSERT_EQ(executor->serializePacket("mp_img_response", mp_response, packet), StatusCode::OK);
+    ASSERT_EQ(onPacketReadySerializeImpl("1", "mp_img_response", "1", "mp_img_response", mediapipe_packet_type_enum::MEDIAPIPE_IMAGE, packet, mp_response), StatusCode::OK);
+    ASSERT_EQ(mp_response.id(), "1");
     ASSERT_EQ(mp_response.outputs(0).datatype(), "UINT8");
     ASSERT_EQ(mp_response.outputs_size(), 1);
     auto mp_output = mp_response.outputs(0);
@@ -2901,6 +2905,7 @@ protected:
     void CreateConfigAndPbtxt(std::string pbtxtContent) {
         std::string graphFilePath = this->directoryPath + "/graph.pbtxt";
         this->configContent.replace(this->configContent.find(this->modelPathToReplace), this->modelPathToReplace.size(), graphFilePath);
+        this->configFilePath = this->directoryPath + this->configFilePath;
         createConfigFileWithContent(this->configContent, this->configFilePath);
         createConfigFileWithContent(pbtxtContent, graphFilePath);
     }
@@ -2932,7 +2937,7 @@ protected:
         const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(this->server.getModule(SERVABLE_MANAGER_MODULE_NAME));
         ModelManager& modelManager = smm->getServableManager();
         std::shared_ptr<MediapipeGraphExecutor> executor;
-        ASSERT_EQ(modelManager.createPipeline(executor, this->request.model_name(), &this->request, &response), ovms::StatusCode::OK);
+        ASSERT_EQ(modelManager.createPipeline(executor, this->request.model_name()), ovms::StatusCode::OK);
         using ovms::ExecutionContext;
         ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer};
         ServableMetricReporter* reporter = nullptr;
@@ -3032,10 +3037,10 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
     {typeid(int16_t), {ovms::Precision::I16, ovms::StatusCode::OK}},
     {typeid(int8_t), {ovms::Precision::I8, ovms::StatusCode::OK}},
     {typeid(bool), {ovms::Precision::BOOL, ovms::StatusCode::OK}},
-    {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::NOT_IMPLEMENTED}},
+    {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::OK}},
     {typeid(void), {ovms::Precision::BIN, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}}};
 
-typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t, bool> InferInputTensorContentsTypesToTest;  // TODO add all kfs relevant bool
+typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t, bool> InferInputTensorContentsTypesToTest;
 TYPED_TEST_SUITE(KFSGRPCContentFieldsSupportTest, InferInputTensorContentsTypesToTest);
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentOVTensor = R"(
@@ -3068,6 +3073,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
 }
 
+#if (PYTHON_DISABLE == 0)
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentPytensor = R"(
         input_stream: "OVMS_PY_TENSOR:in"
@@ -3099,6 +3105,20 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
     this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
 }
 
+TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorInvalidContentSize) {
+    const std::string pbtxtContentPyTensor = R"(
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        }
+    )";
+    this->performInvalidContentSizeTest(pbtxtContentPyTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+#endif
+
 std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>> TYPE_TO_OVMS_PRECISION_TO_STATUS_TF_TENSOR{
     {typeid(float), {ovms::Precision::FP32, ovms::StatusCode::OK}},
     {typeid(uint64_t), {ovms::Precision::U64, ovms::StatusCode::OK}},
@@ -3110,7 +3130,7 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
     {typeid(int16_t), {ovms::Precision::I16, ovms::StatusCode::OK}},
     {typeid(int8_t), {ovms::Precision::I8, ovms::StatusCode::OK}},
     {typeid(bool), {ovms::Precision::BOOL, ovms::StatusCode::OK}},
-    {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::NOT_IMPLEMENTED}},
+    {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::OK}},
     {typeid(void), {ovms::Precision::BIN, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}}};
 
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorCheckExpectedStatusCode) {
@@ -3273,19 +3293,6 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorInvalidContentSize) {
     this->performInvalidContentSizeTest(pbtxtContentTFTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
-TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorInvalidContentSize) {
-    const std::string pbtxtContentPyTensor = R"(
-        input_stream: "OVMS_PY_TENSOR:in"
-        output_stream: "OVMS_PY_TENSOR:out"
-        node {
-        calculator: "PassThroughCalculator"
-        input_stream: "OVMS_PY_TENSOR:in"
-        output_stream: "OVMS_PY_TENSOR:out"
-        }
-    )";
-    this->performInvalidContentSizeTest(pbtxtContentPyTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
-}
-
 INSTANTIATE_TEST_SUITE_P(
     Test,
     MediapipeFlowAddTest,
@@ -3324,9 +3331,11 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         // Expected when building with python
         "CalculatorRunnerSinkCalculator",
         "CalculatorRunnerSourceCalculator",
-        "PyTensorOvTensorConverterCalculator",
-        "PythonExecutorCalculator",
+        "PyTensorOvTensorConverterCalculator",   // integral OVMS calculator
+        "PythonExecutorCalculator",  // integral OVMS calculator
+        "HttpLLMCalculator",  // integral OVMS calculator
 #endif
+        "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
         "AddHeaderCalculator",
         "AddNumbersMultiInputsOutputsTestCalculator",
         "AddOne3CycleIterationsTestCalculator",

@@ -19,6 +19,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <thread>
@@ -95,7 +96,7 @@ void ModelInstance::unsubscribe(PipelineDefinition& pd) {
 static Status getRequestedShape(const ModelConfig& config, const DynamicModelParameter& parameter, const std::string& name, Shape& shapeOut) {
     Shape shape;
     auto mappedName = config.getMappingInputByKey(name);
-    auto inputNameToUse = (mappedName != "" ? mappedName : name);
+    const auto& inputNameToUse = (mappedName != "" ? mappedName : name);
     if (config.getBatchSize().has_value() || parameter.isBatchSizeRequested()) {
         // leave shape untouched
     } else if (config.isShapeAuto(inputNameToUse) && parameter.isShapeRequested(inputNameToUse)) {
@@ -108,7 +109,7 @@ static Status getRequestedShape(const ModelConfig& config, const DynamicModelPar
     } else if (config.getShapes().count(ANONYMOUS_INPUT_NAME) && config.getShapes().at(ANONYMOUS_INPUT_NAME).shape.size()) {
         shape = config.getShapes().at(ANONYMOUS_INPUT_NAME).shape;
     }
-    shapeOut = shape;
+    shapeOut = std::move(shape);
     return StatusCode::OK;
 }
 
@@ -249,7 +250,7 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
             } else {
                 OV_LOGGER("input: {}, input.get_rt_info()", reinterpret_cast<const void*>(&input));
                 auto inheritedModelLayout = getLayoutFromRTMap(input.get_rt_info());
-                auto guessedModelLayout = Layout::getDefaultLayout(input.get_partial_shape().size());
+                const auto& guessedModelLayout = Layout::getDefaultLayout(input.get_partial_shape().size());
 
                 ov::Layout targetModelLayout = inheritedModelLayout.has_value() ? inheritedModelLayout.value() : ov::Layout(guessedModelLayout);
 
@@ -302,7 +303,7 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
             } else {
                 OV_LOGGER("output: {}, output.get_rt_info()", reinterpret_cast<const void*>(&output));
                 auto inheritedModelLayout = getLayoutFromRTMap(output.get_rt_info());
-                auto guessedModelLayout = Layout::getDefaultLayout(output.get_partial_shape().size());
+                const auto& guessedModelLayout = Layout::getDefaultLayout(output.get_partial_shape().size());
 
                 ov::Layout targetModelLayout = inheritedModelLayout.has_value() ? inheritedModelLayout.value() : ov::Layout(guessedModelLayout);
 
@@ -431,6 +432,16 @@ Status ModelInstance::gatherReshapeInfo(bool isBatchingModeAuto, const DynamicMo
 }
 
 Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter) {
+    auto status = loadInputTensorsImpl(config, parameter);
+    if (!status.ok())
+        return status;
+    if (this->inputsInfo.empty()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Tried to load model:{}, version: {} with no inputs", getName(), getVersion());
+        return StatusCode::OV_NO_INPUTS;
+    }
+    return status;
+}
+Status ModelInstance::loadInputTensorsImpl(const ModelConfig& config, const DynamicModelParameter& parameter) {
     this->inputsInfo.clear();
 
     std::map<std::string, ov::PartialShape> modelShapes;
@@ -512,6 +523,17 @@ Status ModelInstance::loadInputTensors(const ModelConfig& config, const DynamicM
 }
 
 Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
+    auto status = loadOutputTensorsImpl(config);
+    if (!status.ok())
+        return status;
+    if (this->outputsInfo.empty()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Tried to load model:{}, version: {} with no outputs", getName(), getVersion());
+        return StatusCode::OV_NO_OUTPUTS;
+    }
+    return status;
+}
+
+Status ModelInstance::loadOutputTensorsImpl(const ModelConfig& config) {
     this->outputsInfo.clear();
 
     OV_LOGGER("ov::Model model: {}, model->outputs()", reinterpret_cast<void*>(model.get()));
@@ -561,7 +583,6 @@ Status ModelInstance::loadOutputTensors(const ModelConfig& config) {
             return StatusCode::UNKNOWN_ERROR;
         }
     }
-
     return StatusCode::OK;
 }
 
@@ -675,7 +696,7 @@ Status ModelInstance::loadOVModelUsingCustomLoader() {
         auto customLoaderInterfacePtr = customloaders.find(loaderName);
         if (customLoaderInterfacePtr == nullptr) {
             SPDLOG_INFO("Loader {} is not in loaded customloaders list", loaderName);
-            throw std::invalid_argument("customloader not exisiting");
+            throw std::invalid_argument("customloader not existing");
         }
 
         CustomLoaderStatus res = customLoaderInterfacePtr->loadModel(this->config.getName(),
@@ -1075,7 +1096,7 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
         }
         modelInstanceUnloadGuard = std::make_unique<ModelInstanceUnloadGuard>(*this);
         if (getStatus().getState() == ModelVersionState::AVAILABLE) {
-            SPDLOG_INFO("Succesfully waited for model: {}, version: {}", getName(), getVersion());
+            SPDLOG_INFO("Successfully waited for model: {}, version: {}", getName(), getVersion());
             return StatusCode::OK;
         }
         modelInstanceUnloadGuard.reset();
@@ -1117,7 +1138,7 @@ void ModelInstance::cleanupFailedLoad() {
 void ModelInstance::unloadModelComponents() {
     subscriptionManager.notifySubscribers();
     while (!canUnloadInstance()) {
-        SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progres.",
+        SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progress.",
             getName(), getVersion(), predictRequestsHandlesCount);
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }

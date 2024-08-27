@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-FROM registry.access.redhat.com/ubi8/ubi:8.8 as rpmbuild
+FROM registry.access.redhat.com/ubi8/ubi:8.10 as rpmbuild
 
 WORKDIR /root
 COPY rpmbuild.sh /root/
 RUN /root/rpmbuild.sh
 
-FROM registry.access.redhat.com/ubi8/ubi:8.8
+FROM registry.access.redhat.com/ubi8/ubi:8.10
 
 RUN mkdir /rpmbuild/
 COPY --from=rpmbuild /ovms-rpmbuild-deps.tar.xz /rpmbuild/

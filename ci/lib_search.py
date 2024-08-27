@@ -82,6 +82,7 @@ def check_dir(start_dir):
         '__pycache__',
         'add.xml',
         'azure_sdk.patch',
+        'cb.patch',
         'bazel-',
         'check_coverage.bat',
         'genhtml',
@@ -104,6 +105,7 @@ def check_dir(start_dir):
         'missing_headers.txt',
         'model.xml',
         'net_http.patch',
+        'partial.patch',
         'opencv_cmake_flags.txt',
         'ovms-c/dist',
         'requirements.txt',
@@ -133,7 +135,13 @@ def check_dir(start_dir):
         "test.log",
         "aipc.txt",
         "internal_tests",
-        "pugixml_v1.13_flags.patch"
+        "pugixml_v1.13_flags.patch",
+        "rag_demo.ipynb",
+        ".bazelversion",
+        "lib_files.txt",
+        "lib_files_python.txt",
+        "lib_custom_nodes_files",
+        "spelling-whitelist.txt",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
@@ -202,6 +210,7 @@ def check_func(start_dir):
         'missing_headers.txt',
         'missing_headers.txt',
         'net_http.patch',
+        'partial.patch',
         'openvino.LICENSE.txt',
         'ovms-c/dist',
         'requirements.txt',
@@ -218,7 +227,8 @@ def check_func(start_dir):
         'graph.pbtxt',
         "build_dependencies.sh",
         "iris_tracking.pbtxt",
-        "internal_tests"
+        "internal_tests",
+        ".bazelversion",
     ]
 
     exclude_directories = ['/dist/']

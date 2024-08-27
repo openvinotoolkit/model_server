@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <fstream>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>

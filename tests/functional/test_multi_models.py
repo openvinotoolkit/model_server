@@ -20,7 +20,7 @@ from constants import MODEL_SERVICE, ERROR_SHAPE, TARGET_DEVICE_GPU, TARGET_DEVI
 from config import  skip_nginx_test
 from conftest import devices_not_supported_for_test
 from model.models_information import Resnet, ResnetBS4, ResnetBS8, ResnetS3
-from utils.grpc import create_channel, infer, get_model_metadata, \
+from utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, \
     model_metadata_response, get_model_status
 import logging
 from utils.models_utils import ModelVersionState, ErrorCode, \
@@ -63,8 +63,8 @@ class TestMultiModelInference:
             logger.info("Getting info about {} model".format(model.name))
             expected_input_metadata = {model.input_name: {'dtype': 1, 'shape': list(model.input_shape)}}
             expected_output_metadata = {model.output_name: {'dtype': 1, 'shape': list(model.output_shape)}}
-            request = get_model_metadata(model_name=model.name)
-            response = stub.GetModelMetadata(request, 10)
+            request = get_model_metadata_request(model_name=model.name)
+            response = get_model_metadata(stub, request)
             input_metadata, output_metadata = model_metadata_response(response=response)
             logger.info("Input metadata: {}".format(input_metadata))
             logger.info("Output metadata: {}".format(output_metadata))
@@ -81,7 +81,7 @@ class TestMultiModelInference:
 
         for model in [Resnet, ResnetBS4, ResnetBS8, ResnetS3]:
             request = get_model_status(model_name=model.name, version=1)
-            response = stub.GetModelStatus(request, 10)
+            response = stub.GetModelStatus(request, 60)
             versions_statuses = response.model_version_status
             version_status = versions_statuses[0]
             assert version_status.version == 1

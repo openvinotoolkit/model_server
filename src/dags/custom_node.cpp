@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "custom_node.hpp"
 
+#include <optional>
 #include <utility>
 
 #include "../custom_node_interface.h"  // NOLINT

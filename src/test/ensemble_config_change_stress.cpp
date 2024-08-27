@@ -23,6 +23,9 @@
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../get_model_metadata_impl.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
+#include "../kfs_frontend/kfs_graph_executor_impl.hpp"
+#endif
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
@@ -137,7 +140,7 @@ void mediaexec<KFSRequest, KFSResponse>(std::shared_ptr<MediapipeGraphExecutor>&
 
 template <>
 void mediacreate<KFSRequest, KFSResponse>(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, KFSRequest& request, KFSResponse& response, ovms::Status& status) {
-    status = manager.createPipeline(executorPtr, request.model_name(), &request, &response);
+    status = manager.createPipeline(executorPtr, request.model_name());
 }
 #endif
 
@@ -641,9 +644,12 @@ TEST_F(StressMediapipeChanges, RemoveModelDuringPredictLoad) {
     // we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
-        StatusCode::MEDIAPIPE_EXECUTION_ERROR};                  // we expect to stop creating pipelines
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK,  // we expect full continuity of operation
+        StatusCode::MEDIAPIPE_PRECONDITION_FAILED,
+    };  // we expect to stop creating pipelines
     std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MEDIAPIPE_EXECUTION_ERROR,
         StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM,  // Can happen when OVMSSessionCalculator fails to create side input packet
     };
     performStressTest(

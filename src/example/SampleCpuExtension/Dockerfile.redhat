@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.9
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.10
 FROM $BASE_IMAGE as base_build
 
 ARG TEMP_DIR=/tmp/openvino_installer
@@ -31,7 +31,7 @@ RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     mkdir /opt/intel && \
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_* /opt/intel/openvino && \
-    ln -s /opt/intel/l_openvino_* /opt/intel/openvino_2023
+    ln -s /opt/intel/l_openvino_* /opt/intel/openvino_2024
 
 WORKDIR /workspace
 COPY Makefile ov_extension.cpp CustomReluOp.cpp CustomReluOp.hpp ./

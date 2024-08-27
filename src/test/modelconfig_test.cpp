@@ -213,7 +213,7 @@ TEST(ModelConfig, shape) {
     EXPECT_EQ((gs1["first"].shape), (ovms::Shape{1, 2, 3}));
     EXPECT_EQ((gs1["second"].shape), (ovms::Shape{6, 6, 200, 300}));
 
-    // mutli shape
+    // multi shape
     config.setShapes(shapeMap);
     config.addShape("third", s3);
 
@@ -472,7 +472,7 @@ TEST(ModelConfig, plugin_config_number) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"OptionA\":1,\"OptionX\":2.45}";
 
-    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     EXPECT_EQ(status, ovms::StatusCode::OK);
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_THAT(actualPluginConfig, UnorderedElementsAre(
@@ -484,7 +484,7 @@ TEST(ModelConfig, plugin_config_string) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"OptionA\":\"1\",\"OptionX\":\"2.45\"}";
 
-    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     EXPECT_EQ(status, ovms::StatusCode::OK);
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_THAT(actualPluginConfig, UnorderedElementsAre(
@@ -496,7 +496,7 @@ TEST(ModelConfig, plugin_config_boolean) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"OptionA\": true,\"OptionX\":false}";
 
-    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     EXPECT_EQ(status, ovms::StatusCode::OK);
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_THAT(actualPluginConfig, UnorderedElementsAre(
@@ -508,7 +508,7 @@ TEST(ModelConfig, plugin_config_invalid) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"OptionX\":{}}";
 
-    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     EXPECT_EQ(status, ovms::StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
     auto actualPluginConfig = config.getPluginConfig();
 }
@@ -516,7 +516,7 @@ TEST(ModelConfig, plugin_config_invalid) {
 TEST(ModelConfig, plugin_config_legacy_cpu) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"CPU_THROUGHPUT_STREAMS\":\"CPU_THROUGHPUT_AUTO\"}";
-    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(actualPluginConfig["PERFORMANCE_HINT"], "THROUGHPUT");
@@ -525,7 +525,7 @@ TEST(ModelConfig, plugin_config_legacy_cpu) {
 TEST(ModelConfig, plugin_config_legacy_cpu_num) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"CPU_THROUGHPUT_STREAMS\":5}";
-    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], "5");
@@ -534,7 +534,7 @@ TEST(ModelConfig, plugin_config_legacy_cpu_num) {
 TEST(ModelConfig, plugin_config_legacy_cpu_str) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"CPU_THROUGHPUT_STREAMS\":\"5\", \"CPU_BIND_THREAD\":\"NO\", \"CPU_THREADS_NUM\": \"2\"}";
-    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], "5");
@@ -548,7 +548,7 @@ TEST(ModelConfig, plugin_config_legacy_cpu_str) {
 TEST(ModelConfig, plugin_config_legacy_gpu) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"GPU_THROUGHPUT_STREAMS\":\"GPU_THROUGHPUT_AUTO\"}";
-    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(actualPluginConfig["PERFORMANCE_HINT"], "THROUGHPUT");
@@ -557,7 +557,7 @@ TEST(ModelConfig, plugin_config_legacy_gpu) {
 TEST(ModelConfig, plugin_config_cpu_bind_thread) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"CPU_BIND_THREAD\":\"YES\"}";
-    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(actualPluginConfig["AFFINITY"], "CORE");
@@ -566,7 +566,7 @@ TEST(ModelConfig, plugin_config_cpu_bind_thread) {
 TEST(ModelConfig, plugin_config_legacy_gpu_num) {
     ovms::ModelConfig config;
     std::string pluginConfig_str = "{\"GPU_THROUGHPUT_STREAMS\":5}";
-    auto status = config.parsePluginConfig(pluginConfig_str);
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], "5");
@@ -935,7 +935,7 @@ TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
 
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -972,7 +972,7 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatArray) {
 
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -1004,7 +1004,7 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatString) {
 
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -1041,7 +1041,7 @@ TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
 
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -1170,7 +1170,7 @@ TEST_P(ModelConfigParseModel, SetWithStateful) {
     std::string config = testPair.first;
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());

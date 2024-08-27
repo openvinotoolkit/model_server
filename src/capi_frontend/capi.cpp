@@ -276,7 +276,7 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* serve
     auto res = srv->start(serverSettings, modelsSettings);
     if (res.ok())
         return nullptr;
-    return reinterpret_cast<OVMS_Status*>(new ovms::Status(res));
+    return reinterpret_cast<OVMS_Status*>(new ovms::Status(std::move(res)));
 }
 
 DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetGrpcPort(OVMS_ServerSettings* settings,
@@ -521,7 +521,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->addInput(inputName, datatype, shape, dimCount);
     if (!status.ok()) {
-        return reinterpret_cast<OVMS_Status*>(new Status(status));
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
     if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
         std::stringstream ss;
@@ -556,7 +556,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest*
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->setInputBuffer(inputName, data, bufferSize, bufferType, deviceId);
     if (!status.ok()) {
-        return reinterpret_cast<OVMS_Status*>(new Status(status));
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
     if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
         std::stringstream ss;
@@ -585,7 +585,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestAddParameter(OVMS_InferenceRequest*
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->addParameter(parameterName, datatype, data);
     if (!status.ok()) {
-        return reinterpret_cast<OVMS_Status*>(new Status(status));
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
     return nullptr;
 }
@@ -600,7 +600,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestRemoveParameter(OVMS_InferenceReque
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->removeParameter(parameterName);
     if (!status.ok()) {
-        return reinterpret_cast<OVMS_Status*>(new Status(status));
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
     return nullptr;
 }
@@ -615,7 +615,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* 
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->removeInput(inputName);
     if (!status.ok()) {
-        return reinterpret_cast<OVMS_Status*>(new Status(status));
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
     return nullptr;
 }
@@ -630,7 +630,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceReque
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->removeInputBuffer(inputName);
     if (!status.ok()) {
-        return reinterpret_cast<OVMS_Status*>(new Status(status));
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
     return nullptr;
 }
@@ -684,7 +684,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceResponseOutput(OVMS_InferenceResponse* res
     *dimCount = tensor->getShape().size();
     *bufferType = buffer->getBufferType();
     *deviceId = buffer->getDeviceId().value_or(0);
-    // possibly it is not neccessary to discriminate
+    // possibly it is not necessary to discriminate
     *data = buffer->data();
     *bytesize = buffer->getByteSize();
     if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
@@ -855,7 +855,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
             //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
         }
         SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
-        return reinterpret_cast<OVMS_Status*>(new Status(status));
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
     // fix execution context and metrics
     ExecutionContext executionContext{
@@ -871,7 +871,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
     }
 
     if (!status.ok()) {
-        return reinterpret_cast<OVMS_Status*>(new Status(status));
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
 
     timer.stop(TOTAL);
@@ -904,7 +904,7 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char
     ModelManager* modelManager{nullptr};
     auto status = getModelManager(server, &modelManager);
     if (!status.ok()) {
-        return reinterpret_cast<OVMS_Status*>(new Status(status));
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
     std::shared_ptr<ovms::ModelInstance> modelInstance = modelManager->findModelInstance(servableName, servableVersion);
 
@@ -931,7 +931,7 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char
             //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
         }
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
-        return reinterpret_cast<OVMS_Status*>(new Status(status));
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
     *state = modelInstance->getStatus().isFailedLoading() ? OVMS_STATE_LOADING_FAILED : static_cast<OVMS_ServableState>(static_cast<int>(modelInstance->getStatus().getState()) / 10 - 1);
     return nullptr;
@@ -973,7 +973,7 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const c
             //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
         }
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
-        return reinterpret_cast<OVMS_Status*>(new Status(status));
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
     *servableMetadata = reinterpret_cast<OVMS_ServableMetadata*>(new ovms::ServableMetadata(servableName, servableVersion, modelInstance->getInputsInfo(), modelInstance->getOutputsInfo(), modelInstance->getRTInfo()));
     return nullptr;

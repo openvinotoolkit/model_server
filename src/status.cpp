@@ -74,6 +74,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_BATCH_DIMENSION, "Invalid batch dimension in shape"},
     {StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE, "Layout incompatible with given shape"},
     {StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED, "Batching set to AUTO but model contains scalar tensor"},
+    {StatusCode::OV_NO_INPUTS, "Cannot load model with no inputs"},
+    {StatusCode::OV_NO_OUTPUTS, "Cannot load model with no outputs"},
     {StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER, "allow_cache is set to true with custom loader usage"},
     {StatusCode::UNKNOWN_ERROR, "Unknown error"},
 
@@ -196,7 +198,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_DESERIALIZATION_ERROR, "Failed to deserialize tensor for mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_START_ERROR, "Failed to start mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, "Failed to read protobuf graph configuration file"},
-    {StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, "Failed to initalize mediapipe graph"},
+    {StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, "Failed to initialize mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, "Failed to add mediapipe graph output stream"},
     {StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, "Failed to close mediapipe graph input stream"},
     {StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Failed to add packet to mediapipe graph input stream"},
@@ -216,6 +218,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE, "Client disconnected during reading first streaming request"},
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME, "Subsequent request with incorrect servable name"},
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION, "Subsequent request with incorrect servable version"},
+    {StatusCode::MEDIAPIPE_PRECONDITION_FAILED, "Mediapipe graph precondition failed"},
 
     // Python Nodes
     {StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS, "The Python Node name is already present in nodes list"},
@@ -223,6 +226,13 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED, "The Python Node state initialization failed"},
     {StatusCode::PYTHON_NODE_MISSING_OPTIONS, "The Python Node is missing options definition"},
     {StatusCode::PYTHON_NODE_MISSING_NAME, "The Python Node is missing name definition"},
+
+    // LLM Nodes
+    {StatusCode::LLM_NODE_NAME_ALREADY_EXISTS, "The LLM Node name is already present in nodes list"},
+    {StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST, "The LLM Node workspace path does not exist"},
+    {StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "The LLM Node resource initialization failed"},
+    {StatusCode::LLM_NODE_MISSING_OPTIONS, "The LLM Node is missing options definition"},
+    {StatusCode::LLM_NODE_MISSING_NAME, "The LLM Node is missing name definition"},
 
     // Storage errors
     // S3
@@ -320,5 +330,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::SERVER_ALREADY_STARTED, "Server has already started"},
     {StatusCode::SERVER_ALREADY_STARTING, "Server is already starting"},
     {StatusCode::MODULE_ALREADY_INSERTED, "Module already inserted"},
+
+    {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},
 };
 }  // namespace ovms

@@ -29,10 +29,15 @@
 #include "../deserialization.hpp"
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
+#include "kfs_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
+// clang-format off
+// kfs_graph_executor_impl needs to be included before mediapipegraphexecutor
+// because it contains functions required by graph execution template
+#include "kfs_graph_executor_impl.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+// clang-format on
 #endif
 #include "../metric.hpp"
 #include "../modelinstance.hpp"
@@ -296,7 +301,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
             SPDLOG_DEBUG("Requested DAG: {} does not exist. Searching for mediapipe graph with that name...", request->model_name());
 #if (MEDIAPIPE_DISABLE == 0)
             std::shared_ptr<MediapipeGraphExecutor> executor;
-            status = this->modelManager.createPipeline(executor, request->model_name(), request, response);
+            status = this->modelManager.createPipeline(executor, request->model_name());
             if (!status.ok()) {
                 return status;
             }
@@ -329,21 +334,21 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
     return StatusCode::OK;
 }
 
-Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* context, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) {
+Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* context, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* serverReaderWriter) {
     OVMS_PROFILE_FUNCTION();
 #if (MEDIAPIPE_DISABLE == 0)
     ::inference::ModelInferRequest firstRequest;
-    if (!stream->Read(&firstRequest)) {
+    if (!serverReaderWriter->Read(&firstRequest)) {
         Status status = StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE;
         SPDLOG_DEBUG(status.string());
         return status;
     }
     std::shared_ptr<MediapipeGraphExecutor> executor;
-    auto status = this->modelManager.createPipeline(executor, firstRequest.model_name(), &firstRequest, nullptr /* response not present in streaming api */);
+    auto status = this->modelManager.createPipeline(executor, firstRequest.model_name());
     if (!status.ok()) {
         return status;
     }
-    return executor->inferStream(firstRequest, *stream);
+    return executor->inferStream(firstRequest, *serverReaderWriter);
 #else
     SPDLOG_DEBUG("Mediapipe support was disabled during build process...");
     return StatusCode::NOT_IMPLEMENTED;
@@ -380,10 +385,16 @@ Status KFSInferenceServiceImpl::buildResponse(
 #endif
 
 static void addReadyVersions(Model& model,
+    model_version_t versionAvailableDuringInitialCheck,
     KFSModelMetadataResponse* response) {
     auto modelVersions = model.getModelVersionsMapCopy();
     for (auto& [modelVersion, modelInstance] : modelVersions) {
-        if (modelInstance.getStatus().getState() == ModelVersionState::AVAILABLE)
+        // even if we have modelUnloadGuard model can have already state set to LOADING/UNLOADING
+        // here we make choice to report it as AVAILABLE even if it is already in different state
+        // since we managed to obtain guard. Model could change state after sending response anyway.
+        // Otherwise we could respond with metadata of one version but in response send information
+        // that different version is ready
+        if ((modelVersion == versionAvailableDuringInitialCheck) || (modelInstance.getStatus().getState() == ModelVersionState::AVAILABLE))
             response->add_versions(std::to_string(modelVersion));
     }
 }
@@ -403,7 +414,7 @@ Status KFSInferenceServiceImpl::buildResponse(
 
     response->Clear();
     response->set_name(instance.getName());
-    addReadyVersions(model, response);
+    addReadyVersions(model, instance.getVersion(), response);
     response->set_platform(PLATFORM);
 
     for (const auto& input : instance.getInputsInfo()) {
