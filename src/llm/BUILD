@@ -40,7 +40,7 @@ cc_library(
 
 cc_library(
     name = "llmcalculator",
-    srcs = ["llm_calculator.cc", "http_llm_calculator.cc"],
+    srcs = ["http_llm_calculator.cc"],
     deps = [
         "@linux_openvino//:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
@@ -112,6 +112,7 @@ cc_library(
     hdrs = ["text_processor.hpp"],
     srcs = ["text_processor.cpp"],
     deps = ["@mediapipe//mediapipe/framework:calculator_framework",
+            "@linux_openvino//:openvino",
             "//src:libovmslogging",
             "//src/python:utils",
     ] + PYBIND_DEPS,

@@ -177,18 +177,23 @@ curl http://localhost:8000/v3/chat/completions \
 {
   "choices": [
     {
-      "finish_reason": "stop",
+      "finish_reason": "length",
       "index": 0,
       "logprobs": null,
       "message": {
-        "content": "\n\nOpenVINO is an open-source software library for deep learning inference that is designed to optimize and run deep learning models on a variety",
+        "content": "OpenVINO is an open-source software framework developed by Intel for optimizing and deploying computer vision, machine learning, and deep learning models on various devices,",
         "role": "assistant"
       }
     }
   ],
-  "created": 1716825108,
+  "created": 1724405301,
   "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-  "object": "chat.completion"
+  "object": "chat.completion",
+  "usage": {
+    "prompt_tokens": 27,
+    "completion_tokens": 30,
+    "total_tokens": 57
+  }
 }
 ```
 
@@ -207,15 +212,20 @@ curl http://localhost:8000/v3/completions \
 {
   "choices": [
     {
-      "finish_reason": "stop",
+      "finish_reason": "length",
       "index": 0,
       "logprobs": null,
-      "text": "\n\nOpenVINO is an open-source software library for deep learning inference that is designed to optimize and run deep learning models on a variety"
+      "text": "\n\nOpenVINO is an open-source computer vision platform developed by Intel for deploying and optimizing computer vision, machine learning, and autonomous driving applications. It"
     }
   ],
-  "created": 1716825108,
+  "created": 1724405354,
   "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-  "object": "text_completions"
+  "object": "text_completion",
+  "usage": {
+    "prompt_tokens": 23,
+    "completion_tokens": 30,
+    "total_tokens": 53
+  }
 }
 ```
 
@@ -318,3 +328,6 @@ The service deployed above can be used in RAG chain using `langchain` library wi
 
 Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
 
+## Scaling the Model Server
+
+Check this simple [text generation scaling demo](./scaling/README.md).

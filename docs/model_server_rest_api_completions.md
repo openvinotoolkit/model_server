@@ -35,7 +35,12 @@ curl http://localhost/v3/completions \
   ],
   "created": 1716825108,
   "model": "llama3",
-  "object": "text_completion"
+  "object": "text_completion",
+  "usage": {
+        "completion_tokens": 14,
+        "prompt_tokens": 17,
+        "total_tokens": 31
+  }
 }
 ```
 
@@ -48,6 +53,8 @@ curl http://localhost/v3/completions \
 |-----|----------|----------|----------|---------|-----|
 | model | ✅ | ✅ | ✅ | string (required) | Name of the model to use. From administrator point of view it is the name assigned to a MediaPipe graph configured to schedule generation using desired model.  |
 | stream | ✅ | ✅ | ✅ | bool (optional, default: `false`) | If set to true, partial message deltas will be sent to the client. The generation chunks will be sent as data-only [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#event_stream_format) as they become available, with the stream terminated by a `data: [DONE]` message. [Example Python code](clients_openai.md) |
+| stream_options | ✅ | ✅ | ✅ | object (optional) | Options for streaming response. Only set this when you set stream: true |
+| stream_options.include_usage | ✅ | ✅ | ✅ | bool (optional) | Streaming option. If set, an additional chunk will be streamed before the data: [DONE] message. The usage field in this chunk shows the token usage statistics for the entire request, and the choices field will always be an empty array. All other chunks will also include a usage field, but with a null value. |
 | prompt | ⚠️ | ✅ | ✅ | string or array (required) | The prompt(s) to generate completions for, encoded as a string, array of strings, array of tokens, or array of token arrays. **_Limitations: only single string prompt is currently supported._** |
 | max_tokens | ✅ | ✅ | ✅ | integer | The maximum number of tokens that can be generated. If not set, the generation will stop once `EOS` token is generated. |
 | ignore_eos | ✅ | ❌ | ✅ | bool (default: `false`) | Whether to ignore the `EOS` token and continue generating tokens after the `EOS` token is generated. If set to `true`, the maximum allowed `max_tokens` value is `4000`. |
@@ -67,22 +74,19 @@ curl http://localhost/v3/completions \
 | top_p | ✅ | ✅ | ✅ | float (default: `1.0`) | Controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens. |
 | top_k | ✅ | ❌ | ✅ | int (default: `0`) | Controls the number of top tokens to consider. Set to 0 to consider all tokens. |
 | repetition_penalty | ✅ | ❌ | ✅ | float (default: `1.0`) | Penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > `1.0` encourage the model to use new tokens, while values < `1.0` encourage the model to repeat tokens. `1.0` means no penalty. |
+| frequency_penalty | ✅ | ✅ | ✅ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim. |
+| presence_penalty | ✅ | ✅ | ✅ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics. |
 | seed | ✅ | ✅ | ✅ | integer (default: `0`) | Random seed to use for the generation. |
 
 #### Unsupported params from OpenAI service:
 - echo
-- frequency_penalty
 - logit_bias
 - logprobs
-- presence_penalty
 - stop
-- stream_options
 - suffix
 
 
 #### Unsupported params from vLLM:
-- presence_penalty 
-- frequency_penalty
 - min_p
 - use_beam_search (**In OpenVINO Model Server just simply increase _best_of_ param to enable beam search**)
 - early_stopping
@@ -110,12 +114,12 @@ curl http://localhost/v3/completions \
 | created | ✅ | ✅ | string | The Unix timestamp (in seconds) of when the chat completion was created.  |
 | model | ✅ | ✅ | string | The model used for the chat completion. |
 | object | ✅ | ✅ | string | always `text_completion` |
+| usage | ✅ | ✅ | object | Usage statistics for the completion request. Consists of three integer fields: `completion_tokens`, `prompt_tokens` and `total_tokens` that inform how many tokens have been generated in a completion, number of tokens in a prompt and the sum of both |
 
 #### Unsupported params from OpenAI service:
 
 - id
 - system_fingerprint
-- usage
 
 
 ## References
