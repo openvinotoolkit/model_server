@@ -36,7 +36,7 @@ void GPUEnvironment::SetUp() {
 
 void GPUEnvironment::skipWithoutGPU() {
     if (!GPUEnvironment::gpuTestsEnabled) {
-        GTEST_SKIP() << "Skipping GPU tests because those tests were not enabled. Check environment.hpp";
+        GTEST_SKIP() << "Skipping GPU tests because those tests were not enabled. Check gpuenvironment.[hc]pp";
     }
 }
 

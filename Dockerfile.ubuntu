@@ -424,6 +424,7 @@ WORKDIR /
 COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,SC2164
+ARG INSTALL_DRIVER_VERSION="23.22.26516"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 RUN apt-get update ; \
     apt-get install -y --no-install-recommends curl ca-certificates libxml2 && \
