@@ -13,11 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <atomic>
+#include <condition_variable>
 #include <fstream>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <sstream>
 #include <string>
+#include <thread>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -770,6 +774,57 @@ TEST_F(MetricFlowTest, RestV3Stream) {
     SPDLOG_ERROR(server.collect());
 }
 
+TEST_F(MetricFlowTest, CurrentGraphs) {
+    using ::testing::_;
+    using ::testing::Return;
+
+    KFSInferenceServiceImpl impl(server);
+    const size_t numberOfWorkloads = 5;
+    std::atomic<size_t> numberOfCurrentlyFinishedWorkloads{0};
+    std::vector<std::thread> threads;
+    std::condition_variable cv;
+    std::mutex mtx;
+
+    for (size_t i = 0; i < numberOfWorkloads; i++) {
+        threads.emplace_back(std::thread([this, &impl, numberOfWorkloads, &numberOfCurrentlyFinishedWorkloads, &cv, &mtx]() -> void {
+            MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+            int counter = 0;
+            inputs_info_t correctInputsMeta{{"in1", {DUMMY_MODEL_SHAPE, this->correctPrecision}}};
+            EXPECT_CALL(stream, Read(_))
+                .WillRepeatedly([this, correctInputsMeta, &counter, numberOfWorkloads, &numberOfCurrentlyFinishedWorkloads, &cv, &mtx](::inference::ModelInferRequest* req) {
+                    if (counter >= this->numberOfAcceptedRequests) {
+                        if (++numberOfCurrentlyFinishedWorkloads >= numberOfWorkloads) {
+                            // Check the metric. The graph requires 2 inputs in order to start processing and we deliver only 1.
+                            // This way we ensure that X graphs are created (wait for second input)
+                            // Before we disconnect (return false) we can check if the metric is equal to number of graphs (X)
+                            // X=numberOfAcceptedRequests
+                            EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_CURRENT_GRAPHS + std::string{"{name=\"multi_input_synchronized_graph\"} "} + std::to_string(numberOfWorkloads)));
+                            cv.notify_all();
+                            return false;  // disconnect
+                        }
+
+                        // Wait for finished workloads to be =numberOfWorkloads
+                        std::unique_lock<std::mutex> lock(mtx);
+                        cv.wait(lock, [&numberOfCurrentlyFinishedWorkloads, numberOfWorkloads]() {
+                            return numberOfCurrentlyFinishedWorkloads >= numberOfWorkloads;
+                        });
+                        return false;  // disconnect
+                    }
+                    preparePredictRequest(*req, correctInputsMeta);
+                    req->mutable_model_name()->assign("multi_input_synchronized_graph");
+                    counter++;
+                    return true;
+                });
+            ON_CALL(stream, Write(_, _)).WillByDefault(Return(1));
+            ASSERT_EQ(impl.ModelStreamInferImpl(nullptr, &stream), ovms::StatusCode::OK);
+        }));
+    }
+
+    for (size_t i = 0; i < numberOfWorkloads; i++) {
+        threads[i].join();
+    }
+}
+
 std::string MetricFlowTest::prepareConfigContent() {
     return std::string{R"({
         "monitoring": {
@@ -835,6 +890,10 @@ std::string MetricFlowTest::prepareConfigContent() {
             {
                 "name": "dummy_gpt",
                 "graph_path": "/ovms/src/test/mediapipe/graph_gpt.pbtxt"
+            },
+            {
+                "name": "multi_input_synchronized_graph",
+                "graph_path": "/ovms/src/test/mediapipe/two_input_graph.pbtxt"
             }
         ]
     }
