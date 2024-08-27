@@ -164,7 +164,7 @@ public:
 
 TEST_F(MediapipeEmbeddingsTest, startup) {
     auto start = std::chrono::high_resolution_clock::now();
-    const int timeout = 5;
+    const int timeout = 50;
     while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
     }
@@ -175,6 +175,7 @@ TEST_F(MediapipeEmbeddingsTest, startup) {
     auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName("embeddings");
     ASSERT_TRUE(mediapipeGraphDefinition != nullptr);
     ASSERT_TRUE(mediapipeGraphDefinition->getStatus().isAvailable());
+    ASSERT_EQ(mediapipeGraphDefinition->validate(*manager), StatusCode::OK);
 }
 
 TEST_F(MediapipeFlowKfsTest, Infer) {

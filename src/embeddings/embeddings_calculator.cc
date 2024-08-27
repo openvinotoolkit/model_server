@@ -34,6 +34,7 @@
 #include "../llm/http_payload.hpp"
 #include "../logging.hpp"
 #include "../profiler.hpp"
+#include <adapters/inference_adapter.h>
 
 using namespace rapidjson;
 using namespace ovms;
@@ -50,12 +51,17 @@ class EmbeddingsCalculator : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
 
+protected:
+    std::shared_ptr<::InferenceAdapter> tokenizer_session{nullptr};
+    std::shared_ptr<::InferenceAdapter> embeddings_session{nullptr};
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<InputDataType>();
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<OutputDataType>();
+	cc->InputSidePackets().Tag("TOKENIZER_SESSION").Set<std::shared_ptr<InferenceAdapter>>();
+	cc->InputSidePackets().Tag("EMBEDDINGS_SESSION").Set<std::shared_ptr<InferenceAdapter>>();
         return absl::OkStatus();
     }
 
@@ -67,6 +73,12 @@ public:
 
     absl::Status Open(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
+	 tokenizer_session = cc->InputSidePackets()
+                      .Tag("TOKENIZER_SESSION")
+                      .Get<std::shared_ptr<::InferenceAdapter>>();
+	 embeddings_session = cc->InputSidePackets()
+		      .Tag("EMBEDDINGS_SESSION")
+                      .Get<std::shared_ptr<::InferenceAdapter>>();
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator  [Node: {}] Open start", cc->NodeName());
 
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator [Node: {}] Open end", cc->NodeName());
