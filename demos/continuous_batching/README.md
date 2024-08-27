@@ -31,6 +31,7 @@ Here, we will also define the LLM engine parameters inside the `graph.pbtxt`.
 
 Install python dependencies for the conversion script:
 ```bash
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2024/3/demos/continuous_batching/requirements.txt
 ```
 
@@ -232,7 +233,7 @@ pip3 install openai
 from openai import OpenAI
 
 client = OpenAI(
-  base_url="http://localhost:8000/v3",
+  base_url="http://localhost:11401/v3",
   api_key="unused"
 )
 
@@ -259,7 +260,7 @@ pip3 install openai
 from openai import OpenAI
 
 client = OpenAI(
-  base_url="http://localhost:8000/v3",
+  base_url="http://localhost:11401/v3",
   api_key="unused"
 )
 
