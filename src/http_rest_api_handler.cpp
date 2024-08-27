@@ -469,13 +469,14 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         }
 
         const std::string model_name = modelNameIt->value.GetString();
-
-        auto streamIt = doc.FindMember("stream");
-        if (streamIt != doc.MemberEnd()) {
-            if (!streamIt->value.IsBool()) {
-                return Status(StatusCode::JSON_INVALID, "\"stream\" field is not a boolean");
+        if (uri != "/v3/embeddings") {
+            auto streamIt = doc.FindMember("stream");
+            if (streamIt != doc.MemberEnd()) {
+                if (!streamIt->value.IsBool()) {
+                    return Status(StatusCode::JSON_INVALID, "\"stream\" field is not a boolean");
+                }
+                streamFieldVal = streamIt->value.GetBool();
             }
-            streamFieldVal = streamIt->value.GetBool();
         }
 
         auto status = this->modelManager.createPipeline(executor, model_name);

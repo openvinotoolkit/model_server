@@ -31,6 +31,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
+#include "../llm/http_payload.hpp"
 #include "../logging.hpp"
 #include "../profiler.hpp"
 
@@ -39,7 +40,7 @@ using namespace ovms;
 
 namespace mediapipe {
 
-using InputDataType = std::string;
+using InputDataType = ovms::HttpPayload;
 using OutputDataType = std::string;
 
 class EmbeddingsCalculator : public CalculatorBase {
@@ -74,6 +75,55 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
+        if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
+            std::string response = "";
+            InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
+            if (!payload.parsedJson->IsObject())
+                return absl::InvalidArgumentError("Received json is not an object");
+            auto it = payload.parsedJson->FindMember("input");
+            if (it != payload.parsedJson->MemberEnd()) {
+                if (it->value.IsString()) {
+                    response += it->value.GetString();
+                } else if (it->value.IsArray()) {
+                    for (auto& input : it->value.GetArray()) {
+                        if (!input.IsString())
+                            return absl::InvalidArgumentError("input should be string");
+                        response += input.GetString();
+                    }
+                } else {
+                    return absl::InvalidArgumentError("input should be string or array of strings");
+                }
+            } else {
+                return absl::InvalidArgumentError("input field is required");
+            }
+            it = payload.parsedJson->FindMember("encoding_format");
+            if (it != payload.parsedJson->MemberEnd()) {
+                if (it->value.IsString()) {
+                    response += it->value.GetString();
+                } else {
+                    return absl::InvalidArgumentError("encoding_format should be string");
+                }
+            }
+            it = payload.parsedJson->FindMember("dimensions");
+            if (it != payload.parsedJson->MemberEnd()) {
+                if (it->value.IsInt()) {
+                    response += std::to_string(it->value.GetInt());
+                } else {
+                    return absl::InvalidArgumentError("dimensions should be string or array of strings");
+                }
+            }
+            it = payload.parsedJson->FindMember("user");
+            if (it != payload.parsedJson->MemberEnd()) {
+                if (it->value.IsString()) {
+                    response += it->value.GetString();
+                } else {
+                    return absl::InvalidArgumentError("user should be string");
+                }
+            }
+            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(response), timestamp);
+        } else {
+            return absl::InvalidArgumentError("Input is empty");
+        }
         return absl::OkStatus();
     }
 };
