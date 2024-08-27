@@ -233,7 +233,7 @@ pip3 install openai
 from openai import OpenAI
 
 client = OpenAI(
-  base_url="http://localhost:11401/v3",
+  base_url="http://localhost:8000/v3",
   api_key="unused"
 )
 
@@ -260,7 +260,7 @@ pip3 install openai
 from openai import OpenAI
 
 client = OpenAI(
-  base_url="http://localhost:11401/v3",
+  base_url="http://localhost:8000/v3",
   api_key="unused"
 )
 
