@@ -163,7 +163,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.4.0.16399.c328ded614f_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
-	INSTALL_DRIVER_VERSION ?= "23.22.26516"
+	INSTALL_DRIVER_VERSION ?= "24.26.30049"
 	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.4.0.16399.c328ded614f_x86_64.tgz
   endif
 endif
