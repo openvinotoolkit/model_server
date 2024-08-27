@@ -163,15 +163,7 @@ public:
     std::unique_ptr<MetricCounter> requestAcceptedGrpcModelInfer;
     std::unique_ptr<MetricCounter> requestAcceptedGrpcModelInferStream;
 
-    // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
-    // std::unique_ptr<MetricCounter> requestSuccessGrpcModelMetadata;
-    // std::unique_ptr<MetricCounter> requestSuccessGrpcModelReady;
-
     std::unique_ptr<MetricCounter> requestAcceptedRestModelInfer;
-
-    // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
-    // std::unique_ptr<MetricCounter> requestSuccessRestModelMetadata;
-    // std::unique_ptr<MetricCounter> requestSuccessRestModelReady;
 
     std::unique_ptr<MetricCounter> requestRejectedGrpcModelInfer;
     std::unique_ptr<MetricCounter> requestRejectedGrpcModelInferStream;
@@ -201,20 +193,10 @@ public:
                 return success ? this->requestAcceptedGrpcModelInfer.get() : this->requestRejectedGrpcModelInfer.get();
             if (context.method == ExecutionContext::Method::ModelInferStream)
                 return success ? this->requestAcceptedGrpcModelInferStream.get() : this->requestRejectedGrpcModelInferStream.get();
-            // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
-            // if (context.method == ExecutionContext::Method::ModelMetadata)
-            //     return success ? this->requestAcceptedGrpcModelMetadata.get() : this->requestRejectedGrpcModelMetadata.get();
-            // if (context.method == ExecutionContext::Method::ModelReady)
-            //     return success ? this->requestAcceptedGrpcModelReady.get() : this->requestRejectedGrpcModelReady.get();
-            return nullptr;  // TODO: Throw?
+            return nullptr;
         } else if (context.interface == ExecutionContext::Interface::REST) {
             if (context.method == ExecutionContext::Method::ModelInfer)
                 return success ? this->requestAcceptedRestModelInfer.get() : this->requestRejectedRestModelInfer.get();
-            // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
-            // if (context.method == ExecutionContext::Method::ModelMetadata)
-            //     return success ? this->requestAcceptedRestModelMetadata.get() : this->requestRejectedRestModelMetadata.get();
-            // if (context.method == ExecutionContext::Method::ModelReady)
-            //     return success ? this->requestAcceptedRestModelReady.get() : this->requestRejectedRestModelReady.get();
             if (context.method == ExecutionContext::Method::V3Unary)
                 return success ? this->requestAcceptedRestV3Unary.get() : this->requestRejectedRestV3Unary.get();
             if (context.method == ExecutionContext::Method::V3Stream)
@@ -232,7 +214,7 @@ public:
                 return this->responseGrpcModelInfer.get();
             if (context.method == ExecutionContext::Method::ModelInferStream)
                 return this->responseGrpcModelInferStream.get();
-            return nullptr;  // TODO: Throw?
+            return nullptr;
         } else if (context.interface == ExecutionContext::Interface::REST) {
             if (context.method == ExecutionContext::Method::ModelInfer)
                 return this->responseRestModelInfer.get();

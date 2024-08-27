@@ -157,7 +157,7 @@ protected:
 
     const std::string modelName = "dummy";
     const std::string dagName = "dummy_demux";
-    const std::string mpName = "dummy_mp";  // TODO: Have graph that use dummy model?
+    const std::string mpName = "dummy_mp";
 
     std::optional<int64_t> modelVersion = std::nullopt;
     std::optional<std::string_view> modelVersionLabel{std::nullopt};

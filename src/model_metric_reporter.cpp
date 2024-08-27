@@ -364,37 +364,11 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
             {"interface", "gRPC"}});
         THROW_IF_NULL(this->requestAcceptedGrpcModelInfer, "cannot create metric");
 
-        // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
-        // this->requestAcceptedGrpcModelMetadata = family->addMetric({{"name", graphName},
-        //     {"api", "KServe"},
-        //     {"method", "ModelMetadata"},
-        //     {"interface", "gRPC"}});
-        // THROW_IF_NULL(this->requestAcceptedGrpcModelMetadata, "cannot create metric");
-
-        // this->requestAcceptedGrpcModelReady = family->addMetric({{"name", graphName},
-        //     {"api", "KServe"},
-        //     {"method", "ModelReady"},
-        //     {"interface", "gRPC"}});
-        // THROW_IF_NULL(this->requestAcceptedGrpcModelReady, "cannot create metric");
-
         this->requestAcceptedRestModelInfer = family->addMetric({{"name", graphName},
             {"api", "KServe"},
             {"method", "ModelInfer"},
             {"interface", "REST"}});
         THROW_IF_NULL(this->requestAcceptedRestModelInfer, "cannot create metric");
-
-        // TODO: ModelMetadata/ModelReady Not supported in MediaPipe for now
-        // this->requestAcceptedRestModelMetadata = family->addMetric({{"name", graphName},
-        //     {"api", "KServe"},
-        //     {"method", "ModelMetadata"},
-        //     {"interface", "REST"}});
-        // THROW_IF_NULL(this->requestAcceptedRestModelMetadata, "cannot create metric");
-
-        // this->requestAcceptedRestModelReady = family->addMetric({{"name", graphName},
-        //     {"api", "KServe"},
-        //     {"method", "ModelReady"},
-        //     {"interface", "REST"}});
-        // THROW_IF_NULL(this->requestAcceptedRestModelReady, "cannot create metric");
 
         this->requestAcceptedRestV3Unary = family->addMetric({{"name", graphName},
             {"api", "V3"},
