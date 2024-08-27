@@ -729,15 +729,6 @@ TEST_F(MetricFlowTest, RestV3Unary) {
         ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     }
 
-    // There is currently no possible scenario that V3 request get rejected.
-    // Everything is pushed to graph once its executor is created.
-    // for (int i = 0; i < numberOfRejectedRequests; i++) {
-    //     std::string request = R"({"model": "dummy_gpt", "prompt": "ReturnError"})";
-    //     std::string response;
-    //     HttpRequestComponents comps;
-    //     auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
-    //     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
-    // }
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests);
     // checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, "dummy_gpt", "REST", "Unary", "V3", numberOfRejectedRequests);
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests);
@@ -758,15 +749,6 @@ TEST_F(MetricFlowTest, RestV3Stream) {
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
     }
 
-    // There is currently no possible scenario that V3 request get rejected.
-    // Everything is pushed to graph once its executor is created.
-    // for (int i = 0; i < numberOfRejectedRequests; i++) {
-    //     std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "ReturnError"})";
-    //     std::string response;
-    //     HttpRequestComponents comps;
-    //     auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
-    //     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
-    // }
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, "dummy_gpt", "REST", "Stream", "V3", numberOfAcceptedRequests);
     // checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, "dummy_gpt", "REST", "Stream", "V3", numberOfRejectedRequests);
     const int numberOfMockedChunksPerRequest = 9;  // Defined in openai_chat_completions_mock_calculator.cpp
@@ -797,7 +779,7 @@ TEST_F(MetricFlowTest, CurrentGraphs) {
                             // Check the metric. The graph requires 2 inputs in order to start processing and we deliver only 1.
                             // This way we ensure that X graphs are created (wait for second input)
                             // Before we disconnect (return false) we can check if the metric is equal to number of graphs (X)
-                            // X=numberOfAcceptedRequests
+                            // X=numberOfWorkloads
                             EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_CURRENT_GRAPHS + std::string{"{name=\"multi_input_synchronized_graph\"} "} + std::to_string(numberOfWorkloads)));
                             cv.notify_all();
                             return false;  // disconnect
