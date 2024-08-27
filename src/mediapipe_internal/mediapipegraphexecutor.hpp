@@ -47,7 +47,7 @@ inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
     return StatusCode::MEDIAPIPE_EXECUTION_ERROR;
 }
 
-#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message, hadError)   \
+#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message, isSuccess)  \
     {                                                                    \
         auto status = code;                                              \
         if (!status.ok()) {                                              \
@@ -59,9 +59,9 @@ inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
                 SPDLOG_DEBUG("Writing error to disconnected client: {}", \
                     status.string());                                    \
             }                                                            \
-            hadError = true;                                             \
+            isSuccess = false;                                           \
         } else {                                                         \
-            hadError = false;                                            \
+            isSuccess = true;                                            \
         }                                                                \
     }
 
@@ -256,7 +256,7 @@ public:
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph deserializing first request");
                 // Deserialize first request
-                bool hadError = false;
+                bool isSuccess = true;
                 OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(
                     createAndPushPacketsImpl(
                         std::shared_ptr<const RequestType>(&req,
@@ -269,8 +269,8 @@ public:
                         graph,
                         this->currentStreamTimestamp,
                         numberOfPacketsCreated),
-                    "partial deserialization of first request", hadError);
-                INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, !hadError));
+                    "partial deserialization of first request", isSuccess);
+                INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, isSuccess));
             }
 
             // Read loop
@@ -284,7 +284,7 @@ public:
                     this->name,
                     this->version,
                     this->inputTypes);
-                bool hadError = false;
+                bool isSuccess = true;
                 if (pstatus.ok()) {
                     OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(
                         createAndPushPacketsImpl(
@@ -294,11 +294,11 @@ public:
                             graph,
                             this->currentStreamTimestamp,
                             numberOfPacketsCreated),
-                        "partial deserialization of subsequent requests", hadError);
+                        "partial deserialization of subsequent requests", isSuccess);
                 } else {
-                    OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(pstatus, "validate subsequent requests", hadError);
+                    OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(pstatus, "validate subsequent requests", isSuccess);
                 }
-                INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, !hadError));
+                INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, isSuccess));
 
                 if (graph.HasError()) {
                     SPDLOG_DEBUG("Graph {}: encountered an error, stopping the execution", this->name);
