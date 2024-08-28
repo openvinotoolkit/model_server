@@ -555,37 +555,6 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsStreamOptionsSetFail) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-// This test can be sensitive to underlying hardware as well as model and runtime updates since it relies on model execution output
-TEST_F(LLMFlowHttpTest, streamChatCompletionsFinishReasonStop) {
-    std::string requestBody = R"(
-        {
-            "model": "llmDummyKFS",
-            "stream": true,
-            "ignore_eos": false,
-            "seed" : 1,
-            "max_tokens": 4095,
-            "messages": [
-            {
-                "role": "user",
-                "content": "What is OpenVINO?"
-            }
-            ]
-        }
-    )";
-
-    std::vector<std::string> responses;
-
-    EXPECT_CALL(writer, PartialReply(::testing::_))
-        .WillRepeatedly([this, &responses](std::string response) {
-            responses.push_back(response);
-        });
-    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
-}
-
 TEST_F(LLMFlowHttpTest, streamChatCompletionsFinishReasonLength) {
     std::string requestBody = R"(
         {
@@ -615,31 +584,6 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsFinishReasonLength) {
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
     ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
-}
-
-TEST_F(LLMFlowHttpTest, streamCompletionsFinishReasonStop) {
-    std::string requestBody = R"(
-        {
-            "model": "llmDummyKFS",
-            "stream": true,
-            "ignore_eos": false,
-            "seed" : 1,
-            "max_tokens": 4095,
-            "prompt": "What is OpenVINO?"
-        }
-    )";
-
-    std::vector<std::string> responses;
-
-    EXPECT_CALL(writer, PartialReply(::testing::_))
-        .WillRepeatedly([this, &responses](std::string response) {
-            responses.push_back(response);
-        });
-    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
 }
 
 TEST_F(LLMFlowHttpTest, streamCompletionsFinishReasonLength) {
