@@ -31,7 +31,6 @@ Here, we will also define the LLM engine parameters inside the `graph.pbtxt`.
 
 Install python dependencies for the conversion script:
 ```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2024/3/demos/continuous_batching/requirements.txt
 ```
 
@@ -287,7 +286,7 @@ It can be demonstrated using benchmarking app from vLLM repository:
 ```bash
 git clone https://github.com/vllm-project/vllm
 cd vllm
-pip3 install -r requirements-cpu.txt
+pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
 python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate inf
