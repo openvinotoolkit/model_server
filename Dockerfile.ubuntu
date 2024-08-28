@@ -312,6 +312,7 @@ COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
 COPY rununittest.sh /ovms/
 RUN ./rununittest.sh
+ARG FUZZER_BUILD=0
 
 # Custom Nodes
 # hadolint ignore=DL3059
