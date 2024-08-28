@@ -23,6 +23,7 @@
 
 namespace ovms {
 
+// Single Model / DAG
 extern const std::string METRIC_NAME_REQUESTS_SUCCESS;
 extern const std::string METRIC_NAME_REQUESTS_FAIL;
 
@@ -35,6 +36,13 @@ extern const std::string METRIC_NAME_INFERENCE_TIME;
 extern const std::string METRIC_NAME_CURRENT_REQUESTS;
 extern const std::string METRIC_NAME_REQUEST_TIME;
 extern const std::string METRIC_NAME_WAIT_FOR_INFER_REQ_TIME;
+
+// MediaPipe
+extern const std::string METRIC_NAME_CURRENT_GRAPHS;
+extern const std::string METRIC_NAME_RESPONSES;
+
+extern const std::string METRIC_NAME_REQUESTS_ACCEPTED;
+extern const std::string METRIC_NAME_REQUESTS_REJECTED;
 
 class Status;
 /**
@@ -83,6 +91,10 @@ private:
         {METRIC_NAME_REQUEST_TIME},
         {METRIC_NAME_STREAMS},
         {METRIC_NAME_INFERENCE_TIME},
-        {METRIC_NAME_WAIT_FOR_INFER_REQ_TIME}};
+        {METRIC_NAME_WAIT_FOR_INFER_REQ_TIME},
+        {METRIC_NAME_CURRENT_GRAPHS},
+        {METRIC_NAME_REQUESTS_ACCEPTED},
+        {METRIC_NAME_REQUESTS_REJECTED},
+        {METRIC_NAME_RESPONSES}};
 };
 }  // namespace ovms

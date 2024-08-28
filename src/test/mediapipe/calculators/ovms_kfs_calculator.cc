@@ -64,6 +64,7 @@ public:
             for (int j = 0; j < request->inputs()[i].shape_size(); j++) {
                 output->add_shape(request->inputs()[i].shape().at(j));
             }
+            *output->mutable_contents() = request->inputs()[i].contents();
         }
 
         for (int i = 0; i < request->raw_input_contents().size(); i++) {

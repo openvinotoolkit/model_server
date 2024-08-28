@@ -43,6 +43,7 @@ namespace ovms {
 class MediapipeGraphDefinitionUnloadGuard;
 class MetricConfig;
 class MetricRegistry;
+class MediapipeServableMetricReporter;
 class ModelManager;
 class MediapipeGraphExecutor;
 class Status;
@@ -158,6 +159,8 @@ private:
     std::atomic<uint64_t> requestsHandlesCounter = 0;
 
     PythonBackend* pythonBackend;
+
+    std::unique_ptr<MediapipeServableMetricReporter> reporter;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

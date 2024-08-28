@@ -2,3 +2,5 @@ mediapipe
 ovms
 *.jpeg
 *.jpg
+venv
+.venv

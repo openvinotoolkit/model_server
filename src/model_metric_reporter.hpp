@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -150,6 +151,85 @@ public:
     std::unique_ptr<MetricGauge> currentRequests;
 
     ModelMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
+};
+
+class MediapipeServableMetricReporter {
+    MetricRegistry* registry;
+
+public:
+    std::unique_ptr<MetricGauge> currentGraphs;
+
+    // KFS
+    std::unique_ptr<MetricCounter> requestAcceptedGrpcModelInfer;
+    std::unique_ptr<MetricCounter> requestAcceptedGrpcModelInferStream;
+
+    std::unique_ptr<MetricCounter> requestAcceptedRestModelInfer;
+
+    std::unique_ptr<MetricCounter> requestRejectedGrpcModelInfer;
+    std::unique_ptr<MetricCounter> requestRejectedGrpcModelInferStream;
+
+    std::unique_ptr<MetricCounter> requestRejectedRestModelInfer;
+
+    // V3
+    std::unique_ptr<MetricCounter> requestAcceptedRestV3Unary;
+    std::unique_ptr<MetricCounter> requestAcceptedRestV3Stream;
+    std::unique_ptr<MetricCounter> requestRejectedRestV3Unary;
+    std::unique_ptr<MetricCounter> requestRejectedRestV3Stream;
+
+    // --- responses -----
+    // KFS
+    std::unique_ptr<MetricCounter> responseGrpcModelInfer;
+    std::unique_ptr<MetricCounter> responseGrpcModelInferStream;
+
+    std::unique_ptr<MetricCounter> responseRestModelInfer;
+
+    // V3
+    std::unique_ptr<MetricCounter> responseRestV3Unary;
+    std::unique_ptr<MetricCounter> responseRestV3Stream;
+
+    inline MetricCounter* getRequestsMetric(const ExecutionContext& context, bool success = true) {
+        if (context.interface == ExecutionContext::Interface::GRPC) {
+            if (context.method == ExecutionContext::Method::ModelInfer)
+                return success ? this->requestAcceptedGrpcModelInfer.get() : this->requestRejectedGrpcModelInfer.get();
+            if (context.method == ExecutionContext::Method::ModelInferStream)
+                return success ? this->requestAcceptedGrpcModelInferStream.get() : this->requestRejectedGrpcModelInferStream.get();
+            return nullptr;
+        } else if (context.interface == ExecutionContext::Interface::REST) {
+            if (context.method == ExecutionContext::Method::ModelInfer)
+                return success ? this->requestAcceptedRestModelInfer.get() : this->requestRejectedRestModelInfer.get();
+            if (context.method == ExecutionContext::Method::V3Unary)
+                return success ? this->requestAcceptedRestV3Unary.get() : this->requestRejectedRestV3Unary.get();
+            if (context.method == ExecutionContext::Method::V3Stream)
+                return success ? this->requestAcceptedRestV3Stream.get() : this->requestRejectedRestV3Stream.get();
+            return nullptr;
+        } else {
+            return nullptr;
+        }
+        return nullptr;
+    }
+
+    inline MetricCounter* getResponsesMetric(const ExecutionContext& context) {
+        if (context.interface == ExecutionContext::Interface::GRPC) {
+            if (context.method == ExecutionContext::Method::ModelInfer)
+                return this->responseGrpcModelInfer.get();
+            if (context.method == ExecutionContext::Method::ModelInferStream)
+                return this->responseGrpcModelInferStream.get();
+            return nullptr;
+        } else if (context.interface == ExecutionContext::Interface::REST) {
+            if (context.method == ExecutionContext::Method::ModelInfer)
+                return this->responseRestModelInfer.get();
+            if (context.method == ExecutionContext::Method::V3Unary)
+                return this->responseRestV3Unary.get();
+            if (context.method == ExecutionContext::Method::V3Stream)
+                return this->responseRestV3Stream.get();
+            return nullptr;
+        } else {
+            return nullptr;
+        }
+        return nullptr;
+    }
+
+    MediapipeServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& graphName);
 };
 
 }  // namespace ovms

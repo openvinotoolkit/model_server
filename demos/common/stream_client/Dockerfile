@@ -62,7 +62,7 @@ RUN apt-get update -qq && apt-get --no-install-recommends -y install \
   libgstreamer-plugins-base1.0-dev \
   && rm -rf /var/lib/apt/lists/*
 RUN pip3 install "numpy<2.0.0"
-RUN git clone https://github.com/oneapi-src/oneVPL.git onevpl --branch v2023.3.1 && \
+RUN git clone https://github.com/intel/libvpl.git onevpl --branch v2023.3.1 && \
   cd onevpl && \
   export VPL_INSTALL_DIR=`pwd`/../_vplinstall && \
   mkdir _build && \
@@ -71,7 +71,7 @@ RUN git clone https://github.com/oneapi-src/oneVPL.git onevpl --branch v2023.3.1
   cmake .. -DCMAKE_INSTALL_PREFIX=$VPL_INSTALL_DIR && \
   cmake --build . --config Release && \
   cmake --build . --config Release --target install
- RUN git clone https://github.com/oneapi-src/oneVPL-intel-gpu onevpl-gpu && \
+ RUN git clone https://github.com/intel/vpl-gpu-rt.git onevpl-gpu --branch intel-onevpl-23.3 && \
    cd onevpl-gpu  && \
    mkdir build && cd build && \
    cmake .. && \

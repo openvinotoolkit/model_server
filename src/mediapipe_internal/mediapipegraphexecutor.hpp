@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "../execution_context.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
 #pragma GCC diagnostic push
@@ -46,7 +47,7 @@ inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
     return StatusCode::MEDIAPIPE_EXECUTION_ERROR;
 }
 
-#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message)             \
+#define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message, isSuccess)  \
     {                                                                    \
         auto status = code;                                              \
         if (!status.ok()) {                                              \
@@ -58,6 +59,9 @@ inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
                 SPDLOG_DEBUG("Writing error to disconnected client: {}", \
                     status.string());                                    \
             }                                                            \
+            isSuccess = false;                                           \
+        } else {                                                         \
+            isSuccess = true;                                            \
         }                                                                \
     }
 
@@ -76,6 +80,8 @@ class MediapipeGraphExecutor {
 
     ::mediapipe::Timestamp currentStreamTimestamp;
 
+    MediapipeServableMetricReporter* mediapipeServableMetricReporter;
+
 public:
     static const std::string PYTHON_SESSION_SIDE_PACKET_TAG;
     static const std::string LLM_SESSION_SIDE_PACKET_TAG;
@@ -87,12 +93,15 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
         const LLMNodeResourcesMap& llmNodeResourcesMap,
-        PythonBackend* pythonBackend);
+        PythonBackend* pythonBackend,
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter);
 
     template <typename RequestType, typename ResponseType>
-    Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) {
+    Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", this->name);
+        MetricCounterGuard failedRequestsGuard(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, false));
+        MetricGaugeGuard currentGraphsGuard(this->mediapipeServableMetricReporter->currentGraphs.get());
         ::mediapipe::CalculatorGraph graph;
         MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
         std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
@@ -143,6 +152,9 @@ public:
             return Status(StatusCode::INVALID_NO_OF_INPUTS, "Not all input packets created");
         }
 
+        failedRequestsGuard.disable();
+        INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, true));
+
         // we wait idle since some calculators could hold ownership on packet content while nodes further down the graph
         // can be still processing those. Closing packet sources triggers Calculator::Close() on nodes that do not expect
         // new packets
@@ -179,16 +191,18 @@ public:
             SPDLOG_DEBUG("Mediapipe failed to execute. Failed to receive all output packets");
             return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Unknown error during mediapipe execution");
         }
+        INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getResponsesMetric(executionContext));
         SPDLOG_DEBUG("Received all output stream packets for graph: {}", this->name);
         return StatusCode::OK;
     }
 
     template <typename RequestType, typename ReaderWriterType>
-    Status inferStream(const RequestType& req, ReaderWriterType& serverReaderWriter) {
+    Status inferStream(const RequestType& req, ReaderWriterType& serverReaderWriter, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_DEBUG("Start MediapipeGraphExecutor::inferEx mediapipe graph: {} execution", this->name);
         std::mutex sendMutex;
         try {
+            MetricGaugeGuard currentGraphs(this->mediapipeServableMetricReporter->currentGraphs.get());
             ::mediapipe::CalculatorGraph graph;
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph initialization");
@@ -199,7 +213,7 @@ public:
                 OVMS_PROFILE_SCOPE("Mediapipe graph installing packet observers");
                 // Installing observers
                 for (const auto& outputName : this->outputNames) {
-                    MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&serverReaderWriter, &sendMutex, &outputName, this](const ::mediapipe::Packet& packet) -> absl::Status {
+                    MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&serverReaderWriter, &sendMutex, &outputName, &executionContext, this](const ::mediapipe::Packet& packet) -> absl::Status {
                         OVMS_PROFILE_SCOPE("Mediapipe Packet Ready Callback");
                         try {
                             std::lock_guard<std::mutex> lock(sendMutex);
@@ -212,6 +226,7 @@ public:
                                                              packet,
                                                              serverReaderWriter),
                                 "error in send packet routine");
+                            INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getResponsesMetric(executionContext));
                             return absl::OkStatus();
                         } catch (...) {
                             return absl::Status(absl::StatusCode::kCancelled, "error in serialization");
@@ -241,6 +256,7 @@ public:
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph deserializing first request");
                 // Deserialize first request
+                bool isSuccess = true;
                 OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(
                     createAndPushPacketsImpl(
                         std::shared_ptr<const RequestType>(&req,
@@ -253,7 +269,8 @@ public:
                         graph,
                         this->currentStreamTimestamp,
                         numberOfPacketsCreated),
-                    "partial deserialization of first request");
+                    "partial deserialization of first request", isSuccess);
+                INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, isSuccess));
             }
 
             // Read loop
@@ -267,6 +284,7 @@ public:
                     this->name,
                     this->version,
                     this->inputTypes);
+                bool isSuccess = true;
                 if (pstatus.ok()) {
                     OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(
                         createAndPushPacketsImpl(
@@ -276,10 +294,11 @@ public:
                             graph,
                             this->currentStreamTimestamp,
                             numberOfPacketsCreated),
-                        "partial deserialization of subsequent requests");
+                        "partial deserialization of subsequent requests", isSuccess);
                 } else {
-                    OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(pstatus, "validate subsequent requests");
+                    OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(pstatus, "validate subsequent requests", isSuccess);
                 }
+                INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, isSuccess));
 
                 if (graph.HasError()) {
                     SPDLOG_DEBUG("Graph {}: encountered an error, stopping the execution", this->name);

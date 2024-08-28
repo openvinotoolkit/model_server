@@ -276,7 +276,7 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     SPDLOG_DEBUG("Total gRPC request processing time: {} ms", requestTotal / 1000);
     if (!reporter) {
         return grpc(Status(StatusCode::OK));
-        // TODO fix after Mediapipe metrics implementation
+        // There is no request time metric for MediaPipe endpoints
     }
     OBSERVE_IF_ENABLED(reporter->requestTimeGrpc, requestTotal);
     return grpc(status);
@@ -305,7 +305,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
             if (!status.ok()) {
                 return status;
             }
-            status = executor->infer(request, response, executionContext, reporterOut);
+            status = executor->infer(request, response, executionContext);
             return status;
 #else
             SPDLOG_DEBUG("Requested DAG: {} does not exist. Mediapipe support was disabled during build process...", request->model_name());
@@ -348,7 +348,8 @@ Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* cont
     if (!status.ok()) {
         return status;
     }
-    return executor->inferStream(firstRequest, *serverReaderWriter);
+    ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInferStream};
+    return executor->inferStream(firstRequest, *serverReaderWriter, executionContext);
 #else
     SPDLOG_DEBUG("Mediapipe support was disabled during build process...");
     return StatusCode::NOT_IMPLEMENTED;

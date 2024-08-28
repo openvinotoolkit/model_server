@@ -47,6 +47,7 @@ cc_library(
         "ovms_kfs_calculator.cc",
         "streaming_test_calculator.cpp",
         "openai_chat_completions_mock_calculator.cpp",
+        "two_input_calculator.cpp",
     ],
     copts = [
         "-Wall",
