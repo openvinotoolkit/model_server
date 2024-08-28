@@ -14,8 +14,9 @@ This demo is supported starting from version 2024.2.
 ```bash
 docker pull openvino/model_server:latest
 ```
-It is optional but recommended to build the latest code version from the main branch.
+It is recommended to build the latest code version when running the demo from the main branch.
 That way you can take advantage of the latest enhancements in this feature.
+When running the demo from release branch, use public docker image.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
@@ -32,7 +33,7 @@ Here, we will also define the LLM engine parameters inside the `graph.pbtxt`.
 Install python dependencies for the conversion script:
 ```bash
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git@xeon openvino-tokenizers transformers==4.41.2
+pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git@main openvino-tokenizers transformers
 ```
 
 Run optimum-cli to download and quantize the model:
@@ -295,7 +296,7 @@ It can be demonstrated using benchmarking app from vLLM repository:
 ```bash
 git clone https://github.com/vllm-project/vllm
 cd vllm
-pip3 install -r requirements-cpu.txt
+pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
 python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate inf
