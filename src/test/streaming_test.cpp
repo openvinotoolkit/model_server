@@ -57,7 +57,14 @@ protected:
     const std::string version{DEFAULT_GRAPH_VERSION};
 
     ::inference::ModelInferRequest firstRequest;
+    ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInferStream};
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
+
+    std::unique_ptr<MediapipeServableMetricReporter> reporter;
+
+    void SetUp() override {
+        this->reporter = std::make_unique<MediapipeServableMetricReporter>(nullptr, nullptr, "");  // disabled metric reporter
+    }
 };
 
 #if (PYTHON_DISABLE == 0)
@@ -70,7 +77,8 @@ protected:
     std::unique_ptr<ConstructorEnabledModelManager> manager;
 
 public:
-    void SetUp() {
+    void SetUp() override {
+        StreamingTest::SetUp();
         pythonModule = std::make_unique<PythonInterpreterModule>();
         pythonModule->start(ovms::Config::instance());
         pythonBackend = pythonModule->getPythonBackend();
@@ -332,7 +340,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::KFS_REQUEST}},
         {{"out", mediapipe_packet_type_enum::KFS_RESPONSE}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
@@ -347,7 +355,7 @@ node {
         .WillOnce(SendWithTimestamp({{"out", 7.2f}}, 1))
         .WillOnce(SendWithTimestamp({{"out", 102.4f}}, 2));
 
-    auto status = executor.inferStream(this->firstRequest, this->stream);
+    auto status = executor.inferStream(this->firstRequest, this->stream, this->executionContext);
     EXPECT_EQ(status, StatusCode::OK) << status.string();
 }
 // Positive:
@@ -388,7 +396,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}});  // no timestamp specified, server will assign one
@@ -403,7 +411,7 @@ node {
         .WillOnce(SendWithTimestamp({{"out", 8.2f}}, 1))
         .WillOnce(SendWithTimestamp({{"out", 103.4f}}, 2));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 class StreamingWithOVMSCalculatorsTest : public StreamingTest {
@@ -451,7 +459,7 @@ TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSep
         .WillOnce(Disconnect());
 
     // Expect no responses
-    status = executor->inferStream(this->firstRequest, this->stream);
+    status = executor->inferStream(this->firstRequest, this->stream, this->executionContext);
     ASSERT_EQ(status, StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
 
@@ -473,7 +481,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests with manually (client) assigned ascending order of timestamp and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);  // first request with timestamp 3
@@ -488,7 +496,7 @@ node {
         .WillOnce(SendWithTimestamp({{"out", 8.2f}}, 12))
         .WillOnce(SendWithTimestamp({{"out", 100.9f}}, 99));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 // Generative AI case + automatic timestamping server-side
@@ -518,7 +526,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     // Mock only 1 request and disconnect immediately
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
@@ -532,7 +540,7 @@ node {
         .WillOnce(SendWithTimestamp({{"out", 5.5f}}, 2))
         .WillOnce(SendWithTimestamp({{"out", 6.5f}}, 3));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 // PYTHON CALCULATOR CASES
@@ -580,7 +588,7 @@ node {
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestamp({{"output", 4.5f}}, 0));
 
-    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(PythonStreamingTest, Positive_SingleStreamSend1Receive1PythonWithConverters) {
@@ -640,7 +648,7 @@ node {
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0));
 
-    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(PythonStreamingTest, Positive_SingleStreamSend3Receive3Python) {
@@ -683,7 +691,7 @@ node {
         .WillOnce(SendWithTimestamp({{"output", 8.2f}}, 1))
         .WillOnce(SendWithTimestamp({{"output", 103.4f}}, 2));
 
-    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(PythonStreamingTest, Positive_SingleStreamSend3Receive3PythonWithConverters) {
@@ -746,7 +754,7 @@ node {
         .WillOnce(SendWithTimestamp({{"out", 8.2f}}, 1))
         .WillOnce(SendWithTimestamp({{"out", 103.4f}}, 2));
 
-    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 // Allow Process() to execute for every input separately with ImmediateInputStreamHandler
@@ -799,7 +807,7 @@ node {
         .WillOnce(SendWithTimestamp({{"output1", 4.5f}}, 0))
         .WillOnce(SendWithTimestampAndNotifyEnd({{"output2", 8.2f}}, 1, mtx));
 
-    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 // --------------------------- Generative mode
@@ -859,7 +867,7 @@ node {
         .WillOnce(SendWithTimestamp({{"output", 5.5f}}, 1))
         .WillOnce(SendWithTimestamp({{"output", 6.5f}}, 2));
 
-    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(PythonStreamingTest, MultipleStreamsInSingleRequestSend1Receive3Python) {
@@ -924,7 +932,7 @@ node {
         .WillOnce(SendWithTimestamp({{"output1", 6.5f}}, 2))
         .WillOnce(SendWithTimestamp({{"output2", 16.5f}}, 2));
 
-    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(PythonStreamingTest, MultipleStreamsInMultipleRequestSend1Receive3Python) {
@@ -991,7 +999,7 @@ node_options: {
         .WillOnce(SendWithTimestamp({{"output1", 6.5f}}, timestamp + 2))
         .WillOnce(SendWithTimestampAndNotifyEnd({{"output2", 10.2f}}, timestamp + 2, mtx));
 
-    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 // Negative - execute yields, but no loopback
@@ -1032,7 +1040,7 @@ node_options: {
 
     prepareRequest(this->firstRequest, {{"input1", 3.5f}, {"input2", 3.5f}}, timestamp);
     EXPECT_CALL(this->stream, Read(_));
-    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_F(PythonStreamingTest, Negative_calculatorReturnNotListOrIteratorObject) {
@@ -1064,7 +1072,7 @@ node {
     this->pythonModule->releaseGILFromThisThread();
     prepareRequest(this->firstRequest, {{"input", 3.5f}});
 
-    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_F(PythonStreamingTest, Negative_calculatorReturnListWithNonTensorObject) {
@@ -1096,7 +1104,7 @@ node {
     this->pythonModule->releaseGILFromThisThread();
     prepareRequest(this->firstRequest, {{"input", 3.5f}});
 
-    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 // --- End Python cases
@@ -1134,7 +1142,7 @@ node {
             {"out3", mediapipe_packet_type_enum::OVTENSOR}},
         {"in1", "in2", "in3"},
         {"out1", "out2", "out3"},
-        {}, {}, nullptr};
+        {}, {}, nullptr, this->reporter.get()};
 
     std::mutex mtx;
     const int64_t timestamp = 64;
@@ -1150,7 +1158,7 @@ node {
         .WillOnce(SendWithTimestamp({{"out2", 8.2f}}, timestamp))
         .WillOnce(SendWithTimestampAndNotifyEnd({{"out3", 103.4f}}, timestamp, mtx));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 // Sending inputs together for synchronized graph
@@ -1185,7 +1193,7 @@ node {
             {"out3", mediapipe_packet_type_enum::OVTENSOR}},
         {"in1", "in2", "in3"},
         {"out1", "out2", "out3"},
-        {}, {}, nullptr};
+        {}, {}, nullptr, this->reporter.get()};
 
     std::mutex mtx;
     const int64_t timestamp = 64;
@@ -1199,7 +1207,7 @@ node {
         .WillOnce(SendWithTimestamp({{"out2", 8.2f}}, timestamp))
         .WillOnce(SendWithTimestampAndNotifyEnd({{"out3", 103.4f}}, timestamp, mtx));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, WrongOrderOfManualTimestamps) {
@@ -1219,7 +1227,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     std::mutex mtx;
 
@@ -1232,7 +1240,7 @@ node {
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 4.5f}}, 3, mtx));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_F(StreamingTest, ErrorInstallingObserver) {
@@ -1252,12 +1260,12 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"wrong_name"}, {}, {}, nullptr};  // cannot install observer due to wrong output name (should never happen due to validation)
+        {"in"}, {"wrong_name"}, {}, {}, nullptr, this->reporter.get()};  // cannot install observer due to wrong output name (should never happen due to validation)
 
     EXPECT_CALL(this->stream, Read(_)).Times(0);
     EXPECT_CALL(this->stream, Write(_, _)).Times(0);
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::INTERNAL_ERROR);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::INTERNAL_ERROR);
 }
 
 TEST_F(StreamingTest, ExitOnDisconnectionDuringRead) {
@@ -1277,7 +1285,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {});
     EXPECT_CALL(this->stream, Read(_))
@@ -1285,7 +1293,7 @@ node {
 
     EXPECT_CALL(this->stream, Write(_, _)).Times(0);
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, ErrorOnDisconnectionDuringWrite) {
@@ -1305,7 +1313,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     std::mutex mtx;
 
@@ -1316,7 +1324,7 @@ node {
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(DisconnectOnWriteAndNotifyEnd(mtx));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_F(StreamingTest, InvalidGraph) {
@@ -1340,10 +1348,10 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
 TEST_F(StreamingTest, ErrorDuringFirstRequestDeserialization) {
@@ -1363,7 +1371,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     // Invalid request - missing data in buffer
     prepareInvalidRequest(this->firstRequest, {"in"});  // no timestamp specified, server will assign one
@@ -1377,7 +1385,7 @@ node {
             Status(StatusCode::INVALID_CONTENT_SIZE).string() + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of first request"},
             mtx));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, ErrorDuringSubsequentRequestDeserializations) {
@@ -1397,7 +1405,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     std::mutex mtx[3];
 
@@ -1420,7 +1428,7 @@ node {
             Status(StatusCode::INVALID_UNEXPECTED_INPUT).string() + " - NONEXISTING is unexpected; partial deserialization of subsequent requests",
             mtx[2]));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, ErrorInProcessStopsStream) {
@@ -1440,7 +1448,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);
     EXPECT_CALL(this->stream, Read(_))
@@ -1448,7 +1456,7 @@ node {
 
     EXPECT_CALL(this->stream, Write(_, _)).Times(0);
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_F(StreamingTest, ManualTimestampWrongType) {
@@ -1468,7 +1476,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     setRequestTimestamp(this->firstRequest, std::string("not an int"));
@@ -1482,7 +1490,7 @@ node {
             Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request parameter OVMS_MP_TIMESTAMP. Should be int64").string() + std::string{"; partial deserialization of first request"},
             mtx));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, ManualTimestampNotInRange) {
@@ -1502,7 +1510,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     // Timestamps not allowed in stream
     // Expect continuity of operation and response with error message
@@ -1522,7 +1530,7 @@ node {
             .WillOnce(SendErrorAndNotifyEnd(
                 Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string() + std::string{" - "} + ::mediapipe::Timestamp::CreateNoErrorChecking(timestamp).DebugString() + std::string{"; partial deserialization of first request"},
                 mtx));
-        ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+        ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
     }
 }
 
@@ -1543,7 +1551,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     // Allowed in stream
     for (auto timestamp : std::vector<::mediapipe::Timestamp>{
@@ -1556,7 +1564,7 @@ node {
             .WillOnce(DisconnectWhenNotified(mtx));  // To ensure the read loop is stopped
         EXPECT_CALL(this->stream, Write(_, _))
             .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 4.5f}}, timestamp.Value(), mtx));
-        ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+        ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
     }
 }
 
@@ -1577,7 +1585,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     std::mutex mtx[2];
 
@@ -1592,7 +1600,7 @@ node {
             Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string() + std::string{" - Timestamp::OneOverPostStream(); partial deserialization of subsequent requests"},
             mtx[1]));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, FirstRequestParametersPassedAsSidePackets) {
@@ -1613,7 +1621,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 3 requests and disconnection
     prepareRequestWithParam(this->firstRequest, {{"in", 3.5f}}, {"val", 65});  // request with parameter val
@@ -1628,7 +1636,7 @@ node {
         .WillOnce(SendWithTimestamp({{"out", 72.2f}}, 1))
         .WillOnce(SendWithTimestamp({{"out", 167.4f}}, 2));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, FirstRequestRestrictedParamName) {
@@ -1649,7 +1657,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving the invalid request and disconnection
     // Request with invalid param py (special pythons session side packet)
@@ -1657,7 +1665,7 @@ node {
 
     EXPECT_CALL(this->stream, Read(_)).Times(0);
     EXPECT_CALL(this->stream, Write(_, _)).Times(0);
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
 TEST_F(StreamingTest, FirstRequestMissingRequiredParameter) {
@@ -1678,13 +1686,13 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});  // missing required request param
     EXPECT_CALL(this->stream, Read(_)).Times(0);
     EXPECT_CALL(this->stream, Write(_, _)).Times(0);
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 }
 
 TEST_F(StreamingTest, ServableNameAndVersionPassedFromFirstRequestToAllResponses) {
@@ -1704,7 +1712,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     // Mock receiving 2 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, std::nullopt, this->name, this->version);  // no timestamp specified, server will assign one
@@ -1717,7 +1725,7 @@ node {
         .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 4.5f}}, 0, this->name, this->version))
         .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 8.2f}}, 1, this->name, this->version));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, SubsequentRequestsDoNotMatchServableNameAndVersion) {
@@ -1737,7 +1745,7 @@ node {
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr};
+        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
     std::mutex mtx;
     // Mock receiving 2 requests and disconnection
@@ -1758,5 +1766,5 @@ node {
         .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 11.4f}}, 2, this->name, this->version))
         .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 13.5f}}, 3, this->name, this->version));
 
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream), StatusCode::OK);
+    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }

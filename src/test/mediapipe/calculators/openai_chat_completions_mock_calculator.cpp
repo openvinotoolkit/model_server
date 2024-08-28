@@ -68,7 +68,12 @@ public:
             return absl::OkStatus();
         }
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
-            auto data = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();  // TODO: Possibly avoid making copy
+            auto data = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+            // This calculator produces string so that it contains:
+            // - URI
+            // - Headers (kv pairs)
+            // - Request body
+            // - timestamps 0-8 (appended in cycles)
             this->body = data.uri + std::string{"\n"};
             for (auto header : data.headers) {
                 this->body += header.first;
@@ -82,6 +87,11 @@ public:
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                 data.parsedJson->Accept(writer);
                 this->body += buffer.GetString();
+            }
+
+            // Mock failing scenario
+            if (data.body.find("ReturnError") != std::string::npos) {
+                return absl::InvalidArgumentError("Returned error");
             }
         }
 

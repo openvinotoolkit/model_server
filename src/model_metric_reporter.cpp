@@ -323,4 +323,142 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
     }
 }
 
+MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& graphName) :
+    registry(registry) {
+    if (!registry) {
+        return;
+    }
+
+    if (!metricConfig || !metricConfig->metricsEnabled) {
+        return;
+    }
+
+    auto familyName = METRIC_NAME_CURRENT_GRAPHS;
+    if (metricConfig->isFamilyEnabled(familyName)) {
+        auto family = registry->createFamily<MetricGauge>(familyName,
+            "Number of MediaPipe graphs in process.");
+        THROW_IF_NULL(family, "cannot create family");
+        this->currentGraphs = family->addMetric(
+            {{"name", graphName}});
+        THROW_IF_NULL(this->currentGraphs, "cannot create metric");
+    } else {
+        SPDLOG_INFO("DISABLED {}", METRIC_NAME_CURRENT_GRAPHS);
+    }
+
+    familyName = METRIC_NAME_REQUESTS_ACCEPTED;
+    if (metricConfig->isFamilyEnabled(familyName)) {
+        auto family = registry->createFamily<MetricCounter>(familyName,
+            "Number of accepted requests which ended up inserting packet(s) into the MediaPipe graph.");
+        THROW_IF_NULL(family, "cannot create family");
+
+        // KFS
+        this->requestAcceptedGrpcModelInfer = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelInfer"},
+            {"interface", "gRPC"}});
+        THROW_IF_NULL(this->requestAcceptedGrpcModelInfer, "cannot create metric");
+
+        this->requestAcceptedGrpcModelInferStream = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelInferStream"},
+            {"interface", "gRPC"}});
+        THROW_IF_NULL(this->requestAcceptedGrpcModelInfer, "cannot create metric");
+
+        this->requestAcceptedRestModelInfer = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelInfer"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->requestAcceptedRestModelInfer, "cannot create metric");
+
+        this->requestAcceptedRestV3Unary = family->addMetric({{"name", graphName},
+            {"api", "V3"},
+            {"method", "Unary"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->requestAcceptedRestV3Unary, "cannot create metric");
+
+        this->requestAcceptedRestV3Stream = family->addMetric({{"name", graphName},
+            {"api", "V3"},
+            {"method", "Stream"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->requestAcceptedRestV3Stream, "cannot create metric");
+    }
+
+    familyName = METRIC_NAME_REQUESTS_REJECTED;
+    if (metricConfig->isFamilyEnabled(familyName)) {
+        auto family = registry->createFamily<MetricCounter>(familyName,
+            "Number of rejected requests which did not end up being inserted into the MediaPipe graph.");
+        THROW_IF_NULL(family, "cannot create family");
+
+        // KFS
+        this->requestRejectedGrpcModelInfer = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelInfer"},
+            {"interface", "gRPC"}});
+        THROW_IF_NULL(this->requestRejectedGrpcModelInfer, "cannot create metric");
+
+        this->requestRejectedGrpcModelInferStream = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelInferStream"},
+            {"interface", "gRPC"}});
+        THROW_IF_NULL(this->requestRejectedGrpcModelInfer, "cannot create metric");
+
+        this->requestRejectedRestModelInfer = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelInfer"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->requestRejectedRestModelInfer, "cannot create metric");
+
+        this->requestRejectedRestV3Unary = family->addMetric({{"name", graphName},
+            {"api", "V3"},
+            {"method", "Unary"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->requestRejectedRestV3Unary, "cannot create metric");
+
+        this->requestRejectedRestV3Stream = family->addMetric({{"name", graphName},
+            {"api", "V3"},
+            {"method", "Stream"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->requestRejectedRestV3Stream, "cannot create metric");
+    }
+
+    familyName = METRIC_NAME_RESPONSES;
+    if (metricConfig->isFamilyEnabled(familyName)) {
+        auto family = registry->createFamily<MetricCounter>(familyName,
+            "Number of responses generated the MediaPipe graph.");
+        THROW_IF_NULL(family, "cannot create family");
+
+        // KFS
+        this->responseGrpcModelInfer = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelInfer"},
+            {"interface", "gRPC"}});
+        THROW_IF_NULL(this->responseGrpcModelInfer, "cannot create metric");
+
+        this->responseGrpcModelInferStream = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelInferStream"},
+            {"interface", "gRPC"}});
+        THROW_IF_NULL(this->responseGrpcModelInfer, "cannot create metric");
+
+        this->responseRestModelInfer = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelInfer"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->responseRestModelInfer, "cannot create metric");
+
+        // V3
+        this->responseRestV3Unary = family->addMetric({{"name", graphName},
+            {"api", "V3"},
+            {"method", "Unary"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->responseRestV3Unary, "cannot create metric");
+
+        this->responseRestV3Stream = family->addMetric({{"name", graphName},
+            {"api", "V3"},
+            {"method", "Stream"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->responseRestV3Stream, "cannot create metric");
+    }
+}
+
 }  // namespace ovms

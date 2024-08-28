@@ -2403,11 +2403,12 @@ class MediapipeSerialization : public ::testing::Test {
             stream_types_mapping_t outputTypes,
             std::vector<std::string> inputNames, std::vector<std::string> outputNames,
             const PythonNodeResourcesMap& pythonNodeResourcesMap,
-            PythonBackend* pythonBackend) :
-            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, pythonBackend) {}
+            MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, nullptr, mediapipeServableMetricReporter) {}
     };
 
 protected:
+    std::unique_ptr<MediapipeServableMetricReporter> reporter;
     std::unique_ptr<MockedMediapipeGraphExecutor> executor;
     ::inference::ModelInferResponse mp_response;
     void SetUp() {
@@ -2421,7 +2422,8 @@ protected:
         const std::vector<std::string> outputNames;
         const ::mediapipe::CalculatorGraphConfig config;
         PythonNodeResourcesMap pythonNodeResourcesMap;
-        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, nullptr);
+        this->reporter = std::make_unique<MediapipeServableMetricReporter>(nullptr, nullptr, "");  // disabled reporter
+        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, this->reporter.get());
     }
 };
 
@@ -2940,8 +2942,7 @@ protected:
         ASSERT_EQ(modelManager.createPipeline(executor, this->request.model_name()), ovms::StatusCode::OK);
         using ovms::ExecutionContext;
         ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer};
-        ServableMetricReporter* reporter = nullptr;
-        auto status = executor->infer(&this->request, &response, executionContext, reporter);
+        auto status = executor->infer(&this->request, &response, executionContext);
         EXPECT_EQ(status, expectedStatus) << status.string();
         if (expectedStatus == ovms::StatusCode::OK) {
             ASSERT_EQ(response.outputs_size(), 1);
@@ -3572,6 +3573,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "ToImageCalculator",
         "TrackedDetectionManagerCalculator",
         "Tvl1OpticalFlowCalculator",
+        "TwoInputCalculator",
         "UpdateFaceLandmarksCalculator",
         "VideoPreStreamCalculator",
         "VisibilityCopyCalculator",
