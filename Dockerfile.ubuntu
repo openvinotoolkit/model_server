@@ -390,11 +390,12 @@ FROM $BASE_IMAGE as release
 ARG INSTALL_RPMS_FROM_URL=
 ARG INSTALL_DRIVER_VERSION="24.26.30049"
 ARG GPU=0
+ARG NPU=0
 ARG NVIDIA=0
 ENV DEBIAN_FRONTEND=noninteractive
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}
-LABEL supported-devices="CPU=1 GPU=${GPU} NVIDIA=${NVIDIA}"
+LABEL supported-devices="CPU=1 GPU=${GPU} NPU=${NPU} NVIDIA=${NVIDIA}"
 ARG BASE_IMAGE
 LABEL base-image=${BASE_IMAGE}
 ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
@@ -438,21 +439,19 @@ RUN     apt-get update -y ; \
                 ;; \
                 "23.13.26032") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.05.25593.11/libigdgmm12_22.3.0_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13700.14/intel-igc-core_1.0.13700.14_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13700.14/intel-igc-opencl_1.0.13700.14_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.13.26032.30/intel-opencl-icd_23.13.26032.30_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.13.26032.30/libigdgmm12_22.3.0_amd64.deb ; \
-                        dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
+                        dpkg -i ./*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
                 "23.22.26516") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/intel-level-zero-gpu_1.3.26516.18_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.14062.11/intel-igc-core_1.0.14062.11_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.14062.11/intel-igc-opencl_1.0.14062.11_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/intel-opencl-icd_23.22.26516.18_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/libigdgmm12_22.3.0_amd64.deb ; \
-                        dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
+                        dpkg -i ./*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
                 "24.26.30049") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
@@ -478,6 +477,15 @@ RUN     apt-get update -y ; \
                             intel-media-va-driver-non-free libmfx1 && \
                             rm -rf /var/lib/apt/lists/* ; \
                 esac ; \
+        fi ; \
+        if [ "$NPU" == "1" ] ; then \
+            mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
+            apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-driver-compiler-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-fw-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-level-zero-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.6/level-zero_1.17.6+u22.04_amd64.deb ; \
+            dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
         fi ; \
         apt-get clean ; \
         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
