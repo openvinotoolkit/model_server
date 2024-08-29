@@ -78,6 +78,8 @@ public:
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             std::string response = "";
             InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
             if (!payload.parsedJson->IsObject())
                 return absl::InvalidArgumentError("Received json is not an object");
             auto it = payload.parsedJson->FindMember("input");
@@ -87,7 +89,7 @@ public:
                 } else if (it->value.IsArray()) {
                     for (auto& input : it->value.GetArray()) {
                         if (!input.IsString())
-                            return absl::InvalidArgumentError("input should be string");
+                            return absl::InvalidArgumentError("every element in input array should be string");
                         response += input.GetString();
                     }
                 } else {
