@@ -121,7 +121,7 @@ Status sendErrorImplWithCode(
     const std::string& message,
     const int code,
     HttpReaderWriter& serverReaderWriter) {
-    serverReaderWriter.PartialReplyWithStatus("{\"error\": \"" + message + "\"}", code);
+    serverReaderWriter.PartialReplyWithStatus("{\"error\": \"" + message + "\"}", tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
     return StatusCode::OK;
 }
 

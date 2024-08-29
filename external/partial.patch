@@ -1,5 +1,5 @@
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
-index c8d0501b..c09331aa 100644
+index c8d0501b..ecddbac3 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
 @@ -17,6 +17,8 @@ limitations under the License.
@@ -75,9 +75,9 @@ index c8d0501b..c09331aa 100644
  
 -void EvHTTPRequest::PartialReplyWithStatus(HTTPStatusCode status) {
 -  NET_LOG(FATAL, "PartialReplyWithStatus not implemented.");
-+void EvHTTPRequest::PartialReplyWithStatus(std::string data, int code) {
++void EvHTTPRequest::PartialReplyWithStatus(std::string data, HTTPStatusCode status) {
 +  bool result =
-+      server_->EventLoopSchedule([this, data = std::move(data), code]() mutable { EvPartialSendReply(std::move(data), code); });
++      server_->EventLoopSchedule([this, data = std::move(data), status]() mutable { EvPartialSendReply(std::move(data), status); });
 +
 +  if (!result) {
 +    NET_LOG(ERROR, "Failed to EventLoopSchedule PartialReply()");
@@ -88,7 +88,7 @@ index c8d0501b..c09331aa 100644
 -void EvHTTPRequest::PartialReply() {
 -  NET_LOG(FATAL, "PartialReplyWithStatus not implemented.");
 +void EvHTTPRequest::PartialReply(std::string data) {
-+  return PartialReplyWithStatus(std::move(data), HTTP_OK);
++  return PartialReplyWithStatus(std::move(data), HTTPStatusCode::OK);
  }
  
  ServerRequestInterface::CallbackStatus
@@ -96,12 +96,12 @@ index c8d0501b..c09331aa 100644
    delete this;
  }
  
-+void EvHTTPRequest::EvPartialSendReply(std::string data, int code) {
++void EvHTTPRequest::EvPartialSendReply(std::string data, HTTPStatusCode status) {
 +  std::unique_lock<std::mutex> lk(this->disconnection_mx_);
 +  if (this->is_disconnected_)
 +    return;
 +  if (!this->is_reply_started_) {
-+    evhttp_send_reply_start(parsed_request_->request, code, "reply start");
++    evhttp_send_reply_start(parsed_request_->request, static_cast<int>(status), "reply start");
 +    this->is_reply_started_ = true;
 +  }
 +  evbuffer_add(output_buf, data.data(), static_cast<int64_t>(data.size()));
@@ -144,7 +144,7 @@ index c8d0501b..c09331aa 100644
  }  // namespace serving
  }  // namespace tensorflow
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
-index 2f8e601d..25cdc1a3 100644
+index 2f8e601d..bcf5a451 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
 @@ -21,6 +21,7 @@ limitations under the License.
@@ -161,7 +161,7 @@ index 2f8e601d..25cdc1a3 100644
  
 -  void PartialReplyWithStatus(HTTPStatusCode status) override;
 -  void PartialReply() override;
-+  void PartialReplyWithStatus(std::string data, int code) override;
++  void PartialReplyWithStatus(std::string data, HTTPStatusCode status) override;
 +  void PartialReply(std::string data) override;
  
    CallbackStatus PartialReplyWithFlushCallback(
@@ -188,7 +188,7 @@ index 2f8e601d..25cdc1a3 100644
 +
   private:
    void EvSendReply(HTTPStatusCode status);
-+  void EvPartialSendReply(std::string data, int code);
++  void EvPartialSendReply(std::string data, HTTPStatusCode status);
 +  void EvPartialReplyEnd();
  
    // Returns true if the data needs be uncompressed
@@ -207,7 +207,7 @@ index 2f8e601d..25cdc1a3 100644
  
  }  // namespace net_http
 diff --git a/tensorflow_serving/util/net_http/server/public/server_request_interface.h b/tensorflow_serving/util/net_http/server/public/server_request_interface.h
-index e5f4b05f..d3ef45b1 100644
+index e5f4b05f..40e87833 100644
 --- a/tensorflow_serving/util/net_http/server/public/server_request_interface.h
 +++ b/tensorflow_serving/util/net_http/server/public/server_request_interface.h
 @@ -143,8 +143,8 @@ class ServerRequestInterface {
@@ -216,7 +216,7 @@ index e5f4b05f..d3ef45b1 100644
    // the underlying behavior is undefined.
 -  virtual void PartialReplyWithStatus(HTTPStatusCode status) = 0;
 -  virtual void PartialReply() = 0;
-+  virtual void PartialReplyWithStatus(std::string data, int code) = 0;
++  virtual void PartialReplyWithStatus(std::string data, HTTPStatusCode status) = 0;
 +  virtual void PartialReply(std::string data) = 0;
  
    // Similar to PartialReply() but with an on_flush callback which will be
