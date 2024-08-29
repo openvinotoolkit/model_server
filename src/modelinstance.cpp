@@ -47,7 +47,6 @@
 #include "model_metric_reporter.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
-#include "ocl_utils.hpp"
 #include "opencltensorfactory.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
@@ -756,34 +755,22 @@ namespace ovms {
 void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
     OV_LOGGER("ov::Core: {}, ov::Model: {}, targetDevice: {}, ieCore.compile_model(model, targetDevice, pluginConfig", reinterpret_cast<void*>(&ieCore), reinterpret_cast<void*>(this->model.get()), this->targetDevice);
     if (this->targetDevice.find("GPU") != std::string::npos) {
-        if (false) {  // use this only for test for now until we have config management
-            cl_platform_id platformId;
-            cl_device_id deviceId;
-            auto oclContext = get_cl_context(platformId, deviceId);  // TODO use params from config, use device from config
-            this->oclContextC = oclContext;
-            this->oclContextCpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(this->ieCore, this->oclContextC);
-            ov::intel_gpu::ocl::ClContext ov_context(this->ieCore, this->oclContextC);
-            OV_LOGGER("ov::Core: {} compile_model(model: {}, target_device:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)&this->model, this->targetDevice, (void*)&pluginConfig);
-            compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->oclContextCpp, pluginConfig));
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
+        if (globalVaDisplay) {
+            OV_LOGGER("ov::intel_gpu::ocl::VAContext(core: {}, globalVaDisplay: {})", (void*)&this->ieCore, globalVaDisplay);
+            this->vaContext = std::make_unique<ov::intel_gpu::ocl::VAContext>(this->ieCore, globalVaDisplay);
+            OV_LOGGER("ov::Core: {} compile_model(model: {}, vaContext:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)&this->model, (void*)&*this->vaContext, (void*)&pluginConfig);
+            compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->vaContext, pluginConfig));
         } else {
-            if (globalVaDisplay) {
-                OV_LOGGER("ov::intel_gpu::ocl::VAContext(core: {}, globalVaDisplay: {})", (void*)&this->ieCore, globalVaDisplay);
-                this->vaContext = std::make_unique<ov::intel_gpu::ocl::VAContext>(this->ieCore, globalVaDisplay);
-                OV_LOGGER("ov::Core: {} compile_model(model: {}, vaContext:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)&this->model, (void*)&*this->vaContext, (void*)&pluginConfig);
-                compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->vaContext, pluginConfig));
-            } else {
-                OV_LOGGER("ov::Core: {} compile_model(model: {}, target_device:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)&this->model, this->targetDevice, (void*)&pluginConfig);
-                compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
-            }
-            OV_LOGGER("ov::CompiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>, compiledModel: {}", (void*)&*this->compiledModel);
-            const auto oclContext = compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
-            OV_LOGGER("ov::intel_gpu::ocl::ClContext(oclContext: {})", (void*)&oclContext);
-            this->oclContextCpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(oclContext);
-            OV_LOGGER("ov::intel_gpu::ocl::ClContext::get(), oclContextCpp: {}", (void*)&*this->oclContextCpp);
-            this->oclContextC = this->oclContextCpp->get();
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
+            OV_LOGGER("ov::Core: {} compile_model(model: {}, target_device:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)&this->model, this->targetDevice, (void*)&pluginConfig);
+            compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
         }
+        OV_LOGGER("ov::CompiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>, compiledModel: {}", (void*)&*this->compiledModel);
+        const auto oclContext = compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
+        OV_LOGGER("ov::intel_gpu::ocl::ClContext(oclContext: {})", (void*)&oclContext);
+        this->oclContextCpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(oclContext);
+        OV_LOGGER("ov::intel_gpu::ocl::ClContext::get(), oclContextCpp: {}", (void*)&*this->oclContextCpp);
+        this->oclContextC = this->oclContextCpp->get();
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
     } else {
         compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
         // TODO reset contexts

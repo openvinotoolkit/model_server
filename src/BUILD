@@ -376,7 +376,7 @@ cc_library(
             "libovmsstring_utils",
             "libovmsazurefilesystem",
             "libovmsmodelversioning",
-	    "libovmsoclutils",
+	    #"libovmsoclutils", # TODO decide if will need
             "libovmstensorfactory",
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
@@ -400,7 +400,7 @@ cc_library(
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + ["-lOpenCL"], # TODO make as a direct dependency
     data = select({
         "//:not_disable_python": [
             "//src/python/binding:pyovms.so",
@@ -914,7 +914,7 @@ cc_library( # make ovms_lib dependent, use share doptions
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED + ["-lOpenCL",],
+    linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library( # make ovms_lib dependent, use share doptions
     name = "libovmsoclutils",
@@ -1416,6 +1416,7 @@ cc_library(
 	# lib va
 	"-lva",
 	"-lva-drm",
+	"-lOpenCL",
     ],
     deps = [
 	":libtest_gpuenvironment",
@@ -1424,7 +1425,7 @@ cc_library(
 	":libovmsoclutils",
         "@com_google_googletest//:gtest",
     ],
-    copts = COPTS_TESTS, # + ["-isystem /usr/include"],
+    copts = COPTS_TESTS + ["-lOpenCL",],# + ["-isystem /usr/include"],
 )
 
 filegroup(

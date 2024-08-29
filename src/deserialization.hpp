@@ -40,10 +40,6 @@
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
-// TODO
-#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
-
-#include "openvino/runtime/remote_tensor.hpp"
 namespace ovms {
 
 #define RETURN_IF_ERR(X)   \

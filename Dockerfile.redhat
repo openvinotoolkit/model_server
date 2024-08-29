@@ -321,6 +321,12 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
     if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
+#RUN wget https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/os/Packages/ocl-icd-2.3.2-6.el10.x86_64.rpm &&  rpm -ivh --nodeps ./ocl-icd-2.3.2-6.el10.x86_64.rpm
+RUN wget https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/os/Packages/libva-devel-2.22.0-1.el10.x86_64.rpm && rpm -ivh --nodeps ./libva-devel-2.22.0-1.el10.x86_64.rpm
+WORKDIR /usr/lib64/
+RUN ln -s libOpenCL.so.1 libOpenCL.so
+WORKDIR /ovms
+
 # Custom Nodes
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 

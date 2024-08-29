@@ -66,6 +66,7 @@ case $INSTALL_DRIVER_VERSION in \
         echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
         exit 1 ; \
 esac ; \
+rpm -ivh http://vault.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm && \
 echo "Installed opencl driver version:" ;\
 echo `rpm -qa | grep intel-opencl` ; \
 
