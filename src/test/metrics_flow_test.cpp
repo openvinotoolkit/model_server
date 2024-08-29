@@ -79,6 +79,7 @@ static void checkRequestsCounter(const std::string& collectedMetricData, const s
     }
 }
 
+#if (MEDIAPIPE_DISABLE == 0)
 // This is for MediaPipe.
 // This checks for counter to be present with exact value and other remaining metrics of the family to be 0.
 static void checkMediapipeRequestsCounter(const std::string& collectedMetricData, const std::string& metricName, const std::string& endpointName, const std::string& interfaceName, const std::string& method, const std::string& api, int value) {
@@ -108,6 +109,7 @@ static void checkMediapipeRequestsCounter(const std::string& collectedMetricData
         }
     }
 }
+#endif
 
 class ServableManagerModuleWithMockedManager : public ServableManagerModule {
     ConstructorEnabledModelManager& mockedManager;
@@ -345,6 +347,7 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
     }
 
+#if (MEDIAPIPE_DISABLE == 0)
     for (int i = 0; i < numberOfAcceptedRequests; i++) {
         request.Clear();
         response.Clear();
@@ -362,6 +365,7 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
         request.mutable_model_name()->assign(mpName);
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
     }
+#endif
 
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelInfer", "KServe", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelInfer", "KServe", numberOfSuccessRequests);                                             // ran by real request
@@ -369,10 +373,12 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "gRPC", "ModelInfer", "KServe", numberOfFailedRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "gRPC", "ModelInfer", "KServe", numberOfFailedRequests);    // ran by real request
 
+#if (MEDIAPIPE_DISABLE == 0)
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, mpName, "gRPC", "ModelInfer", "KServe", numberOfAcceptedRequests);
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, mpName, "gRPC", "ModelInfer", "KServe", numberOfRejectedRequests);
 
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, mpName, "gRPC", "ModelInfer", "KServe", numberOfAcceptedRequests);
+#endif
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
@@ -401,6 +407,7 @@ public:
     MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
 };
 
+#if (MEDIAPIPE_DISABLE == 0)
 TEST_F(MetricFlowTest, GrpcModelInferStream) {
     KFSInferenceServiceImpl impl(server);
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> stream;
@@ -440,6 +447,7 @@ TEST_F(MetricFlowTest, GrpcModelInferStream) {
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, mpName, "gRPC", "ModelInferStream", "KServe", numberOfRejectedRequests);
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, mpName, "gRPC", "ModelInferStream", "KServe", numberOfAcceptedRequests);
 }
+#endif
 
 TEST_F(MetricFlowTest, GrpcModelMetadata) {
     KFSInferenceServiceImpl impl(server);
@@ -608,6 +616,7 @@ TEST_F(MetricFlowTest, RestModelInfer) {
         ASSERT_EQ(handler.processInferKFSRequest(components, response, request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
     }
 
+#if (MEDIAPIPE_DISABLE == 0)
     for (int i = 0; i < numberOfAcceptedRequests; i++) {
         components.model_name = mpName;
         std::string request = R"({"inputs":[{"name":"in","shape":[3,1,10],"datatype":"FP32","data":[1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10]}], "parameters":{"binary_data_output":true}})";
@@ -623,6 +632,7 @@ TEST_F(MetricFlowTest, RestModelInfer) {
         std::optional<int> inferenceHeaderContentLength;
         ASSERT_EQ(handler.processInferKFSRequest(components, response, request, inferenceHeaderContentLength), ovms::StatusCode::INVALID_UNEXPECTED_INPUT);
     }
+#endif
 
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelInfer", "KServe", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelInfer", "KServe", numberOfSuccessRequests);                                             // ran by real request
@@ -630,10 +640,12 @@ TEST_F(MetricFlowTest, RestModelInfer) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "REST", "ModelInfer", "KServe", numberOfFailedRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "REST", "ModelInfer", "KServe", numberOfFailedRequests);    // ran by real request
 
+#if (MEDIAPIPE_DISABLE == 0)
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, mpName, "REST", "ModelInfer", "KServe", numberOfAcceptedRequests);
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, mpName, "REST", "ModelInfer", "KServe", numberOfRejectedRequests);
 
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, mpName, "REST", "ModelInfer", "KServe", numberOfAcceptedRequests);
+#endif
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
@@ -714,6 +726,7 @@ TEST_F(MetricFlowTest, ModelReady) {
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
 }
 
+#if (MEDIAPIPE_DISABLE == 0)
 TEST_F(MetricFlowTest, RestV3Unary) {
     HttpRestApiHandler handler(server, 0);
     MockedServerRequestInterface stream;
@@ -733,7 +746,9 @@ TEST_F(MetricFlowTest, RestV3Unary) {
     // checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, "dummy_gpt", "REST", "Unary", "V3", numberOfRejectedRequests);
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests);
 }
+#endif
 
+#if (MEDIAPIPE_DISABLE == 0)
 TEST_F(MetricFlowTest, RestV3Stream) {
     HttpRestApiHandler handler(server, 0);
     MockedServerRequestInterface stream;
@@ -755,7 +770,9 @@ TEST_F(MetricFlowTest, RestV3Stream) {
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Stream", "V3", numberOfAcceptedRequests * numberOfMockedChunksPerRequest);
     SPDLOG_ERROR(server.collect());
 }
+#endif
 
+#if (MEDIAPIPE_DISABLE == 0)
 TEST_F(MetricFlowTest, CurrentGraphs) {
     using ::testing::_;
     using ::testing::Return;
@@ -806,7 +823,10 @@ TEST_F(MetricFlowTest, CurrentGraphs) {
         threads[i].join();
     }
 }
+#endif
 
+// Test MP metrics when mediapipe is enabled at build time
+#if (MEDIAPIPE_DISABLE == 0)
 std::string MetricFlowTest::prepareConfigContent() {
     return std::string{R"({
         "monitoring": {
@@ -881,3 +901,66 @@ std::string MetricFlowTest::prepareConfigContent() {
     }
     )";
 }
+#else
+// Do not test MP metrics when mediapipe is disabled at build time
+std::string MetricFlowTest::prepareConfigContent() {
+    return std::string{R"({
+        "monitoring": {
+            "metrics": {
+                "enable": true,
+                "metrics_list": [)"} +
+           R"(")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE +
+           R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
+           R"(",")" + METRIC_NAME_CURRENT_REQUESTS +
+           R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
+           R"(",")" + METRIC_NAME_REQUESTS_FAIL +
+           R"(",")" + METRIC_NAME_REQUEST_TIME +
+           R"(",")" + METRIC_NAME_STREAMS +
+           R"(",")" + METRIC_NAME_INFERENCE_TIME +
+           R"(",")" + METRIC_NAME_WAIT_FOR_INFER_REQ_TIME +
+           R"(",")" + METRIC_NAME_CURRENT_GRAPHS +
+           R"(",")" + METRIC_NAME_REQUESTS_ACCEPTED +
+           R"(",")" + METRIC_NAME_REQUESTS_REJECTED +
+           R"(",")" + METRIC_NAME_RESPONSES +
+           R"("]
+            }
+        },
+        "model_config_list": [
+            {"config": {
+                    "name": "dummy",
+                    "nireq": 2,
+                    "plugin_config": {"CPU_THROUGHPUT_STREAMS": 4},
+                    "base_path": "/ovms/src/test/dummy"}}
+        ],
+        "pipeline_config_list": [
+            {
+                "name": "dummy_demux",
+                "inputs": [
+                    "b"
+                ],
+                "demultiply_count": 0,
+                "nodes": [
+                    {
+                        "name": "dummy-node",
+                        "model_name": "dummy",
+                        "type": "DL model",
+                        "inputs": [
+                            {"b": {
+                                    "node_name": "request",
+                                    "data_item": "b"}}],
+                        "outputs": [
+                            {"data_item": "a",
+                                "alias": "a"}]
+                    }
+                ],
+                "outputs": [
+                    {"a": {
+                            "node_name": "dummy-node",
+                            "data_item": "a"}}
+                ]
+            }
+        ]
+    }
+    )";
+}
+#endif
