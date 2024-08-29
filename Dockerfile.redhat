@@ -322,7 +322,7 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
 #RUN wget https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/os/Packages/ocl-icd-2.3.2-6.el10.x86_64.rpm &&  rpm -ivh --nodeps ./ocl-icd-2.3.2-6.el10.x86_64.rpm
-RUN wget https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/os/Packages/libva-devel-2.22.0-1.el10.x86_64.rpm && rpm -ivh --nodeps ./libva-devel-2.22.0-1.el10.x86_64.rpm
+RUN wget -q https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/os/Packages/libva-devel-2.22.0-1.el10.x86_64.rpm && rpm -ivh --nodeps ./libva-devel-2.22.0-1.el10.x86_64.rpm
 WORKDIR /usr/lib64/
 RUN ln -s libOpenCL.so.1 libOpenCL.so
 WORKDIR /ovms
