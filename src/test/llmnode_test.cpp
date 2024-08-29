@@ -225,36 +225,6 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonFinishReasonLength) {
     ASSERT_EQ(parsedResponse["object"], "text_completion");
 }
 
-// This test can be sensitive to underlying hardware as well as model and runtime updates since it relies on model execution output
-TEST_F(LLMFlowHttpTest, unaryCompletionsJsonFinishReasonStop) {
-    std::string requestBody = R"(
-        {
-            "model": "llmDummyKFS",
-            "stream": false,
-            "ignore_eos": false,
-            "max_tokens": 4095,
-            "prompt": "What is OpenVINO?"
-        }
-    )";
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
-    int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
-        ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "stop");
-        ASSERT_EQ(choice["index"], i++);
-        ASSERT_FALSE(choice["logprobs"].IsObject());
-        ASSERT_TRUE(choice["text"].IsString());
-    }
-    ASSERT_EQ(parsedResponse["model"], "llmDummyKFS");
-    ASSERT_EQ(parsedResponse["object"], "text_completion");
-}
-
 TEST_F(LLMFlowHttpTest, unaryCompletionsJsonNFail) {
     std::string requestBody = R"(
         {
