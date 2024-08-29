@@ -88,6 +88,7 @@ class OpenAIChatCompletionsRequest {
     std::optional<float> topP{std::nullopt};
     std::optional<int> topK{std::nullopt};
     std::optional<int> seed{std::nullopt};
+    std::optional<std::vector<std::string>> stop{std::nullopt};
     std::optional<int> bestOf{std::nullopt};
     // std::optional<bool> useBeamSearch{std::nullopt};
     std::optional<bool> ignoreEOS{std::nullopt};
@@ -138,6 +139,8 @@ public:
             config.top_p = topP.value();
         if (seed.has_value())
             config.rng_seed = seed.value();
+        if (stop.has_value())
+            config.stop_strings = stop.value();
         if (frequencyPenalty.has_value())
             config.frequency_penalty = frequencyPenalty.value();
         if (presencePenalty.has_value())
@@ -351,6 +354,29 @@ public:
             if (!it->value.IsUint())
                 return absl::InvalidArgumentError("seed is not an unsigned integer");
             this->seed = it->value.GetUint();
+        }
+
+        // stop: string or array; optional - defaults to null (not set)
+        it = this->doc.FindMember("stop");
+        if (it != this->doc.MemberEnd()) {
+            if (it->value.IsString())
+                this->stop = std::vector<std::string>{it->value.GetString()};
+            else if (it->value.IsArray()) {
+                auto stopArray = it->value.GetArray();
+                // TODO: OpenAI API defines upper bound but do we want it?
+                if (stopArray.Size() < 1 || stopArray.Size() > 4)
+                    return absl::InvalidArgumentError("stop array must have a least 1 and no more than 4 strings");
+
+                this->stop = std::vector<std::string>{};
+                for (size_t i = 0; i < stopArray.Size(); i++) {
+                    const auto& element = stopArray[i];
+                    if (!element.IsString())
+                        return absl::InvalidArgumentError("stop array contains non string element");
+                    this->stop->push_back(element.GetString());
+                }
+            } else {
+                return absl::InvalidArgumentError("stop is not a string or array of strings");
+            }
         }
 
         // best_of: int; optional - defaults to 1
