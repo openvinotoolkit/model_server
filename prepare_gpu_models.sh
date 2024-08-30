@@ -1,4 +1,4 @@
-#!/bin/bash -X
+#!/bin/bash -x
 #
 # Copyright 2024 Intel Corporation
 #
