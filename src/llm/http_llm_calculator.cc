@@ -88,7 +88,8 @@ class OpenAIChatCompletionsRequest {
     std::optional<float> topP{std::nullopt};
     std::optional<int> topK{std::nullopt};
     std::optional<int> seed{std::nullopt};
-    std::optional<std::vector<std::string>> stop{std::nullopt};
+    std::optional<std::set<std::string>> stop{std::nullopt};
+    std::optional<bool> includeStopStrInOutput{std::nullopt};
     std::optional<int> bestOf{std::nullopt};
     // std::optional<bool> useBeamSearch{std::nullopt};
     std::optional<bool> ignoreEOS{std::nullopt};
@@ -141,6 +142,8 @@ public:
             config.rng_seed = seed.value();
         if (stop.has_value())
             config.stop_strings = stop.value();
+        if (includeStopStrInOutput.has_value())
+            config.include_stop_str_in_output = includeStopStrInOutput.value();
         if (frequencyPenalty.has_value())
             config.frequency_penalty = frequencyPenalty.value();
         if (presencePenalty.has_value())
@@ -359,24 +362,33 @@ public:
         // stop: string or array; optional - defaults to null (not set)
         it = this->doc.FindMember("stop");
         if (it != this->doc.MemberEnd()) {
-            if (it->value.IsString())
-                this->stop = std::vector<std::string>{it->value.GetString()};
-            else if (it->value.IsArray()) {
+            if (it->value.IsString()) {
+                this->stop = std::set<std::string>{it->value.GetString()};
+            } else if (it->value.IsArray()) {
                 auto stopArray = it->value.GetArray();
                 // TODO: OpenAI API defines upper bound but do we want it?
                 if (stopArray.Size() < 1 || stopArray.Size() > 4)
                     return absl::InvalidArgumentError("stop array must have a least 1 and no more than 4 strings");
 
-                this->stop = std::vector<std::string>{};
+                this->stop = std::set<std::string>{};
                 for (size_t i = 0; i < stopArray.Size(); i++) {
                     const auto& element = stopArray[i];
                     if (!element.IsString())
                         return absl::InvalidArgumentError("stop array contains non string element");
-                    this->stop->push_back(element.GetString());
+                    this->stop->insert(element.GetString());
                 }
             } else {
                 return absl::InvalidArgumentError("stop is not a string or array of strings");
             }
+        }
+
+        // include_stop_str_in_output: bool; optional - defaults to false
+        // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
+        it = this->doc.FindMember("include_stop_str_in_output");
+        if (it != this->doc.MemberEnd()) {
+            if (!it->value.IsBool())
+                return absl::InvalidArgumentError("include_stop_str_in_output accepts values true or false");
+            this->includeStopStrInOutput = it->value.GetBool();
         }
 
         // best_of: int; optional - defaults to 1
@@ -619,11 +631,11 @@ public:
                     OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
                     ov::genai::GenerationOutputs generationOutputs = this->generationHandle->read();
                     RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
-                    RET_CHECK(generationOutputs.begin()->second.generated_token_ids.size() == 1);
+                    RET_CHECK(generationOutputs.begin()->second.generated_ids.size() == 1);
                     this->usage.completionTokens++;
 
                     // TODO(dkalinow): Move this logic to CB library
-                    int64_t token = generationOutputs.begin()->second.generated_token_ids[0];
+                    int64_t token = generationOutputs.begin()->second.generated_ids[0];
                     auto chunk = this->streamer->put(token);
                     ov::genai::GenerationFinishReason finishReason = generationOutputs.begin()->second.finish_reason;
                     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
@@ -677,9 +689,9 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::gena
         if (i >= n)
             break;
 
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_token_ids);
-        usage.completionTokens += generationOutput.generated_token_ids.size();
-        std::string completeResponse = nodeResources->cbPipe->get_tokenizer().decode(generationOutput.generated_token_ids);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
+        usage.completionTokens += generationOutput.generated_ids.size();
+        std::string completeResponse = nodeResources->cbPipe->get_tokenizer().decode(generationOutput.generated_ids);
         writer.StartObject();  // {
         // finish_reason: string; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)
         // "stop" => natural stop point due to stopping criteria
