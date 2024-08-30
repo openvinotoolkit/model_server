@@ -1311,7 +1311,7 @@ DLL_PUBLIC void OVMS_ServableMetadataDelete(OVMS_ServableMetadata* metadata) {
     delete reinterpret_cast<ovms::ServableMetadata*>(metadata);
 }
 
-OVMS_Status* OVMS_ServerInitilizeGlobalVADisplay(void* vaDisplay) {
+OVMS_Status* OVMS_ServerSetGlobalVADisplay(void* vaDisplay) {
     // we accept nullptr as it is a way to reset behavior for gpu tests
     // TODO
     // * allow to initializze only if server not started, but would require passing server

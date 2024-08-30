@@ -389,7 +389,7 @@ TEST_F(CAPINonCopy, VAContextGlobalPreprocHardcodedInput) {  // TODO rename
     // we need to set up global VA Context before we start the server
     VAHelper vaHelper;
     ASSERT_NE(vaHelper.getVADisplay(), nullptr);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerInitilizeGlobalVADisplay(vaHelper.getVADisplay()));  // TODO reset always on exit
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(vaHelper.getVADisplay()));  // TODO reset always on exit
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
     // prepare request
     OVMS_InferenceRequest* request{nullptr};
@@ -447,7 +447,7 @@ TEST_F(CAPINonCopy, VAContextGlobalPreprocHardcodedInput) {  // TODO rename
         row += "]";
         SPDLOG_ERROR(row);
     }
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerInitilizeGlobalVADisplay(0));  // TODO reset always on exit
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(0));  // TODO reset always on exit
     OVMS_ServerDelete(cserver);
 }
 #endif

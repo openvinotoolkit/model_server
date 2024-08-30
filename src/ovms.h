@@ -78,12 +78,12 @@ typedef enum OVMS_DataType_enum {
 //
 typedef enum OVMS_BufferType_enum {
     OVMS_BUFFERTYPE_CPU,
-    OVMS_BUFFERTYPE_CPU_PINNED,
-    OVMS_BUFFERTYPE_GPU,
+    OVMS_BUFFERTYPE_CPU_PINNED,  // not supported
+    OVMS_BUFFERTYPE_GPU,  // not supported
     OVMS_BUFFERTYPE_OPENCL,
     OVMS_BUFFERTYPE_VASURFACE_Y,
     OVMS_BUFFERTYPE_VASURFACE_UV,
-    OVMS_BUFFERTYPE_HDDL,
+    OVMS_BUFFERTYPE_HDDL,  // not supported
 } OVMS_BufferType;
 
 typedef enum OVMS_ServableState_enum {
@@ -448,7 +448,7 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* request, const char* inputName, const void* data, size_t byteSize, OVMS_BufferType bufferType, uint32_t deviceId);
 
-// Add output to the request. This can be used to be able to specify buffers to avoid copying data after the inference.
+// Add output to the request. This can be used to specify self managed buffers to avoid copying data after the inference.
 //
 // \param request The request object
 // \param outputName The name of the output
@@ -553,7 +553,7 @@ void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
 
-// Execyte asynchronous inference
+// Execute asynchronous inference
 //
 // Setting completion callback with OVMS_InferenceRequestSetCompleteCallback is required to receive a reply.
 //
@@ -651,7 +651,7 @@ OVMS_Status* OVMS_ServableMetadataInfo(OVMS_ServableMetadata* metadata, const vo
 //
 // \param vaDisplay VADisplay that will be used to compile models
 // TODO should we accept server argument as well?
-OVMS_Status* OVMS_ServerInitilizeGlobalVADisplay(void* vaDisplay);
+OVMS_Status* OVMS_ServerSetGlobalVADisplay(void* vaDisplay);
 
 // Deallocates a status object.
 //

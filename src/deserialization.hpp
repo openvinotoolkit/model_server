@@ -286,7 +286,7 @@ public:
 template <>  // TODO separate for different choice
 std::tuple<ovms::Status, const typename RequestTraits<::KFSRequest>::TensorType*, const std::string*> getRequestTensorPtr(const ::KFSRequest& request, const std::string& name, ExtractChoice extractChoice) {
     if (ExtractChoice::EXTRACT_OUTPUT == extractChoice) {
-        SPDLOG_TRACE("Defining output in TFS is not implemented");
+        SPDLOG_TRACE("Defining output in KFS is not implemented");
         return std::make_tuple(Status(StatusCode::NOT_IMPLEMENTED, "Failed to deserialize output in request"), nullptr, nullptr);
     }
     bool deserializeFromSharedInputContents = request.raw_input_contents().size() > 0;

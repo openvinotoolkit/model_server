@@ -31,6 +31,7 @@
 #include "../profiler.hpp"
 #include "../regularovtensorfactory.hpp"
 #include "../tensor_conversion.hpp"
+#include "../tensorinfo.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "nodesession.hpp"
 
@@ -76,8 +77,6 @@ Status EntryNode<RequestType>::fetchResults(TensorWithSourceMap& outputs) {
     }
     InputSink<TensorWithSourceMap&> inputSink(outputs);
     bool isPipeline = true;
-    std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories;
-    factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());  // TODO enable dag with remote tensors?
     return deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>>(*request, inputsInfo, outputsInfo, inputSink, isPipeline, factories);
 }
 

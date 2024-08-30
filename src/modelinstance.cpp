@@ -758,17 +758,17 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
         if (globalVaDisplay) {
             OV_LOGGER("ov::intel_gpu::ocl::VAContext(core: {}, globalVaDisplay: {})", (void*)&this->ieCore, globalVaDisplay);
             this->vaContext = std::make_unique<ov::intel_gpu::ocl::VAContext>(this->ieCore, globalVaDisplay);
-            OV_LOGGER("ov::Core: {} compile_model(model: {}, vaContext:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)&this->model, (void*)&*this->vaContext, (void*)&pluginConfig);
+            OV_LOGGER("ov::Core: {} compile_model(model: {}, vaContext:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)this->model.get(), (void*)this->vaContext.get(), (void*)&pluginConfig);
             compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->vaContext, pluginConfig));
         } else {
-            OV_LOGGER("ov::Core: {} compile_model(model: {}, target_device:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)&this->model, this->targetDevice, (void*)&pluginConfig);
+            OV_LOGGER("ov::Core: {} compile_model(model: {}, target_device:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)this->model.get(), this->targetDevice, (void*)&pluginConfig);
             compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
         }
-        OV_LOGGER("ov::CompiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>, compiledModel: {}", (void*)&*this->compiledModel);
+        OV_LOGGER("ov::CompiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>, compiledModel: {}", (void*)this->compiledModel.get());
         const auto oclContext = compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
         OV_LOGGER("ov::intel_gpu::ocl::ClContext(oclContext: {})", (void*)&oclContext);
         this->oclContextCpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(oclContext);
-        OV_LOGGER("ov::intel_gpu::ocl::ClContext::get(), oclContextCpp: {}", (void*)&*this->oclContextCpp);
+        OV_LOGGER("ov::intel_gpu::ocl::ClContext::get(), oclContextCpp: {}", (void*)this->oclContextCpp.get());
         this->oclContextC = this->oclContextCpp->get();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
     } else {
@@ -1354,7 +1354,6 @@ Status ModelInstance::infer(const RequestType* requestProto,
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
-    // status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {
@@ -1448,7 +1447,6 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
-    SPDLOG_ERROR("ER");
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {
@@ -1475,7 +1473,7 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
                 return;
             }
         }
-        SPDLOG_INFO("Using OV callback");
+        SPDLOG_DEBUG("Using OV callback");
         // here use OVMS response serialization
         // here call user set callback
         // here will go OVMS C-API serialization code
