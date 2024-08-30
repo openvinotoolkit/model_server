@@ -11,14 +11,14 @@ It deploys two instances of the model server allocated to difference CPU sockets
 ## Start the Model Server instances
 
 Let's assume we have two CPU sockets server with two NUMA nodes. 
-```
+```bash
 lscpu | grep NUMA
 NUMA node(s):                       2
 NUMA node0 CPU(s):                  0-31,64-95
 NUMA node1 CPU(s):                  32-63,96-127
 ```
 Following the prework from [demo](../README.md) start the instances like below:
-```
+```bash
 docker run --cpuset-cpus $(lscpu | grep node0 | cut -d: -f2)  -d --rm -p 8003:8003 -v $(pwd)/:/workspace:ro openvino/model_server:latest --rest_port 8003 --config_path /workspace/config.json
 
 docker run --cpuset-cpus $(lscpu | grep node1 | cut -d: -f2)  -d --rm -p 8004:8004 -v $(pwd)/:/workspace:ro openvino/model_server:latest --rest_port 8004 --config_path /workspace/config.json
@@ -42,14 +42,14 @@ stream {
 }
 ```
 Start the Nginx container with: 
-```
+```bash
 docker run -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf:ro -d --net=host -p 80:80 nginx
 ```
 
 ## Testing the scalability
 
 Start benchmarking script like in [demo](../README.md), pointing to the load balancer port and host.
-```
+```bash
 python benchmark_serving.py --host localhost --port 80 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 2000 --request-rate inf --save-result --seed 10
 Initial test run completed. Starting main benchmark run...
 Traffic request rate: inf
@@ -60,8 +60,8 @@ Benchmark duration (s):                  488.53
 Total input tokens:                      443650
 Total generated tokens:                  367462
 Request throughput (req/s):              4.09
-Input token throughput (tok/s):          908.14
 Output token throughput (tok/s):         752.18
+Total Token throughput (tok/s):          908.14
 ---------------Time to First Token----------------
 Mean TTFT (ms):                          188339.52
 Median TTFT (ms):                        186645.04
