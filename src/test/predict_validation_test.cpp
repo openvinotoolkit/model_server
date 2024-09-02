@@ -1924,6 +1924,7 @@ TYPED_TEST(PredictValidationString2DTest, negative_no_string) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
+// To be removed once this test is moved to functional test suite
 TYPED_TEST(PredictValidationString2DTest, negative_over_1gb_after_expansion) {
     std::string longString(1024 * 1024 * 512 * 1, 'a');            // 512mb
     std::vector<std::string> inputStrings = {longString, "", ""};  // sum=1.5gb
@@ -2021,6 +2022,7 @@ TYPED_TEST(PredictValidationString1DTest, negative_wrong_request_shape) {
     EXPECT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
+// To be removed once this test is moved to functional test suite
 TYPED_TEST(PredictValidationString1DTest, positive_over_1gb) {
     std::string longString(1024 * 1024 * 512 * 1, 'a');            // 512mb
     std::vector<std::string> inputStrings = {longString, "", ""};  // sum=1.5gb
@@ -2083,6 +2085,7 @@ TYPED_TEST(PredictValidationStringNativeTest, negative_wrong_request_shape) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
+// To be removed once this test is moved to functional test suite
 TYPED_TEST(PredictValidationStringNativeTest, positive_over_1gb) {
     std::string longString(1024 * 1024 * 512 * 1, 'a');                            // 512mb
     std::vector<std::string> inputStrings = {longString, longString, longString};  // sum=1.5gb

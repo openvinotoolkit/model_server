@@ -1486,6 +1486,7 @@ TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyContent) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
+            "max_tokens": 1,
             "messages": [{"content": "def"}]
         }
     )";
@@ -1495,10 +1496,11 @@ TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyContent) {
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMHttpParametersValidationTest, MessagesWitMoreMessageFields) {
+TEST_F(LLMHttpParametersValidationTest, MessagesWithMoreMessageFields) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
+            "max_tokens": 1,
             "messages": [{"role": "123", "content": "def", "unexpected": "123"}]
         }
     )";
@@ -1603,36 +1605,6 @@ TEST_F(LLMConfigHttpTest, LLMNodeNameExists) {
         node: {
         name: "llmNode"
         calculator: "HttpLLMCalculator"
-        input_stream: "LOOPBACK:loopback"
-        input_stream: "HTTP_REQUEST_PAYLOAD:input"
-        input_side_packet: "LLM_NODE_RESOURCES:llm"
-        output_stream: "LOOPBACK:loopback"
-        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
-        input_stream_info: {
-            tag_index: 'LOOPBACK:0',
-            back_edge: true
-        }
-        node_options: {
-            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/llm_testing/facebook/opt-125m"
-                cache_size: 1
-            }
-        }
-        input_stream_handler {
-            input_stream_handler: "SyncSetInputStreamHandler",
-            options {
-            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
-                sync_set {
-                tag_index: "LOOPBACK:0"
-                }
-            }
-            }
-        }
-        }
-
-        node: {
-        name: "llmNode"
-        calculator: "HttpLLMCalculator"
         input_stream: "LOOPBACK:loopback2"
         input_stream: "HTTP_REQUEST_PAYLOAD:input2"
         input_side_packet: "LLM_NODE_RESOURCES:llm"
@@ -1663,7 +1635,11 @@ TEST_F(LLMConfigHttpTest, LLMNodeNameExists) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_NAME_ALREADY_EXISTS);
+    auto& m = mediapipeDummy.getLLMNodeResourcesMap();
+    m.insert(std::pair<std::string, std::shared_ptr<LLMNodeResources>>("llmNode", nullptr));
+    ASSERT_EQ(mediapipeDummy.validateForConfigFileExistence(), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.validateForConfigLoadablenessPublic(), StatusCode::OK);
+    ASSERT_EQ(mediapipeDummy.initializeNodes(), StatusCode::LLM_NODE_NAME_ALREADY_EXISTS);
 }
 
 TEST_F(LLMConfigHttpTest, LLMNodeNonExistantModelsPath) {
@@ -1835,6 +1811,19 @@ TEST_F(LLMConfigHttpTest, LLMNodeResourceInitFailed) {
     ASSERT_EQ(mediapipeDummy.getLLMNodeResources("llmNode"), nullptr);
 }
 
+struct MockedLLMNodeResources : public LLMNodeResources {
+public:
+    Status initializeContinuousBatchingPipeline(
+        const std::string& basePath,
+        const ov::genai::SchedulerConfig& schedulerConfig,
+        const std::string& device,
+        const plugin_config_t& pluginConfig,
+        const plugin_config_t& tokenizerPluginConfig) override {
+        // Do not initialize, it is not needed in a test
+        return StatusCode::OK;
+    }
+};
+
 class LLMOptionsHttpTest : public ::testing::Test {
 public:
     void SetUp() { py::initialize_interpreter(); }
@@ -1878,7 +1867,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     std::cout << "------------------------A--------------------\n";
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
     std::cout << "------------------------B--------------------\n";
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
@@ -1930,7 +1919,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
@@ -1980,7 +1969,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
 }
 
@@ -2026,7 +2015,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
     ASSERT_EQ(LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 1024);

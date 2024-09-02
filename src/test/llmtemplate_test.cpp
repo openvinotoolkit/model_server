@@ -45,26 +45,6 @@
 using namespace ovms;
 
 class LLMChatTemplateTest : public TestWithTempDir {
-private:
-    bool CreateConfig(std::string& fileContents, std::string& filePath) {
-        std::ofstream configFile{filePath};
-        if (!configFile.is_open()) {
-            std::cout << "Failed to open " << filePath << std::endl;
-            return false;
-        }
-        SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filePath, fileContents);
-        configFile << fileContents << std::endl;
-        configFile.close();
-        if (configFile.fail()) {
-            SPDLOG_INFO("Closing configFile failed");
-            return false;
-        } else {
-            SPDLOG_INFO("Closing configFile succeed");
-        }
-
-        return true;
-    }
-
 protected:
     std::string tokenizerConfigFilePath;
     std::string jinjaConfigFilePath;
@@ -81,10 +61,10 @@ protected:
 
 public:
     bool CreateTokenizerConfig(std::string& fileContents) {
-        return CreateConfig(fileContents, tokenizerConfigFilePath);
+        return createConfigFileWithContent(fileContents, tokenizerConfigFilePath);
     }
     bool CreateJinjaConfig(std::string& fileContents) {
-        return CreateConfig(fileContents, jinjaConfigFilePath);
+        return createConfigFileWithContent(fileContents, jinjaConfigFilePath);
     }
 };
 
@@ -479,69 +459,51 @@ public:
     }
 };
 
+const std::string GRAPH_PATTERN = "<GRAPH_PATTERN>";
+const std::string WORKSPACE_PATTERN = "<MODELS_PATTERN>";
+const std::string MODEL_PATH = "/ovms/llm_testing/facebook/opt-125m";
+
 class LLMChatTemplateHttpTest : public TestWithTempDir {
 protected:
     static std::unique_ptr<std::thread> t;
-
-    const std::string GRAPH_PATTERN = "<GRAPH_PATTERN>";
-    const std::string WORKSPACE_PATTERN = "<MODELS_PATTERN>";
-    const std::string MODEL_PATH = "/ovms/llm_testing/facebook/opt-125m";
 
     std::string tokenizerConfigFilePath;
     std::string jinjaConfigFilePath;
     std::string ovmsConfigFilePath;
     std::string graphConfigFilePath;
 
-    std::string GetFileNameFromPath(const std::string& parentDir, const std::string& fullPath) {
+    static std::string GetFileNameFromPath(const std::string& parentDir, const std::string& fullPath) {
         std::string fileName = fullPath;
         fileName.replace(fileName.find(parentDir), std::string(parentDir).size(), "");
         return fileName;
     }
 
-    bool CreateConfigFile(const std::string& graphPath) {
+    static bool CreateConfigFile(const std::string& graphPath, const std::string& configFilePath) {
         std::string configContents = configTemplate;
         configContents.replace(configContents.find(GRAPH_PATTERN), std::string(GRAPH_PATTERN).size(), graphPath);
-        return CreateConfig(configContents, ovmsConfigFilePath);
+        return createConfigFileWithContent(configContents, configFilePath);
     }
 
-    bool CreatePipelineGraph(const std::string& workspacePath) {
+    static bool CreatePipelineGraph(const std::string& workspacePath, const std::string& graphConfigFilePath) {
         std::string configContents = graphTemplate;
         configContents.replace(configContents.find(WORKSPACE_PATTERN), std::string(WORKSPACE_PATTERN).size(), workspacePath);
-        return CreateConfig(configContents, graphConfigFilePath);
+        return createConfigFileWithContent(configContents, graphConfigFilePath);
     }
 
-    void CreateSymbolicLinks() {
+    static void CreateSymbolicLinks(const std::string& toDirectory) {
         for (const auto& entry : fs::directory_iterator(MODEL_PATH)) {
             std::filesystem::path outFilename = entry.path();
             std::string outFilenameStr = outFilename.string();
             std::string fileName = GetFileNameFromPath(MODEL_PATH, outFilenameStr);
             SPDLOG_INFO("Filename to link {}\n", fileName);
-            std::string symlinkPath = ovms::FileSystem::joinPath({directoryPath, fileName});
+            std::string symlinkPath = ovms::FileSystem::joinPath({toDirectory, fileName});
             SPDLOG_INFO("Creating symlink from: {}\n to:\n{}", outFilenameStr, symlinkPath);
             fs::create_symlink(outFilenameStr, symlinkPath);
+            // TODO: Symlinks are never removed
         }
     }
 
 public:
-    bool CreateConfig(std::string& fileContents, std::string& filePath) {
-        std::ofstream configFile{filePath};
-        if (!configFile.is_open()) {
-            std::cout << "Failed to open " << filePath << std::endl;
-            return false;
-        }
-        SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filePath, fileContents);
-        configFile << fileContents << std::endl;
-        configFile.close();
-        if (configFile.fail()) {
-            SPDLOG_INFO("Closing configFile failed");
-            return false;
-        } else {
-            SPDLOG_INFO("Closing configFile succeed");
-        }
-
-        return true;
-    }
-
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
 
     std::vector<std::pair<std::string, std::string>> headers;
@@ -553,23 +515,19 @@ public:
     ovms::HttpResponseComponents responseComponents;
 
     void SetUp() {
+        TestWithTempDir::SetUp();
         tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
         jinjaConfigFilePath = directoryPath + "/template.jinja";
         ovmsConfigFilePath = directoryPath + "/ovms_config.json";
         graphConfigFilePath = directoryPath + "/graph_config.pbtxt";
 
-        CreateConfigFile(graphConfigFilePath);
-        CreatePipelineGraph(directoryPath);
-        CreateSymbolicLinks();
+        CreateConfigFile(graphConfigFilePath, ovmsConfigFilePath);
+        CreatePipelineGraph(directoryPath, graphConfigFilePath);
+        CreateSymbolicLinks(directoryPath);
 
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
         ::SetUpServer(t, server, port, ovmsConfigFilePath.c_str());
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointChatCompletions, headers), ovms::StatusCode::OK);
     }
@@ -584,41 +542,6 @@ public:
 };
 std::unique_ptr<std::thread> LLMChatTemplateHttpTest::t;
 
-class LLMDefaultChatTemplateHttpTest : public LLMChatTemplateHttpTest {
-    void SetUp() {
-        TestWithTempDir::SetUp();
-        LLMChatTemplateHttpTest::SetUp();
-    }
-};
-
-TEST_F(LLMDefaultChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
-    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
-    std::string requestBody = R"(
-        {
-            "model": "llmDummyKFS",
-            "stream": false,
-            "seed" : 1,
-            "max_tokens": 5,
-            "messages": [
-            {
-                "role": "user",
-                "content": "What is OpenVINO?"
-            }
-            ]
-        }
-    )";
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    // Assertion split in two parts to avoid timestamp mismatch
-    // const size_t timestampLength = 10;
-    std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"\nOpenVINO is","role":"assistant"}}],"created":)";
-    std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"chat.completion"})";
-    // TODO: New output ASSERT_EQ(response.compare(0, expectedResponsePart1.length(), expectedResponsePart1), 0);
-    // TODO: New output ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
-}
-
 std::string fullResponse;
 
 // static void ConcatenateResponse(const std::string& partial) {
@@ -626,20 +549,57 @@ std::string fullResponse;
 // }
 
 class LLMJinjaChatTemplateHttpTest : public LLMChatTemplateHttpTest {
+public:
+    static std::unique_ptr<std::thread> t;
+
 protected:
-    std::unique_ptr<CleanupFilesGuard> cleanupGuard;
+    static const std::string getDirectoryPath() {
+        const std::string directoryName = "LLMJinjaChatTemplateHttpTest";
+        return std::string{"/tmp/"} + directoryName;
+    }
+    static void SetUpTestSuite() {
+        const auto directoryPath = getDirectoryPath();
+        std::filesystem::remove_all(directoryPath);
+        std::filesystem::create_directories(directoryPath);
 
-    void SetUp() {
-        fullResponse = "";
-        TestWithTempDir::SetUp();
-        jinjaConfigFilePath = directoryPath + "/template.jinja";
-        std::string jinjaTemplate = R"({{"What is OpenVINO" + messages[0]['content']}})";
-        ASSERT_EQ(CreateConfig(jinjaTemplate, jinjaConfigFilePath), true);
-        LLMChatTemplateHttpTest::SetUp();
+        const std::string ovmsConfigFilePath = directoryPath + "/ovms_config.json";
+        CreateConfigFile(
+            directoryPath + "/graph_config.pbtxt",
+            ovmsConfigFilePath);
+        CreatePipelineGraph(
+            directoryPath,
+            directoryPath + "/graph_config.pbtxt");
+        CreateSymbolicLinks(directoryPath);
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(t, server, port, ovmsConfigFilePath.c_str());
+        auto start = std::chrono::high_resolution_clock::now();
+        const int numberOfRetries = 5;
+        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
+        }
+    }
 
-        cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
+    void SetUp() override {
+        ovms::Server& server = ovms::Server::instance();
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointChatCompletions, headers), ovms::StatusCode::OK);
+    }
+
+    void TearDown() override {
+        handler.reset();
+    }
+
+    static void TearDownTestSuite() {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+        std::filesystem::remove_all(getDirectoryPath());
     }
 };
+
+std::unique_ptr<std::thread> LLMJinjaChatTemplateHttpTest::t;
 
 TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsUnary) {
     std::string requestBody = R"(
@@ -768,4 +728,32 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
     ASSERT_EQ(response, "");
 
     // ASSERT_EQ(fullResponse, "\n\nThe first thing ");
+}
+
+TEST_F(LLMJinjaChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
+    std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    // Assertion split in two parts to avoid timestamp mismatch
+    // const size_t timestampLength = 10;
+    std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"\nOpenVINO is","role":"assistant"}}],"created":)";
+    std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"chat.completion"})";
+    // TODO: New output ASSERT_EQ(response.compare(0, expectedResponsePart1.length(), expectedResponsePart1), 0);
+    // TODO: New output ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
 }

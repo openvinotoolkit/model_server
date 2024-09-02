@@ -37,6 +37,7 @@
 
 #include "../logging.hpp"
 #include "../stringutils.hpp"
+#include "llm_executor.hpp"
 #include "src/python/utils.hpp"
 #include "text_processor.hpp"
 
@@ -94,7 +95,6 @@ public:
 };
 
 class Status;
-class LLMExecutorWrapper;
 
 using plugin_config_t = std::map<std::string, ov::Any>;
 
@@ -117,6 +117,7 @@ public:
     LLMNodeResources(const LLMNodeResources&) = delete;
     LLMNodeResources& operator=(LLMNodeResources&) = delete;
     LLMNodeResources() = default;
+    virtual ~LLMNodeResources() = default;
 
     void initiateGeneration();
 
@@ -125,6 +126,14 @@ public:
 private:
     std::unique_ptr<LLMExecutorWrapper> llmExecutorWrapper;
     static std::unordered_map<std::string, std::string> prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath);
+
+public:
+    virtual Status initializeContinuousBatchingPipeline(
+        const std::string& basePath,
+        const ov::genai::SchedulerConfig& schedulerConfig,
+        const std::string& device,
+        const plugin_config_t& pluginConfig,
+        const plugin_config_t& tokenizerPluginConfig);
 };
 #pragma GCC visibility pop
 using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;
