@@ -229,6 +229,7 @@ def check_func(start_dir):
         "iris_tracking.pbtxt",
         "internal_tests",
         ".bazelversion",
+        "openvino_tokenizer.xml",
     ]
 
     exclude_directories = ['/dist/']
