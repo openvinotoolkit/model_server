@@ -171,6 +171,16 @@ Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResou
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
+    // Enabled with env OV_CB_FULL_LOG=1
+    std::string modelConfiguration = "";
+    for (auto prop : nodeResources->cbPipe->get_model_configuration()) {
+        modelConfiguration = modelConfiguration + "\t" + prop + "\n";
+    }
+    if (!modelConfiguration.empty())
+    {
+        SPDLOG_INFO("Model configuration: \n {}", modelConfiguration);
+    }
+
     loadTextProcessor(nodeResources, nodeResources->modelsPath);
 
     nodeResources->maxTokensLimit = nodeOptions.max_tokens_limit();
