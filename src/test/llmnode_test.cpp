@@ -112,7 +112,7 @@ public:
                 if (i >= config.num_return_sequences)
                     break;
                 i++;
-                std::vector<int64_t> tokens = out.generated_token_ids;
+                std::vector<int64_t> tokens = out.generated_ids;
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
                 std::string completion = tokenizer->decode(tokens);
                 expectedMessages.emplace_back(completion);
