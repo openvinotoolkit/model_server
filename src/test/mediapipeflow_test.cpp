@@ -172,13 +172,9 @@ TEST_F(MediapipeEmbeddingsTest, startup) {
     const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
     ASSERT_TRUE(servableModule != nullptr);
     ModelManager* manager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
-    auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName("embeddings_calc");
+    auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName("embeddings");
     ASSERT_TRUE(mediapipeGraphDefinition != nullptr);
     ASSERT_TRUE(mediapipeGraphDefinition->getStatus().isAvailable());
-
-    std::string endpointEmbeddings = "/v3/embeddings";
-    auto handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
-    //ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);}
 }
 
 TEST_F(MediapipeFlowKfsTest, Infer) {
