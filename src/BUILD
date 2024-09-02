@@ -18,6 +18,7 @@ load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
      "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
      "create_config_settings")
+
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
         "//:fuzzer_build" : COMMON_FUZZER_COPTS,
@@ -1401,9 +1402,7 @@ cc_library(
     name = "openvino_tests",
     linkstatic = 1,
     alwayslink = True,
-    srcs = [
-        "test/openvino_tests.cpp",
-        ],
+    srcs = ["test/openvino_tests.cpp"],
     data = [
         "test/c_api/config_standard_dummy.json",
         "test/c_api/config_gpu_dummy.json",
@@ -1414,8 +1413,13 @@ cc_library(
     linkopts = [
         "-lstdc++fs",
 	# lib va
-	"-lva",
-	"-lva-drm",
+    ] + select({
+        "//conditions:default": [
+            "-lva",
+            "-lva-drm",
+	],
+	"//:redhat_build": [],
+    }) + [
 	"-lOpenCL",
     ],
     deps = [
@@ -1425,7 +1429,11 @@ cc_library(
 	":libovmsoclutils",
         "@com_google_googletest//:gtest",
     ],
-    copts = COPTS_TESTS + ["-lOpenCL",],# + ["-isystem /usr/include"],
+    copts = COPTS_TESTS + ["-lOpenCL",
+        ] + select({
+            "//:redhat_build": [],
+            "//conditions:default": ["-DBUILD_VAAPITESTS=1"],
+	}), # + ["-isystem /usr/include"],
 )
 
 filegroup(

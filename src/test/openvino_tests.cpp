@@ -236,9 +236,8 @@ public:
     }
 };
 
-#ifndef TEST_VAAPI
+#ifdef BUILD_VAAPITESTS
 // https://docs.openvino.ai/latest/openvino_docs_OV_UG_supported_plugins_GPU_RemoteTensor_API.html#direct-nv12-video-surface-input
-// TODO utility for downloading required models for VAAPI tests
 class VAHelper {
     int drmFiledescriptor = 0;
     VADisplay vaDisplay = nullptr;
@@ -282,6 +281,7 @@ public:
     VAHelper(const VAHelper&) = delete;
     VAHelper& operator=(const VAHelper&) = delete;
 };
+#endif
 
 const std::shared_ptr<ov::Model> preprocessModel(const std::shared_ptr<ov::Model>& model) {
     ov::preprocess::PrePostProcessor preprocessor(model);
@@ -303,6 +303,9 @@ const std::string FACE_DETECTION_ADAS_OUTPUT_NAME{"detection_out"};
 const std::vector<int64_t> FACE_DETECTION_ADAS_INPUT_SHAPE{1, 3, 384, 672};
 
 TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasWithPreprocTest) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
     ov::element::Type_t dtype = ov::element::Type_t::f32;
     Core core;
     auto model = core.read_model(FACE_DETECTION_ADAS_MODEL_PATH);
@@ -369,12 +372,16 @@ TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasWithPreprocTest
         row += "]";
         SPDLOG_ERROR(row);
     }
+#endif
 }
 TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasNoPreprocTest) {
     GTEST_SKIP() << "It seems there is no way to use VAAPI without preprocessing";
 }
 
 TEST_F(CAPINonCopy, VAContextGlobalPreprocHardcodedInput) {  // TODO rename
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
     std::string port = "9000";
     randomizePort(port);
     OVMS_ServerSettings* serverSettings = nullptr;
@@ -449,8 +456,8 @@ TEST_F(CAPINonCopy, VAContextGlobalPreprocHardcodedInput) {  // TODO rename
     }
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(0));  // TODO reset always on exit
     OVMS_ServerDelete(cserver);
-}
 #endif
+}
 
 TEST_F(OpenVINO, SetTensorTest) {
     size_t tSize = 10;
