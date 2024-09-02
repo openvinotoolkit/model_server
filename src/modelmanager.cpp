@@ -109,7 +109,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
             ieCore->add_extension(ovms::Config::instance().cpuExtensionLibraryPath());
             SPDLOG_INFO("Extension added.");
         } else {
-	    const std::string TOKENIZERS_PATH = "libopenvino_tokenizers.so";
+            const std::string TOKENIZERS_PATH = "libopenvino_tokenizers.so";
             SPDLOG_INFO("Loading custom CPU extension from {}", TOKENIZERS_PATH);
             ieCore->add_extension(TOKENIZERS_PATH);
             OV_LOGGER("ov::Core: {}, registered default extension from {}", reinterpret_cast<const void*>(this->ieCore.get()), TOKENIZERS_PATH);
