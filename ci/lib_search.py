@@ -142,6 +142,7 @@ def check_dir(start_dir):
         "lib_files_python.txt",
         "lib_custom_nodes_files",
         "spelling-whitelist.txt",
+        "openvino_tokenizer.xml",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
@@ -229,7 +230,6 @@ def check_func(start_dir):
         "iris_tracking.pbtxt",
         "internal_tests",
         ".bazelversion",
-        "openvino_tokenizer.xml",
     ]
 
     exclude_directories = ['/dist/']
