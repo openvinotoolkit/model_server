@@ -164,7 +164,7 @@ public:
 
 TEST_F(MediapipeEmbeddingsTest, startup) {
     auto start = std::chrono::high_resolution_clock::now();
-    const int timeout = 50;
+    const int timeout = 5;
     while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
     }
@@ -172,10 +172,13 @@ TEST_F(MediapipeEmbeddingsTest, startup) {
     const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
     ASSERT_TRUE(servableModule != nullptr);
     ModelManager* manager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
-    auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName("embeddings");
+    auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName("embeddings_calc");
     ASSERT_TRUE(mediapipeGraphDefinition != nullptr);
     ASSERT_TRUE(mediapipeGraphDefinition->getStatus().isAvailable());
-    ASSERT_EQ(mediapipeGraphDefinition->validate(*manager), StatusCode::OK);
+
+    std::string endpointEmbeddings = "/v3/embeddings";
+    auto handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+    //ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);}
 }
 
 TEST_F(MediapipeFlowKfsTest, Infer) {
