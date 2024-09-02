@@ -29,7 +29,7 @@ node {
   output_side_packet: "SESSION:embeddings"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "embeddings"
+      servable_name: "embeddings_model"
       servable_version: "1"
     }
   }

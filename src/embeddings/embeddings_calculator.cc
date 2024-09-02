@@ -88,6 +88,8 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
+	RET_CHECK(tokenizer_session != nullptr);
+	RET_CHECK(embeddings_session != nullptr);
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             std::string response = "";
             InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
