@@ -25,10 +25,10 @@
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 
 #include "../profiler.hpp"
+#include "apis/openai_completions.hpp"
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
 #include "text_processor.hpp"
-#include "apis/openai_completions.hpp"
 
 using namespace ovms;
 

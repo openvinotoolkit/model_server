@@ -13,11 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+
+#include "openai_completions.hpp"
+
+#include <limits>
+
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "openai_completions.hpp"
 #include "../../logging.hpp"
+#include "../../profiler.hpp"
 
 using namespace rapidjson;
 
@@ -75,7 +80,6 @@ ov::genai::GenerationConfig OpenAIChatCompletionsRequest::createGenerationConfig
 
     return config;
 }
-
 
 absl::Status OpenAIChatCompletionsHandler::processCompletionsPart() {
     // prompt: string
@@ -391,14 +395,13 @@ absl::Status OpenAIChatCompletionsHandler::processRequest(uint32_t maxTokensLimi
     if (status != absl::OkStatus())
         return status;
 
-    if(endpoint == Endpoint::COMPLETIONS)
+    if (endpoint == Endpoint::COMPLETIONS)
         status = processCompletionsPart();
     else
         status = processChatCompletionsPart();
 
     return status;
 }
-
 
 std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, ov::genai::Tokenizer tokenizer) {
     OVMS_PROFILE_FUNCTION();

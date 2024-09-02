@@ -13,20 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
+
 #include <optional>
 #include <set>
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
+#include <openvino/genai/generation_config.hpp>
+#include <openvino/genai/generation_handle.hpp>
 #include <rapidjson/document.h>
 
-#include <openvino/genai/generation_handle.hpp>
-#include <openvino/genai/generation_config.hpp>
-
 #include "absl/status/status.h"
-
-#include "../../profiler.hpp"
 
 using namespace rapidjson;
 
@@ -40,7 +40,6 @@ using chat_entry_t = std::unordered_map<std::string, std::string>;
 using chat_t = std::vector<chat_entry_t>;
 
 #define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
-
 
 // Class that maps OpenAI request content and provides methods to create GenerationConfig from it.
 // It's supposed to be used only by OpenAIChatCompletionsHandler class
@@ -99,14 +98,14 @@ class OpenAIChatCompletionsHandler {
     absl::Status processCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit);
 
 public:
-    OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime) : 
-        doc(doc), 
+    OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime) :
+        doc(doc),
         endpoint(endpoint),
-        created(creationTime) {};
+        created(creationTime) {}
 
-    std::optional<std::string> getPrompt() const; 
+    std::optional<std::string> getPrompt() const;
     std::optional<int> getNumReturnSequences() const;
-    StreamOptions getStreamOptions() const ;
+    StreamOptions getStreamOptions() const;
 
     bool isStream() const;
     std::string getModel() const;
@@ -115,7 +114,7 @@ public:
 
     void incrementCompletionTokensUsage();
 
-     ov::genai::GenerationConfig createGenerationConfig() const;
+    ov::genai::GenerationConfig createGenerationConfig() const;
 
     absl::Status processRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit);
 
