@@ -9,7 +9,7 @@
     { "config": 
 	    {
                 "name": "embeddings_model",
-                "base_path": "models/bge-large-en-v1.5_tokenizer"
+                "base_path": "models/dummy"
             }
 	}
    ]
