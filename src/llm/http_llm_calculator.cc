@@ -29,6 +29,7 @@
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
 #include "text_processor.hpp"
+#include "apis/openai_completions.hpp"
 
 using namespace ovms;
 
