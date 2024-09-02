@@ -1813,14 +1813,13 @@ TEST_F(LLMConfigHttpTest, LLMNodeResourceInitFailed) {
 
 struct MockedLLMNodeResources : public LLMNodeResources {
 public:
-    Status initializeContinuousBatchingPipeline(
+    void initializeContinuousBatchingPipeline(
         const std::string& basePath,
         const ov::genai::SchedulerConfig& schedulerConfig,
         const std::string& device,
         const plugin_config_t& pluginConfig,
         const plugin_config_t& tokenizerPluginConfig) override {
         // Do not initialize, it is not needed in a test
-        return StatusCode::OK;
     }
 };
 

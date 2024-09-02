@@ -33,6 +33,7 @@
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
 #if (PYTHON_DISABLE == 0)
+#include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
 #include "../python/pythonnoderesources.hpp"
 #endif

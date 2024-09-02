@@ -37,11 +37,12 @@
 
 #include "../logging.hpp"
 #include "../stringutils.hpp"
-#include "llm_executor.hpp"
 #include "src/python/utils.hpp"
 #include "text_processor.hpp"
 
 namespace ovms {
+
+class LLMExecutorWrapper;
 
 // TODO: To be moved to CB library.
 class TextStreamer {
@@ -128,7 +129,7 @@ private:
     static std::unordered_map<std::string, std::string> prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath);
 
 public:
-    virtual Status initializeContinuousBatchingPipeline(
+    virtual void initializeContinuousBatchingPipeline(
         const std::string& basePath,
         const ov::genai::SchedulerConfig& schedulerConfig,
         const std::string& device,

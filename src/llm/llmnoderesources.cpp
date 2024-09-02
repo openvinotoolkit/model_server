@@ -162,11 +162,7 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
 
     try {
         plugin_config_t tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
-        auto status = nodeResources->initializeContinuousBatchingPipeline(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig, tokenizerPluginConfig);
-        if (!status.ok()) {
-            SPDLOG_ERROR("Error during llm node initialization for models_path: {}", basePath);
-            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-        }
+        nodeResources->initializeContinuousBatchingPipeline(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig, tokenizerPluginConfig);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", basePath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
@@ -185,14 +181,13 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
     return StatusCode::OK;
 }
 
-Status LLMNodeResources::initializeContinuousBatchingPipeline(
+void LLMNodeResources::initializeContinuousBatchingPipeline(
     const std::string& basePath,
     const ov::genai::SchedulerConfig& schedulerConfig,
     const std::string& device,
     const plugin_config_t& pluginConfig,
     const plugin_config_t& tokenizerPluginConfig) {
     this->cbPipe = std::make_unique<ov::genai::ContinuousBatchingPipeline>(basePath, schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
-    return StatusCode::OK;
 }
 
 void LLMNodeResources::initiateGeneration() {

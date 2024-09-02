@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <string>
 
+#include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
 #include "gtest/gtest.h"
 #include "test_utils.hpp"
