@@ -485,7 +485,7 @@ protected:
 
     const std::string GRAPH_PATTERN = "<GRAPH_PATTERN>";
     const std::string WORKSPACE_PATTERN = "<MODELS_PATTERN>";
-    const std::string MODEL_PATH = "/ovms/llm_testing/facebook/opt-125m";
+    const std::string MODEL_PATH = "/ovms/src/test/llm_testing/facebook/opt-125m";
 
     std::string tokenizerConfigFilePath;
     std::string jinjaConfigFilePath;

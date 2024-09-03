@@ -83,7 +83,7 @@ public:
             };
             plugin_config_t pluginConfig;
             JsonParser::parsePluginConfig("", pluginConfig);
-            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>("/ovms/llm_testing/facebook/opt-125m", schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
+            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>("/ovms/src/test/llm_testing/facebook/opt-125m", schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
             llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(cbPipe);
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error during llm node initialization for models_path exception: {}", e.what());
@@ -1614,7 +1614,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeNameExists) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/llm_testing/facebook/opt-125m"
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
                 cache_size: 1
             }
         }
@@ -1644,7 +1644,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeNameExists) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/llm_testing/facebook/opt-125m"
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
                 cache_size: 1
             }
         }
@@ -1770,7 +1770,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/llm_testing/facebook/opt-125m/config.json"
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m/config.json"
             }
         }
         input_stream_handler {
@@ -1860,7 +1860,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/llm_testing/facebook/opt-125m"
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
             }
         }
         input_stream_handler {
@@ -1909,7 +1909,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/llm_testing/facebook/opt-125m"
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
                 max_num_batched_tokens: 98
                 cache_size: 1
                 block_size: 16
@@ -1960,7 +1960,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/llm_testing/facebook/opt-125m"
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
                 cache_size: 1
                 plugin_config: "[PERF_COUNT=TRUE]"
             }
@@ -2003,7 +2003,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/llm_testing/facebook/opt-125m"
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
                 max_num_batched_tokens: 1024
                 cache_size: 1
                 block_size: 8
