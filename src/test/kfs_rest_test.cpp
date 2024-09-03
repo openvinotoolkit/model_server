@@ -1232,6 +1232,22 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBufferSmallerThanExpected_noBinaryDat
     ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_BINARY_BUFFER_EXCEEDED);
 }
 
+TEST_F(HttpRestApiHandlerTest, binaryInputsInferenceHeaderContentLengthSmallerThanJsonBody) {
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"INT32\",\"parameters\":{\"binary_data_size\":true}}]}";
+    int inferenceHeaderContentLength = request_body.size() - 1;
+
+    ::KFSRequest grpc_request;
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsInferenceHeaderContentLengthLargerThanJsonBody) {
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"INT32\",\"parameters\":{\"binary_data_size\":true}}]}";
+    int inferenceHeaderContentLength = request_body.size() + 1;
+
+    ::KFSRequest grpc_request;
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_EXCEEDED);
+}
+
 TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidBinaryDataSizeParameter) {
     std::string binaryData{0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00};
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"INT32\",\"parameters\":{\"binary_data_size\":true}}]}";
