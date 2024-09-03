@@ -317,6 +317,8 @@ absl::Status OpenAIChatCompletionsHandler::processCommonPart(uint32_t maxTokensL
     if (it != doc.MemberEnd()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("include_stop_str_in_output accepts values true or false");
+        if (!it->value.GetBool() && request.stream)
+            return absl::InvalidArgumentError("include_stop_str_in_output must be explicitly set to true if streaming is used");
         request.includeStopStrInOutput = it->value.GetBool();
     }
 
