@@ -503,7 +503,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
         auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
         if (!status.ok()) {
-            sendErrorImplWithCode(status.string(), 400, *serverReaderWriter);
+            serverReaderWriter->PartialReplyWithStatus("{\"error\": \"" + status.string() + "\"}", tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
         }
         serverReaderWriter->PartialReplyEnd();
         return StatusCode::PARTIAL_END;
