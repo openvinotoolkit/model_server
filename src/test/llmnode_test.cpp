@@ -731,6 +731,7 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsFinishReasonLength) {
     ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
 }
 
+// Potential sporadic - move to functional if problematic
 TEST_F(LLMFlowHttpTest, streamChatCompletionsSingleStopString) {
     std::string requestBody = R"(
         {
@@ -790,6 +791,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsFinishReasonLength) {
     ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
 }
 
+// Potential sporadic - move to functional if problematic
 TEST_F(LLMFlowHttpTest, streamCompletionsSingleStopString) {
     std::string requestBody = R"(
         {
