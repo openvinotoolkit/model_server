@@ -4,7 +4,7 @@ def shortCommit = ""
 
 pipeline {
     agent {
-      label 'builder07'
+      label 'builder12'
     }
     stages {
         stage('Configure') {
