@@ -1298,7 +1298,7 @@ cc_test(
         "-lssl",
     ],
     deps = [
-    	":openvino_tests",
+    	":openvino_remote_tensors_tests",
 	":libtest_environment",
 	":libtest_gpuenvironment",
     	":test_utils",
@@ -1399,10 +1399,10 @@ cc_library(
 )
 
 cc_library(
-    name = "openvino_tests",
+    name = "openvino_remote_tensors_tests",
     linkstatic = 1,
     alwayslink = True,
-    srcs = ["test/openvino_tests.cpp"],
+    srcs = ["test/openvino_remote_tensors_tests.cpp"],
     data = [
         "test/c_api/config_standard_dummy.json",
         "test/c_api/config_gpu_dummy.json",
