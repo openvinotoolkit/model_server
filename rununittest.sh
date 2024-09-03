@@ -47,7 +47,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
     fi
     { bazel test \
         ${SHARED_OPTIONS} "${TEST_FILTER}" \
-        //src:ovms_test ${BAZEL_OPTIONS} 2>&1 | tee ${TEST_LOG} 2>&1 || \
+	//src:ovms_test ${BAZEL_OPTIONS} > ${TEST_LOG} 2>&1 || \
         test_fail_procedure; } && \
         test_success_procedure && \
         rm -rf ${TEST_LOG};
