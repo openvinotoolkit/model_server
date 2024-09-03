@@ -118,7 +118,7 @@ void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& node
     }
 }
 
-Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
+Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());

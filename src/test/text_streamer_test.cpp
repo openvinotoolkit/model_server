@@ -41,7 +41,7 @@ public:
     static void SetUpTestSuite() {
         py::initialize_interpreter();
         ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-        ASSERT_EQ(ovms::LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), ovms::StatusCode::OK);
+        ASSERT_EQ(ovms::LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), ovms::StatusCode::OK);
         tokenizer = std::make_shared<ov::genai::Tokenizer>("/ovms/llm_testing/facebook/opt-125m");
         streamer = std::make_shared<ovms::TextStreamer>(tokenizer);
     }
