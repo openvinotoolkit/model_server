@@ -176,8 +176,7 @@ Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResou
     for (auto prop : nodeResources->cbPipe->get_model_configuration()) {
         modelConfiguration = modelConfiguration + "\t" + prop + "\n";
     }
-    if (!modelConfiguration.empty())
-    {
+    if (!modelConfiguration.empty()) {
         SPDLOG_INFO("Model configuration: \n {}", modelConfiguration);
     }
 
