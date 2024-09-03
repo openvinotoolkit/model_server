@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Script should be used only as a part of Dockerfiles
 # https://dgpu-docs.intel.com/driver/installation.html
 wget -qO - https://repositories.intel.com/gpu/intel-graphics.key |
    gpg --yes --dearmor --output /usr/share/keyrings/intel-graphics.gpg

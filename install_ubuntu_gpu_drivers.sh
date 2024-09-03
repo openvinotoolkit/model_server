@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Script should be used only as a part of Dockerfiles
 apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
 case $INSTALL_DRIVER_VERSION in \
 "21.48.21782") \

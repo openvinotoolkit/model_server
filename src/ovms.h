@@ -412,6 +412,7 @@ OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
 // \param state The servable state
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_GetServableState(OVMS_Server* server, const char* servableName, int64_t servableVersion, OVMS_ServableState* state);
+// TODO FIXME TBD if included in release
 OVMS_Status* OVMS_GetServableContext(OVMS_Server* server, const char* servableName, int64_t servableVersion, void** oclContext);
 
 // OVMS_InferenceRequest
@@ -555,25 +556,25 @@ OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request,
 
 // Execute asynchronous inference
 //
-// Setting completion callback with OVMS_InferenceRequestSetCompleteCallback is required to receive a reply.
+// Setting completion callback with OVMS_InferenceRequestSetCompletionCallback is required to receive a reply.
 //
 // \param server The server object
 // \param request The request object
 // \return OVMS_Status object in case of failure to schedule inference
 OVMS_Status* OVMS_InferenceAsync(OVMS_Server* server, OVMS_InferenceRequest* request);
 
-// Type of function called when response is completed and set with OVMS_InferenceRequestSetCompleteCallback. Callback function takes ownership of OVMS_InferenceResponse object.
+// Type of function called when response is completed and set with OVMS_InferenceRequestSetCompletionCallback. Callback function takes ownership of OVMS_InferenceResponse object.
 // Flag specifies if the response is final coming from inference request, and if there were errors in execution
 // // TODO how to use that in MP
 //
 // \param response resp
 // \param flag Flag specifying if the response is final response for request
-// \param userStruct Data provided to callback, set in OVMS_InferenceRequestSetCompleteCallback
+// \param userStruct Data provided to callback, set in OVMS_InferenceRequestSetCompletionCallback
 typedef void (* OVMS_InferenceResponseCompleteCallback_t)(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 
 // TODO description
 // TODO consider allocators
-OVMS_Status* OVMS_InferenceRequestSetCompleteCallback(OVMS_InferenceRequest*, OVMS_InferenceResponseCompleteCallback_t completeCallback, void* userStruct);
+OVMS_Status* OVMS_InferenceRequestSetCompletionCallback(OVMS_InferenceRequest*, OVMS_InferenceResponseCompleteCallback_t completeCallback, void* userStruct);
 
 // Get OVMS_ServableMetadata object
 //

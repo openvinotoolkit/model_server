@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Script should be used only as a part of Dockerfiles
 case $INSTALL_DRIVER_VERSION in \
 "21.38.21026") \
         mkdir /tmp/gpu_deps ; \

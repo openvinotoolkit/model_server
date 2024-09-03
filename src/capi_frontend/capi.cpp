@@ -508,12 +508,12 @@ DLL_PUBLIC void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* request) {
     delete reinterpret_cast<InferenceRequest*>(request);
 }
 
-DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestSetCompleteCallback(OVMS_InferenceRequest* req, OVMS_InferenceResponseCompleteCallback_t completeCallback, void* userStruct) {
+DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestSetCompletionCallback(OVMS_InferenceRequest* req, OVMS_InferenceResponseCompleteCallback_t completeCallback, void* userStruct) {
     if (req == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
-    request->setCompleteCallback(completeCallback, userStruct);
+    request->setCompletionCallback(completeCallback, userStruct);
     return nullptr;
 }
 

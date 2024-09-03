@@ -119,6 +119,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             python39-devel && \
             yum clean all
 ARG INSTALL_DRIVER_VERSION="23.22.26516"
+# GPU testing in build img
 COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
 RUN ./install_gpu_drivers.sh && \
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \

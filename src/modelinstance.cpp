@@ -904,6 +904,7 @@ void ModelInstance::configureBatchSize(const ModelConfig& config, const DynamicM
 
 void ModelInstance::loadTensorFactories() {
     using std::make_shared;
+    this->tensorFactories.clear();
     this->tensorFactories.emplace(OVMS_BUFFERTYPE_CPU, make_shared<RegularOVTensorFactory>());
     if (this->targetDevice.find("GPU") != std::string::npos) {
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_OPENCL, make_shared<OpenCLTensorFactory>(*this->oclContextCpp));
@@ -1200,6 +1201,7 @@ void ModelInstance::unloadModelComponents() {
     SET_IF_ENABLED(this->getMetricReporter().inferReqQueueSize, 0);
     SET_IF_ENABLED(this->getMetricReporter().streams, 0);
     inferRequestsQueue.reset();
+    tensorFactories.clear();
     compiledModel.reset();
     model.reset();
     outputsInfo.clear();
@@ -1392,8 +1394,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
             SPDLOG_DEBUG("Used device: {}", device);
 
     status = requestProcessor->release();
-    SPDLOG_DEBUG("Calling user provided callback");  // TODO check if this shows
-    // handleCallback(requestProto, responseProto);
+    // handleCallback(requestProto, responseProto); to be enabled when callbacks are implemented in network API's
     return status;
 }
 
@@ -1404,7 +1405,7 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     OVMS_PROFILE_FUNCTION();
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
-    // TODO FIXME we don't have response yet!
+    // we don't have response yet
     // auto requestProcessor = createRequestProcessor(requestProto, responseProto);  // request, response passed only to deduce type
     // auto status = requestProcessor->extractRequestParameters(requestProto);
     // if (!status.ok())

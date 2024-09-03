@@ -1268,7 +1268,7 @@ TEST_F(CAPINonCopy, SyncWithCallbackDummy) {
     callbackStruct.queue = &queue;
     SPDLOG_ERROR("ER:{}", (void*)&callbackStruct);
 
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompleteCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness, reinterpret_cast<void*>(&callbackStruct)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness, reinterpret_cast<void*>(&callbackStruct)));
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
     // check is done in callback
     auto callbackReturnValue = unblockSignal.get();
@@ -1328,7 +1328,7 @@ TEST_F(CAPINonCopy, AsyncWithCallbackDummy) {
     auto unblockSignal = callbackStruct.signal.get_future();
     callbackStruct.bufferAddr = &openCLCppOutputBuffer;
     callbackStruct.queue = &queue;
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompleteCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness, reinterpret_cast<void*>(&callbackStruct)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness, reinterpret_cast<void*>(&callbackStruct)));
     // infer
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceAsync(cserver, request));
     // check
@@ -1458,8 +1458,8 @@ TEST_F(CAPIGPUPerfComparison, Dummy) {
     std::vector<std::future<uint32_t>> unblockSignal;
     unblockSignal.emplace_back(callbackStruct[0].signal.get_future());
     unblockSignal.emplace_back(callbackStruct[1].signal.get_future());
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompleteCallback(request[0], callbackUnblockingAndFreeingRequest, reinterpret_cast<void*>(&callbackStruct[0])));
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompleteCallback(request[1], callbackUnblockingAndFreeingRequest, reinterpret_cast<void*>(&callbackStruct[1])));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request[0], callbackUnblockingAndFreeingRequest, reinterpret_cast<void*>(&callbackStruct[0])));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request[1], callbackUnblockingAndFreeingRequest, reinterpret_cast<void*>(&callbackStruct[1])));
     std::unordered_map<int, double> times;
     size_t iterations = 10;
     iterations = 1'000;
