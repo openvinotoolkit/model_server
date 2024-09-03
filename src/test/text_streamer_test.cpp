@@ -15,17 +15,18 @@
 //*****************************************************************************
 #include <string>
 
+#include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
 #include "gtest/gtest.h"
 #include "test_utils.hpp"
 
 class TextStreamerTest : public ::testing::Test {
 public:
-    ::mediapipe::CalculatorGraphConfig config;
-    std::shared_ptr<ovms::LLMNodeResources> nodeResources = nullptr;
-    std::shared_ptr<ov::genai::Tokenizer> tokenizer;
-    std::shared_ptr<ovms::TextStreamer> streamer;
-    std::string testPbtxt = R"(
+    static inline ::mediapipe::CalculatorGraphConfig config;
+    static inline std::shared_ptr<ovms::LLMNodeResources> nodeResources = std::make_shared<ovms::LLMNodeResources>();
+    static inline std::shared_ptr<ov::genai::Tokenizer> tokenizer;
+    static inline std::shared_ptr<ovms::TextStreamer> streamer;
+    static inline const std::string testPbtxt = R"(
     node: {
     name: "llmNode"
     calculator: "HttpLLMCalculator"
@@ -37,14 +38,14 @@ public:
     }
 )";
 
-    void SetUp() override {
+    static void SetUpTestSuite() {
         py::initialize_interpreter();
         ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-        ASSERT_EQ(ovms::LLMNodeResources::createLLMNodeResources(nodeResources, config.node(0), ""), ovms::StatusCode::OK);
+        ASSERT_EQ(ovms::LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), ovms::StatusCode::OK);
         tokenizer = std::make_shared<ov::genai::Tokenizer>("/ovms/llm_testing/facebook/opt-125m");
         streamer = std::make_shared<ovms::TextStreamer>(tokenizer);
     }
-    void TearDown() {
+    static void TearDownTestSuite() {
         nodeResources.reset();
         py::finalize_interpreter();
     }

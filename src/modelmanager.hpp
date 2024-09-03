@@ -126,7 +126,7 @@ private:
     /**
      * @brief Cleaner thread for sequence and resources cleanup
      */
-    void cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal);
+    void cleanerRoutine(uint32_t resourcesCleanupIntervalMillisec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal);
 
     /**
      * @brief Mutex for blocking concurrent add & remove of resources
@@ -199,11 +199,13 @@ private:
      */
     uint32_t sequenceCleaupIntervalMinutes = 5;
 
+protected:
     /**
-     * Time interval between two consecutive resources cleanup scans (in seconds)
+     * Time interval between two consecutive resources cleanup scans (in milliseconds)
      */
-    uint32_t resourcesCleanupIntervalSec = 1;
+    uint32_t resourcesCleanupIntervalMillisec = 1000;
 
+private:
     /**
       * @brief last md5sum of configfile
       */
@@ -263,8 +265,8 @@ public:
     /**
      *  @brief Gets the cleaner resources interval timestep in seconds
      */
-    uint32_t getResourcesCleanupIntervalSec() {
-        return resourcesCleanupIntervalSec;
+    uint32_t getResourcesCleanupIntervalMillisec() {
+        return resourcesCleanupIntervalMillisec;
     }
 
     /**

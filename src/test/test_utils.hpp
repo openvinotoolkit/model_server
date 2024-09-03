@@ -667,7 +667,7 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
 }
 
 // returns path to a file.
-std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
+bool createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
 #pragma GCC diagnostic pop
 
 template <typename T>
@@ -730,6 +730,10 @@ class ResourcesAccessModelManager : public ConstructorEnabledModelManager {
 public:
     int getResourcesSize() {
         return resources.size();
+    }
+
+    void setResourcesCleanupIntervalMillisec(uint32_t value) {
+        this->resourcesCleanupIntervalMillisec = value;
     }
 };
 
@@ -1035,6 +1039,12 @@ public:
             return it->second.get();
         }
     }
+
+    ovms::Status validateForConfigLoadablenessPublic() {
+        return this->validateForConfigLoadableness();
+    }
+
+    ovms::LLMNodeResourcesMap& getLLMNodeResourcesMap() { return this->llmNodeResourcesMap; }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,

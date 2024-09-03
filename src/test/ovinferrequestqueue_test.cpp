@@ -48,7 +48,7 @@ TEST(OVInferRequestQueue, ShortQueue) {
 }
 
 static void releaseStream(ovms::OVInferRequestsQueue& requestsQueue) {
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     requestsQueue.returnStream(3);
 }
 
@@ -70,10 +70,10 @@ TEST(OVInferRequestQueue, FullQueue) {
     timer.start(QUEUE);
     std::thread th(&releaseStream, std::ref(inferRequestsQueue));
     th.detach();
-    reqid = inferRequestsQueue.getIdleStream().get();  // it should wait 1s for released request
+    reqid = inferRequestsQueue.getIdleStream().get();  // it should wait 0.5s for released request
     timer.stop(QUEUE);
 
-    EXPECT_GT(timer.elapsed<std::chrono::microseconds>(QUEUE), 1'000'000);
+    EXPECT_GT(timer.elapsed<std::chrono::microseconds>(QUEUE), 500'000);
     EXPECT_EQ(reqid, 3);
 }
 
@@ -83,9 +83,8 @@ static void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& 
         int rd = std::rand();
         tv[st] = rd;
         std::mt19937_64 eng{std::random_device{}()};
-        std::uniform_int_distribution<> dist{10, 50};  // mocked inference delay range in ms
+        std::uniform_int_distribution<> dist{1, 5};  // mocked inference delay range in ms
         std::this_thread::sleep_for(std::chrono::milliseconds{dist(eng)});
-        std::mutex mut;
         // test if no other thread updated the content of vector element of reserved id
         EXPECT_EQ(rd, tv[st]);
         ms.returnStream(st);
@@ -103,12 +102,14 @@ TEST(OVInferRequestQueue, MultiThread) {
 
     std::vector<int> test_vector(nireq);  // vector to test if only one thread can manage each element
     std::vector<std::thread> clients;
+    SPDLOG_INFO("AAAAAAAAAAAA");
     for (int i = 0; i < number_clients; ++i) {
         clients.emplace_back(inferenceSimulate, std::ref(inferRequestsQueue), std::ref(test_vector));
     }
     for (auto& t : clients) {
         t.join();
     }
+    SPDLOG_INFO("BBBBBBBB");
     // wait for all thread to complete successfully
 }
 
