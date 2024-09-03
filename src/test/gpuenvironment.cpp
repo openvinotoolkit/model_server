@@ -34,8 +34,12 @@ void GPUEnvironment::SetUp() {
     }
 }
 
+bool GPUEnvironment::shouldSkipWithoutGPU() {
+    return !GPUEnvironment::gpuTestsEnabled;
+}
+
 void GPUEnvironment::skipWithoutGPU() {
-    if (!GPUEnvironment::gpuTestsEnabled) {
+    if (shouldSkipWithoutGPU()) {
         GTEST_SKIP() << "Skipping GPU tests because those tests were not enabled. Check gpuenvironment.[hc]pp";
     }
 }

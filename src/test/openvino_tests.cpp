@@ -148,6 +148,7 @@ protected:
     uint32_t inputSecondDim = 100;
     void SetUp() {
         OpenVINO::SetUp();
+        SKIP_AND_EXIT_IF_NO_GPU();
         Core core;
         this->model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
         auto input = model->get_parameters().at(0);

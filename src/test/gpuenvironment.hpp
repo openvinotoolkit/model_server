@@ -18,9 +18,16 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#define SKIP_AND_EXIT_IF_NO_GPU()                                                                               \
+    if (GPUEnvironment::shouldSkipWithoutGPU()) {                                                               \
+        GTEST_SKIP() << "Skipping GPU tests because those tests were not enabled. Check gpuenvironment.[hc]pp"; \
+        return;                                                                                                 \
+    }
+
 class GPUEnvironment : public testing::Environment {
 public:
     void SetUp() override;
     static bool gpuTestsEnabled;
+    static bool shouldSkipWithoutGPU();
     static void skipWithoutGPU();
 };
