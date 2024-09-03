@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-if [ -d "$1" ]; then
+if [ -d "$1/facebook/opt-125m" ]; then
   echo "Models directory $1 exists. Skipping downloading models."
   exit 0
 fi

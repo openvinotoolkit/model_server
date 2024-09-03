@@ -38,7 +38,7 @@ struct ServerSettingsImpl {
 #endif
     std::optional<size_t> grpcMemoryQuota;
     std::string grpcChannelArguments;
-    uint32_t filesystemPollWaitSeconds = 1;
+    uint32_t filesystemPollWaitMilliseconds = 1000;
     uint32_t sequenceCleanerPollWaitMinutes = 5;
     uint32_t resourcesCleanerPollWaitSeconds = 1;
     std::string cacheDir;

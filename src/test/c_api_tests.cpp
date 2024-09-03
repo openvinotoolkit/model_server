@@ -90,7 +90,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->grpcChannelArguments, "");
     EXPECT_EQ(serverSettings->grpcMaxThreads, std::nullopt);
     EXPECT_EQ(serverSettings->grpcMemoryQuota, std::nullopt);
-    EXPECT_EQ(serverSettings->filesystemPollWaitSeconds, 1);
+    EXPECT_EQ(serverSettings->filesystemPollWaitMilliseconds, 1000);
     EXPECT_EQ(serverSettings->sequenceCleanerPollWaitMinutes, 5);
     EXPECT_EQ(serverSettings->resourcesCleanerPollWaitSeconds, 1);
     EXPECT_EQ(serverSettings->cacheDir, "");
@@ -163,7 +163,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->grpcChannelArguments, "grpcargs");
     EXPECT_EQ(serverSettings->grpcMaxThreads, 100);
     EXPECT_EQ(serverSettings->grpcMemoryQuota, (size_t)1000000);
-    EXPECT_EQ(serverSettings->filesystemPollWaitSeconds, 2);
+    EXPECT_EQ(serverSettings->filesystemPollWaitMilliseconds, 2000);
     EXPECT_EQ(serverSettings->sequenceCleanerPollWaitMinutes, 3);
     EXPECT_EQ(serverSettings->resourcesCleanerPollWaitSeconds, 4);
     EXPECT_EQ(serverSettings->cacheDir, "/tmp/cache");
@@ -187,7 +187,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(cfg.logPath(), "/logs");
     // trace path  // not tested since it is not supported in C-API
     EXPECT_EQ(cfg.grpcChannelArguments(), "grpcargs");
-    EXPECT_EQ(cfg.filesystemPollWaitSeconds(), 2);
+    EXPECT_EQ(cfg.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(cfg.sequenceCleanerPollWaitMinutes(), 3);
     EXPECT_EQ(cfg.resourcesCleanerPollWaitSeconds(), 4);
     EXPECT_EQ(cfg.cacheDir(), "/tmp/cache");
@@ -1389,32 +1389,50 @@ TEST_F(CAPIStateIntegration, Config) {
     OVMS_ServableState state;
     const std::string servableName = "dummy";
     const int64_t servableVersion = 1;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(cserver, nullptr, servableVersion, &state), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NULL(
+        OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(
+        OVMS_GetServableState(cserver, nullptr, servableVersion, &state), StatusCode::NONEXISTENT_PTR);
     OVMS_ServerSettings* serverSettings = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
+    ASSERT_CAPI_STATUS_NULL(
+        OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(
+        OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
+    ovms::ServerSettingsImpl* directPtrServerSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(serverSettings);
+    directPtrServerSettings->filesystemPollWaitMilliseconds = 20;  // mock 20ms config.json polling to make the test shorter
     OVMS_ModelsSettings* modelsSettings = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(
+        OVMS_ModelsSettingsNew(&modelsSettings));
     std::filesystem::copy("/ovms/src/test/configs/emptyConfigWithMetrics.json", configFilePath, std::filesystem::copy_options::recursive);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(cserver, servableName.c_str(), servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(cserver, "pipeline1Dummy", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_GetServableState(cserver, "mediaDummy", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_CAPI_STATUS_NULL(
+        OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
+    ASSERT_CAPI_STATUS_NULL(
+        OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(
+        OVMS_GetServableState(cserver, servableName.c_str(), servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(
+        OVMS_GetServableState(cserver, "pipeline1Dummy", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(
+        OVMS_GetServableState(cserver, "mediaDummy", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
     std::filesystem::copy("/ovms/src/test/c_api/config_metadata_all.json", configFilePath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
     Server* server = reinterpret_cast<Server*>(cserver);
     const ovms::Module* servableModule = server->getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
     ModelManager* modelManager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
+
+    // Instead of waiting for config to get reloaded
     waitForOVMSConfigReload(*modelManager);
-    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(cserver, servableName.c_str(), servableVersion, &state));
+    ASSERT_CAPI_STATUS_NULL(
+        OVMS_GetServableState(cserver, servableName.c_str(), servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
-    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(cserver, "pipeline1Dummy", servableVersion, &state));
+    ASSERT_CAPI_STATUS_NULL(
+        OVMS_GetServableState(cserver, "pipeline1Dummy", servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
 #if (MEDIAPIPE_DISABLE == 0)
     std::filesystem::copy("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json", configFilePath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
     waitForOVMSConfigReload(*modelManager);
-    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(cserver, "mediaDummy", servableVersion, &state));
+    ASSERT_CAPI_STATUS_NULL(
+        OVMS_GetServableState(cserver, "mediaDummy", servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
 #endif
     OVMS_ServerDelete(cserver);

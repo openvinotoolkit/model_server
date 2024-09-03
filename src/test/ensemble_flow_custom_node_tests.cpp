@@ -5638,6 +5638,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
     //  O--------->O--------->O--------->O---------->O
     //          add-sub    add-sub    add-sub
     ResourcesAccessModelManager manager;
+    manager.setResourcesCleanupIntervalMillisec(20);  // Mock cleaner to work in 20ms intervals instead of >1s
     manager.startCleaner();
     ASSERT_EQ(manager.getResourcesSize(), 0);
     PipelineFactory factory;
@@ -5699,6 +5700,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     //  O--------->O--------->O--------->O---------->O
     //          add-sub    add-sub    add-sub
     ResourcesAccessModelManager manager;
+    manager.setResourcesCleanupIntervalMillisec(20);  // Mock cleaner to work in 20ms intervals instead of >1s
     manager.startCleaner();
     ASSERT_EQ(manager.getResourcesSize(), 0);
     PipelineFactory factory;
@@ -5742,7 +5744,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
         {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
 
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
-    waitForOVMSResourcesCleanup(manager);
+    waitForOVMSResourcesCleanup(manager);  // 20ms * 1.8 wait time
     ASSERT_EQ(manager.getResourcesSize(), 3);
 
     // Nodes
@@ -5754,7 +5756,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{customNodeOutputName, pipelineOutputName}}}};
     ASSERT_EQ(factory.reloadDefinition("my_new_pipeline", std::move(info), std::move(connections), manager), StatusCode::OK);
-    waitForOVMSResourcesCleanup(manager);
+    waitForOVMSResourcesCleanup(manager);  // 20ms * 1.8 wait time
     ASSERT_EQ(manager.getResourcesSize(), 2);
     manager.join();
     // Each custom node has effectively 1 internalManager initialized, because they use same library instance

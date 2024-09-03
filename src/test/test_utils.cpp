@@ -122,21 +122,23 @@ void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
     // This is effectively multiplying by 1.8 to have 1 config reload in between
     // two test steps
     const float WAIT_MULTIPLIER_FACTOR = 1.8;
-    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getResourcesCleanupIntervalSec() * 1000;
+    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getResourcesCleanupIntervalMillisec();
+    SPDLOG_DEBUG("waitForOVMSResourcesCleanup {} ms", waitTime);
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }
 
-std::string createConfigFileWithContent(const std::string& content, std::string filename) {
+bool createConfigFileWithContent(const std::string& content, std::string filename) {
     std::ofstream configFile{filename};
     SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filename, content);
     configFile << content << std::endl;
     configFile.close();
     if (configFile.fail()) {
         SPDLOG_INFO("Closing configFile failed");
+        return false;
     } else {
         SPDLOG_INFO("Closing configFile succeed");
     }
-    return filename;
+    return true;
 }
 
 ovms::tensor_map_t prepareTensors(
