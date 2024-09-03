@@ -461,11 +461,11 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
         auto modelNameIt = doc.FindMember("model");
         if (modelNameIt == doc.MemberEnd()) {
-            return Status(StatusCode::JSON_INVALID, "\"model\" field is missing in JSON body");
+            return Status(StatusCode::JSON_INVALID, "model field is missing in JSON body");
         }
 
         if (!modelNameIt->value.IsString()) {
-            return Status(StatusCode::JSON_INVALID, "\"model\" field is not a string");
+            return Status(StatusCode::JSON_INVALID, "model field is not a string");
         }
 
         const std::string model_name = modelNameIt->value.GetString();
@@ -473,7 +473,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             auto streamIt = doc.FindMember("stream");
             if (streamIt != doc.MemberEnd()) {
                 if (!streamIt->value.IsBool()) {
-                    return Status(StatusCode::JSON_INVALID, "\"stream\" field is not a boolean");
+                    return Status(StatusCode::JSON_INVALID, "stream field is not a boolean");
                 }
                 streamFieldVal = streamIt->value.GetBool();
             }

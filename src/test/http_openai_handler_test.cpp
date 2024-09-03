@@ -184,7 +184,7 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldMissing) {
 
     auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    ASSERT_EQ(status.string(), "The file is not valid json - \"model\" field is missing in JSON body");
+    ASSERT_EQ(status.string(), "The file is not valid json - model field is missing in JSON body");
 }
 
 TEST_F(HttpOpenAIHandlerTest, ModelFieldNotAString) {
@@ -203,7 +203,7 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldNotAString) {
 
     auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    ASSERT_EQ(status.string(), "The file is not valid json - \"model\" field is not a string");
+    ASSERT_EQ(status.string(), "The file is not valid json - model field is not a string");
 }
 
 TEST_F(HttpOpenAIHandlerTest, StreamFieldNotABoolean) {
@@ -222,7 +222,7 @@ TEST_F(HttpOpenAIHandlerTest, StreamFieldNotABoolean) {
 
     auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    ASSERT_EQ(status.string(), "The file is not valid json - \"stream\" field is not a boolean");
+    ASSERT_EQ(status.string(), "The file is not valid json - stream field is not a boolean");
 }
 
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
