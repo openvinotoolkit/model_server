@@ -193,7 +193,7 @@ void LLMNodeResources::initializeContinuousBatchingPipeline(
 
 void LLMNodeResources::initiateGeneration() {
     if (!cbPipe) {
-        throw std::logic_error("cannot initialize generation with uninitialized cbPipe");
+        throw std::logic_error("Cannot initiate generation with uninitialized pipeline");
     }
     llmExecutorWrapper = std::make_unique<LLMExecutorWrapper>(cbPipe);
 }
