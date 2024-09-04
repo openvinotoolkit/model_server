@@ -144,7 +144,7 @@ index c8d0501b..ecddbac3 100644
  }  // namespace serving
  }  // namespace tensorflow
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
-index 2f8e601d..bcf5a451 100644
+index 2f8e601d..72e47bce 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
 @@ -21,6 +21,7 @@ limitations under the License.
@@ -166,7 +166,7 @@ index 2f8e601d..bcf5a451 100644
  
    CallbackStatus PartialReplyWithFlushCallback(
        std::function<void()> callback) override;
-@@ -104,16 +105,26 @@ class EvHTTPRequest final : public ServerRequestInterface {
+@@ -104,9 +105,15 @@ class EvHTTPRequest final : public ServerRequestInterface {
  
    void Abort() override;
  
@@ -182,10 +182,8 @@ index 2f8e601d..bcf5a451 100644
    // Keeps a reference to the registered RequestHandlerOptions
    void SetHandlerOptions(const RequestHandlerOptions& handler_options) {
      this->handler_options_ = &handler_options;
-   }
+@@ -114,6 +121,8 @@ class EvHTTPRequest final : public ServerRequestInterface {
  
-+  int64_t Id() { return (int64_t)((int*)this); }
-+
   private:
    void EvSendReply(HTTPStatusCode status);
 +  void EvPartialSendReply(std::string data, HTTPStatusCode status);
@@ -193,7 +191,7 @@ index 2f8e601d..bcf5a451 100644
  
    // Returns true if the data needs be uncompressed
    bool NeedUncompressGzipContent();
-@@ -133,6 +144,12 @@ class EvHTTPRequest final : public ServerRequestInterface {
+@@ -133,6 +142,12 @@ class EvHTTPRequest final : public ServerRequestInterface {
    std::unique_ptr<ParsedEvRequest> parsed_request_;
  
    evbuffer* output_buf;  // owned by this
