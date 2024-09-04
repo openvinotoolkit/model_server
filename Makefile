@@ -81,7 +81,7 @@ OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
 
 TOKENIZERS ?= 1
-TEST_LLM_PATH ?= "/tmp/llm_testing"
+TEST_LLM_PATH ?= "src/test/llm_testing"
 
 OV_USE_BINARY ?= 0
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -663,7 +663,7 @@ cpu_extension:
 
 run_unit_tests:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
-	docker run -v $(realpath ${TEST_LLM_PATH}):/ovms/llm_testing:ro -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh > test.log 2>&1 ; exit_status=$$? ; tail -200 test.log ; exit $$exit_status
+	docker run -v $(realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh > test.log 2>&1 ; exit_status=$$? ; tail -200 test.log ; exit $$exit_status
 
 run_lib_files_test:
 	docker run --entrypoint bash -v $(realpath tests/file_lists):/test $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./test/test_release_files.sh ${BAZEL_DEBUG_FLAGS} > file_test.log 2>&1 ; exit_status=$$? ; tail -200 file_test.log ; exit $$exit_status

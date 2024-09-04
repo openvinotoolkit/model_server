@@ -273,10 +273,6 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
 
 COPY src/ /ovms/src/
 
-# run python testes on a version from os not TFS
-ARG RUN_TESTS=0
-RUN if [ "$RUN_TESTS" == "1" ] ; then bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src/python/binding:test_python_binding; fi ;
-
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
@@ -310,8 +306,9 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
-COPY rununittest.sh /ovms/
-RUN ./rununittest.sh
+COPY rununittest.sh prepare_llm_models.sh /ovms/
+ARG RUN_TESTS=0
+RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./rununittest.sh ; fi
 ARG FUZZER_BUILD=0
 
 # Custom Nodes
