@@ -662,9 +662,10 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStreamOptionsBadType) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReply(::testing::_))
-        .WillOnce([this](std::string response) {
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, tensorflow::serving::net_http::HTTPStatusCode code) {
             ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stream_options is not an object\"}");
+            ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
         });
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
@@ -685,9 +686,10 @@ TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadType) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReply(::testing::_))
-        .WillOnce([this](std::string response) {
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, tensorflow::serving::net_http::HTTPStatusCode code) {
             ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stream_options is not an object\"}");
+            ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
         });
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
@@ -714,9 +716,10 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsStreamOptionsBadContent) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReply(::testing::_))
-        .WillOnce([this](std::string response) {
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, tensorflow::serving::net_http::HTTPStatusCode code) {
             ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
+            ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
         });
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
@@ -737,9 +740,10 @@ TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadContent) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReply(::testing::_))
-        .WillOnce([this](std::string response) {
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, tensorflow::serving::net_http::HTTPStatusCode code) {
             ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
+            ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
         });
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
@@ -765,9 +769,10 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadIncludeUsage) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReply(::testing::_))
-        .WillOnce([this](std::string response) {
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, tensorflow::serving::net_http::HTTPStatusCode code) {
             ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stream_options.include_usage is not a boolean\"}");
+            ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
         });
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
@@ -788,9 +793,10 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeUsage) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReply(::testing::_))
-        .WillOnce([this](std::string response) {
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, tensorflow::serving::net_http::HTTPStatusCode code) {
             ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stream_options.include_usage is not a boolean\"}");
+            ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
         });
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
@@ -849,9 +855,10 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedImmediately)
 
     std::atomic<int> i = 0;
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    EXPECT_CALL(writer, PartialReply(::testing::_)).WillOnce([this, &i](std::string partialResponse) {
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_)).WillOnce([this, &i](std::string partialResponse, tensorflow::serving::net_http::HTTPStatusCode code) {
         i++;
         ASSERT_EQ(partialResponse, "{\"error\": \"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: \"}");
+        ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
     });  // no results
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
@@ -881,9 +888,10 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedImmediately) {
 
     std::atomic<int> i = 0;
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    EXPECT_CALL(writer, PartialReply(::testing::_)).WillOnce([this, &i](std::string partialResponse) {
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_)).WillOnce([this, &i](std::string partialResponse, tensorflow::serving::net_http::HTTPStatusCode code) {
         i++;
         ASSERT_EQ(partialResponse, "{\"error\": \"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: \"}");
+        ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
     });  // no results
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
 
