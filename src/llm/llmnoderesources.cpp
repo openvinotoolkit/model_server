@@ -17,6 +17,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -191,6 +192,9 @@ void LLMNodeResources::initializeContinuousBatchingPipeline(
 }
 
 void LLMNodeResources::initiateGeneration() {
+    if (!cbPipe) {
+        throw std::logic_error("Cannot initiate generation with uninitialized pipeline");
+    }
     llmExecutorWrapper = std::make_unique<LLMExecutorWrapper>(cbPipe);
 }
 

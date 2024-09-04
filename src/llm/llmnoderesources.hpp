@@ -120,7 +120,7 @@ public:
     LLMNodeResources() = default;
     virtual ~LLMNodeResources() = default;
 
-    void initiateGeneration();
+    virtual void initiateGeneration();
 
     void notifyExecutorThread();
 
