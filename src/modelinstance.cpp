@@ -1462,7 +1462,7 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     void* userCallbackData = requestProto->getResponseCompleteCallbackData();
     // here pass by copy into callback
     // TODO unload model guard & test
-    inferRequest.set_callback([this, requestProto, &inferRequest, userCallback, userCallbackData](std::exception_ptr exception) {
+    inferRequest.set_callback([this, requestProto, &inferRequest, userCallback, userCallbackData, modelUnloadGuardPtrMoved = {std::move(modelUnloadGuardPtr)}](std::exception_ptr exception) {
         SPDLOG_INFO("Entry of ov::InferRequest callback call");
         if (exception) {
             try {

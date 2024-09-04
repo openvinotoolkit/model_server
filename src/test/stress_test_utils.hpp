@@ -162,6 +162,21 @@ static const char* stressTestPipelineOneDummyRemovedConfig = R"(
         }
     ]
 })";
+static const char* stressTestPipelineOneDummyConfigChangedToAutoOneModel = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "auto"}
+            }
+        }
+    ]
+})";
 static const char* stressTestPipelineOneDummyConfigChangedToAuto = R"(
 {
     "model_config_list": [
@@ -1149,6 +1164,18 @@ public:
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
+    void changeToAutoShapeOneModel() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(stressTestPipelineOneDummyConfigChangedToAutoOneModel);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void changeToEmptyConfig() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(initialClearConfig);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
     void removePipelineDefinition() {
         SPDLOG_INFO("{} start", __FUNCTION__);
         SetUpConfig(stressTestPipelineOneDummyConfigPipelineRemoved);
@@ -1881,7 +1908,7 @@ public:
             if (sc == StatusCode::OK) {
                 checkInferResponse(response);
             }
-            OVMS_InferenceResponseDelete(response);
+
             if (::testing::Test::HasFailure()) {
                 SPDLOG_INFO("Earlier fail detected. Stopping execution");
                 break;
@@ -1897,5 +1924,103 @@ public:
             ss << "Executed: " << stressIterationsLimit - stressIterationsCounter << " inferences by thread id: " << std::this_thread::get_id() << std::endl;
             SPDLOG_INFO(ss.str());
         }
+    }
+
+    static void callbackUnblockingAndFreeingRequest(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
+        SPDLOG_INFO("Using callback: callbackUnblockingAndFreeingRequest!");
+        CallbackUnblockingStruct* callbackUnblockingStruct = reinterpret_cast<CallbackUnblockingStruct*>(userStruct);
+        callbackUnblockingStruct->signal.set_value(42);
+        callbackUnblockingStruct->response = response;
+        OVMS_InferenceResponseDelete(response);
+    }
+
+    struct CallbackUnblockingStruct {
+        std::promise<uint32_t> signal;
+        OVMS_InferenceResponse* response;
+    };
+
+    void triggerCApiAsyncInferenceInALoop(
+        std::future<void>& startSignal,
+        std::future<void>& stopSignal,
+        const std::set<StatusCode>& requiredLoadResults,
+        const std::set<StatusCode>& allowedLoadResults,
+        std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
+        startSignal.get();
+        // stressIterationsCounter is additional safety measure
+        auto stressIterationsCounter = stressIterationsLimit;
+        bool breakLoop = false;
+        while (stressIterationsCounter-- > 0) {
+            auto futureWaitResult = stopSignal.wait_for(std::chrono::milliseconds(0));
+            if (true == breakLoop) {
+                SPDLOG_INFO("Ending Load");
+                break;
+            }
+            if (futureWaitResult == std::future_status::ready) {
+                SPDLOG_INFO("Got stop signal. Triggering last request");
+                breakLoop = true;
+            }
+            OVMS_InferenceRequest* request{nullptr};
+            OVMS_InferenceRequestNew(&request, this->cserver, "dummy", 1);
+            ASSERT_NE(nullptr, request);
+
+            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "b", OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+            std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, "b", reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, 0));
+
+            OVMS_InferenceResponse* response = nullptr;
+            CallbackUnblockingStruct callbackStruct;
+            auto unblockSignal = callbackStruct.signal.get_future();
+            callbackStruct.response = response;
+
+            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackUnblockingAndFreeingRequest, reinterpret_cast<void*>(&callbackStruct)));
+
+            OVMS_Status* status = OVMS_InferenceAsync(this->cserver, request);
+            //OVMS_InferenceRequestDelete(request);
+            // check
+            auto callbackReturnValue = unblockSignal.get();
+            SPDLOG_INFO("callbackReturnValue {}.", callbackReturnValue);
+
+            uint32_t code = 0;
+            OVMS_Status* codeStatus = OVMS_StatusCode(status, &code);
+            StatusCode sc;
+            if (codeStatus != nullptr) {
+                sc = static_cast<StatusCode>(StatusCode::OK);
+            } else {
+                sc = static_cast<StatusCode>(code);
+            }
+            createPipelineRetCodesCounters[sc]++;
+            EXPECT_TRUE((requiredLoadResults.find(sc) != requiredLoadResults.end()) ||
+                        (allowedLoadResults.find(sc) != allowedLoadResults.end()));
+            if (sc == StatusCode::OK) {
+                ASSERT_EQ(response, nullptr);
+            }
+            //OVMS_InferenceResponseDelete(response);
+            if (::testing::Test::HasFailure()) {
+                SPDLOG_INFO("Earlier fail detected. Stopping execution");
+                break;
+            }
+            for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
+                if (counter > 0) {
+                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint>(retCode), ovms::Status(retCode).string(), counter);
+                }
+            }
+
+            EXPECT_GT(stressIterationsCounter, 0) << "Reaching 0 means that we might not test enough \"after config change\" operation was applied";
+            std::stringstream ss;
+            ss << "Executed: " << stressIterationsLimit - stressIterationsCounter << " inferences by thread id: " << std::this_thread::get_id() << std::endl;
+            SPDLOG_INFO(ss.str());
+        }
+    }
+};
+
+class ConfigChangeStressTestAsync : public ConfigChangeStressTest {
+    void SetUp() override {
+        SetUpCAPIServerInstance(stressTestOneDummyConfig);
+    }
+};
+
+class ConfigChangeStressTestAsyncStartEmpty : public ConfigChangeStressTest {
+    void SetUp() override {
+        SetUpCAPIServerInstance(initialClearConfig);
     }
 };

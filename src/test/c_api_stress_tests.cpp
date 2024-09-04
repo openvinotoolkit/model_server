@@ -64,6 +64,53 @@ public:
     }
 };
 
+class StressCapiAsyncConfigChanges : public ConfigChangeStressTestAsync {};
+
+TEST_F(StressCapiAsyncConfigChanges, ChangeToEmptyConfigAsyncInference) {
+    bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE  // this should be hit if test is stressing enough, sporadically does not happen
+    };
+    performStressTest(
+        &ConfigChangeStressTest::triggerCApiAsyncInferenceInALoop,
+        &ConfigChangeStressTest::changeToEmptyConfig,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(StressCapiAsyncConfigChanges, ChangeToAutoShapeDuringAsyncInference) {
+    bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MODEL_VERSION_NOT_LOADED_YET  // this should be hit if test is stressing enough, sporadically does not happen
+    };
+    performStressTest(
+        &ConfigChangeStressTest::triggerCApiAsyncInferenceInALoop,
+        &ConfigChangeStressTest::changeToAutoShapeOneModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(ConfigChangeStressTestAsyncStartEmpty, ChangeToLoadedModelDuringAsyncInference) {
+    bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MODEL_MISSING  // this should be hit if test is stressing enough, sporadically does not happen
+    };
+    performStressTest(
+        &ConfigChangeStressTest::triggerCApiAsyncInferenceInALoop,
+        &ConfigChangeStressTest::addFirstModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
 TEST_F(StressCapiConfigChanges, AddNewVersionDuringPredictLoad) {
     bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
