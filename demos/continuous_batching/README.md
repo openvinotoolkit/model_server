@@ -14,8 +14,9 @@ This demo is supported starting from version 2024.2.
 ```bash
 docker pull openvino/model_server:latest
 ```
-It is recommended to build the latest code version when running the demo from the main branch.
-That way you can take advantage of the latest enhancements in this feature.
+It is required to rebuild the latest code version when running the demo from the main branch.
+It is guaranteed to match the version of optimum-intel and transformers used to prepare the LLM model and tokenizers.
+That way you can also take advantage of the latest enhancements in this feature.
 When running the demo from release branch, use public docker image.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
@@ -33,7 +34,7 @@ Here, we will also define the LLM engine parameters inside the `graph.pbtxt`.
 Install python dependencies for the conversion script:
 ```bash
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git@main openvino-tokenizers transformers
+pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git@main openvino-tokenizers transformers==4.43.1
 ```
 
 Run optimum-cli to download and quantize the model:
