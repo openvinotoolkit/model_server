@@ -973,7 +973,7 @@ TEST_F(ModelManagerWatcher, StartFromFileWhenModelFilesMissingRelativePath) {
 }
 
 TEST_F(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
-    std::string fileToReload = this->getFilePath("ovms_config_file2.json");
+    std::string fileToReload = this->getFilePath("/ovms_config_file2.json");
     createConfigFileWithContent(getConfig1Model(this->getFilePath("/models/dummy1")), fileToReload);
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -986,12 +986,7 @@ TEST_F(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
     EXPECT_EQ(models, 1);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     createConfigFileWithContent(getConfig2Models(this->getFilePath("/models/dummy1"), this->getFilePath("/models/dummy2")), fileToReload);
-    bool isNeeded = false;
-    manager.configFileReloadNeeded(isNeeded);
-    std::thread s([&manager]() {
-        waitForOVMSConfigReload(manager);
-    });
-    s.join();
+    waitForOVMSConfigReload(manager);
     models = manager.getModels().size();
     EXPECT_EQ(models, 2);
     manager.join();
@@ -1012,12 +1007,7 @@ TEST_F(ModelManagerWatcher, ConfigReloadingShouldAddNewModelRelativePath) {
     EXPECT_EQ(models, 1);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     createConfigFileWithContent(relative_config_2_models, fileToReload);
-    bool isNeeded = false;
-    manager.configFileReloadNeeded(isNeeded);
-    std::thread s([&manager]() {
-        waitForOVMSConfigReload(manager);
-    });
-    s.join();
+    waitForOVMSConfigReload(manager);
     models = manager.getModels().size();
     EXPECT_EQ(models, 2);
     manager.join();
@@ -1038,6 +1028,7 @@ public:
 
 TEST(ModelManagerCleaner, ConfigReloadShouldCleanupResources) {
     ResourcesAccessModelManager manager;
+    manager.setResourcesCleanupIntervalMillisec(20);  // Mock cleaner to work in 20ms intervals instead of >1s
     manager.startCleaner();
     ASSERT_EQ(manager.getResourcesSize(), 0);
 
@@ -1470,6 +1461,9 @@ public:
     void registerVersionToLoad(ovms::model_version_t version) {
         toRegister.emplace_back(version);
     }
+    void setWatcherIntervalMillisec(uint watcherIntervalMillisec) {
+        this->watcherIntervalMillisec = watcherIntervalMillisec;
+    }
 
 private:
     std::vector<ovms::model_version_t> toRegister;
@@ -1482,6 +1476,7 @@ TEST_F(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFrom
     createConfigFileWithContent(getConfig2Models(this->getFilePath("/models/dummy1"), this->getFilePath("/models/dummy2")), fileToReload);
     modelMock = std::make_shared<MockModel>();
     MockModelManagerWithModelInstancesJustChangingStates manager;
+    manager.setWatcherIntervalMillisec(10);  // this makes the watcher check for MD5 changes every 10 ms
     manager.registerVersionToLoad(1);
     manager.registerVersionToLoad(2);
     auto status = manager.startFromFile(fileToReload);
@@ -1518,6 +1513,7 @@ TEST_F(ModelManager, ConfigReloadingShouldRetireModelInstancesOfModelRemovedFrom
     createConfigFileWithContent(relative_config_2_models, fileToReload);
     modelMock = std::make_shared<MockModel>();
     MockModelManagerWithModelInstancesJustChangingStates manager;
+    manager.setWatcherIntervalMillisec(10);  // this makes the watcher check for MD5 changes every 10 ms
     manager.registerVersionToLoad(1);
     manager.registerVersionToLoad(2);
     auto status = manager.startFromFile(fileToReload);

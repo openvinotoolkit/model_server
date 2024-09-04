@@ -42,6 +42,8 @@
 
 namespace ovms {
 
+class LLMExecutorWrapper;
+
 // TODO: To be moved to CB library.
 class TextStreamer {
     std::shared_ptr<ov::genai::Tokenizer> tokenizer;
@@ -94,7 +96,6 @@ public:
 };
 
 class Status;
-class LLMExecutorWrapper;
 
 using plugin_config_t = std::map<std::string, ov::Any>;
 
@@ -111,12 +112,13 @@ public:
     int maxTokensLimit;
     int bestOfLimit;
 
-    static Status createLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
+    static Status initializeLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
     static void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources, const std::string& chatTemplateDirectory);
 
     LLMNodeResources(const LLMNodeResources&) = delete;
     LLMNodeResources& operator=(LLMNodeResources&) = delete;
     LLMNodeResources() = default;
+    virtual ~LLMNodeResources() = default;
 
     void initiateGeneration();
 
@@ -125,6 +127,14 @@ public:
 private:
     std::unique_ptr<LLMExecutorWrapper> llmExecutorWrapper;
     static std::unordered_map<std::string, std::string> prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath);
+
+public:
+    virtual void initializeContinuousBatchingPipeline(
+        const std::string& basePath,
+        const ov::genai::SchedulerConfig& schedulerConfig,
+        const std::string& device,
+        const plugin_config_t& pluginConfig,
+        const plugin_config_t& tokenizerPluginConfig);
 };
 #pragma GCC visibility pop
 using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;

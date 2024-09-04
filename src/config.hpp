@@ -289,11 +289,11 @@ public:
     const std::string& grpcChannelArguments() const;
 
     /**
-     * @brief Get the filesystem poll wait time in seconds
+     * @brief Get the filesystem poll wait time in milliseconds
      * 
      * @return uint 
      */
-    uint32_t filesystemPollWaitSeconds() const;
+    uint32_t filesystemPollWaitMilliseconds() const;
 
     /**
      * @brief Get the sequence cleanup poll wait time in minutes

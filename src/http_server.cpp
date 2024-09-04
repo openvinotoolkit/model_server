@@ -66,6 +66,7 @@ static const net_http::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::REST_COULD_NOT_PARSE_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::REST_COULD_NOT_PARSE_OUTPUT, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::REST_COULD_NOT_PARSE_PARAMETERS, net_http::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::REST_PROTO_TO_STRING_ERROR, net_http::HTTPStatusCode::ERROR},
         {StatusCode::REST_UNSUPPORTED_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, net_http::HTTPStatusCode::ERROR},
