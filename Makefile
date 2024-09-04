@@ -133,7 +133,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
   TARGET_DISTRO_PARAMS = " --//:distro=redhat"
 else
-   BASE_OS must be either ubuntu or redhat)
+   $(error BASE_OS must be either ubuntu or redhat)
 endif
 CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)" --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)

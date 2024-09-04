@@ -423,35 +423,35 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
 # hadolint ignore=DL3003,DL3041,SC2164
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
-        $DNF_TOOL upgrade --setopt=install_weak_deps=0 -y ; \
-        $DNF_TOOL install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
-        if [ "$GPU" == "1" ] ; then \
-		install_gpu_drivers.sh && rm -rf ./install_gpu_drivers.sh; \
-        fi ; \
-        if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
-                rpm -ivh http://vault.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
-        else  \
-                $DNF_TOOL install -y tar gzip; \
-                mkdir /tmp_ovms ; \
-                cd /tmp_ovms ; \
-                curl -L --fail -o deps.tar.xz "$INSTALL_RPMS_FROM_URL" ; \
-                tar -xf deps.tar.xz ; \
-                ls -Rahl . ; \
-                rpm -vi pkg/bin/*.rpm ; \
-                cd / ; \
-                rm -rf /tmp_ovms ; \
-                $DNF_TOOL remove -y tar gzip; \
-        fi ; \
-        # For image with Python enabled install Python library
-        if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
-            $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0; \
-            mkdir -p /ovms/lib/openvino-4.dist-info && \
-            echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.4' > /ovms/lib/openvino-2024.4.dist-info/METADATA ; \
-        fi ; \
-        $DNF_TOOL install -y shadow-utils; \
-        cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
-        groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
-        useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
+    $DNF_TOOL upgrade --setopt=install_weak_deps=0 -y ; \
+    $DNF_TOOL install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+    if [ "$GPU" == "1" ] ; then \
+    	install_gpu_drivers.sh && rm -rf ./install_gpu_drivers.sh; \
+    fi ; \
+    if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
+            rpm -ivh http://vault.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
+    else  \
+            $DNF_TOOL install -y tar gzip; \
+            mkdir /tmp_ovms ; \
+            cd /tmp_ovms ; \
+            curl -L --fail -o deps.tar.xz "$INSTALL_RPMS_FROM_URL" ; \
+            tar -xf deps.tar.xz ; \
+            ls -Rahl . ; \
+            rpm -vi pkg/bin/*.rpm ; \
+            cd / ; \
+            rm -rf /tmp_ovms ; \
+            $DNF_TOOL remove -y tar gzip; \
+    fi ; \
+    # For image with Python enabled install Python library
+    if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
+        $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0; \
+        mkdir -p /ovms/lib/openvino-4.dist-info && \
+        echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.4' > /ovms/lib/openvino-2024.4.dist-info/METADATA ; \
+    fi ; \
+    $DNF_TOOL install -y shadow-utils; \
+    cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
+    groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
+    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 # for NVIDIA
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda yum package"; \

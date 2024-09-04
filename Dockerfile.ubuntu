@@ -126,7 +126,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # GPU testing in build img
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 RUN /tmp/install_gpu_drivers.sh && \
-    groupadd --gid 5000 ovms ; useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
+    groupadd --gid 5000 ovms && \
+    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 # GPU testing in build img
 
 RUN apt-get update; apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
@@ -427,7 +428,7 @@ ARG INSTALL_DRIVER_VERSION="23.22.26516"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 # hadolint ignore=DL3003,SC2164
 RUN apt-get update ; \
-    apt-get install -y --no-install-recommends curl ca-certificates libxml2 && \
+    apt-get install -y --no-install-recommends curl ca-certificates libxml2 ocl-icd-libopencl1 && \
     if [ "$GPU" == "1" ] ; then \
 	/tmp/install_gpu_drivers.sh ; \
     fi ; \
@@ -442,7 +443,9 @@ RUN apt-get update ; \
     fi ; \
     apt-get clean ; \
     rm -rf /tmp/install_gpu_drivers.sh && \
-    rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+    rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* && \
+    groupadd --gid 5000 ovms && \
+    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 # for NVIDIA
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda apt package"; \
