@@ -287,10 +287,6 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
 
 COPY src/ /ovms/src/
 
-# run python testes on a version from os not TFS
-ARG RUN_TESTS=0
-RUN if [ "$RUN_TESTS" == "1" ] ; then bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src/python/binding:test_python_binding; fi ;
-
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
@@ -321,18 +317,18 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
     if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
-# Test Coverage
-COPY ci/check_coverage.bat /ovms/
-ARG CHECK_COVERAGE=0
-COPY rununittest.sh /ovms/
-RUN ./rununittest.sh
-# hadolint ignore=DL3059
 RUN apt-get update -y ; \
     apt-get install -y --no-install-recommends opencl-clhpp-headers intel-opencl-icd ocl-icd-libopencl1 && \
     apt-get clean ; rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;
 WORKDIR /usr/lib/x86_64-linux-gnu/
 RUN ln -s libOpenCL.so.1 libOpenCL.so
 WORKDIR /ovms
+# Test Coverage
+COPY ci/check_coverage.bat /ovms/
+ARG CHECK_COVERAGE=0
+COPY rununittest.sh prepare_llm_models.sh /ovms/
+ARG RUN_TESTS=0
+RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./rununittest.sh ; fi
 ARG FUZZER_BUILD=0
 # Custom Nodes
 # hadolint ignore=DL3059

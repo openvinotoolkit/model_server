@@ -331,6 +331,10 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     KFSRestParser requestParser;
 
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
+    if (endOfJson > request_body.length()) {
+        SPDLOG_DEBUG("Inference header content length exceeded JSON size");
+        return StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_EXCEEDED;
+    }
     auto status = requestParser.parse(request_body.substr(0, endOfJson).c_str());
     if (!status.ok()) {
         SPDLOG_DEBUG("Parsing http request failed");
