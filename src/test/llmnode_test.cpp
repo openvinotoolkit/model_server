@@ -1821,6 +1821,10 @@ public:
         const plugin_config_t& tokenizerPluginConfig) override {
         // Do not initialize, it is not needed in a test
     }
+
+    void initiateGeneration() {
+        // Do not initiate, the cb lib is not initialized anyway
+    }
 };
 
 class LLMOptionsHttpTest : public ::testing::Test {

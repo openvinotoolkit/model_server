@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
@@ -191,6 +192,9 @@ void LLMNodeResources::initializeContinuousBatchingPipeline(
 }
 
 void LLMNodeResources::initiateGeneration() {
+    if (!cbPipe) {
+        throw std::logic_error("cannot initialize generation with uninitialized cbPipe");
+    }
     llmExecutorWrapper = std::make_unique<LLMExecutorWrapper>(cbPipe);
 }
 
