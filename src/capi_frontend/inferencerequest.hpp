@@ -34,7 +34,7 @@ class InferenceRequest {
     std::unordered_map<std::string, InferenceParameter> parameters;
     std::unordered_map<std::string, InferenceTensor> inputs;
     std::unordered_map<std::string, InferenceTensor> outputs;
-    OVMS_InferenceResponseCompleteCallback_t responseCompleteCallback{nullptr};
+    OVMS_InferenceRequestCompletionCallback_t responseCompleteCallback{nullptr};
     void* responseCompleteCallbackData = nullptr;
 
 public:
@@ -58,8 +58,8 @@ public:
     Status removeParameter(const char* parameterName);
     const InferenceParameter* getParameter(const char* name) const;
 
-    void setCompletionCallback(OVMS_InferenceResponseCompleteCallback_t callback, void* callbackData);
-    OVMS_InferenceResponseCompleteCallback_t getResponseCompleteCallback() const {
+    void setCompletionCallback(OVMS_InferenceRequestCompletionCallback_t callback, void* callbackData);
+    OVMS_InferenceRequestCompletionCallback_t getResponseCompleteCallback() const {
         return this->responseCompleteCallback;
     }
     void* getResponseCompleteCallbackData() const {

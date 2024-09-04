@@ -140,7 +140,7 @@ std::map<std::string, shape_t> InferenceRequest::getRequestShapes() const {
     return result;
 }
 
-void InferenceRequest::setCompletionCallback(OVMS_InferenceResponseCompleteCallback_t callback, void* callbackData) {
+void InferenceRequest::setCompletionCallback(OVMS_InferenceRequestCompletionCallback_t callback, void* callbackData) {
     this->responseCompleteCallback = callback;
     this->responseCompleteCallbackData = callbackData;
 }

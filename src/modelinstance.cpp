@@ -1275,7 +1275,7 @@ Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
 }
 
 template <typename RequestType>
-static OVMS_InferenceResponseCompleteCallback_t getCallback(RequestType request) {
+static OVMS_InferenceRequestCompletionCallback_t getCallback(RequestType request) {
     return nullptr;
 }
 template <typename RequestType>
@@ -1284,7 +1284,7 @@ static void* getCallbackData(RequestType request) {
 }
 
 template <>
-OVMS_InferenceResponseCompleteCallback_t getCallback(const InferenceRequest* request) {
+OVMS_InferenceRequestCompletionCallback_t getCallback(const InferenceRequest* request) {
     return request->getResponseCompleteCallback();
 }
 template <>
@@ -1299,7 +1299,7 @@ void handleCallback(RequestType request, ResponseType response) {
 template <>
 void handleCallback(const InferenceRequest* request, InferenceResponse* response) {
     SPDLOG_ERROR("C-API handle callback overload");
-    OVMS_InferenceResponseCompleteCallback_t userCallback = getCallback(request);
+    OVMS_InferenceRequestCompletionCallback_t userCallback = getCallback(request);
     if (userCallback) {
         void* userCallbackData = getCallbackData(request);
         OVMS_InferenceResponse* responseC = reinterpret_cast<OVMS_InferenceResponse*>(response);
@@ -1458,7 +1458,7 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
         getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
     // set callback
     // TODO check if there is callback in async
-    OVMS_InferenceResponseCompleteCallback_t userCallback = requestProto->getResponseCompleteCallback();
+    OVMS_InferenceRequestCompletionCallback_t userCallback = requestProto->getResponseCompleteCallback();
     void* userCallbackData = requestProto->getResponseCompleteCallbackData();
     // here pass by copy into callback
     // TODO unload model guard & test

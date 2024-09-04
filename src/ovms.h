@@ -565,16 +565,15 @@ OVMS_Status* OVMS_InferenceAsync(OVMS_Server* server, OVMS_InferenceRequest* req
 
 // Type of function called when response is completed and set with OVMS_InferenceRequestSetCompletionCallback. Callback function takes ownership of OVMS_InferenceResponse object.
 // Flag specifies if the response is final coming from inference request, and if there were errors in execution
-// // TODO how to use that in MP
 //
 // \param response resp
 // \param flag Flag specifying if the response is final response for request
 // \param userStruct Data provided to callback, set in OVMS_InferenceRequestSetCompletionCallback
-typedef void (* OVMS_InferenceResponseCompleteCallback_t)(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
+typedef void (* OVMS_InferenceRequestCompletionCallback_t)(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 
 // TODO description
 // TODO consider allocators
-OVMS_Status* OVMS_InferenceRequestSetCompletionCallback(OVMS_InferenceRequest*, OVMS_InferenceResponseCompleteCallback_t completeCallback, void* userStruct);
+OVMS_Status* OVMS_InferenceRequestSetCompletionCallback(OVMS_InferenceRequest*, OVMS_InferenceRequestCompletionCallback_t completeCallback, void* userStruct);
 
 // Get OVMS_ServableMetadata object
 //
