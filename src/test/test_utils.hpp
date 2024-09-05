@@ -770,7 +770,7 @@ public:
     MOCK_METHOD((std::vector<absl::string_view>), request_headers, (), (const, override));
     MOCK_METHOD(void, OverwriteResponseHeader, (absl::string_view, absl::string_view), (override));
     MOCK_METHOD(void, AppendResponseHeader, (absl::string_view, absl::string_view), (override));
-    MOCK_METHOD(void, PartialReplyWithStatus, (tensorflow::serving::net_http::HTTPStatusCode), (override));
+    MOCK_METHOD(void, PartialReplyWithStatus, (std::string, tensorflow::serving::net_http::HTTPStatusCode), (override));
     MOCK_METHOD(void, PartialReply, (std::string), (override));
     MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::CallbackStatus, PartialReplyWithFlushCallback, ((std::function<void()>)), (override));
     MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, response_body_status, (), (override));
