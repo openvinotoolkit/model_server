@@ -1931,6 +1931,7 @@ public:
             if (sc == StatusCode::OK) {
                 checkInferResponse(response);
             }
+            OVMS_InferenceResponseDelete(response);
 
             if (::testing::Test::HasFailure()) {
                 SPDLOG_INFO("Earlier fail detected. Stopping execution");
@@ -1998,7 +1999,6 @@ public:
             ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackUnblockingAndFreeingRequest, reinterpret_cast<void*>(&callbackStruct)));
 
             OVMS_Status* status = OVMS_InferenceAsync(this->cserver, request);
-            //OVMS_InferenceRequestDelete(request);
 
             uint32_t code = 0;
             OVMS_Status* codeStatus = OVMS_StatusCode(status, &code);
@@ -2020,11 +2020,11 @@ public:
             createPipelineRetCodesCounters[sc]++;
             EXPECT_TRUE((requiredLoadResults.find(sc) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(sc) != allowedLoadResults.end()));
-            // Too early - callback might not execute yet
-            //if (sc == StatusCode::OK) {
-            //    ASSERT_EQ(response, nullptr);
-            //}
-            //OVMS_InferenceResponseDelete(response);
+
+            if (sc == StatusCode::OK) {
+                ASSERT_EQ(response, nullptr);
+            }
+
             if (::testing::Test::HasFailure()) {
                 SPDLOG_INFO("Earlier fail detected. Stopping execution");
                 break;

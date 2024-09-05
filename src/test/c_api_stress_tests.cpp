@@ -64,9 +64,7 @@ public:
     }
 };
 
-class StressCapiAsyncConfigChanges : public ConfigChangeStressTestAsync {};
-
-TEST_F(StressCapiAsyncConfigChanges, ChangeToEmptyConfigAsyncInference) {
+TEST_F(ConfigChangeStressTestAsync, ChangeToEmptyConfigAsyncInference) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
         StatusCode::OK};  // we expect full continuity of operation
@@ -82,7 +80,7 @@ TEST_F(StressCapiAsyncConfigChanges, ChangeToEmptyConfigAsyncInference) {
         allowedLoadResults);
 }
 
-TEST_F(StressCapiAsyncConfigChanges, ChangeToWrongShapeAsyncInference) {
+TEST_F(ConfigChangeStressTestAsync, ChangeToWrongShapeAsyncInference) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
         StatusCode::OK};  // we expect full continuity of operation
@@ -98,7 +96,7 @@ TEST_F(StressCapiAsyncConfigChanges, ChangeToWrongShapeAsyncInference) {
         allowedLoadResults);
 }
 
-TEST_F(StressCapiAsyncConfigChanges, ChangeToAutoShapeDuringAsyncInference) {
+TEST_F(ConfigChangeStressTestAsync, ChangeToAutoShapeDuringAsyncInference) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
         StatusCode::OK};  // we expect full continuity of operation
