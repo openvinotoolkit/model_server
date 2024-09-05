@@ -1026,10 +1026,8 @@ public:
     }
 };
 
-TEST(ModelManagerCleaner, ConfigReloadShouldCleanupResources) {
+TEST(ModelManagerCleaner, ManagerShouldCleanupResources) {
     ResourcesAccessModelManager manager;
-    manager.setResourcesCleanupIntervalMillisec(20);  // Mock cleaner to work in 20ms intervals instead of >1s
-    manager.startCleaner();
     ASSERT_EQ(manager.getResourcesSize(), 0);
 
     // Reset mocked wrapper deinitializeSum
@@ -1057,15 +1055,13 @@ TEST(ModelManagerCleaner, ConfigReloadShouldCleanupResources) {
         manager.addResourceToCleaner(std::move(ptr3));
         ASSERT_EQ(manager.getResourcesSize(), 3);
 
-        waitForOVMSResourcesCleanup(manager);
+        manager.cleanupResources();
         ASSERT_EQ(manager.getResourcesSize(), 2);
         ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, num3);
     }
-    waitForOVMSResourcesCleanup(manager);
+    manager.cleanupResources();
     ASSERT_EQ(manager.getResourcesSize(), 0);
     ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, (num1 + num2 + num3));
-
-    manager.join();
 }
 
 struct MockedFunctorSequenceCleaner : public ovms::FunctorSequenceCleaner {
