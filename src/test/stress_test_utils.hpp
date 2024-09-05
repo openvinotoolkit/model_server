@@ -16,6 +16,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <regex>
 #include <set>
@@ -960,6 +961,22 @@ static const char* stressTestOneDummyConfig = R"(
     ]
 })";
 
+static const char* stressTestOneDummyConfigWrongShape = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
+                "model_version_policy": {"latest": {"num_versions":1}},
+                "nireq": 100,
+                "shape": {"b": "(1,20) "}
+            }
+        }
+    ]
+})";
+
 const std::string basicMediapipeConfig = R"({
     "model_config_list": [
         {"config": {
@@ -1167,6 +1184,12 @@ public:
     void changeToAutoShapeOneModel() {
         SPDLOG_INFO("{} start", __FUNCTION__);
         SetUpConfig(stressTestPipelineOneDummyConfigChangedToAutoOneModel);
+        createConfigFileWithContent(ovmsConfig, configFilePath);
+        SPDLOG_INFO("{} end", __FUNCTION__);
+    }
+    void changeToWrongShapeOneModel() {
+        SPDLOG_INFO("{} start", __FUNCTION__);
+        SetUpConfig(stressTestOneDummyConfigWrongShape);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -1976,9 +1999,6 @@ public:
 
             OVMS_Status* status = OVMS_InferenceAsync(this->cserver, request);
             //OVMS_InferenceRequestDelete(request);
-            // check
-            auto callbackReturnValue = unblockSignal.get();
-            SPDLOG_INFO("callbackReturnValue {}.", callbackReturnValue);
 
             uint32_t code = 0;
             OVMS_Status* codeStatus = OVMS_StatusCode(status, &code);
@@ -1988,12 +2008,22 @@ public:
             } else {
                 sc = static_cast<StatusCode>(code);
             }
+
+            // check - blocking call - expected only on success
+            if (status != nullptr) {
+                SPDLOG_INFO("OVMS_InferenceAsync failed with status: {}. Not waiting for callback execution.", ovms::Status(sc).string());
+            } else {
+                auto callbackReturnValue = unblockSignal.get();
+                ASSERT_EQ(callbackReturnValue, 42);
+            }
+
             createPipelineRetCodesCounters[sc]++;
             EXPECT_TRUE((requiredLoadResults.find(sc) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(sc) != allowedLoadResults.end()));
-            if (sc == StatusCode::OK) {
-                ASSERT_EQ(response, nullptr);
-            }
+            // Too early - callback might not execute yet
+            //if (sc == StatusCode::OK) {
+            //    ASSERT_EQ(response, nullptr);
+            //}
             //OVMS_InferenceResponseDelete(response);
             if (::testing::Test::HasFailure()) {
                 SPDLOG_INFO("Earlier fail detected. Stopping execution");
