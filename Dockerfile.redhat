@@ -119,9 +119,13 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             python39-devel && \
             yum clean all
 ARG INSTALL_DRIVER_VERSION="23.22.26516"
-# GPU testing in build img
+# GPU testing in build img & remote tensors dependencies
+WORKDIR /usr/lib64/
+RUN ln -s libOpenCL.so.1 libOpenCL.so
+WORKDIR /ovms
 COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
-RUN ./install_gpu_drivers.sh && \
+RUN wget -q https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/os/Packages/libva-devel-2.22.0-1.el10.x86_64.rpm && rpm -ivh --nodeps ./libva-devel-2.22.0-1.el10.x86_64.rpm && \
+    ./install_gpu_drivers.sh && \
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
@@ -322,12 +326,6 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
     if [ "$ov_use_binary" = "1" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp ; fi && \
     if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
-
-#RUN wget https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/os/Packages/ocl-icd-2.3.2-6.el10.x86_64.rpm &&  rpm -ivh --nodeps ./ocl-icd-2.3.2-6.el10.x86_64.rpm
-RUN wget -q https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/os/Packages/libva-devel-2.22.0-1.el10.x86_64.rpm && rpm -ivh --nodeps ./libva-devel-2.22.0-1.el10.x86_64.rpm
-WORKDIR /usr/lib64/
-RUN ln -s libOpenCL.so.1 libOpenCL.so
-WORKDIR /ovms
 
 # Custom Nodes
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes

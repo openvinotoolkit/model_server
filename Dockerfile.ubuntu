@@ -318,7 +318,7 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
 RUN apt-get update -y ; \
-    apt-get install -y --no-install-recommends opencl-clhpp-headers intel-opencl-icd ocl-icd-libopencl1 && \
+    apt-get install -y --no-install-recommends opencl-clhpp-headers opencl-c-headers intel-opencl-icd ocl-icd-libopencl1 && \
     apt-get clean ; rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;
 WORKDIR /usr/lib/x86_64-linux-gnu/
 RUN ln -s libOpenCL.so.1 libOpenCL.so
