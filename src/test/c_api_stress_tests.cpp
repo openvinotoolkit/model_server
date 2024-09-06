@@ -64,6 +64,22 @@ public:
     }
 };
 
+TEST_F(ConfigChangeStressTestAsync, ChangeToEmptyConfigInference) {
+    bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK
+        };  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE  // this should be hit if test is stressing enough, sporadically does not happen
+    };
+    performStressTest(
+        &ConfigChangeStressTest::triggerCApiInferenceInALoop2,
+        &ConfigChangeStressTest::changeToEmptyConfig,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
 TEST_F(ConfigChangeStressTestAsync, ChangeToEmptyConfigAsyncInference) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
@@ -340,7 +356,7 @@ TEST_F(StressCapiConfigChanges, AddModelDuringGetModelStatusLoad) {
 
 class StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges : public StressCapiConfigChanges {
 public:
-    void checkInferResponse(OVMS_InferenceResponse* response) override {
+    void checkInferResponse(OVMS_InferenceResponse* response) {
         ASSERT_NE(response, nullptr);
         uint32_t outputCount = 42;
         ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
