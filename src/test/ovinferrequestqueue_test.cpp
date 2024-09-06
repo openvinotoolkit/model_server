@@ -108,7 +108,6 @@ TEST(OVInferRequestQueue, MultiThread) {
     for (auto& t : clients) {
         t.join();
     }
-    SPDLOG_INFO("BBBBBBBB");
     // wait for all thread to complete successfully
 }
 
