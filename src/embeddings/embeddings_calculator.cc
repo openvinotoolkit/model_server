@@ -26,6 +26,7 @@
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
 
+#include <adapters/inference_adapter.h>
 #include <fmt/ranges.h>
 #include <openvino/openvino.hpp>
 #include <rapidjson/stringbuffer.h>
@@ -50,12 +51,18 @@ class EmbeddingsCalculator : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
 
+protected:
+    std::shared_ptr<::InferenceAdapter> tokenizer_session{nullptr};
+    std::shared_ptr<::InferenceAdapter> embeddings_session{nullptr};
+
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<InputDataType>();
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<OutputDataType>();
+        cc->InputSidePackets().Tag("TOKENIZER_SESSION").Set<std::shared_ptr<InferenceAdapter>>();
+        cc->InputSidePackets().Tag("EMBEDDINGS_SESSION").Set<std::shared_ptr<InferenceAdapter>>();
         return absl::OkStatus();
     }
 
@@ -67,6 +74,12 @@ public:
 
     absl::Status Open(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
+        tokenizer_session = cc->InputSidePackets()
+                                .Tag("TOKENIZER_SESSION")
+                                .Get<std::shared_ptr<::InferenceAdapter>>();
+        embeddings_session = cc->InputSidePackets()
+                                 .Tag("EMBEDDINGS_SESSION")
+                                 .Get<std::shared_ptr<::InferenceAdapter>>();
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator  [Node: {}] Open start", cc->NodeName());
 
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator [Node: {}] Open end", cc->NodeName());
@@ -75,6 +88,8 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
+        RET_CHECK(tokenizer_session != nullptr);
+        RET_CHECK(embeddings_session != nullptr);
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             std::string response = "";
             InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();

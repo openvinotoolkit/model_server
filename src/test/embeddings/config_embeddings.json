@@ -3,7 +3,7 @@
     "mediapipe_config_list": [
     {
         "name":"embeddings",
-        "graph_path":"/ovms/src/test/embeddings/graph.pbtxt"
+        "base_path":"/ovms/src/test/embeddings/"
     }
     ]
 }
