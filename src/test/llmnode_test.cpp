@@ -957,7 +957,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsIncludeStopStrInOutputFalse) {
 
     EXPECT_CALL(writer, PartialReply(::testing::_))
         .WillOnce([this](std::string response) {
-            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: include_stop_str_in_output must be explicitly set to true if streaming is used\"}");
+            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: include_stop_str_in_output cannot be set to false if streaming is used\"}");
         });
     EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(

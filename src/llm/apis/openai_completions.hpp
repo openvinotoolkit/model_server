@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -24,6 +25,7 @@
 
 #include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/generation_handle.hpp>
+#include <openvino/genai/tokenizer.hpp>
 #include <rapidjson/document.h>
 
 #include "absl/status/status.h"
@@ -41,35 +43,6 @@ using chat_t = std::vector<chat_entry_t>;
 
 #define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
 
-// Class that maps OpenAI request content and provides methods to create GenerationConfig from it.
-// It's supposed to be used only by OpenAIChatCompletionsHandler class
-struct OpenAIChatCompletionsRequest {
-    chat_t messages;
-    std::optional<std::string> prompt{std::nullopt};
-    bool stream{false};
-    StreamOptions streamOptions;
-    std::string model;
-    std::optional<int> maxTokens{std::nullopt};
-    std::optional<float> frequencyPenalty{std::nullopt};
-    std::optional<float> presencePenalty{std::nullopt};
-    std::optional<float> diversityPenalty{std::nullopt};
-    std::optional<float> repetitionPenalty{std::nullopt};
-    std::optional<float> lengthPenalty{std::nullopt};
-    std::optional<int> numReturnSequences{std::nullopt};
-    std::optional<float> temperature{std::nullopt};
-    std::optional<float> topP{std::nullopt};
-    std::optional<int> topK{std::nullopt};
-    std::optional<int> seed{std::nullopt};
-    std::optional<std::set<std::string>> stop{std::nullopt};
-    std::optional<bool> includeStopStrInOutput{std::nullopt};
-    std::optional<int> bestOf{std::nullopt};
-    std::optional<bool> ignoreEOS{std::nullopt};
-
-    OpenAIChatCompletionsRequest() = default;
-
-    ov::genai::GenerationConfig createGenerationConfig() const;
-};
-
 enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
@@ -84,24 +57,27 @@ struct CompletionUsageStatistics {
     }
 };
 
+struct OpenAIChatCompletionsRequest;
+
 // Class that wraps OpenAI request, holds and processes raw JSON, provides methods for serialization and keeps track of usage.
 // It is used in the calculator.
 class OpenAIChatCompletionsHandler {
     Document& doc;
     Endpoint endpoint;
     CompletionUsageStatistics usage;
-    OpenAIChatCompletionsRequest request;
+    std::unique_ptr<OpenAIChatCompletionsRequest> request{nullptr};
     std::chrono::time_point<std::chrono::system_clock> created;
+    ov::genai::Tokenizer tokenizer;
 
-    absl::Status processCompletionsPart();
-    absl::Status processChatCompletionsPart();
-    absl::Status processCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit);
+    absl::Status parseCompletionsPart();
+    absl::Status parseChatCompletionsPart();
+    absl::Status parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit);
 
 public:
-    OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime) :
-        doc(doc),
-        endpoint(endpoint),
-        created(creationTime) {}
+    OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
+        ov::genai::Tokenizer tokenizer);
+
+    ~OpenAIChatCompletionsHandler();
 
     std::optional<std::string> getPrompt() const;
     std::optional<int> getNumReturnSequences() const;
@@ -116,9 +92,9 @@ public:
 
     ov::genai::GenerationConfig createGenerationConfig() const;
 
-    absl::Status processRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit);
+    absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit);
 
-    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, ov::genai::Tokenizer tokenizer);
+    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
 };

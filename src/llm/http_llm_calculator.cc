@@ -123,10 +123,11 @@ public:
                 } else {
                     return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v3/chat/completions, /v3/completions");
                 }
-                this->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*payload.parsedJson, endpoint, std::chrono::system_clock::now());
+                this->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*payload.parsedJson, endpoint, std::chrono::system_clock::now(),
+                    nodeResources->cbPipe->get_tokenizer());
                 this->client = payload.client;
 
-                auto status = this->apiHandler->processRequest(nodeResources->maxTokensLimit, nodeResources->bestOfLimit);
+                auto status = this->apiHandler->parseRequest(nodeResources->maxTokensLimit, nodeResources->bestOfLimit);
                 if (status != absl::OkStatus())
                     return status;
 
@@ -190,7 +191,7 @@ public:
                     return r1.score > r2.score;
                 });
 
-                std::string response = this->apiHandler->serializeUnaryResponse(generationOutputs, nodeResources->cbPipe->get_tokenizer());
+                std::string response = this->apiHandler->serializeUnaryResponse(generationOutputs);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
             } else {
