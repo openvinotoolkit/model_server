@@ -86,7 +86,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = ""]
 -    `optional uint32 best_of_limit` - max value of best_of parameter accepted by endpoint [default = 20];
 -    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint [default = 4096];
--    `optional bool enable_prefix_caching` - enable prefix caching [default = false];
+-    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];
 
 
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
