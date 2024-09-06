@@ -133,7 +133,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
   TARGET_DISTRO_PARAMS = " --//:distro=redhat"
 else
-   $(error BASE_OS must be either ubuntu or redhat)
+  $(error BASE_OS must be either ubuntu or redhat)
 endif
 CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)" --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
@@ -665,7 +665,7 @@ cpu_extension:
 run_unit_tests:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
 	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
-	docker run -v $(shell realpath ./rununittests.sh):/ovms/./rununittests.sh -v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas:ro -v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh 2>&1 ; exit_status=$$? ; exit $$exit_status
+	docker run -v $(shell realpath ./rununittests.sh):/ovms/./rununittests.sh -v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas:ro -v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh > test.log 2>&1 ; exit_status=$$? ; tail -200 test.log ; exit $$exit_status
 
 run_lib_files_test:
 	docker run --entrypoint bash -v $(realpath tests/file_lists):/test $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./test/test_release_files.sh ${BAZEL_DEBUG_FLAGS} > file_test.log 2>&1 ; exit_status=$$? ; tail -200 file_test.log ; exit $$exit_status

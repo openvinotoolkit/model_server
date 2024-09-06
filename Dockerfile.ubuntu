@@ -123,15 +123,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     python3 -m pip install "numpy<2.0.0" --no-cache-dir  && \
     python3 -m pip install "Jinja2==3.1.4" --no-cache-dir
 
-# GPU testing in build img
-COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
-RUN /tmp/install_gpu_drivers.sh && \
-    groupadd --gid 5000 ovms && \
-    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
-# GPU testing in build img
-
 RUN apt-get update; apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
-
 
 ARG JOBS=8
 ARG ov_use_binary=0
@@ -261,8 +253,16 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     cp /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /opt/intel/openvino/runtime/lib/intel64 && \
     echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /opt/intel/openvino/runtime/lib/intel64/plugins.xml
 
-# Build OpenVINO Model Server
+
 WORKDIR /ovms
+# GPU testing in build img
+COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
+RUN /tmp/install_gpu_drivers.sh && \
+    groupadd --gid 5000 ovms && \
+    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
+# GPU testing in build img
+
+# Build OpenVINO Model Server
 COPY .bazelrc .bazelversion WORKSPACE /ovms/
 COPY external /ovms/external/
 # This path is required for namespace to setup Python dependencies for testing the binding
@@ -317,9 +317,9 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
     if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
-RUN apt-get update -y ; \
-    apt-get install -y --no-install-recommends opencl-clhpp-headers opencl-c-headers intel-opencl-icd ocl-icd-libopencl1 && \
-    apt-get clean ; rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;
+RUN apt-get update ; \
+    apt-get install -y --no-install-recommends opencl-clhpp-headers vim less opencl-c-headers intel-opencl-icd ocl-icd-libopencl1 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;
 WORKDIR /usr/lib/x86_64-linux-gnu/
 RUN ln -s libOpenCL.so.1 libOpenCL.so
 WORKDIR /ovms
