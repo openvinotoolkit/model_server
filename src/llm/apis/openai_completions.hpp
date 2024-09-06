@@ -15,7 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -65,7 +64,7 @@ class OpenAIChatCompletionsHandler {
     Document& doc;
     Endpoint endpoint;
     CompletionUsageStatistics usage;
-    std::unique_ptr<OpenAIChatCompletionsRequest> request{nullptr};
+    OpenAIChatCompletionsRequest* request = nullptr;
     std::chrono::time_point<std::chrono::system_clock> created;
     ov::genai::Tokenizer tokenizer;
 

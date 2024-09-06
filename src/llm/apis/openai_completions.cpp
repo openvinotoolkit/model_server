@@ -114,10 +114,10 @@ OpenAIChatCompletionsHandler::OpenAIChatCompletionsHandler(Document& doc, Endpoi
     endpoint(endpoint),
     created(creationTime),
     tokenizer(tokenizer) {
-    request = std::make_unique<OpenAIChatCompletionsRequest>();
+    request = new OpenAIChatCompletionsRequest;
 }
 
-OpenAIChatCompletionsHandler::~OpenAIChatCompletionsHandler() = default;
+OpenAIChatCompletionsHandler::~OpenAIChatCompletionsHandler() { delete request; }
 
 absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     // prompt: string
