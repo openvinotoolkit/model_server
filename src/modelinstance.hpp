@@ -279,7 +279,7 @@ private:
          * @brief OpenVINO inference execution stream pool
          */
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
-public:
+
     /**
          * @brief Holds current usage count in predict requests
          * 

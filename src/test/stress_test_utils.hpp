@@ -2047,8 +2047,7 @@ public:
         }
     }
 
-    
-void triggerCApiInferenceInALoop2(
+    void triggerCApiInferenceInALoopSingleModel(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
         const std::set<StatusCode>& requiredLoadResults,
@@ -2116,7 +2115,6 @@ void triggerCApiInferenceInALoop2(
         }
     }
 };
-
 
 class ConfigChangeStressTestAsync : public ConfigChangeStressTest {
     void SetUp() override {

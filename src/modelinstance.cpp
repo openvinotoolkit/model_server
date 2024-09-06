@@ -26,7 +26,6 @@
 #include <utility>
 
 #include <dirent.h>
-#include <fmt/ranges.h>
 #include <malloc.h>
 #include <openvino/runtime/compiled_model.hpp>
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
@@ -1460,23 +1459,10 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     // set callback
     // TODO check if there is callback in async
     OVMS_InferenceRequestCompletionCallback_t userCallback = requestProto->getResponseCompleteCallback();
-    if (userCallback == nullptr)
-    {
-        SPDLOG_DEBUG("userCallback == nullptr");
-    }
     void* userCallbackData = requestProto->getResponseCompleteCallbackData();
-    if (userCallbackData == nullptr)
-    {
-        SPDLOG_DEBUG("userCallbackData == nullptr");
-    }
-
-    SPDLOG_DEBUG("modelInstance ADDRESS THIS: {}", (void*)this);
-
-    //std::shared_ptr<ModelInstanceUnloadGuard> test = std::make_shared<ModelInstanceUnloadGuard>(*this);
     // here pass by copy into callback
-    SPDLOG_DEBUG("START Using OV callback with guard: {} count {}", static_cast<void*>(modelUnloadGuardPtr.get()), std::to_string(modelUnloadGuardPtr->GetHandlesCount()));
     {
-        inferRequest.set_callback([this, requestProto, &inferRequest, userCallback, userCallbackData, test = std::shared_ptr<ModelInstanceUnloadGuard>(std::move(modelUnloadGuardPtr))](std::exception_ptr exception) mutable {
+        inferRequest.set_callback([this, requestProto, &inferRequest, userCallback, userCallbackData, modelUnloadGuardPtrMoved = std::shared_ptr<ModelInstanceUnloadGuard>(std::move(modelUnloadGuardPtr))](std::exception_ptr exception) mutable {
             SPDLOG_INFO("Entry of ov::InferRequest callback call");
             if (exception) {
                 try {
@@ -1489,10 +1475,6 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
                     return;
                 }
             }
-            if (test.get())
-                SPDLOG_DEBUG("DONE Using OV callback with guard: {} count: {}", static_cast<void*>(test.get()), std::to_string(test.get()->GetHandlesCount()));
-            else
-                SPDLOG_DEBUG("DONE NULLPTR Using OV callback with guard:");
             // here use OVMS response serialization
             // here call user set callback
             // here will go OVMS C-API serialization code
@@ -1516,7 +1498,7 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
 
     try {
         SPDLOG_DEBUG("ov::InferRequest: {}, inferRequest.start_async()", reinterpret_cast<void*>(&inferRequest));
-        inferRequest.start_async(); 
+        inferRequest.start_async();
     } catch (std::exception& e) {
         SPDLOG_DEBUG("caught exception in ov::InferRequest.start_async: {}", e.what());
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;

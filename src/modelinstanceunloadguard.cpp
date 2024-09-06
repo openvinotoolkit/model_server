@@ -15,32 +15,15 @@
 //*****************************************************************************
 #include "modelinstanceunloadguard.hpp"
 
-#include <atomic>
-#include <cstddef>
-
 #include "modelinstance.hpp"
-#include "logging.hpp"
 
 namespace ovms {
 ModelInstanceUnloadGuard::ModelInstanceUnloadGuard(ModelInstance& modelInstance) :
     modelInstance(modelInstance) {
     modelInstance.increasePredictRequestsHandlesCount();
-    //SPDLOG_DEBUG("predictRequestsHandlesCount {}", modelInstance.predictRequestsHandlesCount);
-}
-
-uint64_t ModelInstanceUnloadGuard::GetHandlesCount() {
-    SPDLOG_DEBUG("modelInstance ADDRESS: {}", (void*)&modelInstance);
-    if (modelInstance.predictRequestsHandlesCount)
-        return modelInstance.predictRequestsHandlesCount.load();
-    else
-        SPDLOG_DEBUG("NULL modelInstance");
-
-    return 999;
 }
 
 ModelInstanceUnloadGuard::~ModelInstanceUnloadGuard() {
     modelInstance.decreasePredictRequestsHandlesCount();
-    //SPDLOG_DEBUG("DESTROYED predictRequestsHandlesCount {}", modelInstance.predictRequestsHandlesCount);
-    //SPDLOG_DEBUG("GUARD DESTROYED");
 }
 }  // namespace ovms

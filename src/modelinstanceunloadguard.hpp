@@ -15,8 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#include <atomic>
-
 namespace ovms {
 class ModelInstance;
 
@@ -25,7 +23,7 @@ public:
     ModelInstanceUnloadGuard() = delete;
     ModelInstanceUnloadGuard(ModelInstance& modelInstance);
     ~ModelInstanceUnloadGuard();
-    uint64_t GetHandlesCount();
+
 private:
     ModelInstance& modelInstance;
 };
