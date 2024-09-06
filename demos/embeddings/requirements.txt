@@ -1,0 +1,7 @@
+wikipedia
+openai
+langchain_community
+langchain-openai
+langchain
+chromadb
+transformers
