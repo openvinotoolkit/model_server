@@ -2604,3 +2604,205 @@ TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
         ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
     }
 }
+
+class EmbeddingsHttpTest : public ::testing::Test {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
+
+    std::vector<std::pair<std::string, std::string>> headers;
+    ovms::HttpRequestComponents comp;
+    const std::string endpointEmbeddings = "/v3/embeddings";
+    MockedServerRequestInterface writer;
+    std::string response;
+    rapidjson::Document parsedResponse;
+    ovms::HttpResponseComponents responseComponents;
+
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(t, server, port, "/ovms/src/test/embeddings/config_embeddings.json");
+        auto start = std::chrono::high_resolution_clock::now();
+        const int numberOfRetries = 5;
+        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
+        }
+    }
+
+    void SetUp() {
+        ovms::Server& server = ovms::Server::instance();
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
+    }
+
+    static void TearDownTestSuite() {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+
+    void TearDown() {
+        handler.reset();
+    }
+};
+std::unique_ptr<std::thread> EmbeddingsHttpTest::t;
+
+TEST_F(EmbeddingsHttpTest, simplePositive) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": "dummyInput"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    ASSERT_STREQ(response.c_str(), "dummyInput");
+}
+
+TEST_F(EmbeddingsHttpTest, inputAsAListOfStrings) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": ["first", "second", "third"]
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    ASSERT_STREQ(response.c_str(), "firstsecondthird");
+}
+
+TEST_F(EmbeddingsHttpTest, inputInvalid) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": 5
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(EmbeddingsHttpTest, inputInvalidList) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [1, "second", 3]
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(EmbeddingsHttpTest, notExpectedField) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": "dummyInput",
+            "notExpected": "notExpected"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    ASSERT_STREQ(response.c_str(), "dummyInput");
+}
+
+TEST_F(EmbeddingsHttpTest, invalidModel) {
+    std::string requestBody = R"(
+        {
+            "model": "invalidModel",
+            "input": "dummyInput"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
+}
+
+TEST_F(EmbeddingsHttpTest, encodingFormat) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": "dummyInput",
+            "encoding_format": "FORMAT"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    ASSERT_STREQ(response.c_str(), "dummyInputFORMAT");
+}
+
+TEST_F(EmbeddingsHttpTest, invalidEncodingFormat) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": "dummyInput",
+            "encoding_format": 10
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(EmbeddingsHttpTest, dimensions) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": "dummyInput",
+            "dimensions": 2
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    ASSERT_STREQ(response.c_str(), "dummyInput2");
+}
+
+TEST_F(EmbeddingsHttpTest, dimensionsEncodingFormat) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": "dummyInput",
+            "dimensions": "INVALID"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(EmbeddingsHttpTest, user) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": "dummyInput",
+            "user": "USER"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    ASSERT_STREQ(response.c_str(), "dummyInputUSER");
+}
+
+TEST_F(EmbeddingsHttpTest, invalidUser) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": "dummyInput",
+            "user": 10
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}

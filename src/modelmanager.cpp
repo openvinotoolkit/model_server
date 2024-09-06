@@ -102,19 +102,24 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         }
     }
     this->customNodeLibraryManager = std::make_unique<CustomNodeLibraryManager>();
-    if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
-        SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
-        try {
+    try {
+        if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
+            SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
             OV_LOGGER("ov::Core: {}, ieCore->add_extension({})", reinterpret_cast<const void*>(this->ieCore.get()), ovms::Config::instance().cpuExtensionLibraryPath());
             ieCore->add_extension(ovms::Config::instance().cpuExtensionLibraryPath());
             SPDLOG_INFO("Extension added.");
-        } catch (std::exception& ex) {
-            SPDLOG_CRITICAL("Custom CPU extension loading has failed! Reason: {}", ex.what());
-            throw;
-        } catch (...) {
-            SPDLOG_CRITICAL("Custom CPU extension loading has failed with an unknown error!");
-            throw;
+        } else {
+            const std::string TOKENIZERS_PATH = "libopenvino_tokenizers.so";
+            SPDLOG_INFO("Loading custom CPU extension from {}", TOKENIZERS_PATH);
+            ieCore->add_extension(TOKENIZERS_PATH);
+            OV_LOGGER("ov::Core: {}, registered default extension from {}", reinterpret_cast<const void*>(this->ieCore.get()), TOKENIZERS_PATH);
         }
+    } catch (std::exception& ex) {
+        SPDLOG_CRITICAL("Custom CPU extension loading has failed! Reason: {}", ex.what());
+        throw;
+    } catch (...) {
+        SPDLOG_CRITICAL("Custom CPU extension loading has failed with an unknown error!");
+        throw;
     }
     this->logPluginConfiguration();
 }
