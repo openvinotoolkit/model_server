@@ -1127,7 +1127,7 @@ TEST(CpuThroughputStreamsNotSpecified, NotSetWhenPerfHintSpecified) {
     config.setTargetDevice("CPU");
     ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
-    config.setPluginConfig({{"PERFORMANCE_HINT", "THROUGHTPUT"}});
+    config.setPluginConfig({{"PERFORMANCE_HINT", "THROUGHPUT"}});
     pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
 }
