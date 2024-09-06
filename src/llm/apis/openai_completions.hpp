@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <limits>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -56,7 +57,85 @@ struct CompletionUsageStatistics {
     }
 };
 
-struct OpenAIChatCompletionsRequest;
+// Class that maps OpenAI request content and provides methods to create GenerationConfig from it.
+struct OpenAIChatCompletionsRequest {
+    chat_t messages;
+    std::optional<std::string> prompt{std::nullopt};
+    bool stream{false};
+    StreamOptions streamOptions;
+    std::string model;
+    std::optional<int> maxTokens{std::nullopt};
+    std::optional<float> frequencyPenalty{std::nullopt};
+    std::optional<float> presencePenalty{std::nullopt};
+    std::optional<float> diversityPenalty{std::nullopt};
+    std::optional<float> repetitionPenalty{std::nullopt};
+    std::optional<float> lengthPenalty{std::nullopt};
+    std::optional<int> numReturnSequences{std::nullopt};
+    std::optional<float> temperature{std::nullopt};
+    std::optional<float> topP{std::nullopt};
+    std::optional<int> topK{std::nullopt};
+    std::optional<int> seed{std::nullopt};
+    std::optional<std::set<std::string>> stop{std::nullopt};
+    std::optional<bool> includeStopStrInOutput{std::nullopt};
+    std::optional<int> bestOf{std::nullopt};
+    std::optional<bool> ignoreEOS{std::nullopt};
+
+    OpenAIChatCompletionsRequest() = default;
+    ~OpenAIChatCompletionsRequest() = default;
+
+    ov::genai::GenerationConfig createGenerationConfig() const {
+        ov::genai::GenerationConfig config;
+
+        // Generic
+        if (maxTokens.has_value())
+            config.max_new_tokens = maxTokens.value();
+        // TODO: max_length = ?
+        if (ignoreEOS.has_value())
+            config.ignore_eos = ignoreEOS.value();
+
+        // Beam search specific
+        config.num_beam_groups = 1;  // OpenAI hardcoded
+        config.num_beams = 1;        // OpenAI hardcoded
+        config.no_repeat_ngram_size = std::numeric_limits<size_t>::max();
+
+        if (bestOf.has_value())
+            config.num_beams = bestOf.value();
+
+        if (diversityPenalty.has_value())
+            config.diversity_penalty = diversityPenalty.value();  // TODO: Not available in OpenAI nor vLLM
+        // TODO: stop_criteria = ?
+        if (numReturnSequences.has_value())
+            config.num_return_sequences = numReturnSequences.value();
+        if (repetitionPenalty.has_value())
+            config.repetition_penalty = repetitionPenalty.value();
+        if (lengthPenalty.has_value())
+            config.length_penalty = lengthPenalty.value();
+        // TODO: no_repeat_ngram_size = ?
+        // TODO: early_finish = ?
+        // TODO use_beam_search is unused ?
+
+        // Multinomial specific
+        if (temperature.has_value())
+            config.temperature = temperature.value();
+        if (topK.has_value())
+            config.top_k = topK.value();
+        if (topP.has_value())
+            config.top_p = topP.value();
+        if (seed.has_value())
+            config.rng_seed = seed.value();
+        if (stop.has_value())
+            config.stop_strings = stop.value();
+        if (includeStopStrInOutput.has_value())
+            config.include_stop_str_in_output = includeStopStrInOutput.value();
+        if (frequencyPenalty.has_value())
+            config.frequency_penalty = frequencyPenalty.value();
+        if (presencePenalty.has_value())
+            config.presence_penalty = presencePenalty.value();
+        config.do_sample = config.temperature > 0.0f && config.num_beams == 1;
+
+        return config;
+    }
+};
 
 // Class that wraps OpenAI request, holds and processes raw JSON, provides methods for serialization and keeps track of usage.
 // It is used in the calculator.
@@ -64,7 +143,7 @@ class OpenAIChatCompletionsHandler {
     Document& doc;
     Endpoint endpoint;
     CompletionUsageStatistics usage;
-    OpenAIChatCompletionsRequest* request = nullptr;
+    OpenAIChatCompletionsRequest request;
     std::chrono::time_point<std::chrono::system_clock> created;
     ov::genai::Tokenizer tokenizer;
 
@@ -74,9 +153,11 @@ class OpenAIChatCompletionsHandler {
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
-        ov::genai::Tokenizer tokenizer);
-
-    ~OpenAIChatCompletionsHandler();
+        ov::genai::Tokenizer tokenizer) :
+        doc(doc),
+        endpoint(endpoint),
+        created(creationTime),
+        tokenizer(tokenizer) {}
 
     std::optional<std::string> getPrompt() const;
     std::optional<int> getNumReturnSequences() const;
