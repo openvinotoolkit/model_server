@@ -2234,6 +2234,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, false);
     ASSERT_EQ(nodeResources->device, "CPU");
     ASSERT_EQ(nodeResources->pluginConfig.size(), 0);
 }
@@ -2357,6 +2358,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
                 block_size: 8
                 max_num_seqs: 95
                 dynamic_split_fuse: false
+                enable_prefix_caching: true
             }
         }
         input_stream_handler {
@@ -2382,6 +2384,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
+    ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, true);
 }
 
 class GetPromptTokensString : public ::testing::Test {
