@@ -45,4 +45,6 @@ message LLMCalculatorOptions {
     optional uint32 best_of_limit = 10 [default = 20];
 
     optional uint32 max_tokens_limit = 11 [default = 4096];
+
+    optional bool enable_prefix_caching = 12 [default = false];
 }

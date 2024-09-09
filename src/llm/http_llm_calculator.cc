@@ -593,11 +593,11 @@ public:
                     OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
                     ov::genai::GenerationOutputs generationOutputs = this->generationHandle->read();
                     RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
-                    RET_CHECK(generationOutputs.begin()->second.generated_token_ids.size() == 1);
+                    RET_CHECK(generationOutputs.begin()->second.generated_ids.size() == 1);
                     this->usage.completionTokens++;
 
                     // TODO(dkalinow): Move this logic to CB library
-                    int64_t token = generationOutputs.begin()->second.generated_token_ids[0];
+                    int64_t token = generationOutputs.begin()->second.generated_ids[0];
                     auto chunk = this->streamer->put(token);
                     ov::genai::GenerationFinishReason finishReason = generationOutputs.begin()->second.finish_reason;
                     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
@@ -651,9 +651,9 @@ std::string HttpLLMCalculator::serializeUnaryResponse(const std::vector<ov::gena
         if (i >= n)
             break;
 
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_token_ids);
-        usage.completionTokens += generationOutput.generated_token_ids.size();
-        std::string completeResponse = nodeResources->cbPipe->get_tokenizer().decode(generationOutput.generated_token_ids);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
+        usage.completionTokens += generationOutput.generated_ids.size();
+        std::string completeResponse = nodeResources->cbPipe->get_tokenizer().decode(generationOutput.generated_ids);
         writer.StartObject();  // {
         // finish_reason: string; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)
         // "stop" => natural stop point due to stopping criteria
