@@ -293,6 +293,7 @@ RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit
     mkdir -p /opt/intel/openvino/python/openvino-2024.4.dist-info && \
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.4' > /opt/intel/openvino/python/openvino-2024.4.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
+ENV OV_CB_FULL_LOG=1
 
 WORKDIR /ovms
 
@@ -499,6 +500,7 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
         dnf clean all
 
 ENV LD_LIBRARY_PATH=/ovms/lib
+ENV OV_CB_FULL_LOG=1
 
 COPY --from=pkg /ovms_release /ovms
 COPY --from=build /usr/local/lib/python3.*/site-packages/jinja2 /ovms/python_deps/jinja2
