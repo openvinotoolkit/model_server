@@ -79,6 +79,7 @@ struct OpenAIChatCompletionsRequest {
     std::optional<bool> includeStopStrInOutput{std::nullopt};
     std::optional<int> bestOf{std::nullopt};
     std::optional<bool> ignoreEOS{std::nullopt};
+    bool logprobs = false;
 
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
