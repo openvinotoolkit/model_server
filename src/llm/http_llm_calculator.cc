@@ -135,7 +135,7 @@ public:
                 bool encodeAddSpecialTokens = false;
                 switch (endpoint) {
                 case Endpoint::CHAT_COMPLETIONS: {
-                    if (!TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
+                    if (!TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, std::move(finalPrompt))) {
                         return absl::Status(absl::StatusCode::kInvalidArgument, finalPrompt);
                     }
                     if (finalPrompt.size() == 0) {

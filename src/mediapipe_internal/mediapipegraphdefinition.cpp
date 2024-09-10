@@ -461,21 +461,17 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
-
             std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
             Status status = LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(i), mgconfig.getBasePath());
-            if (nodeResources == nullptr || !status.ok()) {
+            if (!status.ok()) {
                 SPDLOG_ERROR("Failed to process LLM node graph {}", this->name);
                 return status;
             }
-
             this->llmNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<LLMNodeResources>>(nodeName, std::move(nodeResources)));
             llmResourcesCleaningGuard.disableCleaning();
         }
 #endif
     }
-
     return StatusCode::OK;
 }
-
 }  // namespace ovms

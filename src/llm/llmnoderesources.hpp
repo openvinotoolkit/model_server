@@ -113,7 +113,7 @@ public:
     int maxTokensLimit;
     int bestOfLimit;
 
-    static Status initializeLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
+    static Status initializeLLMNodeResources(const std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
     static void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources, const std::string& chatTemplateDirectory);
 
     LLMNodeResources(const LLMNodeResources&) = delete;
