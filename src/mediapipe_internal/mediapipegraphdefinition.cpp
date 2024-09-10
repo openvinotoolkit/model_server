@@ -462,7 +462,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
             std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-            Status status = LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(i), mgconfig.getBasePath());
+            Status status = LLMNodeResources::initializeLLMNodeResources(*nodeResources, config.node(i), mgconfig.getBasePath());
             if (!status.ok()) {
                 SPDLOG_ERROR("Failed to process LLM node graph {}", this->name);
                 return status;

@@ -134,7 +134,7 @@ public:
                 std::string finalPrompt = "";
                 switch (endpoint) {
                 case Endpoint::CHAT_COMPLETIONS: {
-                    if (!TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, std::move(finalPrompt))) {
+                    if (!TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
                         return absl::Status(absl::StatusCode::kInvalidArgument, finalPrompt);
                     }
                     if (finalPrompt.size() == 0) {
