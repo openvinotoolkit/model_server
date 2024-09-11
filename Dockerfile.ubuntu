@@ -62,7 +62,8 @@ sed -i -e 's|#if PTHREAD_STACK_MIN > 0|#ifdef PTHREAD_STACK_MIN|g' boost/thread/
 --with-log --with-locale \
 install
 
-COPY third_party /ovms/third_party/
+COPY third_party/azure /ovms/third_party/azure
+COPY third_party/cpprest /ovms/third_party/cpprest
 
 ####### Azure SDK
 WORKDIR /azure
@@ -81,6 +82,7 @@ RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="-fPIC -Wno-erro
 ####### End of Azure SDK
 
 ####### Build OpenCV
+COPY third_party/opencv /ovms/third_party/opencv
 WORKDIR /ovms/third_party/opencv
 RUN ./install_opencv.sh
 ####### End of OpenCV
@@ -129,6 +131,16 @@ ARG CMAKE_BUILD_TYPE=Release
 
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV TF_SYSTEM_LIBS="curl"
+
+# Set up Bazel
+ENV BAZEL_VERSION 6.1.1
+WORKDIR /bazel
+RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
+    chmod +x bazel-*.sh && \
+    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 ARG NVIDIA=0
 # hadolint ignore=DL3003
@@ -235,15 +247,6 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     cp /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /opt/intel/openvino/runtime/lib/intel64 && \
     echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /opt/intel/openvino/runtime/lib/intel64/plugins.xml
 
-# Set up Bazel
-ENV BAZEL_VERSION 6.1.1
-WORKDIR /bazel
-RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
-    chmod +x bazel-*.sh && \
-    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
-
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc .bazelversion WORKSPACE /ovms/
@@ -269,10 +272,6 @@ COPY package.json /ovms/
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
 
 COPY src/ /ovms/src/
-
-# run python testes on a version from os not TFS
-ARG RUN_TESTS=1
-RUN if [ "$RUN_TESTS" == "1" ] ; then bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src/python/binding:test_python_binding; fi ;
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
@@ -307,23 +306,13 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
-COPY rununittest.sh /ovms/
-RUN ./rununittest.sh
-
-# C api shared library
-# hadolint ignore=DL3059
-ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
-RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
-
+COPY rununittest.sh prepare_llm_models.sh /ovms/
+ARG RUN_TESTS=0
+RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./rununittest.sh ; fi
 ARG FUZZER_BUILD=0
-# C api app with bazel
-# hadolint ignore=DL3059
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${CAPI_FLAGS} --jobs $JOBS //src:capi_cpp_example; fi;
-
-# C-API benchmark app
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;
 
 # Custom Nodes
+# hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes; fi;
 
 # OVMS
@@ -332,12 +321,6 @@ RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_f
 
 # hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so; fi;
-
-# C-api C/C++ app with gcc
-COPY MakefileCapi /ovms/
-RUN if [ "$FUZZER_BUILD" == "0" ]; then  CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi cpp && \
-                                         CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi c; fi ;
-
 
 RUN if [ "$FUZZER_BUILD" == "0" ]; then /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms; fi;
 
@@ -349,6 +332,31 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+FROM $BUILD_IMAGE as capi-build
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+# C api shared library
+# hadolint ignore=DL3059
+ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
+ARG JOBS=40
+ARG FUZZER_BUILD=0
+RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
+
+# C-API benchmark app
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;
+
+ARG FUZZER_BUILD=0
+# C api app with bazel
+# hadolint ignore=DL3059
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${CAPI_FLAGS} --jobs $JOBS //src:capi_cpp_example; fi;
+
+# C-api C/C++ app with gcc
+COPY MakefileCapi /ovms/
+RUN if [ "$FUZZER_BUILD" == "0" ]; then  CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi cpp && \
+                                         CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi c; fi ;
+RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_shared.so' -exec cp -v {} /ovms_release/lib/ \;
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
 FROM build as pkg
 
 RUN mkdir /patchelf
@@ -363,6 +371,7 @@ ARG BASE_OS=ubuntu
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
 ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg
+COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
 COPY create_package.sh /
 RUN ./create_package.sh
 
@@ -376,13 +385,14 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 
 FROM $BASE_IMAGE as release
 ARG INSTALL_RPMS_FROM_URL=
-ARG INSTALL_DRIVER_VERSION="23.22.26516"
+ARG INSTALL_DRIVER_VERSION="24.26.30049"
 ARG GPU=0
+ARG NPU=0
 ARG NVIDIA=0
 ENV DEBIAN_FRONTEND=noninteractive
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}
-LABEL supported-devices="CPU=1 GPU=${GPU} NVIDIA=${NVIDIA}"
+LABEL supported-devices="CPU=1 GPU=${GPU} NPU=${NPU} NVIDIA=${NVIDIA}"
 ARG BASE_IMAGE
 LABEL base-image=${BASE_IMAGE}
 ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
@@ -398,24 +408,6 @@ RUN     apt-get update -y ; \
         if [ "$GPU" == "1" ] ; then \
             apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
                 case $INSTALL_DRIVER_VERSION in \
-                "21.48.21782") \
-                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-gmmlib_21.3.3_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-core_1.0.9441_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-opencl_1.0.9441_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-opencl-icd_21.48.21782_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-level-zero-gpu_1.2.21782_amd64.deb ; \
-                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
-                ;; \
-                "22.10.22597") \
-                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-gmmlib_22.0.2_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-core_1.0.10409_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-opencl_1.0.10409_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-opencl-icd_22.10.22597_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-level-zero-gpu_1.3.22597_amd64.deb ; \
-                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
-                ;; \
                 "22.35.24055") \
                         apt-get update && apt-get install -y --no-install-recommends gpg gpg-agent && \
                         curl https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
@@ -444,22 +436,30 @@ RUN     apt-get update -y ; \
                 ;; \
                 "23.13.26032") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.05.25593.11/libigdgmm12_22.3.0_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13700.14/intel-igc-core_1.0.13700.14_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13700.14/intel-igc-opencl_1.0.13700.14_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.13.26032.30/intel-opencl-icd_23.13.26032.30_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.13.26032.30/libigdgmm12_22.3.0_amd64.deb ; \
-                        dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
+                        dpkg -i ./*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
                 "23.22.26516") \
                         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/intel-level-zero-gpu_1.3.26516.18_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.14062.11/intel-igc-core_1.0.14062.11_amd64.deb ; \
                         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.14062.11/intel-igc-opencl_1.0.14062.11_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/intel-opencl-icd_23.22.26516.18_amd64.deb ; \
                         curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/libigdgmm12_22.3.0_amd64.deb ; \
-                        dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
+                        dpkg -i ./*.deb && rm -Rf /tmp/gpu_deps ; \
                 ;; \
+                "24.26.30049") \
+                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/24.26.30049.6/intel-level-zero-gpu_1.3.30049.6_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/24.26.30049.6/intel-opencl-icd_24.26.30049.6_amd64.deb ; \
+                        curl -L -O https://github.com/intel/compute-runtime/releases/download/24.26.30049.6/libigdgmm12_22.3.20_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17193.4/intel-igc-core_1.0.17193.4_amd64.deb ; \
+                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17193.4/intel-igc-opencl_1.0.17193.4_amd64.deb ; \
+
+                        dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
+                ;; \                
                 *) \
                         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
                         apt-get update && apt-get -y --no-install-recommends install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
@@ -474,6 +474,15 @@ RUN     apt-get update -y ; \
                             intel-media-va-driver-non-free libmfx1 && \
                             rm -rf /var/lib/apt/lists/* ; \
                 esac ; \
+        fi ; \
+        if [ "$NPU" == "1" ] ; then \
+            mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
+            apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-driver-compiler-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-fw-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-level-zero-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.6/level-zero_1.17.6+u22.04_amd64.deb ; \
+            dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
         fi ; \
         apt-get clean ; \
         rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \

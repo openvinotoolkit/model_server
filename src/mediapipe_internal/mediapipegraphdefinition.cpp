@@ -29,9 +29,11 @@
 #include "../filesystem.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
 #if (PYTHON_DISABLE == 0)
+#include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
 #include "../python/pythonnoderesources.hpp"
 #endif
@@ -185,7 +187,8 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     PythonBackend* pythonBackend) :
     name(name),
     status(SCHEDULER_CLASS_NAME, this->name),
-    pythonBackend(pythonBackend) {
+    pythonBackend(pythonBackend),
+    reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
     mgconfig = config;
     passKfsRequestFlag = false;
 }
@@ -253,7 +256,8 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
+        this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend, this->reporter.get());
     return status;
 }
 
@@ -458,8 +462,8 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
 
-            std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
-            Status status = LLMNodeResources::createLLMNodeResources(nodeResources, config.node(i), mgconfig.getBasePath());
+            std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
+            Status status = LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(i), mgconfig.getBasePath());
             if (nodeResources == nullptr || !status.ok()) {
                 SPDLOG_ERROR("Failed to process LLM node graph {}", this->name);
                 return status;

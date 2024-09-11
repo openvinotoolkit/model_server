@@ -17,6 +17,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -118,10 +119,9 @@ void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& node
     }
 }
 
-Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
+Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
-    nodeResources = std::make_shared<LLMNodeResources>();
     auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
 
     std::string basePath;
@@ -151,6 +151,7 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
         .block_size = nodeOptions.block_size(),
         .dynamic_split_fuse = nodeOptions.dynamic_split_fuse(),
         .max_num_seqs = nodeOptions.max_num_seqs(),
+        .enable_prefix_caching = nodeOptions.enable_prefix_caching(),
     };
 
     nodeResources->device = nodeOptions.device();
@@ -163,7 +164,7 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
 
     try {
         plugin_config_t tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
-        nodeResources->cbPipe = std::make_unique<ov::genai::ContinuousBatchingPipeline>(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig, tokenizerPluginConfig);
+        nodeResources->initializeContinuousBatchingPipeline(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig, tokenizerPluginConfig);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", basePath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
@@ -182,7 +183,19 @@ Status LLMNodeResources::createLLMNodeResources(std::shared_ptr<LLMNodeResources
     return StatusCode::OK;
 }
 
+void LLMNodeResources::initializeContinuousBatchingPipeline(
+    const std::string& basePath,
+    const ov::genai::SchedulerConfig& schedulerConfig,
+    const std::string& device,
+    const plugin_config_t& pluginConfig,
+    const plugin_config_t& tokenizerPluginConfig) {
+    this->cbPipe = std::make_unique<ov::genai::ContinuousBatchingPipeline>(basePath, schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
+}
+
 void LLMNodeResources::initiateGeneration() {
+    if (!cbPipe) {
+        throw std::logic_error("Cannot initiate generation with uninitialized pipeline");
+    }
     llmExecutorWrapper = std::make_unique<LLMExecutorWrapper>(cbPipe);
 }
 

@@ -52,15 +52,14 @@ pipeline {
               }
         }
 
-        stage("Build docker image") {
+        stage("Prepare build image") {
           when { expression { image_build_needed == "true" } }
           steps {
                 sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
         }
 
-        stage("Run tests in parallel") {
+        stage("Release image and tests in parallel") {
           when { expression { image_build_needed == "true" } }
           parallel {
             stage("Run unit tests") {
@@ -68,15 +67,10 @@ pipeline {
                   sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
             }
-
-            stage("Run lib files test") {
-              steps {
-                  sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
-              }
-            }
-
             stage("Internal tests") {
               steps {
+                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 script {
                   dir ('internal_tests'){ 
                     checkout scmGit(

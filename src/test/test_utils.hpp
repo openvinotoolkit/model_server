@@ -667,7 +667,7 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
 }
 
 // returns path to a file.
-std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
+bool createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
 #pragma GCC diagnostic pop
 
 template <typename T>
@@ -731,6 +731,10 @@ public:
     int getResourcesSize() {
         return resources.size();
     }
+
+    void setResourcesCleanupIntervalMillisec(uint32_t value) {
+        this->resourcesCleanupIntervalMillisec = value;
+    }
 };
 
 class TestWithTempDir : public ::testing::Test {
@@ -766,7 +770,7 @@ public:
     MOCK_METHOD((std::vector<absl::string_view>), request_headers, (), (const, override));
     MOCK_METHOD(void, OverwriteResponseHeader, (absl::string_view, absl::string_view), (override));
     MOCK_METHOD(void, AppendResponseHeader, (absl::string_view, absl::string_view), (override));
-    MOCK_METHOD(void, PartialReplyWithStatus, (tensorflow::serving::net_http::HTTPStatusCode), (override));
+    MOCK_METHOD(void, PartialReplyWithStatus, (std::string, tensorflow::serving::net_http::HTTPStatusCode), (override));
     MOCK_METHOD(void, PartialReply, (std::string), (override));
     MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::CallbackStatus, PartialReplyWithFlushCallback, ((std::function<void()>)), (override));
     MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, response_body_status, (), (override));
@@ -1035,6 +1039,12 @@ public:
             return it->second.get();
         }
     }
+
+    ovms::Status validateForConfigLoadablenessPublic() {
+        return this->validateForConfigLoadableness();
+    }
+
+    ovms::LLMNodeResourcesMap& getLLMNodeResourcesMap() { return this->llmNodeResourcesMap; }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,

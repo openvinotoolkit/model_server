@@ -207,7 +207,7 @@ const std::string& Config::logPath() const { return this->serverSettings.logPath
 const std::string& Config::tracePath() const { return this->serverSettings.tracePath; }
 #endif
 const std::string& Config::grpcChannelArguments() const { return this->serverSettings.grpcChannelArguments; }
-uint32_t Config::filesystemPollWaitSeconds() const { return this->serverSettings.filesystemPollWaitSeconds; }
+uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
 uint32_t Config::sequenceCleanerPollWaitMinutes() const { return this->serverSettings.sequenceCleanerPollWaitMinutes; }
 uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSettings.resourcesCleanerPollWaitSeconds; }
 const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }

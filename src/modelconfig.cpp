@@ -293,7 +293,7 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
 }
 
 Status ModelConfig::parsePluginConfig(std::string command, plugin_config_t& pluginConfig) {
-    return JsonParser::parsePluginConfig(command, pluginConfig);
+    return JsonParser::parsePluginConfig(std::move(command), pluginConfig);
 }
 
 Status ModelConfig::parsePluginConfig(const rapidjson::Value& node, plugin_config_t& pluginConfig) {

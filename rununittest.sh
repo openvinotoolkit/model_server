@@ -45,7 +45,9 @@ if [ "$RUN_TESTS" == "1" ] ; then
             test_fail_procedure; } && \
             generate_coverage_report;
     fi
-    { bazel test \
+    { 
+        bazel test --jobs=$JOBS ${BAZEL_OPTIONS} ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding && \
+        bazel test \
         ${SHARED_OPTIONS} "${TEST_FILTER}" \
         //src:ovms_test ${BAZEL_OPTIONS} > ${TEST_LOG} 2>&1 || \
         test_fail_procedure; } && \

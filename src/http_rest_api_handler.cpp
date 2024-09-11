@@ -331,6 +331,10 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     KFSRestParser requestParser;
 
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
+    if (endOfJson > request_body.length()) {
+        SPDLOG_DEBUG("Inference header content length exceeded JSON size");
+        return StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_EXCEEDED;
+    }
     auto status = requestParser.parse(request_body.substr(0, endOfJson).c_str());
     if (!status.ok()) {
         SPDLOG_DEBUG("Parsing http request failed");
@@ -415,7 +419,7 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
 
     if (!reporter) {
         return StatusCode::OK;
-        // TODO fix after Mediapipe metrics implementation
+        // There is no request time metric for MediaPipe endpoints
     }
     OBSERVE_IF_ENABLED(reporter->requestTimeRest, totalTime);
     return StatusCode::OK;
@@ -490,16 +494,16 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
     }
     if (streamFieldVal == false) {
-        ServableMetricReporter* smr = nullptr;                                                         // Unused
-        ExecutionContext ec{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};  // Unused
-        return executor->infer(&request, &response, ec, smr);
+        ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Unary};
+        return executor->infer(&request, &response, executionContext);
     } else {
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        auto status = executor->inferStream(request, *serverReaderWriter);
+        ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
+        auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
         if (!status.ok()) {
-            sendErrorImpl(status.string(), *serverReaderWriter);
+            serverReaderWriter->PartialReplyWithStatus("{\"error\": \"" + status.string() + "\"}", tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
         }
         serverReaderWriter->PartialReplyEnd();
         return StatusCode::PARTIAL_END;
@@ -826,7 +830,7 @@ Status HttpRestApiHandler::processPredictRequest(
     SPDLOG_DEBUG("Total REST request processing time: {} ms", requestTime / 1000);
     if (!reporterOut) {
         return StatusCode::OK;
-        // TODO fix after Mediapipe metrics implementation
+        // There is no request time metric for MediaPipe endpoints
     }
     OBSERVE_IF_ENABLED(reporterOut->requestTimeRest, requestTime);
     return StatusCode::OK;

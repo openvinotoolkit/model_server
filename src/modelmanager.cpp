@@ -139,12 +139,12 @@ ModelManager::~ModelManager() {
 }
 
 Status ModelManager::start(const Config& config) {
-    this->watcherIntervalMillisec = config.filesystemPollWaitSeconds() * 1000;
+    this->watcherIntervalMillisec = config.filesystemPollWaitMilliseconds();
     sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
-    resourcesCleanupIntervalSec = config.resourcesCleanerPollWaitSeconds();
-    if (resourcesCleanupIntervalSec < 1) {
+    resourcesCleanupIntervalMillisec = config.resourcesCleanerPollWaitSeconds() * 1000;
+    if (resourcesCleanupIntervalMillisec < 1) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Parameter: custom_node_resources_cleaner_interval_seconds has to be greater than 0. Applying default value(1 second)");
-        resourcesCleanupIntervalSec = 1;
+        resourcesCleanupIntervalMillisec = 1000;
     }
     Status status;
     bool startFromConfigFile = (config.configPath() != "");
@@ -174,7 +174,7 @@ void ModelManager::startWatcher(bool watchConfigFile) {
 void ModelManager::startCleaner() {
     if ((!cleanerStarted)) {
         std::future<void> exitSignal = cleanerExitTrigger.get_future();
-        std::thread t(std::thread(&ModelManager::cleanerRoutine, this, resourcesCleanupIntervalSec, sequenceCleaupIntervalMinutes, std::move(exitSignal)));
+        std::thread t(std::thread(&ModelManager::cleanerRoutine, this, resourcesCleanupIntervalMillisec, sequenceCleaupIntervalMinutes, std::move(exitSignal)));
         cleanerStarted = true;
         cleanerThread = std::move(t);
     }
@@ -1083,10 +1083,9 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
 }
 
-void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal) {
+void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalMiliseconds, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started cleaner thread");
 
-    uint32_t resourcesCleanupIntervalMiliseconds = resourcesCleanupIntervalSec * 1000;
     uint32_t sequenceCleanerIntervalMiliseconds = sequenceCleanerIntervalMinutes * 60 * 1000;
 
     FunctorResourcesCleaner functorResourcesCleaner{*this};

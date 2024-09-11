@@ -357,7 +357,7 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.restWorkers(), 46);
     EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
     EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
-    EXPECT_EQ(config.filesystemPollWaitSeconds(), 2);
+    EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
     EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
@@ -439,7 +439,7 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.restWorkers(), 46);
     EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
     EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
-    EXPECT_EQ(config.filesystemPollWaitSeconds(), 2);
+    EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
     EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
