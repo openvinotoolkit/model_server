@@ -50,7 +50,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
             return absl::InvalidArgumentError("accepted logprobs value is currently 1 only");
         request.logprobs = it->value.GetInt();
     }
-    if (request.logprobs && request.temperature==0.0) {
+    if (request.logprobs && request.temperature == 0.0) {
         return absl::InvalidArgumentError("logprobs are not supported with greedy search. Set temperature to non 0 value.");
     }
     if (request.logprobs && request.stream) {
@@ -90,7 +90,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart() {
             return absl::InvalidArgumentError("logprobs accepts values true or false");
         request.logprobschat = it->value.GetBool();
     }
-    if (request.logprobschat && request.temperature==0.0) { 
+    if (request.logprobschat && request.temperature == 0.0) {
         return absl::InvalidArgumentError("logprobs is not supported with greedy search. Set temperature to non 0 value.");
     }
     if (request.logprobschat && request.stream) {
