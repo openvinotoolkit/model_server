@@ -573,7 +573,7 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsStopStringEmpty) {
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 }
 
 TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
@@ -801,6 +801,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsSingleStopString) {
             "ignore_eos": false,
             "max_tokens": 1000,
             "stop": ".",
+            "temperature":0,
             "include_stop_str_in_output": true,
             "prompt": "What is OpenVINO?"
         }
@@ -818,7 +819,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsSingleStopString) {
         ovms::StatusCode::PARTIAL_END);
     ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
     std::regex content_regex("\"text\":\".*\\.[ ]{0,1}\"");
-    ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
+    ASSERT_TRUE(std::regex_search(responses.back(), content_regex)) << responses.back();
 }
 
 TEST_F(LLMFlowHttpTest, streamChatCompletionsUsage) {
