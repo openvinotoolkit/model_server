@@ -212,6 +212,9 @@ ENV OPENVINO_HOME=/openvino
 ENV OPENVINO_CONTRIB=/openvino_contrib
 
 # Add Nvidia dev tool if needed
+RUN apt-get update ; \
+    apt-get install -y --no-install-recommends opencl-clhpp-headers opencl-c-headers intel-opencl-icd && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     set -exuo pipefail ; \
@@ -317,9 +320,6 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
     if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
-RUN apt-get update ; \
-    apt-get install -y --no-install-recommends opencl-clhpp-headers vim less opencl-c-headers intel-opencl-icd ocl-icd-libopencl1 && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;
 WORKDIR /usr/lib/x86_64-linux-gnu/
 RUN ln -s libOpenCL.so.1 libOpenCL.so
 WORKDIR /ovms
