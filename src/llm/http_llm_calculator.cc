@@ -60,7 +60,7 @@ class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<TextStreamer> streamer;
 
     // TODO: Buffer for tokens in streaming path allowing us to store more information
-    //::vector<ov::genai::GenerationOutput> outputsBuffer;
+    // ::vector<ov::genai::GenerationOutput> outputsBuffer;
 
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -216,13 +216,13 @@ public:
 
                     // TODO(dkalinow): Move this logic to CB library
                     auto generationOutput = generationOutputs.begin()->second;
-                    //.push_back(generationOutput);
+                    // .push_back(generationOutput);
                     auto chunk = this->streamer->put(generationOutput.generated_ids[0]);
                     ov::genai::GenerationFinishReason finishReason = generationOutputs.begin()->second.finish_reason;
                     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
                         if (chunk.has_value()) {
                             std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(chunk.value(), finishReason));
-                            //outputsBuffer.clear();
+                            // outputsBuffer.clear();
                             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", response);
                             cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                         }
