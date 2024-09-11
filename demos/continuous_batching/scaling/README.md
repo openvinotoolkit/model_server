@@ -60,8 +60,8 @@ Benchmark duration (s):                  488.53
 Total input tokens:                      443650
 Total generated tokens:                  367462
 Request throughput (req/s):              4.09
-Input token throughput (tok/s):          908.14
 Output token throughput (tok/s):         752.18
+Total Token throughput (tok/s):          1660.32
 ---------------Time to First Token----------------
 Mean TTFT (ms):                          188339.52
 Median TTFT (ms):                        186645.04

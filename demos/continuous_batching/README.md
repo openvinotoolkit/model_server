@@ -293,7 +293,7 @@ It looks like you're testing me!
 OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
 It can be demonstrated using benchmarking app from vLLM repository:
 ```bash
-git clone https://github.com/vllm-project/vllm
+git clone --branch v0.6.0 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements-cpu.txt
 cd benchmarks
@@ -309,8 +309,8 @@ Benchmark duration (s):                  447.62
 Total input tokens:                      215201
 Total generated tokens:                  198588
 Request throughput (req/s):              2.23
-Input token throughput (tok/s):          480.76
 Output token throughput (tok/s):         443.65
+Total Token throughput (tok/s):          924.41
 ---------------Time to First Token----------------
 Mean TTFT (ms):                          171999.94
 Median TTFT (ms):                        170699.21
