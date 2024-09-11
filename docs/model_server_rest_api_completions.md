@@ -60,6 +60,7 @@ curl http://localhost/v3/completions \
 | max_tokens | ✅ | ✅ | ✅ | integer | The maximum number of tokens that can be generated. If not set, the generation will stop once `EOS` token is generated. |
 | ignore_eos | ✅ | ❌ | ✅ | bool (default: `false`) | Whether to ignore the `EOS` token and continue generating tokens after the `EOS` token is generated. If set to `true`, the maximum allowed `max_tokens` value is `4000`. |
 | include_stop_str_in_output | ✅ | ❌ | ✅ | bool (default: `false` if `stream=false`, `true` if `stream=true`) | Whether to include matched stop string in output. Setting it to false when `stream=true` is invalid configuration and will result in error. |
+| logprobs | ⚠️ | ✅ | ✅ | integer (optional) | Include the log probabilities on the logprob of the returned output token. **_ in stream mode logprobs are not returned. Only value 1 is accepted which returns logarithm or the chosen token _** |
 
 #### Beam search sampling specific
 | Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |

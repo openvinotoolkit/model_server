@@ -475,6 +475,110 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonNMultipleStopStrings) {
     }
 }
 
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonLogprobs) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "logprobs": true,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["logprobs"]["content"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["content"][0].IsObject());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["token"].IsString());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["logprob"].IsNumber());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["logprob"].GetFloat() <= 0);
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"][0].IsInt());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"][0].IsObject());    }
+}
+
+TEST_F(LLMFlowHttpTest, unaryCompletionsJsonLogprobs) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "logprobs": 1,
+            "prompt":  "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["logprobs"]["text_offset"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["text_offset"][0].IsInt());
+        ASSERT_TRUE(choice["logprobs"]["token_logprobs"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["token_logprobs"][0].IsNumber());
+        ASSERT_TRUE(choice["logprobs"]["token_logprobs"][0].GetFloat() <= 0);
+        ASSERT_TRUE(choice["logprobs"]["tokens"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["tokens"][0].IsString());
+        ASSERT_TRUE(choice["logprobs"]["top_logprobs"].IsArray());
+    }
+}
+
+TEST_F(LLMFlowHttpTest, ChatCompletionsJsonLogprobsStream) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "logprobs": true,
+            "seed" : 1,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROROK);
+}
+
+TEST_F(LLMFlowHttpTest, CompletionsJsonLogprobsStream) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "logprobs": 2,
+            "seed" : 1,
+            "max_tokens": 1,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsStopStringBadType) {
     std::string requestBody = R"(
         {
