@@ -102,14 +102,12 @@ TEST(OVInferRequestQueue, MultiThread) {
 
     std::vector<int> test_vector(nireq);  // vector to test if only one thread can manage each element
     std::vector<std::thread> clients;
-    SPDLOG_INFO("AAAAAAAAAAAA");
     for (int i = 0; i < number_clients; ++i) {
         clients.emplace_back(inferenceSimulate, std::ref(inferRequestsQueue), std::ref(test_vector));
     }
     for (auto& t : clients) {
         t.join();
     }
-    SPDLOG_INFO("BBBBBBBB");
     // wait for all thread to complete successfully
 }
 

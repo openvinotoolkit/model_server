@@ -29,7 +29,6 @@
 #include "http_payload.hpp"
 #include "llmnoderesources.hpp"
 #include "text_processor.hpp"
-#include "apis/openai_completions.hpp"
 
 using namespace ovms;
 
@@ -61,7 +60,7 @@ class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<TextStreamer> streamer;
 
     // TODO: Buffer for tokens in streaming path allowing us to store more information
-    // std::vector<ov::genai::GenerationOutput> outputsBuffer;
+    //::vector<ov::genai::GenerationOutput> outputsBuffer;
 
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -217,20 +216,20 @@ public:
 
                     // TODO(dkalinow): Move this logic to CB library
                     auto generationOutput = generationOutputs.begin()->second;
-                    outputsBuffer.push_back(generationOutput);
+                    //.push_back(generationOutput);
                     auto chunk = this->streamer->put(generationOutput.generated_ids[0]);
                     ov::genai::GenerationFinishReason finishReason = generationOutputs.begin()->second.finish_reason;
                     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
                         if (chunk.has_value()) {
-                            std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(chunk.value(), finishReason, outputsBuffer));
-                            outputsBuffer.clear();
+                            std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(chunk.value(), finishReason));
+                            //outputsBuffer.clear();
                             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", response);
                             cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                         }
                         cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
                     } else {  // finish generation
                         OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                        std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(this->streamer->end(), finishReason, outputsBuffer));
+                        std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(this->streamer->end(), finishReason));
                         if (this->apiHandler->getStreamOptions().includeUsage)
                             response += packIntoServerSideEventMessage(this->apiHandler->serializeStreamingUsageChunk());
 

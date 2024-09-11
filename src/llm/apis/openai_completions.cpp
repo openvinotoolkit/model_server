@@ -16,6 +16,8 @@
 
 #include "openai_completions.hpp"
 
+#include <cmath>
+
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
@@ -38,6 +40,15 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     }
     if (!request.prompt.has_value() || !request.prompt.value().size()) {
         return absl::Status(absl::StatusCode::kInvalidArgument, "prompt is missing");
+    }
+    // logprobs: int; 1 value allowed
+    it = doc.FindMember("logprobs");
+    if (it != doc.MemberEnd()) {
+        if (!it->value.IsInt())
+            return absl::InvalidArgumentError("logprobs accepts integer values");
+        if (it->value.GetInt() != 1)
+            return absl::InvalidArgumentError("accepted logprobs value is currently 1 only");
+        request.logprobs = it->value.GetInt();
     }
     return absl::OkStatus();
 }
@@ -65,6 +76,13 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart() {
                 return absl::InvalidArgumentError("Invalid message structure");
             chat[member->name.GetString()] = member->value.GetString();
         }
+    }
+    // logprobs: bool; optional - defaults to false
+    it = doc.FindMember("logprobs");
+    if (it != doc.MemberEnd()) {
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("logprobs accepts values true or false");
+        request.logprobschat = it->value.GetBool();
     }
 
     if (request.messages.size() <= 0) {
@@ -124,14 +142,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("ignore_eos accepts values true or false");
         request.ignoreEOS = it->value.GetBool();
-    }
-
-    // logprobs: bool; optional - defaults to false
-    it = doc.FindMember("logprobs");
-    if (it != doc.MemberEnd()) {
-        if (!it->value.IsBool())
-            return absl::InvalidArgumentError("logprobs accepts values true or false");
-        request.logprobs = it->value.GetBool();
     }
 
     // max_tokens: uint; optional
@@ -249,15 +259,17 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
         } else if (it->value.IsArray()) {
             auto stopArray = it->value.GetArray();
             // TODO: OpenAI API defines upper bound but do we want it?
-            if (stopArray.Size() < 1 || stopArray.Size() > 4)
-                return absl::InvalidArgumentError("stop array must have a least 1 and no more than 4 strings");
 
-            request.stop = std::set<std::string>{};
-            for (size_t i = 0; i < stopArray.Size(); i++) {
-                const auto& element = stopArray[i];
-                if (!element.IsString())
-                    return absl::InvalidArgumentError("stop array contains non string element");
-                request.stop->insert(element.GetString());
+            if (stopArray.Size() > 4)
+                return absl::InvalidArgumentError("stop array must have no more than 4 strings");
+            if (!stopArray.Empty()) {
+                request.stop = std::set<std::string>{};
+                for (size_t i = 0; i < stopArray.Size(); i++) {
+                    const auto& element = stopArray[i];
+                    if (!element.IsString())
+                        return absl::InvalidArgumentError("stop array contains non string element");
+                    request.stop->insert(element.GetString());
+                }
             }
         } else {
             return absl::InvalidArgumentError("stop is not a string or array of strings");
@@ -404,55 +416,99 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         // logprobs: object/null; Log probability information for the choice. TODO
         writer.String("logprobs");
         if (this->request.logprobs) {
-            writer.StartObject(); // {
-            writer.String("content");
-            writer.StartArray(); // [
+            if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+                writer.StartObject();  // {
+                writer.String("content");
+                writer.StartArray();  // [
 
-            for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                writer.StartObject(); // {
+                for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
+                    writer.StartObject();  // {
 
-                std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
-                writer.String("token");
-                writer.String(token.c_str());
+                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
+                    writer.String("token");
+                    writer.String(token.c_str());
 
-                float logprob = generationOutput.generated_log_probs[i];
-                writer.String("logprob");
-                writer.Double(logprob);
+                    float logprob = generationOutput.generated_log_probs[i];
+                    writer.String("logprob");
+                    writer.Double(std::log10(logprob));
 
-                writer.String("bytes");
-                writer.StartArray(); // [
-                // Assuming tokenizer returned UTF-8 encoded string
-                const unsigned char* tokenBytes = reinterpret_cast<const unsigned char*>(token.c_str());
-                for (int j = 0; tokenBytes[j] != 0; j++)
-                    writer.Int(tokenBytes[j]);
-                writer.EndArray(); // ]
+                    writer.String("bytes");
+                    writer.StartArray();  // [
+                    // Assuming tokenizer returned UTF-8 encoded string
+                    const unsigned char* tokenBytes = reinterpret_cast<const unsigned char*>(token.c_str());
+                    for (int j = 0; tokenBytes[j] != 0; j++)
+                        writer.Int(tokenBytes[j]);
+                    writer.EndArray();  // ]
 
-                // top_logprobs are currently hardcoded to return only one logprob to comply with the API
-                // for full support significant changes on GenAI side are required
-                writer.String("top_logprobs");
-                writer.StartArray(); // [
-                writer.StartObject(); // {
+                    // top_logprobs are currently hardcoded to return only one logprob to comply with the API
+                    // for full support significant changes on GenAI side are required
+                    writer.String("top_logprobs");
+                    writer.StartArray();   // [
+                    writer.StartObject();  // {
 
-                writer.String("token");
-                writer.String(token.c_str());
+                    writer.String("token");
+                    writer.String(token.c_str());
 
-                writer.String("logprob");
-                writer.Double(logprob);
+                    writer.String("logprob");
+                    writer.Double(logprob);
 
-                writer.String("bytes");
-                writer.StartArray(); // [
-                for (int j = 0; tokenBytes[j] != 0; j++)
-                    writer.Int(tokenBytes[j]);
-                writer.EndArray(); // ]
+                    writer.String("bytes");
+                    writer.StartArray();  // [
+                    for (int j = 0; tokenBytes[j] != 0; j++)
+                        writer.Int(tokenBytes[j]);
+                    writer.EndArray();  // ]
 
-                writer.EndObject(); // }
-                writer.EndArray(); // ]
+                    writer.EndObject();  // }
+                    writer.EndArray();   // ]
 
-                writer.EndObject(); // }
-                
+                    writer.EndObject();  // }
+                }
+                writer.EndArray();   // ]
+                writer.EndObject();  // }
             }
-            writer.EndArray(); // ]
-            writer.EndObject(); // }
+            if (endpoint == Endpoint::COMPLETIONS) {
+                writer.StartObject();  // {
+                writer.String("tokens");
+                writer.StartArray();  // [
+                for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
+                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
+                    writer.String(token.c_str());
+                }
+                writer.EndArray();  // ]
+
+                writer.String("token_logprobs");
+                writer.StartArray();  // [
+                for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
+                    float logprob = generationOutput.generated_log_probs[i];
+                    writer.Double(std::log10(logprob));
+                }
+                writer.EndArray();  // ]
+
+                writer.String("top_logprobs");
+                writer.StartArray();  // [
+                for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
+                    writer.StartObject();  // {
+                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
+                    writer.String(token.c_str());
+                    float logprob = generationOutput.generated_log_probs[i];
+                    writer.Double(std::log10(logprob));
+                    writer.EndObject();  // }
+                }
+                writer.EndArray();  // ]
+
+                writer.String("text_offset");
+                writer.StartArray();  // [
+                for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
+                    if (i == 0) {
+                        writer.Int(0);
+                    } else {
+                        std::string text_before_token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids.begin(), generationOutput.generated_ids.begin() + i}));
+                        writer.Int(text_before_token.size());
+                    }
+                }
+                writer.EndArray();   // ]
+                writer.EndObject();  // }
+            }
         } else {
             writer.Null();
         }
@@ -517,9 +573,8 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     return buffer.GetString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, 
-                                                                  ov::genai::GenerationFinishReason finishReason,
-                                                                  const std::vector<ov::genai::GenerationOutput>& outputsBuffer) {
+std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse,
+    ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -553,10 +608,12 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     writer.Int(0);
     // logprobs: object/null; Log probability information for the choice. TODO
     writer.String("logprobs");
+    writer.Null();
+    // logprobs: object/null; Log probability information for the choice. TODO
+    /*     writer.String("logprobs");
     if (this->request.logprobs) {
         writer.StartObject(); // {
         writer.String("content");
-        writer.StartArray(); // [
 
         for (const auto& generationOutput : outputsBuffer) {
             writer.StartObject(); // {
@@ -606,7 +663,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     } else {
         writer.Null();
     }
-
+ */
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         writer.String("delta");
         writer.StartObject();  // {
