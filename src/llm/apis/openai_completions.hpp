@@ -177,7 +177,7 @@ public:
     absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit);
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
-    std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason);
+    std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
 };
 }  // namespace ovms

@@ -415,7 +415,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         writer.Int(i++);
         // logprobs: object/null; Log probability information for the choice. TODO
         writer.String("logprobs");
-        if (this->request.logprobs) {
+        if (this->request.logprobschat || this->request.logprobs > 0) {
             if (endpoint == Endpoint::CHAT_COMPLETIONS) {
                 writer.StartObject();  // {
                 writer.String("content");
@@ -573,8 +573,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     return buffer.GetString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse,
-    ov::genai::GenerationFinishReason finishReason) {
+std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -609,61 +608,6 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // logprobs: object/null; Log probability information for the choice. TODO
     writer.String("logprobs");
     writer.Null();
-    // logprobs: object/null; Log probability information for the choice. TODO
-    /*     writer.String("logprobs");
-    if (this->request.logprobs) {
-        writer.StartObject(); // {
-        writer.String("content");
-
-        for (const auto& generationOutput : outputsBuffer) {
-            writer.StartObject(); // {
-
-            std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[0]}));
-            writer.String("token");
-            writer.String(token.c_str());
-
-            float logprob = generationOutput.generated_log_probs[0];
-            writer.String("logprob");
-            writer.Double(logprob);
-
-            writer.String("bytes");
-            writer.StartArray(); // [
-            // Assuming tokenizer returned UTF-8 encoded string
-            const unsigned char* tokenBytes = reinterpret_cast<const unsigned char*>(token.c_str());
-            for (int j = 0; tokenBytes[j] != 0; j++)
-                writer.Int(tokenBytes[j]);
-            writer.EndArray(); // ]
-
-            // top_logprobs are currently hardcoded to return only one logprob to comply with the API
-            // for full support significant changes on GenAI side are required
-            writer.String("top_logprobs");
-            writer.StartArray(); // [
-            writer.StartObject(); // {
-
-            writer.String("token");
-            writer.String(token.c_str());
-
-            writer.String("logprob");
-            writer.Double(logprob);
-
-            writer.String("bytes");
-            writer.StartArray(); // [
-            for (int j = 0; tokenBytes[j] != 0; j++)
-                writer.Int(tokenBytes[j]);
-            writer.EndArray(); // ]
-
-            writer.EndObject(); // }
-            writer.EndArray(); // ]
-
-            writer.EndObject(); // }
-            
-        }
-        writer.EndArray(); // ]
-        writer.EndObject(); // }
-    } else {
-        writer.Null();
-    }
- */
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         writer.String("delta");
         writer.StartObject();  // {
