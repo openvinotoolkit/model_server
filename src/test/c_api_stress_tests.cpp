@@ -71,8 +71,7 @@ TEST_F(ConfigChangeStressTestSingleModel, ChangeToEmptyConfigInference) {
     std::set<StatusCode> requiredLoadResults = {
         StatusCode::OK,
         StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {
-    };
+    std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &ConfigChangeStressTest::triggerCApiInferenceInALoopSingleModel,
         &ConfigChangeStressTest::changeToEmptyConfig,
