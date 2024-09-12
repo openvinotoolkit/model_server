@@ -69,9 +69,9 @@ public:
 TEST_F(ConfigChangeStressTestSingleModel, ChangeToEmptyConfigInference) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
-        StatusCode::OK};  // we expect full continuity of operation
+        StatusCode::OK,
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {
-        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE  // this should be hit if test is stressing enough, sporadically does not happen
     };
     performStressTest(
         &ConfigChangeStressTest::triggerCApiInferenceInALoopSingleModel,
@@ -84,11 +84,9 @@ TEST_F(ConfigChangeStressTestSingleModel, ChangeToEmptyConfigInference) {
 TEST_F(ConfigChangeStressTestAsync, ChangeToEmptyConfigAsyncInference) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
-        StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {
-        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,
-        StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR  // this should be hit if test is stressing enough, sporadically does not happen
-    };
+        StatusCode::OK,
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
         &ConfigChangeStressTest::triggerCApiAsyncInferenceInALoop,
         &ConfigChangeStressTest::changeToEmptyConfig,
@@ -102,9 +100,7 @@ TEST_F(ConfigChangeStressTestAsync, ChangeToWrongShapeAsyncInference) {
     std::set<StatusCode> requiredLoadResults = {
         StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {
-        StatusCode::INVALID_SHAPE,
-        StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR  // this should be hit if test is stressing enough, sporadically does not happen
-    };
+        StatusCode::INVALID_SHAPE};
     performStressTest(
         &ConfigChangeStressTest::triggerCApiAsyncInferenceInALoop,
         &ConfigChangeStressTest::changeToWrongShapeOneModel,
@@ -118,8 +114,7 @@ TEST_F(ConfigChangeStressTestAsync, ChangeToAutoShapeDuringAsyncInference) {
     std::set<StatusCode> requiredLoadResults = {
         StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {
-        StatusCode::MODEL_VERSION_NOT_LOADED_YET,  // this should be hit if test is stressing enough, sporadically does not happen
-        StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR};
+        StatusCode::MODEL_VERSION_NOT_LOADED_YET};
     performStressTest(
         &ConfigChangeStressTest::triggerCApiAsyncInferenceInALoop,
         &ConfigChangeStressTest::changeToAutoShapeOneModel,
@@ -135,9 +130,7 @@ TEST_F(ConfigChangeStressTestAsyncStartEmpty, ChangeToLoadedModelDuringAsyncInfe
         StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {
         StatusCode::MODEL_NAME_MISSING,
-        StatusCode::MODEL_VERSION_MISSING,
-        StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR,
-    };
+        StatusCode::MODEL_VERSION_MISSING};
     performStressTest(
         &ConfigChangeStressTest::triggerCApiAsyncInferenceInALoop,
         &ConfigChangeStressTest::addFirstModel,

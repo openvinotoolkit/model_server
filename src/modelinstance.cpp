@@ -1463,10 +1463,10 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     // here pass by copy into callback
     {
         inferRequest.set_callback([this, requestProto, &inferRequest, userCallback, userCallbackData, modelUnloadGuardPtrMoved = std::shared_ptr<ModelInstanceUnloadGuard>(std::move(modelUnloadGuardPtr))](std::exception_ptr exception) mutable {
-            SPDLOG_INFO("Entry of ov::InferRequest callback call");
+            SPDLOG_DEBUG("Entry of ov::InferRequest callback call");
             if (exception) {
                 try {
-                    SPDLOG_INFO("rethrow_exception");
+                    SPDLOG_DEBUG("rethrow_exception");
                     std::rethrow_exception(exception);
                 } catch (const std::exception& e) {
                     SPDLOG_DEBUG("got exception in ov::InferRequest callback: {}", e.what());
