@@ -503,7 +503,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonLogprobs) {
         ASSERT_TRUE(choice["logprobs"]["content"][0].IsObject());
         ASSERT_TRUE(choice["logprobs"]["content"][0]["token"].IsString());
         ASSERT_TRUE(choice["logprobs"]["content"][0]["logprob"].IsNumber());
-        ASSERT_TRUE(choice["logprobs"]["content"][0]["logprob"].GetFloat() <= 0);
+        ASSERT_LE(choice["logprobs"]["content"][0]["logprob"].GetFloat(), 0);
         ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"].IsArray());
         ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"][0].IsInt());
         ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"].IsArray());
@@ -534,7 +534,7 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonLogprobs) {
         ASSERT_TRUE(choice["logprobs"]["text_offset"][0].IsInt());
         ASSERT_TRUE(choice["logprobs"]["token_logprobs"].IsArray());
         ASSERT_TRUE(choice["logprobs"]["token_logprobs"][0].IsNumber());
-        ASSERT_TRUE(choice["logprobs"]["token_logprobs"][0].GetFloat() <= 0);
+        ASSERT_LE(choice["logprobs"]["token_logprobs"][0].GetFloat(), 0);
         ASSERT_TRUE(choice["logprobs"]["tokens"].IsArray());
         ASSERT_TRUE(choice["logprobs"]["tokens"][0].IsString());
         ASSERT_TRUE(choice["logprobs"]["top_logprobs"].IsArray());
