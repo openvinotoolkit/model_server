@@ -560,7 +560,7 @@ TEST_F(LLMFlowHttpTest, ChatCompletionsJsonLogprobsStream) {
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROROK);
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_F(LLMFlowHttpTest, CompletionsJsonLogprobsStream) {
