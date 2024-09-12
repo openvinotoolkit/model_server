@@ -6,6 +6,7 @@ maxdepth: 1
 hidden:
 ---
 
+ovms_demos_continuous_batching
 ovms_demo_clip_image_classification
 ovms_demo_age_gender_guide
 ovms_demo_horizontal_text_detection
@@ -32,11 +33,10 @@ ovms_demo_bert
 ovms_demo_universal-sentence-encoder
 ovms_demo_speech_recognition
 ovms_demo_benchmark_client
-ovms_demo_python_llama
 ovms_demo_python_seq2seq
 ovms_demo_python_stable_diffusion
 ovms_string_output_model_demo
-ovms_demos_continuous_batching
+
 ```
 
 OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities.
@@ -83,10 +83,4 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 |---|---|
 |[Image Classification](image_classification/go/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
 
-
-## Legacy demos
-
-| Demo | Description |
-|---|---|
-|[Text Generation](python_demos/llm_text_generation/README.md) | Generate text using one of popular LLMs sending prompts via gRPC API unary or interactive streaming endpoint.|
 

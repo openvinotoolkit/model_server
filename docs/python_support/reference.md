@@ -2,8 +2,6 @@
 
 ## Introduction
 
-**This feature is currently in preview, meaning some behaviors of the feature and user interface may change in future versions**
-
  Starting with version 2023.3, OpenVINO Model Server supports execution of custom Python code. Such code can execute simple pre- or post-processing as well as complex tasks like image or text generation.
 
  Python execution is enabled via [MediaPipe](../mediapipe.md) by the built-in [`PythonExecutorCalculator`](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#pythonexecutorcalculator) that allows creating graph nodes to execute Python code. Python nodes can be used as standalone servables (single node graphs) or be part of larger MediaPipe graphs.
@@ -938,7 +936,7 @@ class OvmsPythonModel:
 
 In such case, the client could implement different actions depending on which output it receives on the stream.
 
-Another example of such configuration is signaling that generation is finished when running in [generative mode](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#generative-mode). This solution is used in [text generation demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/python_demos/llm_text_generation).
+Another example of such configuration is signaling that generation is finished when running in [generative mode](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#generative-mode). This solution is used in [image generation demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/python_demos/stable_diffusion).
 
 
 ### Calculator type conversions
