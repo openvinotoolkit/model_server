@@ -121,7 +121,7 @@ Click the test that needs to be run:
 
 <details><summary>Run test inference</summary>
 
-1. Download an exemplary model [ResNet50-binary model](https://docs.openvinotoolkit.org/2022.1/omz_models_intel_resnet50_binary_0001_description_resnet50_binary_0001.html) :
+1. Download an exemplary model [ResNet50-binary model](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/resnet50-binary-0001/README.md) :
 
 	```bash
 	source tests/performance/download_model.sh
