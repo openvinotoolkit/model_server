@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <condition_variable>
+#include <mutex>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -154,6 +157,14 @@ public:
     }
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
         return modelMock;
+    }
+
+    int getResourcesSize() {
+        return resources.size();
+    }
+
+    void setResourcesCleanupIntervalMillisec(uint32_t value) {
+        this->resourcesCleanupIntervalMillisec = value;
     }
 };
 
@@ -1026,48 +1037,6 @@ public:
     }
 };
 
-TEST(ModelManagerCleaner, ConfigReloadShouldCleanupResources) {
-    ResourcesAccessModelManager manager;
-    manager.setResourcesCleanupIntervalMillisec(20);  // Mock cleaner to work in 20ms intervals instead of >1s
-    manager.startCleaner();
-    ASSERT_EQ(manager.getResourcesSize(), 0);
-
-    // Reset mocked wrapper deinitializeSum
-    CNLIMWrapperMock::deinitializeSum = 0;
-
-    int num1 = 1;
-    int num2 = 19;
-    int num3 = 11;
-    {
-        std::shared_ptr<CNLIMWrapperMock> ptr1 = std::make_shared<CNLIMWrapperMock>(&num1, [](void* ptr) {
-            int* number = static_cast<int*>(ptr);
-            return *number;
-        });
-        std::shared_ptr<CNLIMWrapperMock> ptr2 = std::make_shared<CNLIMWrapperMock>(&num2, [](void* ptr) {
-            int* number = static_cast<int*>(ptr);
-            return *number;
-        });
-        std::shared_ptr<CNLIMWrapperMock> ptr3 = std::make_shared<CNLIMWrapperMock>(&num3, [](void* ptr) {
-            int* number = static_cast<int*>(ptr);
-            return *number;
-        });
-
-        manager.addResourceToCleaner(ptr1);
-        manager.addResourceToCleaner(ptr2);
-        manager.addResourceToCleaner(std::move(ptr3));
-        ASSERT_EQ(manager.getResourcesSize(), 3);
-
-        waitForOVMSResourcesCleanup(manager);
-        ASSERT_EQ(manager.getResourcesSize(), 2);
-        ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, num3);
-    }
-    waitForOVMSResourcesCleanup(manager);
-    ASSERT_EQ(manager.getResourcesSize(), 0);
-    ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, (num1 + num2 + num3));
-
-    manager.join();
-}
-
 struct MockedFunctorSequenceCleaner : public ovms::FunctorSequenceCleaner {
 public:
     MockedFunctorSequenceCleaner(ovms::GlobalSequencesViewer& globalSequencesViewer) :
@@ -1104,6 +1073,93 @@ public:
 
     const float TIMEOUT_MULTIPLIER_FACTOR = 10;
 };
+
+TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
+    std::mutex mx[2];
+    std::condition_variable cv[2];
+
+    auto waitForCleanerCycleFinishSignal = [&mx, &cv]() {
+        std::unique_lock<std::mutex> lock(mx[1]);
+        SPDLOG_INFO("Waiting for cleaner to signal that cleanup cycle is finished");
+        cv[1].wait(lock);
+    };
+
+    auto signalCleanerThatNextCycleCanContinue = [&cv]() {
+        SPDLOG_INFO("Signaling the cleaner thread that next cycle can start");
+        cv[0].notify_one();
+    };
+
+    auto waitForSignalThatCleanerCycleCanContinue = [&mx, &cv]() {
+        std::unique_lock<std::mutex> lock(mx[0]);
+        SPDLOG_INFO("Waiting for signal that cleaner cycle can continue");
+        cv[0].wait(lock);
+    };
+
+    auto signalMainThreadThatCleanerCycleFinished = [&cv]() {
+        SPDLOG_INFO("Signaling the main thread that the cleaner cycle finished");
+        cv[1].notify_one();
+    };
+
+    ASSERT_EQ(modelManager.getResourcesSize(), 0);
+
+    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).WillRepeatedly(testing::Invoke([this, &waitForSignalThatCleanerCycleCanContinue, &signalMainThreadThatCleanerCycleFinished]() {
+        signalMainThreadThatCleanerCycleFinished();
+        waitForSignalThatCleanerCycleCanContinue();
+        this->mockedFunctorResourcesCleaner.ovms::FunctorResourcesCleaner::cleanup();  // fall back to actual work
+    }));
+
+    // Reset mocked wrapper deinitializeSum
+    CNLIMWrapperMock::deinitializeSum = 0;
+
+    uint32_t resourcesIntervalMiliseconds = 20;
+    uint32_t sequenceIntervalMiliseconds = 60000;
+
+    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
+
+    waitForCleanerCycleFinishSignal();
+
+    int num1 = 1;
+    int num2 = 19;
+    int num3 = 11;
+    {
+        std::shared_ptr<CNLIMWrapperMock> ptr1 = std::make_shared<CNLIMWrapperMock>(&num1, [](void* ptr) {
+            int* number = static_cast<int*>(ptr);
+            return *number;
+        });
+        std::shared_ptr<CNLIMWrapperMock> ptr2 = std::make_shared<CNLIMWrapperMock>(&num2, [](void* ptr) {
+            int* number = static_cast<int*>(ptr);
+            return *number;
+        });
+        std::shared_ptr<CNLIMWrapperMock> ptr3 = std::make_shared<CNLIMWrapperMock>(&num3, [](void* ptr) {
+            int* number = static_cast<int*>(ptr);
+            return *number;
+        });
+
+        modelManager.addResourceToCleaner(ptr1);
+        modelManager.addResourceToCleaner(ptr2);
+        modelManager.addResourceToCleaner(std::move(ptr3));
+        ASSERT_EQ(modelManager.getResourcesSize(), 3);
+
+        signalCleanerThatNextCycleCanContinue();  // signal after one of the resource lifetime is ended (ptr3)
+        waitForCleanerCycleFinishSignal();
+
+        ASSERT_EQ(modelManager.getResourcesSize(), 2);
+        ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, num3);
+    }
+
+    signalCleanerThatNextCycleCanContinue();  // signals after scope of all resources end
+    waitForCleanerCycleFinishSignal();
+
+    ASSERT_EQ(modelManager.getResourcesSize(), 0);
+    ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, (num1 + num2 + num3));
+
+    cleanerExitTrigger.set_value();
+    signalCleanerThatNextCycleCanContinue();  // Just to unlock so cleaner exit trigger can take effect
+
+    if (t.joinable()) {
+        t.join();
+    }
+}
 
 TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenResourcesIntervalIsShorterAndWaitTimeIsGreaterThanSequenceWaitTime) {
     uint32_t resourcesIntervalMiliseconds = 200;

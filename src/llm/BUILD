@@ -51,6 +51,7 @@ cc_library(
         ":llmnoderesources",
         ":httppayload",
         ":text_processor",
+        ":openai_completions_api_handler"
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -67,6 +68,22 @@ mediapipe_proto_library(
         "@mediapipe//mediapipe/framework:calculator_options_proto",
         "@mediapipe//mediapipe/framework:calculator_proto",
     ],
+)
+
+cc_library(
+    name = "openai_completions_api_handler",
+    hdrs = ["apis/openai_completions.hpp"],
+    srcs = ["apis/openai_completions.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
+        ":llm_engine",
+        "//src:libovmsprofiler"
+    ],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
 )
 
 cc_library(

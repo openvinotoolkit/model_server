@@ -52,12 +52,14 @@ curl http://localhost/v3/completions \
 | Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
 |-----|----------|----------|----------|---------|-----|
 | model | ✅ | ✅ | ✅ | string (required) | Name of the model to use. From administrator point of view it is the name assigned to a MediaPipe graph configured to schedule generation using desired model.  |
+| stop | ✅ | ✅ | ✅ | string/array of strings (optional) | Up to 4 sequences where the API will stop generating further tokens. If `stream` is set to `false` matched stop string **is not** included in the output by default. If `stream` is set to `true` matched stop string **is** included in the output by default. It can be changed with `include_stop_str_in_output` parameter, but for `stream=true` setting `include_stop_str_in_output=false` is invalid. |
 | stream | ✅ | ✅ | ✅ | bool (optional, default: `false`) | If set to true, partial message deltas will be sent to the client. The generation chunks will be sent as data-only [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#event_stream_format) as they become available, with the stream terminated by a `data: [DONE]` message. [Example Python code](clients_openai.md) |
 | stream_options | ✅ | ✅ | ✅ | object (optional) | Options for streaming response. Only set this when you set stream: true |
 | stream_options.include_usage | ✅ | ✅ | ✅ | bool (optional) | Streaming option. If set, an additional chunk will be streamed before the data: [DONE] message. The usage field in this chunk shows the token usage statistics for the entire request, and the choices field will always be an empty array. All other chunks will also include a usage field, but with a null value. |
 | prompt | ⚠️ | ✅ | ✅ | string or array (required) | The prompt(s) to generate completions for, encoded as a string, array of strings, array of tokens, or array of token arrays. **_Limitations: only single string prompt is currently supported._** |
 | max_tokens | ✅ | ✅ | ✅ | integer | The maximum number of tokens that can be generated. If not set, the generation will stop once `EOS` token is generated. |
 | ignore_eos | ✅ | ❌ | ✅ | bool (default: `false`) | Whether to ignore the `EOS` token and continue generating tokens after the `EOS` token is generated. If set to `true`, the maximum allowed `max_tokens` value is `4000`. |
+| include_stop_str_in_output | ✅ | ❌ | ✅ | bool (default: `false` if `stream=false`, `true` if `stream=true`) | Whether to include matched stop string in output. Setting it to false when `stream=true` is invalid configuration and will result in error. |
 
 #### Beam search sampling specific
 | Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
@@ -82,7 +84,6 @@ curl http://localhost/v3/completions \
 - echo
 - logit_bias
 - logprobs
-- stop
 - suffix
 
 
@@ -92,7 +93,6 @@ curl http://localhost/v3/completions \
 - early_stopping
 - stop
 - stop_token_ids
-- include_stop_str_in_output
 - min_tokens
 - logprobs
 - prompt_logprobs
