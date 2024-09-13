@@ -27,6 +27,7 @@
 #include <openvino/genai/generation_handle.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include <rapidjson/document.h>
+#include <rapidjson/writer.h>
 
 #include "absl/status/status.h"
 
@@ -79,6 +80,8 @@ struct OpenAIChatCompletionsRequest {
     std::optional<bool> includeStopStrInOutput{std::nullopt};
     std::optional<int> bestOf{std::nullopt};
     std::optional<bool> ignoreEOS{std::nullopt};
+    bool logprobs = 0;
+    int logprobschat = false;
 
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
@@ -177,5 +180,6 @@ public:
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
+    static void writeLogprob(Writer<StringBuffer>& writer, float logprob);
 };
 }  // namespace ovms
