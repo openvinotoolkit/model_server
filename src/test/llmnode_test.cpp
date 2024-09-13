@@ -29,6 +29,7 @@
 #include <pybind11/embed.h>
 
 #include "../http_rest_api_handler.hpp"
+#include "../llm/apis/openai_completions.hpp"
 #include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
 #include "../server.hpp"
@@ -155,6 +156,19 @@ std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 // with user defined one to do that.
 // TODO: Consider stress testing - existing model server under heavy load to check notifications work us expected.
 //
+
+TEST_F(LLMFlowHttpTest, writeLogprobs) {
+
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    std::vector<float> inputs{-0.1, 0, 1, 5};
+    std::vector<std::string> expected{"null", "null", "0.0", "null"};
+    for (size_t i = 0; i < inputs.size(); i++) {
+        OpenAIChatCompletionsHandler::writeLogprob(writer, inputs[i]);
+        EXPECT_EQ(buffer.GetString(), expected[i]);
+        buffer.Clear();
+    }
+}
 
 TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
     config.max_new_tokens = 5;

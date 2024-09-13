@@ -442,8 +442,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
 
                     float logprob = generationOutput.generated_log_probs[i];
                     writer.String("logprob");
-                    writer.Double(std::log10(logprob));
-
+                    writeLogprob(writer, logprob);
                     writer.String("bytes");
                     writer.StartArray();  // [
                     // Assuming tokenizer returned UTF-8 encoded string
@@ -462,8 +461,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                     writer.String(token.c_str());
 
                     writer.String("logprob");
-                    writer.Double(logprob);
-
+                    writeLogprob(writer, logprob);
                     writer.String("bytes");
                     writer.StartArray();  // [
                     for (int j = 0; tokenBytes[j] != 0; j++)
@@ -492,7 +490,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                 writer.StartArray();  // [
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
                     float logprob = generationOutput.generated_log_probs[i];
-                    writer.Double(std::log10(logprob));
+                    writeLogprob(writer, logprob);
                 }
                 writer.EndArray();  // ]
 
@@ -503,7 +501,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                     std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
                     writer.String(token.c_str());
                     float logprob = generationOutput.generated_log_probs[i];
-                    writer.Double(std::log10(logprob));
+                    writeLogprob(writer, logprob);
                     writer.EndObject();  // }
                 }
                 writer.EndArray();  // ]
@@ -713,4 +711,12 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
     return buffer.GetString();
 }
 
+void OpenAIChatCompletionsHandler::writeLogprob(Writer<StringBuffer>& writer, float logprob) {
+    // genai returns probs values which should be in the range of 0-1
+    // other values could be potentially invalid and should be treated as such
+    if (logprob > 0.0 && logprob <= 1.0)
+        writer.Double(std::log10(logprob));
+    else
+        writer.Null();
+}
 }  // namespace ovms
