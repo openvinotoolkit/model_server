@@ -1081,6 +1081,16 @@ static void mediacreate(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ov
 }
 #endif
 
+#define GET_CAPI_STATUS_CODE(status)                          \
+    uint32_t code = 0;                                        \
+    OVMS_Status* codeStatus = OVMS_StatusCode(status, &code); \
+    StatusCode sc;                                            \
+    if (codeStatus != nullptr) {                              \
+        sc = static_cast<StatusCode>(StatusCode::OK);         \
+    } else {                                                  \
+        sc = static_cast<StatusCode>(code);                   \
+    }
+
 class ConfigChangeStressTest : public TestWithTempDir {
 protected:
     const uint loadThreadCount = 20;
@@ -1777,6 +1787,7 @@ public:
         EXPECT_EQ(*shapeMin, {1});
         EXPECT_EQ(*shapeMax, {1});
     }
+
     void triggerCApiGetMetadataInALoop(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
@@ -1794,14 +1805,8 @@ public:
             }
             OVMS_ServableMetadata* servableMetadata = nullptr;
             OVMS_Status* status = OVMS_GetServableMetadata(this->cserver, "pipeline1Dummy", 0, &servableMetadata);
-            uint32_t code = 0;
-            OVMS_Status* codeStatus = OVMS_StatusCode(status, &code);
-            StatusCode sc;
-            if (codeStatus != nullptr) {
-                sc = static_cast<StatusCode>(StatusCode::OK);
-            } else {
-                sc = static_cast<StatusCode>(code);
-            }
+
+            GET_CAPI_STATUS_CODE(status)
             createPipelineRetCodesCounters[sc]++;
             EXPECT_TRUE((requiredLoadResults.find(sc) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(sc) != allowedLoadResults.end()));
@@ -1834,14 +1839,8 @@ public:
             }
             OVMS_ServableState state;
             OVMS_Status* status = OVMS_GetServableState(this->cserver, "pipeline1Dummy", 0, &state);
-            uint32_t code = 0;
-            OVMS_Status* codeStatus = OVMS_StatusCode(status, &code);
-            StatusCode sc;
-            if (codeStatus != nullptr) {
-                sc = static_cast<StatusCode>(StatusCode::OK);
-            } else {
-                sc = static_cast<StatusCode>(code);
-            }
+
+            GET_CAPI_STATUS_CODE(status)
             createPipelineRetCodesCounters[sc]++;
             EXPECT_TRUE((requiredLoadResults.find(sc) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(sc) != allowedLoadResults.end()));
@@ -1917,14 +1916,8 @@ public:
             OVMS_InferenceResponse* response = nullptr;
             OVMS_Status* status = OVMS_Inference(this->cserver, request, &response);
             OVMS_InferenceRequestDelete(request);
-            uint32_t code = 0;
-            OVMS_Status* codeStatus = OVMS_StatusCode(status, &code);
-            StatusCode sc;
-            if (codeStatus != nullptr) {
-                sc = static_cast<StatusCode>(StatusCode::OK);
-            } else {
-                sc = static_cast<StatusCode>(code);
-            }
+
+            GET_CAPI_STATUS_CODE(status)
             createPipelineRetCodesCounters[sc]++;
             EXPECT_TRUE((requiredLoadResults.find(sc) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(sc) != allowedLoadResults.end()));
@@ -2001,15 +1994,7 @@ public:
 
             OVMS_Status* status = OVMS_InferenceAsync(this->cserver, request);
 
-            uint32_t code = 0;
-            OVMS_Status* codeStatus = OVMS_StatusCode(status, &code);
-            StatusCode sc;
-            if (codeStatus != nullptr) {
-                sc = static_cast<StatusCode>(StatusCode::OK);
-            } else {
-                sc = static_cast<StatusCode>(code);
-            }
-
+            GET_CAPI_STATUS_CODE(status)
             // check - blocking call - expected only on success
             if (status != nullptr) {
                 SPDLOG_INFO("OVMS_InferenceAsync failed with status: {}. Not waiting for callback execution.", ovms::Status(sc).string());
@@ -2079,15 +2064,7 @@ public:
             OVMS_Status* status = OVMS_Inference(this->cserver, request, &response);
             OVMS_InferenceRequestDelete(request);
 
-            uint32_t code = 0;
-            OVMS_Status* codeStatus = OVMS_StatusCode(status, &code);
-            StatusCode sc;
-            if (codeStatus != nullptr) {
-                sc = static_cast<StatusCode>(StatusCode::OK);
-            } else {
-                sc = static_cast<StatusCode>(code);
-            }
-
+            GET_CAPI_STATUS_CODE(status)
             createPipelineRetCodesCounters[sc]++;
             EXPECT_TRUE((requiredLoadResults.find(sc) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(sc) != allowedLoadResults.end()));

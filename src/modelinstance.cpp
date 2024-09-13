@@ -1459,6 +1459,11 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     // set callback
     // TODO check if there is callback in async
     OVMS_InferenceRequestCompletionCallback_t userCallback = requestProto->getResponseCompleteCallback();
+    if (userCallback == nullptr) {
+        SPDLOG_DEBUG("User callback not set for async inference.");
+        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+    }
+
     void* userCallbackData = requestProto->getResponseCompleteCallbackData();
     // here pass by copy into callback
     {
