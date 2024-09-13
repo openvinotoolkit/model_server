@@ -355,10 +355,6 @@ ifeq ($(NVIDIA),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
   endif
 endif
-ifeq ($(BASE_OS),redhat)
-	@mkdir -p entitlement
-	@mkdir -p rhsm-ca
-endif
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
@@ -451,6 +447,11 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 release_image:
+ifeq ($(BASE_OS_TAG),20.04)
+  ifeq ($(NPU),1)
+	@echo "NPU is not supported on Ubuntu 20.04" ; exit 1
+  endif
+endif
 ifeq ($(USE_BUILDX),true)
 	$(eval BUILDX:=buildx)
 	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
