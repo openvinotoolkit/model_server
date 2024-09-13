@@ -158,7 +158,6 @@ std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 //
 
 TEST_F(LLMFlowHttpTest, writeLogprobs) {
-
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     std::vector<float> inputs{-0.1, 0, 1, 5};
