@@ -29,6 +29,7 @@
 #include <pybind11/embed.h>
 
 #include "../http_rest_api_handler.hpp"
+#include "../llm/apis/openai_completions.hpp"
 #include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
 #include "../server.hpp"
@@ -155,6 +156,18 @@ std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 // with user defined one to do that.
 // TODO: Consider stress testing - existing model server under heavy load to check notifications work us expected.
 //
+
+TEST_F(LLMFlowHttpTest, writeLogprobs) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    std::vector<float> inputs{-0.1, 0, 1, 5};
+    std::vector<std::string> expected{"null", "null", "0.0", "null"};
+    for (size_t i = 0; i < inputs.size(); i++) {
+        OpenAIChatCompletionsHandler::writeLogprob(writer, inputs[i]);
+        EXPECT_EQ(buffer.GetString(), expected[i]);
+        buffer.Clear();
+    }
+}
 
 TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
     config.max_new_tokens = 5;
@@ -475,6 +488,111 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonNMultipleStopStrings) {
     }
 }
 
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonLogprobs) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "logprobs": true,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["logprobs"]["content"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["content"][0].IsObject());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["token"].IsString());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["logprob"].IsNumber());
+        ASSERT_LE(choice["logprobs"]["content"][0]["logprob"].GetFloat(), 0);
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"][0].IsInt());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"][0].IsObject());
+    }
+}
+
+TEST_F(LLMFlowHttpTest, unaryCompletionsJsonLogprobs) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "logprobs": 1,
+            "prompt":  "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["logprobs"]["text_offset"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["text_offset"][0].IsInt());
+        ASSERT_TRUE(choice["logprobs"]["token_logprobs"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["token_logprobs"][0].IsNumber());
+        ASSERT_LE(choice["logprobs"]["token_logprobs"][0].GetFloat(), 0);
+        ASSERT_TRUE(choice["logprobs"]["tokens"].IsArray());
+        ASSERT_TRUE(choice["logprobs"]["tokens"][0].IsString());
+        ASSERT_TRUE(choice["logprobs"]["top_logprobs"].IsArray());
+    }
+}
+
+TEST_F(LLMFlowHttpTest, ChatCompletionsJsonLogprobsStream) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "logprobs": true,
+            "seed" : 1,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_F(LLMFlowHttpTest, CompletionsJsonLogprobsStream) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "logprobs": 2,
+            "seed" : 1,
+            "max_tokens": 1,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsStopStringBadType) {
     std::string requestBody = R"(
         {
@@ -573,7 +691,7 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsStopStringEmpty) {
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 }
 
 TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
@@ -801,6 +919,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsSingleStopString) {
             "ignore_eos": false,
             "max_tokens": 1000,
             "stop": ".",
+            "temperature":0,
             "include_stop_str_in_output": true,
             "prompt": "What is OpenVINO?"
         }
@@ -818,7 +937,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsSingleStopString) {
         ovms::StatusCode::PARTIAL_END);
     ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
     std::regex content_regex("\"text\":\".*\\.[ ]{0,1}\"");
-    ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
+    ASSERT_TRUE(std::regex_search(responses.back(), content_regex)) << responses.back();
 }
 
 TEST_F(LLMFlowHttpTest, streamChatCompletionsUsage) {
@@ -992,6 +1111,115 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeStopStrInOutputType) {
 }
 
 */
+
+TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStopStringType) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "stop": {},
+            "include_stop_str_in_output": true,
+            "ignore_eos": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, tensorflow::serving::net_http::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stop is not a string or array of strings\"}");
+            ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_F(LLMFlowHttpTest, streamCompletionsBadStopStringElementType) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "stop": ["abc", "def", []],
+            "ignore_eos": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, tensorflow::serving::net_http::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: stop array contains non string element\"}");
+            ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_F(LLMFlowHttpTest, streamCompletionsIncludeStopStrInOutputFalse) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "stop": ".",
+            "include_stop_str_in_output": false,
+            "ignore_eos": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, tensorflow::serving::net_http::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: include_stop_str_in_output cannot be set to false if streaming is used\"}");
+            ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeStopStrInOutputType) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "stop": ["abc", "def"],
+            "include_stop_str_in_output": 1.9,
+            "ignore_eos": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    EXPECT_CALL(writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, tensorflow::serving::net_http::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\": \"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \nCalculator::Process() for node \"llmNode1\" failed: include_stop_str_in_output accepts values true or false\"}");
+            ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
 
 TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStreamOptionsBadType) {
     std::string requestBody = R"(

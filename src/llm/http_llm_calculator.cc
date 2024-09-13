@@ -212,8 +212,8 @@ public:
                     this->apiHandler->incrementCompletionTokensUsage();
 
                     // TODO(dkalinow): Move this logic to CB library
-                    int64_t token = generationOutputs.begin()->second.generated_ids[0];
-                    auto chunk = this->streamer->put(token);
+                    auto generationOutput = generationOutputs.begin()->second;
+                    auto chunk = this->streamer->put(generationOutput.generated_ids[0]);
                     ov::genai::GenerationFinishReason finishReason = generationOutputs.begin()->second.finish_reason;
                     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
                         if (chunk.has_value()) {
@@ -225,7 +225,6 @@ public:
                     } else {  // finish generation
                         OVMS_PROFILE_SCOPE("Generation of last streaming response");
                         std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(this->streamer->end(), finishReason));
-
                         if (this->apiHandler->getStreamOptions().includeUsage)
                             response += packIntoServerSideEventMessage(this->apiHandler->serializeStreamingUsageChunk());
 
