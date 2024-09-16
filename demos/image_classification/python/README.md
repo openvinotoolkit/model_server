@@ -2,7 +2,7 @@
 
 ## Overview
 
-The script [image_classification.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/image_classification/python/image_classification.py) reads all images and their labels specified in the text file. It then classifies them with [ResNet50](https://docs.openvino.ai/2023.1/omz_models_model_resnet50_binary_0001.html) model and presents accuracy results.
+The script [image_classification.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/image_classification/python/image_classification.py) reads all images and their labels specified in the text file. It then classifies them with [ResNet50](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2023/1/models/intel/resnet50-binary-0001/README.md) model and presents accuracy results.
 
 
 ## Download ResNet50 model
@@ -39,7 +39,7 @@ usage: image_classification.py [-h] [--images_list IMAGES_LIST]
 | :---        |    :----   |
 | -h, --help       | Show help message and exit       |
 | --images_list   |   Path to a file with a list of labeled images      |
-| --grpc_address GRPC_ADDRESS | Specify url to grpc service. Default:localhost | 
+| --grpc_address GRPC_ADDRESS | Specify url to grpc service. Default:localhost |
 | --grpc_port GRPC_PORT | Specify port to grpc service. Default: 9000 |
 | --input_name | Specify input tensor name. Default: input |
 | --output_name | Specify output name. Default: resnet_v1_50/predictions/Reshape_1 |
