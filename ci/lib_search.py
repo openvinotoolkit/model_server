@@ -225,6 +225,7 @@ def check_func(start_dir):
         'BUILD.bazel',
         'package.json',
         'graph.pbtxt',
+        'graph_gpu.pbtxt',
         "build_dependencies.sh",
         "iris_tracking.pbtxt",
         "internal_tests",
