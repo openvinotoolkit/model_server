@@ -19,6 +19,7 @@ if [ -d "$1/facebook/opt-125m" ]; then
   echo "Models directory $1 exists. Skipping downloading models."
   exit 0
 fi
+if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then echo "Prepare models with python > 3.8."; exit 1 ; fi
 
 echo "Downloading LLM testing models to directory $1"
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"

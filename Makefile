@@ -350,6 +350,11 @@ ifeq ($(FUZZER_BUILD),1)
 	@echo "Cannot run fuzzer with redhat"; exit 1 ;
   endif
 endif
+ifeq ($(BASE_OS_TAG),20.04)
+  ifeq ($(RUN_TESTS),1)
+	@echo "On ubuntu20 run tests via make run_unit_tests"; exit 1 ;
+  endif
+endif
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
