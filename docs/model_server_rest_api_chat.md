@@ -85,7 +85,7 @@ curl http://localhost/v3/chat/completions \
 #### Multinomial sampling specific
 | Param | OpenVINO Model Server | OpenAI /chat/completions API | vLLM Serving Sampling Params | Type | Description |
 |-------|----------|----------|----------|---------|-----|
-| temperature | ✅ | ✅ | ✅ | float (default: `0.0`) | The value is used to modulate token probabilities for multinomial sampling. It enables multinomial sampling when set to `> 0.0`. |
+| temperature | ✅ | ✅ | ✅ | float (default: `1.0`) | The value is used to modulate token probabilities for multinomial sampling. It enables multinomial sampling when set to `> 0.0`. |
 | top_p | ✅ | ✅ | ✅ | float (default: `1.0`) | Controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens. |
 | top_k | ✅ | ❌ | ✅ | int (default: `0`) | Controls the number of top tokens to consider. Set to 0 to consider all tokens. |
 | repetition_penalty | ✅ | ❌ | ✅ | float (default: `1.0`) | Penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > `1.0` encourage the model to use new tokens, while values < `1.0` encourage the model to repeat tokens. `1.0` means no penalty. |
