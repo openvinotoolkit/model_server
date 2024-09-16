@@ -127,6 +127,7 @@ def check_dir(start_dir):
         "BUILD.bazel",
         "package.json",
         "graph.pbtxt",
+        "graph_gpu.pbtxt",
         "holistic_tracking.pbtxt",
         "ssdlite_object_detection_labelmap.txt",
         "build_dependencies.sh",
