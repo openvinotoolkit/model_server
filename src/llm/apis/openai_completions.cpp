@@ -226,7 +226,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
         request.lengthPenalty = it->value.GetDouble();
     }
 
-    // temperature: float; optional - defaults to 0.0 (different than OpenAI which is 1.0)
+    // temperature: float; optional - defaults to 1.0
     it = doc.FindMember("temperature");
     if (it != doc.MemberEnd()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
