@@ -59,7 +59,7 @@ make build-deps
  ```bash
 make build-package
 ```
- - `make test` - runs tests on `ovmsclient` package. By default the package located in `dist/` directory is used. To specify custom package path pass `PACKAGE_PATH` option like: 
+ - `make test` - runs tests on `ovmsclient` package. By default the package located in `dist/` directory is used. To specify custom package path pass `PACKAGE_PATH` option like:
 
    `make test PACKAGE_PATH=/opt/packages/ovmsclient-2023.1-py3-none-any.whl`
 ```bash
@@ -87,11 +87,11 @@ model_status = client.get_model_status(model_name="model")
 #
 # {
 #    "1": {
-#        "state": "AVAILABLE", 
-#        "error_code": 0, 
+#        "state": "AVAILABLE",
+#        "error_code": 0,
 #        "error_message": ""
-#    }             
-# } 
+#    }
+# }
 #
 ```
 
@@ -100,20 +100,20 @@ model_status = client.get_model_status(model_name="model")
 model_metadata = client.get_model_metadata(model_name="model")
 
 # Exemplary model_metadata. Values for model:
-# https://docs.openvino.ai/2023.1/omz_models_model_resnet_50_tf.html
+# https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2023/1/models/public/resnet-50-tf/README.md
 #
 #{
 #   "model_version": 1,
 #   "inputs": {
 #       "map/TensorArrayStack/TensorArrayGatherV3": {
 #           "shape": [1, 224, 224, 3],
-#           "dtype": DT_FLOAT32  
+#           "dtype": DT_FLOAT32
 #       }
 #   },
 #   "outputs": {
 #       "softmax_tensor": {
 #           "shape": [1, 1001],
-#           "dtype": DT_FLOAT32  
+#           "dtype": DT_FLOAT32
 #       }
 #   }
 #}
@@ -123,7 +123,7 @@ model_metadata = client.get_model_metadata(model_name="model")
 **Create and send predict request with binary input data:**
 ```python
 # Assuming requesting model with inputs and outputs as in:
-# https://docs.openvino.ai/2023.1/omz_models_model_resnet_50_tf.html
+# https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2023/1/models/public/resnet-50-tf/README.md
 
 with open(<path_to_img>, 'rb') as f:
     img = f.read()
