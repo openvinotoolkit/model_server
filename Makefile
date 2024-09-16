@@ -239,8 +239,6 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
 	--build-arg INSTALL_DRIVER_VERSION=$(INSTALL_DRIVER_VERSION)\
-	--build-arg GPU=$(GPU)\
-	--build-arg NPU=$(NPU)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
 	--build-arg JOBS=$(JOBS)\
 	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
@@ -357,10 +355,6 @@ ifeq ($(NVIDIA),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
   endif
 endif
-ifeq ($(BASE_OS),redhat)
-	@mkdir -p entitlement
-	@mkdir -p rhsm-ca
-endif
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
@@ -418,7 +412,7 @@ endif
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg GPU=1 \
-		--build-arg NPU=1 \
+		--build-arg NPU=$$(if [ "$(BASE_OS_TAG)" = "22.04" ]; then echo 1; else echo 0 ; fi) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)
@@ -453,13 +447,20 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 release_image:
+ifeq ($(BASE_OS_TAG),20.04)
+  ifeq ($(NPU),1)
+	@echo "NPU is not supported on Ubuntu 20.04" ; exit 1
+  endif
+endif
 ifeq ($(USE_BUILDX),true)
 	$(eval BUILDX:=buildx)
 	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
 endif
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
-		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)
+		--build-arg GPU=$(GPU) \
+		--build-arg NPU=$(NPU) \
+		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--target=release
 ifeq ($(BUILD_NGINX), 1)
 	cd extras/nginx-mtls-auth && \
