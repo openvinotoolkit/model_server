@@ -29,7 +29,8 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 ARG JOBS=8
 ARG VERBOSE_LOGS=OFF
 
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
+RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
+    dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf update -d6 -y && dnf install -d6 -y \
             libuuid-devel \
             bc \
             cmake \
@@ -43,9 +44,8 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             openssl-devel \
             patch \
             pkg-config \
-            wget \
-            yum-utils && \
-            yum clean all
+            wget && \
+            dnf clean all
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
@@ -101,19 +101,18 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=40
 
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf update -d6 -y && dnf install -d6 -y \
             gdb \
             java-11-openjdk-devel \
             tzdata-java \
             libtool \
             openssl-devel \
             which \
-            yum-utils \
             unzip \
             vim \
             xz \
             python39-devel && \
-            yum clean all
+            dnf clean all
 
 RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
     python3 --version && python3 -m pip install "Jinja2==3.1.4" --no-cache-dir
@@ -127,16 +126,16 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
-RUN  yum install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && yum clean all
+RUN  dnf install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && dnf clean all
 
 ARG NVIDIA=0
 # Add Nvidia dev tool if needed
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms ; \
-    yum -y module disable python36 && \
-    yum -y install libzstd-devel ; \
-    yum install -y  \
+    dnf config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms ; \
+    dnf -y module disable python36 && \
+    dnf -y install libzstd-devel ; \
+    dnf install -y  \
         cuda-nvcc-11-8 libcublas-11-8 libcublas-devel-11-8 \
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcudnn8-devel-8.6.0.163-1.cuda11.8 \
@@ -144,13 +143,13 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
         libcutensor-devel-1.6.1.5-1 \
         cuda-cudart-devel-11-8 && \
     # ignore errors on hosts with older nvidia drivers
-    yum install -y cuda-11-8 || true && \
-    yum install -y python38-Cython && \
+    dnf install -y cuda-11-8 || true && \
+    dnf install -y python38-Cython && \
     curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin && \
     curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
     chmod a+x /usr/local/bin/sccache && \
     curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 && \
-    rm -rf /var/cache/yum
+    dnf clean all
 
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
@@ -170,10 +169,10 @@ RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https:/
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
-RUN yum install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
+RUN dnf install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
     http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-2.2.2-1.el8.x86_64.rpm \
     https://dl.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/j/json-devel-3.6.1-2.el8.x86_64.rpm && \
-    rm -rf /var/cache/yum
+    dnf clean all
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; pip3 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
@@ -408,8 +407,9 @@ WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=DL3003,DL3041,SC2164
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
-        $DNF_TOOL upgrade --setopt=install_weak_deps=0 -y ; \
-        $DNF_TOOL install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+        echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; \
+        $DNF_TOOL upgrade --setopt=install_weak_deps=0 --nodocs -y ; \
+        $DNF_TOOL install --nodocs -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
         if [ "$GPU" == "1" ] ; then \
                 case $INSTALL_DRIVER_VERSION in \
                 "21.38.21026") \
@@ -423,7 +423,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
                         cd /tmp/gpu_deps && rpm -iv *.rpm && rm -Rf /tmp/gpu_deps ; \
                 ;; \
                 "22.10.22597") \
-                        $DNF_TOOL install -y libedit ; \
+                        $DNF_TOOL install --nodocs -y libedit ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.0.3-i699.3.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.10409-i699.3.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/level-zero-1.7.9-i699.3.el8.x86_64.rpm ; \
@@ -432,7 +432,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-opencl-22.10.22597-i699.3.el8.x86_64.rpm ; \
                 ;; \
                 "22.28.23726") \
-                        $DNF_TOOL install -y libedit ; \
+                        $DNF_TOOL install --nodocs -y libedit ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.1.7-i419.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.11485-i419.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-opencl-1.0.11485-i419.el8.x86_64.rpm ; \
@@ -441,7 +441,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5-devel/level-zero-1.8.1-i392.el8.x86_64.rpm ; \
                 ;; \
                 "22.43.24595") \
-                        $DNF_TOOL install -y libedit ; \
+                        $DNF_TOOL install --nodocs -y libedit ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-gmmlib-22.3.1-i529.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-igc-core-1.0.12504.6-i537.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-igc-opencl-1.0.12504.6-i537.el8.x86_64.rpm ; \
@@ -450,7 +450,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/level-zero-1.8.8-i524.el8.x86_64.rpm ; \
                 ;; \
                 "23.22.26516") \
-                        $DNF_TOOL install -y libedit ; \
+                        $DNF_TOOL install --nodocs -y libedit ; \
                         rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-gmmlib-22.3.7-i678.el8_6.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-core-1.0.14062.14-682.el8_6.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-opencl-1.0.14062.14-682.el8_6.x86_64.rpm ; \
@@ -469,7 +469,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
         if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
                 rpm -ivh http://vault.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
         else  \
-                $DNF_TOOL install -y tar gzip; \
+                $DNF_TOOL install --nodocs -y tar gzip; \
                 mkdir /tmp_ovms ; \
                 cd /tmp_ovms ; \
                 curl -L --fail -o deps.tar.xz "$INSTALL_RPMS_FROM_URL" ; \
@@ -482,18 +482,17 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
         fi ; \
         # For image with Python enabled install Python library
         if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
-            $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0; \
+            $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0 --nodocs; \
             mkdir -p /ovms/lib/openvino-4.dist-info && \
             echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.4' > /ovms/lib/openvino-2024.4.dist-info/METADATA ; \
         fi ; \
-        $DNF_TOOL install -y shadow-utils; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
         groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 # for NVIDIA
-RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda yum package"; \
-    dnf install -y  \
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda rpm package"; \
+    dnf install --nodocs -y  \
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcutensor1-1.6.1.5-1 && \
         dnf clean all
