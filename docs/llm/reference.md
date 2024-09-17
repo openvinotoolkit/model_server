@@ -1,7 +1,5 @@
 # Efficient LLM Serving {#ovms_docs_llm_reference}
 
-**THIS IS A PREVIEW FEATURE**
-
 ## Overview
 
 With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in it's [GenAI Library](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) like:
