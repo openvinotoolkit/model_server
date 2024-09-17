@@ -302,9 +302,9 @@ Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model
 
 ## Scaling the Model Server
 
-Check this simple [text generation scaling demo](./scaling/README.md).
+Check this simple [text generation scaling demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/scaling/README.md).
 
 
 ## Testing the model accuracy over serving API
 
-Check the [guide of using lm-evaluation-harness](./accuracy/README.md)
+Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
