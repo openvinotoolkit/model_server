@@ -94,7 +94,7 @@ You can track the actual usage of the cache in the server logs. You can observe 
 ```
 Consider increasing the `cache_size` parameter in case the logs report the usage getting close to 100%. When the cache is consumed, some of the running requests might be preempted to free cache for other requests to finish their generations (preemption will likely have negative impact on performance since preempted request cache will need to be recomputed when it gets processed again). When preemption is not possible i.e. `cache size` is very small and there is a single, long running request that consumes it all, then the request gets terminated when no more cache can be assigned to it, even before reaching stopping criteria. 
 
-`enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case in chat application which resend the history on the conversations. Thanks to prefix caching, there is not need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
+`enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case with chat applications which resend the history of the conversations. Thanks to prefix caching, there is no need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
 utlization of resource will be lower. Old cache will be cleared automatically but it is recommended to increase cache_size to take bigger performance advantage.
 
 `plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size '{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}'.
@@ -104,7 +104,7 @@ The LLM calculator config can also restrict the range of sampling parameters in 
 
 ## Canceling the generation
 
-In order to optimize the usage of compute resources, it is important to stop the text generation when it became irrelevant for the client or when the client gets disconnected for any reason. Such capability is implemented via a tight integration between the LLM calculator and the model server frontend. The calculator gets notified about the client session disconnection. When the client application stops or deliberately breaks the session, the generation cycle gets broken and all resources are released. Below is an easy example how the client can initialize stopping the generation:
+In order to optimize the usage of compute resources, it is important to stop the text generation when it becomes irrelevant for the client or when the client gets disconnected for any reason. Such capability is implemented via a tight integration between the LLM calculator and the model server frontend. The calculator gets notified about the client session disconnection. When the client application stops or deliberately breaks the session, the generation cycle gets broken and all resources are released. Below is an easy example how the client can initialize stopping the generation:
 ```python
 from openai import OpenAI
 client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
@@ -185,7 +185,7 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 
 There are several known limitations which are expected to be addressed in the coming releases:
 
-- Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. It is possible to track in the metrics the number of active generation requests using metric called `ovms_graphs_running`. Also tracking statistics for request and responses is possible. [Learn more](../metrics.md) 
+- Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. It is possible to track in the metrics the number of active generation requests using metric called `ovms_current_graphs`. Also tracking statistics for request and responses is possible. [Learn more](../metrics.md) 
 - Multi modal models are not supported yet. Images can't be sent now as the context.
 - `logprobs` parameter is not supported currently in greedy search (temperature=0) and in streaming mode. It includes only a single logprob and do not include values for input tokens.
 
