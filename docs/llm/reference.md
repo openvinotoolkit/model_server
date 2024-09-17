@@ -15,7 +15,7 @@ It is now integrated into OpenVINO Model Server providing efficient way to run g
 Check out the [quickstart guide](quickstart.md) for a simple example that shows how to use this feature.
 
 ## LLM Calculator
-As you can see in the quickstart above, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) solutions. The calculator is designed to run in cycles and return the chunks of responses to the client.
+As you can see in the quickstart above, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/openvinotoolkit/openvino.genai/tree/master/src/cpp/include/openvino/genai) library. The calculator is designed to run in cycles and return the chunks of responses to the client.
 
 On the input it expects a HttpPayload struct passed by the Model Server frontend:
 ```cpp
@@ -82,8 +82,8 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional uint64 block_size` - number of tokens which KV is stored in a single block (Paged Attention related) [default = 32];
 -    `optional uint64 max_num_seqs` - max number of sequences actively processed by the engine [default = 256];
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
--    `optional string device` - device to load models to. Supported values: "CPU" [default = "CPU"]
--    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = ""]
+-    `optional string device` - device to load models to. Supported values: "CPU", "GPU" [default = "CPU"]
+-    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = "{}"]
 -    `optional uint32 best_of_limit` - max value of best_of parameter accepted by endpoint [default = 20];
 -    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint [default = 4096];
 -    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];
@@ -96,7 +96,28 @@ You can track the actual usage of the cache in the server logs. You can observe 
 ```
 Consider increasing the `cache_size` parameter in case the logs report the usage getting close to 100%. When the cache is consumed, some of the running requests might be preempted to free cache for other requests to finish their generations (preemption will likely have negative impact on performance since preempted request cache will need to be recomputed when it gets processed again). When preemption is not possible i.e. `cache size` is very small and there is a single, long running request that consumes it all, then the request gets terminated when no more cache can be assigned to it, even before reaching stopping criteria. 
 
+`enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case in chat application which resend the history on the conversations. Thanks to prefix caching, there is not need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
+utlization of resource will be lower. Old cache will be cleared automatically but it is recommended to increase cache_size to take bigger performance advantage.
+
+`plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size '{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}'.
+
 The LLM calculator config can also restrict the range of sampling parameters in the client requests. If needed change the default values for  `max_tokens_limit` and `best_of_limit`. It is meant to avoid the result of memory overconsumption by invalid requests.
+
+
+## Canceling the generation
+
+In order to optimize the usage of compute resources, it is important to stop the text generation when it became irrelevant for the client or when the client gets disconnected for any reason. Such capability is implemented via a tight integration between the LLM calculator and the model server frontend. The calculator gets notified about the client session disconnection. When the client application stops or deliberately breaks the session, the generation cycle gets broken and all resources are released. Below is an easy example how the client can initialize stopping the generation:
+```python
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
+stream = client.completions.create(model="model", prompt="Say this is a test", stream=True)
+for chunk in stream:
+    if chunk.choices[0].text is not None:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+    if some_condition:
+        stream.close()
+        break
+```
 
 ## Models Directory
 
@@ -119,13 +140,13 @@ This model directory can be created based on the models from Hugging Face Hub or
 
 In your python environment install required dependencies:
 ```
-pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git@7a224c2419240d5fb58f2f75c2e29f179ed6da28 openvino-tokenizers
+pip3 install "optimum-intel[nncf,openvino]
 ```
 
 Because there is very dynamic development in optimum-intel and openvino, it is recommended to use the latest versions of the dependencies:
 ```
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
-pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/pre-release"
+pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git  openvino_tokenizers openvino
 ```
 
 LLM model can be exported with a command:
@@ -136,7 +157,7 @@ Precision parameter is important and can influence performance, accuracy and mem
 
 Export the tokenizer model with a command:
 ```
-convert_tokenizer -o {target folder name} --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens {tokenizer model in HF hub or Pytorch model folder}
+convert_tokenizer -o {target folder name} --utf8_replace_mode replace --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens {tokenizer model in HF hub or Pytorch model folder}
 ```
 
 Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models).
@@ -164,11 +185,11 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 
 ## Limitations
 
-LLM calculator is a preview feature. It runs a set of accuracy, stability and performance tests, but the next releases targets production grade quality. It has now a set of known issues:
+There are several known limitations which are expected to be addressed in the coming releases:
 
 - Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. It is possible to track in the metrics the number of active generation requests using metric called `ovms_graphs_running`. Also tracking statistics for request and responses is possible. [Learn more](../metrics.md) 
 - Multi modal models are not supported yet. Images can't be sent now as the context.
-- GPU device is not supported yet. It is planned for version 2024.5. 
+- `logprobs` parameter is not supported currently in greedy search (temperature=0) and in streaming mode. It includes only a single logprob and do not include values for input tokens.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
