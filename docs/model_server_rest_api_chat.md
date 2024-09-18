@@ -87,7 +87,7 @@ curl http://localhost/v3/chat/completions \
 |-------|----------|----------|----------|---------|-----|
 | temperature | ✅ | ✅ | ✅ | float (default: `1.0`) | The value is used to modulate token probabilities for multinomial sampling. It enables multinomial sampling when set to `> 0.0`. |
 | top_p | ✅ | ✅ | ✅ | float (default: `1.0`) | Controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens. |
-| top_k | ✅ | ❌ | ✅ | int (default: `0`) | Controls the number of top tokens to consider. Set to 0 to consider all tokens. |
+| top_k | ✅ | ❌ | ✅ | int (default: all tokens) | Controls the number of top tokens to consider. Set to empty or -1 to consider all tokens. |
 | repetition_penalty | ✅ | ❌ | ✅ | float (default: `1.0`) | Penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > `1.0` encourage the model to use new tokens, while values < `1.0` encourage the model to repeat tokens. `1.0` means no penalty. |
 | frequency_penalty | ✅ | ✅ | ✅ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim. |
 | presence_penalty | ✅ | ✅ | ✅ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics. |
@@ -95,10 +95,8 @@ curl http://localhost/v3/chat/completions \
 
 #### Unsupported params from OpenAI service:
 - logit_bias
-- logprobs
 - top_logprobs
 - response_format
-- seed
 - tools
 - tool_choice
 - user
@@ -109,10 +107,8 @@ curl http://localhost/v3/chat/completions \
 - min_p
 - use_beam_search (**In OpenVINO Model Server just simply increase _best_of_ param to enable beam search**)
 - early_stopping
-- stop
 - stop_token_ids
 - min_tokens
-- logprobs
 - prompt_logprobs
 - detokenize
 - skip_special_tokens

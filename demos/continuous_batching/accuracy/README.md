@@ -15,7 +15,7 @@ pip3 install lm_eval[api]
 
 ## Exporting the model and starting the model server
 
-Following the procedure to export the model and start the model server from [text generatino demo](../README.md)
+Follow the procedure to export the model and start the model server from [text generation demo](../README.md)
 
 ## Running the tests
 

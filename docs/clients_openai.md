@@ -14,7 +14,7 @@ LLM calculator <ovms_docs_llm_caclulator>
 ## Introduction
 Beside Tensorflow Serving API and KServe API frontends, the model server has now option to delegate the REST input deserialization and output serialization to a MediaPipe graph. A custom calculator can implement any form of REST API including streaming based on [Server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
 
-That way we are introducing a preview of OpenAI compatible endpoint [chat/completions](./model_server_rest_api_chat.md). More endpoints are planned for the implementation.
+We are introducing OpenAI compatible endpoint [chat/completions](./model_server_rest_api_chat.md) and [completions](./model_server_rest_api_completions.md).
 
 
 ## Python Client
