@@ -422,7 +422,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
                         cd /tmp/gpu_deps && rpm -iv *.rpm && rm -Rf /tmp/gpu_deps ; \
                 ;; \
                 "22.10.22597") \
-                        $DNF_TOOL install --nodocs -y libedit ; \git
+                        $DNF_TOOL install --nodocs -y libedit ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.0.3-i699.3.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.10409-i699.3.el8.x86_64.rpm ; \
                         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/level-zero-1.7.9-i699.3.el8.x86_64.rpm ; \
