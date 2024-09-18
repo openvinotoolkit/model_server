@@ -693,6 +693,21 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* 
     return nullptr;
 }
 
+DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestRemoveOutput(OVMS_InferenceRequest* req, const char* outputName) {
+    if (req == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
+    }
+    if (outputName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "output name"));
+    }
+    InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
+    auto status = request->removeOutput(outputName);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
+    }
+    return nullptr;
+}
+
 DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* req, const char* inputName) {
     if (req == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
@@ -702,6 +717,21 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceReque
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
     auto status = request->removeInputBuffer(inputName);
+    if (!status.ok()) {
+        return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
+    }
+    return nullptr;
+}
+
+DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestOutputRemoveData(OVMS_InferenceRequest* req, const char* outputName) {
+    if (req == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "inference request"));
+    }
+    if (outputName == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "output name"));
+    }
+    InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
+    auto status = request->removeOutputBuffer(outputName);
     if (!status.ok()) {
         return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
@@ -945,6 +975,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
     }
 
     if (!status.ok()) {
+        // TODO fixme error handling with callbacks - we may need to move callback usage here
         return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
 
