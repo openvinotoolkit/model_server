@@ -242,14 +242,3 @@ TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
     auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
 }
-
-// TODO (negative paths):
-// - test that /v3/chat/completions endpoint is not reachable for builds without MediaPipe
-// - test negative path for accessing /v3/chat/completions graph via KFS API
-// - test negative path for accessing regular graph via /v3/chat/completions endpoint
-
-// TODO (positive paths):
-// - partial error is sent via "req" object
-
-// TODO(mkulakow)
-// Test actual flow once the type is changed from std::string to HttpPayload

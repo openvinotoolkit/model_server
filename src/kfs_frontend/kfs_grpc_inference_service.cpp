@@ -127,7 +127,6 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
                 return StatusCode::MODEL_NAME_MISSING;
             }
             auto status = buildResponse(*mediapipeGraphDefinition, response);
-            // INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok())); TODO metrics
             return status;
 #else
             return StatusCode::MODEL_NAME_MISSING;
@@ -209,7 +208,6 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
                 return StatusCode::MODEL_NAME_MISSING;
             }
             auto status = buildResponse(*mediapipeGraphDefinition, response);
-            // INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok())); TODO metrics
             return status;
 #else
             return Status(StatusCode::MODEL_NAME_MISSING);
