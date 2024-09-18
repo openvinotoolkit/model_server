@@ -1307,6 +1307,27 @@ void handleCallback(const InferenceRequest* request, InferenceResponse* response
     }
 }
 
+struct OutputKeeper {
+    std::unordered_map<std::string, ov::Tensor> outputs;
+    ov::InferRequest& request;
+    OutputKeeper(ov::InferRequest& request, const tensor_map_t& outputsInfo) :
+        request(request) {
+        for (auto [k, v] : outputsInfo) {
+            OV_LOGGER("ov::InferRequest: {}, request.get_tensor({})", reinterpret_cast<void*>(&request), k);
+            ov::Tensor tensor = request.get_tensor(k);
+            OV_LOGGER("ov::Tensor(): {}", reinterpret_cast<void*>(&tensor));
+            outputs.emplace(std::make_pair(k, std::move(tensor)));  // TODO try catch
+            OV_LOGGER("ov::Tensor(ov::Tensor&&): {}", reinterpret_cast<void*>(&outputs.at(k)));
+        }
+    }
+    ~OutputKeeper() {
+        for (auto [k, v] : outputs) {
+            OV_LOGGER("ov::InferRequest: {}, request.set_tensor({}, {})", reinterpret_cast<void*>(&request), k, reinterpret_cast<void*>(&v));
+            request.set_tensor(k, v);
+        }
+    }
+};
+
 template <typename RequestType, typename ResponseType>
 Status ModelInstance::infer(const RequestType* requestProto,
     ResponseType* responseProto,
@@ -1356,6 +1377,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
+    OutputKeeper outKeeper(executingStreamIdGuard.getInferRequest(), getOutputsInfo());
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {
@@ -1448,6 +1470,7 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
+    auto outKeeper = std::make_shared<OutputKeeper>(executingStreamIdGuard.getInferRequest(), getOutputsInfo());
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {
@@ -1467,7 +1490,7 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     void* userCallbackData = requestProto->getResponseCompleteCallbackData();
     // here pass by copy into callback
     {
-        inferRequest.set_callback([this, requestProto, &inferRequest, userCallback, userCallbackData, modelUnloadGuardPtrMoved = std::shared_ptr<ModelInstanceUnloadGuard>(std::move(modelUnloadGuardPtr))](std::exception_ptr exception) mutable {
+        inferRequest.set_callback([this, requestProto, &inferRequest, movedOutputKeeper = std::move(outKeeper), userCallback, userCallbackData, modelUnloadGuardPtrMoved = std::shared_ptr<ModelInstanceUnloadGuard>(std::move(modelUnloadGuardPtr))](std::exception_ptr exception) mutable {
             SPDLOG_DEBUG("Entry of ov::InferRequest callback call");
             if (exception) {
                 try {

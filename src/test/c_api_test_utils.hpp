@@ -93,6 +93,7 @@
             ASSERT_NE(err, nullptr);                                                                           \
         }                                                                                                      \
     }
+
 struct ServerSettingsGuard {
     ServerSettingsGuard(int port) {
         THROW_ON_ERROR_CAPI(OVMS_ServerSettingsNew(&settings));
