@@ -82,6 +82,7 @@ OV_CONTRIB_ORG ?= openvinotoolkit
 
 TOKENIZERS ?= 1
 TEST_LLM_PATH ?= "src/test/llm_testing"
+GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
 
 OV_USE_BINARY ?= 0
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -161,11 +162,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),20.04)
         OS=ubuntu20
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.4.0.16579.c3152d32c9c_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2024.4/linux/l_openvino_toolkit_ubuntu20_2024.4.0.16579.c3152d32c9c_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.26.30049"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.4.0.16579.c3152d32c9c_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2024.4/linux/l_openvino_toolkit_ubuntu22_2024.4.0.16579.c3152d32c9c_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -180,7 +181,7 @@ ifeq ($(BASE_OS),redhat)
   endif
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.4.0.16579.c3152d32c9c_x86_64.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2024.4/linux/l_openvino_toolkit_rhel8_2024.4.0.16579.c3152d32c9c_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -670,7 +671,8 @@ cpu_extension:
 
 run_unit_tests:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
-	docker run -v $(realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh > test.log 2>&1 ; exit_status=$$? ; tail -200 test.log ; exit $$exit_status
+	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
+	docker run -v $(shell realpath ./rununittests.sh):/ovms/./rununittests.sh -v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas:ro -v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh > test.log 2>&1 ; exit_status=$$? ; tail -200 test.log ; exit $$exit_status
 
 run_lib_files_test:
 	docker run --entrypoint bash -v $(realpath tests/file_lists):/test $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./test/test_release_files.sh ${BAZEL_DEBUG_FLAGS} > file_test.log 2>&1 ; exit_status=$$? ; tail -200 file_test.log ; exit $$exit_status
