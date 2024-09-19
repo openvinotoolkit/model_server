@@ -1,11 +1,11 @@
 # Efficient LLM Serving - quickstart {#ovms_docs_llm_quickstart}
 
-Let's deploy [TinyLlama/TinyLlama-1.1B-Chat-v1.0](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0) model and request generation.
+Let's deploy [TinyLlama/TinyLlama-1.1B-Chat-v1.0](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0) model and text generation.
 
 1. Install python dependencies for the conversion script:
 ```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/pre-release"
-pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git  openvino_tokenizers==2024.4.* openvino==2024.4.*
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git@fe77316c5a25c7b0e8ae97c23776688448490be2 openvino_tokenizers==2024.4.0 openvino==2024.4.0
 ```
 
 2. Run optimum-cli to download and quantize the model:
