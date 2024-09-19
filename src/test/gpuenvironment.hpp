@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,16 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-class Environment : public testing::Environment {
+#define SKIP_AND_EXIT_IF_NO_GPU()                                                                               \
+    if (GPUEnvironment::shouldSkipWithoutGPU()) {                                                               \
+        GTEST_SKIP() << "Skipping GPU tests because those tests were not enabled. Check gpuenvironment.[hc]pp"; \
+        return;                                                                                                 \
+    }
+
+class GPUEnvironment : public testing::Environment {
 public:
     void SetUp() override;
+    static bool gpuTestsEnabled;
+    static bool shouldSkipWithoutGPU();
+    static void skipWithoutGPU();
 };

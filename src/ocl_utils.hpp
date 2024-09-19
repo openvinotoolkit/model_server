@@ -1,5 +1,6 @@
+#pragma once
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,15 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+namespace ovms {
+cl_context getOCLContext();
+cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId);
 
-#include "environment.hpp"
-#include "gpuenvironment.hpp"
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    ::testing::InitGoogleMock(&argc, argv);
-    ::testing::AddGlobalTestEnvironment(new Environment);
-    ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
-    ::testing::FLAGS_gtest_death_test_style = "threadsafe";
-    return RUN_ALL_TESTS();
-}
+}  // namespace ovms

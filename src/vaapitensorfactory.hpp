@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,15 +13,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
-#include "environment.hpp"
-#include "gpuenvironment.hpp"
+#include <openvino/openvino.hpp>
+#include <openvino/runtime/intel_gpu/ocl/va.hpp>
 
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    ::testing::InitGoogleMock(&argc, argv);
-    ::testing::AddGlobalTestEnvironment(new Environment);
-    ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
-    ::testing::FLAGS_gtest_death_test_style = "threadsafe";
-    return RUN_ALL_TESTS();
+#include "./ovms.h"
+#include "itensorfactory.hpp"
+namespace ov::intel_gpu::ocl {
+class VAContext;
 }
+namespace ovms {
+
+class VAAPITensorFactory : public IOVTensorFactory {
+    ov::intel_gpu::ocl::VAContext& vaContext;
+    uint32_t vaPlaneId;
+
+public:
+    VAAPITensorFactory(ov::intel_gpu::ocl::VAContext& vaContext, OVMS_BufferType type);
+
+    /**
+     * Create tensor and interpret data ptr appropriately depending on the
+     * factory type.
+     */
+    ov::Tensor create(ov::element::Type_t type, const ov::Shape& shape, const void* data) override;
+};
+}  // namespace ovms

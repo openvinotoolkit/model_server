@@ -49,7 +49,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
         bazel test --jobs=$JOBS ${BAZEL_OPTIONS} ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding && \
         bazel test \
         ${SHARED_OPTIONS} "${TEST_FILTER}" \
-        //src:ovms_test ${BAZEL_OPTIONS} > ${TEST_LOG} 2>&1 || \
+	//src:ovms_test ${BAZEL_OPTIONS} > ${TEST_LOG} 2>&1 || \
         test_fail_procedure; } && \
         test_success_procedure && \
         rm -rf ${TEST_LOG};
