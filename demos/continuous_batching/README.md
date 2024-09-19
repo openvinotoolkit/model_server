@@ -30,8 +30,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Install python dependencies for the conversion script:
 ```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/pre-release"
-pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git  openvino_tokenizers==2024.4.* openvino==2024.4.*
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git@fe77316c5a25c7b0e8ae97c23776688448490be2 openvino_tokenizers==2024.4.0 openvino==2024.4.0
 ```
 
 Run optimum-cli to download and quantize the model:
