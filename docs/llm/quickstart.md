@@ -4,8 +4,8 @@ Let's deploy [TinyLlama/TinyLlama-1.1B-Chat-v1.0](https://huggingface.co/TinyLla
 
 1. Install python dependencies for the conversion script:
 ```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-pip3 install "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git@xeon openvino-tokenizers transformers==4.41.2
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/pre-release"
+pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git  openvino_tokenizers==2024.4.* openvino==2024.4.*
 ```
 
 2. Run optimum-cli to download and quantize the model:
@@ -14,7 +14,7 @@ mkdir workspace && cd workspace
 
 optimum-cli export openvino --disable-convert-tokenizer --model TinyLlama/TinyLlama-1.1B-Chat-v1.0 --weight-format int8 TinyLlama-1.1B-Chat-v1.0
 
-convert_tokenizer -o TinyLlama-1.1B-Chat-v1.0 --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens TinyLlama/TinyLlama-1.1B-Chat-v1.0
+convert_tokenizer -o TinyLlama-1.1B-Chat-v1.0 --utf8_replace_mode replace --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens TinyLlama/TinyLlama-1.1B-Chat-v1.0
 ```
 
 3. Create `graph.pbtxt` file in a model directory: 
@@ -37,7 +37,9 @@ node: {
   }
   node_options: {
       [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-          models_path: "./"
+          models_path: "./",
+          plugin_config: '{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}',
+          cache_size: 4
       }
   }
   input_stream_handler {

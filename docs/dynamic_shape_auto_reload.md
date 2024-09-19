@@ -3,15 +3,15 @@
 *NOTE*: This feature is deprecated. Use [model dynamic shapes instead](https://docs.openvino.ai/2024/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model).
 
 ## Introduction
-This guide explains how to configure a model to accept input data in different shapes. In this example, it is done by reloading the model with a new shape each time it receives the request with a shape different than the one which is currently set. 
+This guide explains how to configure a model to accept input data in different shapes. In this example, it is done by reloading the model with a new shape each time it receives the request with a shape different than the one which is currently set.
 
 Enable dynamic shape via model reloading by setting the `shape` parameter to `auto`. To configure and use the dynamic batch size, take advantage of:
 
 - Example client in Python [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/face_detection/python/face_detection.py) that can be used to request inference with the desired input shape.
 
-- An example [face_detection_retail_0004](https://docs.openvinotoolkit.org/2021.4/omz_models_model_face_detection_retail_0004.html) model.
+- An example [face_detection_retail_0004](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2021/4/models/intel/face-detection-retail-0004/README.md) model.
 
-When using the `face_detection_retail_0004` model with the `face_detection.py` script, images are reloaded and resized to the desired width and height. Then, the output is processed from the server, and the inference results are displayed with bounding boxes drawn around the predicted faces. 
+When using the `face_detection_retail_0004` model with the `face_detection.py` script, images are reloaded and resized to the desired width and height. Then, the output is processed from the server, and the inference results are displayed with bounding boxes drawn around the predicted faces.
 
 ## Steps
 Clone OpenVINO&trade; Model Server GitHub repository and enter `model_server` directory.
@@ -55,4 +55,4 @@ python face_detection.py --grpc_port 9000 --width 600 --height 400 --input_image
 The results from running the client will be saved in the directory specified by `--output_dir`
 
 
->**NOTE**: reloading the model takes time and during each reload new requests are queued. Frequent model reloading may negatively affect overall performance. 
+>**NOTE**: reloading the model takes time and during each reload new requests are queued. Frequent model reloading may negatively affect overall performance.
