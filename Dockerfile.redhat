@@ -100,7 +100,7 @@ LABEL version="1.0.0"
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=40
-
+# hadolint ignore=DL3041
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
                    http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && \
     dnf clean all && dnf update -d6 -y && dnf install -d6 -y \
