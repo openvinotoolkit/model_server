@@ -1,5 +1,6 @@
+#pragma once
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,15 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "ovms.h"  // NOLINT
 
-#include "environment.hpp"
-#include "gpuenvironment.hpp"
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    ::testing::InitGoogleMock(&argc, argv);
-    ::testing::AddGlobalTestEnvironment(new Environment);
-    ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
-    ::testing::FLAGS_gtest_death_test_style = "threadsafe";
-    return RUN_ALL_TESTS();
+#ifdef __cplusplus
+extern "C" {
+#endif
+// TODO TBD if included in release
+OVMS_Status* OVMS_GetServableContext(OVMS_Server* server, const char* servableName, int64_t servableVersion, void** oclContext);
+#ifdef __cplusplus
 }
+#endif

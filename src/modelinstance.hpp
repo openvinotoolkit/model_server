@@ -23,6 +23,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -38,15 +39,24 @@
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
+// TODO
+#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#include <openvino/runtime/intel_gpu/ocl/va.hpp>
+
+#include "openvino/runtime/remote_tensor.hpp"
+
 namespace ovms {
 class MetricRegistry;
 class ModelInstanceUnloadGuard;
 class InferenceRequest;
 class InferenceResponse;
+class IOVTensorFactory;
 class PipelineDefinition;
 class Status;
 template <typename T1, typename T2>
 struct RequestProcessor;
+
+extern void* globalVaDisplay;
 
 class DynamicModelParameter {
 public:
@@ -98,6 +108,16 @@ protected:
          */
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
+    cl_context oclContextC;
+
+public:
+    // TODO const correctness & ownership & thread safety
+    const cl_context* getOclCContext() const { return &oclContextC; }
+
+protected:
+    std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;
+    std::unique_ptr<ov::intel_gpu::ocl::VAContext> vaContext;
+    std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> tensorFactories;
     /**
          * @brief Model name
          */
@@ -206,6 +226,7 @@ protected:
          * @return Status
          */
     virtual Status loadOVCompiledModel(const ModelConfig& config);
+    void loadTensorFactories();
 
     /**
          * @brief Prepares inferenceRequestsQueue
@@ -578,6 +599,9 @@ public:
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* requestProto,
         ResponseType* responseProto,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+    template <typename RequestType, typename ResponseType>
+    Status inferAsync(const RequestType* requestProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
