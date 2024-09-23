@@ -50,9 +50,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
             return absl::InvalidArgumentError("accepted logprobs value is currently 1 only");
         request.logprobs = it->value.GetInt();
     }
-    if (request.logprobs && request.temperature == 0.0) {
-        return absl::InvalidArgumentError("logprobs are not supported with greedy search. Set temperature to non 0 value.");
-    }
     if (request.logprobs && request.stream) {
         return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
     }
@@ -89,9 +86,6 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart() {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("logprobs accepts values true or false");
         request.logprobschat = it->value.GetBool();
-    }
-    if (request.logprobschat && request.temperature == 0.0) {
-        return absl::InvalidArgumentError("logprobs is not supported with greedy search. Set temperature to non 0 value.");
     }
     if (request.logprobschat && request.stream) {
         return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
@@ -712,10 +706,10 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
 }
 
 void OpenAIChatCompletionsHandler::writeLogprob(Writer<StringBuffer>& writer, float logprob) {
-    // genai returns probs values which should be in the range of 0-1
+    // genai returns probs values which should be in the range of -inf-0
     // other values could be potentially invalid and should be treated as such
-    if (logprob > 0.0 && logprob <= 1.0)
-        writer.Double(std::log10(logprob));
+    if (logprob < 0.0)
+        writer.Double(logprob);
     else
         writer.Null();
 }

@@ -160,8 +160,8 @@ std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 TEST_F(LLMFlowHttpTest, writeLogprobs) {
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
-    std::vector<float> inputs{-0.1, 0, 1, 5};
-    std::vector<std::string> expected{"null", "null", "0.0", "null"};
+    std::vector<float> inputs{-0.1, -100, 0, 5};
+    std::vector<std::string> expected{"-0.1", "-100", "nul;", "null"};
     for (size_t i = 0; i < inputs.size(); i++) {
         OpenAIChatCompletionsHandler::writeLogprob(writer, inputs[i]);
         EXPECT_EQ(buffer.GetString(), expected[i]);
