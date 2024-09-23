@@ -150,13 +150,6 @@ std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 
 // --------------------------------------- OVMS LLM nodes tests
 
-// TODO: Test bad sampling configuration that would cause errors in step() phase. Need to replace hardcoded generation config
-// with user defined one to do that.
-// TODO: Test bad message or sampling configuration that would cause errors in add_request() phase. Need to replace hardcoded generation config
-// with user defined one to do that.
-// TODO: Consider stress testing - existing model server under heavy load to check notifications work us expected.
-//
-
 TEST_F(LLMFlowHttpTest, writeLogprobs) {
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
