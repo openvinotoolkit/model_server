@@ -449,6 +449,8 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                     // for full support significant changes on GenAI side are required
                     writer.String("top_logprobs");
                     writer.StartArray();   // [
+/*                  
+                    Commented out due to supported only top_logprobs 1
                     writer.StartObject();  // {
 
                     writer.String("token");
@@ -462,7 +464,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                         writer.Int(tokenBytes[j]);
                     writer.EndArray();  // ]
 
-                    writer.EndObject();  // }
+                    writer.EndObject();  // } */
                     writer.EndArray();   // ]
 
                     writer.EndObject();  // }
@@ -708,7 +710,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
 void OpenAIChatCompletionsHandler::writeLogprob(Writer<StringBuffer>& writer, float logprob) {
     // genai returns probs values which should be in the range of -inf-0
     // other values could be potentially invalid and should be treated as such
-    if (logprob < 0.0)
+    if (logprob <= 0.0)
         writer.Double(logprob);
     else
         writer.Null();
