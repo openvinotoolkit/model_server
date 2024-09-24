@@ -448,8 +448,8 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                     // top_logprobs are currently hardcoded to return only one logprob to comply with the API
                     // for full support significant changes on GenAI side are required
                     writer.String("top_logprobs");
-                    writer.StartArray();   // [
-/*                  
+                    writer.StartArray();  // [
+                                          /*                  
                     Commented out due to supported only top_logprobs 1
                     writer.StartObject();  // {
 
@@ -465,7 +465,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                     writer.EndArray();  // ]
 
                     writer.EndObject();  // } */
-                    writer.EndArray();   // ]
+                    writer.EndArray();    // ]
 
                     writer.EndObject();  // }
                 }
