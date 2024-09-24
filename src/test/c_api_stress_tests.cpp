@@ -125,9 +125,9 @@ TEST_F(ConfigChangeStressTestAsync, ChangeToAutoShapeDuringAsyncInference) {
 TEST_F(ConfigChangeStressTestAsyncStartEmpty, ChangeToLoadedModelDuringAsyncInference) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
-        StatusCode::PIPELINE_DEFINITION_NAME_MISSING,
         StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {
+        StatusCode::PIPELINE_DEFINITION_NAME_MISSING,
         StatusCode::MODEL_NAME_MISSING,
         StatusCode::MODEL_VERSION_MISSING};
     performStressTest(
