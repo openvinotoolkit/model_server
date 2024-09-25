@@ -260,8 +260,7 @@ venv-style:$(ACTIVATE_STYLE)
 	@echo -n "Using venv "
 	@python3 --version
 spell: venv-style
-	@pip install codespell
-	@{ git ls-files; git diff --name-only --cached; } | sort | uniq | xargs codespell --skip "spelling-whitelist.txt" | grep -vFf spelling-whitelist.txt; if [ $$? != 1 ]; then exit 1; fi
+	@{ git ls-files; git diff --name-only --cached; } | sort | uniq | xargs $(VIRTUALENV_STYLE_DIR)/bin/codespell --skip "spelling-whitelist.txt" | grep -vFf spelling-whitelist.txt; if [ $$? != 1 ]; then exit 1; fi
 	@echo "Spelling check completed."
 
 $(ACTIVATE):
