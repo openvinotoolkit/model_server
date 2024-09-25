@@ -1510,10 +1510,6 @@ TEST_F(CAPINonCopy, AsyncDummyCheckResetOutputCPU) {
     for (size_t i = 0; i < out1.size(); ++i) {
         EXPECT_NEAR(INITIAL_VALUE + 1, out1[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
     }
-    // CHECK BOTH on GPU/CPU buffers on GPU we need to double read the output and confirm correctness
-    // CHECK both with & without callback
-    // CHECK perf
-    // TODO tests for remove RequestOutputRemoveData
 }
 
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
