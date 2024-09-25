@@ -95,7 +95,7 @@ You can track the actual usage of the cache in the server logs. You can observe 
 Consider increasing the `cache_size` parameter in case the logs report the usage getting close to 100%. When the cache is consumed, some of the running requests might be preempted to free cache for other requests to finish their generations (preemption will likely have negative impact on performance since preempted request cache will need to be recomputed when it gets processed again). When preemption is not possible i.e. `cache size` is very small and there is a single, long running request that consumes it all, then the request gets terminated when no more cache can be assigned to it, even before reaching stopping criteria. 
 
 `enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case with chat applications which resend the history of the conversations. Thanks to prefix caching, there is no need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
-utlization of resource will be lower. Old cache will be cleared automatically but it is recommended to increase cache_size to take bigger performance advantage.
+utilization of resource will be lower. Old cache will be cleared automatically but it is recommended to increase cache_size to take bigger performance advantage.
 
 `plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size '{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}'.
 
