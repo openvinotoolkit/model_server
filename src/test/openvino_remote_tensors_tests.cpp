@@ -1250,6 +1250,8 @@ TEST_F(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     OVMS_ServerDelete(cserver);
 }
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
+static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
+static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 
 const float INITIAL_VALUE{0.13666};
 const float GARBAGE_VALUE = 42.66613;
@@ -1315,7 +1317,7 @@ TEST_F(CAPINonCopy, SyncWithCallbackDummy) {
     callbackStruct.queue = &queue;
     SPDLOG_ERROR("ER:{}", (void*)&callbackStruct);
 
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness, reinterpret_cast<void*>(&callbackStruct)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse, reinterpret_cast<void*>(&callbackStruct)));
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
     // check is done in callback
     auto callbackReturnValue = unblockSignal.get();
@@ -1339,7 +1341,7 @@ static OVMS_Server* startCAPIServerFromConfig(const std::string configPath) {
     return cserver;
 }
 
-void checkDummyResponse(OVMS_InferenceResponse* response, double expectedValue, double tolerance) {
+static void checkDummyResponse(OVMS_InferenceResponse* response, double expectedValue, double tolerance) {
     const void* voutputData{nullptr};
     size_t bytesize = 42;
     uint32_t outputId = 0;
@@ -1366,46 +1368,38 @@ void checkDummyResponse(OVMS_InferenceResponse* response, double expectedValue, 
 }
 TEST_F(CAPINonCopy, SyncWithCallbackDummyCheckResetOutputGPU) {
     ServerGuard serverGuard(DUMMY_MODEL_GPU_CONFIG_PATH);
-    SPDLOG_ERROR("ER");
     OVMS_Server* cserver = serverGuard.server;
-    cl_context* contextFromModel;
+
     cl_platform_id platformId;
     cl_device_id deviceId;
-    SPDLOG_ERROR("ER");
-    cl_context openCLCContext = get_cl_context(platformId, deviceId);  // THIS is required to get correct device Id needed for queue
-    SPDLOG_ERROR("ER");
-    cl::Context openCLCppContext(*contextFromModel, retainCLContextOwnership);
-    SPDLOG_ERROR("ER");
+    cl_context openCLCContext = get_cl_context(platformId, deviceId);
+    cl::Context openCLCppContext(openCLCContext);
     cl::Device device(deviceId);
     cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
-    SPDLOG_ERROR("ER");
-    cl_int clError;
-    auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties, &clError);
-    SPDLOG_ERROR("ER");
-    EXPECT_EQ(0, clError);
+    auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties);
     // create OpenCL buffers
     std::vector<float> in(10, INITIAL_VALUE);
     void* inputBufferData = in.data();
     std::vector<float> out(10, GARBAGE_VALUE + 13);
     void* outputBufferData = out.data();
     size_t inputByteSize = sizeof(float) * in.size();
-    SPDLOG_ERROR("ER");
+    cl_int clError;
     auto openCLCppInputBufferPtr = std::make_unique<cl::Buffer>(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, nullptr, &clError);
     cl::Buffer& openCLCppInputBuffer = *openCLCppInputBufferPtr;
+    EXPECT_EQ(0, clError);
+    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     EXPECT_EQ(0, clError);
     auto openCLCppOutputBufferPtr = std::make_unique<cl::Buffer>(openCLCppContext, CL_MEM_READ_WRITE, inputByteSize, nullptr, &clError);
     cl::Buffer& openCLCppOutputBuffer = *openCLCppOutputBufferPtr;
     EXPECT_EQ(0, clError);
-    SPDLOG_ERROR("ER");
-    EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, outputBufferData));
-    // start CAPI server
+    EXPECT_EQ(0, clError);
+
     // prepare request
     OVMS_InferenceRequest* request{nullptr};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddOutput(request, DUMMY_MODEL_OUTPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
-    std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
     SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)openCLCppInputBuffer);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));
@@ -1413,56 +1407,29 @@ TEST_F(CAPINonCopy, SyncWithCallbackDummyCheckResetOutputGPU) {
     OVMS_InferenceResponse* response = nullptr;
     // set callback
     uint32_t callbackUsed = 31;
-
     CallbackUnblockingStruct callbackStruct;
-    SPDLOG_ERROR("ER:{}", (void*)&callbackStruct.signal);
     auto unblockSignal = callbackStruct.signal.get_future();
     callbackStruct.bufferAddr = &openCLCppOutputBuffer;
     callbackStruct.queue = &queue;
-    SPDLOG_ERROR("ER:{}", (void*)&callbackStruct);
-
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness, reinterpret_cast<void*>(&callbackStruct)));
-    SPDLOG_ERROR("ER");
-    ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
-    SPDLOG_ERROR("ER");
-    // check is done in callback
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse, reinterpret_cast<void*>(&callbackStruct)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceAsync(cserver, request));
     auto callbackReturnValue = unblockSignal.get();
-    OVMS_InferenceResponseDelete(response);
     openCLCppInputBufferPtr.reset();
-    openCLCppOutputBufferPtr.reset();
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, nullptr, nullptr));  // TODO we need test for varian where callback is used
-    // now check with default output buffer
-    std::vector<float> in2(10, INITIAL_VALUE + 42);
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(in2.data()), inputByteSize, OVMS_BUFFERTYPE_CPU, 1));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, nullptr, nullptr));
+    std::vector<float> in2(10, INITIAL_VALUE * 2);
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputRemoveData(request, DUMMY_MODEL_INPUT_NAME));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(in2.data()), inputByteSize, OVMS_BUFFERTYPE_CPU, notUsedNum));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputRemoveData(request, DUMMY_MODEL_OUTPUT_NAME));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestRemoveOutput(request, DUMMY_MODEL_OUTPUT_NAME));
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
-    checkDummyResponse(response, INITIAL_VALUE + 42 + 1, FLOAT_TOLLERANCE);
-    const void* voutputData{nullptr};
-    size_t bytesize = 42;
-    uint32_t outputId = 0;
-    OVMS_DataType datatype = (OVMS_DataType)199;
-    const int64_t* shape{nullptr};
-    size_t dimCount = 42;
-    OVMS_BufferType bufferType = (OVMS_BufferType)199;
-    uint32_t ovmsDeviceId = 42;
-    const char* outputName{nullptr};
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &ovmsDeviceId));
-    ASSERT_EQ(std::string(DUMMY_MODEL_OUTPUT_NAME), outputName);
-    EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
-    EXPECT_EQ(dimCount, 2);
-    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
-    EXPECT_EQ(ovmsDeviceId, 0);
-    std::vector<int> expectedShape{1, 10};
-    for (size_t i = 0; i < DUMMY_MODEL_SHAPE.size(); ++i) {
-        EXPECT_EQ(expectedShape[i], shape[i]) << "Different at:" << i << " place.";
-    }
-    const float* outputData = reinterpret_cast<const float*>(voutputData);
-    for (size_t i = 0; i < out.size(); ++i) {
-        EXPECT_NEAR(INITIAL_VALUE + 42 + 1, outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
-    }
-    checkDummyResponse(response, INITIAL_VALUE + 42 + 1, FLOAT_TOLLERANCE);
+    checkDummyResponse(response, INITIAL_VALUE * 2 + 1, FLOAT_TOLLERANCE);
     OVMS_InferenceResponseDelete(response);
+    std::vector<float> dataFromPreviousOutputBuffer(10, 1231521);
+    // now we need to check if previous output wasn't changed
+    EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, dataFromPreviousOutputBuffer.data()));
+    for (int i = 0; i < DUMMY_MODEL_INPUT_SIZE; ++i) {
+        EXPECT_NEAR(dataFromPreviousOutputBuffer[i], INITIAL_VALUE + 1, FLOAT_TOLLERANCE) << " at place i:" << i;
+    }
 }
 TEST_F(CAPINonCopy, SyncWithoutCallbackDummyCheckResetOutputCPU) {
     ServerGuard serverGuard(DUMMY_MODEL_CPU_CONFIG_PATH);
@@ -1550,7 +1517,7 @@ TEST_F(CAPINonCopy, AsyncDummyCheckResetOutputCPU) {
     // TODO tests for remove RequestOutputRemoveData
 }
 
-static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
+static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
 static void callbackUnblockingAndFreeingRequest(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
 
 cl::CommandQueue* globalQueue = nullptr;
@@ -1602,7 +1569,7 @@ TEST_F(CAPINonCopy, AsyncWithCallbackDummy) {
     auto unblockSignal = callbackStruct.signal.get_future();
     callbackStruct.bufferAddr = &openCLCppOutputBuffer;
     callbackStruct.queue = &queue;
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness, reinterpret_cast<void*>(&callbackStruct)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse, reinterpret_cast<void*>(&callbackStruct)));
     // infer
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceAsync(cserver, request));
     // check
@@ -1943,11 +1910,18 @@ static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnes
     SPDLOG_ERROR("ER:{}", userStruct);
     SPDLOG_ERROR("ER:{}", (void*)&callbackUnblockingStruct->signal);
     callbackUnblockingStruct->signal.set_value(42);
+}
+static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
+    using ovms::StatusCode;
+    SPDLOG_INFO("Using callback: callbackMarkingItWasUsedWith42!");
+    uint32_t* usedFlag = reinterpret_cast<uint32_t*>(userStruct);
+    *usedFlag = 42;
+    OVMS_InferenceResponseDelete(response);
+}
+static void checkDummyOpenCLResponse(OVMS_InferenceResponse* response, cl::CommandQueue& queue, double expectedValue, double tolerance) {
     uint32_t outputCount = 42;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
     ASSERT_EQ(outputCount, 1);
-
-    // verify GetOutput
     const void* voutputData{nullptr};
     size_t bytesize = 42;
     uint32_t outputId = 0;
@@ -1955,32 +1929,37 @@ static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnes
     const int64_t* shape{nullptr};
     size_t dimCount = 42;
     OVMS_BufferType bufferType = (OVMS_BufferType)199;
-    uint32_t deviceId = 42;
+    uint32_t ovmsDeviceId = 42;
     const char* outputName{nullptr};
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &ovmsDeviceId));
     ASSERT_EQ(std::string(DUMMY_MODEL_OUTPUT_NAME), outputName);
     EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
     EXPECT_EQ(dimCount, 2);
     EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_OPENCL);
-    EXPECT_EQ(deviceId, 0);
+    EXPECT_EQ(ovmsDeviceId, 0);
     std::vector<int> expectedShape{1, 10};
     for (size_t i = 0; i < DUMMY_MODEL_SHAPE.size(); ++i) {
         EXPECT_EQ(expectedShape[i], shape[i]) << "Different at:" << i << " place.";
     }
-    SPDLOG_INFO("Callback buffer addr:{}", (void*)voutputData);  // DEBUG does not work in callback
-    EXPECT_EQ(callbackUnblockingStruct->bufferAddr, voutputData);
+
     const cl::Buffer* openCLCppOutputBuffer = reinterpret_cast<const cl::Buffer*>(voutputData);
     std::vector<float> out(10, GARBAGE_VALUE);
     void* bufferOut = out.data();
-    SPDLOG_INFO("Queue address in callback:{}", (void*)callbackUnblockingStruct->queue);  // DEBUG does not work in callback
-    auto clError = callbackUnblockingStruct->queue->enqueueReadBuffer(*openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, expectedShape[1] * sizeof(float), bufferOut);
+    auto clError = queue.enqueueReadBuffer(*openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, expectedShape[1] * sizeof(float), bufferOut);
     EXPECT_EQ(0, clError);
-    std::vector<float> expectedData(expectedShape[1], INITIAL_VALUE + 1);
-
     const float* outputData = reinterpret_cast<const float*>(bufferOut);
     for (size_t i = 0; i < out.size(); ++i) {
-        EXPECT_NEAR(expectedData[i], outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
+        EXPECT_NEAR(expectedValue, outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
     }
+}
+
+static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
+    SPDLOG_INFO("Using callback: callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse!");
+    CallbackUnblockingStruct* callbackUnblockingStruct = reinterpret_cast<CallbackUnblockingStruct*>(userStruct);
+    SPDLOG_ERROR("ER:{}", userStruct);
+    SPDLOG_ERROR("ER:{}", (void*)&callbackUnblockingStruct->signal);
+    callbackUnblockingStruct->signal.set_value(42);
+    checkDummyOpenCLResponse(response, *callbackUnblockingStruct->queue, INITIAL_VALUE + 1, FLOAT_TOLLERANCE);
     OVMS_InferenceResponseDelete(response);
 }
 static void callbackUnblockingAndFreeingRequest(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
