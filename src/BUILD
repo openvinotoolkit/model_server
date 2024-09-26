@@ -50,6 +50,12 @@ COPTS_TESTS = [
         "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
 })
 
+config_setting(
+    name = "windows",
+    values = {"cpu": "x64_windows"},
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "custom_nodes_common_lib",
     linkstatic = 1,
@@ -113,7 +119,7 @@ cc_shared_library(
         "@azure//:__subpackages__",
         "@cpprest//:__subpackages__",
         "@boringssl//:__subpackages__",
-        "@linux_opencv//:__subpackages__",
+        "//third_party:opencv//:__subpackages__",
     ] + select({
         "//:not_disable_mediapipe": [
             "@mediapipe//:__subpackages__",
@@ -561,7 +567,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@linux_opencv//:opencv"
+        "//third_party:opencv",
     ],
     linkshared = 1,
     copts = [
@@ -580,7 +586,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@linux_opencv//:opencv"
+        "//third_party:opencv",
     ],
     linkshared = 1,
     copts = [
@@ -625,7 +631,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@linux_opencv//:opencv"
+        "//third_party:opencv",
     ],
     linkshared = 1,
     copts = [
@@ -644,7 +650,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@linux_opencv//:opencv"
+        "//third_party:opencv",
     ],
     linkshared = 1,
     copts = [
@@ -663,7 +669,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "@linux_opencv//:opencv"
+        "//third_party:opencv",
     ],
     linkshared = 1,
     copts = [

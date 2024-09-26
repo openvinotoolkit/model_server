@@ -206,6 +206,12 @@ new_local_repository(
     path = "/opt/opencv/",
 )
 
+new_local_repository(
+    name = "windows_opencv",
+    build_file = "@//third_party/opencv:opencv_windows.BUILD",
+    path = "C:\\opencv\\build",
+)
+
 ########################################################### Mediapipe end
 
 ########################################################### Python support start
@@ -425,7 +431,7 @@ new_git_repository(
 new_local_repository(
     name = "mediapipe_calculators",
     build_file = "@//third_party/mediapipe_calculators:BUILD",
-    path = "/ovms/third_party/mediapipe_calculators",
+    path = "third_party/mediapipe_calculators",
 )
 
 git_repository(
