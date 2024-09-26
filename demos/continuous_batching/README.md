@@ -7,8 +7,10 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 ## Get the docker image
 
+Pull public image with CPU only support or including also GPU support.
 ```bash
-docker pull openvino/model_server:2024.4-gpu
+docker pull openvino/model_server:latest-gpu
+docker pull openvino/model_server:latest
 ```
 or build the image from source to try the latest enhancements in this feature.
 ```bash
@@ -28,8 +30,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Install python dependencies for the conversion script:
 ```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/pre-release"
-pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git  openvino_tokenizers==2024.4.* openvino==2024.4.*
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+pip3 install optimum-intel@git+https://github.com/huggingface/optimum-intel.git  openvino-tokenizers[transformers]==2024.4.* openvino==2024.4.* nncf>=2.11.0
 ```
 
 Run optimum-cli to download and quantize the model:
@@ -88,10 +90,11 @@ cat config.json
 
 ## Start-up
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
 In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
-to `docker run` command and make sure you copy the graph.pbtxt tuned for GPU device. Also make sure the export model quantization level and cache size fit to the GPU memory.
+to `docker run` command, use the image with GPU support and make sure you copy the graph.pbtxt tuned for GPU device. 
+Also make sure the export model quantization level and cache size fit to the GPU memory.
 ```
 
 
@@ -299,9 +302,9 @@ Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model
 
 ## Scaling the Model Server
 
-Check this simple [text generation scaling demo](./scaling/README.md).
+Check this simple [text generation scaling demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/scaling/README.md).
 
 
 ## Testing the model accuracy over serving API
 
-Check the [guide of using lm-evaluation-harness](./accuracy/README.md)
+Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)

@@ -72,7 +72,7 @@ cmake(
         "--verbose",
         "--",  # <- Pass remaining options to the native tool.
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
-        # there is no elegant paralell compilation support
+        # there is no elegant parallel compilation support
         "VERBOSE=1",
         "-j 4",
     ],

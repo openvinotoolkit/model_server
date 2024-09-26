@@ -78,9 +78,12 @@ typedef enum OVMS_DataType_enum {
 //
 typedef enum OVMS_BufferType_enum {
     OVMS_BUFFERTYPE_CPU,
-    OVMS_BUFFERTYPE_CPU_PINNED,
-    OVMS_BUFFERTYPE_GPU,
-    OVMS_BUFFERTYPE_HDDL,
+    OVMS_BUFFERTYPE_CPU_PINNED,  // not supported
+    OVMS_BUFFERTYPE_GPU,  // not supported
+    OVMS_BUFFERTYPE_OPENCL,
+    OVMS_BUFFERTYPE_VASURFACE_Y,
+    OVMS_BUFFERTYPE_VASURFACE_UV,
+    OVMS_BUFFERTYPE_HDDL,  // not supported
 } OVMS_BufferType;
 
 typedef enum OVMS_ServableState_enum {
@@ -423,7 +426,7 @@ OVMS_Status* OVMS_GetServableState(OVMS_Server* server, const char* servableName
 OVMS_Status* OVMS_InferenceRequestNew(OVMS_InferenceRequest** request, OVMS_Server* server, const char* servableName, int64_t servableVersion);
 void OVMS_InferenceRequestDelete(OVMS_InferenceRequest* response);
 
-// Set the data of the input buffer. Ownership of data needs to be maintained during inference.
+// Add input to the request
 //
 // \param request The request object
 // \param inputName The name of the input
@@ -443,6 +446,27 @@ OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* request, const
 // \param deviceId The device id of the data memory buffer
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest* request, const char* inputName, const void* data, size_t byteSize, OVMS_BufferType bufferType, uint32_t deviceId);
+
+// Add output to the request. This can be used to specify self managed buffers to avoid copying data after the inference.
+//
+// \param request The request object
+// \param outputName The name of the output
+// \param datatype The data type of the input
+// \param shape The shape of the input (ignored for scalars)
+// \param dimCount The number of dimensions of the shape
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_InferenceRequestAddOutput(OVMS_InferenceRequest* request, const char* outputName, OVMS_DataType datatype, const int64_t* shape, size_t dimCount);
+
+// Set the data of the output buffer. Ownership of data needs to be maintained during inference.
+//
+// \param request The request object
+// \param inputName The name of the output with data to be set
+// \param data The data of the output
+// \param byteSize The byte size of the data
+// \param bufferType The buffer type of the data
+// \param deviceId The device id of the data memory buffer
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_InferenceRequestOutputSetData(OVMS_InferenceRequest* request, const char* outputName, const void* data, size_t byteSize, OVMS_BufferType bufferType, uint32_t deviceId);
 
 // Remove the data of the input.
 //
@@ -528,6 +552,27 @@ void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* response);
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_Inference(OVMS_Server* server, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response);
 
+// Execute asynchronous inference
+//
+// Setting completion callback with OVMS_InferenceRequestSetCompletionCallback is required to receive a reply.
+//
+// \param server The server object
+// \param request The request object
+// \return OVMS_Status object in case of failure to schedule inference
+OVMS_Status* OVMS_InferenceAsync(OVMS_Server* server, OVMS_InferenceRequest* request);
+
+// Type of function called when response is completed and set with OVMS_InferenceRequestSetCompletionCallback. Callback function takes ownership of OVMS_InferenceResponse object.
+// Flag specifies if the response is final coming from inference request, and if there were errors in execution
+//
+// \param response resp
+// \param flag Flag specifying if the response is final response for request
+// \param userStruct Data provided to callback, set in OVMS_InferenceRequestSetCompletionCallback
+typedef void (* OVMS_InferenceRequestCompletionCallback_t)(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
+
+// TODO description
+// TODO consider allocators
+OVMS_Status* OVMS_InferenceRequestSetCompletionCallback(OVMS_InferenceRequest*, OVMS_InferenceRequestCompletionCallback_t completeCallback, void* userStruct);
+
 // Get OVMS_ServableMetadata object
 //
 // Creates OVMS_ServableMetadata object describing inputs and outputs.
@@ -594,6 +639,17 @@ OVMS_Status* OVMS_ServableMetadataOutput(OVMS_ServableMetadata* metadata, uint32
 // \param info The ptr to the ov::AnyMap*
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_ServableMetadataInfo(OVMS_ServableMetadata* metadata, const void** info);
+
+// EXPERIMENTAL
+// Set global VADisplay for OpenVINO model compile phase
+// this triggers ov::Core::compile_model to use OpenVINO VAContext which enables
+// usage of VA Surfaces in inferences on models loaded on GPU.
+// This needs to be called before server start.
+// Ensure availability of VA Display during server usage.
+//
+// \param vaDisplay VADisplay that will be used to compile models
+// TODO should we accept server argument as well?
+OVMS_Status* OVMS_ServerSetGlobalVADisplay(void* vaDisplay);
 
 // Deallocates a status object.
 //

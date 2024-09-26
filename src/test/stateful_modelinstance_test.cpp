@@ -30,9 +30,11 @@
 #include "../executingstreamidguard.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../global_sequences_viewer.hpp"
+#include "../itensorfactory.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelversion.hpp"
 #include "../ov_utils.hpp"
+#include "../regularovtensorfactory.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../serialization.hpp"
 #include "../statefulmodelinstance.hpp"
@@ -247,7 +249,9 @@ public:
         ovms::InputSink<ov::InferRequest&> inputSink(inferRequest);
         (void)inputSink;
         bool isPipeline = false;
-        status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), inputSink, isPipeline);
+        std::unordered_map<int, std::shared_ptr<ovms::IOVTensorFactory>> factories;
+        factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<ovms::RegularOVTensorFactory>());
+        status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, factories);
         if (!status.ok())
             return status;
         timer.stop(DESERIALIZE);

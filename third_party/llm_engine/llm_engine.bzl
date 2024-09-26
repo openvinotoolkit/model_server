@@ -20,7 +20,7 @@ def llm_engine():
     new_git_repository(
         name = "llm_engine",
         remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "42398469746fca326fbdb8e195b572f3f483331c", # releases/2024/4 / 17 Sep 2024
+        commit = "ee5aa1ef95f1d0075b3b9d056ff86d360e7c736e", # master / 26 Sep 2024
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
@@ -78,7 +78,7 @@ cmake(
         "--verbose",
         "--",  # <- Pass remaining options to the native tool.
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
-        # there is no elegant paralell compilation support
+        # there is no elegant parallel compilation support
         "VERBOSE=1",
         "-j 4",
     ],
@@ -105,11 +105,11 @@ cmake(
     out_include_dir = "runtime/include",
     # linking order
     out_shared_libs = [
-            "libopenvino_genai.so.2440",
+            "libopenvino_genai.so.2450",
         ],
     tags = ["requires-network"],
     visibility = ["//visibility:public"],
-    lib_name = "libopenvino_genai.so.2440",
+    lib_name = "libopenvino_genai.so.2450",
 )
 
 cc_library(

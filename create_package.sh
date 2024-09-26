@@ -28,7 +28,7 @@ find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "*params" ! -name
 mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/
 cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
-if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2440 ; ln -s libopenvino_genai.so.2024.4.0.0 libopenvino_genai.so.2440 ; fi
+if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2450 ; ln -s libopenvino_genai.so.2024.5.0.0 libopenvino_genai.so.2450 ; fi
 rm -f /ovms_release/lib/libssl.so
 rm -f /ovms_release/lib/libsampleloader*
 
@@ -59,6 +59,8 @@ cp /opt/opencv/share/licenses/opencv4/* /ovms/release_files/thirdparty-licenses/
 if [ "$ov_use_binary" == "1" ] ; then cp /opt/intel/openvino/docs/licensing/EULA.txt /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
 if [ "$ov_use_binary" == "0" ] ; then cp /openvino/LICENSE /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
 if [ "$BASE_OS" == "redhat" ] ; then cp -P /usr/lib64/libpugixml.so* /ovms_release/lib/ ; fi
+if [ "$BASE_OS" == "redhat" ] ; then cp -P /usr/lib64/libOpenCL.so* /ovms_release/lib/ ; fi
+if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/x86_64-linux-gnu/libOpenCL.so* /ovms_release/lib/ ; fi
 
 if [ "$FUZZER_BUILD" == "0" ]; then find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \; ; fi;
 cd /ovms_release/bin

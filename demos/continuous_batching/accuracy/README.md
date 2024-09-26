@@ -15,12 +15,12 @@ pip3 install lm_eval[api]
 
 ## Exporting the model and starting the model server
 
-Following the procedure to export the model and start the model server from [text generatino demo](../README.md)
+Follow the procedure to export the model and start the model server from [text generation demo](../README.md)
 
 ## Running the tests
 
 ```bash
-lm-eval --model local-chat-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3-8B-Instruct,base_url=http://locahost:8000/v3/chat/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path test/ --seed 1 --apply_chat_template --limit 100
+lm-eval --model local-chat-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3-8B-Instruct,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path test/ --seed 1 --apply_chat_template --limit 100
 
 local-chat-completions (model=meta-llama/Meta-Llama-3-8B-Instruct,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=1,max_retries=3,tokenized_requests=False), gen_kwargs: (None), limit: 100.0, num_fewshot: None, batch_size: 1
 |Tasks|Version|     Filter     |n-shot|  Metric   |   |Value|   |Stderr|

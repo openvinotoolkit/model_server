@@ -18,6 +18,7 @@ load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
      "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
      "create_config_settings")
+
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
         "//:fuzzer_build" : COMMON_FUZZER_COPTS,
@@ -163,10 +164,10 @@ cc_library(
 
 cc_library(
     name = "ovms_lib",
-    hdrs = ["ovms.h"],
+    hdrs = ["ovms.h",
+            "ovms_internal.h",
+    ],
     srcs = [
-        "capi_frontend/buffer.cpp",
-        "capi_frontend/buffer.hpp",
         "capi_frontend/capi.cpp",
         "capi_frontend/capi_utils.cpp",
         "capi_frontend/capi_utils.hpp",
@@ -365,6 +366,7 @@ cc_library(
         }) + [
             "cpp_headers",
             "libmodelconfigjsonparser",
+            "libovmscapibuffer",
             "libovmsfilesystem",
             "libovmsfilesystemfactory",
             "libovmslocalfilesystem", # indirectly & directly through factory
@@ -377,6 +379,8 @@ cc_library(
             "libovmsstring_utils",
             "libovmsazurefilesystem",
             "libovmsmodelversioning",
+	    #"libovmsoclutils", # TODO decide if will need
+            "libovmstensorfactory",
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
         ] + select({
@@ -399,7 +403,7 @@ cc_library(
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + ["-lOpenCL"], # TODO make as a direct dependency
     data = select({
         "//:not_disable_python": [
             "//src/python/binding:pyovms.so",
@@ -879,6 +883,58 @@ cc_library( # make ovms_lib dependent, use share doptions
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
+# TODO split
+cc_library(
+    name = "libovmstensorfactory",
+    hdrs = ["itensorfactory.hpp",
+            "opencltensorfactory.hpp",
+            "vaapitensorfactory.hpp",
+            "regularovtensorfactory.hpp",],
+    srcs = ["regularovtensorfactory.cpp",
+            "opencltensorfactory.cpp",
+            "vaapitensorfactory.cpp",
+    ],
+    deps = ["@linux_openvino//:openvino",
+            "libovmscapibuffer",
+            "libovmslogging",
+            "ovms_header",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library( # make ovms_lib dependent, use share doptions
+    name = "libovmscapibuffer",
+    hdrs = ["capi_frontend/buffer.hpp",
+    ],
+    srcs = [
+        "capi_frontend/buffer.cpp",
+    ],
+    deps = [
+            "ovms_header",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library( # make ovms_lib dependent, use share doptions
+    name = "libovmsoclutils",
+    hdrs = ["ocl_utils.hpp",
+    ],
+    srcs = [
+        "ocl_utils.cpp",
+    ],
+    deps = [
+            "@linux_openvino//:openvino",
+            "libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
 
 cc_library( # make ovms_lib dependent, use share doptions
     name = "libovmss3filesystem",
@@ -1057,7 +1113,6 @@ cc_test(
         "test/ensemble_mapping_config_tests.cpp",
         "test/ensemble_metadata_test.cpp",
         "test/ensemble_config_change_stress.cpp",
-        "test/environment.hpp",
         "test/gather_node_test.cpp",
         "test/gcsfilesystem_test.cpp",
         "test/get_model_metadata_response_test.cpp",
@@ -1111,9 +1166,6 @@ cc_test(
         "test/systeminfo_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
-        "test/test_utils.cpp",
-        "test/test_utils.hpp",
-        "test/stress_test_utils.hpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
@@ -1129,12 +1181,12 @@ cc_test(
             "//:disable_mediapipe" : [],
         }) + select({
             "//:not_disable_python": [
-                "test/pythonnode_test.cpp",
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
                 # LLM logic uses Python for processing Jinja templates
                 "test/llmnode_test.cpp",
                 "test/llmtemplate_test.cpp",
+                "test/pythonnode_test.cpp",
                 "test/text_streamer_test.cpp",
             ],
             "//:disable_python" : [],
@@ -1248,6 +1300,10 @@ cc_test(
         "-lssl",
     ],
     deps = [
+    	":openvino_remote_tensors_tests",
+	":libtest_environment",
+	":libtest_gpuenvironment",
+    	":test_utils",
         "//src:ovms_lib",
         "//src:custom_nodes_common_lib",
         "//src:libsampleloader.so",
@@ -1279,6 +1335,107 @@ cc_test(
             "//:disable_python": []
         }),
     copts = COPTS_TESTS,
+)
+
+cc_library(
+    name = "test_utils",
+    linkstatic = 1,
+    hdrs = [
+        "test/c_api_test_utils.hpp",
+        "test/test_utils.hpp",
+        "test/stress_test_utils.hpp",
+        ],
+    srcs = [
+        "test/test_utils.cpp",
+        ],
+    data = [
+    ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+        "-lssl",
+    ],
+    deps = [
+        "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+)
+
+cc_library(
+    name = "libtest_environment",
+    linkstatic = 1,
+    alwayslink = True,
+    hdrs = [
+        "test/environment.hpp",
+        ],
+    srcs = [
+        "test/environment.cpp",
+        ],
+    linkopts = [],
+    deps = [
+	"libovmslogging",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+)
+
+cc_library(
+    name = "libtest_gpuenvironment",
+    linkstatic = 1,
+    alwayslink = True,
+    hdrs = [
+        "test/gpuenvironment.hpp",
+        ],
+    srcs = [
+        "test/gpuenvironment.cpp",
+        ],
+    linkopts = [],
+    deps = [
+	"libovmslogging",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+)
+
+cc_library(
+    name = "openvino_remote_tensors_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/openvino_remote_tensors_tests.cpp"],
+    data = [
+        "test/c_api/config_standard_dummy.json",
+        "test/c_api/config_gpu_dummy.json",
+        "test/configs/config_gpu_face_detection_adas.json",
+        "test/dummy/1/dummy.xml",
+        "test/dummy/1/dummy.bin",
+    ],
+    linkopts = [
+        "-lstdc++fs",
+	# lib va
+    ] + select({
+        "//conditions:default": [
+            "-lva",
+            "-lva-drm",
+	],
+	"//:redhat_build": [],
+    }) + [
+	"-lOpenCL",
+    ],
+    deps = [
+	":libtest_gpuenvironment",
+        ":test_utils",
+        "//src:ovms_lib",
+	":libovmsoclutils",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS + ["-lOpenCL",
+        ] + select({
+            "//:redhat_build": [],
+            "//conditions:default": ["-DBUILD_VAAPITESTS=1"],
+	}), # + ["-isystem /usr/include"],
 )
 
 filegroup(

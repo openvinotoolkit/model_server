@@ -34,3 +34,11 @@ def distro_flag():
             "distro": "ubuntu",
         },
     )
+    more_selects.config_setting_negation(
+        name = "not_redhat_build",
+        negate = ":redhat_build",
+    )
+    more_selects.config_setting_negation(
+        name = "not_ubuntu_build",
+        negate = ":ubuntu_build",
+    )

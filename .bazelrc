@@ -99,3 +99,4 @@ build --check_visibility=true
 build --cxxopt=-DOVMS_DUMP_TO_FILE=0
 coverage --cxxopt=-DOVMS_DUMP_TO_FILE=0
 test --cxxopt=-DOVMS_DUMP_TO_FILE=0
+test --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
