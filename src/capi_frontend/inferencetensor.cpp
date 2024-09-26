@@ -20,6 +20,7 @@
 
 #include "../ovms.h"  // NOLINT
 #include "../status.hpp"
+#include "../logging.hpp"
 #include "buffer.hpp"
 
 namespace ovms {
@@ -36,7 +37,20 @@ Status InferenceTensor::setBuffer(const void* addr, size_t byteSize, OVMS_Buffer
     if (nullptr != this->buffer) {
         return StatusCode::DOUBLE_BUFFER_SET;
     }
-    this->buffer = std::make_unique<Buffer>(addr, byteSize, bufferType, deviceId, createCopy);
+    if (this->datatype == OVMS_DATATYPE_STRING) {
+            SPDLOG_ERROR("ER");
+        using type = std::vector<std::string>;
+        const type* cStringVector = reinterpret_cast<const type*>(addr);
+            SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("ER");
+        type* stringVector = const_cast<type*>(cStringVector);
+        this->buffer = std::make_unique<Buffer>(stringVector, createCopy);
+            SPDLOG_ERROR("ER");
+    } else {
+            SPDLOG_ERROR("ER");
+        this->buffer = std::make_unique<Buffer>(addr, byteSize, bufferType, deviceId, createCopy);
+    }
+            SPDLOG_ERROR("ER");
     return StatusCode::OK;
 }
 
