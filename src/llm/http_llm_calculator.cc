@@ -224,7 +224,11 @@ public:
                         cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
                     } else {  // finish generation
                         OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                        std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(this->streamer->end(), finishReason));
+                        std::string finalChunk = this->streamer->end();
+                        // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
+                        if (chunk.has_value())
+                            finalChunk = chunk.value() + finalChunk;
+                        std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(finalChunk, finishReason));
                         if (this->apiHandler->getStreamOptions().includeUsage)
                             response += packIntoServerSideEventMessage(this->apiHandler->serializeStreamingUsageChunk());
 

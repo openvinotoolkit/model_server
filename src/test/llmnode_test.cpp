@@ -150,18 +150,11 @@ std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 
 // --------------------------------------- OVMS LLM nodes tests
 
-// TODO: Test bad sampling configuration that would cause errors in step() phase. Need to replace hardcoded generation config
-// with user defined one to do that.
-// TODO: Test bad message or sampling configuration that would cause errors in add_request() phase. Need to replace hardcoded generation config
-// with user defined one to do that.
-// TODO: Consider stress testing - existing model server under heavy load to check notifications work us expected.
-//
-
 TEST_F(LLMFlowHttpTest, writeLogprobs) {
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
-    std::vector<float> inputs{-0.1, 0, 1, 5};
-    std::vector<std::string> expected{"null", "null", "0.0", "null"};
+    std::vector<float> inputs{-0.5, -100, 0, 5};
+    std::vector<std::string> expected{"-0.5", "-100.0", "0.0", "null"};
     for (size_t i = 0; i < inputs.size(); i++) {
         OpenAIChatCompletionsHandler::writeLogprob(writer, inputs[i]);
         EXPECT_EQ(buffer.GetString(), expected[i]);
@@ -520,7 +513,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonLogprobs) {
         ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"].IsArray());
         ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"][0].IsInt());
         ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"].IsArray());
-        ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"][0].IsObject());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"].Empty());
     }
 }
 
