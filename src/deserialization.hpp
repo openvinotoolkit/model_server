@@ -335,6 +335,7 @@ public:
         case ovms::Precision::U32:
         case ovms::Precision::U16:
         case ovms::Precision::BOOL:
+        case ovms::Precision::STRING:
         case ovms::Precision::U1:
         case ovms::Precision::U8: {
             return makeTensor(requestInput, tensorInfo, factories);

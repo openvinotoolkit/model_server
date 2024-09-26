@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #include "predict_request_validation_utils.hpp"
+
+#include "precision.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
@@ -828,11 +830,20 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
         SPDLOG_DEBUG(details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
+    if (expectedPrecision == Precision::STRING) {
+        SPDLOG_DEBUG("Skipping check for content size due to string precision");
+        return StatusCode::OK;
+    }
     size_t expectedValueCount = 1;
     for (size_t i = 0; i < tensor.getShape().size(); i++) {
         expectedValueCount *= tensor.getShape()[i];
     }
+    // TODO ifology for string
     size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+    SPDLOG_ERROR("ER:{}", ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size());
+    SPDLOG_ERROR("ER:{}", expectedValueCount);
+    SPDLOG_ERROR("ER:{}", toString(expectedPrecision));
+    SPDLOG_ERROR("ER:{}", toString(expectedPrecision));
     if (expectedContentSize != buffer->getByteSize()) {
         std::stringstream ss;
         ss << "Expected: " << expectedContentSize << " bytes; Actual: " << buffer->getByteSize() << " bytes; input name: " << getCurrentlyValidatedInputName();
@@ -930,9 +941,6 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid precision - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_PRECISION, details);
-    }
-    if (tensor.getDataType() == OVMS_DATATYPE_STRING) {
-        return Status(StatusCode::INVALID_PRECISION, "Inference on models using string precision input via C-API is unsupported");
     }
     return StatusCode::OK;
 }

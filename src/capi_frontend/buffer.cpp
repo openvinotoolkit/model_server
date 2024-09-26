@@ -18,31 +18,36 @@
 #include <cstring>
 #include <optional>
 
+#include "../logging.hpp"
+
 namespace ovms {
 Buffer::Buffer(const void* pptr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> bufferDeviceId, bool createCopy) :
-    ptr(createCopy ? nullptr : pptr),
     byteSize(byteSize),
     bufferType(bufferType),
-    bufferDeviceId(bufferDeviceId) {
+    bufferDeviceId(bufferDeviceId),
+    ownedCopy(createCopy ? std::make_unique<char[]>(byteSize) : nullptr),
+    ptr(createCopy ? ownedCopy.get() : const_cast<void*>(pptr)) {
     if (!createCopy)
         return;
-    ownedCopy = std::make_unique<char[]>(byteSize);
     std::memcpy(ownedCopy.get(), pptr, byteSize);
 }
 Buffer::Buffer(size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> bufferDeviceId) :
-    ptr(nullptr),
     byteSize(byteSize),
     bufferType(bufferType),
-    bufferDeviceId(bufferDeviceId) {
-    ownedCopy = std::make_unique<char[]>(byteSize);
-}
+    bufferDeviceId(bufferDeviceId),
+    ownedCopy(std::make_unique<char[]>(byteSize)),
+    ptr(ownedCopy.get()){};
 
 const void* Buffer::data() const {
-    return (ptr != nullptr) ? ptr : ownedCopy.get();
+    return ptr;
 }
 
 void* Buffer::data() {
-    return (ptr != nullptr) ? nullptr : ownedCopy.get();
+    if (holder) {
+        // TODO FIXME log
+        throw std::runtime_error("It is not supported to use Buffer with complex type with non const data extraction");
+    }
+    return const_cast<void*>(ptr);
 }
 
 size_t Buffer::getByteSize() const {
