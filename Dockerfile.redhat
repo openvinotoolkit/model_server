@@ -427,8 +427,6 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     # For image with Python enabled install Python library
     if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
         $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0 --nodocs; \
-        mkdir -p /ovms/lib/openvino-4.dist-info && \
-        echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.4' > /ovms/lib/openvino-2024.4.dist-info/METADATA ; \
     fi ; \
     $DNF_TOOL install -y shadow-utils; \
     cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
