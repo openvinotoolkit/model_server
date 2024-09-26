@@ -427,20 +427,8 @@ TEST_F(CAPIInference, Validation) {
 }
 
 TEST_F(CAPIInference, RejectStringPrecision) {
-    std::string port = "9000";
-    randomizePort(port);
-    OVMS_ServerSettings* serverSettings = nullptr;
-    OVMS_ModelsSettings* modelsSettings = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
-    ASSERT_NE(serverSettings, nullptr);
-    ASSERT_NE(modelsSettings, nullptr);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_string.json"));
-    OVMS_Server* cserver = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
-    ASSERT_NE(cserver, nullptr);
+    ServerGuard serverGuard("/ovms/src/test/c_api/config_string.json");
+    OVMS_Server* cserver = serverGuard.server;
     OVMS_InferenceRequest* request{nullptr};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "passthrough", 1));
     ASSERT_NE(nullptr, request);
@@ -451,7 +439,6 @@ TEST_F(CAPIInference, RejectStringPrecision) {
     OVMS_InferenceResponse* response = nullptr;
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_PRECISION);
     OVMS_InferenceRequestDelete(request);
-    OVMS_ServerDelete(cserver);
 }
 
 TEST_F(CAPIInference, TwoInputs) {
@@ -966,6 +953,55 @@ TEST_F(CAPIInference, NegativeInference) {
     OVMS_ServerDelete(nullptr);
     OVMS_ServerDelete(cserver);
     OVMS_ServerDelete(nullptr);
+}
+TEST_F(CAPIInference, String) {
+    ServerGuard serverGuard("/ovms/src/test/c_api/config_string.json");
+    OVMS_InferenceRequest* request{nullptr};
+    const std::string MODEL_NAME = "passthrough";
+    const std::string INPUT_NAME = "my_name";
+    const std::string OUTPUT_NAME = "my_name";
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, serverGuard.server, MODEL_NAME.c_str(), 1));
+    ASSERT_NE(nullptr, request);
+    //char* b = "awfdaohpawjfpawf1234asiefpawfj445pbvjep"; // ->
+    std::vector<std::string> data{{"Intel"}};
+
+    std::vector<int64_t> inShape{(int64_t)data.size()};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, INPUT_NAME.c_str(), OVMS_DATATYPE_STRING, inShape.data(), inShape.size()));
+    // setting buffer
+    uint32_t notUsedNum = 0;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, INPUT_NAME.c_str(), reinterpret_cast<void*>(&data[0]), int64_t(data.size()), OVMS_BUFFERTYPE_CPU, notUsedNum));
+
+    //////////////////
+    //  INFERENCE
+    //////////////////
+
+    OVMS_InferenceResponse* response = nullptr;
+    SPDLOG_ERROR("ER:{}", (void*) &data);
+    ASSERT_CAPI_STATUS_NULL(OVMS_Inference(serverGuard.server, request, &response));
+    // verify GetOutputCount
+    uint32_t outputCount = 42;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
+    ASSERT_EQ(outputCount, 1);
+    // verify GetOutput
+    const void* voutputData;
+    size_t bytesize = 42;
+    uint32_t outputId = 0;
+    OVMS_DataType datatype = (OVMS_DataType)199;
+    const int64_t* shape{nullptr};
+    size_t dimCount = 42;
+    OVMS_BufferType bufferType = (OVMS_BufferType)199;
+    uint32_t deviceId = 42;
+    const char* outputName{nullptr};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
+    ASSERT_EQ(std::string(OUTPUT_NAME.c_str()), outputName);
+    EXPECT_EQ(datatype, OVMS_DATATYPE_STRING);
+    EXPECT_EQ(dimCount, 1);
+    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
+    EXPECT_EQ(deviceId, 0);
+    EXPECT_EQ(bytesize, sizeof(float));  // TODO TBD what to do whith string
+    SPDLOG_ERROR("ER:{}", (void*)voutputData);
+    EXPECT_EQ(((std::vector<std::string>*)voutputData)->operator[](0), data[0]);
+    OVMS_InferenceResponseDelete(response);
 }
 
 TEST_F(CAPIInference, Scalar) {

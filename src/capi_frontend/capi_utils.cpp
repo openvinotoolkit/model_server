@@ -21,7 +21,6 @@
 #include <utility>
 
 #include "../logging.hpp"
-#include "../shape.hpp"
 #include "../status.hpp"
 #include "buffer.hpp"
 #include "inferencerequest.hpp"

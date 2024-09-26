@@ -308,6 +308,7 @@ Status serializePredictResponse(
         case ovms::Precision::U32:
         case ovms::Precision::U16:
         case ovms::Precision::U8:
+        case ovms::Precision::STRING:
             break;
         case ovms::Precision::BF16:
         case ovms::Precision::U4:
@@ -319,7 +320,6 @@ Status serializePredictResponse(
         case ovms::Precision::MIXED:
         case ovms::Precision::Q78:
         case ovms::Precision::BIN:
-        case ovms::Precision::STRING:
         default: {
             Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
             SPDLOG_ERROR(status.string());
