@@ -445,7 +445,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                         writer.Int(tokenBytes[j]);
                     writer.EndArray();  // ]
 
-                    // top_logprobs are currently hardcoded to return only one logprob to comply with the API
+                    // top_logprobs are currently hardcoded to return empty array to comply with the API
                     // for full support significant changes on GenAI side are required
                     writer.String("top_logprobs");
                     writer.StartArray();  // [
@@ -708,7 +708,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
 }
 
 void OpenAIChatCompletionsHandler::writeLogprob(Writer<StringBuffer>& writer, float logprob) {
-    // genai returns probs values which should be in the range of -inf-0
+    // genai returns logaritm of probability per token which should be in the range of -inf-0
     // other values could be potentially invalid and should be treated as such
     if (logprob <= 0.0)
         writer.Double(logprob);

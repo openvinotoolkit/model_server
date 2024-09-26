@@ -513,7 +513,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonLogprobs) {
         ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"].IsArray());
         ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"][0].IsInt());
         ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"].IsArray());
-        // ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"][0].IsObject());
+        ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"].Empty());
     }
 }
 
