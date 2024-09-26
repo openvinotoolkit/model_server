@@ -34,6 +34,17 @@ def create_config_settings():
         name = "not_disable_mediapipe",
         negate = ":disable_mediapipe",
     )
+    native.config_setting(
+        name = "disable_cloud",
+        define_values = {
+            "CLOUD_DISABLE": "1",
+        },
+        visibility = ["//visibility:public"],
+    )
+    more_selects.config_setting_negation(
+        name = "not_disable_cloud",
+        negate = ":disable_cloud",
+    )
     #To build without python use flags - bazel build --define PYTHON_DISABLE=1 //src:ovms
     native.config_setting(
         name = "disable_python",

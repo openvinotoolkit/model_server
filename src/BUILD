@@ -28,6 +28,9 @@ COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
 }) + select({
         "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
         "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+}) + select({
+        "//conditions:default": ["-DCLOUD_DISABLE=1"],
+        "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
 })
 
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
@@ -48,6 +51,9 @@ COPTS_TESTS = [
 }) + select({
         "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
         "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+}) + select({
+        "//conditions:default": ["-DCLOUD_DISABLE=1"],
+        "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
 })
 
 config_setting(
@@ -102,7 +108,7 @@ cc_shared_library(
         "@double_conversion//:__subpackages__",
         "@nsync//:__subpackages__",
         "@eigen_archive//:__subpackages__",
-        "@linux_openvino//:__subpackages__",
+        "//third_party:openvino//:__subpackages__",
         "@com_github_jupp0r_prometheus_cpp//:__subpackages__",
         "@//:__subpackages__",
         "@com_github_grpc_grpc//:__subpackages__",
@@ -118,7 +124,7 @@ cc_shared_library(
         "@ruy//:__subpackages__",
         "@azure//:__subpackages__",
         "@cpprest//:__subpackages__",
-        "@boringssl//:__subpackages__",
+        "//third_party:boringssl//:__subpackages__",
         "//third_party:opencv//:__subpackages__",
     ] + select({
         "//:not_disable_mediapipe": [
@@ -383,13 +389,18 @@ cc_library(
             "//src:libovmsprofiler",
             "libovmsstatus",
             "libovmsstring_utils",
-            "libovmsazurefilesystem",
             "libovmsmodelversioning",
 	    #"libovmsoclutils", # TODO decide if will need
             "libovmstensorfactory",
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
-        ] + select({
+         ] + select({
+                "//:not_disable_cloud": [
+                    "libovmsazurefilesystem",
+                    ],
+                "//:disable_cloud": []
+                }) 
+           + select({
             "//conditions:default": [
                 "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
                 "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
@@ -473,7 +484,7 @@ cc_library(
     name = "libovmsprecision",
     hdrs = ["precision.hpp"],
     srcs = ["precision.cpp",],
-    deps = ["@linux_openvino//:openvino",], # TODO dispose
+    deps = ["//third_party:openvino",], # TODO dispose
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
@@ -900,7 +911,7 @@ cc_library(
             "opencltensorfactory.cpp",
             "vaapitensorfactory.cpp",
     ],
-    deps = ["@linux_openvino//:openvino",
+    deps = ["//third_party:openvino",
             "libovmscapibuffer",
             "libovmslogging",
             "ovms_header",
@@ -933,7 +944,7 @@ cc_library( # make ovms_lib dependent, use share doptions
         "ocl_utils.cpp",
     ],
     deps = [
-            "@linux_openvino//:openvino",
+            "//third_party:openvino",
             "libovmslogging",
     ],
     visibility = ["//visibility:public"],
@@ -967,7 +978,7 @@ cc_library(
     hdrs = ["filesystem.hpp",],
     srcs = ["filesystem.cpp",],
     deps = [
-            "@boringssl//:ssl",
+            "//third_party:boringssl",
             "libovmslogging",
             "libovmsmodelversioning",
             "libovmsstatus",],
@@ -996,11 +1007,16 @@ cc_library(
     srcs = ["filesystemfactory.cpp",],
     deps = ["libovmsfilesystem",
             "libovmsstatus",
-            "libovmsazurefilesystem",
-            "libovmsgcsfilesystem",
-            "libovmss3filesystem",
             "libovmslocalfilesystem",
-            "libovmslogging"],
+            "libovmslogging"
+            ] + select({
+            "//:not_disable_cloud": [
+                "libovmsazurefilesystem",
+                "libovmsgcsfilesystem",
+                "libovmss3filesystem",
+                ],
+            "//:disable_cloud": []
+            }),
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
@@ -1015,7 +1031,7 @@ cc_library(
     srcs = ["json_parser.cpp"],
     deps = ["cpp_headers",
             "@com_github_tencent_rapidjson//:rapidjson",
-            "@linux_openvino//:openvino",
+            "//third_party:openvino",
             "@com_github_gabime_spdlog//:spdlog"],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,

@@ -41,20 +41,24 @@ cc_library(
         "@org_tensorflow//tensorflow/core:framework",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
-        "@aws-sdk-cpp//:aws-sdk-cpp",
-        "@aws-sdk-cpp//:aws-sdk-cpp_cmake",
-        "@azure//:storage",
-        "@cpprest//:sdk",
-        "@boost//:lib",
-        "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
-        "@linux_openvino//:openvino",
+        "//third_party:openvino",
         "//third_party:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
         ] + select({
+            "//:not_disable_cloud": [
+                "@aws-sdk-cpp//:aws-sdk-cpp",
+                "@aws-sdk-cpp//:aws-sdk-cpp_cmake",
+                "@azure//:storage",
+                "@cpprest//:sdk",
+                "@boost//:lib",
+                "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",],
+            "//:disable_cloud": []
+            })
+         + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework:calculator_framework",
                 "@mediapipe//mediapipe/framework/stream_handler:barrier_input_stream_handler",

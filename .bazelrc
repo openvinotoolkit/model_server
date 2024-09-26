@@ -55,6 +55,10 @@ build --define=MEDIAPIPE_DISABLE=0
 coverage --define=MEDIAPIPE_DISABLE=0
 test --define=MEDIAPIPE_DISABLE=0
 
+build --define=CLOUD_DISABLE=0
+coverage --define=CLOUD_DISABLE=0
+test --define=CLOUD_DISABLE=0
+
 build --define=PYTHON_DISABLE=0
 coverage --define=PYTHON_DISABLE=0
 test --define=PYTHON_DISABLE=0
@@ -91,7 +95,8 @@ build --cxxopt=-Werror=format-security
 build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 
 build --experimental_repo_remote_exec
-build --force_pic
+# TODO: Add equivalent windows flag
+build:linux --force_pic
 build --experimental_cc_shared_library
 
 build --check_visibility=true
