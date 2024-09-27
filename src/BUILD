@@ -73,9 +73,6 @@ cc_library(
     ],
     copts = [
         "-Wall",
-        "-Wno-unknown-pragmas",
-        "-Werror",
-        "-Wno-sign-compare",
     ],
 )
 
@@ -583,8 +580,6 @@ cc_binary(
     linkshared = 1,
     copts = [
         "-Wall",
-        "-Wno-unknown-pragmas",
-        "-Werror"
     ]
 )
 
@@ -602,8 +597,6 @@ cc_binary(
     linkshared = 1,
     copts = [
         "-Wall",
-        "-Wno-unknown-pragmas",
-        "-Werror"
     ]
 )
 
@@ -623,8 +616,6 @@ cc_binary(
     linkshared = 1,
     copts = [
         "-Wall",
-        "-Wno-unknown-pragmas",
-        "-Werror"
     ]
 )
 
@@ -647,8 +638,6 @@ cc_binary(
     linkshared = 1,
     copts = [
         "-Wall",
-        "-Wno-unknown-pragmas",
-        "-Werror"
     ]
 )
 
@@ -666,8 +655,6 @@ cc_binary(
     linkshared = 1,
     copts = [
         "-Wall",
-        "-Wno-unknown-pragmas",
-        "-Werror"
     ]
 )
 
@@ -685,8 +672,6 @@ cc_binary(
     linkshared = 1,
     copts = [
         "-Wall",
-        "-Wno-unknown-pragmas",
-        "-Werror"
     ]
 )
 
@@ -1092,16 +1077,20 @@ cc_binary(
     copts = [
         "-Wall",
         "-Wconversion",
-        "-Werror",
     ],
     deps = [
-        "//src:ovms_lib",
-        "//src:libcustom_node_east_ocr.so",
-        "//src:libcustom_node_face_blur.so",
-        "//src:libcustom_node_horizontal_ocr.so",
-        "//src:libcustom_node_model_zoo_intel_object_detection.so",
-        "//src:libcustom_node_image_transformation.so",
-    ] + select({
+        "//src:ovms_lib",]
+    + select({
+            "//conditions:default": [
+                "//src:libcustom_node_east_ocr.so",
+                "//src:libcustom_node_face_blur.so",
+                "//src:libcustom_node_horizontal_ocr.so",
+                "//src:libcustom_node_model_zoo_intel_object_detection.so",
+                "//src:libcustom_node_image_transformation.so",
+            ],
+            "//src:windows" : [],
+        })
+     + select({
             "//conditions:default": [
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
             ],
