@@ -1407,7 +1407,7 @@ cc_library(
     srcs = ["test/openvino_remote_tensors_tests.cpp"],
     data = [
         "test/c_api/config_standard_dummy.json",
-        "test/c_api/config_gpu_dummy.json",
+        "test/configs/config_gpu_dummy.json",
         "test/configs/config_gpu_face_detection_adas.json",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
