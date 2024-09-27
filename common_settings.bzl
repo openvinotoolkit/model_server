@@ -73,10 +73,10 @@ def create_config_settings():
 ###############################
 COMMON_STATIC_LIBS_COPTS = [
     "-Wall",
-    "-Wno-unknown-pragmas",
-    "-Wno-sign-compare",
+    # TODO: make linux specific "-Wno-unknown-pragmas", 
+    #"-Wno-sign-compare",
     "-fvisibility=hidden", # Needed for pybind targets
-    "-Werror",
+    #"-Werror",
 ]
 COMMON_STATIC_LIBS_LINKOPTS = [
         "-lxml2",

@@ -76,18 +76,22 @@ build --copt=-DGRPC_BAZEL_BUILD
 build --copt=-O2
 
 # LLVM, MLIR and TF require C++14, we use C++17 in project
-build --cxxopt=-std=c++17
-build --host_cxxopt=-std=c++17
+build:linux --cxxopt=-std=c++17
+build:linux --host_cxxopt=-std=c++17
+
+build:windows --cxxopt=/std:c++17
+build:windows --host_cxxopt=/std:c++17
 
 # Security options
-build --cxxopt=-fno-strict-overflow
-build --cxxopt=-fno-delete-null-pointer-checks
-build --cxxopt=-fwrapv
-build --cxxopt=-fstack-protector
-build --cxxopt=-fstack-clash-protection
-build --cxxopt=-Wformat
-build --cxxopt=-Wformat-security
-build --cxxopt=-Werror=format-security
+build:linux --cxxopt=-fno-strict-overflow
+build:linux --cxxopt=-fno-delete-null-pointer-checks
+build:linux --cxxopt=-fwrapv
+build:linux --cxxopt=-fstack-protector
+build:linux --cxxopt=-fstack-clash-protection
+# TODO: Add equivalent windows flag
+build:linux --cxxopt=-Wformat
+build:linux --cxxopt=-Wformat-security
+build:linux --cxxopt=-Werror=format-security
 
 # Adding "--cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0" creates parity with TF
 # compilation options. It also addresses memory use due to

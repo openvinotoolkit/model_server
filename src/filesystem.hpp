@@ -27,8 +27,6 @@
 #include "model_version_policy.hpp"
 #ifdef __linux__
 #include "openssl/md5.h"
-#else
-#include "MD5.h"
 #endif
 #include "status.hpp"
 
@@ -261,7 +259,7 @@ public:
         std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
 #pragma GCC diagnostic pop
 #else // Windows
-        std::string md5sum = md5(str);
+        std::string md5sum = std::hash(str);
 #endif
         return (md5sum);
     }
