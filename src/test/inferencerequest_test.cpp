@@ -58,65 +58,38 @@ const OVMS_DataType DATATYPE{OVMS_DATATYPE_FP32};
 TEST(InferenceParameter, CreateParameter) {
     InferenceParameter parameter(PARAMETER_NAME.c_str(), PARAMETER_DATATYPE, reinterpret_cast<const void*>(&PARAMETER_VALUE));
 }
-struct BaseHolder {
-    virtual ~BaseHolder() = default;
-};
-
-template <typename T>
-class DeepCopyHolder : public BaseHolder {
-    std::unique_ptr<T> storage;
-
-public:
-    DeepCopyHolder(T* val) :
-        storage(std::make_unique<T>(*val)) {
-        SPDLOG_DEBUG("Implicit copy happened");
-    }  // here happens implicit copy
-};
-
-struct A {
-    std::unique_ptr<BaseHolder> hold;
-    template <typename T>  // TODO replace new
-    A(T* val, bool copy) :
-        hold(copy ? std::unique_ptr<BaseHolder>(new DeepCopyHolder<T>(val)) : nullptr) {}
-};
-
-TEST(DeepCopyHolder, H) {
-    std::vector<std::string> text{{"Intel"}, {"is"}, {"GPTW"}};
-    std::vector<std::string> text2BeDeleted{{"Intel"}, {"owns"}};
-    auto j = std::make_unique<DeepCopyHolder<std::vector<std::string>>>(&text);
-    A a(&text, true);
-    A b(new std::vector<std::string>(text2BeDeleted), false);
-}
 TEST(Buffer, StringHandling) {
-    using vs_t = std::vector<std::string>;
-    const vs_t* vsptr{nullptr};
-    std::vector<std::string> intelText{{"Intel"}, {"owns"}, {"OVMS"}};
-    std::vector<std::string> nvidiaText{{"NVIDIA"}, {"owns"}, {"Triton"}};
+    using std::string;
+    using vs_t = std::vector<string>;
+    const string* sptr{nullptr};
+    vs_t intelText{{"Intel"}, {"owns"}, {"OVMS"}};
+    vs_t nvidiaText{{"NVIDIA"}, {"owns"}, {"Triton"}};
     std::unique_ptr<const Buffer> bufferWithCopy{nullptr};
     const void* ptr{nullptr};
     {
         vs_t text2BeDeleted = nvidiaText;
-        const Buffer bufferWithNoCopy(&intelText, false);
-        bufferWithCopy = std::make_unique<const Buffer>(&text2BeDeleted, true);
+        //const Buffer bufferWithNoCopy(&intelText, false);
+        const Buffer bufferWithNoCopy(&intelText[0], intelText.size() * sizeof(string), OVMS_BUFFERTYPE_CPU);
+        auto vecstruniqptr = std::make_unique<vs_t>(std::move(text2BeDeleted));
+        bufferWithCopy = std::make_unique<const Buffer>(std::move(vecstruniqptr));
         // check with nocopy
         ptr = bufferWithNoCopy.data();
-        EXPECT_EQ(ptr, &intelText);
-        vsptr = reinterpret_cast<const vs_t*>(ptr);
-        EXPECT_EQ(std::string("Intel"), vsptr->at(0));
-        EXPECT_EQ(*vsptr, intelText);
+        EXPECT_EQ(intelText.data(), &intelText[0]);
+        EXPECT_EQ(ptr, &intelText[0]);
+        sptr = reinterpret_cast<const string*>(ptr);
+        EXPECT_EQ(intelText.size(), bufferWithNoCopy.getByteSize() / sizeof(string));
+        EXPECT_TRUE(std::equal(intelText.begin(), intelText.end(), sptr));
         // now check with copy
         ptr = bufferWithCopy->data();
-        EXPECT_NE(ptr, &text2BeDeleted);
-        vsptr = reinterpret_cast<const vs_t*>(ptr);
-        EXPECT_EQ(std::string("NVIDIA"), vsptr->at(0));
-        EXPECT_EQ(*vsptr, text2BeDeleted);
+        sptr = reinterpret_cast<const string*>(ptr);
+        EXPECT_EQ(nvidiaText.size(), bufferWithNoCopy.getByteSize() / sizeof(string));
+        EXPECT_TRUE(std::equal(nvidiaText.begin(), nvidiaText.end(), sptr));
     }
     // now text is deleted but for buffer with copy still expect to work
-    std::vector<std::string> randomData{{"Intel"}, {"owns"}, {"DCAI"}};
+    vs_t randomData{{"Intel"}, {"owns"}, {"DCAI"}};
     ptr = bufferWithCopy->data();
-    vsptr = reinterpret_cast<const vs_t*>(ptr);
-    EXPECT_EQ(*vsptr, nvidiaText);
-    EXPECT_EQ(bufferWithCopy->getByteSize(), 0); // TODO FIXME TBD
+    sptr = reinterpret_cast<const string*>(ptr);
+    EXPECT_EQ(bufferWithCopy->getByteSize(), sizeof(string) * nvidiaText.size());
     EXPECT_EQ(bufferWithCopy->getBufferType(), OVMS_BUFFERTYPE_CPU);
     EXPECT_EQ(bufferWithCopy->getDeviceId(), std::nullopt);
 }

@@ -18,9 +18,9 @@
 #include <optional>
 #include <utility>
 
+#include "../logging.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../status.hpp"
-#include "../logging.hpp"
 #include "buffer.hpp"
 
 namespace ovms {
@@ -37,20 +37,14 @@ Status InferenceTensor::setBuffer(const void* addr, size_t byteSize, OVMS_Buffer
     if (nullptr != this->buffer) {
         return StatusCode::DOUBLE_BUFFER_SET;
     }
-    if (this->datatype == OVMS_DATATYPE_STRING) {
-            SPDLOG_ERROR("ER");
+    if (createCopy && this->datatype == OVMS_DATATYPE_STRING) {
         using type = std::vector<std::string>;
-        const type* cStringVector = reinterpret_cast<const type*>(addr);
-            SPDLOG_ERROR("ER");
-        SPDLOG_ERROR("ER");
-        type* stringVector = const_cast<type*>(cStringVector);
-        this->buffer = std::make_unique<Buffer>(stringVector, createCopy);
-            SPDLOG_ERROR("ER");
+        auto cstrptr = reinterpret_cast<const std::string*>(addr);
+        auto uniqarraystrptr = std::make_unique<type>(cstrptr, cstrptr + (byteSize / sizeof(std::string)));
+        this->buffer = std::make_unique<Buffer>(std::move(uniqarraystrptr));
     } else {
-            SPDLOG_ERROR("ER");
         this->buffer = std::make_unique<Buffer>(addr, byteSize, bufferType, deviceId, createCopy);
     }
-            SPDLOG_ERROR("ER");
     return StatusCode::OK;
 }
 

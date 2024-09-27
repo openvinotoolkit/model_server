@@ -43,10 +43,6 @@ const void* Buffer::data() const {
 }
 
 void* Buffer::data() {
-    if (holder) {
-        // TODO FIXME log
-        throw std::runtime_error("It is not supported to use Buffer with complex type with non const data extraction");
-    }
     return const_cast<void*>(ptr);
 }
 

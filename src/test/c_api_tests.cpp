@@ -432,12 +432,13 @@ TEST_F(CAPIInference, RejectStringPrecision) {
     OVMS_InferenceRequest* request{nullptr};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "passthrough", 1));
     ASSERT_NE(nullptr, request);
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, OVMS_DATATYPE_STRING, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
-    std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::array<int64_t, 1> shape{1};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, OVMS_DATATYPE_STRING, shape.data(), shape.size()));
+    std::array<std::string, 1> data{"RandomString"};
     uint32_t notUsedNum = 0;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
     OVMS_InferenceResponse* response = nullptr;
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_PRECISION);
+    ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
     OVMS_InferenceRequestDelete(request);
 }
 
@@ -931,16 +932,22 @@ TEST_F(CAPIInference, NegativeInference) {
     OVMS_ServerDelete(cserver);
     OVMS_ServerDelete(nullptr);
 }
+TEST(OpenVINO2, String) {
+    std::vector<std::string> data{{"Intel"}, {"CCGafawfaw"}};
+    ov::Shape shape{2};
+    ov::Tensor t(ov::element::string, shape, data.data());
+    SPDLOG_ERROR("ER:{} {} {} sizeof:{}", t.get_byte_size(), t.get_size(), t.get_shape()[0], sizeof(std::string));
+}
 TEST_F(CAPIInference, String) {
+    using std::string;
     ServerGuard serverGuard("/ovms/src/test/c_api/config_string.json");
     OVMS_InferenceRequest* request{nullptr};
-    const std::string MODEL_NAME = "passthrough";
-    const std::string INPUT_NAME = "my_name";
-    const std::string OUTPUT_NAME = "my_name";
+    const string MODEL_NAME = "passthrough";
+    const string INPUT_NAME = "my_name";
+    const string OUTPUT_NAME = "my_name";
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, serverGuard.server, MODEL_NAME.c_str(), 1));
     ASSERT_NE(nullptr, request);
-    //char* b = "awfdaohpawjfpawf1234asiefpawfj445pbvjep"; // ->
-    std::vector<std::string> data{{"Intel"}};
+    std::vector<string> data{{"Intel"}, {"CCG"}};
 
     std::vector<int64_t> inShape{(int64_t)data.size()};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, INPUT_NAME.c_str(), OVMS_DATATYPE_STRING, inShape.data(), inShape.size()));
@@ -953,7 +960,7 @@ TEST_F(CAPIInference, String) {
     //////////////////
 
     OVMS_InferenceResponse* response = nullptr;
-    SPDLOG_ERROR("ER:{}", (void*) &data);
+    SPDLOG_ERROR("ER:{}", (void*)&data);
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(serverGuard.server, request, &response));
     // verify GetOutputCount
     uint32_t outputCount = 42;
@@ -970,14 +977,15 @@ TEST_F(CAPIInference, String) {
     uint32_t deviceId = 42;
     const char* outputName{nullptr};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
-    ASSERT_EQ(std::string(OUTPUT_NAME.c_str()), outputName);
+    ASSERT_EQ(string(OUTPUT_NAME.c_str()), outputName);
     EXPECT_EQ(datatype, OVMS_DATATYPE_STRING);
     EXPECT_EQ(dimCount, 1);
     EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
     EXPECT_EQ(deviceId, 0);
-    EXPECT_EQ(bytesize, sizeof(float));  // TODO TBD what to do whith string
+    EXPECT_EQ(bytesize, sizeof(string) * data.size());  // TODO TBD what to do whith string
     SPDLOG_ERROR("ER:{}", (void*)voutputData);
-    EXPECT_EQ(((std::vector<std::string>*)voutputData)->operator[](0), data[0]);
+    EXPECT_EQ(data.size(), bytesize / sizeof(string));
+    EXPECT_TRUE(std::equal(data.begin(), data.end(), reinterpret_cast<const string*>(voutputData)));
     OVMS_InferenceResponseDelete(response);
 }
 

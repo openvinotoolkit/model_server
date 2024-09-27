@@ -207,6 +207,7 @@ Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::str
             (nullptr != outputNameFromCapiTensor) &&
             (name == *outputNameFromCapiTensor)) {
             auto consolidatedBuffer = std::make_unique<Buffer>(size, OVMS_BUFFERTYPE_CPU, std::nullopt);
+            // TODO FIXME string handling
             bufferOut = reinterpret_cast<char*>(consolidatedBuffer->data());
             outputTensor->setBuffer(std::move(consolidatedBuffer));
             return StatusCode::OK;
