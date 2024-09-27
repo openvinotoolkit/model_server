@@ -209,7 +209,7 @@ public:
                     ov::genai::GenerationOutputs generationOutputs = this->generationHandle->read();
                     RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
                     RET_CHECK(generationOutputs.begin()->second.generated_ids.size() == 1);
-                    this->apiHandler->incrementCompletionTokensUsage();
+                    this->apiHandler->incrementProcessedTokens();
 
                     // TODO(dkalinow): Move this logic to CB library
                     auto generationOutput = generationOutputs.begin()->second;
