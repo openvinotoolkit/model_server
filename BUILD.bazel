@@ -38,7 +38,7 @@ cc_library(
         "@minitrace//:trace",
         "@com_github_grpc_grpc//:grpc++",
         "@com_github_tencent_rapidjson//:rapidjson",
-        "@org_tensorflow//tensorflow/core:framework",
+        # TODO: enable "@org_tensorflow//tensorflow/core:framework",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",

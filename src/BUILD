@@ -726,7 +726,7 @@ cc_library(
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
         "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
-        "@org_tensorflow//tensorflow/core:framework", # Eigen Tensor
+        # TODO: enable "@org_tensorflow//tensorflow/core:framework", # Eigen Tensor
         "libovmslogging",
         "libovmsprofiler",
         "libovmsstatus",
