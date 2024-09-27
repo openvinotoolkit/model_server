@@ -2447,17 +2447,17 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     std::cout << "------------------------A--------------------\n";
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
     std::cout << "------------------------B--------------------\n";
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
-    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 8);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
-    ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, false);
-    ASSERT_EQ(nodeResources->device, "CPU");
-    ASSERT_EQ(nodeResources->pluginConfig.size(), 0);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_batched_tokens, 256);
+    ASSERT_EQ(nodeResources.schedulerConfig.cache_size, 8);
+    ASSERT_EQ(nodeResources.schedulerConfig.block_size, 32);
+    ASSERT_EQ(nodeResources.schedulerConfig.dynamic_split_fuse, true);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources.schedulerConfig.enable_prefix_caching, false);
+    ASSERT_EQ(nodeResources.device, "CPU");
+    ASSERT_EQ(nodeResources.pluginConfig.size(), 0);
 }
 
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
@@ -2500,14 +2500,14 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
-    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 16);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_batched_tokens, 98);
+    ASSERT_EQ(nodeResources.schedulerConfig.cache_size, 1);
+    ASSERT_EQ(nodeResources.schedulerConfig.block_size, 16);
+    ASSERT_EQ(nodeResources.schedulerConfig.dynamic_split_fuse, true);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_seqs, 256);
     // TODO: Check plugin config
 }
 
@@ -2550,7 +2550,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
 }
 
@@ -2597,15 +2597,15 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 1024);
-    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
-    ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, true);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_batched_tokens, 1024);
+    ASSERT_EQ(nodeResources.schedulerConfig.cache_size, 1);
+    ASSERT_EQ(nodeResources.schedulerConfig.block_size, 8);
+    ASSERT_EQ(nodeResources.schedulerConfig.dynamic_split_fuse, false);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_seqs, 95);
+    ASSERT_EQ(nodeResources.schedulerConfig.enable_prefix_caching, true);
 }
 
 class GetPromptTokensString : public ::testing::Test {

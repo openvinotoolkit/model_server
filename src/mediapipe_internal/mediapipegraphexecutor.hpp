@@ -296,7 +296,7 @@ public:
                             numberOfPacketsCreated),
                         "partial deserialization of subsequent requests", isSuccess);
                 } else {
-                    OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(pstatus, "validate subsequent requests", isSuccess);
+                    OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(std::move(pstatus), "validate subsequent requests", isSuccess);
                 }
                 INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, isSuccess));
 
