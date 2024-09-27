@@ -53,6 +53,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     if (request.logprobs && request.stream) {
         return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
     }
+
     return absl::OkStatus();
 }
 
@@ -150,6 +151,14 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
         request.ignoreEOS = it->value.GetBool();
     }
 
+    // echo: bool; optional - defaults to false
+    it = doc.FindMember("echo");
+    if (it != doc.MemberEnd()) {
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("echo accepts values true or false");
+        request.echo = it->value.GetBool();
+    }
+
     // max_tokens: uint; optional
     it = doc.FindMember("max_tokens");
     if (it != doc.MemberEnd()) {
@@ -158,8 +167,10 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
                 return absl::InvalidArgumentError("max_tokens value can't be greater than 4294967295");
             return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
         }
-        if (it->value.GetUint() == 0)
-            return absl::InvalidArgumentError("max_tokens value should be greater than 0");
+        if (it->value.GetUint() == 0) {
+            if (!request.echo)
+                return absl::InvalidArgumentError("max_tokens value should be greater than 0");
+        }
         if (!(it->value.GetUint() < maxTokensLimit))
             return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit));
         request.maxTokens = it->value.GetUint();
@@ -357,8 +368,10 @@ void OpenAIChatCompletionsHandler::setPromptTokensUsage(int promptTokens) {
     usage.promptTokens = promptTokens;
 }
 
-void OpenAIChatCompletionsHandler::incrementCompletionTokensUsage() {
-    usage.completionTokens++;
+void OpenAIChatCompletionsHandler::incrementProcessedTokens() {
+    processedTokens++;
+    if(!request.echo || processedTokens > usage.promptTokens)
+        usage.completionTokens++;
 }
 
 ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig() const {
@@ -398,6 +411,8 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
 
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
         usage.completionTokens += generationOutput.generated_ids.size();
+        if (request.echo)
+            usage.completionTokens -= usage.promptTokens;
         std::string completeResponse = tokenizer.decode(generationOutput.generated_ids);
         writer.StartObject();  // {
         // finish_reason: string;
