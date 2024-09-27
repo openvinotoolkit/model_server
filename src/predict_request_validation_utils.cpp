@@ -830,20 +830,12 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
         SPDLOG_DEBUG(details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
-    if (expectedPrecision == Precision::STRING) {
-        SPDLOG_DEBUG("Skipping check for content size due to string precision");
-        return StatusCode::OK;
-    }
     size_t expectedValueCount = 1;
     for (size_t i = 0; i < tensor.getShape().size(); i++) {
         expectedValueCount *= tensor.getShape()[i];
     }
-    // TODO ifology for string
-    size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
-    SPDLOG_ERROR("ER:{}", ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size());
-    SPDLOG_ERROR("ER:{}", expectedValueCount);
-    SPDLOG_ERROR("ER:{}", toString(expectedPrecision));
-    SPDLOG_ERROR("ER:{}", toString(expectedPrecision));
+    size_t elementSize = (expectedPrecision == Precision::STRING) ? sizeof(std::string) : ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+    size_t expectedContentSize = expectedValueCount * elementSize;
     if (expectedContentSize != buffer->getByteSize()) {
         std::stringstream ss;
         ss << "Expected: " << expectedContentSize << " bytes; Actual: " << buffer->getByteSize() << " bytes; input name: " << getCurrentlyValidatedInputName();

@@ -426,7 +426,7 @@ TEST_F(CAPIInference, Validation) {
     OVMS_ServerDelete(cserver);
 }
 
-TEST_F(CAPIInference, RejectStringPrecision) {
+TEST_F(CAPIInference, AcceptStringPrecision) {
     ServerGuard serverGuard("/ovms/src/test/c_api/config_string.json");
     OVMS_Server* cserver = serverGuard.server;
     OVMS_InferenceRequest* request{nullptr};
@@ -436,7 +436,7 @@ TEST_F(CAPIInference, RejectStringPrecision) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, OVMS_DATATYPE_STRING, shape.data(), shape.size()));
     std::array<std::string, 1> data{"RandomString"};
     uint32_t notUsedNum = 0;
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(std::string) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
     OVMS_InferenceResponse* response = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
     OVMS_InferenceRequestDelete(request);
@@ -946,7 +946,7 @@ TEST_F(CAPIInference, String) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, INPUT_NAME.c_str(), OVMS_DATATYPE_STRING, inShape.data(), inShape.size()));
     // setting buffer
     uint32_t notUsedNum = 0;
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, INPUT_NAME.c_str(), reinterpret_cast<void*>(&data[0]), int64_t(data.size()), OVMS_BUFFERTYPE_CPU, notUsedNum));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, INPUT_NAME.c_str(), reinterpret_cast<void*>(&data[0]), int64_t(data.size() * sizeof(std::string)), OVMS_BUFFERTYPE_CPU, notUsedNum));
     //////////////////
     //  INFERENCE
     //////////////////
