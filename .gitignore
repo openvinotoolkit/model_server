@@ -27,4 +27,5 @@ tags
 .venv-style/
 src/test/llm_testing
 node_modules/
-yarn.lock
+yarn.*
+bazel-openvino-model-server
