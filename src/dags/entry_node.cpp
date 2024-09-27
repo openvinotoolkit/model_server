@@ -44,7 +44,6 @@
 namespace ovms {
 
 const std::string ENTRY_NODE_NAME = "request";
-
 template <typename RequestType>
 Status EntryNode<RequestType>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
     OVMS_PROFILE_FUNCTION();

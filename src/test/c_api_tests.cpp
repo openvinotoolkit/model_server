@@ -948,17 +948,14 @@ TEST_F(CAPIInference, String) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, serverGuard.server, MODEL_NAME.c_str(), 1));
     ASSERT_NE(nullptr, request);
     std::vector<string> data{{"Intel"}, {"CCG"}};
-
     std::vector<int64_t> inShape{(int64_t)data.size()};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, INPUT_NAME.c_str(), OVMS_DATATYPE_STRING, inShape.data(), inShape.size()));
     // setting buffer
     uint32_t notUsedNum = 0;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, INPUT_NAME.c_str(), reinterpret_cast<void*>(&data[0]), int64_t(data.size()), OVMS_BUFFERTYPE_CPU, notUsedNum));
-
     //////////////////
     //  INFERENCE
     //////////////////
-
     OVMS_InferenceResponse* response = nullptr;
     SPDLOG_ERROR("ER:{}", (void*)&data);
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(serverGuard.server, request, &response));
@@ -982,13 +979,26 @@ TEST_F(CAPIInference, String) {
     EXPECT_EQ(dimCount, 1);
     EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
     EXPECT_EQ(deviceId, 0);
-    EXPECT_EQ(bytesize, sizeof(string) * data.size());  // TODO TBD what to do whith string
-    SPDLOG_ERROR("ER:{}", (void*)voutputData);
+    EXPECT_EQ(bytesize, sizeof(string) * data.size());
     EXPECT_EQ(data.size(), bytesize / sizeof(string));
     EXPECT_TRUE(std::equal(data.begin(), data.end(), reinterpret_cast<const string*>(voutputData)));
+    // now perform second inference and then check if first output is still ok
+    OVMS_InferenceResponse* response2 = nullptr;
+    const std::vector<std::string> originalData = data;
+    // request still points to original data
+    data[0] = "Habana";
+    data[1] = "Gaudi";
+    ASSERT_CAPI_STATUS_NULL(OVMS_Inference(serverGuard.server, request, &response2));
+    const void* voutputData2;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response2, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData2, &bytesize, &bufferType, &deviceId));
+    EXPECT_EQ(bytesize, sizeof(string) * data.size());
+    EXPECT_EQ(data.size(), bytesize / sizeof(string));
+    EXPECT_TRUE(std::equal(data.begin(), data.end(), reinterpret_cast<const string*>(voutputData2)));
+    // now we check previous response ensuring copy on output
+    EXPECT_TRUE(std::equal(originalData.begin(), originalData.end(), reinterpret_cast<const string*>(voutputData)));
     OVMS_InferenceResponseDelete(response);
+    OVMS_InferenceResponseDelete(response2);
 }
-
 TEST_F(CAPIInference, Scalar) {
     //////////////////////
     // start server

@@ -16,9 +16,11 @@
 //*****************************************************************************
 #include <memory>
 #include <optional>
+#include <string>
 #include <typeinfo>
+#include <utility>
+#include <vector>
 
-#include "../logging.hpp"
 #include "../ovms.h"  // NOLINT
 namespace ovms {
 class Buffer {
@@ -30,12 +32,7 @@ class Buffer {
     const void* ptr{nullptr};
 
 public:
-    Buffer(std::unique_ptr<std::vector<std::string>>&& values) :
-        byteSize(values->size() * sizeof(std::string)),
-        bufferType(OVMS_BUFFERTYPE_CPU),
-        stringVec(std::move(values)),
-        ptr(stringVec->data()) {
-    }
+    Buffer(std::unique_ptr<std::vector<std::string>>&& values);
     Buffer(const void* ptr, size_t byteSize, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt, bool createCopy = false);
     Buffer(size_t byteSize, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt);
     ~Buffer();

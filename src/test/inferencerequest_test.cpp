@@ -68,7 +68,6 @@ TEST(Buffer, StringHandling) {
     const void* ptr{nullptr};
     {
         vs_t text2BeDeleted = nvidiaText;
-        //const Buffer bufferWithNoCopy(&intelText, false);
         const Buffer bufferWithNoCopy(&intelText[0], intelText.size() * sizeof(string), OVMS_BUFFERTYPE_CPU);
         auto vecstruniqptr = std::make_unique<vs_t>(std::move(text2BeDeleted));
         bufferWithCopy = std::make_unique<const Buffer>(std::move(vecstruniqptr));
@@ -171,9 +170,7 @@ TEST(InferenceRequest, CreateInferenceRequest) {
     status = request.addInput(INPUT_NAME.c_str(), OVMS_DATATYPE_STRING, stringShape.data(), stringShape.size());
     ASSERT_EQ(status, StatusCode::OK) << status.string();
     // set input buffer
-    //status = request.setInputBuffer(INPUT_NAME.c_str(), INPUT_DATA.data(), INPUT_DATA.size() * sizeof(float), OVMS_BUFFERTYPE_CPU, std::nullopt);
-    //status = request.setInputBuffer(INPUT_NAME.c_str(), &string, OVMS_BUFFERTYPE_CPU, std::nullopt);a
-
+    status = request.setInputBuffer(INPUT_NAME.c_str(), strings.data(), strings.size() * sizeof(float), OVMS_BUFFERTYPE_CPU, std::nullopt);
     ASSERT_EQ(status, StatusCode::OK) << status.string();
 }
 TEST(InferenceResponse, CreateAndReadData) {

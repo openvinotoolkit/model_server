@@ -16,11 +16,17 @@
 #include "buffer.hpp"
 
 #include <cstring>
-#include <optional>
+#include <utility>
 
 #include "../logging.hpp"
 
 namespace ovms {
+Buffer::Buffer(std::unique_ptr<std::vector<std::string>>&& values) :
+    byteSize(values->size() * sizeof(std::string)),
+    bufferType(OVMS_BUFFERTYPE_CPU),
+    stringVec(std::move(values)),
+    ptr(stringVec->data()) {
+}
 Buffer::Buffer(const void* pptr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> bufferDeviceId, bool createCopy) :
     byteSize(byteSize),
     bufferType(bufferType),
@@ -36,8 +42,8 @@ Buffer::Buffer(size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32
     bufferType(bufferType),
     bufferDeviceId(bufferDeviceId),
     ownedCopy(std::make_unique<char[]>(byteSize)),
-    ptr(ownedCopy.get()){};
-
+    ptr(ownedCopy.get()) {
+}
 const void* Buffer::data() const {
     return ptr;
 }
