@@ -131,3 +131,8 @@ struct ServerGuard {
     }
     OVMS_Server* server{nullptr};
 };
+struct CallbackUnblockingStruct {
+    std::promise<uint32_t> signal;
+    void* bufferAddr = nullptr;
+};
+void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);

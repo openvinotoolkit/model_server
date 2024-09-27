@@ -47,15 +47,9 @@ Buffer::Buffer(size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32
 const void* Buffer::data() const {
     return ptr;
 }
-
-void* Buffer::data() {
-    return const_cast<void*>(ptr);
-}
-
 size_t Buffer::getByteSize() const {
     return byteSize;
 }
-
 OVMS_BufferType Buffer::getBufferType() const {
     return this->bufferType;
 }

@@ -37,7 +37,6 @@ public:
     Buffer(size_t byteSize, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt);
     ~Buffer();
     const void* data() const;
-    void* data();
     OVMS_BufferType getBufferType() const;
     const std::optional<uint32_t>& getDeviceId() const;
     size_t getByteSize() const;

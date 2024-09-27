@@ -1243,7 +1243,6 @@ cc_test(
     srcs = [
         "test/azurefilesystem_test.cpp",
         "test/tensor_conversion_test.cpp",
-        "test/c_api_test_utils.hpp",
         "test/c_api_tests.cpp",
         "test/c_api_stress_tests.cpp",
         "test/custom_loader_test.cpp",
@@ -1442,6 +1441,7 @@ cc_test(
         "-lssl",
     ],
     deps = [
+            ":openvino_tests",
             ":openvino_remote_tensors_tests",
             ":inferencerequest_test",
 	":libtest_environment",
@@ -1489,6 +1489,7 @@ cc_library(
         "test/stress_test_utils.hpp",
         ],
     srcs = [
+        "test/c_api_test_utils.cpp",
         "test/test_utils.cpp",
         ],
     data = [
@@ -1605,7 +1606,25 @@ filegroup(
     "//src:libcustom_node_image_transformation.so",
   ]
 )
-
+cc_library(
+    name = "openvino_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/openvino_tests.cpp"],
+    data = [
+        "test/c_api/config_standard_dummy.json",
+        "test/c_api/config_gpu_dummy.json",
+        "test/dummy/1/dummy.xml",
+        "test/dummy/1/dummy.bin",
+    ],
+    deps = [
+        ":test_utils",
+        "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+    linkopts = [],
+)
 filegroup(
   name = "static_analysis",
   srcs = [

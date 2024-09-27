@@ -932,12 +932,6 @@ TEST_F(CAPIInference, NegativeInference) {
     OVMS_ServerDelete(cserver);
     OVMS_ServerDelete(nullptr);
 }
-TEST(OpenVINO2, String) {
-    std::vector<std::string> data{{"Intel"}, {"CCGafawfaw"}};
-    ov::Shape shape{2};
-    ov::Tensor t(ov::element::string, shape, data.data());
-    SPDLOG_ERROR("ER:{} {} {} sizeof:{}", t.get_byte_size(), t.get_size(), t.get_shape()[0], sizeof(std::string));
-}
 TEST_F(CAPIInference, String) {
     using std::string;
     ServerGuard serverGuard("/ovms/src/test/c_api/config_string.json");
