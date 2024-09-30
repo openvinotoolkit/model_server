@@ -40,6 +40,9 @@ Status InferenceRequest::addInput(const char* name, OVMS_DataType datatype, cons
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
 }
 Status InferenceRequest::addOutput(const char* name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount) {
+    if (datatype == OVMS_DATATYPE_STRING) {
+        return Status(StatusCode::NOT_IMPLEMENTED, "String is not supported for setting outputs in C-API");
+    }
     auto [it, emplaced] = outputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
 }
