@@ -262,6 +262,7 @@ Status serializePredictResponse(
             OVMS_BUFFERTYPE_CPU,
             std::nullopt,
             true);
+        OV_LOGGER("ov::Tensor:{} data():{}, ov::Tensor::get_byte_size():{}", (void*)&tensor, tensor.data(), tensor.get_byte_size());
     }
     return StatusCode::OK;
 }

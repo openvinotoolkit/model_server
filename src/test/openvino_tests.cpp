@@ -34,7 +34,7 @@ TEST_F(OpenVINO, String) {
     std::vector<std::string> data{{"Intel"}, {"CCGafawfaw"}, {"aba"}};
     ov::Shape shape{3};
     ov::Tensor t(ov::element::string, shape, data.data());
-    EXPECT_EQ(t.get_byte_size() + 1, data.size() * sizeof(std::string));
+    EXPECT_EQ(t.get_byte_size(), data.size() * sizeof(std::string));
 }
 TEST_F(OpenVINO, CallbacksTest) {
     Core core;

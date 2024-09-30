@@ -992,6 +992,8 @@ TEST_F(CAPIInference, String) {
     EXPECT_TRUE(std::equal(originalData.begin(), originalData.end(), reinterpret_cast<const string*>(voutputData)));
     OVMS_InferenceResponseDelete(response);
     OVMS_InferenceResponseDelete(response2);
+    // test setting output
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddOutput(request, INPUT_NAME.c_str(), OVMS_DATATYPE_STRING, inShape.data(), inShape.size()), StatusCode::NOT_IMPLEMENTED);
 }
 TEST_F(CAPIInference, Scalar) {
     //////////////////////
