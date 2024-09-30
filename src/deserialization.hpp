@@ -389,7 +389,9 @@ std::tuple<ovms::Status, const typename RequestTraits<ovms::InferenceRequest>::T
     }
     }
     if ((!status.ok() || requestTensorPtr == nullptr)) {
-        SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+        if (extractChoice == ExtractChoice::EXTRACT_INPUT) {
+            SPDLOG_DEBUG("Failed to deserialize request. Validation of request failed");
+        }
         return std::make_tuple(Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request"), nullptr, nullptr);
     }
     return std::make_tuple(Status(StatusCode::OK), requestTensorPtr, nullptr);
