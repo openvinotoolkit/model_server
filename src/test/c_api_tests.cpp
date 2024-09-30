@@ -425,8 +425,7 @@ TEST_F(CAPIInference, Validation) {
     OVMS_InferenceRequestDelete(request);
     OVMS_ServerDelete(cserver);
 }
-
-TEST_F(CAPIInference, AcceptStringPrecision) {
+TEST_F(CAPIInference, AcceptInputRejectOutputStringPrecision) {
     ServerGuard serverGuard("/ovms/src/test/c_api/config_string.json");
     OVMS_Server* cserver = serverGuard.server;
     OVMS_InferenceRequest* request{nullptr};
@@ -439,6 +438,7 @@ TEST_F(CAPIInference, AcceptStringPrecision) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, PASSTHROUGH_STRING_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(std::string) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
     OVMS_InferenceResponse* response = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddOutput(request, PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, OVMS_DATATYPE_STRING, shape.data(), shape.size()), StatusCode::NOT_IMPLEMENTED);
     OVMS_InferenceRequestDelete(request);
 }
 
@@ -951,7 +951,6 @@ TEST_F(CAPIInference, String) {
     //  INFERENCE
     //////////////////
     OVMS_InferenceResponse* response = nullptr;
-    SPDLOG_ERROR("ER:{}", (void*)&data);
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(serverGuard.server, request, &response));
     // verify GetOutputCount
     uint32_t outputCount = 42;
@@ -985,6 +984,11 @@ TEST_F(CAPIInference, String) {
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(serverGuard.server, request, &response2));
     const void* voutputData2;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response2, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData2, &bytesize, &bufferType, &deviceId));
+    ASSERT_EQ(string(OUTPUT_NAME.c_str()), outputName);
+    EXPECT_EQ(datatype, OVMS_DATATYPE_STRING);
+    EXPECT_EQ(dimCount, 1);
+    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
+    EXPECT_EQ(deviceId, 0);
     EXPECT_EQ(bytesize, sizeof(string) * data.size());
     EXPECT_EQ(data.size(), bytesize / sizeof(string));
     EXPECT_TRUE(std::equal(data.begin(), data.end(), reinterpret_cast<const string*>(voutputData2)));
@@ -992,8 +996,6 @@ TEST_F(CAPIInference, String) {
     EXPECT_TRUE(std::equal(originalData.begin(), originalData.end(), reinterpret_cast<const string*>(voutputData)));
     OVMS_InferenceResponseDelete(response);
     OVMS_InferenceResponseDelete(response2);
-    // test setting output
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestAddOutput(request, INPUT_NAME.c_str(), OVMS_DATATYPE_STRING, inShape.data(), inShape.size()), StatusCode::NOT_IMPLEMENTED);
 }
 TEST_F(CAPIInference, Scalar) {
     //////////////////////
