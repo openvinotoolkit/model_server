@@ -65,29 +65,25 @@ TEST(Buffer, StringHandling) {
     vs_t intelText{{"Intel"}, {"owns"}, {"OVMS"}};
     vs_t nvidiaText{{"NVIDIA"}, {"owns"}, {"Triton"}};
     std::unique_ptr<const Buffer> bufferWithCopy{nullptr};
-    const void* voidPtr{nullptr};
     {
         vs_t text2BeDeleted = nvidiaText;
         const Buffer bufferWithNoCopy(&intelText[0], intelText.size() * sizeof(string), OVMS_BUFFERTYPE_CPU);
         auto text2BeMoved = std::make_unique<vs_t>(std::move(text2BeDeleted));
         bufferWithCopy = std::make_unique<const Buffer>(std::move(text2BeMoved));
         // check with nocopy
-        voidPtr = bufferWithNoCopy.data();
         EXPECT_EQ(intelText.data(), &intelText[0]);
-        EXPECT_EQ(voidPtr, &intelText[0]);
-        stringPtr = reinterpret_cast<const string*>(voidPtr);
+        EXPECT_EQ(bufferWithNoCopy.data(), &intelText[0]);
+        stringPtr = reinterpret_cast<const string*>(bufferWithNoCopy.data());
         EXPECT_EQ(intelText.size(), bufferWithNoCopy.getByteSize() / sizeof(string));
         EXPECT_TRUE(std::equal(intelText.begin(), intelText.end(), stringPtr));
         // now check with copy
-        voidPtr = bufferWithCopy->data();
-        stringPtr = reinterpret_cast<const string*>(voidPtr);
+        stringPtr = reinterpret_cast<const string*>(bufferWithCopy->data());
         EXPECT_EQ(nvidiaText.size(), bufferWithNoCopy.getByteSize() / sizeof(string));
         EXPECT_TRUE(std::equal(nvidiaText.begin(), nvidiaText.end(), stringPtr));
     }
     // now text is deleted but for buffer with copy still expect to work
     vs_t randomData{{"Intel"}, {"owns"}, {"DCAI"}};
-    voidPtr = bufferWithCopy->data();
-    stringPtr = reinterpret_cast<const string*>(voidPtr);
+    stringPtr = reinterpret_cast<const string*>(bufferWithCopy->data());
     EXPECT_EQ(bufferWithCopy->getByteSize(), sizeof(string) * nvidiaText.size());
     EXPECT_EQ(bufferWithCopy->getBufferType(), OVMS_BUFFERTYPE_CPU);
     EXPECT_EQ(bufferWithCopy->getDeviceId(), std::nullopt);

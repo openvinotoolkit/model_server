@@ -969,7 +969,8 @@ TEST_F(CAPIInference, String) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &deviceId));
     ASSERT_EQ(string(OUTPUT_NAME.c_str()), outputName);
     EXPECT_EQ(datatype, OVMS_DATATYPE_STRING);
-    EXPECT_EQ(dimCount, 1);
+    EXPECT_EQ(dimCount, inShape.size());
+    EXPECT_TRUE(std::equal(inShape.begin(), inShape.end(), reinterpret_cast<const int64_t*>(shape)));
     EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
     EXPECT_EQ(deviceId, 0);
     EXPECT_EQ(bytesize, sizeof(string) * data.size());
