@@ -82,7 +82,7 @@ TEST(Buffer, StringHandling) {
         EXPECT_TRUE(std::equal(nvidiaText.begin(), nvidiaText.end(), stringPtr));
     }
     // now text is deleted but for buffer with copy still expect to work
-    vs_t randomData{{"Intel"}, {"owns"}, {"DCAI"}};
+    vs_t randomData{{"Akademia"}, {"Pana"}, {"Kleksa"}};
     stringPtr = reinterpret_cast<const string*>(bufferWithCopy->data());
     EXPECT_EQ(bufferWithCopy->getByteSize(), sizeof(string) * nvidiaText.size());
     EXPECT_EQ(bufferWithCopy->getBufferType(), OVMS_BUFFERTYPE_CPU);

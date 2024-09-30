@@ -941,7 +941,7 @@ TEST_F(CAPIInference, String) {
     const string OUTPUT_NAME = "my_name";
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, serverGuard.server, MODEL_NAME.c_str(), 1));
     ASSERT_NE(nullptr, request);
-    std::vector<string> data{{"Intel"}, {"CCG"}};
+    std::vector<string> data{{"Pan"}, {"Kleks"}};
     std::vector<int64_t> inShape{(int64_t)data.size()};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, INPUT_NAME.c_str(), OVMS_DATATYPE_STRING, inShape.data(), inShape.size()));
     // setting buffer
