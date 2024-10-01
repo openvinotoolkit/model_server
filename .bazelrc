@@ -79,16 +79,26 @@ build --copt=-O2
 build:linux --cxxopt=-std=c++17
 build:linux --host_cxxopt=-std=c++17
 
-build:windows --cxxopt=/std:c++17
 build:windows --host_cxxopt=/std:c++17
+build:windows --cxxopt=/std:c++17
+build:windows --copt=/std:c++17
+build:windows --objccopt=/std:c++17
+#build:windows --per_file_copt=*@/std=c++latest
+build:windows --action_env BAZEL_CXXOPTS="/std:c++17"
+build:windows --action_env BAZEL_COPTS="/std:c++17"
+build:windows --action_env BAZEL_OBJCOPTS="/std:c++17"
+
+# Fixing compiler errors:
+#build:windows --cxxopt=/translateInclude=no
+build:windows --enable_platform_specific_config
 
 # Security options
+# TODO: Add equivalent windows flag
 build:linux --cxxopt=-fno-strict-overflow
 build:linux --cxxopt=-fno-delete-null-pointer-checks
 build:linux --cxxopt=-fwrapv
 build:linux --cxxopt=-fstack-protector
 build:linux --cxxopt=-fstack-clash-protection
-# TODO: Add equivalent windows flag
 build:linux --cxxopt=-Wformat
 build:linux --cxxopt=-Wformat-security
 build:linux --cxxopt=-Werror=format-security
@@ -98,6 +108,7 @@ build:linux --cxxopt=-Werror=format-security
 # copy-on-write semantics of std::strings of the older ABI.
 build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 
+common --noenable_bzlmod
 build --experimental_repo_remote_exec
 # TODO: Add equivalent windows flag
 build:linux --force_pic
@@ -109,3 +120,34 @@ build --cxxopt=-DOVMS_DUMP_TO_FILE=0
 coverage --cxxopt=-DOVMS_DUMP_TO_FILE=0
 test --cxxopt=-DOVMS_DUMP_TO_FILE=0
 test --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
+
+# Suppress all C++ compiler warnings, otherwise build logs become 10s of MBs.
+build:linux --host_copt=-w
+build:windows --copt=/W0
+build:windows --host_copt=/W0
+
+# Speed Windows compile times. Available in VS 16.4 (we are on 16.11). See
+# https://groups.google.com/a/tensorflow.org/d/topic/build/SsW98Eo7l3o/discussion
+build:windows --copt=/d2ReducedOptimizeHugeFunctions
+build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
+
+# Verbose failure logs when something goes wrong
+build:windows --verbose_failures
+
+# Work around potential issues with large command lines on windows.
+# See: https://github.com/bazelbuild/bazel/issues/5163
+build:windows --features=compiler_param_file
+
+# Make sure to include as little of windows.h as possible
+build:windows --copt=-DWIN32_LEAN_AND_MEAN
+build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
+build:windows --copt=-DNOGDI
+build:windows --host_copt=-DNOGDI
+
+# Misc build options we need for windows.
+build:windows --linkopt=/DEBUG
+build:windows --host_linkopt=/DEBUG
+build:windows --linkopt=/OPT:REF
+build:windows --host_linkopt=/OPT:REF
+build:windows --linkopt=/OPT:ICF
+build:windows --host_linkopt=/OPT:ICF

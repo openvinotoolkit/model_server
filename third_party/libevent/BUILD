@@ -194,11 +194,14 @@ include_files = [
     "libevent/include/event2/visibility.h",
 ]
 
+WINDOWS_LIB_PATH = "c:\\opt\\libevent\\*"
+
+# TODO: make select for windows
 lib_files = [
-    "libevent/lib/libevent.a",
-    "libevent/lib/libevent_core.a",
-    "libevent/lib/libevent_extra.a",
-    "libevent/lib/libevent_pthreads.a",
+    "libevent/lib/event.lib",
+    "libevent/lib/event_core.lib",
+    "libevent/lib/event_extra.lib",
+    # TODO: windows compilation does not produce this: "libevent/lib/libevent_pthreads.lib",
 ]
 
 genrule(
@@ -215,17 +218,22 @@ genrule(
         "make install",
         "rm -rf $$TMP_DIR",
     ]),
+    cmd_bat = "\n".join([
+        "set INSTALL_DIR=$$(pwd)\\$(@D)\\libevent",
+        "set WINDOWS_LIB_PATH=c:\\opt\\libevent\\",
+        "xcopy /R /E %WINDOWS_LIB_PATH%  %INSTALL_DIR%",
+    ]),
 )
 
 cc_library(
     name = "libevent",
     srcs = [
         "libevent/lib/libevent.a",
-        "libevent/lib/libevent_pthreads.a",
+        #"libevent/lib/libevent_pthreads.a",
     ],
     hdrs = include_files,
     includes = ["libevent/include"],
-    linkopts = ["-lpthread"],
+    #linkopts = ["-lpthread"],
     linkstatic = 1,
 )
 

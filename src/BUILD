@@ -889,13 +889,22 @@ cc_library( # make ovms_lib dependent, use share doptions
 cc_library(
     name = "libovmstensorfactory",
     hdrs = ["itensorfactory.hpp",
-            "opencltensorfactory.hpp",
-            "vaapitensorfactory.hpp",
-            "regularovtensorfactory.hpp",],
-    srcs = ["regularovtensorfactory.cpp",
-            "opencltensorfactory.cpp",
-            "vaapitensorfactory.cpp",
-    ],
+            "regularovtensorfactory.hpp",] 
+            + select({
+                "//conditions:default": [
+                    "vaapitensorfactory.hpp",
+                    "opencltensorfactory.hpp",
+                ],
+                "//src:windows" : [],
+            }),
+    srcs = ["regularovtensorfactory.cpp"]
+            + select({
+                "//conditions:default": [
+                    "vaapitensorfactory.cpp",
+                    "opencltensorfactory.cpp",
+                ],
+                "//src:windows" : [],
+            }),
     deps = ["//third_party:openvino",
             "libovmscapibuffer",
             "libovmslogging",
