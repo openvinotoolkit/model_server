@@ -327,7 +327,7 @@ WORKDIR /ovms
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
-COPY run_unit_tests.sh prepare_llm_models.sh /ovms/
+COPY run_unit_tests.sh prepare_llm_models.sh prepare_gpu_models.sh /ovms/
 ARG RUN_TESTS=0
 RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
 ARG FUZZER_BUILD=0
