@@ -341,11 +341,6 @@ ifeq ($(CHECK_COVERAGE),1)
 	@echo "Cannot test coverage without running tests. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;
   endif
 endif
-ifeq ($(RUN_GPU_TESTS),ON)
-  ifeq ($(RUN_TESTS),0)
-       @echo "Cannot use 'RUN_GPU_TESTS=ON when RUN_TESTS=0'"; exit 1 ;
-  endif
-endif
 ifeq ($(FUZZER_BUILD),1)
   ifeq ($(RUN_TESTS),1)
 	@echo "Cannot run tests for now with fuzzer build"; exit 1 ;
@@ -678,7 +673,7 @@ cpu_extension:
 run_unit_tests:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
 ifeq ($(RUN_GPU_TESTS),ON)
-	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
+	./prepare_gpu_models.sh ${GPU_MODEL_PATH} && \
 	docker run \
 		--device=/dev/dri \
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \
