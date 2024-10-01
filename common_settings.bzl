@@ -75,7 +75,7 @@ COMMON_STATIC_LIBS_COPTS = [
     "-Wall",
     # TODO: make linux specific "-Wno-unknown-pragmas", 
     #"-Wno-sign-compare",
-    "-fvisibility=hidden", # Needed for pybind targets
+    #"-fvisibility=hidden", # Needed for pybind targets
     #"-Werror",
 ]
 COMMON_STATIC_LIBS_LINKOPTS = [
