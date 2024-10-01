@@ -301,7 +301,7 @@ To run unit tests verifying integration with Intel GPUs, add `RUN_GPU_TESTS=ON` 
 make run_unit_tests RUN_GPU_TESTS=ON
 ```
 
-> NOTE: It is required to follow [this guide](https://dgpu-docs.intel.com/driver/installation.html#ubuntu) to prepare host machine to work with VA API.
+> NOTE: It is required to follow [this guide](https://dgpu-docs.intel.com/driver/installation.html#ubuntu) to prepare host machine to work with VA API (Ubuntu).
 
 On bare metal, run (just once):
 ```
@@ -314,6 +314,8 @@ sudo reboot
 ```
 
 > NOTE: It is required to execute unit tests on machine with Intel Data Center GPU.
+
+> NOTE: For RedHat base OS unit tests which require VA API are skipped.
 
 ## Debugging
 
