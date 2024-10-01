@@ -296,6 +296,25 @@ make ovms_builder_image
 make run_unit_tests
 ```
 
+To run unit tests verifying integration with Intel GPUs, add `RUN_GPU_TESTS=ON` parameter:
+```
+make run_unit_tests RUN_GPU_TESTS=ON
+```
+
+> NOTE: It is required to follow [this guide](https://dgpu-docs.intel.com/driver/installation.html#ubuntu) to prepare host machine to work with VA API.
+
+On bare metal, run (just once):
+```
+sudo apt install -y \
+    linux-headers-$(uname -r) \
+    linux-modules-extra-$(uname -r) \
+    flex bison \
+    intel-fw-gpu intel-i915-dkms xpu-smi
+sudo reboot
+```
+
+> NOTE: It is required to execute unit tests on machine with Intel Data Center GPU.
+
 ## Debugging
 
 Debugging options are available. Click on the required option :
