@@ -1459,43 +1459,58 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     // set callback
     // TODO check if there is callback in async
     OVMS_InferenceRequestCompletionCallback_t userCallback = requestProto->getResponseCompleteCallback();
+    if (userCallback == nullptr) {
+        SPDLOG_DEBUG("User callback not set for async inference.");
+        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+    }
+
     void* userCallbackData = requestProto->getResponseCompleteCallbackData();
     // here pass by copy into callback
-    // TODO unload model guard & test
-    inferRequest.set_callback([this, requestProto, &inferRequest, userCallback, userCallbackData](std::exception_ptr exception) {
-        SPDLOG_INFO("Entry of ov::InferRequest callback call");
-        if (exception) {
-            try {
-                std::rethrow_exception(exception);
-            } catch (const std::exception& e) {
-                SPDLOG_DEBUG("got exception in ov::InferRequest callback: {}", e.what());
-            } catch (...) {
-                SPDLOG_DEBUG("got exception in ov::InferRequest callback");
-                return;
+    {
+        inferRequest.set_callback([this, requestProto, &inferRequest, userCallback, userCallbackData, modelUnloadGuardPtrMoved = std::shared_ptr<ModelInstanceUnloadGuard>(std::move(modelUnloadGuardPtr))](std::exception_ptr exception) mutable {
+            SPDLOG_DEBUG("Entry of ov::InferRequest callback call");
+            if (exception) {
+                try {
+                    SPDLOG_DEBUG("rethrow_exception");
+                    std::rethrow_exception(exception);
+                } catch (const std::exception& e) {
+                    SPDLOG_DEBUG("got exception in ov::InferRequest callback: {}", e.what());
+                } catch (...) {
+                    SPDLOG_DEBUG("got exception in ov::InferRequest callback");
+                    return;
+                }
             }
-        }
-        SPDLOG_DEBUG("Using OV callback");
-        // here use OVMS response serialization
-        // here call user set callback
-        // here will go OVMS C-API serialization code
-        std::unique_ptr<ResponseType> res(new ResponseType(this->getName(), this->getVersion()));
-        OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-        try {
-            // TODO created filter based on what is in request, then perform casual serialization for what was NOT in request, and rewrite tensors from request to response for those that were
-            auto status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), requestProto, res.get(), getTensorInfoName, useSharedOutputContentFn(requestProto));  // TODO FIXME handle status
-        } catch (std::exception& e) {
-            SPDLOG_DEBUG("caught exception in ov::InferRequest callback: {}", e.what());
-        } catch (...) {
-            SPDLOG_DEBUG("caught exception in ov::InferRequest callback");
-        }
-        OVMS_InferenceResponse* response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
-        SPDLOG_DEBUG("Calling user provided callback");  // TODO check if this shows
-        userCallback(response, 1, userCallbackData);
-        SPDLOG_DEBUG("Called user provided callback");                       // TODO check if this shows
-        inferRequest.set_callback([](std::exception_ptr exception_ptr) {});  // reset callback on infer request // TODO this should be called on all exit paths
-    });
-    OV_LOGGER("ov::InferRequest: {}, inferRequest.start_async()", reinterpret_cast<void*>(&inferRequest));
-    inferRequest.start_async();  // TODO wrap into try catch
+            // here use OVMS response serialization
+            // here call user set callback
+            // here will go OVMS C-API serialization code
+            std::unique_ptr<ResponseType> res(new ResponseType(this->getName(), this->getVersion()));
+            OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+            try {
+                // TODO created filter based on what is in request, then perform casual serialization for what was NOT in request, and rewrite tensors from request to response for those that were
+                auto status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), requestProto, res.get(), getTensorInfoName, useSharedOutputContentFn(requestProto));  // TODO FIXME handle status
+            } catch (std::exception& e) {
+                SPDLOG_DEBUG("caught exception in ov::InferRequest callback: {}", e.what());
+            } catch (...) {
+                SPDLOG_DEBUG("caught exception in ov::InferRequest callback");
+            }
+            OVMS_InferenceResponse* response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
+            SPDLOG_DEBUG("Calling user provided callback");  // TODO check if this shows
+            userCallback(response, 1, userCallbackData);
+            SPDLOG_DEBUG("Called user provided callback");                       // TODO check if this shows
+            inferRequest.set_callback([](std::exception_ptr exception_ptr) {});  // reset callback on infer request // TODO this should be called on all exit paths
+        });
+    }
+
+    try {
+        SPDLOG_DEBUG("ov::InferRequest: {}, inferRequest.start_async()", reinterpret_cast<void*>(&inferRequest));
+        inferRequest.start_async();
+    } catch (std::exception& e) {
+        SPDLOG_DEBUG("caught exception in ov::InferRequest.start_async: {}", e.what());
+        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+    } catch (...) {
+        SPDLOG_DEBUG("caught exception in ov::InferRequest.start_async");
+        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
+    }
     return StatusCode::OK;
 }
 

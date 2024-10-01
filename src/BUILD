@@ -169,16 +169,6 @@ cc_library(
     ],
     srcs = [
         "capi_frontend/capi.cpp",
-        "capi_frontend/capi_utils.cpp",
-        "capi_frontend/capi_utils.hpp",
-        "capi_frontend/inferenceparameter.cpp",
-        "capi_frontend/inferenceparameter.hpp",
-        "capi_frontend/inferenceresponse.cpp",
-        "capi_frontend/inferenceresponse.hpp",
-        "capi_frontend/inferencerequest.cpp",
-        "capi_frontend/inferencerequest.hpp",
-        "capi_frontend/inferencetensor.cpp",
-        "capi_frontend/inferencetensor.hpp",
         "capi_frontend/servablemetadata.cpp",
         "capi_frontend/servablemetadata.hpp",
         "capi_frontend/server_settings.hpp",
@@ -241,8 +231,6 @@ cc_library(
         "dags/pipeline.hpp",
         "dags/pipelinedefinition.cpp",
         "dags/pipelinedefinition.hpp",
-        "dags/pipelinedefinitionstatus.cpp",
-        "dags/pipelinedefinitionstatus.hpp",
         "dags/pipelinedefinitionunloadguard.cpp",
         "dags/pipelinedefinitionunloadguard.hpp",
         "dags/pipelineeventqueue.hpp",
@@ -287,8 +275,6 @@ cc_library(
         "modelinstance.hpp",
         "modelinstanceunloadguard.cpp",
         "modelinstanceunloadguard.hpp",
-        "modelversionstatus.cpp",
-        "modelversionstatus.hpp",
         "model_service.hpp",
         "model_service.cpp",
         "model_metric_reporter.cpp",
@@ -321,8 +307,6 @@ cc_library(
         "sequence_manager.cpp",
         "sequence_manager.hpp",
         "sequence_processing_spec.hpp",
-        "shape.cpp",
-        "shape.hpp",
         "statefulmodelinstance.cpp",
         "statefulmodelinstance.hpp",
         "systeminfo.cpp",
@@ -367,12 +351,19 @@ cc_library(
             "cpp_headers",
             "libmodelconfigjsonparser",
             "libovmscapibuffer",
+            "libovmscapi_utils",
+            "libovmscapiinferenceparameter",
+            "libovmscapiinferencerequest",
+            "libovmscapiinferenceresponse",
+            "libovmscapiinferencetensor",
+            "libovmsdagspipelinedefinitionstatus",
             "libovmsfilesystem",
             "libovmsfilesystemfactory",
             "libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
             "libovmsmetrics",
             "libovmsprecision",
+            "libovmsshape",
             "libovmstfs_grpc",
             "//src:libovmsprofiler",
             "libovmsstatus",
@@ -831,10 +822,12 @@ cc_library( # make ovms_lib dependent, use share doptions
 
 cc_library(
     name = "libovmsmodelversioning",
-    hdrs = ["modelversion.hpp",
+    hdrs = [
             "model_version_policy.hpp",],
     srcs = ["model_version_policy.cpp",],
-    deps = [],
+    deps = [
+            "libovmsmodelversion"
+    ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
@@ -863,8 +856,7 @@ cc_library( # make ovms_lib dependent, use share doptions
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
-
-cc_library( # make ovms_lib dependent, use share doptions
+cc_library(
     name = "libovmsgcsfilesystem",
     hdrs = ["gcsfilesystem.hpp",],
     srcs = [
@@ -904,7 +896,7 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
-cc_library( # make ovms_lib dependent, use share doptions
+cc_library(
     name = "libovmscapibuffer",
     hdrs = ["capi_frontend/buffer.hpp",
     ],
@@ -913,13 +905,166 @@ cc_library( # make ovms_lib dependent, use share doptions
     ],
     deps = [
             "ovms_header",
+            "libovmslogging",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
-cc_library( # make ovms_lib dependent, use share doptions
+cc_library(
+    name = "libovmscapi_utils_h",
+    hdrs = ["capi_frontend/capi_utils.hpp",],
+    deps = [
+            "ovms_header",
+            "libovmsshape",
+            "libovmsprecision",
+            "libovmsdagspipelinedefinitionstatus",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovmscapi_utils",
+    hdrs = [],
+    srcs = ["capi_frontend/capi_utils.cpp",],
+    deps = [
+            "libovmscapi_utils_h",
+            "libovmslogging",
+            "libovmsstatus",
+            "libovmscapibuffer",
+            "libovmscapiinferencerequest",
+            "libovmscapiinferenceresponse",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovmscapiinferenceparameter",
+    hdrs = ["capi_frontend/inferenceparameter.hpp",],
+    srcs = ["capi_frontend/inferenceparameter.cpp",],
+    deps = [
+            "ovms_header",
+            "libovmscapi_utils_h",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovmscapiinferencetensor",
+    hdrs = ["capi_frontend/inferencetensor.hpp",
+    ],
+    srcs = [
+        "capi_frontend/inferencetensor.cpp",
+    ],
+    deps = [
+            "ovms_header",
+            "libovmscapibuffer",
+            "libovmslogging",
+            "libovmsshape",
+            "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovmscapiinferencerequest",
+    hdrs = ["capi_frontend/inferencerequest.hpp",],
+    srcs = ["capi_frontend/inferencerequest.cpp",],
+    deps = [
+            "ovms_header",
+            "libovmscapiinferencetensor",
+            "libovmscapiinferenceparameter",
+            "libovmscapibuffer",
+            "libovmsmodelversion",
+            "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovmscapiinferenceresponse",
+    hdrs = ["capi_frontend/inferenceresponse.hpp",],
+    srcs = ["capi_frontend/inferenceresponse.cpp",],
+    deps = [
+            "ovms_header",
+            "libovmscapiinferencetensor",
+            "libovmscapiinferenceparameter",
+            "libovmsmodelversion",
+            "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovmsshape",
+    hdrs = ["shape.hpp",],
+    srcs = ["shape.cpp",],
+    deps = [
+            "@linux_openvino//:openvino",
+            "ovms_header",
+            "libovmslogging",
+            "libovmsstatus",
+            "libovmsstring_utils",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovmsmodelversion",
+    hdrs = [
+        "modelversion.hpp",
+    ],
+    srcs = [
+    ],
+    deps = [
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovmsmodelversionstatus",
+    hdrs = ["modelversionstatus.hpp",],
+    srcs = ["modelversionstatus.cpp",],
+    deps = [
+            "libovmslogging",
+            "libovmsmodelversion",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovmsdagspipelinedefinitionstatus",
+    hdrs = ["dags/pipelinedefinitionstatus.hpp",],
+    srcs = ["dags/pipelinedefinitionstatus.cpp",],
+    deps = [
+            "libovmslogging",
+            "libovmsmodelversionstatus",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
     name = "libovmsoclutils",
     hdrs = ["ocl_utils.hpp",
     ],
@@ -935,8 +1080,7 @@ cc_library( # make ovms_lib dependent, use share doptions
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
-
-cc_library( # make ovms_lib dependent, use share doptions
+cc_library(
     name = "libovmss3filesystem",
     hdrs = ["s3filesystem.hpp",],
     srcs = [
@@ -955,7 +1099,6 @@ cc_library( # make ovms_lib dependent, use share doptions
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
-
 cc_library(
     name = "libovmsfilesystem",
     hdrs = ["filesystem.hpp",],
@@ -1100,7 +1243,6 @@ cc_test(
     srcs = [
         "test/azurefilesystem_test.cpp",
         "test/tensor_conversion_test.cpp",
-        "test/c_api_test_utils.hpp",
         "test/c_api_tests.cpp",
         "test/c_api_stress_tests.cpp",
         "test/custom_loader_test.cpp",
@@ -1120,7 +1262,6 @@ cc_test(
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/http_rest_api_handler_test.cpp",
-        "test/inferencerequest_test.cpp",
         "test/kfs_metadata_test.cpp",
         "test/kfs_rest_test.cpp",
         "test/layout_test.cpp",
@@ -1300,7 +1441,9 @@ cc_test(
         "-lssl",
     ],
     deps = [
-    	":openvino_remote_tensors_tests",
+            ":openvino_tests",
+            ":openvino_remote_tensors_tests",
+            ":inferencerequest_test",
 	":libtest_environment",
 	":libtest_gpuenvironment",
     	":test_utils",
@@ -1346,6 +1489,7 @@ cc_library(
         "test/stress_test_utils.hpp",
         ],
     srcs = [
+        "test/c_api_test_utils.cpp",
         "test/test_utils.cpp",
         ],
     data = [
@@ -1381,25 +1525,38 @@ cc_library(
     ],
     copts = COPTS_TESTS,
 )
-
 cc_library(
     name = "libtest_gpuenvironment",
     linkstatic = 1,
     alwayslink = True,
-    hdrs = [
-        "test/gpuenvironment.hpp",
-        ],
-    srcs = [
-        "test/gpuenvironment.cpp",
-        ],
+    hdrs = ["test/gpuenvironment.hpp",],
+    srcs = ["test/gpuenvironment.cpp",],
     linkopts = [],
     deps = [
-	"libovmslogging",
-        "@com_google_googletest//:gtest",
+            "libovmslogging",
+            "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
 )
-
+cc_library(
+    name = "inferencerequest_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/inferencerequest_test.cpp",],
+    data = [],
+    linkopts = [],
+    deps = [
+            ":libovmscapibuffer",
+            ":libovmslogging",
+            ":libovmsstatus",
+            ":libovmsshape",
+            ":libovmscapiinferenceparameter",
+            ":libovmscapiinferencerequest",
+            ":libovmscapiinferenceresponse",
+            "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+)
 cc_library(
     name = "openvino_remote_tensors_tests",
     linkstatic = 1,
@@ -1449,7 +1606,25 @@ filegroup(
     "//src:libcustom_node_image_transformation.so",
   ]
 )
-
+cc_library(
+    name = "openvino_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/openvino_tests.cpp"],
+    data = [
+        "test/c_api/config_standard_dummy.json",
+        "test/c_api/config_gpu_dummy.json",
+        "test/dummy/1/dummy.xml",
+        "test/dummy/1/dummy.bin",
+    ],
+    deps = [
+        ":test_utils",
+        "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+    linkopts = [],
+)
 filegroup(
   name = "static_analysis",
   srcs = [

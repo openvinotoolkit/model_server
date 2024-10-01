@@ -21,7 +21,6 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../itensorfactory.hpp"
 #include "../logging.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../regularovtensorfactory.hpp"
@@ -29,7 +28,7 @@
 #include "node.hpp"
 
 namespace ovms {
-
+class IOVTensorFactory;
 extern const std::string ENTRY_NODE_NAME;
 
 template <typename RequestType>
