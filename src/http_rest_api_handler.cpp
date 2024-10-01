@@ -575,7 +575,8 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     }
     std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
-    Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelMetadata});
+    KFSModelExtraMetadata extraMetadata;
+    Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelMetadata}, &extraMetadata);
     if (!gstatus.ok()) {
         return gstatus;
     }

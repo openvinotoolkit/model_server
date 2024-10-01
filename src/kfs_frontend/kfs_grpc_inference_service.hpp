@@ -42,6 +42,11 @@ using KFSDataType = std::string;
 using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
 using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
 
+struct KFSModelExtraMetadata {
+    ov::AnyMap rt_info;
+    std::string mp_schema;
+};
+
 namespace ovms {
 class ExecutionContext;
 class MediapipeGraphDefinition;
