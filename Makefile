@@ -679,7 +679,7 @@ ifeq ($(RUN_GPU_TESTS),ON)
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \
 		-u 0 \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
-		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas:ro \
+		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
