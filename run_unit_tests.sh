@@ -26,7 +26,9 @@ ${debug_bazel_flags} \
 
 # Check if RUN_GPU_TESTS is set and add it to SHARED_OPTIONS
 if [ "$RUN_GPU_TESTS" == "ON" ]; then
-    sh ./install_va.sh
+    if grep -q "ID=ubuntu" /etc/os-release; then
+        sh ./install_va.sh  # It is required for VA API unit tests on Ubuntu
+    fi
     SHARED_OPTIONS+=" --test_env RUN_GPU_TESTS=ON"
 fi
 
