@@ -23,6 +23,12 @@ ${debug_bazel_flags} \
 --test_summary=detailed \
 --test_output=streamed \
 --test_env PYTHONPATH=${PYTHONPATH}"
+
+# Check if RUN_GPU_TESTS is set and add it to SHARED_OPTIONS
+if [ "$RUN_GPU_TESTS" == "ON" ]; then
+    SHARED_OPTIONS+=" --test_env RUN_GPU_TESTS=ON"
+fi
+
 test_success_procedure() {
     grep -a " ms \| ms)" ${TEST_LOG}
     tail -50 ${TEST_LOG}
@@ -36,6 +42,7 @@ test_fail_procedure() {
     cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1
 }
 echo "Run test: ${RUN_TESTS}"
+echo "Run GPU test: ${RUN_GPU_TESTS}"
 echo "Run coverage: ${CHECK_COVERAGE}"
 if [ "$RUN_TESTS" == "1" ] ; then
     if [ "$CHECK_COVERAGE" == "1" ] ; then
