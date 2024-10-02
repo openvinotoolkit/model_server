@@ -36,6 +36,8 @@
 #include "../logging.hpp"
 #include "../profiler.hpp"
 
+#include "absl/strings/escaping.h"
+
 using namespace rapidjson;
 using namespace ovms;
 
@@ -90,6 +92,8 @@ public:
         OVMS_PROFILE_FUNCTION();
         RET_CHECK(tokenizer_session != nullptr);
         RET_CHECK(embeddings_session != nullptr);
+	std::vector<std::string> input_strings;
+	bool isBase64 = false;
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             std::string response = "";
             InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
@@ -106,6 +110,7 @@ public:
                         if (!input.IsString())
                             return absl::InvalidArgumentError("every element in input array should be string");
                         response += input.GetString();
+			input_strings.push_back(input.GetString());
                     }
                 } else {
                     return absl::InvalidArgumentError("input should be string or array of strings");
@@ -116,6 +121,9 @@ public:
             it = payload.parsedJson->FindMember("encoding_format");
             if (it != payload.parsedJson->MemberEnd()) {
                 if (it->value.IsString()) {
+		    if (it->value.GetString() == std::string("base64")) {
+                        isBase64 = true;
+		    }
                     response += it->value.GetString();
                 } else {
                     return absl::InvalidArgumentError("encoding_format should be string");
@@ -137,10 +145,48 @@ public:
                     return absl::InvalidArgumentError("user should be string");
                 }
             }
-            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(response), timestamp);
         } else {
             return absl::InvalidArgumentError("Input is empty");
         }
+	::InferenceOutput output;
+
+	ov::Shape tensor_shape{input_strings.size()};
+	ov::Tensor tokenizer_input(ov::element::string, tensor_shape, input_strings.data());
+	::InferenceInput input;
+	input["aa"] = tokenizer_input;
+
+	::InferenceOutput tokenizer_output = tokenizer_session->infer(input);
+	output = embeddings_session->infer(tokenizer_output);
+	
+	std::vector<float> data{1.9, 2.9};
+	std::string_view sv(reinterpret_cast<char*>(data.data()), data.size());
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+	writer.StartObject();
+
+	writer.String("object");
+	writer.String("list");
+
+	writer.String("data");
+	writer.StartArray();
+
+	writer.StartObject();
+	writer.String("object");
+	writer.String("embedding");
+	writer.String("embedding");
+	if (isBase64) {
+		writer.String(absl::Base64Escape(sv).c_str());
+	} else {
+		writer.StartArray();
+		for (auto value : data) {
+			writer.Double(value);
+		}
+		writer.EndArray();
+	}
+	writer.EndObject();
+	writer.EndArray();
+	writer.EndObject();
+	cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
         return absl::OkStatus();
     }
 };
