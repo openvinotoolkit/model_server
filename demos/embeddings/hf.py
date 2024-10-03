@@ -17,6 +17,9 @@ model.eval()
 warmup_input = tokenizer(["my test", "test test"], padding=True, truncation=True, return_tensors='pt')
 
 encoded_input = tokenizer(sentences, padding=True, truncation=True, return_tensors='pt')
+print('input_ids', encoded_input.input_ids.shape)
+print('token_type_ids', encoded_input.token_type_ids.shape)
+print('attention_mask', encoded_input.attention_mask.shape)
 # for s2p(short query to long passage) retrieval task, add an instruction to query (not add instruction for passages)
 # encoded_input = tokenizer([instruction + q for q in queries], padding=True, truncation=True, return_tensors='pt')
 
@@ -29,7 +32,8 @@ with torch.no_grad():
     duration = (end_time - start_time).total_seconds() * 1000
     print("Duration:", duration, "ms")
     # Perform pooling. In this case, cls pooling.
-    print(model_output)
+    print('last_hidden_state', model_output.last_hidden_state.shape)
+    print('pooler_output', model_output.pooler_output.shape)
     sentence_embeddings = model_output[0][:, 0]
 # normalize embeddings
 #sentence_embeddings = torch.nn.functional.normalize(sentence_embeddings, p=2, dim=1)
