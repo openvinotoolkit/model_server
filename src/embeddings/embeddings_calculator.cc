@@ -108,6 +108,7 @@ public:
             if (it != payload.parsedJson->MemberEnd()) {
                 if (it->value.IsString()) {
                     response += it->value.GetString();
+            input_strings.push_back(it->value.GetString());
                 } else if (it->value.IsArray()) {
                     for (auto& input : it->value.GetArray()) {
                         if (!input.IsString())
@@ -190,9 +191,13 @@ public:
         RET_CHECK(lastHiddenStateTensor.get_shape().size() == 3);
         LOG(INFO) << lastHiddenStateTensor.get_shape();
         // TODO: Batch size must be equal to number of input strings
-        RET_CHECK(lastHiddenStateTensor.get_shape()[0], input_strings.size());
-        // TODO: RET_CHECK for precision 
-
+        RET_CHECK(lastHiddenStateTensor.get_shape()[0] == input_strings.size());
+        try {
+	    RET_CHECK(lastHiddenStateTensor.data(ov::element::f32) != nullptr);
+	} catch (const std::exception& e) {
+            LOG(INFO) << "Caught exception from asserting output data type:" << e.what();
+            RET_CHECK(false);
+        }
         // TODO: Normalization? mean pooling? those are the parameters which can change postprocessing:
         // https://github.com/langchain-ai/langchain/blob/master/libs/community/langchain_community/embeddings/openvino.py#L228-L255
         // Demo usage: https://github.com/langchain-ai/langchain/blob/master/docs/docs/integrations/text_embedding/openvino.ipynb
@@ -201,15 +206,7 @@ public:
 
         // 1. mean pooling (optional)
         // 2. normalization (optional)
-        // 3. slicing 0th element from dimension X [batch, X=(6?), Y=(1024?)]
         
-
-        // for batch 
-
-        // 
-
-        std::vector<float> data{1.9, 2.9};
-        std::string_view sv(reinterpret_cast<char*>(data.data()), data.size());
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
         writer.StartObject();
@@ -220,20 +217,29 @@ public:
         writer.String("data");
         writer.StartArray();
 
-        writer.StartObject();
-        writer.String("object");
-        writer.String("embedding");
-        writer.String("embedding");
-        if (isBase64) {
-            writer.String(absl::Base64Escape(sv).c_str());
-        } else {
-            writer.StartArray();
-            for (auto value : data) {
-                writer.Double(value);
-            }
-            writer.EndArray();
-        }
-        writer.EndObject();
+	ov::Shape output_shape = lastHiddenStateTensor.get_shape();
+	for (int i = 0; i < output_shape[0]; i++) {
+		size_t stride = i * output_shape[1] * output_shape[2];
+		std::vector<float> data(reinterpret_cast<float*>(lastHiddenStateTensor.data()) + stride, reinterpret_cast<float*>(lastHiddenStateTensor.data()) + stride + output_shape[2]);
+		std::string_view sv(reinterpret_cast<char*>(data.data()), data.size());
+		writer.StartObject();
+		writer.String("object");
+		writer.String("embedding");
+		writer.String("embedding");
+		if (isBase64) {
+		    writer.String(absl::Base64Escape(sv).c_str());
+		} else {
+		    writer.StartArray();
+		    for (auto value : data) {
+			writer.Double(value);
+		    }
+		    writer.EndArray();
+		}
+		writer.String("index");
+		writer.Int(i);
+		writer.EndObject();
+	}
+
         writer.EndArray();
         writer.EndObject();
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
