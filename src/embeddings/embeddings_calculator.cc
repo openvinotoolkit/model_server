@@ -1,3 +1,5 @@
+// TODO: move to separate target
+
 //*****************************************************************************
 // Copyright 2024 Intel Corporation
 //
@@ -24,6 +26,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
+#include "mediapipe/framework/port/ret_check.h"
 #pragma GCC diagnostic pop
 
 #include <adapters/inference_adapter.h>
@@ -80,8 +83,8 @@ public:
                                 .Tag("TOKENIZER_SESSION")
                                 .Get<std::shared_ptr<::InferenceAdapter>>();
         embeddings_session = cc->InputSidePackets()
-                                 .Tag("EMBEDDINGS_SESSION")
-                                 .Get<std::shared_ptr<::InferenceAdapter>>();
+                                    .Tag("EMBEDDINGS_SESSION")
+                                    .Get<std::shared_ptr<::InferenceAdapter>>();
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator  [Node: {}] Open start", cc->NodeName());
 
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator [Node: {}] Open end", cc->NodeName());
@@ -92,8 +95,8 @@ public:
         OVMS_PROFILE_FUNCTION();
         RET_CHECK(tokenizer_session != nullptr);
         RET_CHECK(embeddings_session != nullptr);
-	std::vector<std::string> input_strings;
-	bool isBase64 = false;
+        std::vector<std::string> input_strings;
+        bool isBase64 = false;
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             std::string response = "";
             InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
@@ -110,7 +113,7 @@ public:
                         if (!input.IsString())
                             return absl::InvalidArgumentError("every element in input array should be string");
                         response += input.GetString();
-			input_strings.push_back(input.GetString());
+            input_strings.push_back(input.GetString());
                     }
                 } else {
                     return absl::InvalidArgumentError("input should be string or array of strings");
@@ -121,9 +124,9 @@ public:
             it = payload.parsedJson->FindMember("encoding_format");
             if (it != payload.parsedJson->MemberEnd()) {
                 if (it->value.IsString()) {
-		    if (it->value.GetString() == std::string("base64")) {
+            if (it->value.GetString() == std::string("base64")) {
                         isBase64 = true;
-		    }
+            }
                     response += it->value.GetString();
                 } else {
                     return absl::InvalidArgumentError("encoding_format should be string");
@@ -148,45 +151,92 @@ public:
         } else {
             return absl::InvalidArgumentError("Input is empty");
         }
-	::InferenceOutput output;
 
-	ov::Shape tensor_shape{input_strings.size()};
-	ov::Tensor tokenizer_input(ov::element::string, tensor_shape, input_strings.data());
-	::InferenceInput input;
-	input["aa"] = tokenizer_input;
+        // Automatically deduce tokenizer input name
+        std::vector<std::string> tokenizerInputNames = tokenizer_session->getInputNames();
+        RET_CHECK(tokenizerInputNames.size() == 1);
+        const std::string& tokenizerInputName = tokenizerInputNames.at(0);
+        LOG(INFO) << "Tokenizer input name detected: " << tokenizerInputName;
 
-	::InferenceOutput tokenizer_output = tokenizer_session->infer(input);
-	output = embeddings_session->infer(tokenizer_output);
-	
-	std::vector<float> data{1.9, 2.9};
-	std::string_view sv(reinterpret_cast<char*>(data.data()), data.size());
+        ::InferenceInput tokenizerInputMap;
+        tokenizerInputMap[tokenizerInputName] = ov::Tensor{
+            ov::element::string,
+            ov::Shape{input_strings.size()},
+            input_strings.data()
+        };
+
+        ::InferenceOutput embeddingsOutputMap;
+        try {
+            ::InferenceOutput tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
+            RET_CHECK(tokenizerOutputMap.size() > 0);
+            // TODO: Validate input/output names before passing over to subsequent inference?
+            embeddingsOutputMap = embeddings_session->infer(tokenizerOutputMap);
+            RET_CHECK(embeddingsOutputMap.size() > 0);
+        } catch (const std::exception& e) {
+            LOG(INFO) << "Caught exception from session infer():" << e.what();
+            RET_CHECK(false);
+        } catch (...) {
+            LOG(INFO) << "Caught unknown exception from session infer()";
+            RET_CHECK(false);
+        }
+
+        // TODO (bstrzele) (dtrawins): Support both kinds of models with 1 or 2 outputs?
+        // TODO: At the moment hardcoded for 1 output only supporting bge-large-en-v1.5, but will not work with rerank/other models
+        // TODO: Must require last_hidden_state kind of tensor
+        RET_CHECK(embeddingsOutputMap.size() == 1);
+        ov::Tensor lastHiddenStateTensor = embeddingsOutputMap.begin()->second;
+        LOG(INFO) << "Embedding output name detected: " << embeddingsOutputMap.begin()->first;
+        // TODO: Supporting only 3 dimensional output
+        RET_CHECK(lastHiddenStateTensor.get_shape().size() == 3);
+        LOG(INFO) << lastHiddenStateTensor.get_shape();
+        // TODO: Batch size must be equal to number of input strings
+        RET_CHECK(lastHiddenStateTensor.get_shape()[0], input_strings.size());
+        // TODO: RET_CHECK for precision 
+
+        // TODO: Normalization? mean pooling? those are the parameters which can change postprocessing:
+        // https://github.com/langchain-ai/langchain/blob/master/libs/community/langchain_community/embeddings/openvino.py#L228-L255
+        // Demo usage: https://github.com/langchain-ai/langchain/blob/master/docs/docs/integrations/text_embedding/openvino.ipynb
+        // TODO: In this implementation I do skip both.
+        // TODO: 
+
+        // 1. mean pooling (optional)
+        // 2. normalization (optional)
+        // 3. slicing 0th element from dimension X [batch, X=(6?), Y=(1024?)]
+        
+
+        // for batch 
+
+        // 
+
+        std::vector<float> data{1.9, 2.9};
+        std::string_view sv(reinterpret_cast<char*>(data.data()), data.size());
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
-	writer.StartObject();
+        writer.StartObject();
 
-	writer.String("object");
-	writer.String("list");
+        writer.String("object");
+        writer.String("list");
 
-	writer.String("data");
-	writer.StartArray();
+        writer.String("data");
+        writer.StartArray();
 
-	writer.StartObject();
-	writer.String("object");
-	writer.String("embedding");
-	writer.String("embedding");
-	if (isBase64) {
-		writer.String(absl::Base64Escape(sv).c_str());
-	} else {
-		writer.StartArray();
-		for (auto value : data) {
-			writer.Double(value);
-		}
-		writer.EndArray();
-	}
-	writer.EndObject();
-	writer.EndArray();
-	writer.EndObject();
-	cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
+        writer.StartObject();
+        writer.String("object");
+        writer.String("embedding");
+        writer.String("embedding");
+        if (isBase64) {
+            writer.String(absl::Base64Escape(sv).c_str());
+        } else {
+            writer.StartArray();
+            for (auto value : data) {
+                writer.Double(value);
+            }
+            writer.EndArray();
+        }
+        writer.EndObject();
+        writer.EndArray();
+        writer.EndObject();
+        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
         return absl::OkStatus();
     }
 };
