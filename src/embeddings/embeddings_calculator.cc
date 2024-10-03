@@ -216,6 +216,7 @@ public:
 
         writer.String("data");
         writer.StartArray();
+	bool normalize = true;
 
 	ov::Shape output_shape = lastHiddenStateTensor.get_shape();
 	for (int i = 0; i < output_shape[0]; i++) {
@@ -226,6 +227,13 @@ public:
 		writer.String("object");
 		writer.String("embedding");
 		writer.String("embedding");
+		if (normalize) {
+			float square_sum = std::inner_product(data.begin(), data.end(), data.begin(), 0);
+			float denom = std::sqrt(square_sum);
+			for (int j = 0; j < data.size(); j++){
+				data[j] /= denom;
+			}
+		}
 		if (isBase64) {
 		    writer.String(absl::Base64Escape(sv).c_str());
 		} else {
