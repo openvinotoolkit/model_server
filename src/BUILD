@@ -79,7 +79,8 @@ cc_library(
 cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
-    static_deps = ["@tensorflow_serving//:__subpackages__",
+    static_deps = [
+        #"@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
         "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
@@ -468,7 +469,7 @@ cc_library(
     name = "libhttpclientconnection",
     hdrs = ["client_connection.hpp", "http_frontend/http_client_connection.hpp"],
     deps = [
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -709,9 +710,9 @@ cc_library(
     srcs = [
         "tfs_frontend/tfs_utils.cpp",],
     deps = [
-        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
-        # TODO: enable "@org_tensorflow//tensorflow/core:framework", # Eigen Tensor
+        #"@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
+        #"@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
+        "@org_tensorflow//tensorflow/core:framework", # Eigen Tensor
         "libovmslogging",
         "libovmsprofiler",
         "libovmsstatus",
@@ -735,10 +736,10 @@ cc_library( # TODO split dependencies
         "httpservermodule.cpp",
     ],
     deps = [
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
-        "@tensorflow_serving//tensorflow_serving/util:json_tensor",
+        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        #"@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
+        #"@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "libovmslogging",
         "libovmsprofiler",
         "libovmsstatus",
@@ -1084,8 +1085,8 @@ cc_binary(
         # "-lovms_shared",  # Use for dynamic linking when necessary
     ],
     copts = [
-        "-Wall",
-        "-Wconversion",
+        #"-Wall",
+        #"-Wconversion",
     ],
     deps = [
         "//src:ovms_lib",]
