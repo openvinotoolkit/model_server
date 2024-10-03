@@ -218,17 +218,14 @@ genrule(
         "make install",
         "rm -rf $$TMP_DIR",
     ]),
-    cmd_bat = "\n".join([
-        "set INSTALL_DIR=$$(pwd)\\$(@D)\\libevent",
-        "set WINDOWS_LIB_PATH=c:\\opt\\libevent\\",
-        "xcopy /R /E %WINDOWS_LIB_PATH%  %INSTALL_DIR%",
-    ]),
+    # TODO: compile the libevent here instad of copying from hardcoded path, find a way to execute more than one command in cmd_bat on windows
+    cmd_bat = "xcopy /R /E /Y /F c:\\opt\\libevent\\ %cd%\\$(@D)\\libevent\\",
 )
 
 cc_library(
     name = "libevent",
     srcs = [
-        "libevent/lib/libevent.a",
+        "libevent/lib/libevent.lib",
         #"libevent/lib/libevent_pthreads.a",
     ],
     hdrs = include_files,
