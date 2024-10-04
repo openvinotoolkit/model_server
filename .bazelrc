@@ -121,28 +121,102 @@ coverage --cxxopt=-DOVMS_DUMP_TO_FILE=0
 test --cxxopt=-DOVMS_DUMP_TO_FILE=0
 test --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
-# Suppress all C++ compiler warnings, otherwise build logs become 10s of MBs.
-build:linux --host_copt=-w
+# TF bazelrc settings
+# TensorFlow Bazel configuration file.
+
+build --define framework_shared_object=true
+build --define tsl_protobuf_header_only=true
+
+build --define=use_fast_cpp_protos=true
+build --define=allow_oversize_protos=true
+
+build --spawn_strategy=standalone
+build -c opt
+
+# Make Bazel print out all options from rc files.
+build --announce_rc
+
+# TODO(mihaimaruseac): Document this option or remove if no longer needed
+build --define=grpc_no_ares=true
+
+
+build --noincompatible_remove_legacy_whole_archive
+build --features=-force_no_whole_archive
+
+# TODO(mihaimaruseac): Document this option or remove if no longer needed
+build --enable_platform_specific_config
+
+# Enable XLA support by default.
+build --define=with_xla_support=true
+
+# TODO(mihaimaruseac): Document this option or remove if no longer needed
+build --config=short_logs
+
+# TODO(mihaimaruseac): Document this option or remove if no longer needed
+build --config=v2
+
+# Disable AWS/HDFS support by default
+build --define=no_aws_support=true
+build --define=no_hdfs_support=true
+
+# TF now has `cc_shared_library` targets, so it needs the experimental flag
+# TODO(rostam): Remove when `cc_shared_library` is enabled by default
+build --experimental_cc_shared_library
+
+# cc_shared_library ensures no library is linked statically more than once.
+build --experimental_link_static_libraries_once=false
+
+# Prevent regressions on those two incompatible changes
+# TODO: remove those flags when they are flipped in the default Bazel version TF uses.
+build --incompatible_enforce_config_setting_visibility
+
+# Config to use a mostly-static build and disable modular op registration
+# support (this will revert to loading TensorFlow with RTLD_GLOBAL in Python).
+# By default, TensorFlow will build with a dependence on
+# //tensorflow:libtensorflow_framework.so.
+build:monolithic --define framework_shared_object=false
+build:monolithic --define tsl_protobuf_header_only=false
+build:monolithic --experimental_link_static_libraries_once=false  # b/229868128
+
 build:windows --copt=/W0
 build:windows --host_copt=/W0
+
+# On Windows, `__cplusplus` is wrongly defined without this switch
+# See https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
+build:windows --copt=/Zc:__cplusplus
+build:windows --host_copt=/Zc:__cplusplus
+
+# Tensorflow uses M_* math constants that only get defined by MSVC headers if
+# _USE_MATH_DEFINES is defined.
+build:windows --copt=/D_USE_MATH_DEFINES
+build:windows --host_copt=/D_USE_MATH_DEFINES
+
+# Windows has a relatively short command line limit, which TF has begun to hit.
+# See https://docs.bazel.build/versions/main/windows.html
+build:windows --features=compiler_param_file
+build:windows --features=archive_param_file
 
 # Speed Windows compile times. Available in VS 16.4 (we are on 16.11). See
 # https://groups.google.com/a/tensorflow.org/d/topic/build/SsW98Eo7l3o/discussion
 build:windows --copt=/d2ReducedOptimizeHugeFunctions
 build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
 
-# Verbose failure logs when something goes wrong
-build:windows --verbose_failures
+build:windows --cxxopt=/std:c++17
+build:windows --host_cxxopt=/std:c++17
 
-# Work around potential issues with large command lines on windows.
-# See: https://github.com/bazelbuild/bazel/issues/5163
-build:windows --features=compiler_param_file
+# On windows, we still link everything into a single DLL.
+build:windows --config=monolithic
 
 # Make sure to include as little of windows.h as possible
 build:windows --copt=-DWIN32_LEAN_AND_MEAN
 build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
 build:windows --copt=-DNOGDI
 build:windows --host_copt=-DNOGDI
+
+# MSVC (Windows): Standards-conformant preprocessor mode
+# See https://docs.microsoft.com/en-us/cpp/preprocessor/preprocessor-experimental-overview
+build:windows --copt=/Zc:preprocessor
+build:windows --host_copt=/Zc:preprocessor
 
 # Misc build options we need for windows.
 build:windows --linkopt=/DEBUG
@@ -151,3 +225,39 @@ build:windows --linkopt=/OPT:REF
 build:windows --host_linkopt=/OPT:REF
 build:windows --linkopt=/OPT:ICF
 build:windows --host_linkopt=/OPT:ICF
+
+# Verbose failure logs when something goes wrong
+build:windows --verbose_failures
+
+# Work around potential issues with large command lines on windows.
+# See: https://github.com/bazelbuild/bazel/issues/5163
+build:windows --features=compiler_param_file
+
+# Configure short or long logs
+build:short_logs --output_filter=DONT_MATCH_ANYTHING
+build:verbose_logs --output_filter=
+
+build:avx_win --copt=/arch=AVX
+build:avx2_win --copt=/arch=AVX2
+
+# Options to build TensorFlow 1.x or 2.x.
+build:v1 --define=tf_api_version=1 --action_env=TF2_BEHAVIOR=0
+build:v2 --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
+
+# Flag to enable remote config
+common --experimental_repo_remote_exec
+
+# Config-specific options should come above this line.
+
+# Load rc file written by ./configure.
+try-import %workspace%/.tf_configure.bazelrc
+
+# Load rc file with user-specific options.
+try-import %workspace%/.bazelrc.user
+
+# Disable TFRT integration for now unless --config=tfrt is specified.
+build      --deleted_packages=tensorflow/core/tfrt/stubs,tensorflow/compiler/mlir/tfrt,tensorflow/compiler/mlir/tfrt/benchmarks,tensorflow/compiler/mlir/tfrt/ir,tensorflow/compiler/mlir/tfrt/ir/mlrt,tensorflow/compiler/mlir/tfrt/jit/python_binding,tensorflow/compiler/mlir/tfrt/jit/transforms,tensorflow/compiler/mlir/tfrt/python_tests,tensorflow/compiler/mlir/tfrt/tests,tensorflow/compiler/mlir/tfrt/tests/mlrt,tensorflow/compiler/mlir/tfrt/tests/ir,tensorflow/compiler/mlir/tfrt/tests/analysis,tensorflow/compiler/mlir/tfrt/tests/jit,tensorflow/compiler/mlir/tfrt/tests/lhlo_to_tfrt,tensorflow/compiler/mlir/tfrt/tests/lhlo_to_jitrt,tensorflow/compiler/mlir/tfrt/tests/tf_to_corert,tensorflow/compiler/mlir/tfrt/tests/tf_to_tfrt_data,tensorflow/compiler/mlir/tfrt/tests/saved_model,tensorflow/compiler/mlir/tfrt/transforms/lhlo_gpu_to_tfrt_gpu,tensorflow/compiler/mlir/tfrt/transforms/mlrt,tensorflow/core/runtime_fallback,tensorflow/core/runtime_fallback/conversion,tensorflow/core/runtime_fallback/kernel,tensorflow/core/runtime_fallback/opdefs,tensorflow/core/runtime_fallback/runtime,tensorflow/core/runtime_fallback/util,tensorflow/core/tfrt/mlrt,tensorflow/core/tfrt/mlrt/attribute,tensorflow/core/tfrt/mlrt/kernel,tensorflow/core/tfrt/mlrt/bytecode,tensorflow/core/tfrt/mlrt/interpreter,tensorflow/compiler/mlir/tfrt/translate/mlrt,tensorflow/compiler/mlir/tfrt/translate/mlrt/testdata,tensorflow/core/tfrt/gpu,tensorflow/core/tfrt/run_handler_thread_pool,tensorflow/core/tfrt/runtime,tensorflow/core/tfrt/saved_model,tensorflow/core/tfrt/graph_executor,tensorflow/core/tfrt/saved_model/tests,tensorflow/core/tfrt/tpu,tensorflow/core/tfrt/utils,tensorflow/core/tfrt/utils/debug,tensorflow/core/tfrt/saved_model/python,tensorflow/core/tfrt/graph_executor/python
+
+
+# Load rc file written by ./configure.
+try-import %workspace%/.tf_configure.bazelrc
