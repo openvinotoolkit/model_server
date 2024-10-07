@@ -39,10 +39,11 @@
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
-// TODO
+// TODO windows
+#ifdef __linux__ 
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
 #include <openvino/runtime/intel_gpu/ocl/va.hpp>
-
+#endif
 #include "openvino/runtime/remote_tensor.hpp"
 
 namespace ovms {
@@ -108,15 +109,20 @@ protected:
          */
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
+    // TODO windows
+#ifdef __linux__  
     cl_context oclContextC;
+
 
 public:
     // TODO const correctness & ownership & thread safety
     const cl_context* getOclCContext() const { return &oclContextC; }
-
+#endif
 protected:
+#ifdef __linux__
     std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;
     std::unique_ptr<ov::intel_gpu::ocl::VAContext> vaContext;
+#endif
     std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> tensorFactories;
     /**
          * @brief Model name

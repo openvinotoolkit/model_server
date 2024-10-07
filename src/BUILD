@@ -398,7 +398,14 @@ cc_library(
                     ],
                 "//:disable_cloud": []
                 }) 
-           + select({
+            + select({
+                "//conditions:default": [],
+                "//src:windows" : [
+                    "@windows_opencl//:opencl",
+                    "@windows_opencl2//:opencl2",
+                    ],
+                })  
+            + select({
             "//conditions:default": [
                 "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
                 "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
@@ -737,7 +744,7 @@ cc_library( # TODO split dependencies
     ],
     deps = [
         #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
-        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "libovmslogging",

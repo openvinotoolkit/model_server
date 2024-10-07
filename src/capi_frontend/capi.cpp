@@ -76,8 +76,12 @@ using std::chrono::microseconds;
 extern "C" {
 #endif
 
+#ifdef __linux__ 
 #define DLL_PUBLIC __attribute__((visibility("default")))
 #define DLL_LOCAL __attribute__((visibility("hidden")))
+#elif _WIN32
+#define DLL_PUBLIC __declspec(dllexport)
+#endif
 
 DLL_PUBLIC OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor) {
     if (major == nullptr)

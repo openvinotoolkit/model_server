@@ -210,6 +210,18 @@ new_local_repository(
     path = "C:\\opt\\opencv\\build",
 )
 
+new_local_repository(
+    name = "windows_opencl",
+    build_file = "@//third_party/opencl:opencl_windows.BUILD",
+    path = "C:\\opencl\\external\\OpenCL-CLHPP",
+)
+
+new_local_repository(
+    name = "windows_opencl2",
+    build_file = "@//third_party/opencl:opencl_windows2.BUILD",
+    path = "C:\\opencl\\external\\OpenCL-Headers",
+)
+
 ########################################################### Mediapipe end
 
 ########################################################### Python support start
