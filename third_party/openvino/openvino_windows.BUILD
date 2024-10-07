@@ -37,4 +37,6 @@ cc_library(
     deps = [
         ":openvino_new_headers",
     ],
+    #defines = ["OV_GPU_USE_OPENCL_HPP"],
+    #copts = ["-I/runtime/intel_gpu/ocl"],
 )

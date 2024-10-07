@@ -27,7 +27,7 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
-#include <netinet/in.h>
+//  TODO: windows #include <netinet/in.h>
 #include <signal.h>
 #include <stdlib.h>
 // TODO: windows #include <sys/socket.h>
