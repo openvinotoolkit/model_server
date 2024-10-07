@@ -19,8 +19,12 @@
 #include <stdexcept>
 #include <string>
 
+// TODO: Write windows/linux specific status codes.
+#ifdef __linux__ 
 #include <sysexits.h>
-
+#elif _WIN32
+#include <ntstatus.h>
+#endif
 #include "capi_frontend/server_settings.hpp"
 #include "version.hpp"
 
@@ -178,7 +182,7 @@ void CLIParser::parse(int argc, char** argv) {
                 std::cerr << argument << ", ";
             }
             std::cerr << std::endl;
-            exit(EX_USAGE);
+            exit(3);
         }
 
         if (result->count("version")) {
@@ -187,16 +191,16 @@ void CLIParser::parse(int argc, char** argv) {
             std::cout << project_name + " " + project_version << std::endl;
             std::cout << "OpenVINO backend " << OPENVINO_NAME << std::endl;
             std::cout << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
-            exit(EX_OK);
+            exit(0);
         }
 
         if (result->count("help") || result->arguments().size() == 0) {
             std::cout << options->help({"", "multi model", "single model"}) << std::endl;
-            exit(EX_OK);
+            exit(0);
         }
     } catch (const std::exception& e) {
         std::cerr << "error parsing options: " << e.what() << std::endl;
-        exit(EX_USAGE);
+        exit(3);
     }
 }
 

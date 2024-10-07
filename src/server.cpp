@@ -28,11 +28,17 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
-#include <netinet/in.h>
+//  TODO: windows #include <netinet/in.h>
 #include <signal.h>
 #include <stdlib.h>
-#include <sys/socket.h>
+// TODO: windows  #include <sys/socket.h>
+
+// TODO: Write windows/linux specific status codes.
+#ifdef __linux__ 
 #include <sysexits.h>
+#elif _WIN32
+#include <ntstatus.h>
+#endif
 #include <unistd.h>
 
 #include "capi_frontend/server_settings.hpp"
@@ -318,9 +324,9 @@ void Server::shutdownModules() {
 
 static int statusToExitCode(const Status& status) {
     if (status.ok()) {
-        return EX_OK;
+        return 0;
     } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
-        return EX_USAGE;
+        return 3;
     }
     return EXIT_FAILURE;
 }

@@ -585,7 +585,7 @@ public:
          *
          * @return Status
          */
-    Status waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
+    Status waitForLoaded(const uint32_t waitForModelLoadedTimeoutMilliseconds,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuard);
 
     void subscribe(PipelineDefinition& pd);

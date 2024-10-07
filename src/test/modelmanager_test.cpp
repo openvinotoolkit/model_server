@@ -1172,7 +1172,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenRe
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    const uint timeout = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
+    const uint32_t timeout = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
     sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     cleanerExitTrigger.set_value();
@@ -1192,7 +1192,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesWhenResourcesInte
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    const uint timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
+    const uint32_t timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
     resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     cleanerExitTrigger.set_value();
 
@@ -1212,7 +1212,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenSe
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    const uint timeout = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
+    const uint32_t timeout = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
     sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     cleanerExitTrigger.set_value();
@@ -1231,7 +1231,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupSequenceWhenSequenceInterv
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(0);
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    const uint timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
+    const uint32_t timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
     sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     cleanerExitTrigger.set_value();
 
@@ -1251,7 +1251,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenIn
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
-    const uint timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
+    const uint32_t timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
     sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
     cleanerExitTrigger.set_value();
@@ -1517,7 +1517,7 @@ public:
     void registerVersionToLoad(ovms::model_version_t version) {
         toRegister.emplace_back(version);
     }
-    void setWatcherIntervalMillisec(uint watcherIntervalMillisec) {
+    void setWatcherIntervalMillisec(uint32_t watcherIntervalMillisec) {
         this->watcherIntervalMillisec = watcherIntervalMillisec;
     }
 
@@ -2171,7 +2171,7 @@ const int AVAILABLE_STATE_DELAY_MILLISECONDS = 5;
 
 class ModelInstanceLoadedWaitInLoadingState : public ovms::ModelInstance {
 public:
-    ModelInstanceLoadedWaitInLoadingState(ov::Core& ieCore, const uint modelInstanceLoadDelayInMilliseconds) :
+    ModelInstanceLoadedWaitInLoadingState(ov::Core& ieCore, const uint32_t modelInstanceLoadDelayInMilliseconds) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
 
@@ -2189,12 +2189,12 @@ protected:
     }
 
 private:
-    const uint modelInstanceLoadDelayInMilliseconds;
+    const uint32_t modelInstanceLoadDelayInMilliseconds;
 };
 
 class ModelWithModelInstanceLoadedWaitInLoadingState : public ovms::Model {
 public:
-    ModelWithModelInstanceLoadedWaitInLoadingState(const std::string& name, const uint modelInstanceLoadDelayInMilliseconds) :
+    ModelWithModelInstanceLoadedWaitInLoadingState(const std::string& name, const uint32_t modelInstanceLoadDelayInMilliseconds) :
         Model(name, false, nullptr),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string&, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
@@ -2202,7 +2202,7 @@ public:
     }
 
 private:
-    const uint modelInstanceLoadDelayInMilliseconds;
+    const uint32_t modelInstanceLoadDelayInMilliseconds;
 };
 
 std::shared_ptr<ModelWithModelInstanceLoadedWaitInLoadingState> modelWithModelInstanceLoadedWaitInLoadingState;

@@ -77,8 +77,8 @@ namespace ovms {
 
 void* globalVaDisplay = nullptr;
 
-const uint MAX_NIREQ_COUNT = 100000;
-const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
+const uint32_t MAX_NIREQ_COUNT = 100000;
+const uint32_t UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
 ModelInstance::~ModelInstance() = default;
 ModelInstance::ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig) :
@@ -651,8 +651,8 @@ std::string ModelInstance::findModelFilePathWithExtension(const std::string& ext
     return findFilePathWithExtension(path, extension);
 }
 
-uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& modelConfig) {
-    uint numberOfParallelInferRequests = 0;
+uint32_t ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& modelConfig) {
+    uint32_t numberOfParallelInferRequests = 0;
     if (modelConfig.getNireq() > 0) {
         return modelConfig.getNireq();
     }
@@ -670,8 +670,8 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
     return numberOfParallelInferRequests;
 }
 
-uint ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig) {
-    uint nireq = getNumOfParallelInferRequestsUnbounded(modelConfig);
+uint32_t ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig) {
+    uint32_t nireq = getNumOfParallelInferRequestsUnbounded(modelConfig);
     if (nireq > MAX_NIREQ_COUNT) {
         SPDLOG_WARN("Invalid nireq because its value was too high: {}. Maximum value: {}", nireq, MAX_NIREQ_COUNT);
         return 0;
@@ -877,7 +877,7 @@ Status ModelInstance::fetchModelFilepaths() {
 }
 
 Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
-    uint numberOfParallelInferRequests = getNumOfParallelInferRequests(config);
+    uint32_t numberOfParallelInferRequests = getNumOfParallelInferRequests(config);
     if (numberOfParallelInferRequests == 0) {
         return Status(StatusCode::INVALID_NIREQ, "Exceeded allowed nireq value");
     }
@@ -1122,7 +1122,7 @@ Status ModelInstance::reloadModelIfRequired(
     return status;
 }
 
-Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
+Status ModelInstance::waitForLoaded(const uint32_t waitForModelLoadedTimeoutMilliseconds,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuard) {
     // order is important here for performance reasons
     // assumption: model is already loaded for most of the calls
@@ -1134,9 +1134,9 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     modelInstanceUnloadGuard.reset();
 
     // wait several time since no guarantee that cv wakeup will be triggered before calling wait_for
-    const uint waitLoadedTimestepMilliseconds = 100;
-    const uint waitCheckpoints = waitForModelLoadedTimeoutMilliseconds / waitLoadedTimestepMilliseconds;
-    uint waitCheckpointsCounter = waitCheckpoints;
+    const uint32_t waitLoadedTimestepMilliseconds = 100;
+    const uint32_t waitCheckpoints = waitForModelLoadedTimeoutMilliseconds / waitLoadedTimestepMilliseconds;
+    uint32_t waitCheckpointsCounter = waitCheckpoints;
     SPDLOG_DEBUG("Waiting for loaded state for model: {} version: {} with timestep: {} timeout: {} check count: {}", getName(), getVersion(),
         waitLoadedTimestepMilliseconds, waitForModelLoadedTimeoutMilliseconds, waitCheckpointsCounter);
     std::mutex cv_mtx;
@@ -1221,7 +1221,7 @@ void ModelInstance::unloadModelComponents() {
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());
         }
     }
-    malloc_trim(0);
+    // TODO: windows for malloc_trim(0);
 }
 
 const std::set<std::string>& ModelInstance::getOptionalInputNames() {

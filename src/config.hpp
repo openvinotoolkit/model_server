@@ -198,7 +198,7 @@ public:
     /**
          * @brief Get the nireq
          *
-         * @return uint 
+         * @return uint32_t 
          */
     uint32_t nireq() const;
 
@@ -291,7 +291,7 @@ public:
     /**
      * @brief Get the filesystem poll wait time in milliseconds
      * 
-     * @return uint 
+     * @return uint32_t 
      */
     uint32_t filesystemPollWaitMilliseconds() const;
 
