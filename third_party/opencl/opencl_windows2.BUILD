@@ -19,26 +19,11 @@ package(
 )
 
 cc_library(
-    name = "openvino_new_headers",
+    name = "opencl2",
     hdrs = glob([
-        "include/openvino/**/*.*"
+        "include/**/*.*"
     ]),
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
 )
 
-cc_library(
-    name = "openvino",
-    srcs = glob([
-        "bin\\intel64\\Release\\openvino.dll"
-    ]),
-    #strip_include_prefix = "include/ie",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":openvino_new_headers",
-        "@windows_opencl//:opencl",
-        "@windows_opencl2//:opencl2",
-    ],
-    defines = ["OV_GPU_USE_OPENCL_HPP"],
-    #copts = ["-I./"],
-)

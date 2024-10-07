@@ -124,6 +124,9 @@ static void onIllegal(int status) {
     shutdown_request = 2;
 }
 
+// TODO windows
+#ifdef __linux__  
+
 static void installSignalHandlers() {
     static struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = onInterrupt;
@@ -143,6 +146,8 @@ static void installSignalHandlers() {
     sigIllHandler.sa_flags = 0;
     sigaction(SIGILL, &sigIllHandler, NULL);
 }
+
+#endif
 
 ModuleState Module::getState() const {
     return state;
@@ -333,7 +338,10 @@ static int statusToExitCode(const Status& status) {
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
+// TODO windows
+#ifdef __linux__  
     installSignalHandlers();
+#endif
     CLIParser parser;
     ServerSettingsImpl serverSettings;
     ModelsSettingsImpl modelsSettings;
