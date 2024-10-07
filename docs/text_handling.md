@@ -6,7 +6,7 @@ We addressed both the situation when the original model requires tokens on input
 
 ## Serving a MediaPipe graph with strings processing via a python node
 
-When the model server is configured to serve python script (via MediaPipe Graph with PythonExecutorCalculator), it is possible to send a string or a list of strings. Refer to full [Python execution documentation](python_support/reference.md) or end-to-end [LLM text generation demo](../demos/python_demos/llm_text_generation/README.md).
+When the model server is configured to serve python script (via MediaPipe Graph with PythonExecutorCalculator), it is possible to send a string or a list of strings. Refer to full [Python execution documentation](python_support/reference.md).
 
 ## Serving a model with a string in input or output layer
 
