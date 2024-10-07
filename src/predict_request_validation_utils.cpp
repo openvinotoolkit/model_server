@@ -286,7 +286,6 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
     return Status(StatusCode::INVALID_MISSING_INPUT, details);
 }
 
-template <>
 template <typename RequestType, typename InputTensorType, typename InputTensorIteratorType, typename ShapeType>
 Status RequestValidator<RequestType, InputTensorType, InputTensorIteratorType, ShapeType>::checkIfShapeValuesNegative(const InputTensorType& proto) const {
     RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
