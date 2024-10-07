@@ -80,7 +80,7 @@ cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
     static_deps = [
-        #"@tensorflow_serving//:__subpackages__",
+        "@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
         "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
@@ -711,7 +711,7 @@ cc_library(
         "tfs_frontend/tfs_utils.cpp",],
     deps = [
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        #"@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
+        "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
         "@org_tensorflow//tensorflow/core:framework", # Eigen Tensor
         "libovmslogging",
         "libovmsprofiler",
@@ -738,8 +738,8 @@ cc_library( # TODO split dependencies
     deps = [
         #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        #"@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
-        #"@tensorflow_serving//tensorflow_serving/util:json_tensor",
+        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
+        "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "libovmslogging",
         "libovmsprofiler",
         "libovmsstatus",
