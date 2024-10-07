@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 
-#include <dlfcn.h>
+//#include <dlfcn.h>
 #include <errno.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -602,12 +602,14 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", loaderConfig.getLibraryPath());
             return StatusCode::PATH_INVALID;
         }
-        void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
+        // TODO: implement LoadLibrary for windows
+        //void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
+        void* handle = NULL;
         if (!handleCL) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
             return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
         }
-
+        /*
         // load the symbols
         createCustomLoader_t* customObj = (createCustomLoader_t*)dlsym(handleCL, "createCustomLoader");
         const char* dlsym_error = dlerror();
@@ -627,6 +629,7 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
             return StatusCode::CUSTOM_LOADER_INIT_FAILED;
         }
         customloaders.add(loaderName, customLoaderIfPtr, handleCL);
+        */
     } else {
         // Loader is already in the existing loaders. Move it to new loaders.
         // Reload of customloader is not supported yet

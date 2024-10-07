@@ -30,7 +30,7 @@
 #include <netinet/in.h>
 #include <signal.h>
 #include <stdlib.h>
-#include <sys/socket.h>
+// TODO: windows #include <sys/socket.h>
 #include <unistd.h>
 
 #include "config.hpp"
@@ -96,7 +96,7 @@ static Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std
     return StatusCode::OK;
 }
 
-static uint getGRPCServersCount(const ovms::Config& config) {
+static uint32_t getGRPCServersCount(const ovms::Config& config) {
     const char* environmentVariableBuffer = std::getenv("GRPC_SERVERS");
     if (environmentVariableBuffer) {
         auto result = stou32(environmentVariableBuffer);
@@ -105,7 +105,7 @@ static uint getGRPCServersCount(const ovms::Config& config) {
         }
     }
 
-    return std::max<uint>(1, config.grpcWorkers());
+    return std::max<uint32_t>(1, config.grpcWorkers());
 }
 
 GRPCServerModule::~GRPCServerModule() {
@@ -165,7 +165,7 @@ Status GRPCServerModule::start(const ovms::Config& config) {
     if ((config.grpcMemoryQuota() != 0) || (config.grpcMaxThreads() != 0)) {
         builder.SetResourceQuota(resource_quota);
     }
-    uint grpcServersCount = getGRPCServersCount(config);
+    uint32_t grpcServersCount = getGRPCServersCount(config);
     servers.reserve(grpcServersCount);
     SPDLOG_DEBUG("Starting gRPC servers: {}", grpcServersCount);
 
@@ -176,7 +176,7 @@ Status GRPCServerModule::start(const ovms::Config& config) {
         SPDLOG_ERROR(status.string());
         return status;
     }
-    for (uint i = 0; i < grpcServersCount; ++i) {
+    for (uint32_t i = 0; i < grpcServersCount; ++i) {
         std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
         if (server == nullptr) {
             std::stringstream ss;
