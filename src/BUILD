@@ -263,12 +263,6 @@ cc_library(
         "grpc_utils.hpp",
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
-        "http_rest_api_handler.cpp",
-        "http_server.cpp",
-        "httpservermodule.cpp",
-        "http_rest_api_handler.hpp",
-        "http_server.hpp",
-        "httpservermodule.hpp",
         "kfs_frontend/kfs_grpc_inference_service.cpp",
         "kfs_frontend/kfs_grpc_inference_service.hpp",
         "kfs_frontend/kfs_utils.cpp",
@@ -390,7 +384,9 @@ cc_library(
                 "//:disable_cloud": []
                 }) 
             + select({
-                "//conditions:default": [],
+                "//conditions:default": [
+                    "libovmshttpservermodule",
+                ],
                 "//src:windows" : [
                     "@windows_opencl//:opencl",
                     "@windows_opencl2//:opencl2",
