@@ -1,0 +1,17 @@
+{
+    "model_config_list": [
+    { "config": 
+	    {
+                "name": "tokenizer",
+                "base_path": "bge-large-en-v1.5-tokenizer"
+            }
+	},
+    { "config": 
+	    {
+                "name": "embeddings_model",
+                "base_path": "bge-large-en-v1.5-embeddings",
+                "target_device": "CPU"
+            }
+	}
+   ]
+}
