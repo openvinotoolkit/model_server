@@ -94,7 +94,8 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
             std::filesystem::create_directories(this->modelCacheDirectory);
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} did not exist, created", this->modelCacheDirectory);
         }
-        int result = access(this->modelCacheDirectory.c_str(), W_OK);
+        // TODO: check on windows andl inux
+        int result = access(this->modelCacheDirectory.c_str(), 0);
         if (result != 0) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);
         } else {
@@ -604,9 +605,9 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
         }
         // TODO: implement LoadLibrary for windows
         //void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
-        void* handle = NULL;
+        void* handleCL = NULL;
         if (!handleCL) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), "e");
             return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
         }
         /*
@@ -844,6 +845,8 @@ class LoudFileInfoReporter {
 
 public:
     LoudFileInfoReporter(const std::string& filename, std::ifstream& file) {
+        // TODO windows
+         #ifdef __linux__
         struct stat statTime;
 
         if (stat(filename.c_str(), &statTime) != 0) {
@@ -862,6 +865,7 @@ public:
         }
         file.clear();
         file.seekg(0);
+        #endif
     }
     void log() {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, ss.str());
