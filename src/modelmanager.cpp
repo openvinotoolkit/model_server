@@ -40,7 +40,6 @@
 #include "customloaderconfig.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
-#include "dags/custom_node_library_internal_manager_wrapper.hpp"
 #include "dags/custom_node_library_manager.hpp"
 #include "dags/entry_node.hpp"  // need for ENTRY_NODE_NAME
 #include "dags/exit_node.hpp"   // need for EXIT_NODE_NAME

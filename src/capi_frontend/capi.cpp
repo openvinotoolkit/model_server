@@ -1325,7 +1325,10 @@ OVMS_Status* OVMS_ServerSetGlobalVADisplay(void* vaDisplay) {
     // we accept nullptr as it is a way to reset behavior for gpu tests
     // TODO
     // * allow to initializze only if server not started, but would require passing server
+//TODO: Windows
+#ifdef __linux__
     ovms::globalVaDisplay = vaDisplay;
+#endif
     return nullptr;
 }
 

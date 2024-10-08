@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 #include "custom_node_library_internal_manager_wrapper.hpp"
 
 namespace ovms {
