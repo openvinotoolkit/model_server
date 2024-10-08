@@ -27,16 +27,6 @@
 
 namespace ovms {
 
-GatherNodeInputHandler::GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails) :
-    NodeInputHandler(inputsMissingCount),
-    collapsingDetails(std::make_unique<CollapseDetails>(collapsingDetails)) {
-    remainingDependencies = std::accumulate(
-        collapsingDetails.collapsedSessionSizes.begin(),
-        collapsingDetails.collapsedSessionSizes.end(),
-        remainingDependencies,
-        std::multiplies<session_id_t>());
-}
-
 Status GatherNodeInputHandler::setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId) {
     auto inputsShardsIt = shardsStorage.find(inputName);
     if (inputsShardsIt == shardsStorage.end()) {

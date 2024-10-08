@@ -1,6 +1,6 @@
-build --action_env PYTHON_BIN_PATH="C:/Program Files/Python39/python.exe"
-build --action_env PYTHON_LIB_PATH="C:/Program Files/Python39/lib/site-packages"
-build --python_path="C:/Program Files/Python39/python.exe"
+build --action_env PYTHON_BIN_PATH="C:/opt/Python39/python.exe"
+build --action_env PYTHON_LIB_PATH="C:/opt/Python39/lib/site-packages"
+build --python_path="C:/opt/Python39/python.exe"
 build:opt --copt=/arch:AVX
 build:opt --host_copt=/arch:AVX
 build --copt=/d2ReducedOptimizeHugeFunctions --host_copt=/d2ReducedOptimizeHugeFunctions
