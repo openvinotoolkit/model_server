@@ -37,7 +37,6 @@
 #include "modelversionstatus.hpp"
 #include "ovinferrequestsqueue.hpp"
 #include "tensorinfo.hpp"
-#include "tensor_conversion.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
 // TODO windows

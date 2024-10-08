@@ -23,7 +23,6 @@
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
-#include "nodesessionmetadata.hpp"
 
 namespace ovms {
 
