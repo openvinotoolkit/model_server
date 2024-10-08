@@ -1086,7 +1086,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
                 continue;
             }
             RETURN_IF_ERR(checkIfShapeValuesNegative(*outputIt));
-            // Batch and mode retrieval for given input
+            // Batch and mode retrieval for given output
             auto batchIndex = outputInfo->getLayout().getBatchIndex();
             if (batchIndex.has_value() && batchIndex.value() >= outputInfo->getShape().size()) {
                 SPDLOG_DEBUG("[servable name: {} version: {}] Batch index out of shape range for output: {} layout: {} shape: {}",
