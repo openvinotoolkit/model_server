@@ -39,6 +39,7 @@
 #include "tensor_conversion.hpp"
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
+#include "prediction_service_utils.hpp"
 
 namespace ovms {
 
@@ -68,17 +69,6 @@ public:
             "Tried to deserialize of yet unsupported frontend");
         return ov::Tensor();
     }
-};
-
-enum class ExtractChoice {
-    EXTRACT_INPUT,
-    EXTRACT_OUTPUT,
-};
-
-template <typename Request, typename Tensor, ExtractChoice choice>
-class RequestTensorExtractor {
-public:
-    static Status extract(const Request& request, const std::string& name, const Tensor tensor);
 };
 
 template <class Requester>
@@ -352,24 +342,6 @@ public:
     }
 };
 
-template <>
-class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, ExtractChoice::EXTRACT_OUTPUT> {
-public:
-    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
-        SPDLOG_TRACE("Extracting output: {}", name);
-        return request.getOutput(name.c_str(), tensor);
-    }
-};
-
-template <>
-class RequestTensorExtractor<InferenceRequest, const InferenceTensor**, ExtractChoice::EXTRACT_INPUT> {
-public:
-    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
-        SPDLOG_TRACE("Extracting input: {}", name);
-        return request.getInput(name.c_str(), tensor);
-    }
-};
-
 // due to header included in many places function below is not used in all cpp files ...
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -379,11 +351,11 @@ std::tuple<ovms::Status, const typename RequestTraits<ovms::InferenceRequest>::T
     ovms::Status status;
     switch (extractChoice) {
     case ExtractChoice::EXTRACT_INPUT: {
-        status = RequestTensorExtractor<InferenceRequest, const InferenceTensor**, ExtractChoice::EXTRACT_INPUT>::extract(request, name, &requestTensorPtr);
+        status = RequestTensorExtractor<InferenceRequest, InferenceTensor, ExtractChoice::EXTRACT_INPUT>::extract(request, name, &requestTensorPtr);
         break;
     }
     case ExtractChoice::EXTRACT_OUTPUT: {
-        status = RequestTensorExtractor<InferenceRequest, const InferenceTensor**, ExtractChoice::EXTRACT_OUTPUT>::extract(request, name, &requestTensorPtr);
+        status = RequestTensorExtractor<InferenceRequest, InferenceTensor, ExtractChoice::EXTRACT_OUTPUT>::extract(request, name, &requestTensorPtr);
         break;
     }
     }

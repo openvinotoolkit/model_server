@@ -24,6 +24,9 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "capi_frontend/inferencerequest.hpp"
+#include "status.hpp"
+#include "logging.hpp"
 #include "shape.hpp"
 
 namespace ovms {
@@ -37,6 +40,51 @@ std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::Predi
 
 std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex);
 std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request);
+
+enum class ExtractChoice {
+    EXTRACT_INPUT,
+    EXTRACT_OUTPUT,
+};
+
+template <typename Request, typename InputTensorType, ExtractChoice choice>
+class RequestTensorExtractor {
+public:
+    static Status extract(const Request& request, const std::string& name, const InputTensorType** tensor);
+};
+
+template <>
+class RequestTensorExtractor<InferenceRequest, InferenceTensor, ExtractChoice::EXTRACT_OUTPUT> {
+public:
+    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
+        SPDLOG_TRACE("Extracting output: {}", name);
+        return request.getOutput(name.c_str(), tensor);
+    }
+};
+
+template <>
+class RequestTensorExtractor<InferenceRequest, InferenceTensor, ExtractChoice::EXTRACT_INPUT> {
+public:
+    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
+        SPDLOG_TRACE("Extracting input: {}", name);
+        return request.getInput(name.c_str(), tensor);
+    }
+};
+
+template <>
+class RequestTensorExtractor<tensorflow::serving::PredictRequest, tensorflow::TensorProto, ExtractChoice::EXTRACT_OUTPUT> {
+public:
+    static Status extract(const tensorflow::serving::PredictRequest& request, const std::string& name, const tensorflow::TensorProto** tensor) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+};
+
+template <>
+class RequestTensorExtractor<KFSRequest, KFSTensorInputProto, ExtractChoice::EXTRACT_OUTPUT> {
+public:
+    static Status extract(const KFSRequest& request, const std::string& name, const KFSTensorInputProto** tensor) {
+        return StatusCode::INTERNAL_ERROR;
+    }
+};
 
 /**
  * This is specific check required for passing KFS API related info

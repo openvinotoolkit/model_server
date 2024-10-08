@@ -37,6 +37,7 @@
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
+#include "prediction_service_utils.hpp"
 
 namespace ovms {
 namespace request_validation_utils {
@@ -96,6 +97,7 @@ template <typename RequestType, typename InputTensorType, typename InputIterator
 class RequestValidator {
     const RequestType& request;
     const tensor_map_t& inputsInfo;
+    const tensor_map_t& outputsInfo;
     const std::string& servableName;
     const model_version_t servableVersion;
     const std::set<std::string>& optionalAllowedInputNames;
@@ -113,11 +115,12 @@ class RequestValidator {
 
 public:
     RequestValidator(
-        const RequestType& request, const tensor_map_t& inputsInfo,
+        const RequestType& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo,
         const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames,
         const Mode batchingMode, const shapes_info_map_t& shapeInfo) :
         request(request),
         inputsInfo(inputsInfo),
+        outputsInfo(outputsInfo),
         servableName(servableName),
         servableVersion(servableVersion),
         optionalAllowedInputNames(optionalAllowedInputNames),
@@ -833,6 +836,7 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
         expectedValueCount *= tensor.getShape()[i];
     }
     size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+    SPDLOG_ERROR("expectedContentSize {} ByteSize {}", expectedContentSize, buffer->getByteSize());
     if (expectedContentSize != buffer->getByteSize()) {
         std::stringstream ss;
         ss << "Expected: " << expectedContentSize << " bytes; Actual: " << buffer->getByteSize() << " bytes; input name: " << getCurrentlyValidatedInputName();
@@ -936,6 +940,28 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
     }
     return StatusCode::OK;
 }
+
+// template <>
+// Status RequestValidator<TFSRequestType>::validateNumberOfOutputs(const TFSRequestType& request, size_t expectedNumberOfOutputs) const {
+//     return StatusCode::INTERNAL_ERROR;
+// }
+// template <>
+// Status RequestValidator<KFSRequest>::validateNumberOfOutputs(const KFSRequest& request, size_t expectedNumberOfOutputs) const {
+//     return StatusCode::INTERNAL_ERROR;
+// }
+// template <>
+// Status RequestValidator<ovms::InferenceRequest>::validateNumberOfOutputs(const ovms::InferenceRequest& request, size_t expectedNumberOfOutputs) const {
+//     if (request.getOutputsSize() != expectedNumberOfOutputs) {
+//         std::stringstream ss;
+//         ss << "Expected: " << inputInfo.getPrecisionAsString()
+//            << "; Actual: " << toString(getOVMSDataTypeAsPrecision(tensor.getDataType()))
+//            << "; input name: " << getCurrentlyValidatedInputName();
+//         const std::string details = ss.str();
+//         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid precision - {}", servableName, servableVersion, details);
+//         return Status(StatusCode::INTERNAL_ERROR, details);
+//     }
+//     return StatusCode::OK;
+// }
 
 static Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name) {
     if (shapeInfo.size() == 0) {
@@ -1052,25 +1078,48 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         RETURN_IF_ERR(checkShapeMismatch(proto, *inputInfo, batchIndex, finalStatus, batchingMode, shapeMode));
         RETURN_IF_ERR(validateTensorContent(proto, inputInfo->getPrecision(), bufferId));
     }
+    if(std::is_same<RequestType, InferenceRequest>::value) {
+        bufferId = 0;
+        const InputTensorType* outputIt;
+        for (const auto& [name, outputInfo] : outputsInfo) {
+            if((RequestTensorExtractor<RequestType, InputTensorType, ExtractChoice::EXTRACT_OUTPUT>::extract(request, name, &outputIt)).getCode() == StatusCode::NONEXISTENT_TENSOR){
+                continue;
+            }
+            RETURN_IF_ERR(checkIfShapeValuesNegative(*outputIt));
+            // Batch and mode retrieval for given input
+            auto batchIndex = outputInfo->getLayout().getBatchIndex();
+            if (batchIndex.has_value() && batchIndex.value() >= outputInfo->getShape().size()) {
+                SPDLOG_DEBUG("[servable name: {} version: {}] Batch index out of shape range for output: {} layout: {} shape: {}",
+                    servableName, servableVersion, name, outputInfo->getLayout(), outputInfo->getShape().toString());
+                return StatusCode::INTERNAL_ERROR;
+            }
+            Mode shapeMode = getShapeMode(shapeInfo, name);
+            RETURN_IF_ERR(validatePrecision(*outputInfo, *outputIt));
+            RETURN_IF_ERR(validateNumberOfShapeDimensions(*outputInfo, *outputIt));
+            RETURN_IF_ERR(checkBatchSizeMismatch(*outputIt, outputInfo->getBatchSize(), batchIndex, finalStatus, batchingMode, shapeMode));
+            RETURN_IF_ERR(checkShapeMismatch(*outputIt, *outputInfo, batchIndex, finalStatus, batchingMode, shapeMode));
+            RETURN_IF_ERR(validateTensorContent(*outputIt, outputInfo->getPrecision(), bufferId));
+        }
+    }
     return finalStatus;
 }
 
 template <>
-Status validate(const TFSRequestType& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+Status validate(const TFSRequestType& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
     OVMS_PROFILE_FUNCTION();
-    return RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
+    return RequestValidator<TFSRequestType, TFSInputTensorType, TFSInputTensorIteratorType, TFSShapeType>(request, inputsInfo, outputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
 }
 
 template <>
-Status validate(const KFSRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+Status validate(const KFSRequest& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
     OVMS_PROFILE_FUNCTION();
-    return RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
+    return RequestValidator<KFSRequest, KFSTensorInputProto, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, outputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
 }
 
 template <>
-Status validate(const InferenceRequest& request, const tensor_map_t& inputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+Status validate(const InferenceRequest& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
     OVMS_PROFILE_FUNCTION();
-    return RequestValidator<InferenceRequest, InferenceTensor, const InferenceTensor*, signed_shape_t>(request, inputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
+    return RequestValidator<InferenceRequest, InferenceTensor, const InferenceTensor*, signed_shape_t>(request, inputsInfo, outputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
 }
 }  // namespace request_validation_utils
 }  // namespace ovms

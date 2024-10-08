@@ -1235,6 +1235,7 @@ const Status ModelInstance::validate(const RequestType* request) {
     return request_validation_utils::validate(
         *request,
         getInputsInfo(),
+        getOutputsInfo(),
         getName(),
         getVersion(),
         this->getOptionalInputNames(),
