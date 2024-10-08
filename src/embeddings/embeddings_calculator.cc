@@ -154,6 +154,7 @@ public:
 
         // Automatically deduce tokenizer input name
         std::vector<std::string> tokenizerInputNames = tokenizer_session->getInputNames();
+        std::vector<std::string> embeddingsInputNames = embeddings_session->getInputNames();
         RET_CHECK(tokenizerInputNames.size() == 1);
         const std::string& tokenizerInputName = tokenizerInputNames.at(0);
         LOG(INFO) << "Tokenizer input name detected: " << tokenizerInputName;
@@ -167,9 +168,14 @@ public:
         ::InferenceOutput embeddingsOutputMap;
         try {
             ::InferenceOutput tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
-            RET_CHECK(tokenizerOutputMap.size() > 0);
-            // TODO: Validate input/output names before passing over to subsequent inference?
-            embeddingsOutputMap = embeddings_session->infer(tokenizerOutputMap);
+            ::InferenceInput embeddingsInputMap;
+            RET_CHECK(tokenizerOutputMap.size() >= embeddingsInputNames.size());
+            for (const auto& embeddingsInputName : embeddingsInputNames) {
+                auto it = tokenizerOutputMap.find(embeddingsInputName);
+                RET_CHECK(it != tokenizerOutputMap.end());
+                embeddingsInputMap[embeddingsInputName] = it->second;
+            }
+            embeddingsOutputMap = embeddings_session->infer(embeddingsInputMap);
             RET_CHECK(embeddingsOutputMap.size() > 0);
         } catch (const std::exception& e) {
             LOG(INFO) << "Caught exception from session infer():" << e.what();
@@ -182,21 +188,30 @@ public:
         // TODO (bstrzele) (dtrawins): Support both kinds of models with 1 or 2 outputs?
         // TODO: At the moment hardcoded for 1 output only supporting bge-large-en-v1.5, but will not work with rerank/other models
         // TODO: Must require last_hidden_state kind of tensor
-        RET_CHECK(embeddingsOutputMap.size() == 1);
-        ov::Tensor lastHiddenStateTensor = embeddingsOutputMap.begin()->second;
-        LOG(INFO) << "Embedding output name detected: " << embeddingsOutputMap.begin()->first;
-        // TODO: Supporting only 3 dimensional output
+
+        ov::Tensor lastHiddenStateTensor; 
+        if (embeddingsOutputMap.size() == 2) { // GTE
+            // Search by number of dimensions, should be 3
+            bool found = false;
+            for (const auto& [name, tensor] : embeddingsOutputMap) {
+                if (tensor.get_shape().size() == 3) {
+                    lastHiddenStateTensor = tensor;
+                    found = true;
+                    break;
+                } 
+            }
+            RET_CHECK(found);
+        } else { // BGE
+            RET_CHECK(embeddingsOutputMap.size() == 1);
+            lastHiddenStateTensor = embeddingsOutputMap.begin()->second;
+            LOG(INFO) << "Embedding output name detected automatically: " << embeddingsOutputMap.begin()->first;
+        }
+
         RET_CHECK(lastHiddenStateTensor.get_shape().size() == 3);
         LOG(INFO) << lastHiddenStateTensor.get_shape();
         // TODO: Batch size must be equal to number of input strings
         RET_CHECK(lastHiddenStateTensor.get_shape()[0] == input_strings.size());
-        try {
-            RET_CHECK(lastHiddenStateTensor.data(ov::element::f32) != nullptr);
-        } catch (const std::exception& e) {
-            LOG(INFO) << "Caught exception from asserting output data type:" << e.what();
-            RET_CHECK(false);
-        }
-        // TODO mean pooling (optional)
+        RET_CHECK(lastHiddenStateTensor.get_element_type() == ov::element::f32);
 
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -208,6 +223,7 @@ public:
         writer.String("data");
         writer.StartArray();
         bool normalize = true;
+        // TODO: mean pooling
 
         ov::Shape output_shape = lastHiddenStateTensor.get_shape();
         for (int i = 0; i < output_shape[0]; i++) {
