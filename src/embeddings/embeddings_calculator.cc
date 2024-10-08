@@ -38,7 +38,6 @@
 #include "../llm/http_payload.hpp"
 #include "../logging.hpp"
 #include "../profiler.hpp"
-
 #include "absl/strings/escaping.h"
 
 using namespace rapidjson;
@@ -83,8 +82,8 @@ public:
                                 .Tag("TOKENIZER_SESSION")
                                 .Get<std::shared_ptr<::InferenceAdapter>>();
         embeddings_session = cc->InputSidePackets()
-                                    .Tag("EMBEDDINGS_SESSION")
-                                    .Get<std::shared_ptr<::InferenceAdapter>>();
+                                 .Tag("EMBEDDINGS_SESSION")
+                                 .Get<std::shared_ptr<::InferenceAdapter>>();
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator  [Node: {}] Open start", cc->NodeName());
 
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator [Node: {}] Open end", cc->NodeName());
@@ -108,13 +107,13 @@ public:
             if (it != payload.parsedJson->MemberEnd()) {
                 if (it->value.IsString()) {
                     response += it->value.GetString();
-            input_strings.push_back(it->value.GetString());
+                    input_strings.push_back(it->value.GetString());
                 } else if (it->value.IsArray()) {
                     for (auto& input : it->value.GetArray()) {
                         if (!input.IsString())
                             return absl::InvalidArgumentError("every element in input array should be string");
                         response += input.GetString();
-            input_strings.push_back(input.GetString());
+                        input_strings.push_back(input.GetString());
                     }
                 } else {
                     return absl::InvalidArgumentError("input should be string or array of strings");
@@ -125,9 +124,9 @@ public:
             it = payload.parsedJson->FindMember("encoding_format");
             if (it != payload.parsedJson->MemberEnd()) {
                 if (it->value.IsString()) {
-            if (it->value.GetString() == std::string("base64")) {
+                    if (it->value.GetString() == std::string("base64")) {
                         isBase64 = true;
-            }
+                    }
                     response += it->value.GetString();
                 } else {
                     return absl::InvalidArgumentError("encoding_format should be string");
@@ -163,8 +162,7 @@ public:
         tokenizerInputMap[tokenizerInputName] = ov::Tensor{
             ov::element::string,
             ov::Shape{input_strings.size()},
-            input_strings.data()
-        };
+            input_strings.data()};
 
         ::InferenceOutput embeddingsOutputMap;
         try {
@@ -193,20 +191,13 @@ public:
         // TODO: Batch size must be equal to number of input strings
         RET_CHECK(lastHiddenStateTensor.get_shape()[0] == input_strings.size());
         try {
-	    RET_CHECK(lastHiddenStateTensor.data(ov::element::f32) != nullptr);
-	} catch (const std::exception& e) {
+            RET_CHECK(lastHiddenStateTensor.data(ov::element::f32) != nullptr);
+        } catch (const std::exception& e) {
             LOG(INFO) << "Caught exception from asserting output data type:" << e.what();
             RET_CHECK(false);
         }
-        // TODO: Normalization? mean pooling? those are the parameters which can change postprocessing:
-        // https://github.com/langchain-ai/langchain/blob/master/libs/community/langchain_community/embeddings/openvino.py#L228-L255
-        // Demo usage: https://github.com/langchain-ai/langchain/blob/master/docs/docs/integrations/text_embedding/openvino.ipynb
-        // TODO: In this implementation I do skip both.
-        // TODO: 
+        // TODO mean pooling (optional)
 
-        // 1. mean pooling (optional)
-        // 2. normalization (optional)
-        
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
         writer.StartObject();
@@ -216,37 +207,38 @@ public:
 
         writer.String("data");
         writer.StartArray();
-	bool normalize = true;
+        bool normalize = true;
 
-	ov::Shape output_shape = lastHiddenStateTensor.get_shape();
-	for (int i = 0; i < output_shape[0]; i++) {
-		size_t stride = i * output_shape[1] * output_shape[2];
-		std::vector<float> data(reinterpret_cast<float*>(lastHiddenStateTensor.data()) + stride, reinterpret_cast<float*>(lastHiddenStateTensor.data()) + stride + output_shape[2]);
-		std::string_view sv(reinterpret_cast<char*>(data.data()), data.size());
-		writer.StartObject();
-		writer.String("object");
-		writer.String("embedding");
-		writer.String("embedding");
-		if (normalize) {
-			float square_sum = std::inner_product(data.begin(), data.end(), data.begin(), 0);
-			float denom = std::sqrt(square_sum);
-			for (int j = 0; j < data.size(); j++){
-				data[j] /= denom;
-			}
-		}
-		if (isBase64) {
-		    writer.String(absl::Base64Escape(sv).c_str());
-		} else {
-		    writer.StartArray();
-		    for (auto value : data) {
-			writer.Double(value);
-		    }
-		    writer.EndArray();
-		}
-		writer.String("index");
-		writer.Int(i);
-		writer.EndObject();
-	}
+        ov::Shape output_shape = lastHiddenStateTensor.get_shape();
+        for (int i = 0; i < output_shape[0]; i++) {
+            size_t stride = i * output_shape[1] * output_shape[2];
+            std::vector<float> data(reinterpret_cast<float*>(lastHiddenStateTensor.data()) + stride, reinterpret_cast<float*>(lastHiddenStateTensor.data()) + stride + output_shape[2]);
+            writer.StartObject();
+            writer.String("object");
+            writer.String("embedding");
+            writer.String("embedding");
+            if (normalize) {
+                double square_sum = std::inner_product(data.begin(), data.end(), data.begin(), double(0.0));
+                double denom = std::max(std::sqrt(square_sum), double(1e-12));
+                std::transform(data.begin(), data.end(), data.begin(),
+                    [denom](auto& element) { return element / denom; });
+            }
+            if (isBase64) {
+                std::string_view sv(reinterpret_cast<char*>(data.data()), data.size());
+                std::string escaped;
+                absl::Base64Escape(sv, &escaped);
+                writer.String(escaped.c_str());
+            } else {
+                writer.StartArray();
+                for (auto value : data) {
+                    writer.Double(value);
+                }
+                writer.EndArray();
+            }
+            writer.String("index");
+            writer.Int(i);
+            writer.EndObject();
+        }
 
         writer.EndArray();
         writer.EndObject();
