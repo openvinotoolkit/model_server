@@ -95,6 +95,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::INVALID_MISSING_INPUT, "Missing input with specific name"},
     {StatusCode::INVALID_UNEXPECTED_INPUT, "Unexpected input"},
     {StatusCode::INVALID_MISSING_OUTPUT, "Missing output with specific name"},
+    {StatusCode::INVALID_MISSING_OUTPUT_BUFFER, "Missing output buffer in request"},
     {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, "Invalid number of shape dimensions"},
     {StatusCode::INVALID_BATCH_SIZE, "Invalid input batch size"},
     {StatusCode::INVALID_SHAPE, "Invalid input shape"},
