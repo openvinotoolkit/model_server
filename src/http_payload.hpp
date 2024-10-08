@@ -22,7 +22,7 @@
 
 #include <rapidjson/document.h>
 
-#include "../client_connection.hpp"
+#include "client_connection.hpp"
 
 namespace ovms {
 

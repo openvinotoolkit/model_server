@@ -26,7 +26,7 @@
 
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
-#include "http_payload.hpp"
+#include "../http_payload.hpp"
 #include "llmnoderesources.hpp"
 #include "text_processor.hpp"
 

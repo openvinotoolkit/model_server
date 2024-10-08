@@ -1,15 +1,10 @@
-# How to serve Embeddings models with via OpenAI API {#ovms_demos_embeddings}
+# How to serve Embeddings models via OpenAI API {#ovms_demos_embeddings}
 This demo shows how to deploy embeddings models in the OpenVINO Model Server for text feature extractions.
 Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
 ## Get the docker image
 
-Pull public image with CPU only support or including also GPU support.
-```bash
-docker pull openvino/model_server:latest-gpu
-docker pull openvino/model_server:latest
-```
-or build the image from source to try the latest enhancements in this feature.
+Until the feature is not included in public image, build the image from source to try the latest enhancements in this feature. In 2024.5 public release this command will be optional.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
@@ -20,7 +15,7 @@ It will create an image called `openvino/model_server:latest`.
 > **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
 
 ## Model preparation
-> **Note** Python 3.9 or higher is need for that step
+> **Note** Python 3.9 or higher is needed for that step
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 LLM engine parameters will be defined inside the `graph.pbtxt` file.

@@ -16,9 +16,6 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
-#include <atomic>
-#include <optional>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 
@@ -30,12 +27,12 @@
 #pragma GCC diagnostic pop
 
 #include <adapters/inference_adapter.h>
-#include <fmt/ranges.h>
-#include <openvino/openvino.hpp>
+//#include <fmt/ranges.h>
+//#include <openvino/openvino.hpp>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "../llm/http_payload.hpp"
+#include "../http_payload.hpp"
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "absl/strings/escaping.h"
