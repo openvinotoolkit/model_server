@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
 #include "custom_node.hpp"
 
 #include <optional>
@@ -48,7 +47,7 @@ CustomNode::CustomNode(
 
 Status CustomNode::execute(session_key_t sessionKey, PipelineEventQueue& notifyEndQueue) {
     auto& nodeSession = getNodeSession(sessionKey);
-    CustomNodeSession& customNodeSession = static_cast<CustomNodeSession&>(nodeSession);
+    auto& customNodeSession = static_cast<CustomNodeSession&>(nodeSession);
     return customNodeSession.execute(notifyEndQueue, *this, this->library, this->libraryParameters, this->parameters.size(), getCNLIMWrapperPtr(customNodeLibraryInternalManager));
 }
 

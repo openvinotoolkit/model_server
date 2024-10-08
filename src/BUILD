@@ -178,8 +178,6 @@ cc_library(
             "ovms_internal.h",
     ],
     srcs = [
-        "dags/custom_node_library_internal_manager_wrapper.hpp",
-        "dags/custom_node_library_internal_manager_wrapper.cpp",
         "capi_frontend/capi.cpp",
         "capi_frontend/servablemetadata.cpp",
         "capi_frontend/servablemetadata.hpp",
@@ -202,6 +200,8 @@ cc_library(
         "dags/customnodesession.hpp",
         "dags/custom_node.cpp",
         "dags/custom_node.hpp",
+        "dags/custom_node_library_internal_manager_wrapper.hpp",
+        "dags/custom_node_library_internal_manager_wrapper.cpp",
         "dags/custom_node_library_manager.cpp",
         "dags/custom_node_library_manager.hpp",
         "dags/custom_node_output_allocator.cpp",
@@ -419,7 +419,7 @@ cc_library(
         ],
         "//:disable_python": []
     }),
-    linkstatic = True,
+    alwayslink = 1,
 )
 
 cc_library(
