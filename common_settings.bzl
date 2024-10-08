@@ -78,12 +78,21 @@ COMMON_STATIC_LIBS_COPTS = [
     #"-fvisibility=hidden", # Needed for pybind targets
     #"-Werror",
 ]
-COMMON_STATIC_LIBS_LINKOPTS = [
-        "-lxml2",
-        "-luuid",
-        "-lstdc++fs",
-        "-lcrypto",
-]
+COMMON_STATIC_LIBS_LINKOPTS = select({
+                "//conditions:default": [
+                    "-lxml2",
+                    "-luuid",
+                    "-lstdc++fs",
+                    "-lcrypto",
+                    "-lOpenCL", # TODO make as a direct dependency
+                    # "-lovms_shared",  # Use for dynamic linking when necessary
+                ],
+                "//src:windows" : [
+                    "",
+                    ],
+                }) 
+
+
 COMMON_FUZZER_COPTS = [
     "-fsanitize=address",
     "-fprofile-generate",

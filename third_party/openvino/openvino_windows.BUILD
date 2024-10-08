@@ -30,7 +30,7 @@ cc_library(
 cc_library(
     name = "openvino",
     srcs = glob([
-        "bin\\intel64\\Release\\openvino.dll"
+        "lib\\intel64\\Release\\openvino.lib"
     ]),
     #strip_include_prefix = "include/ie",
     visibility = ["//visibility:public"],
@@ -41,4 +41,5 @@ cc_library(
     ],
     defines = ["OV_GPU_USE_OPENCL_HPP"],
     #copts = ["-I./"],
+    #linkopts = ["-lopenvino"],
 )

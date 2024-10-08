@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 #include "pipelinedefinition.hpp"
 
 #include <chrono>
@@ -27,8 +28,8 @@
 #include "../ov_utils.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
-#include "custom_node.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
+#include "custom_node.hpp"
 #include "dl_node.hpp"
 #include "entry_node.hpp"
 #include "exit_node.hpp"

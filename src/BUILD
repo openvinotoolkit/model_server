@@ -206,16 +206,14 @@ cc_library(
         "deserialization.cpp",
         "deserialization.hpp",
         "dags/aliases.hpp",
+        "dags/customnodesession.cpp",
+        "dags/customnodesession.hpp",
         "dags/custom_node.cpp",
         "dags/custom_node.hpp",
         "dags/custom_node_library_manager.cpp",
         "dags/custom_node_library_manager.hpp",
         "dags/custom_node_output_allocator.cpp",
         "dags/custom_node_output_allocator.hpp",
-        "dags/custom_node_library_internal_manager_wrapper.hpp",
-        "dags/custom_node_library_internal_manager_wrapper.cpp",
-        "dags/customnodesession.cpp",
-        "dags/customnodesession.hpp",
         "dags/dl_node.cpp",
         "dags/dl_node.hpp",
         "dags/dlnodesession.cpp",
@@ -260,6 +258,8 @@ cc_library(
         "dags/pipeline_factory.hpp",
         "dags/session_id.hpp",
         "dags/tensormap.hpp",
+        "dags/custom_node_library_internal_manager_wrapper.hpp",
+        "dags/custom_node_library_internal_manager_wrapper.cpp",
         "execution_context.hpp",
         "executingstreamidguard.cpp",
         "executingstreamidguard.hpp",
@@ -421,14 +421,13 @@ cc_library(
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED + ["-lOpenCL"], # TODO make as a direct dependency
+    linkopts = LINKOPTS_ADJUSTED, 
     data = select({
         "//:not_disable_python": [
             "//src/python/binding:pyovms.so",
         ],
         "//:disable_python": []
     }),
-    alwayslink = 1,
 )
 
 cc_library(
@@ -686,12 +685,7 @@ cc_binary(
     srcs = [
         "main_capi.cpp",
     ],
-    linkopts = [
-        "-lxml2",
-        "-luuid",
-        "-lstdc++fs",
-        "-lcrypto",
-    ],
+    linkopts = LINKOPTS_ADJUSTED,
     copts = [
     ],
     deps = [
@@ -1080,13 +1074,7 @@ cc_binary(
     srcs = [
         "main.cpp",
     ],
-    linkopts = [
-        "-lxml2",
-        "-luuid",
-        "-lstdc++fs",
-        "-lcrypto",
-        # "-lovms_shared",  # Use for dynamic linking when necessary
-    ],
+    linkopts = LINKOPTS_ADJUSTED,
     copts = [
         #"-Wall",
         #"-Wconversion",
