@@ -18,11 +18,6 @@
 
 namespace ovms {
 
-void* getCNLIMWrapperPtr(const std::shared_ptr<CNLIMWrapper>& wrapper) {
-    if (wrapper == nullptr) {
-        return nullptr;
-    }
-    return wrapper->ptr;
-}
+
 
 }  // namespace ovms

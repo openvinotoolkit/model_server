@@ -213,13 +213,13 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencl",
     build_file = "@//third_party/opencl:opencl_windows.BUILD",
-    path = "C:\\opencl\\external\\OpenCL-CLHPP",
+    path = "C:\\opt\\opencl\\external\\OpenCL-CLHPP",
 )
 
 new_local_repository(
     name = "windows_opencl2",
     build_file = "@//third_party/opencl:opencl_windows2.BUILD",
-    path = "C:\\opencl\\external\\OpenCL-Headers",
+    path = "C:\\opt\\opencl\\external\\OpenCL-Headers",
 )
 
 ########################################################### Mediapipe end

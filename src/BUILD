@@ -178,6 +178,8 @@ cc_library(
             "ovms_internal.h",
     ],
     srcs = [
+        "dags/custom_node_library_internal_manager_wrapper.hpp",
+        "dags/custom_node_library_internal_manager_wrapper.cpp",
         "capi_frontend/capi.cpp",
         "capi_frontend/servablemetadata.cpp",
         "capi_frontend/servablemetadata.hpp",
@@ -246,8 +248,6 @@ cc_library(
         "dags/pipeline_factory.hpp",
         "dags/session_id.hpp",
         "dags/tensormap.hpp",
-        "dags/custom_node_library_internal_manager_wrapper.hpp",
-        "dags/custom_node_library_internal_manager_wrapper.cpp",
         "execution_context.hpp",
         "executingstreamidguard.cpp",
         "executingstreamidguard.hpp",
@@ -419,6 +419,7 @@ cc_library(
         ],
         "//:disable_python": []
     }),
+    linkstatic = True,
 )
 
 cc_library(
