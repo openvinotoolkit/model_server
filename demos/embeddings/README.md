@@ -28,7 +28,7 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 Install python dependencies for the conversion script:
 ```bash
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-pip3 install optimum-intel@git+https://github.com/huggingface/optimum-intel.git  openvino-tokenizers[transformers]==2024.4.* openvino==2024.4.* nncf>=2.11.0 sentence_transformers==3.1.1
+pip3 install optimum-intel@git+https://github.com/huggingface/optimum-intel.git  openvino-tokenizers[transformers]==2024.4.* openvino==2024.4.* nncf>=2.11.0 sentence_transformers==3.1.1 openai
 ```
 
 Run optimum-cli to download and quantize the model:
@@ -38,8 +38,6 @@ convert_tokenizer -o models/gte-large-en-v1.5-tokenizer/1 Alibaba-NLP/gte-large-
 optimum-cli export openvino --disable-convert-tokenizer --model Alibaba-NLP/gte-large-en-v1.5 --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/gte-large-en-v1.5-embeddings/1
 ```
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
-> **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/meta-llama/Meta-Llama-3-8B) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`.
-
 
 You should have a model folder like below:
 ```bash
@@ -108,6 +106,28 @@ Completion endpoint should be used to pass the prompt directly by the client and
 curl http://localhost:8000/v3/embeddings \
   -H "Content-Type: application/json" -d '{ "model": "Alibaba-NLP/gte-large-en-v1.5", "input": "hello world"}' | jq .
 ```
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "embedding",
+      "embedding": [
+        -0.03440694510936737,
+        -0.02553200162947178,
+        -0.010130723007023335,
+        -0.013917984440922737,
+...
+        0.02722850814461708,
+        -0.017527244985103607,
+        -0.0053995149210095406
+      ],
+      "index": 0
+    }
+  ]
+}
+
+```
 
 Altenratively there could be used openai python client like in the example below:
 
@@ -130,7 +150,7 @@ responses = client.embeddings.create(
     model=model,
 )
 for data in responses.data:
-    print(data.embedding)  # list of float of len 4096
+    print(data.embedding)
 ```
 
 

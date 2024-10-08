@@ -7,7 +7,7 @@ import numpy as np
 model_id = "Alibaba-NLP/gte-large-en-v1.5"
 tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
 model_pt = AutoModel.from_pretrained(model_id, trust_remote_code=True)
-model_ov = OVSentenceTransformer.from_pretrained('models/gte-large-en-v1.5-embeddings/1', trust_remote_code=True, normalize=True)
+model_ov = OVSentenceTransformer.from_pretrained(model_id, trust_remote_code=True, normalize=True)
 
 text = "hello world"
 
@@ -38,7 +38,7 @@ def run_OV():
 
 def run_ovms():
     from openai import OpenAI
-    client = OpenAI(base_url="http://localhost:6001/v3",api_key="unused"    )
+    client = OpenAI(base_url="http://localhost:8000/v3",api_key="unused"    )
     start_time = datetime.datetime.now()
     responses = client.embeddings.create(input=[text], model=model_id)
     end_time = datetime.datetime.now()
@@ -46,8 +46,8 @@ def run_ovms():
     print("Duration:", duration, "ms - OVMS",)
     print(type(responses.data))
     for data in responses.data:
-        print(type(data.embedding))
-        result = np.array(data.embedding)
+        print(type(data))
+        result = np.array(data)
         print(result)
 
 HF_embeddings = run_model(model_pt)
