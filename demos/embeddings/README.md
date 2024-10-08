@@ -77,7 +77,7 @@ cat config.json
 
 ## Start-up
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json --cpu_extension libopenvino_tokenizers.so
 ```
 In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU. 

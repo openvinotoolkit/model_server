@@ -1,5 +1,3 @@
-// TODO: move to separate target
-
 //*****************************************************************************
 // Copyright 2024 Intel Corporation
 //
@@ -94,7 +92,6 @@ public:
         std::vector<std::string> input_strings;
         bool isBase64 = false;
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
-            std::string response = "";
             InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
@@ -103,13 +100,11 @@ public:
             auto it = payload.parsedJson->FindMember("input");
             if (it != payload.parsedJson->MemberEnd()) {
                 if (it->value.IsString()) {
-                    response += it->value.GetString();
                     input_strings.push_back(it->value.GetString());
                 } else if (it->value.IsArray()) {
                     for (auto& input : it->value.GetArray()) {
                         if (!input.IsString())
                             return absl::InvalidArgumentError("every element in input array should be string");
-                        response += input.GetString();
                         input_strings.push_back(input.GetString());
                     }
                 } else {
@@ -124,27 +119,12 @@ public:
                     if (it->value.GetString() == std::string("base64")) {
                         isBase64 = true;
                     }
-                    response += it->value.GetString();
                 } else {
                     return absl::InvalidArgumentError("encoding_format should be string");
                 }
             }
-            it = payload.parsedJson->FindMember("dimensions");
-            if (it != payload.parsedJson->MemberEnd()) {
-                if (it->value.IsInt()) {
-                    response += std::to_string(it->value.GetInt());
-                } else {
-                    return absl::InvalidArgumentError("dimensions should be string or array of strings");
-                }
-            }
-            it = payload.parsedJson->FindMember("user");
-            if (it != payload.parsedJson->MemberEnd()) {
-                if (it->value.IsString()) {
-                    response += it->value.GetString();
-                } else {
-                    return absl::InvalidArgumentError("user should be string");
-                }
-            }
+            // TODO: dimensions (optional)
+            // TODO: user (optional)
         } else {
             return absl::InvalidArgumentError("Input is empty");
         }
@@ -154,7 +134,7 @@ public:
         std::vector<std::string> embeddingsInputNames = embeddings_session->getInputNames();
         RET_CHECK(tokenizerInputNames.size() == 1);
         const std::string& tokenizerInputName = tokenizerInputNames.at(0);
-        LOG(INFO) << "Tokenizer input name detected: " << tokenizerInputName;
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Tokenizer input name detected: {}", tokenizerInputName);
 
         ::InferenceInput tokenizerInputMap;
         tokenizerInputMap[tokenizerInputName] = ov::Tensor{
@@ -166,10 +146,12 @@ public:
         try {
             ::InferenceOutput tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
             ::InferenceInput embeddingsInputMap;
+            // Check if tokenizer produced at least the number of outputs as there are inputs in embedding model
             RET_CHECK(tokenizerOutputMap.size() >= embeddingsInputNames.size());
             for (const auto& embeddingsInputName : embeddingsInputNames) {
                 auto it = tokenizerOutputMap.find(embeddingsInputName);
                 RET_CHECK(it != tokenizerOutputMap.end());
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embedding model input {} is connected with matching tokenizer output", embeddingsInputName);
                 embeddingsInputMap[embeddingsInputName] = it->second;
             }
             embeddingsOutputMap = embeddings_session->infer(embeddingsInputMap);
@@ -182,17 +164,14 @@ public:
             RET_CHECK(false);
         }
 
-        // TODO (bstrzele) (dtrawins): Support both kinds of models with 1 or 2 outputs?
-        // TODO: At the moment hardcoded for 1 output only supporting bge-large-en-v1.5, but will not work with rerank/other models
-        // TODO: Must require last_hidden_state kind of tensor
-
-        ov::Tensor lastHiddenStateTensor; 
+        ov::Tensor embeddingsTensor; 
         if (embeddingsOutputMap.size() == 2) { // GTE
             // Search by number of dimensions, should be 3
             bool found = false;
             for (const auto& [name, tensor] : embeddingsOutputMap) {
                 if (tensor.get_shape().size() == 3) {
-                    lastHiddenStateTensor = tensor;
+                    embeddingsTensor = tensor;
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", name);
                     found = true;
                     break;
                 } 
@@ -200,15 +179,13 @@ public:
             RET_CHECK(found);
         } else { // BGE
             RET_CHECK(embeddingsOutputMap.size() == 1);
-            lastHiddenStateTensor = embeddingsOutputMap.begin()->second;
-            LOG(INFO) << "Embedding output name detected automatically: " << embeddingsOutputMap.begin()->first;
+            embeddingsTensor = embeddingsOutputMap.begin()->second;
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", embeddingsOutputMap.begin()->first);
         }
 
-        RET_CHECK(lastHiddenStateTensor.get_shape().size() == 3);
-        LOG(INFO) << lastHiddenStateTensor.get_shape();
-        // TODO: Batch size must be equal to number of input strings
-        RET_CHECK(lastHiddenStateTensor.get_shape()[0] == input_strings.size());
-        RET_CHECK(lastHiddenStateTensor.get_element_type() == ov::element::f32);
+        RET_CHECK(embeddingsTensor.get_shape().size() == 3);
+        RET_CHECK(embeddingsTensor.get_shape()[0] == input_strings.size());
+        RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
 
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -222,10 +199,11 @@ public:
         bool normalize = true;
         // TODO: mean pooling
 
-        ov::Shape output_shape = lastHiddenStateTensor.get_shape();
-        for (int i = 0; i < output_shape[0]; i++) {
-            size_t stride = i * output_shape[1] * output_shape[2];
-            std::vector<float> data(reinterpret_cast<float*>(lastHiddenStateTensor.data()) + stride, reinterpret_cast<float*>(lastHiddenStateTensor.data()) + stride + output_shape[2]);
+        ov::Shape outputShape = embeddingsTensor.get_shape();
+        size_t batchSize = outputShape[0];
+        for (size_t i = 0; i < batchSize; i++) {
+            size_t stride = i * outputShape[1] * outputShape[2];
+            std::vector<float> data(reinterpret_cast<float*>(embeddingsTensor.data()) + stride, reinterpret_cast<float*>(embeddingsTensor.data()) + stride + outputShape[2]);
             writer.StartObject();
             writer.String("object");
             writer.String("embedding");
