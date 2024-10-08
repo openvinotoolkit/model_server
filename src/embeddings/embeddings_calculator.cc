@@ -240,7 +240,7 @@ public:
                     [denom](auto& element) { return element / denom; });
             }
             if (isBase64) {
-                std::string_view sv(reinterpret_cast<char*>(data.data()), data.size());
+                std::string_view sv(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
                 std::string escaped;
                 absl::Base64Escape(sv, &escaped);
                 writer.String(escaped.c_str());
