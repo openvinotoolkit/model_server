@@ -359,7 +359,7 @@ cc_library(
             "libovmscapiinferencetensor",
             "libovmsdagspipelinedefinitionstatus",
             "libovmsfilesystem",
-            "libovmsfilesystemfactory",
+            "libovmsfilesystemfactory_h",
             "libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
             "libovmsmetrics",
@@ -1142,10 +1142,21 @@ cc_library(
 )
 
 cc_library(
-    name = "libovmsfilesystemfactory",
+    name = "libovmsfilesystemfactory_h",
     hdrs = ["filesystemfactory.hpp",],
+    deps = [],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "libovmsfilesystemfactory",
+    hdrs = [],
     srcs = ["filesystemfactory.cpp",],
     deps = ["libovmsfilesystem",
+            "libovmsfilesystemfactory_h",
             "libovmsstatus",
             "libovmsazurefilesystem",
             "libovmsgcsfilesystem",
@@ -1231,6 +1242,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
         "//src:libcustom_node_east_ocr.so",
         "//src:libcustom_node_face_blur.so",
         "//src:libcustom_node_horizontal_ocr.so",
@@ -1462,6 +1474,7 @@ cc_test(
 	":libtest_gpuenvironment",
     	":test_utils",
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
         "//src:custom_nodes_common_lib",
         "//src:libsampleloader.so",
         "//src:lib_node_mock.so",
