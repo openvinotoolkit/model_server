@@ -17,6 +17,7 @@
 # Add or remove models from the tested_models array to export them
 
 tested_models=(
+    nomic-ai/nomic-embed-text-v1.5
     Alibaba-NLP/gte-large-en-v1.5
     BAAI/bge-large-en-v1.5
     thenlper/gte-small

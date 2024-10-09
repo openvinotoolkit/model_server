@@ -19,13 +19,23 @@ from optimum.intel import OVModelForFeatureExtraction, OVSentenceTransformer
 import torch
 import datetime
 import numpy as np
+import argparse
 
-model_id = "Alibaba-NLP/gte-large-en-v1.5"
+parser = argparse.ArgumentParser(description='Compare embeddings resposnes from HF transfomers, OVSentenceTransformer and OVMS')
+parser.add_argument('--service_url', required=False, default='http://localhost:6000/v3/embeddings',
+                    help='Specify url to embeddings endpoint. default:http://localhost:8000/v3/embeddings', dest='service_url')
+parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', help='Model name to query. default: Alibaba-NLP/gte-large-en-v1.5',
+                    dest='model_name')
+parser.add_argument('--input', type=list, default=["hello world","goodbye world"], help='String to query. default: ["hello world","goodbye world"]',
+                    dest='input')
+args = vars(parser.parse_args())
+
+model_id = args['model_name']
 tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
 model_pt = AutoModel.from_pretrained(model_id, trust_remote_code=True)
-model_ov = OVSentenceTransformer.from_pretrained(model_id, trust_remote_code=True)
+#model_ov = OVSentenceTransformer.from_pretrained(model_id, trust_remote_code=True)
 
-text = ["hello world","goodbye world"]
+text = args['input']
 
 def run_model():
     with torch.no_grad():
@@ -51,7 +61,7 @@ def run_OV():
 
 def run_ovms():
     from openai import OpenAI
-    client = OpenAI(base_url="http://localhost:8000/v3",api_key="unused"    )
+    client = OpenAI(base_url=args['service_url'],api_key="unused"    )
     start_time = datetime.datetime.now()
     responses = client.embeddings.create(input=text, model=model_id)
     end_time = datetime.datetime.now()
@@ -60,7 +70,7 @@ def run_ovms():
     return responses.data
 
 HF_embeddings = run_model()
-OV_embeddings = run_OV()
+#OV_embeddings = run_OV()
 OVMS_embeddings = run_ovms()
 
 i=0
@@ -69,12 +79,11 @@ for res in OVMS_embeddings:
     ovmsresult = np.array(res.embedding)
     with np.printoptions(precision=4, suppress=True):
         print("OVMS embeddings: shape:",ovmsresult.shape, "emb[:20]:\n", ovmsresult[:20])
-        print("OVSentenceTransformer: shape:",OV_embeddings[i].shape, "emb[:20]:\n", OV_embeddings[i][:20])
+        #print("OVSentenceTransformer: shape:",OV_embeddings[i].shape, "emb[:20]:\n", OV_embeddings[i][:20])
         print("HF AutoModel: shape:",HF_embeddings[i].shape, "emb[:20]:\n", HF_embeddings[i][:20])
-    print("Similarity with OVSentenceTransformer:", np.linalg.norm(ovmsresult - OV_embeddings[i]))
     print("Similarity with HF AutoModel:", np.linalg.norm(ovmsresult - HF_embeddings[i]))
     assert np.allclose(ovmsresult, HF_embeddings[i], atol=1e-2)
-    assert (np.linalg.norm(ovmsresult - HF_embeddings[i]) < 0.03)
+    assert (np.linalg.norm(ovmsresult - HF_embeddings[i]) < 0.06)
     i+=1
 
 

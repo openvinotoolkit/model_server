@@ -165,7 +165,7 @@ It creates `config_all.json` with models structure including IR files, `graph.pb
 
 All those models can be deployed togather via:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config_all.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config_all.json --cpu_extension /ovms/lib/libopenvino_tokenizers.so
 ```
 
 
