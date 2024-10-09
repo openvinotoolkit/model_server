@@ -24,6 +24,7 @@
 #include "../get_model_metadata_impl.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
+#include "gpuenvironment.hpp"
 #include "test_utils.hpp"
 
 using testing::Return;
@@ -380,6 +381,55 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
     };
     auto status = modelInstance.loadModel(config);
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID) << status.string();
+}
+class TestLoadModelWithRemoteTensorFactoriesSucceeds : public ::testing::Test {
+protected:
+    ovms::ModelConfig config;
+    std::unique_ptr<ov::Core> ieCore;
+    void SetUp() {
+        ieCore = std::make_unique<ov::Core>();
+
+        config = ovms::ModelConfig{
+            "NOT_USED_NAME",
+            dummy_model_location,  // base path
+            "SOME",                // target device
+            "1",                   // batchsize
+            1,                     // NIREQ
+            false,                 // is stateful
+            false,                 // idle sequence cleanup enabled
+            false,                 // low latency transformation enabled
+            500,                   // stateful sequence max number,
+            "",                    // cache dir
+            1,                     // version
+            dummy_model_location,  // local path
+        };
+    }
+};
+TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, CheckIfLoadingSucceedsForGPU) {
+    SKIP_AND_EXIT_IF_NO_GPU();
+    this->config.setTargetDevice("GPU");
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    auto status = modelInstance.loadModel(config);
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+}
+TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, CheckIfLoadingSucceedsForHeteroCPUGPU) {
+    SKIP_AND_EXIT_IF_NO_GPU();
+    this->config.setTargetDevice("HETERO:GPU,CPU");
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    auto status = modelInstance.loadModel(config);
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+}
+TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, CheckIfLoadingSucceedsForAutoCPUGPU) {
+    this->config.setTargetDevice("AUTO:GPU,CPU");
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    auto status = modelInstance.loadModel(config);
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+}
+TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, CheckIfLoadingSucceedsForMultiCPUGPU) {
+    this->config.setTargetDevice("MULTI:GPU,CPU");
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    auto status = modelInstance.loadModel(config);
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
 
 TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
