@@ -335,7 +335,6 @@ cc_library(
                 "kfs_frontend/kfs_graph_executor_impl.hpp",
                 "http_frontend/http_graph_executor_impl.cpp",
                 "http_frontend/http_graph_executor_impl.hpp",
-                #"embeddings/embeddings_calculator.cc",  # it should not be included here, but separated to different target like http_llm_calculator.cpp
             ],
             "//:disable_mediapipe" : [],
         }),

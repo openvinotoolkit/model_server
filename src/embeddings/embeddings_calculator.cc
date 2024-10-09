@@ -25,8 +25,6 @@
 #pragma GCC diagnostic pop
 
 #include <adapters/inference_adapter.h>
-//#include <fmt/ranges.h>
-//#include <openvino/openvino.hpp>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
@@ -164,8 +162,8 @@ public:
             RET_CHECK(false);
         }
 
-        ov::Tensor embeddingsTensor; 
-        if (embeddingsOutputMap.size() == 2) { // GTE
+        ov::Tensor embeddingsTensor;
+        if (embeddingsOutputMap.size() == 2) {  // GTE
             // Search by number of dimensions, should be 3
             bool found = false;
             for (const auto& [name, tensor] : embeddingsOutputMap) {
@@ -174,10 +172,10 @@ public:
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", name);
                     found = true;
                     break;
-                } 
+                }
             }
             RET_CHECK(found);
-        } else { // BGE
+        } else {  // BGE
             RET_CHECK(embeddingsOutputMap.size() == 1);
             embeddingsTensor = embeddingsOutputMap.begin()->second;
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", embeddingsOutputMap.begin()->first);

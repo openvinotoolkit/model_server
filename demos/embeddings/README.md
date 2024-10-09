@@ -57,7 +57,7 @@ models/
 ```
 
 The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. 
-Runtime configuration for both models can be tunned in `subconfig.json` file. 
+Runtime configuration for both models can be tuned in `subconfig.json` file. 
 
 ## Server configuration
 Prepare config.json:

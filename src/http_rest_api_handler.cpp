@@ -474,7 +474,6 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
         const std::string model_name = modelNameIt->value.GetString();
 
-
         bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
         if (isTextGenerationEndpoint) {
             auto streamIt = doc.FindMember("stream");
