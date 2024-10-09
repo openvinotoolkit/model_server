@@ -56,7 +56,7 @@ curl http://localhost/v3/embeddings \
 
 #### Unsupported params from OpenAI service:
 - user
-- dimentions
+- dimensions
 
 ## Response
 

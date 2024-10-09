@@ -4,7 +4,7 @@ Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
 ## Get the docker image
 
-Build the image from source to try this new feature. It will be included in the public image in the comming version 2024.5.
+Build the image from source to try this new feature. It will be included in the public image in the coming version 2024.5.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
@@ -156,14 +156,14 @@ TBD
 
 ## Deploying multiple embedding models
 
-It is possible to deploy multiple graphs and models on a single model server instance. For each model the same export steps should be repeated and each pipeline should be added to the confuration file.
+It is possible to deploy multiple graphs and models on a single model server instance. For each model the same export steps should be repeated and each pipeline should be added to the configuration file.
 The following script prepares the repository with all tested models:
 ```bash
 ./export_all_models.sh
 ```
 It creates `config_all.json` with models structure including IR files, `graph.pbtxt` definitions and `subconfig.json` subconfigs.
 
-All those models can be deployed togather via:
+All those models can be deployed together via:
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config_all.json --cpu_extension /ovms/lib/libopenvino_tokenizers.so
 ```
