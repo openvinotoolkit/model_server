@@ -1,0 +1,43 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name" : "OVMS RLS",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bazel-out/x64_windows-opt/bin/src/ovms.exe",
+            "args": ["--help"],
+            "cwd": "${workspaceFolder}/bazel-out/x64_windows-opt/bin/src/",
+            "environment": [
+                {"name": "PATH", "value": "%PATH%;C:\\opt\\intel\\openvino_2024\\runtime\\bin\\intel64\\Release;C:\\Windows\\SysWOW64\\;C:\\opt\\intel\\openvino_2024\\runtime\\3rdparty\\tbb\\bin\\;C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Redist\\MSVC\\14.29.30133\\debug_nonredist\\x64\\Microsoft.VC142.DebugCRT\\"},
+            ],
+            "externalConsole": true,
+            "logging": {
+                "moduleLoad": false,
+                "trace": true
+            },
+            "sourceFileMap": {
+                "/c/users/rasapala/_bazel_rasapala/tpoq5oxa/execroot/ovms/": "${workspaceFolder}"
+            }
+        },
+        {
+            "name" : "OVMS DEBG",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bazel-out/x64_windows-dbg/bin/src/ovms.exe",
+            "args": ["--help"],
+            "cwd": "${workspaceFolder}/bazel-out/x64_windows-dbg/bin/src/",
+            "environment": [
+                {"name": "PATH", "value": "%PATH%;C:\\opt\\intel\\openvino_2024\\runtime\\bin\\intel64\\Release;C:\\Windows\\SysWOW64\\;C:\\opt\\intel\\openvino_2024\\runtime\\3rdparty\\tbb\\bin\\;C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Redist\\MSVC\\14.29.30133\\debug_nonredist\\x64\\Microsoft.VC142.DebugCRT\\"},
+            ],
+            "externalConsole": true,
+            "logging": {
+                "moduleLoad": false,
+                "trace": true
+            },
+            "sourceFileMap": {
+                "/c/users/rasapala/_bazel_rasapala/tpoq5oxa/execroot/ovms/": "${workspaceFolder}"
+            }
+        }
+    ]
+}
