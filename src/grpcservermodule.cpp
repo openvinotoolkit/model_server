@@ -27,10 +27,14 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
-//  TODO: windows #include <netinet/in.h>
 #include <signal.h>
-#include <stdlib.h>
-// TODO: windows #include <sys/socket.h>
+#include <stdlib.h> 
+#ifdef __linux__
+#include <netinet/in.h>
+#include <sys/socket.h>
+#elif _WIN32
+#include <winsock2.h>
+#endif 
 #include <unistd.h>
 
 #include "config.hpp"
@@ -75,7 +79,33 @@ static bool isPortAvailable(uint64_t port) {
 }
 #else 
 static bool isPortAvailable(uint64_t port) {
-    return false;
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        SPDLOG_ERROR("WSAStartup error.");
+        return false;
+    }
+
+    // Create a socket
+    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == INVALID_SOCKET) {
+        SPDLOG_ERROR("INVALID_SOCKET error.");
+        WSACleanup();
+        return false;
+    }
+
+    // Bind to port
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_port = htons(port);
+    if (bind(sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
+        SPDLOG_ERROR("Bind port {} error: {}", port, WSAGetLastError());
+        close(sock);
+        WSACleanup();
+        return false;
+    }
+
+    return true;
 }
 #endif
 
