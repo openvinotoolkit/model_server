@@ -2605,6 +2605,8 @@ TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
     }
 }
 
+// TODO (bstrzele): CVS-154380 This does not set up actual embedding endpoint,
+// because there are no models. ALl it does is set up server with no servables
 class EmbeddingsHttpTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
@@ -2650,70 +2652,6 @@ public:
 };
 std::unique_ptr<std::thread> EmbeddingsHttpTest::t;
 
-TEST_F(EmbeddingsHttpTest, simplePositive) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    ASSERT_STREQ(response.c_str(), "dummyInput");
-}
-
-TEST_F(EmbeddingsHttpTest, inputAsAListOfStrings) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["first", "second", "third"]
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    ASSERT_STREQ(response.c_str(), "firstsecondthird");
-}
-
-TEST_F(EmbeddingsHttpTest, inputInvalid) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": 5
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_F(EmbeddingsHttpTest, inputInvalidList) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": [1, "second", 3]
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_F(EmbeddingsHttpTest, notExpectedField) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput",
-            "notExpected": "notExpected"
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    ASSERT_STREQ(response.c_str(), "dummyInput");
-}
-
 TEST_F(EmbeddingsHttpTest, invalidModel) {
     std::string requestBody = R"(
         {
@@ -2726,83 +2664,6 @@ TEST_F(EmbeddingsHttpTest, invalidModel) {
         ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
 }
 
-TEST_F(EmbeddingsHttpTest, encodingFormat) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput",
-            "encoding_format": "FORMAT"
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    ASSERT_STREQ(response.c_str(), "dummyInputFORMAT");
-}
-
-TEST_F(EmbeddingsHttpTest, invalidEncodingFormat) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput",
-            "encoding_format": 10
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_F(EmbeddingsHttpTest, dimensions) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput",
-            "dimensions": 2
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    ASSERT_STREQ(response.c_str(), "dummyInput2");
-}
-
-TEST_F(EmbeddingsHttpTest, dimensionsEncodingFormat) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput",
-            "dimensions": "INVALID"
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_F(EmbeddingsHttpTest, user) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput",
-            "user": "USER"
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    ASSERT_STREQ(response.c_str(), "dummyInputUSER");
-}
-
-TEST_F(EmbeddingsHttpTest, invalidUser) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput",
-            "user": 10
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
+// TODO(bstrzele): CVS-154380 valid endpoint, but KServe/gRPC calculator with ov::Tensor expected input
+// TODO(bstrzele): CVS-154380 end to end tests
+// TODO(bstrzele): CVS-154380 deserialization unit tests

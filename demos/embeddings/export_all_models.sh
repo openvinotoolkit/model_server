@@ -1,5 +1,4 @@
 #/bin/bash
-#!/bin/bash
 # Copyright (c) 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-# This script should be used inside the build image to create a binary package based on the compiled artefacts
+# Execute it in the context of git repository in the demos/embeddings folder
+# Add or remove models from the tested_models array to export them
 
 tested_models=(
     Alibaba-NLP/gte-large-en-v1.5
@@ -27,8 +26,8 @@ cat config_all.json | jq 'del(.mediapipe_config_list[])' | tee config_all.json
 
 for i in "${tested_models[@]}"; do
     echo "$i"
-    #convert_tokenizer -o models/$i/tokenizer/1 $i
-    #optimum-cli export openvino --disable-convert-tokenizer --model $i --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/$i/embeddings/1
+    convert_tokenizer -o models/$i/tokenizer/1 $i
+    optimum-cli export openvino --disable-convert-tokenizer --model $i --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/$i/embeddings/1
     cp models/graph.pbtxt models/$i
     cp subconfig.json models/$i
     sed -i -e "s/\"tokenizer_model\"/\"${i//[\/]/\\/}-tokenizer_model\"/g" models/$i/subconfig.json

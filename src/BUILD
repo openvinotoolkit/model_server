@@ -335,7 +335,6 @@ cc_library(
                 "kfs_frontend/kfs_graph_executor_impl.hpp",
                 "http_frontend/http_graph_executor_impl.cpp",
                 "http_frontend/http_graph_executor_impl.hpp",
-		"embeddings/embeddings_calculator.cc",  # it should not be included here, but separated to different target like http_llm_calculator.cpp
             ],
             "//:disable_mediapipe" : [],
         }),
@@ -346,6 +345,7 @@ cc_library(
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
                 "//src/llm:text_processor",
+                "//src/embeddings:embeddingscalculator",
             ],
             "//:disable_python": []
         }) + [
@@ -387,7 +387,7 @@ cc_library(
                 "@mediapipe//mediapipe/calculators/geti/utils:utils",
                 "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
                 "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
-                "//src/llm:httppayload",
+                "//src:httppayload",
                 "//src:libhttpclientconnection",
             ],
             "//:disable_mediapipe" : [],
@@ -437,6 +437,19 @@ cc_library(
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "httppayload",
+    hdrs = ["http_payload.hpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:libhttpclientconnection"
+    ],
+    visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,

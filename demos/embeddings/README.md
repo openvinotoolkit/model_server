@@ -1,10 +1,10 @@
-# How to serve Embeddings models with via OpenAI API {#ovms_demos_embeddings}
+# How to serve Embeddings models via OpenAI API {#ovms_demos_embeddings}
 This demo shows how to deploy embeddings models in the OpenVINO Model Server for text feature extractions.
 Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
 ## Get the docker image
 
-Build the image from source to try this new feature.
+Build the image from source to try this new feature. It will be included in the public image in the comming version 2024.5.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
@@ -15,7 +15,7 @@ It will create an image called `openvino/model_server:latest`.
 > **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
 
 ## Model preparation
-> **Note** Python 3.9 or higher is need for that step
+> **Note** Python 3.9 or higher is needed for that step
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 LLM engine parameters will be defined inside the `graph.pbtxt` file.
@@ -54,7 +54,7 @@ models/
 > **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder. The models can be also stored on the cloud storage like s3, gcs or azure storage.
 
 The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. 
-Runtime configuration for both models can be tunned in `subconfig.json` file. 
+Runtime configuration for both models can be tuned in `subconfig.json` file. 
 
 ## Server configuration
 Prepare config.json:
@@ -74,7 +74,7 @@ cat config.json
 
 ## Start-up
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json --cpu_extension /ovms/lib/libopenvino_tokenizers.so
 ```
 In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU. 
@@ -121,7 +121,7 @@ curl http://localhost:8000/v3/embeddings \
 
 ```
 
-Altenratively there could be used openai python client like in the example below:
+Alternatively there could be used openai python client like in the example below:
 
 ```bash
 pip3 install openai
