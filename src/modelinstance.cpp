@@ -666,7 +666,21 @@ static std::string findFilePathWithExtension(const std::string& path, const std:
 }
 #else
 static std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
-    // TODO: Implement
+    if (FileSystem::isPathEscaped(path)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+        return std::string();
+    }
+
+    std::vector<std::string> files;
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+        if (!std::filesystem::is_directory(entry.status())) {
+            auto name = entry.path().string();
+            if (endsWith(name, extension)) {
+                return name;
+            }
+        }
+    }
+
     return std::string();
 }
 static bool dirExists(const std::string& path) {
@@ -674,7 +688,8 @@ static bool dirExists(const std::string& path) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
         return false;
     }
-    return false;
+
+    return std::filesystem::is_directory(path);
 }
 
 #endif
