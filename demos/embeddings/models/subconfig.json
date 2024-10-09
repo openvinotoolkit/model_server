@@ -2,7 +2,7 @@
     "model_config_list": [
     { "config": 
 	    {
-                "name": "tokenizer",
+                "name": "tokenizer_model",
                 "base_path": "bge-large-en-v1.5-tokenizer"
             }
 	},
