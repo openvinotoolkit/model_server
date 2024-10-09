@@ -97,12 +97,14 @@ xcopy /r /s /e /Y C:\git\model_server\bazel-out\x64_windows-opt\bin\src\ovms.exe
 xcopy /r /s /e /Y C:\git\model_server\bazel-out\x64_windows-opt\bin\src\opencv_world470.dll c:\opt\test
 cd c:\opt\test
 wget https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -O 1.tar.gz
+tar xzf 1.tar.gz -C model\1
+
+## Start server
 ovms.exe --model_name faster_rcnn --model_path model --port 9000
 
 ## Prepare client
-cd c:\opt
-md client
-cd client
+Open second cmd.exe terminal
+cd c:\opt && md client && cd client
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/object_detection.py
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/requirements.txt
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_91cl.txt
