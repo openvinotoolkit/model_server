@@ -90,9 +90,6 @@ curl -s http://localhost:8000/v1/config | jq -c .
 
 ## Client code
 
-A single servable exposes both `chat/completions` and `completions` endpoints with and without stream capabilities.
-Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
-Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
 
 ```bash
 curl http://localhost:8000/v3/embeddings \
