@@ -20,7 +20,7 @@ def llm_engine():
     new_git_repository(
         name = "llm_engine",
         remote = "https://github.com/mzegla/openvino.genai",
-        commit = "1c952559704335e5ef3dfc07ce9ce80fa5b3c143", # support echo with  max_new_tokens=0
+        commit = "2c637f6397575e7cc457e8ff84eb4ca86ec3087f", # support echo with max_new_tokens=0
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
