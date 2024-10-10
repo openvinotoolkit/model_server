@@ -2672,7 +2672,7 @@ TEST_F(EmbeddingsHttpTest, simplePositive) {
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
     double sum = 0;
     for (auto& value : d["data"][0]["embedding"].GetArray()) {
-	    sum += value.GetDouble() * value.GetDouble();
+        sum += value.GetDouble() * value.GetDouble();
     }
     double norm = std::max(std::sqrt(sum), double(1e-12));
     ASSERT_NEAR(norm, 1.0, 1e-6);
@@ -2700,7 +2700,7 @@ TEST_F(EmbeddingsHttpTest, simplePositiveNoNorm) {
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
     double sum = 0;
     for (auto& value : d["data"][0]["embedding"].GetArray()) {
-	    sum += value.GetDouble() * value.GetDouble();
+        sum += value.GetDouble() * value.GetDouble();
     }
     double norm = std::max(std::sqrt(sum), double(1e-12));
     ASSERT_NEAR(norm, 9.5, 1);  // norm of a not normalized vector
