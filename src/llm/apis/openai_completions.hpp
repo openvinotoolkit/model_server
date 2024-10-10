@@ -152,7 +152,7 @@ class OpenAIChatCompletionsHandler {
     OpenAIChatCompletionsRequest request;
     std::chrono::time_point<std::chrono::system_clock> created;
     ov::genai::Tokenizer tokenizer;
-    size_t processedTokens = 0; // tracks overall number of tokens processed by the pipeline
+    size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart();
