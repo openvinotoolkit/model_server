@@ -79,7 +79,7 @@ In-case of problems, see [Debugging](#debugging).
 | `--test_filter='ModelVersionStatus.*'` | limits the tests run to the indicated test  |
 | `//src:ovms_test` | the test source |
 > **NOTE**: For more information, see the [bazel command-line reference](https://docs.bazel.build/versions/master/command-line-reference.html)
-
+> **NOTE**: If container has access to Intel GPU device and test models, add `--test_env RUN_GPU_TESTS=1` to run GPU unit tests.
 
 
 5. Select one of these options to change the target image name or network port to be used in tests. It might be helpful on a shared development host:
