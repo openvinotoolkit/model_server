@@ -370,7 +370,7 @@ void OpenAIChatCompletionsHandler::setPromptTokensUsage(int promptTokens) {
 
 void OpenAIChatCompletionsHandler::incrementProcessedTokens() {
     processedTokens++;
-    if(!request.echo || processedTokens > usage.promptTokens)
+    if (!request.echo || processedTokens > usage.promptTokens)
         usage.completionTokens++;
 }
 

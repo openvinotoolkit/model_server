@@ -132,6 +132,7 @@ public:
                     return status;
 
                 std::string finalPrompt = "";
+                bool encodeAddSpecialTokens = false;
                 switch (endpoint) {
                 case Endpoint::CHAT_COMPLETIONS: {
                     if (!TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
@@ -144,6 +145,7 @@ public:
                 }
                 case Endpoint::COMPLETIONS: {
                     finalPrompt = this->apiHandler->getPrompt().value();
+                    encodeAddSpecialTokens = true;
                 }
                 }
 
@@ -155,7 +157,7 @@ public:
                         return absl::CancelledError();
                     }
 
-                    ov::Tensor finalPromptIds = nodeResources->cbPipe->get_tokenizer().encode(finalPrompt).input_ids;
+                    ov::Tensor finalPromptIds = nodeResources->cbPipe->get_tokenizer().encode(finalPrompt, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
                     this->apiHandler->setPromptTokensUsage(finalPromptIds.get_size());
                     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(finalPromptIds));
 
