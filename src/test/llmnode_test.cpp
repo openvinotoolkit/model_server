@@ -2652,6 +2652,8 @@ public:
 };
 std::unique_ptr<std::thread> EmbeddingsHttpTest::t;
 
+const int EMBEDDING_OUTPUT_SIZE = 384;
+
 TEST_F(EmbeddingsHttpTest, simplePositive) {
     std::string requestBody = R"(
         {
@@ -2669,7 +2671,7 @@ TEST_F(EmbeddingsHttpTest, simplePositive) {
     ASSERT_EQ(d["data"].Size(), 1);
     ASSERT_EQ(d["data"][0]["object"], "embedding");
     ASSERT_EQ(d["data"][0]["embedding"].IsArray(), true);
-    ASSERT_EQ(d["data"][0]["embedding"].Size(), 1024);
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 
@@ -2691,7 +2693,7 @@ TEST_F(EmbeddingsHttpTest, simplePositiveBase64) {
     ASSERT_EQ(d["data"].Size(), 1);
     ASSERT_EQ(d["data"][0]["object"], "embedding");
     ASSERT_EQ(d["data"][0]["embedding"].IsString(), true);
-    ASSERT_EQ(d["data"][0]["embedding"].Size(), 5464);
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), ((4 * (EMBEDDING_OUTPUT_SIZE * sizeof(float)) / 3) + 3) & ~3);
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 
@@ -2770,7 +2772,7 @@ TEST_F(EmbeddingsExtensionTest, simplePositive) {
     ASSERT_EQ(d["data"].Size(), 1);
     ASSERT_EQ(d["data"][0]["object"], "embedding");
     ASSERT_EQ(d["data"][0]["embedding"].IsArray(), true);
-    ASSERT_EQ(d["data"][0]["embedding"].Size(), 1024);
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 
