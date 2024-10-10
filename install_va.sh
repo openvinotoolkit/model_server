@@ -53,4 +53,4 @@ apt install -y \
   libigc-dev intel-igc-cm libigdfcl-dev libigfxcmrt-dev level-zero-dev
 
 # 6. install vaapi headers
-apt install libva-dev
+apt install -y libva-dev
