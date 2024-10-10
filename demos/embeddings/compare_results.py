@@ -21,7 +21,7 @@ import datetime
 import numpy as np
 import argparse
 
-parser = argparse.ArgumentParser(description='Compare embeddings resposnes from HF transfomers, OVSentenceTransformer and OVMS')
+parser = argparse.ArgumentParser(description='Compare embeddings responses from HF transformers, OVSentenceTransformer and OVMS')
 parser.add_argument('--service_url', required=False, default='http://localhost:6000/v3/embeddings',
                     help='Specify url to embeddings endpoint. default:http://localhost:8000/v3/embeddings', dest='service_url')
 parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', help='Model name to query. default: Alibaba-NLP/gte-large-en-v1.5',
