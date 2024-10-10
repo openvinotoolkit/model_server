@@ -175,7 +175,9 @@ A simple method of testing the response accuracy is via comparing the response f
 
 The script [compare_results.py](./compare_results.py) can assist with such experiment.
 ```bash
-python compare_results.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
+python compare_results.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --input "hello world" --input "goodbye world"
+
+input ['hello world', 'goodbye world']
 HF Duration: 50.626 ms NewModel
 OVMS Duration: 20.219 ms
 Batch number: 0
