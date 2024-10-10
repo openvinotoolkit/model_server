@@ -669,7 +669,6 @@ cpu_extension:
 	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${OS}
 
 run_unit_tests:
-	$(MAKE) -C src/example/SampleCpuExtension
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
 	./prepare_embeddings_models.sh ${TEST_LLM_PATH}
 	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
