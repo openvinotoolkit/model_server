@@ -29,7 +29,7 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 })
 
 mediapipe_proto_library(
-    name = "embeddings_calculator_proto", # llmcalculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    name = "embeddings_calculator_proto", # embeddings_calculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["embeddings_calculator.proto"],
     visibility = ["//visibility:private"],
     deps = [
