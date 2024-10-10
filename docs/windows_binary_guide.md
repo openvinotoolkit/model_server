@@ -1,4 +1,7 @@
 # OpenVINO&trade; Model Server Developer Guide for Windows
+# No MEDIAPIPE support
+# No PYTHON NODES support
+# No REST API support
 
 # Install prerequisites
 md c:\git
@@ -27,10 +30,9 @@ Add c:\opt to system env PATH
 ## DEPLOY
 Open cmd.exe in c:\opt
 md test\model\1
-xcopy /r /s /e /Y C:\opt\intel\openvino_2024\runtime\bin\intel64\Release\* c:\opt\test
-xcopy /r /s /e /Y C:\opt\intel\openvino_2024\runtime\3rdparty\tbb\bin\tbb12.dll c:\opt\test
+c:\opt\intel\openvino_2024\setupvars.bat
+C:\opt\opencv\build\setup_vars_opencv4.cmd
 xcopy /r /s /e /Y ovms.exe c:\opt\test
-xcopy /r /s /e /Y C:\opt\opencv\build\x64\vc16\bin\opencv_world470.dll c:\opt\test
 cd c:\opt\test
 wget https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -O 1.tar.gz
 tar xzf 1.tar.gz -C model\1
