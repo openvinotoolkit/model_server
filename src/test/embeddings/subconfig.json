@@ -3,13 +3,13 @@
     { "config": 
 	    {
                 "name": "tokenizer",
-                "base_path": "models/bge-large-en-v1.5_tokenizer"
+                "base_path": "/ovms/src/test/llm_testing/thenlper/gte-small/tokenizer"
             }
 	},
     { "config": 
 	    {
                 "name": "embeddings_model",
-                "base_path": "models/dummy"
+                "base_path": "/ovms/src/test/llm_testing/thenlper/gte-small/embeddings"
             }
 	}
    ]

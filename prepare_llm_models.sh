@@ -15,7 +15,8 @@
 # limitations under the License.
 #
 
-if [ -d "$1/facebook/opt-125m" ]; then
+EMBEDDING_MODEL="thenlper/gte-small"
+if [ -d "$1/facebook/opt-125m" ] && [ -d "$1/$EMBEDDING_MODEL" ]; then
   echo "Models directory $1 exists. Skipping downloading models."
   exit 0
 fi
@@ -35,6 +36,20 @@ else
     pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
 fi
 
-optimum-cli export openvino --disable-convert-tokenizer --model facebook/opt-125m --weight-format int8 $1/facebook/opt-125m
-convert_tokenizer -o $1/facebook/opt-125m --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens facebook/opt-125m
+if [ -d "$1/facebook/opt-125m" ]; then
+  echo "Models directory $1/facebook/opt-125m exists. Skipping downloading models."
+else
+  optimum-cli export openvino --disable-convert-tokenizer --model facebook/opt-125m --weight-format int8 $1/facebook/opt-125m
+  convert_tokenizer -o $1/facebook/opt-125m --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens facebook/opt-125m
+fi
+
+
+if [ -d "$1/$EMBEDDING_MODEL" ]; then
+  echo "Models directory $1/$EMBEDDING_MODEL exists. Skipping downloading models."
+else
+  optimum-cli export openvino --model "$EMBEDDING_MODEL" --task feature-extraction "$1/$EMBEDDING_MODEL/embeddings/1"
+  convert_tokenizer -o "$1/$EMBEDDING_MODEL/tokenizer/1" "$EMBEDDING_MODEL"
+  rm "$1/$EMBEDDING_MODEL/embeddings/1/openvino_tokenizer.xml"
+  rm "$1/$EMBEDDING_MODEL/embeddings/1/openvino_tokenizer.bin"
+fi
 
