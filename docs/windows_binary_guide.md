@@ -1,18 +1,22 @@
 # OpenVINO&trade; Model Server Developer Guide for Windows
-# No MEDIAPIPE support
-# No PYTHON NODES support
-# No REST API support
+## No MEDIAPIPE support
+## No PYTHON NODES support
+## No REST API support
 
 # Install prerequisites
+```
 md c:\git
 md c:\opt
+```
 
 ## VISAUL
 Visual Studio 2022 with C++ - https://visualstudio.microsoft.com/downloads/
 
 ## PYTOHN: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
 Python3. (Python 3.11.9 is tested)
+```
 pip install numpy==1.23
+```
 make sure you install numpy for the python version you pass as build argument
 make sure default "python --version" gets you 3.9
 
@@ -29,6 +33,7 @@ Add c:\opt to system env PATH
 
 ## DEPLOY
 Open cmd.exe in c:\opt
+```
 md test\model\1
 c:\opt\intel\openvino_2024\setupvars.bat
 C:\opt\opencv\build\setup_vars_opencv4.cmd
@@ -36,12 +41,16 @@ xcopy /r /s /e /Y ovms.exe c:\opt\test
 cd c:\opt\test
 wget https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -O 1.tar.gz
 tar xzf 1.tar.gz -C model\1
+```
 
 ## Start server
+```
 ovms.exe --model_name faster_rcnn --model_path model --port 9000
+```
 
 ## Prepare client
 Open second cmd.exe terminal
+```
 cd c:\opt
 md client
 cd client
@@ -53,6 +62,9 @@ wget https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/da
 pip install --upgrade pip
 pip install -r requirements.txt
 pip install numpy==1.23
+```
 
 ## Run client inference
+```
 python object_detection.py --image coco_bike.jpg --output output.jpg --service_url localhost:9000
+```
