@@ -171,7 +171,7 @@ TBD
 
 ## RAG with Model Server
 
-Embeddings endpoint can be applied in RAG chains to deletated text feature extraction both for documented vectorization and in context retreival.
+Embeddings endpoint can be applied in RAG chains to deletated text feature extraction both for documented vectorization and in context retrieval.
 Check this demo to see the langchain code example which is using OpenVINO Model Server both for text generation and embedding endpoint in [RAG application demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/continuous_batching/rag)
 
 ## Deploying multiple embedding models

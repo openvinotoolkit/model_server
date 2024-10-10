@@ -82,7 +82,7 @@ for res in OVMS_embeddings:
         print("OVMS embeddings: shape:",ovmsresult.shape, "emb[:20]:\n", ovmsresult[:20])
         #print("OVSentenceTransformer: shape:",OV_embeddings[i].shape, "emb[:20]:\n", OV_embeddings[i][:20])
         print("HF AutoModel: shape:",HF_embeddings[i].shape, "emb[:20]:\n", HF_embeddings[i][:20])
-    print("Diference score with HF AutoModel:", np.linalg.norm(ovmsresult - HF_embeddings[i]))
+    print("Difference score with HF AutoModel:", np.linalg.norm(ovmsresult - HF_embeddings[i]))
     assert np.allclose(ovmsresult, HF_embeddings[i], atol=1e-2)
     assert (np.linalg.norm(ovmsresult - HF_embeddings[i]) < 0.06)
     i+=1
