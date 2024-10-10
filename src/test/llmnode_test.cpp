@@ -2692,7 +2692,7 @@ TEST_F(EmbeddingsHttpTest, simplePositiveBase64) {
     ASSERT_EQ(d["data"].Size(), 1);
     ASSERT_EQ(d["data"][0]["object"], "embedding");
     ASSERT_TRUE(d["data"][0]["embedding"].IsString());
-    ASSERT_EQ(d["data"][0]["embedding"].Size(), ((4 * (EMBEDDING_OUTPUT_SIZE * sizeof(float)) / 3) + 3) & ~3); // In base64 each symbol represents 3/4 of a byte rounded up
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), ((4 * (EMBEDDING_OUTPUT_SIZE * sizeof(float)) / 3) + 3) & ~3);  // In base64 each symbol represents 3/4 of a byte rounded up
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 

@@ -16,7 +16,7 @@
 #
 
 EMBEDDING_MODEL="thenlper/gte-small"
-if [ -d "$1/facebook/opt-125m" ] && [ -d "$1/${EMBEDDING_MODEL}_embeddings" ] && [ -d "$1/${EMBEDDING_MODEL}_tokenizer" ]; then
+if [ -d "$1/facebook/opt-125m" ] && [ -d "$1/$EMBEDDING_MODEL" ]; then
   echo "Models directory $1 exists. Skipping downloading models."
   exit 0
 fi
@@ -44,12 +44,12 @@ else
 fi
 
 
-if [ -d "$1/${EMBEDDING_MODEL}_embeddings" ] && [ -d "$1/${EMBEDDING_MODEL}_tokenizer" ]; then
-  echo "Models directory $1/$EMBEDDING_MODEL_embeddings exists. Skipping downloading models."
+if [ -d "$1/$EMBEDDING_MODEL" ]; then
+  echo "Models directory $1/$EMBEDDING_MODEL exists. Skipping downloading models."
 else
-  optimum-cli export openvino --model "$EMBEDDING_MODEL" --task feature-extraction "$1/${EMBEDDING_MODEL}_embeddings/1"
-  convert_tokenizer -o "$1/${EMBEDDING_MODEL}_tokenizer/1" "$EMBEDDING_MODEL"
-  rm "$1/${EMBEDDING_MODEL}_embeddings/1/openvino_tokenizer.xml"
-  rm "$1/${EMBEDDING_MODEL}_embeddings/1/openvino_tokenizer.bin"
+  optimum-cli export openvino --model "$EMBEDDING_MODEL" --task feature-extraction "$1/$EMBEDDING_MODEL/embeddings/1"
+  convert_tokenizer -o "$1/$EMBEDDING_MODEL/tokenizer/1" "$EMBEDDING_MODEL"
+  rm "$1/$EMBEDDING_MODEL/embeddings/1/openvino_tokenizer.xml"
+  rm "$1/$EMBEDDING_MODEL/embeddings/1/openvino_tokenizer.bin"
 fi
 
