@@ -2605,8 +2605,6 @@ TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
     }
 }
 
-// TODO (bstrzele): CVS-154380 This does not set up actual embedding endpoint,
-// because there are no models. ALl it does is set up server with no servables
 class EmbeddingsHttpTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
@@ -2619,7 +2617,6 @@ public:
     const std::string endpointEmbeddings = "/v3/embeddings";
     MockedServerRequestInterface writer;
     std::string response;
-    rapidjson::Document parsedResponse;
     ovms::HttpResponseComponents responseComponents;
 
     static void SetUpTestSuite() {
@@ -2665,12 +2662,13 @@ TEST_F(EmbeddingsHttpTest, simplePositive) {
         handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
     rapidjson::Document d;
-    d.Parse(response.c_str());
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
     ASSERT_EQ(d["object"], "list");
-    ASSERT_EQ(d["data"].IsArray(), true);
+    ASSERT_TRUE(d["data"].IsArray());
     ASSERT_EQ(d["data"].Size(), 1);
     ASSERT_EQ(d["data"][0]["object"], "embedding");
-    ASSERT_EQ(d["data"][0]["embedding"].IsArray(), true);
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
@@ -2687,13 +2685,14 @@ TEST_F(EmbeddingsHttpTest, simplePositiveBase64) {
         handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
     rapidjson::Document d;
-    d.Parse(response.c_str());
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
     ASSERT_EQ(d["object"], "list");
-    ASSERT_EQ(d["data"].IsArray(), true);
+    ASSERT_TRUE(d["data"].IsArray());
     ASSERT_EQ(d["data"].Size(), 1);
     ASSERT_EQ(d["data"][0]["object"], "embedding");
-    ASSERT_EQ(d["data"][0]["embedding"].IsString(), true);
-    ASSERT_EQ(d["data"][0]["embedding"].Size(), ((4 * (EMBEDDING_OUTPUT_SIZE * sizeof(float)) / 3) + 3) & ~3);
+    ASSERT_TRUE(d["data"][0]["embedding"].IsString());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), ((4 * (EMBEDDING_OUTPUT_SIZE * sizeof(float)) / 3) + 3) & ~3); // In base64 each symbol represents 3/4 of a byte rounded up
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 
@@ -2709,7 +2708,6 @@ public:
     const std::string endpointEmbeddings = "/v3/embeddings";
     MockedServerRequestInterface writer;
     std::string response;
-    rapidjson::Document parsedResponse;
     ovms::HttpResponseComponents responseComponents;
 
     static void SetUpTestSuite() {
@@ -2766,12 +2764,13 @@ TEST_F(EmbeddingsExtensionTest, simplePositive) {
         handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
     rapidjson::Document d;
-    d.Parse(response.c_str());
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
     ASSERT_EQ(d["object"], "list");
-    ASSERT_EQ(d["data"].IsArray(), true);
+    ASSERT_TRUE(d["data"].IsArray());
     ASSERT_EQ(d["data"].Size(), 1);
     ASSERT_EQ(d["data"][0]["object"], "embedding");
-    ASSERT_EQ(d["data"][0]["embedding"].IsArray(), true);
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
     ASSERT_EQ(d["data"][0]["index"], 0);
 }

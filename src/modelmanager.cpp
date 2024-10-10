@@ -124,7 +124,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     } catch (std::exception& ex) {
         SPDLOG_WARN("Loading of libopenvino_tokenizers has failed! Reason: {}", ex.what());
     } catch (...) {
-        SPDLOG_CRITICAL("Custom CPU extension loading has failed with an unknown error!");
+        SPDLOG_CRITICAL("Tokenizer CPU extension loading has failed with an unknown error!");
         throw;
     }
     this->logPluginConfiguration();
