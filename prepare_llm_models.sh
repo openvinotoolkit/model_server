@@ -15,7 +15,8 @@
 # limitations under the License.
 #
 
-if [ -d "$1/facebook/opt-125m" ]; then
+EMBEDDING_MODEL="BAAI/bge-large-en-v1.5"
+if [ -d "$1/facebook/opt-125m" ] && [ -d "$1/$EMBEDDING_MODEL" ]; then
   echo "Models directory $1 exists. Skipping downloading models."
   exit 0
 fi
@@ -38,3 +39,12 @@ fi
 optimum-cli export openvino --disable-convert-tokenizer --model facebook/opt-125m --weight-format int8 $1/facebook/opt-125m
 convert_tokenizer -o $1/facebook/opt-125m --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens facebook/opt-125m
 
+if [ -d "$1/$EMBEDING_MODEL" ]; then
+  echo "Models directory $1 exists. Skipping downloading models."
+  exit 0
+fi
+
+optimum-cli export openvino --model "$EMBEDDING_MODEL" --task feature-extraction "$1/${EMBEDDING_MODEL}_embeddings/1"
+convert_tokenizer -o "$1/${EMBEDDING_MODEL}_tokenizer/1" "$EMBEDDING_MODEL"
+rm "$1/${EMBEDDING_MODEL}_embeddings/1/openvino_tokenizer.xml"
+rm "$1/${EMBEDDING_MODEL}_embeddings/1/openvino_tokenizer.bin"
