@@ -49,7 +49,7 @@ cc_library(
         "//src:libovmsprofiler",
         ":llm_engine",
         ":llmnoderesources",
-        ":httppayload",
+        "//src:httppayload",
         ":text_processor",
         ":openai_completions_api_handler"
     ],
@@ -106,19 +106,6 @@ cc_library(
     ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
-)
-
-cc_library(
-    name = "httppayload",
-    hdrs = ["http_payload.hpp"],
-    deps = [
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "//src:libhttpclientconnection"
-    ],
-    visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,

@@ -33,6 +33,7 @@ std::shared_ptr<spdlog::logger> capi_logger = std::make_shared<spdlog::logger>("
 std::shared_ptr<spdlog::logger> mediapipe_logger = std::make_shared<spdlog::logger>("mediapipe");
 std::shared_ptr<spdlog::logger> llm_executor_logger = std::make_shared<spdlog::logger>("llm_executor");
 std::shared_ptr<spdlog::logger> llm_calculator_logger = std::make_shared<spdlog::logger>("llm_calculator");
+std::shared_ptr<spdlog::logger> embeddings_calculator_logger = std::make_shared<spdlog::logger>("embeddings_calculator");
 #endif
 #if (OV_TRACING == 1)
 std::shared_ptr<spdlog::logger> ov_logger = std::make_shared<spdlog::logger>("openvino");

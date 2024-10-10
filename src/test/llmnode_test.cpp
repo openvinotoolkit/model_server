@@ -2604,3 +2604,66 @@ TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
         ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
     }
 }
+
+// TODO (bstrzele): CVS-154380 This does not set up actual embedding endpoint,
+// because there are no models. ALl it does is set up server with no servables
+class EmbeddingsHttpTest : public ::testing::Test {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
+
+    std::vector<std::pair<std::string, std::string>> headers;
+    ovms::HttpRequestComponents comp;
+    const std::string endpointEmbeddings = "/v3/embeddings";
+    MockedServerRequestInterface writer;
+    std::string response;
+    rapidjson::Document parsedResponse;
+    ovms::HttpResponseComponents responseComponents;
+
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(t, server, port, "/ovms/src/test/embeddings/config_embeddings.json");
+        auto start = std::chrono::high_resolution_clock::now();
+        const int numberOfRetries = 5;
+        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
+        }
+    }
+
+    void SetUp() {
+        ovms::Server& server = ovms::Server::instance();
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
+    }
+
+    static void TearDownTestSuite() {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+
+    void TearDown() {
+        handler.reset();
+    }
+};
+std::unique_ptr<std::thread> EmbeddingsHttpTest::t;
+
+TEST_F(EmbeddingsHttpTest, invalidModel) {
+    std::string requestBody = R"(
+        {
+            "model": "invalidModel",
+            "input": "dummyInput"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
+}
+
+// TODO(bstrzele): CVS-154380 valid endpoint, but KServe/gRPC calculator with ov::Tensor expected input
+// TODO(bstrzele): CVS-154380 end to end tests
+// TODO(bstrzele): CVS-154380 deserialization unit tests

@@ -21,7 +21,7 @@
 
 #include <rapidjson/document.h>
 
-#include "../llm/http_payload.hpp"
+#include "../http_payload.hpp"
 #include "../mediapipe_internal/packettypes.hpp"
 #include "../status.hpp"
 #pragma GCC diagnostic push
