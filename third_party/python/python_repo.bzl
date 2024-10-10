@@ -18,11 +18,14 @@ def _python_repository_impl(repository_ctx):
     result = repository_ctx.execute(["cat","/etc/os-release"],quiet=False)
     ubuntu20_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 20")
     ubuntu22_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 22")
+    debian_count = result.stdout.count("PRETTY_NAME=\"Debian")
 
-    if ubuntu20_count == 1 or ubuntu22_count == 1:
+    if ubuntu20_count == 1 or ubuntu22_count == 1 or debian_count == 1:
         lib_path = "lib/x86_64-linux-gnu"
         if ubuntu20_count == 1:
             version = "3.8"
+        elif debian_count == 1:
+            version = "3.9"
         else:
             version = "3.10"
     else: # for redhat
