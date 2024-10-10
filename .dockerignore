@@ -1,4 +1,6 @@
 .venv
 .venv-style
 **/.venv
-
+out
+demos/continuous_batching
+demos/embeddings

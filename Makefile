@@ -681,23 +681,31 @@ ifeq ($(RUN_GPU_TESTS),ON)
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		-v ${PWD}/out:/out:rw \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
 		-e JOBS=$(JOBS) \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
-		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; tail -200 test.log ; exit $$exit_status
+		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
+		tail -200 test.log ; \
+		[ -f ./out/results.txt ] && cat ./out/results.txt || echo "The results file was not generated" ; \
+		exit $$exit_status
 else
 	docker run \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		-v ${PWD}/out:/out:rw \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e JOBS=$(JOBS) \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
-		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; tail -200 test.log ; exit $$exit_status
+		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
+		tail -200 test.log ; \
+		[ -f ./out/results.txt ] && cat ./out/results.txt || echo "The results file was not generated" ; \
+		exit $$exit_status
 endif
 
 
