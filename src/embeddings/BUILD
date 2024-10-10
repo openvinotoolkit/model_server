@@ -28,6 +28,16 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
     "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
 })
 
+mediapipe_proto_library(
+    name = "embeddings_calculator_proto", # llmcalculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["embeddings_calculator.proto"],
+    visibility = ["//visibility:private"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
+)
+
 cc_library(
     name = "embeddingscalculator",
     srcs = ["embeddings_calculator.cc"],
@@ -38,6 +48,7 @@ cc_library(
         "//src:httppayload",
         "//src:libovmslogging",
         "//src:libovmsprofiler",
+	"embeddings_calculator_cc_proto",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
