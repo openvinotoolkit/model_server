@@ -4,11 +4,7 @@ Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
 ## Get the docker image
 
-<<<<<<< HEAD
 Build the image from source to try this new feature. It will be included in the public image in the coming version 2024.5.
-=======
-Until the feature is not included in public image, build the image from source to try the latest enhancements in this feature. In 2024.5 public release this command will be optional.
->>>>>>> origin/main
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
@@ -35,10 +31,7 @@ Run optimum-cli to download and quantize the model:
 cd demos/embeddings
 convert_tokenizer -o models/gte-large-en-v1.5-tokenizer/1 Alibaba-NLP/gte-large-en-v1.5
 optimum-cli export openvino --disable-convert-tokenizer --model Alibaba-NLP/gte-large-en-v1.5 --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/gte-large-en-v1.5-embeddings/1
-<<<<<<< HEAD
 rm models/gte-large-en-v1.5-embeddings/1/*.json models/gte-large-en-v1.5-embeddings/1/vocab.txt 
-=======
->>>>>>> origin/main
 ```
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
 
@@ -49,18 +42,8 @@ models/
 ├── graph.pbtxt
 ├── gte-large-en-v1.5-embeddings
 │   └── 1
-<<<<<<< HEAD
 │       ├── openvino_model.bin
 │       └── openvino_model.xml
-=======
-│       ├── config.json
-│       ├── openvino_model.bin
-│       ├── openvino_model.xml
-│       ├── special_tokens_map.json
-│       ├── tokenizer_config.json
-│       ├── tokenizer.json
-│       └── vocab.txt
->>>>>>> origin/main
 ├── gte-large-en-v1.5-tokenizer
 │   └── 1
 │       ├── openvino_tokenizer.bin
@@ -68,10 +51,7 @@ models/
 └── subconfig.json
 
 ```
-<<<<<<< HEAD
 > **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder. The models can be also stored on the cloud storage like s3, gcs or azure storage.
-=======
->>>>>>> origin/main
 
 The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. 
 Runtime configuration for both models can be tuned in `subconfig.json` file. 
