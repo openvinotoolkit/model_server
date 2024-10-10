@@ -111,6 +111,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             libnuma-dev \
             libtbb-dev \
             libssl-dev \
+            nlohmann-json3-dev \
             python2 \
             python2-dev \
             python3-dev \
@@ -284,6 +285,7 @@ COPY BUILD.bazel /ovms/
 COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
+COPY geti_calculators /geti_calculators/
 
 # prebuild dependencies before copying sources
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies

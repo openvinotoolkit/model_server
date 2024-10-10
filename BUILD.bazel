@@ -69,7 +69,13 @@ cc_library(
                 "@mediapipe//mediapipe/framework/port:logging",
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
                 "@mediapipe//mediapipe/framework/port:status",
-                "@model_api//:model_api"],
+                "@model_api//:model_api",
+                "@geti_calculators//inference:inference_calculators",
+                "@geti_calculators//utils:utils",
+                "@geti_calculators//utils:emptylabel_calculators",
+                "@geti_calculators//serialization:calculators",
+                "//third_party/cpp-base64:cpp-base64",
+		],
             "//:disable_mediapipe": []
             })
          + select({
