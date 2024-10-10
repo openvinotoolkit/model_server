@@ -73,9 +73,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 8e2dc85ddd0ab691c9b55398238f9a96f7df0979  # master 2024-09-25
+OV_SOURCE_BRANCH ?= d499a16453e4fa969a955700935de59db736b232  # master 2024-10-10
 OV_CONTRIB_BRANCH ?= e6eb43a32c98a04162a921a80d89f82b30910973  # master 2024-06-13
-OV_TOKENIZERS_BRANCH ?= 81c067c557d48011e6879a42d4a25147060eaeff  # master 2024-09-19
+OV_TOKENIZERS_BRANCH ?= 31e79092b34c954bc8372d4df3499a4cc6fd6960  # master 2024-10-09
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -162,11 +162,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),20.04)
         OS=ubuntu20
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.5.0.16830.8e2dc85ddd0_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.5.0.16952.d499a16453e_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.26.30049"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.5.0.16830.8e2dc85ddd0_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.5.0.16952.d499a16453e_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -181,7 +181,7 @@ ifeq ($(BASE_OS),redhat)
   endif
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.5.0.16830.8e2dc85ddd0_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.5.0.16952.d499a16453e_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
