@@ -24,6 +24,8 @@
 #include "mediapipe/framework/port/ret_check.h"
 #pragma GCC diagnostic pop
 
+#include "src/embeddings/embeddings_calculator.pb.h"
+
 #include <adapters/inference_adapter.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -194,7 +196,8 @@ public:
 
         writer.String("data");
         writer.StartArray();
-        bool normalize = true;
+	const auto& options = cc->Options<EmbeddingsCalculatorOptions>();
+        bool normalize = options.normalize_embeddings();
         // TODO: mean pooling
 
         ov::Shape outputShape = embeddingsTensor.get_shape();

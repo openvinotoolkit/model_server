@@ -2670,6 +2670,40 @@ TEST_F(EmbeddingsHttpTest, simplePositive) {
     ASSERT_EQ(d["data"][0]["object"], "embedding");
     ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    double sum = 0;
+    for (auto& value : d["data"][0]["embedding"].GetArray()) {
+	    sum += value.GetDouble() * value.GetDouble();
+    }
+    double norm = std::max(std::sqrt(sum), double(1e-12));
+    ASSERT_NEAR(norm, 1.0, 1e-6);
+    ASSERT_EQ(d["data"][0]["index"], 0);
+}
+
+TEST_F(EmbeddingsHttpTest, simplePositiveNoNorm) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_no_norm",
+            "input": "dummyInput"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 1);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    double sum = 0;
+    for (auto& value : d["data"][0]["embedding"].GetArray()) {
+	    sum += value.GetDouble() * value.GetDouble();
+    }
+    double norm = std::max(std::sqrt(sum), double(1e-12));
+    ASSERT_NEAR(norm, 9.5, 1);  // norm of a not normalized vector
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 
