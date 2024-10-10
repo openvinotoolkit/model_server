@@ -24,8 +24,6 @@
 #include "mediapipe/framework/port/ret_check.h"
 #pragma GCC diagnostic pop
 
-#include "src/embeddings/embeddings_calculator.pb.h"
-
 #include <adapters/inference_adapter.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -34,6 +32,7 @@
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "absl/strings/escaping.h"
+#include "src/embeddings/embeddings_calculator.pb.h"
 
 using namespace rapidjson;
 using namespace ovms;
@@ -196,7 +195,7 @@ public:
 
         writer.String("data");
         writer.StartArray();
-	const auto& options = cc->Options<EmbeddingsCalculatorOptions>();
+        const auto& options = cc->Options<EmbeddingsCalculatorOptions>();
         bool normalize = options.normalize_embeddings();
         // TODO: mean pooling
 
