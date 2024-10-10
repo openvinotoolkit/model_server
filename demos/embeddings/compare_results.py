@@ -26,8 +26,8 @@ parser.add_argument('--service_url', required=False, default='http://localhost:6
                     help='Specify url to embeddings endpoint. default:http://localhost:8000/v3/embeddings', dest='service_url')
 parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', help='Model name to query. default: Alibaba-NLP/gte-large-en-v1.5',
                     dest='model_name')
-parser.add_argument('--input', type=list, default=["hello world","goodbye world"], help='String to query. default: ["hello world","goodbye world"]',
-                    dest='input')
+parser.add_argument('--input', type=list, default=["hello world","goodbye world"], help='List of strings to query. default: ["hello world","goodbye world"]',
+                    dest='input', action='append')
 args = vars(parser.parse_args())
 
 model_id = args['model_name']
@@ -36,6 +36,7 @@ model_pt = AutoModel.from_pretrained(model_id, trust_remote_code=True)
 #model_ov = OVSentenceTransformer.from_pretrained(model_id, trust_remote_code=True)
 
 text = args['input']
+print(text)
 
 def run_model():
     with torch.no_grad():
@@ -81,7 +82,7 @@ for res in OVMS_embeddings:
         print("OVMS embeddings: shape:",ovmsresult.shape, "emb[:20]:\n", ovmsresult[:20])
         #print("OVSentenceTransformer: shape:",OV_embeddings[i].shape, "emb[:20]:\n", OV_embeddings[i][:20])
         print("HF AutoModel: shape:",HF_embeddings[i].shape, "emb[:20]:\n", HF_embeddings[i][:20])
-    print("Similarity with HF AutoModel:", np.linalg.norm(ovmsresult - HF_embeddings[i]))
+    print("Diference score with HF AutoModel:", np.linalg.norm(ovmsresult - HF_embeddings[i]))
     assert np.allclose(ovmsresult, HF_embeddings[i], atol=1e-2)
     assert (np.linalg.norm(ovmsresult - HF_embeddings[i]) < 0.06)
     i+=1

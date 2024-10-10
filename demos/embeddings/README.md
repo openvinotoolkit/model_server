@@ -4,7 +4,11 @@ Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
 ## Get the docker image
 
+<<<<<<< HEAD
 Build the image from source to try this new feature. It will be included in the public image in the coming version 2024.5.
+=======
+Until the feature is not included in public image, build the image from source to try the latest enhancements in this feature. In 2024.5 public release this command will be optional.
+>>>>>>> origin/main
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
@@ -31,7 +35,10 @@ Run optimum-cli to download and quantize the model:
 cd demos/embeddings
 convert_tokenizer -o models/gte-large-en-v1.5-tokenizer/1 Alibaba-NLP/gte-large-en-v1.5
 optimum-cli export openvino --disable-convert-tokenizer --model Alibaba-NLP/gte-large-en-v1.5 --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/gte-large-en-v1.5-embeddings/1
+<<<<<<< HEAD
 rm models/gte-large-en-v1.5-embeddings/1/*.json models/gte-large-en-v1.5-embeddings/1/vocab.txt 
+=======
+>>>>>>> origin/main
 ```
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
 
@@ -42,8 +49,18 @@ models/
 ├── graph.pbtxt
 ├── gte-large-en-v1.5-embeddings
 │   └── 1
+<<<<<<< HEAD
 │       ├── openvino_model.bin
 │       └── openvino_model.xml
+=======
+│       ├── config.json
+│       ├── openvino_model.bin
+│       ├── openvino_model.xml
+│       ├── special_tokens_map.json
+│       ├── tokenizer_config.json
+│       ├── tokenizer.json
+│       └── vocab.txt
+>>>>>>> origin/main
 ├── gte-large-en-v1.5-tokenizer
 │   └── 1
 │       ├── openvino_tokenizer.bin
@@ -51,7 +68,10 @@ models/
 └── subconfig.json
 
 ```
+<<<<<<< HEAD
 > **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder. The models can be also stored on the cloud storage like s3, gcs or azure storage.
+=======
+>>>>>>> origin/main
 
 The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. 
 Runtime configuration for both models can be tuned in `subconfig.json` file. 
@@ -131,17 +151,19 @@ client = OpenAI(
   api_key="unused"
 )
 model = "Alibaba-NLP/gte-large-en-v1.5"
-responses = client.embeddings.create(
+embedding_responses = client.embeddings.create(
     input=[
-        "Hello my name is",
-        "Model server can support embeddings endpoint"
+        "That is a happy person",
+        "That is a happy very person"
     ],
     model=model,
 )
-for data in responses.data:
-    print(data.embedding)
+embedding_from_string1 = np.array(embedding_responses.data[0].embedding)
+embedding_from_string2 = np.array(embedding_responses.data[1].embedding)
+cos_sim = np.dot(embedding_from_string1, embedding_from_string2)/(np.linalg.norm(embedding_from_string1)*np.linalg.norm(embedding_from_string2))
+print("Similarity score as cos_sim", cos_sim)
 ```
-
+It will report results like `Similarity score as cos_sim 0.97654650115054`.
 
 ## Benchmarking feature extraction
 
@@ -149,7 +171,8 @@ TBD
 
 ## RAG with Model Server
 
-TBD
+Embeddings endpoint can be applied in RAG chains to deletated text feature extraction both for documented vectorization and in context retreival.
+Check this demo to see the langchain code example which is using OpenVINO Model Server both for text generation and embedding endpoint in [RAG application demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/continuous_batching/rag)
 
 ## Deploying multiple embedding models
 
@@ -184,7 +207,7 @@ HF AutoModel: shape: (1024,) emb[:20]:
  [-0.0345 -0.0252 -0.0106 -0.0124 -0.0167 -0.0018 -0.0301  0.0002 -0.0408
  -0.0139 -0.015   0.0104  0.0054 -0.0006  0.0326 -0.0296 -0.04   -0.0457
   0.0087 -0.0102]
-Similarity with HF AutoModel: 0.02175156185021083
+Difference score with HF AutoModel: 0.02175156185021083
 Batch number: 1
 OVMS embeddings: shape: (1024,) emb[:20]:
  [-0.0141 -0.0332 -0.0041 -0.0205 -0.0008  0.0189 -0.0278 -0.0083 -0.0511
@@ -194,7 +217,7 @@ HF AutoModel: shape: (1024,) emb[:20]:
  [-0.0146 -0.0333 -0.005  -0.0194  0.0004  0.0197 -0.0281 -0.0069 -0.0511
   0.005   0.0253 -0.0067  0.0167  0.0079  0.0128 -0.0407 -0.0317 -0.0329
   0.0095 -0.0051]
-Similarity with HF AutoModel: 0.024787274668209857
+Difference score with HF AutoModel: 0.024787274668209857
 
 ```
 
