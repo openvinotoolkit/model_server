@@ -19,7 +19,7 @@ node {
   output_side_packet: "SESSION:tokenizer"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "tokenizer"
+      servable_name: "tokenizer_model"
       servable_version: "1"
     }
   }

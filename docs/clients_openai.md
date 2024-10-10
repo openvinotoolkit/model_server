@@ -8,7 +8,9 @@ hidden:
 
 Chat completion API <ovms_docs_rest_api_chat>
 Completions API <ovms_docs_rest_api_completion>
-Demo <ovms_demos_continuous_batching>
+Demo - text generation<ovms_demos_continuous_batching>
+Completions API <ovms_docs_rest_api_embeddings>
+Demo - text embeddings <ovms_demos_embeddings>
 LLM calculator <ovms_docs_llm_caclulator>
 ```
 ## Introduction
@@ -163,6 +165,42 @@ stream = client.completions.create(
 for chunk in stream:
     if chunk.choices[0].text is not None:
         print(chunk.choices[0].text, end="")
+```
+:::
+::::
+
+### Text embeddings
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```{code} python
+from openai import OpenAI
+client = OpenAI(
+  base_url="http://localhost:8000/v3",
+  api_key="unused"
+)
+responses = client.embeddings.create(input=[hello world], model='Alibaba-NLP/gte-large-en-v1.5')
+for data in responses.data:
+    print(data.embedding)
+```
+:::
+:::{tab-item} python [requests]
+:sync: python-requests
+```{code} python
+import requests
+payload = {"model": "Alibaba-NLP/gte-large-en-v1.5", "input": "hello world"}
+headers = {"Content-Type": "application/json", "Authorization": "not used"}
+response = requests.post("http://localhost:8000/v3/completions", json=payload, headers=headers)
+print(response.text)
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```{code} bash
+curl http://localhost:8000/v3/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "Alibaba-NLP/gte-large-en-v1.5", "input": "hello world"}'
 ```
 :::
 ::::
