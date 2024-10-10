@@ -46,7 +46,7 @@ NodeStreamIdGuard::~NodeStreamIdGuard() {
     }
 }
 
-std::optional<int> NodeStreamIdGuard::tryGetId(const uint microseconds) {
+std::optional<int> NodeStreamIdGuard::tryGetId(const uint32_t microseconds) {
     OVMS_PROFILE_FUNCTION();
     if (!this->streamId) {
         if (std::future_status::ready == this->futureStreamId.wait_for(std::chrono::microseconds(microseconds))) {
@@ -57,7 +57,7 @@ std::optional<int> NodeStreamIdGuard::tryGetId(const uint microseconds) {
     return this->streamId;
 }
 
-bool NodeStreamIdGuard::tryDisarm(const uint microseconds) {
+bool NodeStreamIdGuard::tryDisarm(const uint32_t microseconds) {
     if (std::future_status::ready == this->futureStreamId.wait_for(std::chrono::microseconds(microseconds))) {
         this->streamId = this->futureStreamId.get();
         SPDLOG_DEBUG("Returning streamId:", this->streamId.value());

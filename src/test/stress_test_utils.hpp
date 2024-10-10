@@ -1093,9 +1093,9 @@ static void mediacreate(std::shared_ptr<MediapipeGraphExecutor>& executorPtr, ov
 
 class ConfigChangeStressTest : public TestWithTempDir {
 protected:
-    const uint loadThreadCount = 20;
-    const uint beforeConfigChangeLoadTimeMs = 30;
-    const uint afterConfigChangeLoadTimeMs = 50;
+    const uint32_t loadThreadCount = 20;
+    const uint32_t beforeConfigChangeLoadTimeMs = 30;
+    const uint32_t afterConfigChangeLoadTimeMs = 50;
     const int stressIterationsLimit = 5000;
 
     std::string configFilePath;
@@ -1355,12 +1355,12 @@ public:
             std::back_inserter(futureStopSignals),
             [](auto& p) { return p.get_future(); });
         std::unordered_map<StatusCode, std::atomic<uint64_t>> createPipelineRetCodesCounters;
-        for (uint i = 0; i != static_cast<uint>(StatusCode::STATUS_CODE_END); ++i) {
+        for (uint32_t i = 0; i != static_cast<uint>(StatusCode::STATUS_CODE_END); ++i) {
             createPipelineRetCodesCounters[static_cast<StatusCode>(i)] = 0;
         }
         // create worker threads
         std::vector<std::unique_ptr<std::thread>> workerThreads;
-        for (uint i = 0; i < loadThreadCount; ++i) {
+        for (uint32_t i = 0; i < loadThreadCount; ++i) {
             workerThreads.emplace_back(std::make_unique<std::thread>(
                 [this,
                     &triggerLoadInALoop,

@@ -48,7 +48,7 @@ typedef void* VADisplay;
 
 cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
     cl_int clError;
-    cl_uint numPlatforms = 0;
+    cl_uint32_t numPlatforms = 0;
     clError = clGetPlatformIDs(0, nullptr, &numPlatforms);
     if (clError != CL_SUCCESS) {
         std::cerr << "Error getting number of platforms\n";
@@ -56,7 +56,7 @@ cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
     }
     // extract 1st platform from numPlatforms
     clGetPlatformIDs(1, &platformId, nullptr);
-    cl_uint numDevices = 0;
+    cl_uint32_t numDevices = 0;
     // query how many devices there are
     clError = clGetDeviceIDs(platformId, CL_DEVICE_TYPE_GPU, 0, nullptr, &numDevices);
     if (clError != CL_SUCCESS) {
@@ -67,7 +67,7 @@ cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
         std::cerr << "There is no available devices\n";
         throw 1;
     }
-    cl_uint numberOfDevicesInContext = 1;
+    cl_uint32_t numberOfDevicesInContext = 1;
     clError = clGetDeviceIDs(platformId, CL_DEVICE_TYPE_GPU, numberOfDevicesInContext, &deviceId, nullptr);
     if (clError != CL_SUCCESS) {
         std::cerr << "Error getting GPU deviceId\n";
@@ -1365,7 +1365,7 @@ OVMS_Server* startCAPIServerFromConfig(const std::string configPath) {
 
 class CAPIGPUPerfComparison : public TestWithTempDir {
 protected:
-    const uint afterConfigChangeLoadTimeMs = 50;
+    const uint32_t afterConfigChangeLoadTimeMs = 50;
     const int stressIterationsLimit = 5000;
 
     std::string configFilePath;

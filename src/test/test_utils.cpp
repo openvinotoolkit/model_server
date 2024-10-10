@@ -106,7 +106,7 @@ void waitForOVMSConfigReload(ovms::ModelManager& manager) {
     // This is effectively multiplying by 5 to have at least 1 config reload in between
     // two test steps, but we check if config files changed to exit earlier if changes are already applied
     const float WAIT_MULTIPLIER_FACTOR = 5;
-    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getWatcherIntervalMillisec() * 1000;
+    const uint32_t waitTime = WAIT_MULTIPLIER_FACTOR * manager.getWatcherIntervalMillisec() * 1000;
     bool reloadIsNeeded = true;
     int timestepMs = 10;
 
@@ -122,7 +122,7 @@ void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
     // This is effectively multiplying by 1.8 to have 1 config reload in between
     // two test steps
     const float WAIT_MULTIPLIER_FACTOR = 1.8;
-    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getResourcesCleanupIntervalMillisec();
+    const uint32_t waitTime = WAIT_MULTIPLIER_FACTOR * manager.getResourcesCleanupIntervalMillisec();
     SPDLOG_DEBUG("waitForOVMSResourcesCleanup {} ms", waitTime);
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }

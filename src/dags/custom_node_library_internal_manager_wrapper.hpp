@@ -35,6 +35,10 @@ struct CNLIMWrapper {
     }
 };
 
-void* getCNLIMWrapperPtr(const std::shared_ptr<CNLIMWrapper>& wrapper);
-
+static void* getCNLIMWrapperPtr(const std::shared_ptr<CNLIMWrapper>& wrapper) {
+    if (wrapper == nullptr) {
+        return nullptr;
+    }
+    return wrapper->ptr;
+}
 }  // namespace ovms

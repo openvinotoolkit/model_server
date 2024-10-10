@@ -16,6 +16,7 @@
 #include "metric_config.hpp"
 
 #include <regex>
+#include <sstream>
 #include <string>
 
 #include <rapidjson/istreamwrapper.h>
@@ -29,6 +30,11 @@
 #include "status.hpp"
 #include "stringutils.hpp"
 
+#ifndef __linux__
+// Workaround : https://github.com/Tencent/rapidjson/issues/1448
+#pragma push_macro("GetObject")
+#undef GetObject
+#endif
 namespace ovms {
 
 // Single Model / DAG
@@ -176,3 +182,8 @@ Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metric
 }
 
 }  // namespace ovms
+
+#ifndef __linux__
+// Workaround : https://github.com/Tencent/rapidjson/issues/1448
+#pragma pop_macro("GetObject")
+#endif

@@ -140,7 +140,7 @@ public:
         std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance = nullptr,
         std::unique_ptr<std::future<void>> waitBeforePerformInference = nullptr);
 
-    void testConcurrentPredicts(const int initialBatchSize, const uint waitingBeforePerformInferenceCount, const uint waitingBeforeGettingModelCount) {
+    void testConcurrentPredicts(const int initialBatchSize, const uint32_t waitingBeforePerformInferenceCount, const uint32_t waitingBeforeGettingModelCount) {
         ASSERT_GE(20, waitingBeforePerformInferenceCount);
         config.setNireq(20);
         ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -203,7 +203,7 @@ public:
         }
     }
 
-    void testConcurrentBsChanges(const int initialBatchSize, const uint numberOfThreads) {
+    void testConcurrentBsChanges(const int initialBatchSize, const uint32_t numberOfThreads) {
         ASSERT_GE(20, numberOfThreads);
         config.setNireq(20);
         ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -856,8 +856,8 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhenSeveralInferRequestJustBeforeGetting
     const int initialBatchSize = 1;
     this->config.setBatchingParams("auto");
 
-    const uint waitingBeforePerformInferenceCount = 0;
-    const uint waitingBeforeGettingModelCount = 9;
+    const uint32_t waitingBeforePerformInferenceCount = 0;
+    const uint32_t waitingBeforeGettingModelCount = 9;
     this->testConcurrentPredicts(initialBatchSize, waitingBeforePerformInferenceCount, waitingBeforeGettingModelCount);
 }
 
@@ -865,8 +865,8 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhenSeveralInferRequestJustBeforeInferen
     const int initialBatchSize = 1;
     this->config.setBatchingParams("auto");
 
-    const uint waitingBeforePerformInferenceCount = 9;
-    const uint waitingBeforeGettingModelCount = 0;
+    const uint32_t waitingBeforePerformInferenceCount = 9;
+    const uint32_t waitingBeforeGettingModelCount = 0;
     this->testConcurrentPredicts(initialBatchSize, waitingBeforePerformInferenceCount, waitingBeforeGettingModelCount);
 }
 
@@ -874,8 +874,8 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhenSeveralInferRequestAtDifferentStages
     const int initialBatchSize = 1;
     this->config.setBatchingParams("auto");
 
-    const uint waitingBeforePerformInferenceCount = 9;
-    const uint waitingBeforeGettingModelCount = 9;
+    const uint32_t waitingBeforePerformInferenceCount = 9;
+    const uint32_t waitingBeforeGettingModelCount = 9;
     this->testConcurrentPredicts(initialBatchSize, waitingBeforePerformInferenceCount, waitingBeforeGettingModelCount);
 }
 
@@ -883,7 +883,7 @@ TYPED_TEST(TestPredict, SuccesfullReloadForMultipleThreadsDifferentBS) {
     const int initialBatchSize = 2;
     this->config.setBatchingParams("auto");
 
-    const uint numberOfThreads = 5;
+    const uint32_t numberOfThreads = 5;
     this->testConcurrentBsChanges(initialBatchSize, numberOfThreads);
 }
 TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {

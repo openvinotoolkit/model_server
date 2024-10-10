@@ -190,7 +190,7 @@ protected:
     /**
      * Time interval between each config file check
      */
-    uint watcherIntervalMillisec = 1000;
+    uint32_t watcherIntervalMillisec = 1000;
     const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
 
 private:
@@ -258,7 +258,7 @@ public:
     /**
      *  @brief Gets the watcher interval timestep in seconds
      */
-    uint getWatcherIntervalMillisec() {
+    uint32_t getWatcherIntervalMillisec() {
         return watcherIntervalMillisec;
     }
 

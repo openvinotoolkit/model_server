@@ -28,19 +28,28 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
-#include <netinet/in.h>
+//  TODO: windows #include <netinet/in.h>
 #include <signal.h>
 #include <stdlib.h>
-#include <sys/socket.h>
+// TODO: windows  #include <sys/socket.h>
+
+// TODO: Write windows/linux specific status codes.
+#ifdef __linux__ 
 #include <sysexits.h>
+#elif _WIN32
+#include <ntstatus.h>
+#endif
 #include <unistd.h>
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
+// TODO windows
+#ifdef __linux__
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
+#endif
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "metric_module.hpp"
@@ -118,6 +127,9 @@ static void onIllegal(int status) {
     shutdown_request = 2;
 }
 
+// TODO windows
+#ifdef __linux__  
+
 static void installSignalHandlers() {
     static struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = onInterrupt;
@@ -137,6 +149,8 @@ static void installSignalHandlers() {
     sigIllHandler.sa_flags = 0;
     sigaction(SIGILL, &sigIllHandler, NULL);
 }
+
+#endif
 
 ModuleState Module::getState() const {
     return state;
@@ -195,8 +209,11 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
 #endif
     if (name == GRPC_SERVER_MODULE_NAME)
         return std::make_unique<GRPCServerModule>(*this);
+// TODO windows
+#ifdef __linux__
     if (name == HTTP_SERVER_MODULE_NAME)
         return std::make_unique<HTTPServerModule>(*this);
+#endif
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
 #if (PYTHON_DISABLE == 0)
@@ -265,10 +282,13 @@ Status Server::startModules(ovms::Config& config) {
     INSERT_MODULE(GRPC_SERVER_MODULE_NAME, it);
     START_MODULE(it);
     // if we ever decide not to start GRPC module then we need to implement HTTP responses without using grpc implementations
+    // TODO windows
+#ifdef __linux__
     if (config.restPort() != 0) {
         INSERT_MODULE(HTTP_SERVER_MODULE_NAME, it);
         START_MODULE(it);
     }
+#endif
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
 #if (PYTHON_DISABLE == 0)
@@ -303,7 +323,10 @@ void Server::shutdownModules() {
     // we want very precise order of modules shutdown
     // first we should stop incoming new requests
     ensureModuleShutdown(GRPC_SERVER_MODULE_NAME);
+    // TODO windows
+#ifdef __linux__
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
+#endif
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
 #if (PYTHON_DISABLE == 0)
@@ -318,16 +341,19 @@ void Server::shutdownModules() {
 
 static int statusToExitCode(const Status& status) {
     if (status.ok()) {
-        return EX_OK;
+        return 0;
     } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
-        return EX_USAGE;
+        return 3;
     }
     return EXIT_FAILURE;
 }
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
+// TODO windows
+#ifdef __linux__  
     installSignalHandlers();
+#endif
     CLIParser parser;
     ServerSettingsImpl serverSettings;
     ModelsSettingsImpl modelsSettings;

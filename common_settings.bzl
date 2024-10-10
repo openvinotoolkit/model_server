@@ -34,6 +34,17 @@ def create_config_settings():
         name = "not_disable_mediapipe",
         negate = ":disable_mediapipe",
     )
+    native.config_setting(
+        name = "disable_cloud",
+        define_values = {
+            "CLOUD_DISABLE": "1",
+        },
+        visibility = ["//visibility:public"],
+    )
+    more_selects.config_setting_negation(
+        name = "not_disable_cloud",
+        negate = ":disable_cloud",
+    )
     #To build without python use flags - bazel build --define PYTHON_DISABLE=1 //src:ovms
     native.config_setting(
         name = "disable_python",
@@ -62,17 +73,26 @@ def create_config_settings():
 ###############################
 COMMON_STATIC_LIBS_COPTS = [
     "-Wall",
-    "-Wno-unknown-pragmas",
-    "-Wno-sign-compare",
-    "-fvisibility=hidden", # Needed for pybind targets
-    "-Werror",
+    # TODO: make linux specific "-Wno-unknown-pragmas", 
+    #"-Wno-sign-compare",
+    #"-fvisibility=hidden", # Needed for pybind targets
+    #"-Werror",
 ]
-COMMON_STATIC_LIBS_LINKOPTS = [
-        "-lxml2",
-        "-luuid",
-        "-lstdc++fs",
-        "-lcrypto",
-]
+COMMON_STATIC_LIBS_LINKOPTS = select({
+                "//conditions:default": [
+                    "-lxml2",
+                    "-luuid",
+                    "-lstdc++fs",
+                    "-lcrypto",
+                    "-lOpenCL", # TODO make as a direct dependency
+                    # "-lovms_shared",  # Use for dynamic linking when necessary
+                ],
+                "//src:windows" : [
+                    "",
+                    ],
+                }) 
+
+
 COMMON_FUZZER_COPTS = [
     "-fsanitize=address",
     "-fprofile-generate",

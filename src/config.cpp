@@ -21,7 +21,12 @@
 #include <thread>
 
 #include <spdlog/spdlog.h>
+// TODO: Write windows/linux specific status codes.
+#ifdef __linux__ 
 #include <sysexits.h>
+#elif _WIN32
+#include <ntstatus.h>
+#endif
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
@@ -30,8 +35,8 @@
 
 namespace ovms {
 
-const uint AVAILABLE_CORES = getCoreCount();
-const uint MAX_PORT_NUMBER = std::numeric_limits<ushort>::max();
+const uint32_t AVAILABLE_CORES = getCoreCount();
+const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint32_t>::max();
 
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
 const uint32_t DEFAULT_GRPC_MAX_THREADS = AVAILABLE_CORES * 8.0;
@@ -45,7 +50,7 @@ Config& Config::parse(int argc, char** argv) {
     p.parse(argc, argv);
     p.prepare(&serverSettings, &modelsSettings);
     if (!this->parse(&serverSettings, &modelsSettings))
-        exit(EX_USAGE);
+        exit(3);
     return *this;
 }
 

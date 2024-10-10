@@ -17,13 +17,13 @@
 #include "grpc_utils.hpp"
 
 #include <string>
-#include <unordered_map>
+#include <map>
 
 #include "status.hpp"
 
 namespace ovms {
 const grpc::Status grpc(const Status& status) {
-    static const std::unordered_map<const StatusCode, grpc::StatusCode> grpcStatusMap = {
+    static const std::map<const StatusCode, grpc::StatusCode> grpcStatusMap = {
         {StatusCode::OK, grpc::StatusCode::OK},
         // INTERNAL_ERRORS
         // Should never occur - ModelInstance::validate takes care of that

@@ -26,3 +26,7 @@ cppclean_test
 tags
 .venv-style/
 src/test/llm_testing
+node_modules/
+yarn.*
+bazel-openvino-model-server/
+bazel-model_server/

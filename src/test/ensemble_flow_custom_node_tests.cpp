@@ -303,7 +303,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
     // Most basic configuration, just process single add-sub custom node pipeline request
     // input  (differentOps    dummy   chooseMax ) XN    output
     //  O-----(----->O---------->O------->O------>...----->O
-    const uint demultiplicationLayersCount = 10;
+    const uint32_t demultiplicationLayersCount = 10;
     // values chosen in a way that first chosen different ops result will be addition. all following ones will be multiplications
     const std::vector<float> inputValues{0.2, 0.7, -0.4, -0.1, 0.0001, -0.8, 0.7, 0.8, 0.9, 0.1};
     const std::vector<float> inputFactors{1, -1, 2, 2};
@@ -375,7 +375,7 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
     // Most basic configuration, just process single add-sub custom node pipeline request
     // input  (differentOps dummy)xN   chooseMax xN    output
     //  O-----(----->O------->O---...----->O---->...----->O
-    const uint demultiplicationLayersCount = 4;
+    const uint32_t demultiplicationLayersCount = 4;
     // values chosen in a way that first chosen different ops result will be addition. all following ones will be multiplications
     const std::vector<float> inputValues{0.2, 0.7, -0.4, -0.1, 0.0001, -0.8, 0.7, 0.8, 0.9, 0.1};
     const std::vector<float> inputFactors{1, -1, 2, 2};
@@ -2396,8 +2396,8 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, Demultip
     std::vector<float> input(4 * DUMMY_MODEL_OUTPUT_SIZE);
     std::fill(input.begin(), input.end(), 1.0);
 
-    uint iterations = -1;
-    uint number = 0;
+    uint32_t iterations = -1;
+    uint32_t number = 0;
     std::transform(input.begin(), input.end(), input.begin(),
         [&iterations, &number](float f) -> float {
             iterations++;

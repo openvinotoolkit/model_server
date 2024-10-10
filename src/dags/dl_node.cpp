@@ -34,7 +34,7 @@
 
 namespace ovms {
 
-const uint WAIT_FOR_STREAM_ID_TIMEOUT_MICROSECONDS = 1;
+const uint32_t WAIT_FOR_STREAM_ID_TIMEOUT_MICROSECONDS = 1;
 
 Status DLNode::getRealOutputName(ModelInstance& model, const std::string& alias, std::string* result) const {
     auto it = nodeOutputNameAlias.find(alias);
@@ -79,7 +79,7 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     auto& metadataTensorResultsPair = it.first->second;
     auto& tensorResults = metadataTensorResultsPair.second;
     Status status;
-    const uint waitTimeMicroseconds = 1;
+    const uint32_t waitTimeMicroseconds = 1;
     auto& inferRequest = dlNodeSession.getInferRequest(waitTimeMicroseconds);
     auto& model = dlNodeSession.getModelInstance();
     status = this->fetchResults(tensorResults, inferRequest, model, nodeSession.getSessionKey());
@@ -155,7 +155,7 @@ void DLNode::release(session_key_t sessionId) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Release node: {} sessionKey: {}", getName(), sessionId);
     getNodeSession(sessionId).release();
 }
-bool DLNode::tryDisarm(const session_key_t& sessionKey, const uint microseconds) {
+bool DLNode::tryDisarm(const session_key_t& sessionKey, const uint32_t microseconds) {
     return getNodeSession(sessionKey).tryDisarm(microseconds);
 }
 
