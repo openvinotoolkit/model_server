@@ -71,13 +71,20 @@ def create_config_settings():
 ###############################
 # compilation settings
 ###############################
-COMMON_STATIC_LIBS_COPTS = [
-    "-Wall",
-    # TODO: make linux specific "-Wno-unknown-pragmas", 
-    #"-Wno-sign-compare",
-    #"-fvisibility=hidden", # Needed for pybind targets
-    #"-Werror",
-]
+COMMON_STATIC_LIBS_COPTS = select({
+                "//conditions:default": [
+                    "-Wall",
+                    "-Wconversion",
+                    "-Wno-unknown-pragmas", 
+                    "-Wno-sign-compare",
+                    "-fvisibility=hidden", # Needed for pybind targets
+                    "-Werror",
+                ],
+                "//src:windows" : [
+                    "-Wall",
+                    ],
+                }) 
+
 COMMON_STATIC_LIBS_LINKOPTS = select({
                 "//conditions:default": [
                     "-lxml2",
@@ -91,7 +98,6 @@ COMMON_STATIC_LIBS_LINKOPTS = select({
                     "",
                     ],
                 }) 
-
 
 COMMON_FUZZER_COPTS = [
     "-fsanitize=address",

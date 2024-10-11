@@ -71,9 +71,7 @@ cc_library(
         "custom_nodes/common/buffersqueue.hpp",
         "custom_nodes/common/buffersqueue.cpp",
     ],
-    copts = [
-        "-Wall",
-    ],
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_shared_library(
@@ -196,16 +194,16 @@ cc_library(
         "deserialization.cpp",
         "deserialization.hpp",
         "dags/aliases.hpp",
-        "dags/customnodesession.cpp",
-        "dags/customnodesession.hpp",
         "dags/custom_node.cpp",
         "dags/custom_node.hpp",
-        "dags/custom_node_library_internal_manager_wrapper.hpp",
-        "dags/custom_node_library_internal_manager_wrapper.cpp",
         "dags/custom_node_library_manager.cpp",
         "dags/custom_node_library_manager.hpp",
         "dags/custom_node_output_allocator.cpp",
         "dags/custom_node_output_allocator.hpp",
+        "dags/custom_node_library_internal_manager_wrapper.hpp",
+        "dags/custom_node_library_internal_manager_wrapper.cpp",
+        "dags/customnodesession.cpp",
+        "dags/customnodesession.hpp",
         "dags/dl_node.cpp",
         "dags/dl_node.hpp",
         "dags/dlnodesession.cpp",
@@ -463,7 +461,7 @@ cc_library(
     name = "libhttpclientconnection",
     hdrs = ["client_connection.hpp", "http_frontend/http_client_connection.hpp"],
     deps = [
-        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -573,9 +571,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = [
-        "-Wall",
-    ]
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_binary(
@@ -590,9 +586,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = [
-        "-Wall",
-    ]
+    copts =COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_binary(
@@ -609,9 +603,7 @@ cc_binary(
         "custom_nodes/add_one/add_one_internal_manager.hpp"
     ],
     linkshared = 1,
-    copts = [
-        "-Wall",
-    ]
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_binary(
@@ -631,9 +623,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = [
-        "-Wall",
-    ]
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_binary(
@@ -648,9 +638,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = [
-        "-Wall",
-    ]
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_binary(
@@ -665,9 +653,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = [
-        "-Wall",
-    ]
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 # POC which can start OVMS with C-API built by bazel
@@ -725,7 +711,7 @@ cc_library( # TODO split dependencies
         "httpservermodule.cpp",
     ],
     deps = [
-        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
@@ -1219,10 +1205,7 @@ cc_binary(
         "main.cpp",
     ],
     linkopts = LINKOPTS_ADJUSTED,
-    copts = [
-        #"-Wall",
-        #"-Wconversion",
-    ],
+    copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
         "//src:ovms_lib",]
     + select({
