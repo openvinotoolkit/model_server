@@ -25,7 +25,7 @@ cl_context getOCLContext() {
     cl_int err;
 
     // Step 1: Querying Platforms
-    cl_uint32_t numPlatforms = 0;
+    cl_uint numPlatforms = 0;
     err = clGetPlatformIDs(0, nullptr, &numPlatforms);
     if (err != CL_SUCCESS) {
         std::cerr << "Error getting number of platforms\n";
@@ -37,7 +37,7 @@ cl_context getOCLContext() {
     clGetPlatformIDs(1, &platform, nullptr);
 
     // Step 2: Querying Devices
-    cl_uint32_t numDevices = 0;
+    cl_uint numDevices = 0;
     err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, nullptr, &numDevices);
     if (err != CL_SUCCESS) {
         std::cerr << "Error getting number of devices\n";
@@ -62,7 +62,7 @@ cl_context getOCLContext() {
 }
 cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
     cl_int err;
-    cl_uint32_t numPlatforms = 0;
+    cl_uint numPlatforms = 0;
     err = clGetPlatformIDs(0, nullptr, &numPlatforms);
     if (err != CL_SUCCESS) {
         std::cerr << "Error getting number of platforms\n";
@@ -70,7 +70,7 @@ cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
     }
     // extract 1st platform from numPlatforms
     clGetPlatformIDs(1, &platformId, nullptr);
-    cl_uint32_t numDevices = 0;
+    cl_uint numDevices = 0;
     // query how many devices there are
     err = clGetDeviceIDs(platformId, CL_DEVICE_TYPE_GPU, 0, nullptr, &numDevices);
     if (err != CL_SUCCESS) {
@@ -81,7 +81,7 @@ cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
         std::cerr << "There is no available devices\n";
         throw 1;
     }
-    cl_uint32_t numberOfDevicesInContext = 1;
+    cl_uint numberOfDevicesInContext = 1;
     err = clGetDeviceIDs(platformId, CL_DEVICE_TYPE_GPU, numberOfDevicesInContext, &deviceId, nullptr);
     if (err != CL_SUCCESS) {
         std::cerr << "Error getting GPU deviceId\n";

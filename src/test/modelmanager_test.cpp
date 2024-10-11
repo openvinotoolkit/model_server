@@ -21,6 +21,7 @@
 
 #include "../cleaner_utils.hpp"
 #include "../config.hpp"
+#include "../dags/custom_node_library_internal_manager_wrapper.hpp"
 #include "../dags/node_library.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
