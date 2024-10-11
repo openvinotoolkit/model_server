@@ -57,6 +57,7 @@ INSTALL_RPMS_FROM_URL ?=
 
 CHECK_COVERAGE ?=0
 RUN_TESTS ?= 0
+RUN_GPU_TESTS ?=
 NVIDIA ?=0
 GPU ?= 0
 NPU ?= 0
@@ -228,6 +229,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
 	--build-arg RUN_TESTS=$(RUN_TESTS)\
+	--build-arg RUN_GPU_TESTS=$(RUN_GPU_TESTS)\
 	--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
 	--build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS)\
 	--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
@@ -670,8 +672,42 @@ cpu_extension:
 
 run_unit_tests:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
-	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
-	docker run -v $(shell realpath ./rununittests.sh):/ovms/./rununittests.sh -v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas:ro -v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro -e https_proxy=${https_proxy} -e RUN_TESTS=1 -e JOBS=$(JOBS) -e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./rununittest.sh > test.log 2>&1 ; exit_status=$$? ; tail -200 test.log ; exit $$exit_status
+ifeq ($(RUN_GPU_TESTS),1)
+	./prepare_gpu_models.sh ${GPU_MODEL_PATH} && \
+	docker run \
+		--device=/dev/dri \
+		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \
+		-u 0 \
+		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
+		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
+		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		-v ${PWD}/out:/out:rw \
+		-e https_proxy=${https_proxy} \
+		-e RUN_TESTS=1 \
+		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
+		-e JOBS=$(JOBS) \
+		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
+		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
+		tail -200 test.log ; \
+		[ -f ./out/results.txt ] && cat ./out/results.txt || echo "The results file was not generated" ; \
+		exit $$exit_status
+else
+	docker run \
+		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
+		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		-v ${PWD}/out:/out:rw \
+		-e https_proxy=${https_proxy} \
+		-e RUN_TESTS=1 \
+		-e JOBS=$(JOBS) \
+		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
+		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
+		tail -200 test.log ; \
+		[ -f ./out/results.txt ] && cat ./out/results.txt || echo "The results file was not generated" ; \
+		exit $$exit_status
+endif
+
 
 run_lib_files_test:
 	docker run --entrypoint bash -v $(realpath tests/file_lists):/test $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./test/test_release_files.sh ${BAZEL_DEBUG_FLAGS} > file_test.log 2>&1 ; exit_status=$$? ; tail -200 file_test.log ; exit $$exit_status
