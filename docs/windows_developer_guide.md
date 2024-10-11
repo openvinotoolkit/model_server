@@ -9,7 +9,7 @@ md c:\opt
 ## VISAUL
 Visual Studio 2022 with C++ - https://visualstudio.microsoft.com/downloads/
 
-## PYTOHN: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
+## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
 Python3. (Python 3.11.9 is tested)
 pip install numpy==1.23
 make sure you install numpy for the python version you pass as build argument
@@ -53,7 +53,7 @@ Install in c:\opt\boringssl
 ## NINJA - not needed until boring SSL is needed
 https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-win.zip
 
-## NASM - not needed until boring SSL is neede
+## NASM - not needed until boring SSL is needed
 https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-installer-x64.exe
 
 ## https://boringssl.googlesource.com/boringssl/+/HEAD/BUILDING.md
