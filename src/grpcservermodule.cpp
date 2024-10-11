@@ -105,6 +105,10 @@ static bool isPortAvailable(uint64_t port) {
         return false;
     }
 
+    // TODO: windows - check when can we close and cleanup, destructor ? add as member and store.
+    // Does not work when we close here as in linux.
+    //close(sock);
+    //WSACleanup();
     return true;
 }
 #endif

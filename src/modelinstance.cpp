@@ -619,8 +619,6 @@ Status ModelInstance::loadOutputTensorsImpl(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-
-// TODO windows
 #ifdef __linux__
 // Temporary methods. To be replaces with proper storage class.
 static bool dirExists(const std::string& path) {
@@ -1280,6 +1278,9 @@ void ModelInstance::unloadModelComponents() {
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());
         }
     }
+#ifdef __linux__
+    malloc_trim(0);
+#endif
     // TODO: windows for malloc_trim(0);
 }
 

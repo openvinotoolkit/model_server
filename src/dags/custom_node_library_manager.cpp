@@ -17,7 +17,9 @@
 
 #include <utility>
 
-//#include <dlfcn.h>
+#ifdef __linux__ 
+#include <dlfcn.h>
+#endif
 
 #include "../filesystem.hpp"
 #include "../logging.hpp"
@@ -44,15 +46,10 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading custom node library name: {}; base_path: {}", name, basePath);
 
-    // TODO: implement LoadLibrary for windows with GetProcAddress
-    // void* handle = dlopen(basePath.c_str(), RTLD_LAZY | RTLD_LOCAL);
-    // char* error = dlerror();
-    void* handle = NULL;
-    if (handle == NULL) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Library name: {} failed to open base_path: {} with error: {}", name, basePath, "e");
-        return StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN;
-    }
-    /*
+#ifdef __linux__ 
+    void* handle = dlopen(basePath.c_str(), RTLD_LAZY | RTLD_LOCAL);
+    char* error = dlerror();
+    
     initialize_fn initialize = reinterpret_cast<initialize_fn>(dlsym(handle, "initialize"));
     error = dlerror();
     if (error || initialize == nullptr) {
@@ -111,7 +108,15 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         basePath};
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Successfully loaded custom node library name: {}; base_path: {}", name, basePath);
-    */
+#elif _WIN32
+    // TODO: implement LoadLibrary for windows with GetProcAddress
+    void* handle = NULL;
+    if (handle == NULL) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Library name: {} failed to open base_path: {} with error: {}", name, basePath, "e");
+        return StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN;
+    }
+#endif
+
     return StatusCode::OK;
 }
 

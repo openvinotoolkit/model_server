@@ -28,13 +28,13 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
-//  TODO: windows #include <netinet/in.h>
 #include <signal.h>
 #include <stdlib.h>
-// TODO: windows  #include <sys/socket.h>
 
 // TODO: Write windows/linux specific status codes.
 #ifdef __linux__ 
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <sysexits.h>
 #elif _WIN32
 #include <ntstatus.h>
@@ -341,9 +341,17 @@ void Server::shutdownModules() {
 
 static int statusToExitCode(const Status& status) {
     if (status.ok()) {
+#ifdef __linux__ 
+        return EX_OK;
+#elif _WIN32
         return 0;
+#endif
     } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
+#ifdef __linux__ 
+        return EX_USAGE;
+#elif _WIN32
         return 3;
+#endif
     }
     return EXIT_FAILURE;
 }

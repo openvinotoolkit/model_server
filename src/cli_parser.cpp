@@ -182,7 +182,12 @@ void CLIParser::parse(int argc, char** argv) {
                 std::cerr << argument << ", ";
             }
             std::cerr << std::endl;
-            exit(3);
+#ifdef __linux__ 
+        exit(EX_USAGE);
+#elif _WIN32
+        exit(3);
+#endif
+           
         }
 
         if (result->count("version")) {
@@ -191,16 +196,28 @@ void CLIParser::parse(int argc, char** argv) {
             std::cout << project_name + " " + project_version << std::endl;
             std::cout << "OpenVINO backend " << OPENVINO_NAME << std::endl;
             std::cout << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
+#ifdef __linux__ 
+            exit(EX_OK);
+#elif _WIN32
             exit(0);
+#endif
         }
 
         if (result->count("help") || result->arguments().size() == 0) {
             std::cout << options->help({"", "multi model", "single model"}) << std::endl;
+#ifdef __linux__ 
+            exit(EX_OK);
+#elif _WIN32
             exit(0);
+#endif
         }
     } catch (const std::exception& e) {
         std::cerr << "error parsing options: " << e.what() << std::endl;
+#ifdef __linux__ 
+        exit(EX_USAGE);
+#elif _WIN32
         exit(3);
+#endif
     }
 }
 

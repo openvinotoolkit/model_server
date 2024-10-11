@@ -50,7 +50,11 @@ Config& Config::parse(int argc, char** argv) {
     p.parse(argc, argv);
     p.prepare(&serverSettings, &modelsSettings);
     if (!this->parse(&serverSettings, &modelsSettings))
+#ifdef __linux__ 
+        exit(EX_USAGE);
+#elif _WIN32
         exit(3);
+#endif
     return *this;
 }
 
