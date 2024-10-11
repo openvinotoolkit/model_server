@@ -296,7 +296,7 @@ make ovms_builder_image
 make run_unit_tests
 ```
 
-To run unit tests verifying integration with Intel GPUs, add `RUN_GPU_TESTS=1` parameter:
+To run unit tests, verifying integration with Intel GPUs, add `RUN_GPU_TESTS=1` parameter:
 ```
 make run_unit_tests RUN_GPU_TESTS=1
 ```
