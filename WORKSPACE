@@ -54,6 +54,14 @@ http_archive(
     build_file = "@//third_party/libevent:BUILD",
 )
 
+http_archive(
+    name = "com_github_libevent_libevent_windows",
+    url = "https://github.com/libevent/libevent/archive/release-2.1.12-stable.zip",
+    sha256 = "8836ad722ab211de41cb82fe098911986604f6286f67d10dfb2b6787bf418f49",
+    strip_prefix = "libevent-release-2.1.12-stable",
+    build_file = "@//third_party/libevent:libevent_windows.BUILD",
+)
+
 # overriding tensorflow serving bazel dependency
 # alternative would be to use cmake build of grpc and flag
 # to use system ssl instead

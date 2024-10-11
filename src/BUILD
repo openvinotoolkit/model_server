@@ -252,7 +252,19 @@ cc_library(
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
         "global_sequences_viewer.hpp",
-        "global_sequences_viewer.cpp",
+        "global_sequences_viewer.cpp",]
+        #TODO : add to server lib and cleanup headers too many includes
+         + select({
+                "//conditions:default": [
+                    "http_server.hpp",
+                    "http_server.cpp",
+                    "http_rest_api_handler.hpp",
+                    "httpservermodule.hpp",
+                    "http_rest_api_handler.cpp",
+                    "httpservermodule.cpp",
+                ],
+                "//src:windows" : [],
+                }) + [      
         "layout.cpp",
         "layout.hpp",
         "layout_configuration.cpp",
@@ -382,9 +394,7 @@ cc_library(
                 "//:disable_cloud": []
                 }) 
             + select({
-                "//conditions:default": [
-                    "libovmshttpservermodule",
-                ],
+                "//conditions:default": [],
                 "//src:windows" : [
                     "@windows_opencl//:opencl",
                     "@windows_opencl2//:opencl2",
@@ -701,8 +711,8 @@ cc_library(
 cc_library( # TODO split dependencies
     name = "libovmshttpservermodule",
     hdrs = [
-        "http_rest_api_handler.hpp",
         "http_server.hpp",
+        "http_rest_api_handler.hpp",
         "httpservermodule.hpp",
     ],
     srcs = [
@@ -711,6 +721,9 @@ cc_library( # TODO split dependencies
         "httpservermodule.cpp",
     ],
     deps = [
+        "@com_github_jupp0r_prometheus_cpp//core",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
@@ -718,7 +731,13 @@ cc_library( # TODO split dependencies
         "libovmslogging",
         "libovmsprofiler",
         "libovmsstatus",
-    ],
+        "//src/kfserving_api:kfserving_api_cpp",
+    ] + select({
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
+            ],
+            "//:disable_python": []
+        }),
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,

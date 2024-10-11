@@ -28,7 +28,7 @@ load("//:common_settings.bzl",
      "create_config_settings")
 create_config_settings()
 
-#To build without python use flags - bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
+#To build without python use flags - bazel build --config=linux --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
 
 cc_library(
   name = "ovms_dependencies",
@@ -53,7 +53,7 @@ cc_library(
                 "@aws-sdk-cpp//:aws-sdk-cpp_cmake",
                 "@azure//:storage",
                 "@cpprest//:sdk",
-                "@boost//:lib",
+                "//third_party:boost",
                 "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",],
             "//:disable_cloud": []
             })

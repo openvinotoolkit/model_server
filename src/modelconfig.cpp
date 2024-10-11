@@ -635,9 +635,9 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         //TODO: SPDLOG_DEBUG("shape: {}", std::string(getShapes().begin()->second));
     } else {
         //TODO: SPDLOG_DEBUG("shape:");
-        for (auto& [shapeInput, shapeValue] : getShapes()) {
+        //for (auto& [shapeInput, shapeValue] : getShapes()) {
             //TODO: SPDLOG_DEBUG("  {}: {}", shapeInput, std::string(shapeValue));
-        }
+        //}
     }
     if (getModelVersionPolicy()) {
         //TODO: SPDLOG_DEBUG("model_version_policy: {}", std::string(*getModelVersionPolicy()));
@@ -645,9 +645,9 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     //TODO: SPDLOG_DEBUG("nireq: {}", getNireq());
     //TODO: SPDLOG_DEBUG("target_device: {}", getTargetDevice());
     //TODO: SPDLOG_DEBUG("plugin_config:");
-    for (auto& [pluginParameter, pluginValue] : getPluginConfig()) {
+    //for (auto& [pluginParameter, pluginValue] : getPluginConfig()) {
         //TODO: SPDLOG_DEBUG("  {}: {}", pluginParameter, pluginValue.as<std::string>());
-    }
+    //}
 
     bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize().has_value());
     bool shapeSet = (getShapes().size() > 0);
@@ -674,9 +674,9 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     // if the config has models which require custom loader to be used, then load the same here
     if (v.HasMember("custom_loader_options")) {
-        if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
+        //if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
             //TODO: SPDLOG_ERROR("Couldn't parse custom loader options config");
-        }
+        //}
     }
     return StatusCode::OK;
 }

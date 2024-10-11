@@ -89,9 +89,9 @@ COPY third_party /build/third_party/
 
 RUN cp /build/third_party/opencv/install_opencv.sh /build/third_party/opencv/opencv_cmake_flags.txt . && ./install_opencv.sh
 
-RUN bazel build @org_tensorflow//tensorflow/core:framework
+RUN bazel build --config=linux @org_tensorflow//tensorflow/core:framework
 
-RUN bazel build \
+RUN bazel build --config=linux \
     @tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto \
     @com_github_grpc_grpc//:grpc++ \
     @com_google_protobuf//:protobuf_lite \
@@ -100,7 +100,7 @@ RUN bazel build \
 
 COPY src/ /build/src/
 
-RUN bazel build //src:$CLIENT
+RUN bazel build --config=linux //src:$CLIENT
 
 FROM ubuntu:20.04 as release
 ENV DEBIAN_FRONTEND=noninteractive 

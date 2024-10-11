@@ -28,6 +28,7 @@
 
 #ifdef __linux__ 
 #include <dlfcn.h>
+#include <sysexits.h>
 #endif
 #include <errno.h>
 #include <rapidjson/document.h>
