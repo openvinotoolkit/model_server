@@ -28,13 +28,13 @@
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
 #include <signal.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 #ifdef __linux__
 #include <netinet/in.h>
 #include <sys/socket.h>
 #elif _WIN32
 #include <winsock2.h>
-#endif 
+#endif
 #include <unistd.h>
 
 #include "config.hpp"
@@ -77,7 +77,7 @@ static bool isPortAvailable(uint64_t port) {
     close(s);
     return true;
 }
-#else 
+#else
 static bool isPortAvailable(uint64_t port) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -107,8 +107,8 @@ static bool isPortAvailable(uint64_t port) {
 
     // TODO: windows - check when can we close and cleanup, destructor ? add as member and store.
     // Does not work when we close here as in linux.
-    //close(sock);
-    //WSACleanup();
+    // close(sock);
+    // WSACleanup();
     return true;
 }
 #endif

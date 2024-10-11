@@ -16,7 +16,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
-     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
+     "COMMON_STATIC_LIBS_COPTS_VISIBLE", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
      "create_config_settings")
 
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
@@ -71,7 +71,7 @@ cc_library(
         "custom_nodes/common/buffersqueue.hpp",
         "custom_nodes/common/buffersqueue.cpp",
     ],
-    copts = COMMON_STATIC_LIBS_COPTS,
+    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
 )
 
 cc_shared_library(
@@ -581,7 +581,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
+    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
 )
 
 cc_binary(
@@ -596,7 +596,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts =COMMON_STATIC_LIBS_COPTS,
+    copts =COMMON_STATIC_LIBS_COPTS_VISIBLE,
 )
 
 cc_binary(
@@ -613,7 +613,7 @@ cc_binary(
         "custom_nodes/add_one/add_one_internal_manager.hpp"
     ],
     linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
+    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
 )
 
 cc_binary(
@@ -633,7 +633,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
+    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
 )
 
 cc_binary(
@@ -648,7 +648,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
+    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
 )
 
 cc_binary(
@@ -663,7 +663,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
+    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
 )
 
 # POC which can start OVMS with C-API built by bazel

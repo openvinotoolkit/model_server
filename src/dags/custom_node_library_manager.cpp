@@ -17,7 +17,7 @@
 
 #include <utility>
 
-#ifdef __linux__ 
+#ifdef __linux__
 #include <dlfcn.h>
 #endif
 
@@ -46,10 +46,10 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading custom node library name: {}; base_path: {}", name, basePath);
 
-#ifdef __linux__ 
+#ifdef __linux__
     void* handle = dlopen(basePath.c_str(), RTLD_LAZY | RTLD_LOCAL);
     char* error = dlerror();
-    
+
     initialize_fn initialize = reinterpret_cast<initialize_fn>(dlsym(handle, "initialize"));
     error = dlerror();
     if (error || initialize == nullptr) {

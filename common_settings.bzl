@@ -83,6 +83,19 @@ COMMON_STATIC_LIBS_COPTS = select({
                 "//src:windows" : [
                     "-Wall",
                     ],
+                })
+
+COMMON_STATIC_LIBS_COPTS_VISIBLE = select({
+                "//conditions:default": [
+                    "-Wall",
+                    # TODO: was in ovms bin "-Wconversion",
+                    "-Wno-unknown-pragmas", 
+                    "-Wno-sign-compare",
+                    "-Werror",
+                ],
+                "//src:windows" : [
+                    "-Wall",
+                    ],
                 }) 
 
 COMMON_STATIC_LIBS_LINKOPTS = select({

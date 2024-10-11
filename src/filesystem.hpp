@@ -19,8 +19,8 @@
 #include <fstream>
 #include <regex>
 #include <set>
-#include <string>
 #include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -126,9 +126,9 @@ public:
      */
 
     virtual StatusCode deleteFileFolder(const std::string& path) = 0;
-    
-    // TODO: Implement Windows version
-    #ifdef __linux__
+
+// TODO: Implement Windows version
+#ifdef __linux__
     /**
      * @brief Create a Temp Path
      *
@@ -150,7 +150,7 @@ public:
 
         return StatusCode::OK;
     }
-    #endif
+#endif
 
     static bool isPathEscaped(const std::string& path) {
         std::size_t lhs = path.find("../");
@@ -257,13 +257,13 @@ public:
     static std::string getStringMD5(const std::string& str) {
 #ifdef __linux__
         unsigned char result[MD5_DIGEST_LENGTH];
-        
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         MD5((unsigned char*)str.c_str(), str.size(), result);
         std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
 #pragma GCC diagnostic pop
-#else // Windows TODO: Check how it works - tests ?
+#else  // Windows TODO: Check how it works - tests ?
         std::hash<std::string> hasher;
         std::string md5sum = std::to_string(hasher(str));
 #endif
@@ -271,7 +271,7 @@ public:
     }
 
     StatusCode CreateLocalDir(const std::string& path) {
-        try{
+        try {
             fs::create_directory(path);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create local folder: {} {} ", path, e.what());

@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 
-#ifdef __linux__ 
+#ifdef __linux__
 #include <dlfcn.h>
 #include <sysexits.h>
 #endif
@@ -97,7 +97,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} did not exist, created", this->modelCacheDirectory);
         }
         // TODO: check on windows
-#ifdef __linux__ 
+#ifdef __linux__
         int result = access(this->modelCacheDirectory.c_str(), EX_OK);
 #elif _WIN32
         int result = access(this->modelCacheDirectory.c_str(), 0);
@@ -609,7 +609,7 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", loaderConfig.getLibraryPath());
             return StatusCode::PATH_INVALID;
         }
-#ifdef __linux__ 
+#ifdef __linux__
         void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
         if (!handleCL) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), "e");
@@ -857,7 +857,7 @@ class LoudFileInfoReporter {
 public:
     LoudFileInfoReporter(const std::string& filename, std::ifstream& file) {
         // TODO windows
-         #ifdef __linux__
+#ifdef __linux__
         struct stat statTime;
 
         if (stat(filename.c_str(), &statTime) != 0) {
@@ -876,7 +876,7 @@ public:
         }
         file.clear();
         file.seekg(0);
-        #endif
+#endif
     }
     void log() {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, ss.str());

@@ -40,7 +40,7 @@
 #include "tfs_frontend/tfs_utils.hpp"
 
 // TODO windows
-#ifdef __linux__ 
+#ifdef __linux__
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
 #include <openvino/runtime/intel_gpu/ocl/va.hpp>
 #endif
@@ -110,14 +110,14 @@ protected:
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
     // TODO windows
-#ifdef __linux__  
+#ifdef __linux__
     cl_context oclContextC;
-
 
 public:
     // TODO const correctness & ownership & thread safety
     const cl_context* getOclCContext() const { return &oclContextC; }
 #endif
+
 protected:
 #ifdef __linux__
     std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;

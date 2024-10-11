@@ -85,55 +85,55 @@ bool ModelConfig::isDeviceUsed(const std::string& device) const {
 
 bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (this->name != rhs.name) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to name mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to name mismatch", this->name);
         return true;
     }
     if (this->stateful != rhs.stateful) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to stateful mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to stateful mismatch", this->name);
         return true;
     }
     if (this->idleSequenceCleanup != rhs.idleSequenceCleanup) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to idleSequenceCleanup mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to idleSequenceCleanup mismatch", this->name);
         return true;
     }
     if (this->maxSequenceNumber != rhs.maxSequenceNumber) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to maxSequenceNumber mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to maxSequenceNumber mismatch", this->name);
         return true;
     }
     if (this->lowLatencyTransformation != rhs.lowLatencyTransformation) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to lowLatencyTransformation mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to lowLatencyTransformation mismatch", this->name);
         return true;
     }
     if (this->basePath != rhs.basePath) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to original base path mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to original base path mismatch", this->name);
         return true;
     }
     if (this->targetDevice != rhs.targetDevice) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to target device mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to target device mismatch", this->name);
         return true;
     }
     if (this->batchingMode != rhs.batchingMode) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batching mode mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batching mode mismatch", this->name);
         return true;
     }
     if (!isBatchSizeConfigurationEqual(rhs)) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batch size mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to batch size mismatch", this->name);
         return true;
     }
     if (this->nireq != rhs.nireq) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to nireq mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to nireq mismatch", this->name);
         return true;
     }
     if (this->pluginConfig != rhs.pluginConfig) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to plugin config mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to plugin config mismatch", this->name);
         return true;
     }
     if (!isLayoutConfigurationEqual(rhs)) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to named layout mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to named layout mismatch", this->name);
         return true;
     }
     if (!isShapeConfigurationEqual(rhs)) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to shape configuration mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to shape configuration mismatch", this->name);
         return true;
     }
     if (isCustomLoaderConfigChanged(rhs)) {
@@ -147,12 +147,12 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
 
 bool ModelConfig::isCustomLoaderConfigChanged(const ModelConfig& rhs) const {
     if (this->customLoaderOptionsConfigMap.size() != rhs.customLoaderOptionsConfigMap.size()) {
-        //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to custom loader config mismatch", this->name);
+        // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to custom loader config mismatch", this->name);
         return true;
     }
     if (this->customLoaderOptionsConfigMap.size() > 0 && rhs.customLoaderOptionsConfigMap.size() > 0) {
         if (!(this->customLoaderOptionsConfigMap == rhs.customLoaderOptionsConfigMap)) {
-            //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to custom loader config mismatch", this->name);
+            // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to custom loader config mismatch", this->name);
             return true;
         }
     }
@@ -209,7 +209,7 @@ std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(st
     Mode batchingMode = FIXED;
     std::optional<Dimension> effectiveBatchSize = std::nullopt;
     if (configBatchSize == "auto") {
-        //TODO: SPDLOG_LOGGER_WARN(modelmanager_logger, "Batch size auto is deprecated. Use model dynamic shapes instead. Check (https://docs.openvino.ai/2023.3/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model)");
+        // TODO: SPDLOG_LOGGER_WARN(modelmanager_logger, "Batch size auto is deprecated. Use model dynamic shapes instead. Check (https://docs.openvino.ai/2023.3/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model)");
         batchingMode = AUTO;
     } else if (configBatchSize == "") {
         // do nothing
@@ -217,7 +217,7 @@ std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(st
         Dimension dim;
         auto status = Dimension::fromString(configBatchSize, dim);
         if (!status.ok()) {
-            //TODO: SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
+            // TODO: SPDLOG_WARN("Wrong batch size parameter provided. Model batch size will be set to default.");
         } else {
             effectiveBatchSize = dim;
         }
@@ -257,11 +257,11 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
         }
         m = specific.FindMember("versions");
         if (m == specific.MemberEnd()) {
-            //TODO: SPDLOG_WARN("Model policy is invalid. 'specific' policy should include 'versions' item with a list of numbers as a value");
+            // TODO: SPDLOG_WARN("Model policy is invalid. 'specific' policy should include 'versions' item with a list of numbers as a value");
             return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
         }
         if (!m->value.IsArray()) {
-            //TODO: SPDLOG_WARN("Model policy is invalid. 'versions' item should have a list of numbers as a value, for example [1,2]");
+            // TODO: SPDLOG_WARN("Model policy is invalid. 'versions' item should have a list of numbers as a value, for example [1,2]");
             return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
         }
         std::vector<model_version_t> versions;
@@ -269,7 +269,7 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
             if (version.IsUint64() && version.GetUint64() > 0) {
                 versions.push_back(version.GetUint64());
             } else {
-                //TODO: SPDLOG_WARN("Model policy specified in config contains invalid version. Version should be a number greater than 0.");
+                // TODO: SPDLOG_WARN("Model policy specified in config contains invalid version. Version should be a number greater than 0.");
             }
         }
         modelVersionPolicy = std::make_shared<SpecificModelVersionPolicy>(versions);
@@ -408,7 +408,7 @@ Status ModelConfig::parseLayoutParameter(const std::string& command) {
 
 Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
     if (str == "auto") {
-        //TODO: SPDLOG_LOGGER_WARN(modelmanager_logger, "Shape auto is deprecated. Use model dynamic shapes instead. Check (https://docs.openvino.ai/2023.3/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model)");
+        // TODO: SPDLOG_LOGGER_WARN(modelmanager_logger, "Shape auto is deprecated. Use model dynamic shapes instead. Check (https://docs.openvino.ai/2023.3/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model)");
         shapeInfo.shapeMode = AUTO;
         return StatusCode::OK;
     }
@@ -419,7 +419,7 @@ Status ModelConfig::parseShape(ShapeInfo& shapeInfo, const std::string& str) {
 }
 
 Status ModelConfig::parseModelMapping() {
-    //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing model: {} mapping from path: {}", getName(), getPath());
+    // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing model: {} mapping from path: {}", getName(), getPath());
     mappingInputs.clear();
     mappingOutputs.clear();
     std::filesystem::path path = this->getPath();
@@ -433,33 +433,33 @@ Status ModelConfig::parseModelMapping() {
     rapidjson::Document doc;
     rapidjson::IStreamWrapper isw(ifs);
     if (doc.ParseStream(isw).HasParseError()) {
-        //TODO: SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model: {} mapping configuration file is not a valid JSON file.", getName());
+        // TODO: SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model: {} mapping configuration file is not a valid JSON file.", getName());
         return StatusCode::JSON_INVALID;
     }
 
     if (validateJsonAgainstSchema(doc, MODELS_MAPPING_SCHEMA) != StatusCode::OK) {
-        //TODO: SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model: {} mapping configuration file is not a valid JSON file.", getName());
+        // TODO: SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model: {} mapping configuration file is not a valid JSON file.", getName());
         return StatusCode::JSON_INVALID;
     }
     auto itr = doc.FindMember("inputs");
     if (itr == doc.MemberEnd()) {
-        //TODO: SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load inputs object from file {}", path.c_str());
+        // TODO: SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load inputs object from file {}", path.c_str());
     } else {
         // Process inputs
         for (const auto& key : itr->value.GetObject()) {
-            //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loaded input mapping {} => {}", key.name.GetString(), key.value.GetString());
+            // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loaded input mapping {} => {}", key.name.GetString(), key.value.GetString());
             mappingInputs[key.name.GetString()] = key.value.GetString();
             reversedMappingInputs[key.value.GetString()] = key.name.GetString();
         }
     }
     itr = doc.FindMember("outputs");
     if (itr == doc.MemberEnd()) {
-        //TODO: SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load outputs object from file {}", fmt::ptr(path.c_str()));
+        // TODO: SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load outputs object from file {}", fmt::ptr(path.c_str()));
     } else {
         // Process outputs
         const auto it = doc.FindMember("outputs");
         for (const auto& key : it->value.GetObject()) {
-            //TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loaded output mapping {} => {}", key.name.GetString(), key.value.GetString());
+            // TODO: SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loaded output mapping {} => {}", key.name.GetString(), key.value.GetString());
             mappingOutputs[key.name.GetString()] = key.value.GetString();
             reversedMappingOutputs[key.value.GetString()] = key.name.GetString();
         }
@@ -472,7 +472,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     try {
         this->setBasePath(v["base_path"].GetString());
     } catch (std::logic_error& e) {
-        //TODO: SPDLOG_DEBUG("Relative path error: {}", e.what());
+        // TODO: SPDLOG_DEBUG("Relative path error: {}", e.what());
         return StatusCode::INTERNAL_ERROR;
     }
     Status firstErrorStatus = StatusCode::OK;
@@ -502,7 +502,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                 if (!firstErrorStatus.ok()) {
                     firstErrorStatus = status;
                 }
-                //TODO: SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
+                // TODO: SPDLOG_WARN("There was an error parsing shape {}", v["shape"].GetString());
             } else {
                 this->addShape(ANONYMOUS_INPUT_NAME, shapeInfo);
             }
@@ -518,7 +518,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                         if (!firstErrorStatus.ok()) {
                             firstErrorStatus = status;
                         }
-                        //TODO: SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
+                        // TODO: SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
                         valid = false;
                     }
                 } else {
@@ -526,7 +526,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                         if (sh.IsUint64()) {
                             size_t dim = sh.GetUint64();
                             if (dim > static_cast<size_t>(std::numeric_limits<dimension_value_t>::max())) {
-                                //TODO: SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
+                                // TODO: SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
                                 if (!firstErrorStatus.ok()) {
                                     firstErrorStatus = StatusCode::SHAPE_WRONG_FORMAT;
                                 }
@@ -535,7 +535,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                             }
                             shapeInfo.shape.add(Dimension{static_cast<dimension_value_t>(dim)});
                         } else {
-                            //TODO: SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
+                            // TODO: SPDLOG_WARN("There was an error parsing shape {}", s.name.GetString());
                             if (!firstErrorStatus.ok()) {
                                 firstErrorStatus = StatusCode::SHAPE_WRONG_FORMAT;
                             }
@@ -549,7 +549,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
                         this->addShape(s.name.GetString(), shapeInfo);
                     }
                 } else {
-                    //TODO: SPDLOG_WARN("Provided shape name: {} is forbidden and will be omitted", ANONYMOUS_INPUT_NAME);
+                    // TODO: SPDLOG_WARN("Provided shape name: {} is forbidden and will be omitted", ANONYMOUS_INPUT_NAME);
                 }
             }
         }
@@ -575,7 +575,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             if (!firstErrorStatus.ok()) {
                 firstErrorStatus = status;
             }
-            //TODO: SPDLOG_ERROR("Couldn't parse plugin config");
+            // TODO: SPDLOG_ERROR("Couldn't parse plugin config");
             return status;
         }
     }
@@ -585,7 +585,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     if (v.HasMember("low_latency_transformation")) {
         if (!this->isStateful()) {
-            //TODO: SPDLOG_ERROR("Low latency transformation parameter was set for non stateful model {}.", v["name"].GetString());
+            // TODO: SPDLOG_ERROR("Low latency transformation parameter was set for non stateful model {}.", v["name"].GetString());
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
         this->setLowLatencyTransformation(v["low_latency_transformation"].GetBool());
@@ -593,7 +593,7 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     if (v.HasMember("idle_sequence_cleanup")) {
         if (!this->isStateful()) {
-            //TODO: SPDLOG_ERROR("Idle sequence cleanup parameter was set for non stateful model {}.", v["name"].GetString());
+            // TODO: SPDLOG_ERROR("Idle sequence cleanup parameter was set for non stateful model {}.", v["name"].GetString());
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
         this->setIdleSequenceCleanup(v["idle_sequence_cleanup"].GetBool());
@@ -601,11 +601,11 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     if (v.HasMember("max_sequence_number")) {
         if (!this->isStateful()) {
-            //TODO: SPDLOG_ERROR("Max sequence number parameter was set for non stateful model {}.", v["name"].GetString());
+            // TODO: SPDLOG_ERROR("Max sequence number parameter was set for non stateful model {}.", v["name"].GetString());
             return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
         }
         if (!v["max_sequence_number"].IsUint()) {
-            //TODO: SPDLOG_ERROR("Sequence maximum number parameter was set above unsigned int value for model {}.", v["name"].GetString());
+            // TODO: SPDLOG_ERROR("Sequence maximum number parameter was set above unsigned int value for model {}.", v["name"].GetString());
             return StatusCode::INVALID_MAX_SEQUENCE_NUMBER;
         }
         this->setMaxSequenceNumber(v["max_sequence_number"].GetUint());
@@ -621,62 +621,62 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
             if (!firstErrorStatus.ok()) {
                 firstErrorStatus = status;
             }
-            //TODO: SPDLOG_WARN("Couldn't parse model version policy. {}", status.string());
+            // TODO: SPDLOG_WARN("Couldn't parse model version policy. {}", status.string());
         }
     } else {
         modelVersionPolicy = ModelVersionPolicy::getDefaultVersionPolicy();
     }
 
-    //TODO: SPDLOG_DEBUG("Specified model parameters:");
-    //TODO: SPDLOG_DEBUG("model_basepath: {}", getBasePath());
-    //TODO: SPDLOG_DEBUG("model_name: {}", getName());
-    //TODO: SPDLOG_DEBUG("batch_size: {}", getBatchSize().has_value() ? getBatchSize().value().toString() : "not configured");
+    // TODO: SPDLOG_DEBUG("Specified model parameters:");
+    // TODO: SPDLOG_DEBUG("model_basepath: {}", getBasePath());
+    // TODO: SPDLOG_DEBUG("model_name: {}", getName());
+    // TODO: SPDLOG_DEBUG("batch_size: {}", getBatchSize().has_value() ? getBatchSize().value().toString() : "not configured");
     if (isShapeAnonymous()) {
-        //TODO: SPDLOG_DEBUG("shape: {}", std::string(getShapes().begin()->second));
+        // TODO: SPDLOG_DEBUG("shape: {}", std::string(getShapes().begin()->second));
     } else {
-        //TODO: SPDLOG_DEBUG("shape:");
-        //for (auto& [shapeInput, shapeValue] : getShapes()) {
-            //TODO: SPDLOG_DEBUG("  {}: {}", shapeInput, std::string(shapeValue));
+        // TODO: SPDLOG_DEBUG("shape:");
+        // for (auto& [shapeInput, shapeValue] : getShapes()) {
+        // TODO: SPDLOG_DEBUG("  {}: {}", shapeInput, std::string(shapeValue));
         //}
     }
     if (getModelVersionPolicy()) {
-        //TODO: SPDLOG_DEBUG("model_version_policy: {}", std::string(*getModelVersionPolicy()));
+        // TODO: SPDLOG_DEBUG("model_version_policy: {}", std::string(*getModelVersionPolicy()));
     }
-    //TODO: SPDLOG_DEBUG("nireq: {}", getNireq());
-    //TODO: SPDLOG_DEBUG("target_device: {}", getTargetDevice());
-    //TODO: SPDLOG_DEBUG("plugin_config:");
-    //for (auto& [pluginParameter, pluginValue] : getPluginConfig()) {
-        //TODO: SPDLOG_DEBUG("  {}: {}", pluginParameter, pluginValue.as<std::string>());
+    // TODO: SPDLOG_DEBUG("nireq: {}", getNireq());
+    // TODO: SPDLOG_DEBUG("target_device: {}", getTargetDevice());
+    // TODO: SPDLOG_DEBUG("plugin_config:");
+    // for (auto& [pluginParameter, pluginValue] : getPluginConfig()) {
+    // TODO: SPDLOG_DEBUG("  {}: {}", pluginParameter, pluginValue.as<std::string>());
     //}
 
     bool batchSizeSet = (getBatchingMode() != FIXED || getBatchSize().has_value());
     bool shapeSet = (getShapes().size() > 0);
 
-    //TODO: SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
+    // TODO: SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
     if (batchSizeSet && shapeSet) {
-        //TODO: SPDLOG_WARN("Both shape and batch size have been defined. Batch size parameter will be ignored.");
+        // TODO: SPDLOG_WARN("Both shape and batch size have been defined. Batch size parameter will be ignored.");
         setBatchingMode(FIXED);
         setBatchSize(std::nullopt);
     }
 
-    //TODO: SPDLOG_DEBUG("stateful: {}", isStateful());
+    // TODO: SPDLOG_DEBUG("stateful: {}", isStateful());
     if (isStateful()) {
-        //TODO: SPDLOG_DEBUG("idle_sequence_cleanup: {}", getIdleSequenceCleanup());
-        //TODO: SPDLOG_DEBUG("max_sequence_number: {}", getMaxSequenceNumber());
-        //TODO: SPDLOG_DEBUG("low_latency_transformation: {}", isLowLatencyTransformationUsed());
+        // TODO: SPDLOG_DEBUG("idle_sequence_cleanup: {}", getIdleSequenceCleanup());
+        // TODO: SPDLOG_DEBUG("max_sequence_number: {}", getMaxSequenceNumber());
+        // TODO: SPDLOG_DEBUG("low_latency_transformation: {}", isLowLatencyTransformationUsed());
     }
 
     // Model Cache options
     if (v.HasMember("allow_cache")) {
         setAllowCache(v["allow_cache"].GetBool());
-        //TODO: SPDLOG_DEBUG("allow_cache: {}", v["allow_cache"].GetBool());
+        // TODO: SPDLOG_DEBUG("allow_cache: {}", v["allow_cache"].GetBool());
     }
 
     // if the config has models which require custom loader to be used, then load the same here
     if (v.HasMember("custom_loader_options")) {
-        //if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
-            //TODO: SPDLOG_ERROR("Couldn't parse custom loader options config");
-        //}
+        // if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
+        // TODO: SPDLOG_ERROR("Couldn't parse custom loader options config");
+        // }
     }
     return StatusCode::OK;
 }

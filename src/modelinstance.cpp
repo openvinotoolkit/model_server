@@ -32,7 +32,7 @@
 #include <malloc.h>
 #include <openvino/runtime/compiled_model.hpp>
 // TODO windows
-#ifdef __linux__ 
+#ifdef __linux__
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
 #endif
 #include <openvino/runtime/remote_tensor.hpp>
@@ -490,8 +490,8 @@ Status ModelInstance::loadInputTensorsImpl(const ModelConfig& config, const Dyna
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
     }
     configureBatchSize(this->config, parameter);
-    // TODO windows
-    #ifdef __linux__
+// TODO windows
+#ifdef __linux__
     if (globalVaDisplay) {
         SPDLOG_ERROR("Adding va preproc");
         ov::preprocess::PrePostProcessor ppp(this->model);
@@ -505,7 +505,7 @@ Status ModelInstance::loadInputTensorsImpl(const ModelConfig& config, const Dyna
         ppp.input().model().set_layout("NCHW");
         this->model = ppp.build();
     }
-    #endif
+#endif
     OV_LOGGER("ov::Model: {}, model->inputs()", reinterpret_cast<void*>(model.get()));
     for (const ov::Output<ov::Node>& input : this->model->inputs()) {
         try {
@@ -800,19 +800,23 @@ namespace ovms {
 void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
     OV_LOGGER("ov::Core: {}, ov::Model: {}, targetDevice: {}, ieCore.compile_model(model, targetDevice, pluginConfig", reinterpret_cast<void*>(&ieCore), reinterpret_cast<void*>(this->model.get()), this->targetDevice);
     if (this->targetDevice.find("GPU") != std::string::npos) {
-        #ifdef __linux__ 
+#ifdef __linux__
         if (globalVaDisplay) {
             OV_LOGGER("ov::intel_gpu::ocl::VAContext(core: {}, globalVaDisplay: {})", (void*)&this->ieCore, globalVaDisplay);
             this->vaContext = std::make_unique<ov::intel_gpu::ocl::VAContext>(this->ieCore, globalVaDisplay);
             OV_LOGGER("ov::Core: {} compile_model(model: {}, vaContext:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)this->model.get(), (void*)this->vaContext.get(), (void*)&pluginConfig);
             compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->vaContext, pluginConfig));
-        } else 
-        #endif
-        {
+        } else {
             OV_LOGGER("ov::Core: {} compile_model(model: {}, target_device:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)this->model.get(), this->targetDevice, (void*)&pluginConfig);
             compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
         }
-        #ifdef __linux__ 
+#elif
+        // TODO: Rremove when enabled on windows with global disaplay
+        OV_LOGGER("ov::Core: {} compile_model(model: {}, target_device:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)this->model.get(), this->targetDevice, (void*)&pluginConfig);
+        compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
+#endif
+
+#ifdef __linux__
         OV_LOGGER("ov::CompiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>, compiledModel: {}", (void*)this->compiledModel.get());
         const auto oclContext = compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
         OV_LOGGER("ov::intel_gpu::ocl::ClContext(oclContext: {})", (void*)&oclContext);
@@ -820,15 +824,15 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
         OV_LOGGER("ov::intel_gpu::ocl::ClContext::get(), oclContextCpp: {}", (void*)this->oclContextCpp.get());
         this->oclContextC = this->oclContextCpp->get();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
-        #endif
+#endif
     } else {
         compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
-        // TODO reset contexts
-        #ifdef __linux__ 
+// TODO reset contexts
+#ifdef __linux__
         this->oclContextCpp.reset();
         this->vaContext.reset();
         this->oclContextC = NULL;
-        #endif
+#endif
     }
 }
 
@@ -958,17 +962,16 @@ void ModelInstance::loadTensorFactories() {
     using std::make_shared;
     this->tensorFactories.clear();
     this->tensorFactories.emplace(OVMS_BUFFERTYPE_CPU, make_shared<RegularOVTensorFactory>());
-    // TODO windows
-    #ifdef __linux__
+// TODO windows
+#ifdef __linux__
     if (this->targetDevice.find("GPU") != std::string::npos) {
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_OPENCL, make_shared<OpenCLTensorFactory>(*this->oclContextCpp));
         // TODO what to do if display was not initialized? not allow in validation? but here we don't have the information about vacontext unless it is global
-        
+
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_VASURFACE_Y, make_shared<VAAPITensorFactory>(*this->vaContext, OVMS_BUFFERTYPE_VASURFACE_Y));
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_VASURFACE_UV, make_shared<VAAPITensorFactory>(*this->vaContext, OVMS_BUFFERTYPE_VASURFACE_UV));
-        
     }
-    #endif
+#endif
     // TODO test MULTI/AUTO/HETERO
 }
 
