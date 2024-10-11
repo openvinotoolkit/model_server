@@ -352,7 +352,7 @@ class Status {
     StatusCode code;
     std::unique_ptr<std::string> message;
 
-    static const std::unordered_map<const StatusCode, const std::string> statusMessageMap;
+    static const std::unordered_map<StatusCode, std::string> statusMessageMap;
 
     void appendDetails(const std::string& details) {
         ensureMessageAllocated();

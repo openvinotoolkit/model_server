@@ -44,7 +44,7 @@ public:
         signal.notify_one();
     }
 
-    std::optional<T> tryPull(const uint waitDurationMicroseconds) {
+    std::optional<T> tryPull(const uint32_t waitDurationMicroseconds) {
         std::unique_lock<std::mutex> lock(mtx);
         if (signal.wait_for(lock,
                 std::chrono::microseconds(waitDurationMicroseconds),

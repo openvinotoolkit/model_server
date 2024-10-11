@@ -56,7 +56,7 @@ ModelInstance& DLNodeSession::getModelInstance() {
     return *this->model;
 }
 
-ov::InferRequest& DLNodeSession::getInferRequest(const uint microseconds) {
+ov::InferRequest& DLNodeSession::getInferRequest(const uint32_t microseconds) {
     auto& inferRequestsQueue = this->model->getInferRequestsQueue();
     auto streamIdOpt = this->nodeStreamIdGuard->tryGetId(microseconds);
     if (!streamIdOpt) {
@@ -201,7 +201,7 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
     return StatusCode::OK;
 }
 
-Status DLNodeSession::execute(PipelineEventQueue& notifyEndQueue, uint waitForStreamIdTimeoutMicroseconds, Node& node) {
+Status DLNodeSession::execute(PipelineEventQueue& notifyEndQueue, uint32_t waitForStreamIdTimeoutMicroseconds, Node& node) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     if (this->nodeStreamIdGuard == nullptr) {
@@ -315,7 +315,7 @@ void DLNodeSession::release() {
     this->modelUnloadGuard.reset();
 }
 
-bool DLNodeSession::tryDisarm(uint microseconds) {
+bool DLNodeSession::tryDisarm(uint32_t microseconds) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Trying to disarm stream id guard of node: {}", getName());
     if (this->nodeStreamIdGuard == nullptr) {
         return true;

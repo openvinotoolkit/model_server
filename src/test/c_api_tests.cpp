@@ -57,7 +57,7 @@ static void testDefaultSingleModelOptions(ModelsSettingsImpl* modelsSettings) {
     EXPECT_EQ(modelsSettings->idleSequenceCleanup, std::nullopt);
 }
 
-const uint AVAILABLE_CORES = std::thread::hardware_concurrency();
+const uint32_t AVAILABLE_CORES = std::thread::hardware_concurrency();
 
 TEST(CAPIConfigTest, MultiModelConfiguration) {
     OVMS_ServerSettings* _serverSettings = nullptr;

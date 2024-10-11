@@ -44,8 +44,8 @@ TEST_F(NodeSessionMetadataTest, GenerateSubsession) {
 }
 
 TEST_F(NodeSessionMetadataTest, GenerateTwoLevelsOfSubsession) {
-    const uint firstLevelDemultiplexSize = 3;
-    const uint secondLevelDemultiplexSize = 2;
+    const uint32_t firstLevelDemultiplexSize = 3;
+    const uint32_t secondLevelDemultiplexSize = 2;
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     auto demultiplexedMetas = meta.generateSubsessions("request", firstLevelDemultiplexSize);
     ASSERT_EQ(demultiplexedMetas.size(), firstLevelDemultiplexSize);
@@ -67,9 +67,9 @@ TEST_F(NodeSessionMetadataTest, GenerateTwoLevelsOfSubsession) {
 }
 
 TEST_F(NodeSessionMetadataTest, GenerateThreeLevelsOfSubsession) {
-    const uint firstLevelDemultiplexSize = 3;
-    const uint secondLevelDemultiplexSize = 2;
-    const uint thirdLevelDemultiplexSize = 4;
+    const uint32_t firstLevelDemultiplexSize = 3;
+    const uint32_t secondLevelDemultiplexSize = 2;
+    const uint32_t thirdLevelDemultiplexSize = 4;
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     auto demultiplexedMetaLev3 = meta
                                      .generateSubsessions("request", firstLevelDemultiplexSize)[2]
@@ -100,9 +100,9 @@ TEST_F(NodeSessionMetadataTest, GenerateTwoSubsessionsWithTheSameNameShouldThrow
 }
 
 TEST_F(NodeSessionMetadataTest, CollapseSubsession1Level) {
-    const uint firstLevelDemultiplexSize = 3;
-    const uint secondLevelDemultiplexSize = 2;
-    const uint thirdLevelDemultiplexSize = 4;
+    const uint32_t firstLevelDemultiplexSize = 3;
+    const uint32_t secondLevelDemultiplexSize = 2;
+    const uint32_t thirdLevelDemultiplexSize = 4;
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     auto demultiplexedMetaLev3 = meta
                                      .generateSubsessions("request", firstLevelDemultiplexSize)[2]
@@ -129,9 +129,9 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsession1Level) {
 }
 
 TEST_F(NodeSessionMetadataTest, CollapseSubsession1LevelNotInLIFOOrderShouldThrow) {
-    const uint firstLevelDemultiplexSize = 3;
-    const uint secondLevelDemultiplexSize = 2;
-    const uint thirdLevelDemultiplexSize = 4;
+    const uint32_t firstLevelDemultiplexSize = 3;
+    const uint32_t secondLevelDemultiplexSize = 2;
+    const uint32_t thirdLevelDemultiplexSize = 4;
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     auto demultiplexedMetaLev3 = meta
                                      .generateSubsessions("request", firstLevelDemultiplexSize)[2]
@@ -147,9 +147,9 @@ TEST_F(NodeSessionMetadataTest, CollapseSubsession1LevelNotInLIFOOrderShouldThro
 }
 
 TEST_F(NodeSessionMetadataTest, CollapseSubsessions2LevelsAtOnce) {
-    const uint firstLevelDemultiplexSize = 13;
-    const uint secondLevelDemultiplexSize = 42;
-    const uint thirdLevelDemultiplexSize = 666;
+    const uint32_t firstLevelDemultiplexSize = 13;
+    const uint32_t secondLevelDemultiplexSize = 42;
+    const uint32_t thirdLevelDemultiplexSize = 666;
     NodeSessionMetadata meta{DEFAULT_TEST_CONTEXT};
     auto demultiplexedMetaLev3 = meta
                                      .generateSubsessions("request", firstLevelDemultiplexSize)[12]
@@ -251,7 +251,7 @@ TEST_F(NodeSessionMetadataTest, GetShardIdNoSubsession) {
 }
 TEST_F(NodeSessionMetadataTest, GetShardId1SubsessionLevel) {
     NodeSessionMetadata metaStart{DEFAULT_TEST_CONTEXT};
-    uint subsessionSize = 13;
+    uint32_t subsessionSize = 13;
     const std::string subsessionName = "subsession";
     auto subsessions = metaStart.generateSubsessions(subsessionName, subsessionSize);
     ASSERT_EQ(subsessions.size(), subsessionSize);
@@ -262,7 +262,7 @@ TEST_F(NodeSessionMetadataTest, GetShardId1SubsessionLevel) {
 
 TEST_F(NodeSessionMetadataTest, GetShardId1SubsessionLevelCollapsing) {
     NodeSessionMetadata metaStart{DEFAULT_TEST_CONTEXT};
-    uint subsessionSize = 13;
+    uint32_t subsessionSize = 13;
     const std::string subsessionName = "subsession";
     auto subsessions = metaStart.generateSubsessions(subsessionName, subsessionSize);
     ASSERT_EQ(subsessions.size(), subsessionSize);
@@ -273,8 +273,8 @@ TEST_F(NodeSessionMetadataTest, GetShardId1SubsessionLevelCollapsing) {
 
 TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevels) {
     NodeSessionMetadata metaStart{DEFAULT_TEST_CONTEXT};
-    uint subsessionSize1st = 13;
-    uint subsessionSize2nd = 9;
+    uint32_t subsessionSize1st = 13;
+    uint32_t subsessionSize2nd = 9;
     const std::string subsessionName1st = "subsession";
     const std::string subsessionName2nd = "subsession2";
     auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1st, subsessionSize1st);
@@ -286,8 +286,8 @@ TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevels) {
 
 TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse1) {
     NodeSessionMetadata metaStart{DEFAULT_TEST_CONTEXT};
-    uint subsessionSize1st = 13;
-    uint subsessionSize2nd = 9;
+    uint32_t subsessionSize1st = 13;
+    uint32_t subsessionSize2nd = 9;
     const std::string subsessionName1st = "subsession";
     const std::string subsessionName2nd = "subsession2";
     auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1st, subsessionSize1st);
@@ -299,8 +299,8 @@ TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse1) {
 
 TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse1NotInOrderShouldThrow) {
     NodeSessionMetadata metaStart{DEFAULT_TEST_CONTEXT};
-    uint subsessionSize1st = 13;
-    uint subsessionSize2nd = 9;
+    uint32_t subsessionSize1st = 13;
+    uint32_t subsessionSize2nd = 9;
     const std::string subsessionName1st = "subsession";
     const std::string subsessionName2nd = "subsession2";
     auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1st, subsessionSize1st);
@@ -312,8 +312,8 @@ TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse1NotInOrderSh
 
 TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse2) {
     NodeSessionMetadata metaStart{DEFAULT_TEST_CONTEXT};
-    uint subsessionSize1st = 13;
-    uint subsessionSize2nd = 9;
+    uint32_t subsessionSize1st = 13;
+    uint32_t subsessionSize2nd = 9;
     const std::string subsessionName1st = "subsession";
     const std::string subsessionName2nd = "subsession2";
     auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1st, subsessionSize1st);
@@ -325,8 +325,8 @@ TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse2) {
 }
 TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse3ShouldThrow) {
     NodeSessionMetadata metaStart{DEFAULT_TEST_CONTEXT};
-    uint subsessionSize1st = 13;
-    uint subsessionSize2nd = 9;
+    uint32_t subsessionSize1st = 13;
+    uint32_t subsessionSize2nd = 9;
     const std::string subsessionName1st = "subsession";
     const std::string subsessionName2nd = "subsession2";
     auto subsessionsLevel1 = metaStart.generateSubsessions(subsessionName1st, subsessionSize1st);
@@ -339,10 +339,10 @@ TEST_F(NodeSessionMetadataTest, GetShardId2SubsessionLevelsCollapse3ShouldThrow)
 
 TEST_F(NodeSessionMetadataTest, GetShardId4SubsessionLevelsCollapse3) {
     NodeSessionMetadata metaStart{DEFAULT_TEST_CONTEXT};
-    uint subsessionSize1 = 13;
-    uint subsessionSize2 = 9;
-    uint subsessionSize3 = 7;
-    uint subsessionSize4 = 5;
+    uint32_t subsessionSize1 = 13;
+    uint32_t subsessionSize2 = 9;
+    uint32_t subsessionSize3 = 7;
+    uint32_t subsessionSize4 = 5;
     const std::string subsessionName1 = "subsession1";
     const std::string subsessionName2 = "subsession2";
     const std::string subsessionName3 = "subsession3";
@@ -362,10 +362,10 @@ TEST_F(NodeSessionMetadataTest, GetShardId4SubsessionLevelsCollapse3) {
 
 TEST_F(NodeSessionMetadataTest, GetShardId4SubsessionLevelsCollapse1) {
     NodeSessionMetadata metaStart{DEFAULT_TEST_CONTEXT};
-    uint subsessionSize1 = 13;
-    uint subsessionSize2 = 9;
-    uint subsessionSize3 = 7;
-    uint subsessionSize4 = 5;
+    uint32_t subsessionSize1 = 13;
+    uint32_t subsessionSize2 = 9;
+    uint32_t subsessionSize3 = 7;
+    uint32_t subsessionSize4 = 5;
     const std::string subsessionName1 = "subsession1";
     const std::string subsessionName2 = "subsession2";
     const std::string subsessionName3 = "subsession3";

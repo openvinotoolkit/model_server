@@ -18,7 +18,7 @@
 
 namespace ovms {
 
-const std::unordered_map<const StatusCode, const std::string> Status::statusMessageMap = {
+const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::OK, ""},
 
     {StatusCode::PATH_INVALID, "The provided base path is invalid or doesn't exists"},

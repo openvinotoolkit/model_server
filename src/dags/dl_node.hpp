@@ -66,7 +66,7 @@ private:
     Status getRealOutputName(ModelInstance& model, const std::string& alias, std::string* result) const;
 
     Status executeInference(PipelineEventQueue& notifyEndQueue, ov::InferRequest& infer_request);
-    bool tryDisarm(const session_key_t& sessionKey, const uint microseconds = 1) override;
+    bool tryDisarm(const session_key_t& sessionKey, const uint32_t microseconds = 1) override;
 
 protected:
     std::unique_ptr<NodeSession> createNodeSession(const NodeSessionMetadata& metadata, const CollapseDetails& collapsingDetails) override;

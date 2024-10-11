@@ -54,7 +54,7 @@ public:
     const session_key_t& getSessionKey() const { return sessionKey; }
     bool isReady() const;
     virtual void release() {}
-    virtual bool tryDisarm(uint microseconds) { return true; }
+    virtual bool tryDisarm(uint32_t microseconds) { return true; }
     Status notifyFinishedDependency();
     Timer<TIMER_END>& getTimer() const;
 };

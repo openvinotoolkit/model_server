@@ -52,7 +52,7 @@ TEST(TestThreadSafeQueue, PushElement) {
     queue.push(i);
 }
 
-const uint WAIT_FOR_ELEMENT_TIMEOUT_MICROSECONDS = 1'000'000;
+const uint32_t WAIT_FOR_ELEMENT_TIMEOUT_MICROSECONDS = 1'000'000;
 
 TEST(TestThreadSafeQueue, SeveralElementsInFIFOOrder) {
     const std::vector<int> elements = {1, 2, 3, 4, 5, 6};
@@ -71,20 +71,20 @@ TEST(TestThreadSafeQueue, NoElementsPushed) {
     EXPECT_EQ(std::nullopt, queue.tryPull(200));  // 200ms
 }
 
-const uint ELEMENTS_TO_INSERT = 500;
+const uint32_t ELEMENTS_TO_INSERT = 500;
 
 static void producer(ThreadSafeQueue<int>& queue, std::future<void> startSignal) {
     startSignal.get();
-    uint counter = 0;
+    uint32_t counter = 0;
     while (counter < ELEMENTS_TO_INSERT) {
         queue.push(counter);
         ++counter;
     }
 }
 
-static void consumer(ThreadSafeQueue<int>& queue, std::future<void> startSignal, std::vector<int>& consumed, const uint elementsToPull) {
+static void consumer(ThreadSafeQueue<int>& queue, std::future<void> startSignal, std::vector<int>& consumed, const uint32_t elementsToPull) {
     startSignal.get();
-    uint counter = 0;
+    uint32_t counter = 0;
     while (counter < elementsToPull) {
         consumed[counter] = queue.tryPull(WAIT_FOR_ELEMENT_TIMEOUT_MICROSECONDS).value();
         counter++;
@@ -94,7 +94,7 @@ static void consumer(ThreadSafeQueue<int>& queue, std::future<void> startSignal,
 TEST(TestThreadSafeQueue, SeveralThreadsAllElementsPresent) {
     using std::thread;
     using std::vector;
-    const uint NUMBER_OF_PRODUCERS = 80;
+    const uint32_t NUMBER_OF_PRODUCERS = 80;
 
     vector<thread> producers;
     vector<thread> consumers;

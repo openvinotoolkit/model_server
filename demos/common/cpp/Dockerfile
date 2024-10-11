@@ -96,7 +96,7 @@ RUN bazel build \
     @com_github_grpc_grpc//:grpc++ \
     @com_google_protobuf//:protobuf_lite \
     @org_tensorflow//tensorflow/core:lib \
-    @linux_opencv//:opencv
+    //third_party:opencv
 
 COPY src/ /build/src/
 

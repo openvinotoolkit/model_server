@@ -188,12 +188,12 @@ void PipelineDefinition::retire(ModelManager& manager) {
     this->connections.clear();
 }
 
-Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
+Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds) {
     unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
 
-    const uint waitLoadedTimestepMicroseconds = 1000;
-    const uint waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
-    uint waitCheckpointsCounter = waitCheckpoints;
+    const uint32_t waitLoadedTimestepMicroseconds = 1000;
+    const uint32_t waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
+    uint32_t waitCheckpointsCounter = waitCheckpoints;
     std::mutex cvMtx;
     std::unique_lock<std::mutex> cvLock(cvMtx);
     while (waitCheckpointsCounter-- != 0) {

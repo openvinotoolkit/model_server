@@ -18,7 +18,7 @@
 #include <memory>
 #include <regex>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -41,7 +41,7 @@ namespace ovms {
 namespace net_http = tensorflow::serving::net_http;
 
 static const net_http::HTTPStatusCode http(const ovms::Status& status) {
-    const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap = {
+    const std::map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap = {
         {StatusCode::OK, net_http::HTTPStatusCode::OK},
         {StatusCode::OK_RELOADED, net_http::HTTPStatusCode::CREATED},
         {StatusCode::OK_NOT_RELOADED, net_http::HTTPStatusCode::OK},

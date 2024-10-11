@@ -25,10 +25,16 @@
 #include <thread>
 #include <utility>
 
+// TODO windows
+#ifdef __linux__
 #include <dirent.h>
+#endif
 #include <malloc.h>
 #include <openvino/runtime/compiled_model.hpp>
+// TODO windows
+#ifdef __linux__ 
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#endif
 #include <openvino/runtime/remote_tensor.hpp>
 #include <spdlog/spdlog.h>
 #include <sys/types.h>
@@ -47,7 +53,6 @@
 #include "model_metric_reporter.hpp"
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
-#include "opencltensorfactory.hpp"
 #include "ov_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "prediction_service_utils.hpp"
@@ -59,7 +64,11 @@
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
 #include "timer.hpp"
+// TODO windows
+#ifdef __linux__
+#include "opencltensorfactory.hpp"
 #include "vaapitensorfactory.hpp"
+#endif
 
 namespace {
 enum : unsigned int {
@@ -75,10 +84,13 @@ enum : unsigned int {
 
 namespace ovms {
 
+// TODO windows
+#ifdef __linux__
 void* globalVaDisplay = nullptr;
+#endif
 
-const uint MAX_NIREQ_COUNT = 100000;
-const uint UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
+const uint32_t MAX_NIREQ_COUNT = 100000;
+const uint32_t UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
 ModelInstance::~ModelInstance() = default;
 ModelInstance::ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig) :
@@ -478,6 +490,8 @@ Status ModelInstance::loadInputTensorsImpl(const ModelConfig& config, const Dyna
         SPDLOG_DEBUG("model: {}, version: {}; reshaping inputs is not required", getName(), getVersion());
     }
     configureBatchSize(this->config, parameter);
+    // TODO windows
+    #ifdef __linux__
     if (globalVaDisplay) {
         SPDLOG_ERROR("Adding va preproc");
         ov::preprocess::PrePostProcessor ppp(this->model);
@@ -491,6 +505,7 @@ Status ModelInstance::loadInputTensorsImpl(const ModelConfig& config, const Dyna
         ppp.input().model().set_layout("NCHW");
         this->model = ppp.build();
     }
+    #endif
     OV_LOGGER("ov::Model: {}, model->inputs()", reinterpret_cast<void*>(model.get()));
     for (const ov::Output<ov::Node>& input : this->model->inputs()) {
         try {
@@ -604,6 +619,7 @@ Status ModelInstance::loadOutputTensorsImpl(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
+#ifdef __linux__
 // Temporary methods. To be replaces with proper storage class.
 static bool dirExists(const std::string& path) {
     if (FileSystem::isPathEscaped(path)) {
@@ -646,13 +662,42 @@ static std::string findFilePathWithExtension(const std::string& path, const std:
 
     return std::string();
 }
+#else
+static std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
+    if (FileSystem::isPathEscaped(path)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+        return std::string();
+    }
+
+    std::vector<std::string> files;
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+        if (!std::filesystem::is_directory(entry.status())) {
+            auto name = entry.path().string();
+            if (endsWith(name, extension)) {
+                return name;
+            }
+        }
+    }
+
+    return std::string();
+}
+static bool dirExists(const std::string& path) {
+    if (FileSystem::isPathEscaped(path)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+        return false;
+    }
+
+    return std::filesystem::is_directory(path);
+}
+
+#endif
 
 std::string ModelInstance::findModelFilePathWithExtension(const std::string& extension) const {
     return findFilePathWithExtension(path, extension);
 }
 
-uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& modelConfig) {
-    uint numberOfParallelInferRequests = 0;
+uint32_t ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& modelConfig) {
+    uint32_t numberOfParallelInferRequests = 0;
     if (modelConfig.getNireq() > 0) {
         return modelConfig.getNireq();
     }
@@ -670,8 +715,8 @@ uint ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& mo
     return numberOfParallelInferRequests;
 }
 
-uint ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig) {
-    uint nireq = getNumOfParallelInferRequestsUnbounded(modelConfig);
+uint32_t ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelConfig) {
+    uint32_t nireq = getNumOfParallelInferRequestsUnbounded(modelConfig);
     if (nireq > MAX_NIREQ_COUNT) {
         SPDLOG_WARN("Invalid nireq because its value was too high: {}. Maximum value: {}", nireq, MAX_NIREQ_COUNT);
         return 0;
@@ -755,15 +800,19 @@ namespace ovms {
 void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
     OV_LOGGER("ov::Core: {}, ov::Model: {}, targetDevice: {}, ieCore.compile_model(model, targetDevice, pluginConfig", reinterpret_cast<void*>(&ieCore), reinterpret_cast<void*>(this->model.get()), this->targetDevice);
     if (this->targetDevice.find("GPU") != std::string::npos) {
+        #ifdef __linux__ 
         if (globalVaDisplay) {
             OV_LOGGER("ov::intel_gpu::ocl::VAContext(core: {}, globalVaDisplay: {})", (void*)&this->ieCore, globalVaDisplay);
             this->vaContext = std::make_unique<ov::intel_gpu::ocl::VAContext>(this->ieCore, globalVaDisplay);
             OV_LOGGER("ov::Core: {} compile_model(model: {}, vaContext:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)this->model.get(), (void*)this->vaContext.get(), (void*)&pluginConfig);
             compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->vaContext, pluginConfig));
-        } else {
+        } else 
+        #endif
+        {
             OV_LOGGER("ov::Core: {} compile_model(model: {}, target_device:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)this->model.get(), this->targetDevice, (void*)&pluginConfig);
             compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
         }
+        #ifdef __linux__ 
         OV_LOGGER("ov::CompiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>, compiledModel: {}", (void*)this->compiledModel.get());
         const auto oclContext = compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
         OV_LOGGER("ov::intel_gpu::ocl::ClContext(oclContext: {})", (void*)&oclContext);
@@ -771,12 +820,15 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
         OV_LOGGER("ov::intel_gpu::ocl::ClContext::get(), oclContextCpp: {}", (void*)this->oclContextCpp.get());
         this->oclContextC = this->oclContextCpp->get();
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
+        #endif
     } else {
         compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
         // TODO reset contexts
+        #ifdef __linux__ 
         this->oclContextCpp.reset();
         this->vaContext.reset();
         this->oclContextC = NULL;
+        #endif
     }
 }
 
@@ -877,7 +929,7 @@ Status ModelInstance::fetchModelFilepaths() {
 }
 
 Status ModelInstance::prepareInferenceRequestsQueue(const ModelConfig& config) {
-    uint numberOfParallelInferRequests = getNumOfParallelInferRequests(config);
+    uint32_t numberOfParallelInferRequests = getNumOfParallelInferRequests(config);
     if (numberOfParallelInferRequests == 0) {
         return Status(StatusCode::INVALID_NIREQ, "Exceeded allowed nireq value");
     }
@@ -906,12 +958,17 @@ void ModelInstance::loadTensorFactories() {
     using std::make_shared;
     this->tensorFactories.clear();
     this->tensorFactories.emplace(OVMS_BUFFERTYPE_CPU, make_shared<RegularOVTensorFactory>());
+    // TODO windows
+    #ifdef __linux__
     if (this->targetDevice.find("GPU") != std::string::npos) {
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_OPENCL, make_shared<OpenCLTensorFactory>(*this->oclContextCpp));
         // TODO what to do if display was not initialized? not allow in validation? but here we don't have the information about vacontext unless it is global
+        
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_VASURFACE_Y, make_shared<VAAPITensorFactory>(*this->vaContext, OVMS_BUFFERTYPE_VASURFACE_Y));
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_VASURFACE_UV, make_shared<VAAPITensorFactory>(*this->vaContext, OVMS_BUFFERTYPE_VASURFACE_UV));
+        
     }
+    #endif
     // TODO test MULTI/AUTO/HETERO
 }
 
@@ -1122,7 +1179,7 @@ Status ModelInstance::reloadModelIfRequired(
     return status;
 }
 
-Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
+Status ModelInstance::waitForLoaded(const uint32_t waitForModelLoadedTimeoutMilliseconds,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuard) {
     // order is important here for performance reasons
     // assumption: model is already loaded for most of the calls
@@ -1134,9 +1191,9 @@ Status ModelInstance::waitForLoaded(const uint waitForModelLoadedTimeoutMillisec
     modelInstanceUnloadGuard.reset();
 
     // wait several time since no guarantee that cv wakeup will be triggered before calling wait_for
-    const uint waitLoadedTimestepMilliseconds = 100;
-    const uint waitCheckpoints = waitForModelLoadedTimeoutMilliseconds / waitLoadedTimestepMilliseconds;
-    uint waitCheckpointsCounter = waitCheckpoints;
+    const uint32_t waitLoadedTimestepMilliseconds = 100;
+    const uint32_t waitCheckpoints = waitForModelLoadedTimeoutMilliseconds / waitLoadedTimestepMilliseconds;
+    uint32_t waitCheckpointsCounter = waitCheckpoints;
     SPDLOG_DEBUG("Waiting for loaded state for model: {} version: {} with timestep: {} timeout: {} check count: {}", getName(), getVersion(),
         waitLoadedTimestepMilliseconds, waitForModelLoadedTimeoutMilliseconds, waitCheckpointsCounter);
     std::mutex cv_mtx;
@@ -1221,7 +1278,10 @@ void ModelInstance::unloadModelComponents() {
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());
         }
     }
+#ifdef __linux__
     malloc_trim(0);
+#endif
+    // TODO: windows for malloc_trim(0);
 }
 
 const std::set<std::string>& ModelInstance::getOptionalInputNames() {
