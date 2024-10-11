@@ -30,7 +30,8 @@ SKIPPED_FILE="skipped_results.txt"
 FAILED_FILE="failed_results.txt"
 SUMMARY_FILE="/out/results.txt"
 
-rm $SUMMARY_FILE
+mkdir -p /out/
+rm -f $SUMMARY_FILE
 
 > "$OK_FILE"
 > "$SKIPPED_FILE"
