@@ -95,8 +95,12 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
             std::filesystem::create_directories(this->modelCacheDirectory);
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} did not exist, created", this->modelCacheDirectory);
         }
-        // TODO: check on windows andl inux
+        // TODO: check on windows
+#ifdef __linux__ 
+        int result = access(this->modelCacheDirectory.c_str(), EX_OK);
+#elif _WIN32
         int result = access(this->modelCacheDirectory.c_str(), 0);
+#endif
         if (result != 0) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);
         } else {
