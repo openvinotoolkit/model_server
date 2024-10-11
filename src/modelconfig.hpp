@@ -91,7 +91,7 @@ private:
     /**
          * @brief Nireq
          */
-    uint64_t nireq;
+    uint32_t nireq;
 
     /**
          * @brief Flag determining if model is stateful
@@ -499,9 +499,9 @@ public:
     /**
          * @brief Get the nireq
          * 
-         * @return uint64_t 
+         * @return uint32_t 
          */
-    uint64_t getNireq() const {
+    uint32_t getNireq() const {
         return this->nireq;
     }
 
@@ -510,7 +510,7 @@ public:
          * 
          * @param nireq 
          */
-    void setNireq(const uint64_t nireq) {
+    void setNireq(const uint32_t nireq) {
         this->nireq = nireq;
     }
 
