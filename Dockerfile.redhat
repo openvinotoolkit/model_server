@@ -176,7 +176,7 @@ ARG ov_use_binary=0
 ARG DLDT_PACKAGE_URL
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG CMAKE_BUILD_TYPE=Release
-ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=redhat"
+ARG debug_bazel_flags="--config=linux --strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=redhat"
 
 # hadolint ignore=DL3003
 RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
@@ -285,7 +285,7 @@ COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
 # prebuild dependencies before copying sources
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
+RUN bazel build --config=linux --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
 
 # hadolint ignore=DL3059
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
@@ -328,14 +328,14 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/vers
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
 # Custom Nodes
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
+RUN bazel build --config=linux --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 
 # OVMS
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
+RUN bazel build --config=linux --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
 
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
+RUN bazel build --config=linux --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
 
 ARG ovms_metadata_file
 
@@ -356,14 +356,14 @@ FROM $BUILD_IMAGE as capi-build
 # C api shared library
 ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=redhat"
 ARG JOBS=40
-RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
+RUN bazel build --config=linux --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
 
 # C api app with bazel
 # hadolint ignore=DL3059
-RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
+RUN bazel build --config=linux --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
 
 # C-API benchmark app
-RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"
+RUN bazel build --config=linux --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"
 # C-api C/C++ app with gcc
 COPY MakefileCapi /ovms/
 RUN make -f MakefileCapi cpp CAPI_FLAGS="${CAPI_FLAGS}" && \

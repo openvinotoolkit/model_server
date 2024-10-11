@@ -26,12 +26,12 @@ RUN http_proxy=${HTTP_PROXY} yum install -y glibc.i686 libgcc.x86_64 libgcc.i686
 ADD ./kwbuildtools /tmp/kwbuildtools
 
 WORKDIR /example_cpp_client/cpp
-RUN bazel build @org_tensorflow//tensorflow/core:framework
+RUN bazel build --config=linux @org_tensorflow//tensorflow/core:framework
 
-RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build //src:all
+RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build --config=linux //src:all
 
 WORKDIR /ovms/src
-RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build //src:static_analysis
+RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build --config=linux //src:static_analysis
 
 RUN echo $ENV_KLOCWORK_TOKEN > /ovms/ltoken
 RUN /tmp/kwbuildtools/bin/kwbuildproject --force --url ${ENV_KLOCWORK_URL}"${ENV_KLOCWORK_PROJECT}" --tables-directory kwtables /tmp/out.out ; exit 0

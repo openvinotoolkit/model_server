@@ -33,3 +33,12 @@ alias(
     }),
     visibility = ["//visibility:public"],
 )
+
+alias(
+    name = "libevent",
+    actual = select({
+        "//src:windows": "@com_github_libevent_libevent//:libevent",
+        "//conditions:default": "@com_github_libevent_libevent_windows//:libevent",
+    }),
+    visibility = ["//visibility:public"],
+)
