@@ -256,7 +256,6 @@ venv:$(ACTIVATE)
 	@echo $(BUILD_ARGS)
 	@echo -n "Using venv "
 	@. $(ACTIVATE); python3 --version
-	@rm -rf ./out
 
 venv-style:$(ACTIVATE_STYLE)
 	@echo $(BUILD_ARGS)
