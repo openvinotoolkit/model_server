@@ -315,7 +315,7 @@ sudo reboot
 
 > NOTE: It is required to execute unit tests on machine with Intel Data Center GPU.
 
-> NOTE: For RedHat base OS unit tests which require VA API are skipped.
+> NOTE: For RedHat base OS unit tests, which require VA API, are skipped.
 
 ## Debugging
 
