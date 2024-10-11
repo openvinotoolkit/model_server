@@ -24,3 +24,12 @@ alias(
     }),
     visibility = ["//visibility:public"],
 )
+
+alias(
+    name = "boost",
+    actual = select({
+        "//src:windows": "@windows_boost//:boost",
+        "//conditions:default": "@linux_boost//:boost",
+    }),
+    visibility = ["//visibility:public"],
+)
