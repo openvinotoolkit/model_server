@@ -32,7 +32,7 @@
 #include <stdlib.h>
 
 // TODO: Write windows/linux specific status codes.
-#ifdef __linux__ 
+#ifdef __linux__
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sysexits.h>
@@ -128,7 +128,7 @@ static void onIllegal(int status) {
 }
 
 // TODO windows
-#ifdef __linux__  
+#ifdef __linux__
 
 static void installSignalHandlers() {
     static struct sigaction sigIntHandler;
@@ -341,13 +341,13 @@ void Server::shutdownModules() {
 
 static int statusToExitCode(const Status& status) {
     if (status.ok()) {
-#ifdef __linux__ 
+#ifdef __linux__
         return EX_OK;
 #elif _WIN32
         return 0;
 #endif
     } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
-#ifdef __linux__ 
+#ifdef __linux__
         return EX_USAGE;
 #elif _WIN32
         return 3;
@@ -359,7 +359,7 @@ static int statusToExitCode(const Status& status) {
 // OVMS Start
 int Server::start(int argc, char** argv) {
 // TODO windows
-#ifdef __linux__  
+#ifdef __linux__
     installSignalHandlers();
 #endif
     CLIParser parser;

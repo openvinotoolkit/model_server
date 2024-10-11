@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -25,8 +26,8 @@
 #include "../precision.hpp"
 #include "../shape.hpp"
 #include "nodeinputhandler.hpp"
-#include "session_id.hpp"
 #include "nodesessionmetadata.hpp"
+#include "session_id.hpp"
 
 namespace ovms {
 
@@ -41,13 +42,13 @@ class GatherNodeInputHandler : public NodeInputHandler {
 public:
     // TODO: Investigate why windows does not see this symbol
     GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails) :
-    NodeInputHandler(inputsMissingCount),
-    collapsingDetails(std::make_unique<CollapseDetails>(collapsingDetails)) {
-    remainingDependencies = std::accumulate(
-        collapsingDetails.collapsedSessionSizes.begin(),
-        collapsingDetails.collapsedSessionSizes.end(),
-        remainingDependencies,
-        std::multiplies<session_id_t>());
+        NodeInputHandler(inputsMissingCount),
+        collapsingDetails(std::make_unique<CollapseDetails>(collapsingDetails)) {
+        remainingDependencies = std::accumulate(
+            collapsingDetails.collapsedSessionSizes.begin(),
+            collapsingDetails.collapsedSessionSizes.end(),
+            remainingDependencies,
+            std::multiplies<session_id_t>());
     }
     Status setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId) override;
     Status notifyFinishedDependency() override;

@@ -17,6 +17,4 @@
 
 namespace ovms {
 
-
-
 }  // namespace ovms

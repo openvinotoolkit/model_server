@@ -22,7 +22,7 @@
 
 #include <spdlog/spdlog.h>
 // TODO: Write windows/linux specific status codes.
-#ifdef __linux__ 
+#ifdef __linux__
 #include <sysexits.h>
 #elif _WIN32
 #include <ntstatus.h>
@@ -50,7 +50,7 @@ Config& Config::parse(int argc, char** argv) {
     p.parse(argc, argv);
     p.prepare(&serverSettings, &modelsSettings);
     if (!this->parse(&serverSettings, &modelsSettings))
-#ifdef __linux__ 
+#ifdef __linux__
         exit(EX_USAGE);
 #elif _WIN32
         exit(3);

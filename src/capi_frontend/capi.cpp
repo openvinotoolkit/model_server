@@ -76,13 +76,13 @@ using std::chrono::microseconds;
 extern "C" {
 #endif
 
-#ifdef __linux__ 
+#ifdef __linux__
 #define DLL_PUBLIC __attribute__((visibility("default")))
 #define DLL_LOCAL __attribute__((visibility("hidden")))
 #elif _WIN32
 // TODO: Fix capi.cpp(86): error C2375: 'OVMS_ApiVersion': redefinition; different linkage
 // #define DLL_PUBLIC __declspec(dllexport)
-#define DLL_PUBLIC  
+#define DLL_PUBLIC
 #endif
 
 DLL_PUBLIC OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor) {
@@ -1325,7 +1325,7 @@ OVMS_Status* OVMS_ServerSetGlobalVADisplay(void* vaDisplay) {
     // we accept nullptr as it is a way to reset behavior for gpu tests
     // TODO
     // * allow to initializze only if server not started, but would require passing server
-//TODO: Windows
+// TODO: Windows
 #ifdef __linux__
     ovms::globalVaDisplay = vaDisplay;
 #endif
