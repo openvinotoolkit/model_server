@@ -571,14 +571,14 @@ void HttpRestApiHandler::convertRTInfo(Value& scope, Document& doc, ov::AnyMap& 
         SPDLOG_DEBUG("building rest response: rt_info: key: {}; value: {}", key, value.as<std::string>());
         rapidjson::Value rt_info_key, rt_info_value, subScope;
         rt_info_key.SetString(key.c_str(), doc.GetAllocator());
-        if (value.is<ov::AnyMap>()){
+        if (value.is<ov::AnyMap>()) {
             SPDLOG_INFO("building submap rest response : key: {};", key);
             subScope.SetObject();
             convertRTInfo(subScope, doc, value.as<ov::AnyMap>());
             scope.AddMember(rt_info_key, subScope, doc.GetAllocator());
         } else {
-        rt_info_value.SetString(value.as<std::string>().c_str(), doc.GetAllocator());
-        scope.AddMember(rt_info_key, rt_info_value, doc.GetAllocator());
+            rt_info_value.SetString(value.as<std::string>().c_str(), doc.GetAllocator());
+            scope.AddMember(rt_info_key, rt_info_value, doc.GetAllocator());
         }
     }
 }

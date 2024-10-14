@@ -1255,7 +1255,7 @@ public:
             EXPECT_EQ((*servableMetadataRtInfo).at("MO_version").as<std::string>(), "2023.0.0-10926-b4452d56304-releases/2023/0");
             EXPECT_EQ((*servableMetadataRtInfo).at("conversion_parameters").as<ov::AnyMap>().at("layout").as<std::string>(), "...");
             EXPECT_EQ(5, servableMetadataRtInfo->size());
-        } else if (servableName =="pipeline1Dummy"){
+        } else if (servableName == "pipeline1Dummy") {
             EXPECT_EQ(0, servableMetadataRtInfo->size());
         }
         OVMS_ServableMetadataDelete(servableMetadata);
