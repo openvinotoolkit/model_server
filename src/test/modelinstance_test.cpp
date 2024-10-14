@@ -405,14 +405,14 @@ protected:
         };
     }
 };
-TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, CheckIfLoadingSucceedsForGPU) {
+TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, OpenCL_CheckIfLoadingSucceedsForGPU) {
     SKIP_AND_EXIT_IF_NO_GPU();
     this->config.setTargetDevice("GPU");
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     auto status = modelInstance.loadModel(config);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
-TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, CheckIfLoadingSucceedsForHeteroCPUGPU) {
+TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, OpenCL_CheckIfLoadingSucceedsForHeteroCPUGPU) {
     SKIP_AND_EXIT_IF_NO_GPU();
     this->config.setTargetDevice("HETERO:GPU,CPU");
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
