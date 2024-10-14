@@ -53,7 +53,7 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Library name: {} failed to open base_path: {} with error: {}", name, basePath, error);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN;
     }
-    
+
     initialize_fn initialize = reinterpret_cast<initialize_fn>(dlsym(handle, "initialize"));
     error = dlerror();
     if (error || initialize == nullptr) {
