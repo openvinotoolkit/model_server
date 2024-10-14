@@ -1557,7 +1557,7 @@ public:
     MockModelInstance(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
     }
-    ov::AnyMap getRTInfo() const override {
+    ov::AnyMap getRTInfo()  override {
         std::vector<std::string> mockLabels;
         for (size_t i = 0; i < 5; i++) {
             mockLabels.emplace_back(std::to_string(i));

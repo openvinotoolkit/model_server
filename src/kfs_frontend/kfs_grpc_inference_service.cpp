@@ -187,12 +187,11 @@ Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* contex
     return StatusCode::OK;
 }
 
-::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response) {
-    return grpc(ModelMetadataImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelMetadata}));
+::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, KFSModelExtraMetadata& extraMetadata) {
+    return grpc(ModelMetadataImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelMetadata}, extraMetadata));
 }
 
 Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext, KFSModelExtraMetadata& extraMetadata) {
-    KFSModelExtraMetadata extraMetadata;
     const auto& name = request->name();
     const auto& versionString = request->version();
 
@@ -244,6 +243,7 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     }
     auto status = buildResponse(*model, *instance, response);
     extraMetadata.rt_info = instance->getRTInfo();
+
     INCREMENT_IF_ENABLED(instance->getMetricReporter().getModelMetadataMetric(executionContext, status.ok()));
 
     return status;
@@ -403,8 +403,7 @@ static void addReadyVersions(Model& model,
 Status KFSInferenceServiceImpl::buildResponse(
     Model& model,
     ModelInstance& instance,
-    KFSModelMetadataResponse* response,
-    KFSModelExtraMetadata* extraMetadata) {
+    KFSModelMetadataResponse* response) {
 
     std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
 
@@ -426,8 +425,6 @@ Status KFSInferenceServiceImpl::buildResponse(
     for (const auto& output : instance.getOutputsInfo()) {
         convert(output, response->add_outputs());
     }
-
-    extraMetadata->rt_info = instance.getRTInfo();
     return StatusCode::OK;
 }
 

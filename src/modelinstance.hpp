@@ -311,6 +311,7 @@ protected:
     virtual Status loadOutputTensorsImpl(const ModelConfig& config);
     virtual Status loadInputTensorsImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
+
 private:
     Status gatherReshapeInfo(bool isBatchingModeAuto, const DynamicModelParameter& parameter, bool& isReshapeRequired, std::map<std::string, ov::PartialShape>& modelShapes);
 
@@ -350,6 +351,7 @@ private:
       * Variable to tell reload is due to customloader config change
       */
     bool isCustomLoaderConfigChanged;
+
 
 public:
     /**
@@ -483,7 +485,21 @@ public:
         return inputsInfo;
     }
 
-    virtual ov::AnyMap getRTInfo() const;
+     /**
+           * @brief Get RTMap Info object
+           * @param path list of keys to get RTMap info
+           * @return const ov::AnyMap
+           */
+    ov::AnyMap getRTInfo(std::vector<std::string> path);
+
+    /**
+           * @brief Get RTMap Info object
+           *
+           * @return const ov::AnyMap
+         */
+    virtual ov::AnyMap getRTInfo();
+
+
 
     /**
          * @brief Get the Outputs Info object

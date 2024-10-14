@@ -565,6 +565,24 @@ void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
     }
 }
 
+void HttpRestApiHandler::convertRTInfo(Value& scope, Document& doc, ov::AnyMap& rt_info) {
+    scope.SetObject();
+    for (auto& [key, value] : rt_info) {
+        SPDLOG_DEBUG("building rest response: rt_info: key: {}; value: {}", key, value.as<std::string>());
+        rapidjson::Value rt_info_key, rt_info_value, subScope;
+        rt_info_key.SetString(key.c_str(), doc.GetAllocator());
+        if (value.is<ov::AnyMap>()){
+            SPDLOG_INFO("building submap rest response : key: {};", key);
+            subScope.SetObject();
+            convertRTInfo(subScope, doc, value.as<ov::AnyMap>());
+            scope.AddMember(rt_info_key, subScope, doc.GetAllocator());
+        } else {
+        rt_info_value.SetString(value.as<std::string>().c_str(), doc.GetAllocator());
+        scope.AddMember(rt_info_key, rt_info_value, doc.GetAllocator());
+        }
+    }
+}
+
 Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     ::KFSModelMetadataRequest grpc_request;
     ::KFSModelMetadataResponse grpc_response;
@@ -576,7 +594,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
     KFSModelExtraMetadata extraMetadata;
-    Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelMetadata}, &extraMetadata);
+    Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelMetadata}, extraMetadata);
     if (!gstatus.ok()) {
         return gstatus;
     }
@@ -594,6 +612,8 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
 
     convertShapeType(doc["inputs"], doc);
     convertShapeType(doc["outputs"], doc);
+    doc.AddMember("rt_info", Value(rapidjson::kObjectType), doc.GetAllocator());
+    convertRTInfo(doc["rt_info"], doc, extraMetadata.rt_info);
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);

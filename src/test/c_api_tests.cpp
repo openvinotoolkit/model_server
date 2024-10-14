@@ -1244,7 +1244,20 @@ public:
         const ov::AnyMap* servableMetadataRtInfo{nullptr};
         ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
         ASSERT_NE(nullptr, servableMetadataRtInfo);
-        EXPECT_EQ(0, servableMetadataRtInfo->size());
+        std::cout << "SERVABLE:::" << servableName.c_str() << std::endl;
+        if (servableName == "dummy") {
+            EXPECT_EQ((*servableMetadataRtInfo).at("MO_version").as<std::string>(), "2020.1.0-61-gd349c3ba4a");
+            EXPECT_EQ((*servableMetadataRtInfo).at("model_info").as<ov::AnyMap>().at("resolution").as<ov::AnyMap>().at("height").as<std::string>(), "200");
+            EXPECT_EQ((*servableMetadataRtInfo).at("conversion_parameters").as<ov::AnyMap>().at("data_type").as<std::string>(), "float");
+            EXPECT_EQ((*servableMetadataRtInfo).at("optimization").as<std::string>(), "");
+            EXPECT_EQ(5, servableMetadataRtInfo->size());
+        } else if (servableName == "scalar") {
+            EXPECT_EQ((*servableMetadataRtInfo).at("MO_version").as<std::string>(), "2023.0.0-10926-b4452d56304-releases/2023/0");
+            EXPECT_EQ((*servableMetadataRtInfo).at("conversion_parameters").as<ov::AnyMap>().at("layout").as<std::string>(), "...");
+            EXPECT_EQ(5, servableMetadataRtInfo->size());
+        } else if (servableName =="pipeline1Dummy"){
+            EXPECT_EQ(0, servableMetadataRtInfo->size());
+        }
         OVMS_ServableMetadataDelete(servableMetadata);
     }
 
