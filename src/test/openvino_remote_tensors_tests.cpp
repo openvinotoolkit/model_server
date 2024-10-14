@@ -91,46 +91,6 @@ public:
 
 constexpr bool queueReadWriteBlockingTrue = true;
 constexpr bool retainCLContextOwnership = true;
-TEST_F(OpenVINO, ResetOutputTensors) {
-    Core core;
-    auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
-    ov::AnyMap config = {ov::hint::performance_mode(ov::hint::PerformanceMode::THROUGHPUT),
-        ov::auto_batch_timeout(0)};
-    auto compiledModel = core.compile_model(model, "CPU", config);
-    std::vector<float> in1(DUMMY_MODEL_INPUT_SIZE, 0.1);
-    void* inputBufferData = in1.data();
-    ov::Shape shape;
-    shape.emplace_back(1);
-    shape.emplace_back(DUMMY_MODEL_INPUT_SIZE);
-    ov::element::Type_t dtype = ov::element::Type_t::f32;
-    ov::Tensor input1(dtype, shape, in1.data());
-    auto inferRequest = compiledModel.create_infer_request();
-    inferRequest.set_tensor(DUMMY_MODEL_INPUT_NAME, input1);
-    // keep original output tensor
-    ov::Tensor originalOutput = inferRequest.get_tensor(DUMMY_MODEL_OUTPUT_NAME);
-    // set output
-    std::vector<float> out(DUMMY_MODEL_INPUT_SIZE, 15124.1);
-    ov::Tensor output(dtype, shape, out.data());
-    inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, output);
-    inferRequest.infer();
-    for (size_t i = 0; i < DUMMY_MODEL_INPUT_SIZE; ++i) {
-        EXPECT_NEAR(in1[i] + 1, out[i], 0.0004) << "i:" << i;
-    }
-    std::vector<float> in2(DUMMY_MODEL_INPUT_SIZE, 42);
-    ov::Tensor input2(dtype, shape, in2.data());
-    inferRequest.set_tensor(DUMMY_MODEL_INPUT_NAME, input2);
-    inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, originalOutput);
-    inferRequest.infer();
-    auto secondOutput = inferRequest.get_tensor(DUMMY_MODEL_OUTPUT_NAME);
-    float* data2nd = reinterpret_cast<float*>(secondOutput.data());
-    for (size_t i = 1; i < DUMMY_MODEL_INPUT_SIZE; ++i) {
-        EXPECT_NEAR(in2[i] + 1, data2nd[i], 0.0004) << "i:" << i;
-    }
-    // now check if first output didn't change content
-    for (size_t i = 0; i < DUMMY_MODEL_INPUT_SIZE; ++i) {
-        EXPECT_NEAR(in1[i] + 1, out[i], 0.0004) << "i:" << i;
-    }
-}
 TEST_F(OpenVINOGPU, ExtractContextFromModel) {
     // TODO split
     Core core;
@@ -1249,8 +1209,6 @@ TEST_F(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     // TODO cleanup settings
     OVMS_ServerDelete(cserver);
 }
-static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
-static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 
 const float INITIAL_VALUE{0.13666};
@@ -1407,7 +1365,7 @@ TEST_F(CAPINonCopy, SyncWithCallbackDummyCheckResetOutputGPU) {
     OVMS_InferenceResponse* response = nullptr;
     // set callback
     uint32_t callbackUsed = 31;
-    CallbackUnblockingStruct callbackStruct;
+    CallbackUnblockingStructWithQueue callbackStruct;
     auto unblockSignal = callbackStruct.signal.get_future();
     callbackStruct.bufferAddr = &openCLCppOutputBuffer;
     callbackStruct.queue = &queue;
@@ -1900,20 +1858,6 @@ TEST_F(OpenVINOGPUContextFromModel, OutputTensorHasSmallerShapeAndAppropriateOCL
     EXPECT_THROW(inferRequest->set_tensor(output, outputOVOCLBufferTensor), ov::Exception);
 }
 
-static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
-    SPDLOG_INFO("Using callback: callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness!");
-    CallbackUnblockingStructWithQueue* callbackUnblockingStruct = reinterpret_cast<CallbackUnblockingStructWithQueue*>(userStruct);
-    SPDLOG_ERROR("ER:{}", userStruct);
-    SPDLOG_ERROR("ER:{}", (void*)&callbackUnblockingStruct->signal);
-    callbackUnblockingStruct->signal.set_value(42);
-}
-static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
-    using ovms::StatusCode;
-    SPDLOG_INFO("Using callback: callbackMarkingItWasUsedWith42!");
-    uint32_t* usedFlag = reinterpret_cast<uint32_t*>(userStruct);
-    *usedFlag = 42;
-    OVMS_InferenceResponseDelete(response);
-}
 static void checkDummyOpenCLResponse(OVMS_InferenceResponse* response, cl::CommandQueue& queue, double expectedValue, double tolerance) {
     uint32_t outputCount = 42;
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
@@ -1951,7 +1895,7 @@ static void checkDummyOpenCLResponse(OVMS_InferenceResponse* response, cl::Comma
 
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
     SPDLOG_INFO("Using callback: callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse!");
-    CallbackUnblockingStruct* callbackUnblockingStruct = reinterpret_cast<CallbackUnblockingStruct*>(userStruct);
+    CallbackUnblockingStructWithQueue* callbackUnblockingStruct = reinterpret_cast<CallbackUnblockingStructWithQueue*>(userStruct);
     SPDLOG_ERROR("ER:{}", userStruct);
     SPDLOG_ERROR("ER:{}", (void*)&callbackUnblockingStruct->signal);
     callbackUnblockingStruct->signal.set_value(42);

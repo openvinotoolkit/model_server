@@ -1627,7 +1627,7 @@ cc_library(
     srcs = ["test/openvino_tests.cpp"],
     data = [
         "test/c_api/config_standard_dummy.json",
-        "test/c_api/config_gpu_dummy.json",
+        "test/configs/config_gpu_dummy.json",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
     ],
