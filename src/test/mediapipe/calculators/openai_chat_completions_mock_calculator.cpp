@@ -17,7 +17,7 @@
 #include <string>
 #include <thread>
 
-#include "../../../llm/http_payload.hpp"
+#include "../../../http_payload.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
