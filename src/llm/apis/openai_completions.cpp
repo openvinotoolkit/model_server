@@ -264,8 +264,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
             request.stop = std::set<std::string>{it->value.GetString()};
         } else if (it->value.IsArray()) {
             auto stopArray = it->value.GetArray();
-            // TODO: OpenAI API defines upper bound but do we want it?
-
             if (stopArray.Size() > 4)
                 return absl::InvalidArgumentError("stop array must have no more than 4 strings");
             if (!stopArray.Empty()) {

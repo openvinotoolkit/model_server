@@ -15,6 +15,13 @@
 # limitations under the License.
 #
 # Script should be used only as a part of Dockerfiles
+
+# Check if INSTALL_DRIVER_VERSION is set
+if [ -z "$INSTALL_DRIVER_VERSION" ]; then
+    echo "Error: INSTALL_DRIVER_VERSION cannot be empty."
+    exit 1
+fi
+
 case $INSTALL_DRIVER_VERSION in \
 "21.38.21026") \
         mkdir /tmp/gpu_deps ; \
@@ -27,7 +34,7 @@ case $INSTALL_DRIVER_VERSION in \
         cd /tmp/gpu_deps && rpm -iv *.rpm && rm -Rf /tmp/gpu_deps ; \
 ;; \
 "22.10.22597") \
-        $DNF_TOOL install -y libedit ; \
+        $DNF_TOOL install --nodocs -y libedit ; \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.0.3-i699.3.el8.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.10409-i699.3.el8.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/level-zero-1.7.9-i699.3.el8.x86_64.rpm ; \
@@ -36,7 +43,7 @@ case $INSTALL_DRIVER_VERSION in \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-opencl-22.10.22597-i699.3.el8.x86_64.rpm ; \
 ;; \
 "22.28.23726") \
-        $DNF_TOOL install -y libedit ; \
+        $DNF_TOOL install --nodocs -y libedit ; \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.1.7-i419.el8.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.11485-i419.el8.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-opencl-1.0.11485-i419.el8.x86_64.rpm ; \
@@ -45,7 +52,7 @@ case $INSTALL_DRIVER_VERSION in \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5-devel/level-zero-1.8.1-i392.el8.x86_64.rpm ; \
 ;; \
 "22.43.24595") \
-        $DNF_TOOL install -y libedit ; \
+        $DNF_TOOL install --nodocs -y libedit ; \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-gmmlib-22.3.1-i529.el8.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-igc-core-1.0.12504.6-i537.el8.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-igc-opencl-1.0.12504.6-i537.el8.x86_64.rpm ; \
@@ -54,7 +61,7 @@ case $INSTALL_DRIVER_VERSION in \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/level-zero-1.8.8-i524.el8.x86_64.rpm ; \
 ;; \
 "23.22.26516") \
-        $DNF_TOOL install -y libedit ; \
+        $DNF_TOOL install --nodocs -y libedit ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-gmmlib-22.3.7-i678.el8_6.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-core-1.0.14062.14-682.el8_6.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-opencl-1.0.14062.14-682.el8_6.x86_64.rpm ; \

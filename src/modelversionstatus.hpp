@@ -19,8 +19,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <spdlog/spdlog.h>
-
 #include "modelversion.hpp"
 
 // note: think about using https://github.com/Neargye/magic_enum when compatible compiler is supported.

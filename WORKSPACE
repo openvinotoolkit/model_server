@@ -124,7 +124,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "2587216be4b37d4d4e7b7e5c17730a199dcdcba6", # Return proper status when loading model failed (#80)
+    commit = "9407697e8a18eebea664bab27d217a06bfa237fd", # Support ov::string in ovms model api adapter (#90)
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build

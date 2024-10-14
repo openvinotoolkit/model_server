@@ -2,7 +2,7 @@
 langchain_community
 openai
 sentence_transformers
-chromadb
+faiss-cpu
 unstructured
 langchain-openai
 langchain

@@ -28,8 +28,9 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=8
 ARG VERBOSE_LOGS=OFF
-
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all && yum update -d6 -y && yum install -d6 -y \
+# hadolint ignore=DL3041
+RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
+    dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf update -d6 -y && dnf install -d6 -y \
             libuuid-devel \
             bc \
             cmake \
@@ -43,9 +44,8 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             openssl-devel \
             patch \
             pkg-config \
-            wget \
-            yum-utils && \
-            yum clean all
+            wget && \
+            dnf clean all
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
@@ -100,10 +100,10 @@ LABEL version="1.0.0"
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=40
-
+# hadolint ignore=DL3041
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
                    http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && \
-    dnf clean all && yum update -d6 -y && yum install -d6 -y \
+    dnf clean all && dnf update -d6 -y && dnf install -d6 -y \
             gdb \
             java-11-openjdk-devel \
             tzdata-java \
@@ -112,12 +112,11 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
             libtool \
             openssl-devel \
             which \
-            yum-utils \
             unzip \
             vim \
             xz \
             python39-devel && \
-            yum clean all
+            dnf clean all
 ARG INSTALL_DRIVER_VERSION="23.22.26516"
 # GPU testing in build img & remote tensors dependencies
 WORKDIR /usr/lib64/
@@ -140,16 +139,16 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
-RUN  yum install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && yum clean all
+RUN  dnf install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && dnf clean all
 
 ARG NVIDIA=0
 # Add Nvidia dev tool if needed
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    yum config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms ; \
-    yum -y module disable python36 && \
-    yum -y install libzstd-devel ; \
-    yum install -y  \
+    dnf config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms ; \
+    dnf -y module disable python36 && \
+    dnf -y install libzstd-devel ; \
+    dnf install -y  \
         cuda-nvcc-11-8 libcublas-11-8 libcublas-devel-11-8 \
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcudnn8-devel-8.6.0.163-1.cuda11.8 \
@@ -157,13 +156,13 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
         libcutensor-devel-1.6.1.5-1 \
         cuda-cudart-devel-11-8 && \
     # ignore errors on hosts with older nvidia drivers
-    yum install -y cuda-11-8 || true && \
-    yum install -y python38-Cython && \
+    dnf install -y cuda-11-8 || true && \
+    dnf install -y python38-Cython && \
     curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin && \
     curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
     chmod a+x /usr/local/bin/sccache && \
     curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 && \
-    rm -rf /var/cache/yum
+    dnf clean all
 
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
@@ -183,10 +182,10 @@ RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https:/
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
-RUN yum install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
+RUN dnf install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
     http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-2.2.2-1.el8.x86_64.rpm \
     https://dl.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/j/json-devel-3.6.1-2.el8.x86_64.rpm && \
-    rm -rf /var/cache/yum
+    dnf clean all
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; pip3 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
@@ -317,8 +316,8 @@ ARG minitrace_flags
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
 ARG RUN_TESTS=0
-COPY rununittest.sh prepare_llm_models.sh /ovms/
-RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./rununittest.sh ; fi
+COPY run_unit_tests.sh prepare_llm_models.sh prepare_gpu_models.sh /ovms/
+RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp" && \
@@ -420,31 +419,14 @@ WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
 # hadolint ignore=DL3003,DL3041,SC2164
-RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
-    $DNF_TOOL upgrade --setopt=install_weak_deps=0 -y ; \
-    $DNF_TOOL install -y pkg-config && rpm -ivh https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm && \
+RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; \
+    $DNF_TOOL upgrade --setopt=install_weak_deps=0 --nodocs -y ; \
     if [ "$GPU" == "1" ] ; then \
     	install_gpu_drivers.sh && rm -rf ./install_gpu_drivers.sh; \
     fi ; \
-    if [ "$INSTALL_RPMS_FROM_URL" == "" ] ; then \
-            rpm -ivh http://vault.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm; \
-    else  \
-            $DNF_TOOL install -y tar gzip; \
-            mkdir /tmp_ovms ; \
-            cd /tmp_ovms ; \
-            curl -L --fail -o deps.tar.xz "$INSTALL_RPMS_FROM_URL" ; \
-            tar -xf deps.tar.xz ; \
-            ls -Rahl . ; \
-            rpm -vi pkg/bin/*.rpm ; \
-            cd / ; \
-            rm -rf /tmp_ovms ; \
-            $DNF_TOOL remove -y tar gzip; \
-    fi ; \
     # For image with Python enabled install Python library
     if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
-        $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0; \
-        mkdir -p /ovms/lib/openvino-4.dist-info && \
-        echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.4' > /ovms/lib/openvino-2024.4.dist-info/METADATA ; \
+        $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0 --nodocs; \
     fi ; \
     $DNF_TOOL install -y shadow-utils; \
     cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
@@ -452,8 +434,8 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=mic
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 # for NVIDIA
-RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda yum package"; \
-    dnf install -y  \
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda rpm package"; \
+    dnf install --nodocs -y  \
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcutensor1-1.6.1.5-1 && \
         dnf clean all
