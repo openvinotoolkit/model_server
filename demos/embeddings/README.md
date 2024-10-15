@@ -35,7 +35,7 @@ rm models/gte-large-en-v1.5-embeddings/1/*.json models/gte-large-en-v1.5-embeddi
 Move the tokenizer to a separate folder to create an embedding pipeline:
 ```bash
 mkdir -p models/gte-large-en-v1.5-tokenizer/1
-mv models/gte-large-en-v1.5-embeddings/*tokenizer.* -t models/gte-large-en-v1.5-tokenizer/1
+mv models/gte-large-en-v1.5-embeddings/1/*_tokenizer.* -t models/gte-large-en-v1.5-tokenizer/1
 ```
 
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
