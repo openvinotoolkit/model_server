@@ -50,6 +50,12 @@ COPTS_TESTS = [
         "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
 })
 
+config_setting(
+    name = "windows",
+    values = {"cpu": "x64_windows"},
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "custom_nodes_common_lib",
     linkstatic = 1,
