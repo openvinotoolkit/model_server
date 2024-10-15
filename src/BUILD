@@ -137,7 +137,10 @@ cc_shared_library(
         })
     ,
     features = [],
-    roots = ["//src:ovms_lib"],
+    roots = [
+        "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
+    ],
 )
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
@@ -695,6 +698,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
     ],
     linkstatic = True,
 )
