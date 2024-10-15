@@ -35,6 +35,12 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
     "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
 })
 
+config_setting(
+    name = "windows",
+    values = {"cpu": "x64_windows"},
+    visibility = ["//visibility:public"],
+)
+
 COPTS_TESTS = [
     "-Wall",
     "-Wno-unknown-pragmas",
