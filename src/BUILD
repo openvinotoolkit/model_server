@@ -70,7 +70,9 @@ cc_library(
 cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
-    static_deps = ["@tensorflow_serving//:__subpackages__",
+    static_deps = [
+        #"//src:libovmsfilesystemfactory", // TODO FIXME missing symbols @atobisze
+        "@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
         "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
@@ -139,7 +141,6 @@ cc_shared_library(
     features = [],
     roots = [
         "//src:ovms_lib",
-        "//src:libovmsfilesystemfactory",
     ],
 )
 
@@ -363,6 +364,7 @@ cc_library(
             "libovmsdagspipelinedefinitionstatus",
             "libovmsfilesystem",
             "libovmsfilesystemfactory_h",
+            "libovmsfilesystemfactory", # TODO FIXME missing symbols @atobisze when not in ovms_lib
             "libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
             "libovmsmetrics",
@@ -1171,6 +1173,7 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
 )
 
 cc_library(
