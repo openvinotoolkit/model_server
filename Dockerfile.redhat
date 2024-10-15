@@ -124,7 +124,7 @@ RUN ln -s libOpenCL.so.1 libOpenCL.so
 WORKDIR /ovms
 COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
 RUN wget -q https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/os/Packages/libva-devel-2.22.0-1.el10.x86_64.rpm && rpm -ivh --nodeps ./libva-devel-2.22.0-1.el10.x86_64.rpm && \
-    ./install_gpu_drivers.sh && \
+    if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; source ./install_gpu_drivers.sh && \
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
@@ -422,7 +422,7 @@ COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; \
     $DNF_TOOL upgrade --setopt=install_weak_deps=0 --nodocs -y ; \
     if [ "$GPU" == "1" ] ; then \
-    	install_gpu_drivers.sh && rm -rf ./install_gpu_drivers.sh; \
+    	source install_gpu_drivers.sh && rm -rf ./install_gpu_drivers.sh; \
     fi ; \
     # For image with Python enabled install Python library
     if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
