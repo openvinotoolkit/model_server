@@ -338,14 +338,8 @@ RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_f
 # OVMS
 # hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms; fi;
-RUN printenv > my_env.log
-RUN echo ${minitrace_flags} >> my_env.log 
-RUN echo ${debug_bazel_flags} >> my_env.log 
-RUN echo ${JOBS} >> my_env.log 
-RUN cat /root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/stable-status.txt >> my_env.log
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
 
-
-FROM build as BABA
 # hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so; fi;
 

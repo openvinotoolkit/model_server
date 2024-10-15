@@ -1219,6 +1219,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
     ],
     linkstatic = True,
 )
