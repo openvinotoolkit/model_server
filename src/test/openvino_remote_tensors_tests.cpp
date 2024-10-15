@@ -1418,7 +1418,7 @@ TEST_F(CAPINonCopy, SyncWithoutCallbackDummyCheckResetOutputCPU) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestRemoveOutput(request, DUMMY_MODEL_OUTPUT_NAME));
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
     checkDummyResponse(response, INITIAL_VALUE + 42 + 1, FLOAT_TOLLERANCE);
-    // intentional check for original output buffer if they were not overriden
+    // intentional check for original output buffer if they were not overridden
     for (size_t i = 0; i < out1.size(); ++i) {
         EXPECT_NEAR(INITIAL_VALUE + 1, out1[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
     }
@@ -1465,7 +1465,7 @@ TEST_F(CAPINonCopy, AsyncDummyCheckResetOutputCPU) {
     unblockSignal.get();
     checkDummyResponse(callbackStruct.response, INITIAL_VALUE + 42 + 1, FLOAT_TOLLERANCE);
     OVMS_InferenceResponseDelete(callbackStruct.response);
-    // intentional check for original output buffer if they were not overriden
+    // intentional check for original output buffer if they were not overridden
     for (size_t i = 0; i < out1.size(); ++i) {
         EXPECT_NEAR(INITIAL_VALUE + 1, out1[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
     }
