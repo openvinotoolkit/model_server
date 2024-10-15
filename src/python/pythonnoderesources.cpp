@@ -140,12 +140,8 @@ Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNode
     py::gil_scoped_acquire acquire;
     try {
         py::module_ sys = py::module_::import("sys");
-
-        std::cout << "FILENAME:" <<filename.c_str() <<std::endl;
-        std::cout << "basePath:" <<basePath.c_str() <<std::endl;
-
         sys.attr("path").attr("append")(basePath.c_str());
-        py::module_ script = py::module_::import("symmetric_increment");
+        py::module_ script = py::module_::import(filename.c_str());
 
         if (!py::hasattr(script, "OvmsPythonModel")) {
             SPDLOG_ERROR("Error during python node initialization. No OvmsPythonModel class found in {}", nodeOptions.handler_path());

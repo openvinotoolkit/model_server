@@ -25,3 +25,11 @@ cc_library(
     copts = ["-lcrypto", "-lssl"],
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "crypto",
+    hdrs = glob(["include/openssl/*"]),
+    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    copts = ["-lcrypto", "-lssl"],
+    visibility = ["//visibility:public"],
+)
