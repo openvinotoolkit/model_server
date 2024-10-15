@@ -66,9 +66,24 @@ http_archive(
 # alternative would be to use cmake build of grpc and flag
 # to use system ssl instead
 new_local_repository(
-    name = "linux_boringssl",
-    build_file = "@//third_party/boringssl:BUILD",
+    name = "boringssl",
     path = "/usr/",
+    build_file_content = """
+cc_library(
+    name = "ssl",
+    hdrs = glob(["include/openssl/*"]),
+    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    copts = ["-lcrypto", "-lssl"],
+    visibility = ["//visibility:public"],
+)
+cc_library(
+    name = "crypto",
+    hdrs = glob(["include/openssl/*"]),
+    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    copts = ["-lcrypto", "-lssl"],
+    visibility = ["//visibility:public"],
+)
+""",
 )
 
 new_local_repository(

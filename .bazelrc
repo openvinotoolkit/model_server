@@ -171,9 +171,9 @@ build:windows --incompatible_enforce_config_setting_visibility
 # support (this will revert to loading TensorFlow with RTLD_GLOBAL in Python).
 # By default, TensorFlow will build with a dependence on
 # //tensorflow:libtensorflow_framework.so.
-#build:monolithic --define framework_shared_object=false
-#build:monolithic --define tsl_protobuf_header_only=false
-#build:monolithic --experimental_link_static_libraries_once=false  # b/229868128
+build:monolithic --define framework_shared_object=false
+build:monolithic --define tsl_protobuf_header_only=false
+build:monolithic --experimental_link_static_libraries_once=false  # b/229868128
 
 build:windows --copt=/W0
 build:windows --host_copt=/W0
@@ -234,12 +234,12 @@ build:windows --features=compiler_param_file
 build:short_logs --output_filter=DONT_MATCH_ANYTHING
 build:verbose_logs --output_filter=
 
-#build:avx_win --copt=/arch=AVX
-#build:avx2_win --copt=/arch=AVX2
+build:avx_win --copt=/arch=AVX
+build:avx2_win --copt=/arch=AVX2
 
 # Options to build TensorFlow 1.x or 2.x.
-#build:v1 --define=tf_api_version=1 --action_env=TF2_BEHAVIOR=0
-#build:v2 --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
+build:v1 --define=tf_api_version=1 --action_env=TF2_BEHAVIOR=0
+build:v2 --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
 
 # Flag to enable remote config
 build:windows --experimental_repo_remote_exec
