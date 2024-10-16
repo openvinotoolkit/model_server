@@ -36,7 +36,7 @@
 namespace ovms {
 
 const uint32_t AVAILABLE_CORES = getCoreCount();
-const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint32_t>::max();
+const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint16_t>::max();
 
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
 const uint32_t DEFAULT_GRPC_MAX_THREADS = AVAILABLE_CORES * 8.0;
