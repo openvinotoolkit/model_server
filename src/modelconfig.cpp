@@ -674,9 +674,9 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
 
     // if the config has models which require custom loader to be used, then load the same here
     if (v.HasMember("custom_loader_options")) {
-        // if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
-        // TODO: SPDLOG_ERROR("Couldn't parse custom loader options config");
-        // }
+        if (!parseCustomLoaderOptionsConfig(v["custom_loader_options"]).ok()) {
+            SPDLOG_ERROR("Couldn't parse custom loader options config");
+        }
     }
     return StatusCode::OK;
 }
