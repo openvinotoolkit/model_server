@@ -47,7 +47,7 @@ if [ "$RUN_GPU_TESTS" == "1" ]; then
 fi
 
 test_success_procedure() {
-    #tail -50 ${TEST_LOG}
+    tail -50 ${TEST_LOG}
     # Process the log file
     grep -aE '^\[       OK \].*\([0-9]+ ms\)' "$TEST_LOG" >> "$OK_FILE"
     grep -aE '^\[  SKIPPED \].*\([0-9]+ ms\)' "$TEST_LOG" >> "$SKIPPED_FILE"
@@ -62,7 +62,7 @@ generate_coverage_report() {
 }
 test_fail_procedure() {
     test_success_procedure
-    cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1
+    tail -n 200 ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1
 }
 echo "Run test: ${RUN_TESTS}"
 echo "Run GPU test: ${RUN_GPU_TESTS}"

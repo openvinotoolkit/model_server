@@ -672,7 +672,6 @@ cpu_extension:
 
 run_unit_tests:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
-	mkdir -p ./out
 ifeq ($(RUN_GPU_TESTS),1)
 	./prepare_gpu_models.sh ${GPU_MODEL_PATH} && \
 	docker run \
