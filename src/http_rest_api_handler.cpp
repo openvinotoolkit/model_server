@@ -580,7 +580,12 @@ void HttpRestApiHandler::convertRTInfo(Value& scope, Document& doc, ov::AnyMap& 
             convertRTInfo(subScope, doc, value.as<ov::AnyMap>());
             scope.AddMember(rt_info_key, subScope, doc.GetAllocator());
         } else {
-            rt_info_value.SetString(value.as<std::string>().c_str(), doc.GetAllocator());
+            try {
+                rt_info_value.SetString(value.as<std::string>().c_str(), doc.GetAllocator());
+            } catch (const std::exception& e) {
+                SPDLOG_DEBUG("Error converting RT info value to string: {}", e.what());
+                rt_info_value.SetString("Error converting value", doc.GetAllocator());
+            }
             scope.AddMember(rt_info_key, rt_info_value, doc.GetAllocator());
         }
     }

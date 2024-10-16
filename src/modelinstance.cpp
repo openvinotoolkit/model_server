@@ -364,7 +364,7 @@ ov::AnyMap ModelInstance::getRTInfo(std::vector<std::string> path) {
     }
     std::string type_name("St10shared_ptrIN2ov4MetaEE");
     for (const auto& [key, value] : rtMap) {
-        if (*value.type_info().name() == *type_name.c_str()) {
+        if (std::string(value.type_info().name()) == type_name) {
             path.push_back(key);
             ov::AnyMap subMap = model->get_rt_info<ov::AnyMap>(path);
             anyMap[key] = getRTInfo(path);
@@ -383,7 +383,7 @@ ov::AnyMap ModelInstance::getRTInfo() {
     std::vector<std::string> path{};
     std::string type_name("St10shared_ptrIN2ov4MetaEE");  // OV private type behind OV:Any in RTInfo which is shared_ptr<ov::Meta>
     for (const auto& [key, value] : rtMap) {
-        if (*value.type_info().name() == *type_name.c_str()) {
+        if (std::string(value.type_info().name()) == type_name) {
             path.push_back(key);
             anyMap[key] = getRTInfo(path);
             path.pop_back();
