@@ -32,6 +32,7 @@
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "absl/strings/escaping.h"
+#include "src/embeddings/embeddings_calculator.pb.h"
 
 using namespace rapidjson;
 using namespace ovms;
@@ -194,7 +195,8 @@ public:
 
         writer.String("data");
         writer.StartArray();
-        bool normalize = true;
+        const auto& options = cc->Options<EmbeddingsCalculatorOptions>();
+        bool normalize = options.normalize_embeddings();
         // TODO: mean pooling
 
         ov::Shape outputShape = embeddingsTensor.get_shape();
