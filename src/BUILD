@@ -120,7 +120,6 @@ cc_shared_library(
         "@ruy//:__subpackages__",
         "@azure//:__subpackages__",
         "@cpprest//:__subpackages__",
-        "//third_party:boringssl//:__subpackages__",
         "//third_party:opencv//:__subpackages__",
     ] + select({
         "//:not_disable_mediapipe": [
@@ -143,7 +142,12 @@ cc_shared_library(
             ],
         "//:disable_python": []
         })
-    ,
+     + select({
+            "//conditions:default": [
+                "@boringssl//:__subpackages__",
+            ],
+            "//src:windows" : [],
+        }),
     features = [],
     roots = ["//src:ovms_lib"],
 )
@@ -976,10 +980,15 @@ cc_library(
     hdrs = ["filesystem.hpp",],
     srcs = ["filesystem.cpp",],
     deps = [
-            "//third_party:boringssl",
             "libovmslogging",
             "libovmsmodelversioning",
-            "libovmsstatus",],
+            "libovmsstatus",]
+            + select({
+                "//conditions:default": [
+                    "@boringssl//:ssl",
+                ],
+                "//src:windows" : [],
+            }),
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,

@@ -67,29 +67,8 @@ http_archive(
 # to use system ssl instead
 new_local_repository(
     name = "boringssl",
-    path = "/usr/",
-    build_file_content = """
-cc_library(
-    name = "ssl",
-    hdrs = glob(["include/openssl/*"]),
-    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
-    copts = ["-lcrypto", "-lssl"],
-    visibility = ["//visibility:public"],
-)
-cc_library(
-    name = "crypto",
-    hdrs = glob(["include/openssl/*"]),
-    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
-    copts = ["-lcrypto", "-lssl"],
-    visibility = ["//visibility:public"],
-)
-""",
-)
-
-new_local_repository(
-    name = "windows_boringssl",
-    build_file = "@//third_party/boringssl:boringssl_windows.BUILD",
-    path = "C:\\opt\\boringssl",
+    path = "",
+    build_file = "@//third_party/boringssl:BUILD",
 )
 
 # overriding GCS curl dependency to force using system provided openssl
