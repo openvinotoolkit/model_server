@@ -29,11 +29,17 @@ pip3 install optimum-intel@git+https://github.com/huggingface/optimum-intel.git 
 Run optimum-cli to download and quantize the model:
 ```bash
 cd demos/embeddings
-convert_tokenizer -o models/gte-large-en-v1.5-tokenizer/1 Alibaba-NLP/gte-large-en-v1.5
-optimum-cli export openvino --disable-convert-tokenizer --model Alibaba-NLP/gte-large-en-v1.5 --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/gte-large-en-v1.5-embeddings/1
-rm models/gte-large-en-v1.5-embeddings/1/*.json models/gte-large-en-v1.5-embeddings/1/vocab.txt 
+optimum-cli export openvino --model Alibaba-NLP/gte-large-en-v1.5 --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/gte-large-en-v1.5-embeddings/1
+rm models/gte-large-en-v1.5-embeddings/1/*.json models/gte-large-en-v1.5-embeddings/1/vocab.txt
 ```
+
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
+
+Move the tokenizer to a separate folder to create an embedding pipeline:
+```bash
+mkdir -p models/gte-large-en-v1.5-tokenizer/1
+mv models/gte-large-en-v1.5-embeddings/1/*_tokenizer.* -t models/gte-large-en-v1.5-tokenizer/1
+```
 
 You should have a model folder like below:
 ```bash
