@@ -28,10 +28,7 @@ ${debug_bazel_flags} \
 OK_FILE="ok_results.txt"
 SKIPPED_FILE="skipped_results.txt"
 FAILED_FILE="failed_results.txt"
-SUMMARY_FILE="/out/results.txt"
-
-mkdir -p /out/
-rm -f $SUMMARY_FILE
+SUMMARY_FILE="results.txt"
 
 > "$OK_FILE"
 > "$SKIPPED_FILE"
@@ -53,8 +50,8 @@ test_success_procedure() {
     grep -aE '^\[  SKIPPED \].*\([0-9]+ ms\)' "$TEST_LOG" >> "$SKIPPED_FILE"
     grep -aE '^\[  FAILED  \].*\([0-9]+ ms\)' "$TEST_LOG" >> "$FAILED_FILE"
     cat $OK_FILE $SKIPPED_FILE $FAILED_FILE >> "$SUMMARY_FILE"
-    cat $SUMMARY_FILE
     echo -e "Results summary:\nOK tests: $(wc -l < "$OK_FILE")\nSKIPPED tests: $(wc -l < "$SKIPPED_FILE")\nFAILED tests: $(wc -l < "$FAILED_FILE")" >> "$SUMMARY_FILE"
+    cat $SUMMARY_FILE
 }
 generate_coverage_report() {
     test_success_procedure
