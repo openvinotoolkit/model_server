@@ -459,14 +459,14 @@ TEST_F(MetricFlowTest, GrpcModelMetadata) {
         request.Clear();
         response.Clear();
         request.mutable_name()->assign(modelName);
-        ASSERT_EQ(impl.ModelMetadata(nullptr, &request, &response, extraMetadata).error_code(), grpc::StatusCode::OK);
+        ASSERT_EQ(impl.ModelMetadata(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
 
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         request.Clear();
         response.Clear();
         request.mutable_name()->assign(dagName);
-        ASSERT_EQ(impl.ModelMetadata(nullptr, &request, &response, extraMetadata).error_code(), grpc::StatusCode::OK);
+        ASSERT_EQ(impl.ModelMetadata(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
 
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);  // ran by real request
