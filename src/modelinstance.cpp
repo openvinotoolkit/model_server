@@ -754,7 +754,7 @@ Status ModelInstance::loadOVModelUsingCustomLoader() {
 namespace ovms {
 void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
     OV_LOGGER("ov::Core: {}, ov::Model: {}, targetDevice: {}, ieCore.compile_model(model, targetDevice, pluginConfig", reinterpret_cast<void*>(&ieCore), reinterpret_cast<void*>(this->model.get()), this->targetDevice);
-    if (this->targetDevice.find("GPU") != std::string::npos) {
+    if (startsWith(this->targetDevice, "GPU")) {
         if (globalVaDisplay) {
             OV_LOGGER("ov::intel_gpu::ocl::VAContext(core: {}, globalVaDisplay: {})", (void*)&this->ieCore, globalVaDisplay);
             this->vaContext = std::make_unique<ov::intel_gpu::ocl::VAContext>(this->ieCore, globalVaDisplay);
@@ -906,7 +906,8 @@ void ModelInstance::loadTensorFactories() {
     using std::make_shared;
     this->tensorFactories.clear();
     this->tensorFactories.emplace(OVMS_BUFFERTYPE_CPU, make_shared<RegularOVTensorFactory>());
-    if (this->targetDevice.find("GPU") != std::string::npos) {
+    // if there is ocl context set it means that device is GPU
+    if (this->oclContextCpp) {
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_OPENCL, make_shared<OpenCLTensorFactory>(*this->oclContextCpp));
         // TODO what to do if display was not initialized? not allow in validation? but here we don't have the information about vacontext unless it is global
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_VASURFACE_Y, make_shared<VAAPITensorFactory>(*this->vaContext, OVMS_BUFFERTYPE_VASURFACE_Y));
