@@ -453,6 +453,7 @@ TEST_F(MetricFlowTest, GrpcModelMetadata) {
     KFSInferenceServiceImpl impl(server);
     ::KFSModelMetadataRequest request;
     KFSModelMetadataResponse response;
+    KFSModelExtraMetadata extraMetadata;
 
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         request.Clear();

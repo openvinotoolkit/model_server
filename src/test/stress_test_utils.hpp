@@ -1600,9 +1600,10 @@ public:
                 break;
             }
             KFSModelMetadataResponse response;
+            KFSModelExtraMetadata extraMetadata;
             ovms::Server& server = ovms::Server::instance();
             KFSInferenceServiceImpl impl(server);
-            auto status = impl.ModelMetadataImpl(nullptr, &request, &response, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata));
+            auto status = impl.ModelMetadataImpl(nullptr, &request, &response, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata), extraMetadata);
             createPipelineRetCodesCounters[status.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
