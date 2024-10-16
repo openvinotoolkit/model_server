@@ -123,6 +123,7 @@ WORKDIR /usr/lib64/
 RUN ln -s libOpenCL.so.1 libOpenCL.so
 WORKDIR /ovms
 COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
+# hadolint ignore=SC1091
 RUN wget -q https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/os/Packages/libva-devel-2.22.0-1.el10.x86_64.rpm && rpm -ivh --nodeps ./libva-devel-2.22.0-1.el10.x86_64.rpm && \
     if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; source ./install_gpu_drivers.sh && \
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
@@ -418,7 +419,7 @@ ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
-# hadolint ignore=DL3003,DL3041,SC2164
+# hadolint ignore=DL3003,DL3041,SC2164,SC1091
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; \
     $DNF_TOOL upgrade --setopt=install_weak_deps=0 --nodocs -y ; \
     if [ "$GPU" == "1" ] ; then \
