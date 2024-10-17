@@ -3433,6 +3433,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "DetectionsToRectsCalculator",
         "DetectionsToRenderDataCalculator",
         "EmbeddingsCalculator",
+        "RerankCalculator",
         "EmptyLabelCalculator",
         "EmptyLabelClassificationCalculator",
         "EmptyLabelDetectionCalculator",
