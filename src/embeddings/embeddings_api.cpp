@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "embeddings_api.hpp"
 
+#include <string>
 #include <variant>
 
 #include "rapidjson/document.h"
