@@ -964,6 +964,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
             this->status.setLoading(ModelVersionStatusErrorCode::UNKNOWN);
             return status;
         }
+        this->checkForOutputTensorResetAbility();
         this->loadTensorFactories();
     } catch (const ov::Exception& e) {
         SPDLOG_ERROR("exception occurred while loading model: {}", e.what());
@@ -1312,18 +1313,22 @@ struct OutputKeeper {
     ov::InferRequest& request;
     OutputKeeper(ov::InferRequest& request, const tensor_map_t& outputsInfo) :
         request(request) {
-        for (auto [k, v] : outputsInfo) {
-            OV_LOGGER("ov::InferRequest: {}, request.get_tensor({})", reinterpret_cast<void*>(&request), k);
-            ov::Tensor tensor = request.get_tensor(k);
-            OV_LOGGER("ov::Tensor(): {}", reinterpret_cast<void*>(&tensor));
-            outputs.emplace(std::make_pair(k, std::move(tensor)));  // TODO try catch
-            OV_LOGGER("ov::Tensor(ov::Tensor&&): {}", reinterpret_cast<void*>(&outputs.at(k)));
+        for (auto [name, _] : outputsInfo) {
+            OV_LOGGER("ov::InferRequest: {}, request.get_tensor({})", reinterpret_cast<void*>(&request), name);
+            try {
+                ov::Tensor tensor = request.get_tensor(name);
+                OV_LOGGER("ov::Tensor(): {}", reinterpret_cast<void*>(&tensor));
+                outputs.emplace(std::make_pair(name, std::move(tensor)));
+                OV_LOGGER("ov::Tensor(ov::Tensor&&): {}", reinterpret_cast<void*>(&outputs.at(name)));
+            } catch (std::exception& e) {
+                SPDLOG_DEBUG("Resetting output:{}; for this model  is not supported. Check C-API documentation for OVMS_InferenceRequestOutputSetData. Error:", name, e.what());
+            }
         }
     }
     ~OutputKeeper() {
-        for (auto [k, v] : outputs) {
-            OV_LOGGER("ov::InferRequest: {}, request.set_tensor({}, {})", reinterpret_cast<void*>(&request), k, reinterpret_cast<void*>(&v));
-            request.set_tensor(k, v);
+        for (auto [name, v] : outputs) {
+            OV_LOGGER("ov::InferRequest: {}, request.set_tensor({}, {})", reinterpret_cast<void*>(&request), name, reinterpret_cast<void*>(&v));
+            request.set_tensor(name, v);
         }
     }
 };
@@ -1377,7 +1382,11 @@ Status ModelInstance::infer(const RequestType* requestProto,
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
-    OutputKeeper outKeeper(executingStreamIdGuard.getInferRequest(), getOutputsInfo());
+
+    std::unique_ptr<OutputKeeper> outKeeper;
+    if (this->doesSupportOutputReset()) {
+        outKeeper = std::make_unique<OutputKeeper>(executingStreamIdGuard.getInferRequest(), getOutputsInfo());
+    }
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {
@@ -1418,6 +1427,26 @@ Status ModelInstance::infer(const RequestType* requestProto,
     status = requestProcessor->release();
     // handleCallback(requestProto, responseProto); to be enabled when callbacks are implemented in network API's
     return status;
+}
+void ModelInstance::checkForOutputTensorResetAbility() {
+    StreamIdGuard guard(getInferRequestsQueue());
+    auto request = guard.getInferRequest();
+    bool allOutputsSupported = true;
+    for (auto [name, _] : getOutputsInfo()) {
+        try {
+            ov::Tensor tensor = request.get_tensor(name);
+        } catch (std::exception& e) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Resetting output:{}; for model:{}; version:{}, is not supported. Check C-API documentation for OVMS_InferenceRequestOutputSetData. Error:{}", name, getName(), getVersion(), e.what());
+            allOutputsSupported = false;
+        } catch (...) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Resetting output:{}; for model:{}; version:{}, is not supported. Check C-API documentation for OVMS_InferenceRequestOutputSetData.", name, getName(), getVersion());
+            allOutputsSupported = false;
+        }
+    }
+    this->supportOutputTensorsReset = allOutputsSupported;
+}
+bool ModelInstance::doesSupportOutputReset() const {
+    return this->supportOutputTensorsReset;
 }
 
 #pragma GCC diagnostic pop
@@ -1470,7 +1499,10 @@ Status ModelInstance::inferAsync(const RequestType* requestProto,
     timer.start(DESERIALIZE);
     InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
-    auto outKeeper = std::make_shared<OutputKeeper>(executingStreamIdGuard.getInferRequest(), getOutputsInfo());
+    std::shared_ptr<OutputKeeper> outKeeper;
+    if (this->doesSupportOutputReset()) {
+        outKeeper = std::make_shared<OutputKeeper>(executingStreamIdGuard.getInferRequest(), getOutputsInfo());
+    }
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
     if (!status.ok()) {

@@ -693,9 +693,6 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnDummyModelWithMapping) {
 TYPED_TEST(TestPredictWithMapping, SuccesfullOnPassthrough_2D_U8ModelWithMapping) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
         GTEST_SKIP() << "String inputs not supported for C-API";
-    GTEST_SKIP() << "Temporarily skipped since OV cannot copy ov::Tensor with that model"
-                    " which is required for setting output compatibility of C-API frontend"
-                    " with other frondents";
     this->modelPath = this->directoryPath + "/passthrough/";
     this->mappingConfigPath = this->modelPath + "1/mapping_config.json";
     std::filesystem::copy("/ovms/src/test/passthrough", this->modelPath, std::filesystem::copy_options::recursive);
