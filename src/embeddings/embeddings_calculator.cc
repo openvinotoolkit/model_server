@@ -33,6 +33,7 @@
 #include "../profiler.hpp"
 #include "absl/strings/escaping.h"
 #include "src/embeddings/embeddings_calculator.pb.h"
+#include "embeddings_api.hpp"
 
 using namespace rapidjson;
 using namespace ovms;
@@ -88,62 +89,42 @@ public:
         OVMS_PROFILE_FUNCTION();
         RET_CHECK(tokenizer_session != nullptr);
         RET_CHECK(embeddings_session != nullptr);
-        std::vector<std::string> input_strings;
-        bool isBase64 = false;
-        if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
-            InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
-            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
-            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
-            if (!payload.parsedJson->IsObject())
-                return absl::InvalidArgumentError("Received json is not an object");
-            auto it = payload.parsedJson->FindMember("input");
-            if (it != payload.parsedJson->MemberEnd()) {
-                if (it->value.IsString()) {
-                    input_strings.push_back(it->value.GetString());
-                } else if (it->value.IsArray()) {
-                    for (auto& input : it->value.GetArray()) {
-                        if (!input.IsString())
-                            return absl::InvalidArgumentError("every element in input array should be string");
-                        input_strings.push_back(input.GetString());
-                    }
-                } else {
-                    return absl::InvalidArgumentError("input should be string or array of strings");
-                }
-            } else {
-                return absl::InvalidArgumentError("input field is required");
-            }
-            it = payload.parsedJson->FindMember("encoding_format");
-            if (it != payload.parsedJson->MemberEnd()) {
-                if (it->value.IsString()) {
-                    if (it->value.GetString() == std::string("base64")) {
-                        isBase64 = true;
-                    }
-                } else {
-                    return absl::InvalidArgumentError("encoding_format should be string");
-                }
-            }
-            // TODO: dimensions (optional)
-            // TODO: user (optional)
-        } else {
+        if (cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             return absl::InvalidArgumentError("Input is empty");
         }
+        InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
+        auto request = EmbeddingsRequest::from_json(payload.parsedJson);
+        if (auto error = std::get_if<std::string>(&request)) {
+            return absl::InvalidArgumentError(*error);
+        }
+        EmbeddingsRequest embeddingsRequest = std::get<EmbeddingsRequest>(request);
 
         // Automatically deduce tokenizer input name
         std::vector<std::string> tokenizerInputNames = tokenizer_session->getInputNames();
         std::vector<std::string> embeddingsInputNames = embeddings_session->getInputNames();
+
         RET_CHECK(tokenizerInputNames.size() == 1);
         const std::string& tokenizerInputName = tokenizerInputNames.at(0);
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Tokenizer input name detected: {}", tokenizerInputName);
 
         ::InferenceInput tokenizerInputMap;
-        tokenizerInputMap[tokenizerInputName] = ov::Tensor{
-            ov::element::string,
-            ov::Shape{input_strings.size()},
-            input_strings.data()};
 
         ::InferenceOutput embeddingsOutputMap;
+        size_t expected_batch_size = 1;
         try {
-            ::InferenceOutput tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
+            ::InferenceOutput tokenizerOutputMap;
+            if (auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input)) {
+                expected_batch_size = strings->size();
+                tokenizerInputMap[tokenizerInputName] = ov::Tensor{
+                    ov::element::string,
+                    ov::Shape{expected_batch_size},
+                    strings->data()};
+                tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
+            } else {
+                // TODO: input already tokenized
+            }
             ::InferenceInput embeddingsInputMap;
             // Check if tokenizer produced at least the number of outputs as there are inputs in embedding model
             RET_CHECK(tokenizerOutputMap.size() >= embeddingsInputNames.size());
@@ -183,7 +164,7 @@ public:
         }
 
         RET_CHECK(embeddingsTensor.get_shape().size() == 3);
-        RET_CHECK(embeddingsTensor.get_shape()[0] == input_strings.size());
+        RET_CHECK(embeddingsTensor.get_shape()[0] == expected_batch_size);
         RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
 
         StringBuffer buffer;
@@ -214,7 +195,7 @@ public:
                 std::transform(data.begin(), data.end(), data.begin(),
                     [denom](auto& element) { return element / denom; });
             }
-            if (isBase64) {
+            if (embeddingsRequest.encoding_format == EncodingFormat::BASE64) {
                 std::string_view sv(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
                 std::string escaped;
                 absl::Base64Escape(sv, &escaped);
