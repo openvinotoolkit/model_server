@@ -1324,7 +1324,7 @@ static void checkDummyResponse(OVMS_InferenceResponse* response, double expected
         EXPECT_NEAR(expectedValue, outputData[i], tolerance) << "Different at:" << i << " place.";
     }
 }
-TEST_F(CAPINonCopy, SyncWithCallbackDummyCheckResetOutputGPU) {
+TEST_F(CAPINonCopy, OpenCL_SyncWithCallbackDummyCheckResetOutputGPU) {
     ServerGuard serverGuard(DUMMY_MODEL_GPU_CONFIG_PATH);
     OVMS_Server* cserver = serverGuard.server;
 
@@ -1423,7 +1423,6 @@ TEST_F(CAPINonCopy, SyncWithoutCallbackDummyCheckResetOutputCPU) {
         EXPECT_NEAR(INITIAL_VALUE + 1, out1[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
     }
     OVMS_InferenceResponseDelete(response);
-    // TODO tests for remove RequestOutputRemoveData
 }
 TEST_F(CAPINonCopy, AsyncDummyCheckResetOutputCPU) {
     ServerGuard serverGuard(DUMMY_MODEL_CPU_CONFIG_PATH);
