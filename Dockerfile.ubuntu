@@ -95,7 +95,7 @@ ARG BASE_IMAGE
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=ubuntu"
+ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=ubuntu"
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
             libgflags-dev \
@@ -156,10 +156,10 @@ RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https:/
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; pip install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; pip install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
-RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
+RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"py_off=1"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
@@ -167,8 +167,8 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
     ln -s /opt/intel/openvino /opt/intel/openvino_2024
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/${CMAKE_BUILD_TYPE}/python /opt/intel/openvino/
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/${CMAKE_BUILD_TYPE}/python /opt/intel/openvino/
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
 
 ################## END OF OPENVINO SOURCE BUILD ######################
 
@@ -286,8 +286,8 @@ COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
-# prebuild dependencies before copying sources
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
+# prebuild dependencies before copying sources & test dependencies for caching
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
 COPY src/ /ovms/src/
 
@@ -303,7 +303,7 @@ COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classi
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
-RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
+RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino/python/openvino-2024.5.dist-info && \
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.5' > /opt/intel/openvino/python/openvino-2024.5.dist-info/METADATA
 
@@ -337,7 +337,7 @@ RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_f
 
 # OVMS
 # hadolint ignore=DL3059
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms; fi;
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms //src:ovms_test; fi;
 
 # hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so; fi;
@@ -357,7 +357,7 @@ FROM $BUILD_IMAGE as capi-build
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 # C api shared library
 # hadolint ignore=DL3059
-ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
+ARG CAPI_FLAGS="--strip=always --config mp_off_py_off --//:distro=ubuntu"
 ARG JOBS=40
 ARG FUZZER_BUILD=0
 RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
@@ -458,7 +458,7 @@ COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.4.dist-info 
 COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe
 
 # For image with Python enabled install Python library
-RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
+RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     apt-get update -y ; \
     if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then python_version=3.10; else python_version=3.8; fi; \
     apt-get install libpython$python_version --no-install-recommends -y && \

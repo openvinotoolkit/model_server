@@ -78,7 +78,7 @@ build --cxxopt=-fstack-clash-protection
 build --cxxopt=-Wformat
 build --cxxopt=-Wformat-security
 build --cxxopt=-Werror=format-security
-
+build --cxxopt=-DOVMS_DUMP_TO_FILE=0
 # Adding "--cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0" creates parity with TF
 # compilation options. It also addresses memory use due to
 # copy-on-write semantics of std::strings of the older ABI.
@@ -97,3 +97,18 @@ build --cxxopt=-DOVMS_DUMP_TO_FILE=0
 # very strict in sandboxing
 test --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 test --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+# genai hardcodes path during build time so without this so is not visible
+test --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
+
+build --remote_cache=http://10.123.246.16:9666
+build --remote_upload_local_results=true
+build:mp_on_py_on --define=MEDIAPIPE_DISABLE=0
+build:mp_on_py_on --define=PYTHON_DISABLE=0
+build:mp_on_py_on --disk_cache=/root/.cache/bazel_mp_on_py_on
+build:mp_on_py_off --define=MEDIAPIPE_DISABLE=0
+build:mp_on_py_off --define=PYTHON_DISABLE=1
+build:mp_on_py_off --disk_cache=/root/.cache/bazel_mp_on_py_off
+build:mp_off_py_off --define=MEDIAPIPE_DISABLE=1
+build:mp_off_py_off --define=PYTHON_DISABLE=1
+build:mp_off_py_off --disk_cache=/root/.cache/bazel_mp_off_py_off
+#build --remote_header=x-build-event-log=DEBUG

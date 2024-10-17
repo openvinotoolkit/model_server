@@ -176,7 +176,7 @@ ARG ov_use_binary=0
 ARG DLDT_PACKAGE_URL
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG CMAKE_BUILD_TYPE=Release
-ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=redhat"
+ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 
 # hadolint ignore=DL3003
 RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
@@ -189,7 +189,7 @@ RUN dnf install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/
     dnf clean all
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; pip3 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; pip3 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
@@ -201,8 +201,8 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
     ln -s /opt/intel/openvino /opt/intel/openvino_2024
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/Release/python /opt/intel/openvino/
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/Release/python /opt/intel/openvino/
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
 ################## END OF OPENVINO SOURCE BUILD ######################
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
@@ -285,7 +285,7 @@ COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
 # prebuild dependencies before copying sources
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
 # hadolint ignore=DL3059
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
@@ -301,7 +301,7 @@ COPY src/ /ovms/src/
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
-RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
+RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino/python/openvino-2024.5.dist-info && \
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.5' > /opt/intel/openvino/python/openvino-2024.5.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
@@ -332,7 +332,7 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 
 # OVMS
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms //src:ovms_test
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
@@ -354,7 +354,7 @@ RUN rm -Rf /etc/entitlement /etc/rhsm/ca
 
 FROM $BUILD_IMAGE as capi-build
 # C api shared library
-ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=redhat"
+ARG CAPI_FLAGS="--strip=always  --config=mp_off_py_off --//:distro=redhat"
 ARG JOBS=40
 RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
 
@@ -384,7 +384,7 @@ WORKDIR /
 ARG BASE_OS=redhat
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
-ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=redhat"
+ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
 COPY create_package.sh /
 RUN ./create_package.sh
@@ -426,7 +426,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     	source install_gpu_drivers.sh && rm -rf ./install_gpu_drivers.sh; \
     fi ; \
     # For image with Python enabled install Python library
-    if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
+    if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
         $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0 --nodocs; \
     fi ; \
     $DNF_TOOL install -y shadow-utils; \
