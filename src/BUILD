@@ -836,7 +836,7 @@ cc_library(
             "model_version_policy.hpp",],
     srcs = ["model_version_policy.cpp",],
     deps = [
-            "libovmsmodelversion"
+            "libovmsmodelversion",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1032,7 +1032,7 @@ cc_library(
     hdrs = ["shape.hpp",],
     srcs = ["shape.cpp",],
     deps = [
-            "@linux_openvino//:openvino",
+            "//third_party:openvino",
             "ovms_header",
             "libovmslogging",
             "libovmsstatus",
