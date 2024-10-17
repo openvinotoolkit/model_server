@@ -42,15 +42,6 @@ alias(
 )
 
 alias(
-    name = "boringssl",
-    actual = select({
-        "//src:windows": "@windows_boringssl//:ssl",
-        "//conditions:default": "@boringssl//:ssl",
-    }),
-    visibility = ["//visibility:public"],
-)
-
-alias(
     name = "libevent",
     actual = select({
         "//src:windows": "@com_github_libevent_libevent//:libevent",
