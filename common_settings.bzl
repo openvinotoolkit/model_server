@@ -105,7 +105,6 @@ COMMON_STATIC_LIBS_LINKOPTS = select({
                     "-lstdc++fs",
                     "-lssl",
                     "-lcrypto",
-                    "-lOpenCL", # TODO make as a direct dependency
                     # "-lovms_shared",  # Use for dynamic linking when necessary
                 ],
                 "//src:windows" : [

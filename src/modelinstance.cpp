@@ -663,6 +663,7 @@ static std::string findFilePathWithExtension(const std::string& path, const std:
     return std::string();
 }
 #else
+// TODO: Move this to filesystem and check if windows impl can be used on linux also
 static std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
     if (FileSystem::isPathEscaped(path)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
