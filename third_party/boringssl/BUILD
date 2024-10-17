@@ -16,19 +16,15 @@
 
 cc_library(
     name = "ssl",
-    hdrs = select({
-        "//conditions:default": glob(["include/openssl/*"]),
-        "//src:windows" :  glob(["windows_boringssl\\include\\openssl\\*"]),
-    }),
-    srcs = select({
-                "//conditions:default": glob(["lib/x86_64-linux-gnu/libssl.so"]),
-                "//src:windows" : glob(["windows_boringssl\\lib\\libssl.lib"]),
-    }),
-    deps = select({
-        "//conditions:default": [],
-        "//src:windows" :  ["@windows_boringssl//:ssl"],
-        }),
+    hdrs = glob(["include/openssl/*"]),
+    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
     copts = ["-lcrypto", "-lssl"],
     visibility = ["//visibility:public"],
-    strip_include_prefix = "windows_boringssl",
+)
+cc_library(
+    name = "crypto",
+    hdrs = glob(["include/openssl/*"]),
+    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
+    copts = ["-lcrypto", "-lssl"],
+    visibility = ["//visibility:public"],
 )
