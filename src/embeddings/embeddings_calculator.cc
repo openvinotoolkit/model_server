@@ -32,8 +32,8 @@
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "absl/strings/escaping.h"
-#include "src/embeddings/embeddings_calculator.pb.h"
 #include "embeddings_api.hpp"
+#include "src/embeddings/embeddings_calculator.pb.h"
 
 using namespace rapidjson;
 using namespace ovms;
