@@ -22,12 +22,14 @@ load("//:common_settings.bzl",
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
         "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-}) + select({
-        "//conditions:default": ["-DPYTHON_DISABLE=1"],
-        "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
-}) + select({
-        "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
-        "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+})
+COPTS_PYTHON = select({
+    "//conditions:default": ["-DPYTHON_DISABLE=1"],
+    "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
+})
+COPTS_MEDIAPIPE = select({
+    "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
+    "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
 })
 
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
@@ -145,7 +147,6 @@ cc_shared_library(
 )
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
-
 
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
@@ -399,7 +400,7 @@ cc_library(
         }),
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED + COPTS_PYTHON + COPTS_MEDIAPIPE,
     linkopts = LINKOPTS_ADJUSTED + ["-lOpenCL"], # TODO make as a direct dependency
     data = select({
         "//:not_disable_python": [
@@ -769,7 +770,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED + COPTS_MEDIAPIPE,
     linkopts = LINKOPTS_ADJUSTED,
 )
 

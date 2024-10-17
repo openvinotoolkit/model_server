@@ -99,10 +99,14 @@ else
 	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=0"
 endif
 
-ifeq ($(PYTHON_DISABLE),1)
-	DISABLE_PYTHON_PARAMS = " --define PYTHON_DISABLE=1"
+ifeq ($(MEDIAPIPE_DISABLE),1)
+  DISABLE_PARAMS = " --config=mp_off_py_off"
 else
-	DISABLE_PYTHON_PARAMS = " --define PYTHON_DISABLE=0"
+  ifeq ($(PYTHON_DISABLE),1)
+    DISABLE_PARAMS = " --config=mp_on_py_off"
+  else
+    DISABLE_PARAMS = " --config=mp_on_py_on"
+  endif
 endif
 
 FUZZER_BUILD_PARAMS ?= ""
@@ -136,8 +140,8 @@ else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
-CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)" --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
@@ -390,7 +394,7 @@ else
 	@touch .workspace/metadata.json
 endif
 	@cat .workspace/metadata.json
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+	docker $(BUILDX) build --network host $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=build
