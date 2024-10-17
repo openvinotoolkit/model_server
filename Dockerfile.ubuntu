@@ -356,7 +356,7 @@ FROM $BUILD_IMAGE as capi-build
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 # C api shared library
 # hadolint ignore=DL3059
-ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
+ARG CAPI_FLAGS="--config=linux --strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
 ARG JOBS=40
 ARG FUZZER_BUILD=0
 RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared

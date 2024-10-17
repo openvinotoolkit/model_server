@@ -52,19 +52,9 @@ Add c:\opt to system env PATH
 ## Enable Developer mode on in windows system settings
 
 #### Boring SSL - not needed until md5 hash is needed.
-Install in c:\opt\boringssl
-
-## NINJA - not needed until boring SSL is needed
-https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-win.zip
-
-## NASM - not needed until boring SSL is needed
-https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-installer-x64.exe
-
-## https://boringssl.googlesource.com/boringssl/+/HEAD/BUILDING.md
+Clone in in c:\opt\
 ```
-git clone "https://boringssl.googlesource.com/boringssl"
-cmake -GNinja -B build -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=c:/opt/boringssl
-ninja -C build install
+git clone https://github.com/firebase/boringSSL-SwiftPM.git
 ```
 
 ## Libevent - ovms link phase
