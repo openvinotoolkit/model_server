@@ -21,7 +21,6 @@
 #include <utility>
 
 #include "../logging.hpp"
-#include "../shape.hpp"
 #include "../status.hpp"
 #include "buffer.hpp"
 #include "inferencerequest.hpp"
@@ -207,8 +206,15 @@ Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::str
         if (status.ok() &&
             (nullptr != outputNameFromCapiTensor) &&
             (name == *outputNameFromCapiTensor)) {
+            if (precision == ov::element::string) {
+                std::string msg{"String format is not supported in DAG in demultiplexing scenarios as of now"};
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, msg);
+                return Status(StatusCode::NOT_IMPLEMENTED, std::move(msg));
+            }
+
             auto consolidatedBuffer = std::make_unique<Buffer>(size, OVMS_BUFFERTYPE_CPU, std::nullopt);
-            bufferOut = reinterpret_cast<char*>(consolidatedBuffer->data());
+            // const cast is ok here since we own the buffer
+            bufferOut = reinterpret_cast<char*>(const_cast<void*>(consolidatedBuffer->data()));
             outputTensor->setBuffer(std::move(consolidatedBuffer));
             return StatusCode::OK;
         }

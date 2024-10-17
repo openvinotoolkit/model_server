@@ -70,7 +70,7 @@ Status onPacketReadySerializeAndSendImpl(
             packetType,
             packet,
             out));
-    serverReaderWriter.PartialReply(std::move(out));  // TODO: Possibly avoid copy
+    serverReaderWriter.PartialReply(std::move(out));
     return StatusCode::OK;
 }
 

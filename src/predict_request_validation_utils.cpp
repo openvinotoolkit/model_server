@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #include "predict_request_validation_utils.hpp"
+
+#include "precision.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
@@ -831,7 +833,8 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
     for (size_t i = 0; i < tensor.getShape().size(); i++) {
         expectedValueCount *= tensor.getShape()[i];
     }
-    size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+    size_t elementSize = (expectedPrecision == Precision::STRING) ? sizeof(std::string) : ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+    size_t expectedContentSize = expectedValueCount * elementSize;
     if (expectedContentSize != buffer->getByteSize()) {
         std::stringstream ss;
         ss << "Expected: " << expectedContentSize << " bytes; Actual: " << buffer->getByteSize() << " bytes; input name: " << getCurrentlyValidatedInputName();
@@ -929,9 +932,6 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, const Inference
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Invalid precision - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_PRECISION, details);
-    }
-    if (tensor.getDataType() == OVMS_DATATYPE_STRING) {
-        return Status(StatusCode::INVALID_PRECISION, "Inference on models using string precision input via C-API is unsupported");
     }
     return StatusCode::OK;
 }

@@ -82,7 +82,7 @@ cl_context get_cl_context(cl_platform_id& platformId, cl_device_id& deviceId) {
     return openCLCContext;
 }
 
-class OpenVINO : public ::testing::Test {
+class OpenVINOGPU : public ::testing::Test {
 public:
     void SetUp() override {
         GPUEnvironment::skipWithoutGPU();
@@ -91,7 +91,7 @@ public:
 
 constexpr bool queueReadWriteBlockingTrue = true;
 constexpr bool retainCLContextOwnership = true;
-TEST_F(OpenVINO, ExtractContextFromModel) {
+TEST_F(OpenVINOGPU, ExtractContextFromModel) {
     // TODO split
     Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
@@ -137,7 +137,7 @@ TEST_F(OpenVINO, ExtractContextFromModel) {
     }
 }
 
-class OpenVINOContextFromModel : public OpenVINO {
+class OpenVINOGPUContextFromModel : public OpenVINOGPU {
 protected:
     Core core;
     std::shared_ptr<ov::Model> model;
@@ -149,7 +149,7 @@ protected:
     cl_context ctxFromModel;
     uint32_t inputSecondDim = 100;
     void SetUp() {
-        OpenVINO::SetUp();
+        OpenVINOGPU::SetUp();
         SKIP_AND_EXIT_IF_NO_GPU();
         Core core;
         this->model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
@@ -180,7 +180,7 @@ protected:
     }
     void TearDown() {}
 };
-TEST_F(OpenVINO, LoadModelWithPrecreatedContext) {
+TEST_F(OpenVINOGPU, LoadModelWithPrecreatedContext) {
     Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
     auto input = model->get_parameters().at(0);
@@ -227,7 +227,7 @@ TEST_F(OpenVINO, LoadModelWithPrecreatedContext) {
     }
 }
 
-struct CallbackUnblockingStruct {
+struct CallbackUnblockingStructWithQueue {
     std::promise<uint32_t> signal;
     void* bufferAddr = nullptr;
     cl::CommandQueue* queue = nullptr;
@@ -305,7 +305,7 @@ const std::string FACE_DETECTION_ADAS_INPUT_NAME{"data"};
 const std::string FACE_DETECTION_ADAS_OUTPUT_NAME{"detection_out"};
 const std::vector<int64_t> FACE_DETECTION_ADAS_INPUT_SHAPE{1, 3, 384, 672};
 
-TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasWithPreprocTest) {
+TEST_F(OpenVINOGPU, LoadModelWithVAContextInferenceFaceDetectionAdasWithPreprocTest) {
 #ifndef BUILD_VAAPITESTS
     GTEST_SKIP() << "Test not enabled on UBI images";
 #else
@@ -377,7 +377,7 @@ TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasWithPreprocTest
     }
 #endif
 }
-TEST_F(OpenVINO, LoadModelWithVAContextInferenceFaceDetectionAdasNoPreprocTest) {
+TEST_F(OpenVINOGPU, LoadModelWithVAContextInferenceFaceDetectionAdasNoPreprocTest) {
     GTEST_SKIP() << "It seems there is no way to use VAAPI without preprocessing";
 }
 
@@ -462,7 +462,7 @@ TEST_F(CAPINonCopy, VAContextGlobalPreprocHardcodedInput) {  // TODO rename
 #endif
 }
 
-TEST_F(OpenVINO, SetTensorTest) {
+TEST_F(OpenVINOGPU, SetTensorTest) {
     size_t tSize = 10;
     int iterations = 10;
     iterations = 1'000;
@@ -1203,7 +1203,6 @@ TEST_F(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     // TODO cleanup settings
     OVMS_ServerDelete(cserver);
 }
-static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 
 const float INITIAL_VALUE{0.13666};
@@ -1263,7 +1262,7 @@ TEST_F(CAPINonCopy, SyncWithCallbackDummy) {
     // set callback
     uint32_t callbackUsed = 31;
 
-    CallbackUnblockingStruct callbackStruct;
+    CallbackUnblockingStructWithQueue callbackStruct;
     SPDLOG_ERROR("ER:{}", (void*)&callbackStruct.signal);
     auto unblockSignal = callbackStruct.signal.get_future();
     callbackStruct.bufferAddr = &openCLCppOutputBuffer;
@@ -1326,7 +1325,7 @@ TEST_F(CAPINonCopy, AsyncWithCallbackDummy) {
     SPDLOG_DEBUG("openCLCppOutputBuffer:{}", (void*)openCLCppOutputBuffer);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputSetData(request, DUMMY_MODEL_OUTPUT_NAME, reinterpret_cast<void*>(&openCLCppOutputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));  // device id ?? TODO
     // set callback
-    CallbackUnblockingStruct callbackStruct;
+    CallbackUnblockingStructWithQueue callbackStruct;
     auto unblockSignal = callbackStruct.signal.get_future();
     callbackStruct.bufferAddr = &openCLCppOutputBuffer;
     callbackStruct.queue = &queue;
@@ -1494,56 +1493,7 @@ TEST_F(CAPIGPUPerfComparison, Dummy) {
     std::cout << "" << fps * elementsCount << " \t\t ";
 }
 
-TEST_F(OpenVINO, CallbacksTest) {
-    Core core;
-    auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
-    const std::string inputName{"b"};
-    auto input = model->get_parameters().at(0);
-    ov::element::Type_t dtype = ov::element::Type_t::f32;
-    ov::Shape ovShape;
-    ovShape.emplace_back(1);
-    ovShape.emplace_back(10000);
-    std::map<std::string, ov::PartialShape> inputShapes;
-    inputShapes[inputName] = ovShape;
-    model->reshape(inputShapes);
-    auto cpuCompiledModel = core.compile_model(model, "CPU");
-    auto cpuInferRequest = cpuCompiledModel.create_infer_request();
-    // prepare ov::Tensor data
-    std::vector<ov::Tensor> inputOvTensors, outputOvTensors;
-    inputOvTensors.emplace_back(dtype, ovShape);
-    outputOvTensors.emplace_back(dtype, ovShape);
-    cpuInferRequest.set_tensor(inputName, inputOvTensors[0]);
-
-    uint32_t callbackUsed = 31;
-    OVMS_InferenceResponse* response{nullptr};
-    cpuInferRequest.set_callback([&response, &callbackUsed](std::exception_ptr exception) {
-        if (exception) {
-            try {
-                std::rethrow_exception(exception);
-            } catch (const std::exception& e) {
-                std::cout << "Caught exception: '" << e.what() << "'\n";
-            } catch (...) {
-                return;
-            }
-        }
-        SPDLOG_INFO("Using OV callback");
-        // here will go OVMS C-API serialization code
-        callbackMarkingItWasUsedWith42(response, 1, reinterpret_cast<void*>(&callbackUsed));
-    });
-    bool callbackCalled{false};
-    cpuInferRequest.start_async();
-    EXPECT_FALSE(callbackCalled);
-    cpuInferRequest.wait();
-    ov::Tensor outOvTensor = cpuInferRequest.get_tensor("a");
-    auto outAutoTensor = cpuInferRequest.get_tensor("a");
-    // EXPECT_TRUE(outOvTensor.is<ov::intel_gpu::ocl::ClBufferTensor>());
-    EXPECT_TRUE(outOvTensor.is<ov::Tensor>());
-    // EXPECT_TRUE(outAutoTensor.is<ov::intel_gpu::ocl::ClBufferTensor>());
-    EXPECT_TRUE(outAutoTensor.is<ov::Tensor>());
-    // TODO check what happens if output tensor is not correct
-}
-
-TEST_F(OpenVINOContextFromModel, UseCLContextForBuffersOVContextForInference) {
+TEST_F(OpenVINOGPUContextFromModel, UseCLContextForBuffersOVContextForInference) {
     cl_platform_id platformId;
     cl_device_id deviceId;
     cl_context openCLCContext = get_cl_context(platformId, deviceId);
@@ -1598,7 +1548,7 @@ TEST_F(OpenVINOContextFromModel, UseCLContextForBuffersOVContextForInference) {
     }
 }
 
-TEST_F(OpenVINOContextFromModel, OutputTensorHasBiggerUnderlyingOCLBufferThanNeededPass) {
+TEST_F(OpenVINOGPUContextFromModel, OutputTensorHasBiggerUnderlyingOCLBufferThanNeededPass) {
     cl::Context openCLCppContext(ctxFromModel, retainCLContextOwnership);
     cl_int clError;
     auto input = model->get_parameters().at(0);
@@ -1637,7 +1587,7 @@ TEST_F(OpenVINOContextFromModel, OutputTensorHasBiggerUnderlyingOCLBufferThanNee
     EXPECT_TRUE(outAutoTensor.is<ov::intel_gpu::ocl::ClBufferTensor>());
     EXPECT_TRUE(outAutoTensor.is<ov::Tensor>());
 }
-TEST_F(OpenVINOContextFromModel, OutputTensorHasBiggerShapeAndOCLBufferThanNeededThrowsOnSetTensor) {
+TEST_F(OpenVINOGPUContextFromModel, OutputTensorHasBiggerShapeAndOCLBufferThanNeededThrowsOnSetTensor) {
     cl::Context openCLCppContext(ctxFromModel, retainCLContextOwnership);
     cl_int clError;
     auto input = model->get_parameters().at(0);
@@ -1662,7 +1612,7 @@ TEST_F(OpenVINOContextFromModel, OutputTensorHasBiggerShapeAndOCLBufferThanNeede
     inferRequest->set_tensor(input, inputOVOCLBufferTensor);
     EXPECT_THROW(inferRequest->set_tensor(output, outputOVOCLBufferTensor), ov::Exception);
 }
-TEST_F(OpenVINOContextFromModel, OutputTensorHasSmallerUnderlyingOCLBufferThanNeededThrowsOnCreateRemoteTensor) {
+TEST_F(OpenVINOGPUContextFromModel, OutputTensorHasSmallerUnderlyingOCLBufferThanNeededThrowsOnCreateRemoteTensor) {
     cl::Context openCLCppContext(ctxFromModel, retainCLContextOwnership);
     cl_int clError;
     auto input = model->get_parameters().at(0);
@@ -1679,7 +1629,7 @@ TEST_F(OpenVINOContextFromModel, OutputTensorHasSmallerUnderlyingOCLBufferThanNe
     EXPECT_THROW(ovGpuOclContext->create_tensor(output->get_element_type(), output->get_shape(), openCLCppOutputBuffer), ov::Exception);
     // we will put data into input buffer
 }
-TEST_F(OpenVINOContextFromModel, OutputTensorHasSmallerShapeAndUnderlyingOCLBufferThanNeededThrowsOnSetTensor) {
+TEST_F(OpenVINOGPUContextFromModel, OutputTensorHasSmallerShapeAndUnderlyingOCLBufferThanNeededThrowsOnSetTensor) {
     cl::Context openCLCppContext(ctxFromModel, retainCLContextOwnership);
     cl_int clError;
     auto input = model->get_parameters().at(0);
@@ -1705,7 +1655,7 @@ TEST_F(OpenVINOContextFromModel, OutputTensorHasSmallerShapeAndUnderlyingOCLBuff
     inferRequest->set_tensor(input, inputOVOCLBufferTensor);
     EXPECT_THROW(inferRequest->set_tensor(output, outputOVOCLBufferTensor), ov::Exception);
 }
-TEST_F(OpenVINOContextFromModel, OutputTensorHasSmallerShapeAndAppropriateOCLBufferThanNeededThrowsOnSetTensor) {
+TEST_F(OpenVINOGPUContextFromModel, OutputTensorHasSmallerShapeAndAppropriateOCLBufferThanNeededThrowsOnSetTensor) {
     cl::Context openCLCppContext(ctxFromModel, retainCLContextOwnership);
     cl_int clError;
     auto input = model->get_parameters().at(0);
@@ -1731,17 +1681,9 @@ TEST_F(OpenVINOContextFromModel, OutputTensorHasSmallerShapeAndAppropriateOCLBuf
     EXPECT_THROW(inferRequest->set_tensor(output, outputOVOCLBufferTensor), ov::Exception);
 }
 
-static void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
-    using ovms::StatusCode;
-    SPDLOG_INFO("Using callback: callbackMarkingItWasUsedWith42!");
-    uint32_t* usedFlag = reinterpret_cast<uint32_t*>(userStruct);
-    *usedFlag = 42;
-    OVMS_InferenceResponseDelete(response);
-}
-
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
     SPDLOG_INFO("Using callback: callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectness!");
-    CallbackUnblockingStruct* callbackUnblockingStruct = reinterpret_cast<CallbackUnblockingStruct*>(userStruct);
+    CallbackUnblockingStructWithQueue* callbackUnblockingStruct = reinterpret_cast<CallbackUnblockingStructWithQueue*>(userStruct);
     SPDLOG_ERROR("ER:{}", userStruct);
     SPDLOG_ERROR("ER:{}", (void*)&callbackUnblockingStruct->signal);
     callbackUnblockingStruct->signal.set_value(42);
