@@ -688,7 +688,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
-		cat test.log ; \
+		tail -200 test.log ; \
 		exit $$exit_status
 else
 	docker run \
@@ -700,7 +700,7 @@ else
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
-		cat test.log ; \
+		tail -200 test.log ; \
 		exit $$exit_status
 endif
 
