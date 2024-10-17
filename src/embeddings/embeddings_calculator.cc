@@ -47,7 +47,6 @@ class EmbeddingsCalculator : public CalculatorBase {
     static const std::string OUTPUT_TAG_NAME;
 
     mediapipe::Timestamp timestamp{0};
-    std::chrono::time_point<std::chrono::system_clock> created;
 
 protected:
     std::shared_ptr<::InferenceAdapter> tokenizer_session{nullptr};
@@ -127,7 +126,6 @@ public:
         } else {
             return absl::InvalidArgumentError("Input is empty");
         }
-
         // Automatically deduce tokenizer input name
         std::vector<std::string> tokenizerInputNames = tokenizer_session->getInputNames();
         std::vector<std::string> embeddingsInputNames = embeddings_session->getInputNames();
@@ -140,7 +138,6 @@ public:
             ov::element::string,
             ov::Shape{input_strings.size()},
             input_strings.data()};
-
         ::InferenceOutput embeddingsOutputMap;
         try {
             ::InferenceOutput tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
@@ -162,7 +159,6 @@ public:
             LOG(INFO) << "Caught unknown exception from session infer()";
             RET_CHECK(false);
         }
-
         ov::Tensor embeddingsTensor;
         if (embeddingsOutputMap.size() == 2) {  // GTE
             // Search by number of dimensions, should be 3
