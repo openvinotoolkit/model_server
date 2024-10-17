@@ -1804,6 +1804,9 @@ cc_test(
     deps = [
             ":test_utils",
             "//src/rerank:rerank_api_handler",
+            ":openvino_tests",
+            ":openvino_remote_tensors_tests",
+            ":embeddings_handler_tests",
             ":inferencerequest_test",
             ":libtest_environment",
             ":libtest_gpuenvironment",
@@ -1969,6 +1972,19 @@ cc_library(
     deps = [
         ":test_utils",
         "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+    linkopts = [],
+)
+cc_library(
+    name = "embeddings_handler_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/embeddings_handler_test.cpp"],
+    data = [],
+    deps = [
+        "//src/embeddings:embeddings_api",
         "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,

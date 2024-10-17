@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "embeddings_api.hpp"
 
+#include <algorithm>
 #include <string>
 #include <variant>
 
@@ -23,7 +24,12 @@
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
 
+#include <rapidjson/writer.h>
+
+#include "absl/strings/escaping.h"
 #include "rapidjson/document.h"
+
+using namespace rapidjson;
 
 std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjson::Document* parsedJson) {
     EmbeddingsRequest request;
@@ -88,4 +94,68 @@ std::variant<std::vector<std::string>, std::vector<std::vector<int>>>& Embedding
 }
 EncodingFormat EmbeddingsHandler::getEncodingFormat() const {
     return request.encoding_format;
+}
+
+void EmbeddingsHandler::setPromptTokensUsage(int promptTokens) {
+    this->promptTokens = promptTokens;
+}
+
+absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings) {
+    Writer<StringBuffer> writer(buffer);
+    writer.StartObject();
+
+    writer.String("object");
+    writer.String("list");
+
+    writer.String("data");
+    writer.StartArray();
+    // TODO: mean pooling
+
+    ov::Shape outputShape = embeddingsTensor.get_shape();
+    if (outputShape.size() != 3) {
+        return absl::InvalidArgumentError("Invalid embeddings tensor shape");
+    }
+    size_t batchSize = outputShape[0];
+    for (size_t i = 0; i < batchSize; i++) {
+        size_t stride = i * outputShape[1] * outputShape[2];
+        std::vector<float> data(reinterpret_cast<float*>(embeddingsTensor.data()) + stride, reinterpret_cast<float*>(embeddingsTensor.data()) + stride + outputShape[2]);
+        writer.StartObject();
+        writer.String("object");
+        writer.String("embedding");
+        writer.String("embedding");
+        if (normalizeEmbeddings) {
+            double square_sum = std::inner_product(data.begin(), data.end(), data.begin(), double(0.0));
+            double denom = std::max(std::sqrt(square_sum), double(1e-12));
+            std::transform(data.begin(), data.end(), data.begin(),
+                [denom](auto& element) { return element / denom; });
+        }
+        if (this->getEncodingFormat() == EncodingFormat::BASE64) {
+            std::string_view sv(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
+            std::string escaped;
+            absl::Base64Escape(sv, &escaped);
+            writer.String(escaped.c_str());
+        } else {
+            writer.StartArray();
+            for (auto value : data) {
+                writer.Double(value);
+            }
+            writer.EndArray();
+        }
+        writer.String("index");
+        writer.Int(i);
+        writer.EndObject();
+    }
+
+    writer.EndArray();
+
+    writer.String("usage");
+    writer.StartObject();
+    writer.String("prompt_tokens");
+    writer.Int(promptTokens);
+    writer.String("total_tokens");
+    writer.Int(promptTokens);
+    writer.EndObject();
+
+    writer.EndObject();
+    return absl::OkStatus();
 }

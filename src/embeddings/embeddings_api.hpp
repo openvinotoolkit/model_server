@@ -24,6 +24,9 @@
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
 
+#include <openvino/runtime/tensor.hpp>
+#include <rapidjson/stringbuffer.h>
+
 #include "rapidjson/document.h"
 
 enum class EncodingFormat {
@@ -41,6 +44,7 @@ struct EmbeddingsRequest {
 class EmbeddingsHandler {
     rapidjson::Document& doc;
     EmbeddingsRequest request;
+    size_t promptTokens = 0;
 
 public:
     EmbeddingsHandler(rapidjson::Document& document) :
@@ -50,4 +54,6 @@ public:
     EncodingFormat getEncodingFormat() const;
 
     absl::Status parseRequest();
+    absl::Status parseResponse(rapidjson::StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings);
+    void setPromptTokensUsage(int promptTokens);
 };
