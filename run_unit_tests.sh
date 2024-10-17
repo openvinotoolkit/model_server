@@ -24,20 +24,6 @@ ${debug_bazel_flags} \
 --test_output=streamed \
 --test_env PYTHONPATH=${PYTHONPATH}"
 
-# Create output files for each category
-OK_FILE="ok_results.txt"
-SKIPPED_FILE="skipped_results.txt"
-FAILED_FILE="failed_results.txt"
-SUMMARY_FILE="/out/results.txt"
-
-mkdir -p /out/
-rm -f $SUMMARY_FILE
-
-> "$OK_FILE"
-> "$SKIPPED_FILE"
-> "$FAILED_FILE"
-> "$SUMMARY_FILE"
-
 # Check if RUN_GPU_TESTS is set and add it to SHARED_OPTIONS
 if [ "$RUN_GPU_TESTS" == "1" ]; then
     if grep -q "ID=ubuntu" /etc/os-release; then
@@ -47,13 +33,8 @@ if [ "$RUN_GPU_TESTS" == "1" ]; then
 fi
 
 test_success_procedure() {
+    grep -a " ms \| ms)" ${TEST_LOG}
     tail -50 ${TEST_LOG}
-    # Process the log file
-    grep -aE '^\[       OK \].*\([0-9]+ ms\)' "$TEST_LOG" >> "$OK_FILE"
-    grep -aE '^\[  SKIPPED \].*\([0-9]+ ms\)' "$TEST_LOG" >> "$SKIPPED_FILE"
-    grep -aE '^\[  FAILED  \].*\([0-9]+ ms\)' "$TEST_LOG" >> "$FAILED_FILE"
-    cat $OK_FILE $SKIPPED_FILE $FAILED_FILE >> "$SUMMARY_FILE"
-    echo -e "Results summary:\nOK tests: $(wc -l < "$OK_FILE")\nSKIPPED tests: $(wc -l < "$SKIPPED_FILE")\nFAILED tests: $(wc -l < "$FAILED_FILE")" >> "$SUMMARY_FILE"
 }
 generate_coverage_report() {
     test_success_procedure
