@@ -60,6 +60,13 @@ Status InferenceRequest::setOutputBuffer(const char* name, const void* addr, siz
     }
     return it->second.setBuffer(addr, byteSize, bufferType, deviceId);
 }
+Status InferenceRequest::removeOutputBuffer(const char* name) {
+    auto it = outputs.find(name);
+    if (it == outputs.end()) {
+        return StatusCode::NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER;
+    }
+    return it->second.removeBuffer();
+}
 Status InferenceRequest::removeInputBuffer(const char* name) {
     auto it = inputs.find(name);
     if (it == inputs.end()) {
@@ -94,6 +101,13 @@ uint64_t InferenceRequest::getInputsSize() const {
 }
 Status InferenceRequest::removeInput(const char* name) {
     auto count = inputs.erase(name);
+    if (count) {
+        return StatusCode::OK;
+    }
+    return StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL;
+}
+Status InferenceRequest::removeOutput(const char* name) {
+    auto count = outputs.erase(name);
     if (count) {
         return StatusCode::OK;
     }
