@@ -67,8 +67,14 @@ http_archive(
 # to use system ssl instead
 new_local_repository(
     name = "boringssl",
-    path = "",
+    path = "/usr/",
     build_file = "@//third_party/boringssl:BUILD",
+)
+
+new_local_repository(
+    name = "windows_boringssl",
+    build_file = "@//third_party/boringssl:boringssl_windows.BUILD",
+    path = "C:\\opt\\boringssl",
 )
 
 # overriding GCS curl dependency to force using system provided openssl
@@ -333,6 +339,9 @@ workspace()
 # Initialize bazel package rules' external dependencies.
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 rules_pkg_dependencies()
+
+load("@rules_license//:deps.bzl", "rules_license_dependencies")
+rules_license_dependencies()
 
 load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
