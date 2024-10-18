@@ -22,12 +22,14 @@ load("//:common_settings.bzl",
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
         "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-}) + select({
-        "//conditions:default": ["-DPYTHON_DISABLE=1"],
-        "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
-}) + select({
-        "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
-        "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+})
+COPTS_PYTHON = select({
+    "//conditions:default": ["-DPYTHON_DISABLE=1"],
+    "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
+})
+COPTS_MEDIAPIPE = select({
+    "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
+    "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
 })
 
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
@@ -70,7 +72,9 @@ cc_library(
 cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
-    static_deps = ["@tensorflow_serving//:__subpackages__",
+    static_deps = [
+        #"//src:libovmsfilesystemfactory", // TODO FIXME missing symbols @atobisze
+        "@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
         "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
@@ -137,11 +141,12 @@ cc_shared_library(
         })
     ,
     features = [],
-    roots = ["//src:ovms_lib"],
+    roots = [
+        "//src:ovms_lib",
+    ],
 )
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
-
 
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
@@ -359,7 +364,8 @@ cc_library(
             "libovmscapiinferencetensor",
             "libovmsdagspipelinedefinitionstatus",
             "libovmsfilesystem",
-            "libovmsfilesystemfactory",
+            "libovmsfilesystemfactory_h",
+            "libovmsfilesystemfactory", # TODO FIXME missing symbols @atobisze when not in ovms_lib
             "libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
             "libovmsmetrics",
@@ -394,7 +400,7 @@ cc_library(
         }),
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED + COPTS_PYTHON + COPTS_MEDIAPIPE,
     linkopts = LINKOPTS_ADJUSTED + ["-lOpenCL"], # TODO make as a direct dependency
     data = select({
         "//:not_disable_python": [
@@ -695,6 +701,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
     ],
     linkstatic = True,
 )
@@ -763,7 +770,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED + COPTS_MEDIAPIPE,
     linkopts = LINKOPTS_ADJUSTED,
 )
 
@@ -1142,10 +1149,21 @@ cc_library(
 )
 
 cc_library(
-    name = "libovmsfilesystemfactory",
+    name = "libovmsfilesystemfactory_h",
     hdrs = ["filesystemfactory.hpp",],
+    deps = [],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "libovmsfilesystemfactory",
+    hdrs = [],
     srcs = ["filesystemfactory.cpp",],
     deps = ["libovmsfilesystem",
+            "libovmsfilesystemfactory_h",
             "libovmsstatus",
             "libovmsazurefilesystem",
             "libovmsgcsfilesystem",
@@ -1156,6 +1174,7 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
 )
 
 cc_library(
@@ -1208,6 +1227,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
     ],
     linkstatic = True,
 )
@@ -1231,6 +1251,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
         "//src:libcustom_node_east_ocr.so",
         "//src:libcustom_node_face_blur.so",
         "//src:libcustom_node_horizontal_ocr.so",
@@ -1462,6 +1483,7 @@ cc_test(
 	":libtest_gpuenvironment",
     	":test_utils",
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
         "//src:custom_nodes_common_lib",
         "//src:libsampleloader.so",
         "//src:lib_node_mock.so",
