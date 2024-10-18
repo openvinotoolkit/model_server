@@ -254,6 +254,7 @@ TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
 
     KFSModelMetadataRequest req;
     KFSModelMetadataResponse res;
+    KFSModelExtraMetadata extraMetadata;
 
     req.Clear();
     req.set_name("dummy2");
@@ -270,18 +271,18 @@ TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
 
-    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata)), StatusCode::MODEL_NAME_MISSING);
+    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata), extraMetadata), StatusCode::MODEL_NAME_MISSING);
     req.Clear();
     req.set_name("dummy");
     req.set_version("2");
-    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata)), StatusCode::MODEL_VERSION_MISSING);
+    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata), extraMetadata), StatusCode::MODEL_VERSION_MISSING);
 
     req.Clear();
     req.set_name("dummy");
-    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata)), StatusCode::MODEL_VERSION_MISSING);
+    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata), extraMetadata), StatusCode::MODEL_VERSION_MISSING);
 
     req.Clear();
     req.set_name("dummy");
     req.set_version("$$");
-    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata)), StatusCode::MODEL_VERSION_INVALID_FORMAT);
+    ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata), extraMetadata), StatusCode::MODEL_VERSION_INVALID_FORMAT);
 }
