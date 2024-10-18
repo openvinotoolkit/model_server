@@ -346,6 +346,7 @@ cc_library(
                 "//src/llm:llmnoderesources",
                 "//src/llm:text_processor",
                 "//src/embeddings:embeddingscalculator",
+                "//src/rerank:rerankcalculator",
             ],
             "//:disable_python": []
         }) + [
@@ -1343,6 +1344,7 @@ cc_test(
                 "test/llmtemplate_test.cpp",
                 "test/pythonnode_test.cpp",
                 "test/text_streamer_test.cpp",
+                "test/rerank_handler_test.cpp",
             ],
             "//:disable_python" : [],
         }),
