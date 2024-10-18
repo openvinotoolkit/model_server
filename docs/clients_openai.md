@@ -9,9 +9,8 @@ hidden:
 Chat completion API <ovms_docs_rest_api_chat>
 Completions API <ovms_docs_rest_api_completion>
 Demo - text generation<ovms_demos_continuous_batching>
-Completions API <ovms_docs_rest_api_embeddings>
+Embeddings API <ovms_docs_rest_api_embeddings>
 Demo - text embeddings <ovms_demos_embeddings>
-LLM calculator <ovms_docs_llm_caclulator>
 ```
 ## Introduction
 Beside Tensorflow Serving API and KServe API frontends, the model server has now option to delegate the REST input deserialization and output serialization to a MediaPipe graph. A custom calculator can implement any form of REST API including streaming based on [Server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
