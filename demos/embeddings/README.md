@@ -53,8 +53,11 @@ models/
 ```
 > **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder. The models can be also stored on the cloud storage like s3, gcs or azure storage.
 
+> **Note** Check for other tested models in script `export_all_models.sh`.
+
 The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. 
 Runtime configuration for both models can be tuned in `subconfig.json` file. 
+
 
 ## Server configuration
 Prepare config.json:
@@ -74,7 +77,7 @@ cat config.json
 
 ## Start-up
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json --cpu_extension /ovms/lib/libopenvino_tokenizers.so
+docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
 In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU. 
@@ -165,7 +168,7 @@ It creates `config_all.json` with models structure including IR files, `graph.pb
 
 All those models can be deployed together via:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config_all.json --cpu_extension /ovms/lib/libopenvino_tokenizers.so
+docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config_all.json
 ```
 
 

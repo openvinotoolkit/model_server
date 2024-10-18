@@ -1,4 +1,4 @@
-# OpenAI API completions endpoint {#ovms_docs_rest_api_embeddings}
+# OpenAI API embeddings endpoint {#ovms_docs_rest_api_embeddings}
 
 ## API Reference
 OpenVINO Model Server includes now the `embeddings` endpoint using OpenAI API.
@@ -49,7 +49,7 @@ curl http://localhost/v3/embeddings \
 #### Generic
 
 | Param | OpenVINO Model Server | OpenAI /completions API | Type | Description |
-|-----|----------|----------|----------|---------|-----|
+|-----|----------|----------|---------|-----|
 | model | ✅ | ✅ | string (required) | Name of the model to use. Name assigned to a MediaPipe graph configured to schedule generation using desired embedding model.  |
 | input | ✅ | ✅ | string/list of strings (required) | Input text to embed, encoded as a string or a list of strings  |
 | encoding_format | ✅ | ✅ | float or base64 (default: `float`) | The format to return the embeddings in |
