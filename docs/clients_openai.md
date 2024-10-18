@@ -15,7 +15,10 @@ Demo - text embeddings <ovms_demos_embeddings>
 ## Introduction
 Beside Tensorflow Serving API and KServe API frontends, the model server has now option to delegate the REST input deserialization and output serialization to a MediaPipe graph. A custom calculator can implement any form of REST API including streaming based on [Server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
 
-We are introducing OpenAI compatible endpoint [chat/completions](./model_server_rest_api_chat.md) and [completions](./model_server_rest_api_completions.md).
+We are introducing OpenAI compatible endpoints:
+- [chat/completions](./model_server_rest_api_chat.md)
+- [completions](./model_server_rest_api_completions.md).
+- [embeddings](./model_server_rest_api_embeddings.md)
 
 
 ## Python Client
@@ -190,14 +193,14 @@ for data in responses.data:
 import requests
 payload = {"model": "Alibaba-NLP/gte-large-en-v1.5", "input": "hello world"}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://localhost:8000/v3/completions", json=payload, headers=headers)
+response = requests.post("http://localhost:8000/v3/embeddings", json=payload, headers=headers)
 print(response.text)
 ```
 :::
 :::{tab-item} curl
 :sync: curl
 ```{code} bash
-curl http://localhost:8000/v3/completions \
+curl http://localhost:8000/v3/embeddings \
   -H "Content-Type: application/json" \
   -d '{"model": "Alibaba-NLP/gte-large-en-v1.5", "input": "hello world"}'
 ```
