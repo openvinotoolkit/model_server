@@ -53,8 +53,11 @@ models/
 ```
 > **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder. The models can be also stored on the cloud storage like s3, gcs or azure storage.
 
+> **Note** Check for other tested models in script `export_all_models.sh`.
+
 The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. 
 Runtime configuration for both models can be tuned in `subconfig.json` file. 
+
 
 ## Server configuration
 Prepare config.json:
