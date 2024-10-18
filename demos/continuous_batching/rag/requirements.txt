@@ -7,3 +7,4 @@ unstructured
 langchain-openai
 langchain
 langchainhub
+ipywidgets
