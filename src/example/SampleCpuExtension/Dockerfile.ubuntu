@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=ubuntu:20.04
+ARG BASE_IMAGE=ubuntu:22.04
 FROM $BASE_IMAGE
 
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG DLDT_PACKAGE_URL
 ARG APT_OV_PACKAGE
-ARG DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.2/linux/l_openvino_toolkit_ubuntu20_2022.2.0.7713.af16ea1d79a_x86_64.tgz
+ARG DLDT_PACKAGE_URL
 
 RUN apt update && apt install -y build-essential wget make python3
 

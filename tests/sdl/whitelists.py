@@ -18,7 +18,6 @@ from enum import Enum, auto
 
 
 class OvmsImageType(Enum):
-    UBUNTU20 = auto()
     UBUNTU22 = auto()
     UBUNTU22_GPU = auto()
     UBUNTU22_NGINX = auto()
@@ -30,10 +29,8 @@ class OvmsImageType(Enum):
 class OvmsBaseImageType(Enum):
     COMMON = "common"
     UBUNTU = "ubuntu"
-    UBUNTU20 = "ubuntu20"
     UBUNTU22 = "ubuntu22"
     UBUNTU_PYTHON = "ubuntu_python"
-    UBUNTU20_PYTHON = "ubuntu20_python"
     UBUNTU22_PYTHON = "ubuntu22_python"
     UBUNTU_GPU = "ubuntu_gpu"
     UBUNTU_NGINX = "ubuntu_nginx"
@@ -53,8 +50,6 @@ dynamic_libraries = {
     },
     OvmsBaseImageType.UBUNTU: {'libicuuc.so', 'libicudata.so',},
     OvmsBaseImageType.UBUNTU_PYTHON: {'libexpat.so',},
-    OvmsBaseImageType.UBUNTU20: {'librt.so',},
-    OvmsBaseImageType.UBUNTU20_PYTHON: {'libpython3.8.so', 'libutil.so',},
     OvmsBaseImageType.UBUNTU22: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseImageType.UBUNTU22_PYTHON: {'libpython3.10.so',},
     OvmsBaseImageType.REDHAT: set(),
@@ -62,8 +57,6 @@ dynamic_libraries = {
 }
 
 whitelisted_dynamic_libraries = {
-    OvmsImageType.UBUNTU20: {"default": dynamic_libraries[OvmsBaseImageType.COMMON] | dynamic_libraries[OvmsBaseImageType.UBUNTU] | dynamic_libraries[OvmsBaseImageType.UBUNTU20],
-                             "python": dynamic_libraries[OvmsBaseImageType.UBUNTU_PYTHON] | dynamic_libraries[OvmsBaseImageType.UBUNTU20_PYTHON]},
     OvmsImageType.UBUNTU22: {"default": dynamic_libraries[OvmsBaseImageType.COMMON] | dynamic_libraries[OvmsBaseImageType.UBUNTU] | dynamic_libraries[OvmsBaseImageType.UBUNTU22],
                              "python": dynamic_libraries[OvmsBaseImageType.UBUNTU_PYTHON] | dynamic_libraries[OvmsBaseImageType.UBUNTU22_PYTHON]},
     OvmsImageType.UBUNTU22_GPU: {"default": dynamic_libraries[OvmsBaseImageType.COMMON] | dynamic_libraries[OvmsBaseImageType.UBUNTU] | dynamic_libraries[OvmsBaseImageType.UBUNTU22],
@@ -116,14 +109,12 @@ libraries = {
     },
     OvmsBaseImageType.UBUNTU: set(),
     OvmsBaseImageType.UBUNTU22: {'libopenvino_intel_npu_plugin.so',},
-    OvmsBaseImageType.UBUNTU20_PYTHON: set(),
     OvmsBaseImageType.UBUNTU22_PYTHON: set(),
     OvmsBaseImageType.REDHAT: {'libpugixml.so',},
     OvmsBaseImageType.REDHAT_PYTHON: set(),
 }
 
 whitelisted_libraries = {
-    OvmsImageType.UBUNTU20: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU]},
     OvmsImageType.UBUNTU22: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU] | libraries[OvmsBaseImageType.UBUNTU22]},
     OvmsImageType.UBUNTU22_GPU: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU] | libraries[OvmsBaseImageType.UBUNTU22]},
     OvmsImageType.UBUNTU22_NGINX: {"default": libraries[OvmsBaseImageType.COMMON] | libraries[OvmsBaseImageType.UBUNTU] | libraries[OvmsBaseImageType.UBUNTU22]},
@@ -144,18 +135,6 @@ packages = {
         'libreadline8',
         'libsqlite3-0',
         'readline-common',
-    },
-    OvmsBaseImageType.UBUNTU20: {
-        'libicu66',
-        'libssl1.1',
-        'tzdata',
-    },
-    OvmsBaseImageType.UBUNTU20_PYTHON: {
-        'libmpdec2',
-        'libpython3.8',
-        'libpython3.8-minimal',
-        'libpython3.8-stdlib',
-        'mime-support',
     },
     OvmsBaseImageType.UBUNTU22: {'libicu70'},
     OvmsBaseImageType.UBUNTU22_PYTHON: {
@@ -218,8 +197,6 @@ packages = {
 }
 
 whitelisted_packages = {
-    OvmsImageType.UBUNTU20: {"default": packages[OvmsBaseImageType.UBUNTU] | packages[OvmsBaseImageType.UBUNTU20],
-                             "python": packages[OvmsBaseImageType.UBUNTU_PYTHON] | packages[OvmsBaseImageType.UBUNTU20_PYTHON]},
     OvmsImageType.UBUNTU22: {"default": packages[OvmsBaseImageType.UBUNTU] | packages[OvmsBaseImageType.UBUNTU22],
                              "python": packages[OvmsBaseImageType.UBUNTU_PYTHON] | packages[OvmsBaseImageType.UBUNTU22_PYTHON]},
     OvmsImageType.UBUNTU22_GPU: {"default": packages[OvmsBaseImageType.UBUNTU] | packages[OvmsBaseImageType.UBUNTU22] | packages[OvmsBaseImageType.UBUNTU_GPU],
