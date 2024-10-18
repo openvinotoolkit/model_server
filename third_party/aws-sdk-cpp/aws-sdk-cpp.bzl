@@ -33,10 +33,9 @@ def _impl(repository_ctx):
     https_proxy = repository_ctx.os.environ.get("https_proxy", "")
 
     result = repository_ctx.execute(["cat","/etc/os-release"],quiet=False)
-    ubuntu20_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 20")
     ubuntu22_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 22")
 
-    if ubuntu20_count == 1 or ubuntu22_count == 1:
+    if ubuntu22_count == 1:
         lib_path = "lib"
     else: # for redhat
         lib_path = "lib64"
@@ -65,7 +64,7 @@ filegroup(
 )
 
 build_release = {{"CMAKE_BUILD_TYPE": "Release"}}
-build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
+build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}} 
 cmake(
     name = "aws-sdk-cpp_cmake",
     build_args = [
@@ -74,7 +73,7 @@ cmake(
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
         # there is no elegant parallel compilation support
         "VERBOSE=1",
-        "-j 4",
+        "-j `nproc`",
     ],
     cache_entries = {{
         "BUILD_ONLY": "s3", # core builds always
