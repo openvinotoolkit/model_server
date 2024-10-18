@@ -33,14 +33,14 @@ else
     python3 -m venv .venv
     . .venv/bin/activate
     pip3 install -U pip
-    pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
+    pip3 install --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre optimum-intel@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers[transformers] openvino nncf
 fi
 
 if [ -d "$1/facebook/opt-125m" ]; then
   echo "Models directory $1/facebook/opt-125m exists. Skipping downloading models."
 else
   optimum-cli export openvino --disable-convert-tokenizer --model facebook/opt-125m --weight-format int8 $1/facebook/opt-125m
-  convert_tokenizer -o $1/facebook/opt-125m --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens facebook/opt-125m
+  convert_tokenizer -o $1/facebook/opt-125m --with-detokenizer --skip-special-tokens --streaming-detokenizer facebook/opt-125m
 fi
 
 
