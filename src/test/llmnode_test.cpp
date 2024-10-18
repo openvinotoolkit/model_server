@@ -95,11 +95,13 @@ public:
         }
     }
 
-    int generateExpectedText(std::string prompt) {
+    int generateExpectedText(std::string prompt, bool addSpecialTokens = true) {
         try {
+            ov::Tensor promptIds = cbPipe->get_tokenizer().encode(prompt, ov::genai::add_special_tokens(addSpecialTokens)).input_ids;
+            std::cout << "Generated prompt ids: " << getPromptTokensString(promptIds) << std::endl;
             auto generationHandle = cbPipe->add_request(
                 currentRequestId++,
-                prompt,
+                promptIds,
                 config);
             if (generationHandle == nullptr) {
                 return -1;
@@ -116,7 +118,11 @@ public:
                     break;
                 i++;
                 std::vector<int64_t> tokens = out.generated_ids;
-                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
+                std::cout << "[" << i << "] Generated tokens: ";
+                for (int64_t token : tokens) {
+                    std::cout << token << " ";
+                }
+                std::cout << std::endl;
                 std::string completion = tokenizer->decode(tokens);
                 expectedMessages.emplace_back(completion);
             }
@@ -200,6 +206,101 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+}
+
+TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoWithCompletion) {
+    config.max_new_tokens = 5;
+    config.rng_seed = 1;
+    config.num_beams = 16;
+    config.echo = true;
+    ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
+    ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "best_of": 16,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?",
+            "echo": true
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    int i = 0;
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["text"].IsString());
+        EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
+        EXPECT_TRUE(std::string(choice["text"].GetString()).find("What is OpenVINO?") != std::string::npos);
+        EXPECT_EQ(std::string(choice["text"].GetString()).rfind("What is OpenVINO?", 0), 0);  // Check if prompt is at the beginning
+        ASSERT_EQ(choice["index"], i++);
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+}
+
+TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoOnly) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_tokens": 0,
+            "prompt": "What is OpenVINO?",
+            "echo": true,
+            "logprobs": 1
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    int i = 0;
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+
+        ASSERT_TRUE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["logprobs"].GetObject()["token_logprobs"].IsArray());
+        for (size_t i = 0; i < choice["logprobs"].GetObject()["token_logprobs"].Size(); ++i) {
+            auto& logprob = choice["logprobs"].GetObject()["token_logprobs"][i];
+            if (i == 0) {
+                ASSERT_TRUE(logprob.IsNull());
+            } else {
+                ASSERT_TRUE(logprob.IsFloat());
+                ASSERT_LT(logprob.GetFloat(), 0);
+            }
+        }
+
+        ASSERT_TRUE(choice["text"].IsString());
+        EXPECT_STREQ(choice["text"].GetString(), "What is OpenVINO?");
+        ASSERT_EQ(choice["index"], i++);
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 0 /* max_tokens */);
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), parsedResponse["choices"].GetArray()[0]["logprobs"].GetObject()["token_logprobs"].Size());
     EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
 }
@@ -288,8 +389,12 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
     config.rng_seed = 1;
     config.num_beams = 16;
     config.num_return_sequences = 8;
+    config.echo = false;
     ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
     ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    for (size_t i = 0; i < config.num_return_sequences; i++) {
+        std::cout << "Expected message: " << expectedMessages[i] << std::endl;
+    }
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -353,7 +458,8 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
     config.rng_seed = 1;
     config.num_beams = 16;
     config.num_return_sequences = 8;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
+    config.echo = false;
+    ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
     ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
     std::string requestBody = R"(
         {

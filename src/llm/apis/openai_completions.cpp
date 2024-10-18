@@ -44,11 +44,15 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     // logprobs: int; 1 value allowed
     it = doc.FindMember("logprobs");
     if (it != doc.MemberEnd()) {
-        if (!it->value.IsInt())
+        if (it->value.IsNull()) {
+            request.logprobs = 0;
+        } else if (!it->value.IsInt()) {
             return absl::InvalidArgumentError("logprobs accepts integer values");
-        if (it->value.GetInt() != 1)
+        } else if (it->value.GetInt() != 1) {
             return absl::InvalidArgumentError("accepted logprobs value is currently 1 only");
-        request.logprobs = it->value.GetInt();
+        } else {
+            request.logprobs = it->value.GetInt();
+        }
     }
     if (request.logprobs && request.stream) {
         return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
