@@ -475,12 +475,26 @@ OVMS_Status* OVMS_InferenceRequestOutputSetData(OVMS_InferenceRequest* request, 
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_InferenceRequestInputRemoveData(OVMS_InferenceRequest* request, const char* inputName);
 
+// Remove the data of the output.
+//
+// \param request The request object
+// \param outputName The name of the output with data to be removed
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_InferenceRequestOutputRemoveData(OVMS_InferenceRequest* request, const char* outputName);
+
 // Remove input from the request.
 //
 // \param request The request object
 // \param inputName The name of the input to be removed
 // \return OVMS_Status object in case of failure
 OVMS_Status* OVMS_InferenceRequestRemoveInput(OVMS_InferenceRequest* request, const char* inputName);
+
+// Remove output from the request.
+//
+// \param request The request object
+// \param outputName The name of the input to be removed
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_InferenceRequestRemoveOutput(OVMS_InferenceRequest* request, const char* outputName);
 
 // Add parameter to the request.
 //
