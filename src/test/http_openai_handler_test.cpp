@@ -82,10 +82,10 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/test/", requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor("/v3/completions/", requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(/v3/test/
+    std::string expectedResponse = R"(/v3/completions/
 
         {
             "model": "gpt",
@@ -108,10 +108,10 @@ TEST_F(HttpOpenAIHandlerTest, UnaryWithHeaders) {
     comp.headers.push_back(std::pair<std::string, std::string>("test2", "header"));
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/test/", requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor("/v3/completions/", requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(/v3/test/
+    std::string expectedResponse = R"(/v3/completions/
 test1headertest2header
         {
             "model": "gpt",
@@ -137,7 +137,7 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
     EXPECT_CALL(writer, IsDisconnected()).Times(9);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::PARTIAL_END);
 
     ASSERT_EQ(response, "");
@@ -151,7 +151,7 @@ TEST_F(HttpOpenAIHandlerTest, BodyNotAJson) {
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
     EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - Cannot parse JSON body");
 }
@@ -164,7 +164,7 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
     EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body must be an object");
 }
@@ -182,9 +182,9 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldMissing) {
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
     EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    ASSERT_EQ(status.string(), "The file is not valid json - \"model\" field is missing in JSON body");
+    ASSERT_EQ(status.string(), "The file is not valid json - model field is missing in JSON body");
 }
 
 TEST_F(HttpOpenAIHandlerTest, ModelFieldNotAString) {
@@ -201,9 +201,9 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldNotAString) {
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
     EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    ASSERT_EQ(status.string(), "The file is not valid json - \"model\" field is not a string");
+    ASSERT_EQ(status.string(), "The file is not valid json - model field is not a string");
 }
 
 TEST_F(HttpOpenAIHandlerTest, StreamFieldNotABoolean) {
@@ -220,9 +220,9 @@ TEST_F(HttpOpenAIHandlerTest, StreamFieldNotABoolean) {
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
     EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    ASSERT_EQ(status.string(), "The file is not valid json - \"stream\" field is not a boolean");
+    ASSERT_EQ(status.string(), "The file is not valid json - stream field is not a boolean");
 }
 
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
@@ -239,6 +239,6 @@ TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
     EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
     EXPECT_CALL(writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/test", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
 }

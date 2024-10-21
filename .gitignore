@@ -30,3 +30,4 @@ node_modules/
 yarn.*
 bazel-openvino-model-server/
 bazel-model_server/
+out

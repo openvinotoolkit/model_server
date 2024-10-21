@@ -15,6 +15,17 @@
 # limitations under the License.
 #
 # Script should be used only as a part of Dockerfiles
+set -e
+# Check if INSTALL_DRIVER_VERSION is set
+if [ -z "$INSTALL_DRIVER_VERSION" ]; then
+    echo "Error: INSTALL_DRIVER_VERSION cannot be empty."
+    exit 1
+fi
+if [ -z "$DNF_TOOL" ]; then
+    echo "Error: DNF_TOOL cannot be empty."
+    exit 1
+fi
+
 case $INSTALL_DRIVER_VERSION in \
 "21.38.21026") \
         mkdir /tmp/gpu_deps ; \

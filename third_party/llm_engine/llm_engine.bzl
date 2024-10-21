@@ -39,13 +39,6 @@ def _impl(repository_ctx):
     https_proxy = repository_ctx.os.environ.get("https_proxy", "")
     OpenVINO_DIR = repository_ctx.os.environ.get("OpenVINO_DIR", "")
     result = repository_ctx.execute(["cat","/etc/os-release"],quiet=False)
-    ubuntu20_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 20")
-    ubuntu22_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 22")
-
-    if ubuntu20_count == 1 or ubuntu22_count == 1:
-        lib_path = "lib"
-    else: # for redhat
-        lib_path = "lib"
 
     # Note we need to escape '{/}' by doubling them due to call to format
     build_file_content = """
@@ -80,7 +73,7 @@ cmake(
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
         # there is no elegant parallel compilation support
         "VERBOSE=1",
-        "-j 4",
+        "-j 32",
     ],
     cache_entries = {{
         "BUILD_SHARED_LIBS": "OFF",
@@ -101,7 +94,7 @@ cmake(
         "HTTPS_PROXY": "{https_proxy}",
     }},
     lib_source = ":all_srcs",
-    out_lib_dir = "runtime/{lib_path}/intel64",
+    out_lib_dir = "runtime/lib/intel64",
     out_include_dir = "runtime/include",
     # linking order
     out_shared_libs = [
@@ -120,7 +113,7 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 """
-    repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy, lib_path=lib_path))
+    repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy))
 
 llm_engine_repository = repository_rule(
     implementation = _impl,
