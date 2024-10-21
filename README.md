@@ -21,7 +21,8 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
 ### Key features:
-- **[NEW]** [Efficient Text Generation via OpenAI API](https://docs.openvino.ai/nightly/ovms_docs_llm_reference.html)
+- **[NEW]** [Text Embeddings compatible with OpenAI API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demos_embeddings.html)
+- **[NEW]** [Efficient Text Generation via OpenAI API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demos_continuous_batching.html)
 - [Python code execution](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html)
 - [gRPC streaming](https://docs.openvino.ai/nightly/ovms_docs_streaming_endpoints.html)
 - [MediaPipe graphs serving](https://docs.openvino.ai/nightly/ovms_docs_mediapipe.html) 

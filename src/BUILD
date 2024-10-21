@@ -70,7 +70,9 @@ cc_library(
 cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
-    static_deps = ["@tensorflow_serving//:__subpackages__",
+    static_deps = [
+        #"//src:libovmsfilesystemfactory", // TODO FIXME missing symbols @atobisze
+        "@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
         "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
@@ -137,7 +139,9 @@ cc_shared_library(
         })
     ,
     features = [],
-    roots = ["//src:ovms_lib"],
+    roots = [
+        "//src:ovms_lib",
+    ],
 )
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
@@ -359,7 +363,8 @@ cc_library(
             "libovmscapiinferencetensor",
             "libovmsdagspipelinedefinitionstatus",
             "libovmsfilesystem",
-            "libovmsfilesystemfactory",
+            "libovmsfilesystemfactory_h",
+            "libovmsfilesystemfactory", # TODO FIXME missing symbols @atobisze when not in ovms_lib
             "libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
             "libovmsmetrics",
@@ -695,6 +700,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
     ],
     linkstatic = True,
 )
@@ -1142,10 +1148,21 @@ cc_library(
 )
 
 cc_library(
-    name = "libovmsfilesystemfactory",
+    name = "libovmsfilesystemfactory_h",
     hdrs = ["filesystemfactory.hpp",],
+    deps = [],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "libovmsfilesystemfactory",
+    hdrs = [],
     srcs = ["filesystemfactory.cpp",],
     deps = ["libovmsfilesystem",
+            "libovmsfilesystemfactory_h",
             "libovmsstatus",
             "libovmsazurefilesystem",
             "libovmsgcsfilesystem",
@@ -1156,6 +1173,7 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
 )
 
 cc_library(
@@ -1208,6 +1226,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
     ],
     linkstatic = True,
 )
@@ -1231,6 +1250,7 @@ cc_binary(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
         "//src:libcustom_node_east_ocr.so",
         "//src:libcustom_node_face_blur.so",
         "//src:libcustom_node_horizontal_ocr.so",
@@ -1462,6 +1482,7 @@ cc_test(
 	":libtest_gpuenvironment",
     	":test_utils",
         "//src:ovms_lib",
+        "//src:libovmsfilesystemfactory",
         "//src:custom_nodes_common_lib",
         "//src:libsampleloader.so",
         "//src:lib_node_mock.so",

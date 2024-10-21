@@ -74,9 +74,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= d499a16453e4fa969a955700935de59db736b232  # master 2024-10-10
-OV_CONTRIB_BRANCH ?= e6eb43a32c98a04162a921a80d89f82b30910973  # master 2024-06-13
-OV_TOKENIZERS_BRANCH ?= 81c067c557d48011e6879a42d4a25147060eaeff  # master 2024-09-19
+OV_SOURCE_BRANCH ?= 03c9ae38292a90ecb5cbfe2c8d5472eed0ec1aa9  # master 2024-10-18
+OV_CONTRIB_BRANCH ?= 4272f47cb3ffbaf5c0fb5db569deb16856c578a1  # master 2024-10-11
+OV_TOKENIZERS_BRANCH ?= 57b236f113d78767657676cdefee6695e5e914ff  # master 2024-10-18
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -163,11 +163,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),20.04)
         OS=ubuntu20
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.5.0.16952.d499a16453e_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.5.0.17060.03c9ae38292_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.26.30049"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.5.0.16952.d499a16453e_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.5.0.17060.03c9ae38292_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -182,7 +182,7 @@ ifeq ($(BASE_OS),redhat)
   endif
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.5.0.16952.d499a16453e_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.5.0.17060.03c9ae38292_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -681,7 +681,6 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
-		-v ${PWD}/out:/out:rw \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
@@ -690,13 +689,11 @@ ifeq ($(RUN_GPU_TESTS),1)
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
 		tail -200 test.log ; \
-		[ -f ./out/results.txt ] && cat ./out/results.txt || echo "The results file was not generated" ; \
 		exit $$exit_status
 else
 	docker run \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
-		-v ${PWD}/out:/out:rw \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e JOBS=$(JOBS) \
@@ -704,7 +701,6 @@ else
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
 		tail -200 test.log ; \
-		[ -f ./out/results.txt ] && cat ./out/results.txt || echo "The results file was not generated" ; \
 		exit $$exit_status
 endif
 
