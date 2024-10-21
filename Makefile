@@ -44,7 +44,7 @@ JOBS ?= $(CORES_TOTAL)
 
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
-# Currently supported BASE_OS values are: ubuntu20 ubuntu22 redhat
+# Currently supported BASE_OS values are: ubuntu22 redhat
 BASE_OS ?= ubuntu22
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
@@ -150,9 +150,6 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS),ubuntu22)
 	BASE_OS_TAG=22.04
   endif
-  ifeq ($(BASE_OS),ubuntu20)
-	BASE_OS_TAG=20.04
-  endif
   ifeq ($(NVIDIA),1)
 	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu$(BASE_OS_TAG)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
@@ -160,11 +157,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   endif
-  ifeq ($(BASE_OS_TAG),20.04)
-        OS=ubuntu20
-	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.5.0.16952.d499a16453e_x86_64.tgz
-  else ifeq  ($(BASE_OS_TAG),22.04)
+  ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.26.30049"
 	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.5.0.16952.d499a16453e_x86_64.tgz
@@ -352,11 +345,6 @@ ifeq ($(FUZZER_BUILD),1)
 	@echo "Cannot run fuzzer with redhat"; exit 1 ;
   endif
 endif
-ifeq ($(BASE_OS_TAG),20.04)
-  ifeq ($(RUN_TESTS),1)
-	@echo "On ubuntu20 run tests via make run_unit_tests"; exit 1 ;
-  endif
-endif
 ifeq ($(NVIDIA),1)
   ifeq ($(OV_USE_BINARY),1)
 	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
@@ -454,11 +442,6 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 release_image:
-ifeq ($(BASE_OS_TAG),20.04)
-  ifeq ($(NPU),1)
-	@echo "NPU is not supported on Ubuntu 20.04" ; exit 1
-  endif
-endif
 ifeq ($(USE_BUILDX),true)
 	$(eval BUILDX:=buildx)
 	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
