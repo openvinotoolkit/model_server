@@ -635,8 +635,8 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         SPDLOG_DEBUG("shape: {}", std::string(getShapes().begin()->second));
     } else {
         SPDLOG_DEBUG("shape:");
-         for (auto& [shapeInput, shapeValue] : getShapes()) {
-        SPDLOG_DEBUG("  {}: {}", shapeInput, std::string(shapeValue));
+        for (auto& [shapeInput, shapeValue] : getShapes()) {
+            SPDLOG_DEBUG("  {}: {}", shapeInput, std::string(shapeValue));
         }
     }
     if (getModelVersionPolicy()) {
