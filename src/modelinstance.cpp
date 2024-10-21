@@ -1429,7 +1429,7 @@ Status ModelInstance::infer(const RequestType* requestProto,
     return status;
 }
 void ModelInstance::checkForOutputTensorResetAbility() {
-    // for reseting output we need copy constructor of compiled model infer request ov::Tensor to be implemented.
+    // for resetting output we need copy constructor of compiled model infer request ov::Tensor to be implemented.
     StreamIdGuard guard(getInferRequestsQueue());
     auto request = guard.getInferRequest();
     bool allOutputsSupported = true;
