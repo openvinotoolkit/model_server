@@ -117,7 +117,7 @@ for chunk in stream:
         break
 ```
 
-> NOTE: To leverage LLM graph cancelation upon client disconnection, use `stream=True` parameter.
+> NOTE: To leverage LLM graph cancellation upon client disconnection, use `stream=True` parameter.
 
 ## Models Directory
 
