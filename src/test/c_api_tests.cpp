@@ -247,7 +247,7 @@ TEST(CAPIStartTest, StartFlow) {
     // Cannot start due to configuration error
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 5555));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 5555));  // The same port
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config.json"));
 
     // Expect fail
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings),
@@ -404,7 +404,7 @@ TEST_F(CAPIInference, Validation) {
     ASSERT_NE(serverSettings, nullptr);
     ASSERT_NE(modelsSettings, nullptr);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_dummy.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_standard_dummy.json"));
     OVMS_Server* cserver = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
@@ -426,7 +426,7 @@ TEST_F(CAPIInference, Validation) {
     OVMS_ServerDelete(cserver);
 }
 TEST_F(CAPIInference, AcceptInputRejectOutputStringPrecision) {
-    ServerGuard serverGuard("/ovms/src/test/c_api/config_string.json");
+    ServerGuard serverGuard("/ovms/src/test/configs/config_string.json");
     OVMS_Server* cserver = serverGuard.server;
     OVMS_InferenceRequest* request{nullptr};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "passthrough", 1));
@@ -452,7 +452,7 @@ TEST_F(CAPIInference, TwoInputs) {
     ASSERT_NE(serverSettings, nullptr);
     ASSERT_NE(modelsSettings, nullptr);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_double_dummy.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_double_dummy.json"));
     OVMS_Server* cserver = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
@@ -524,7 +524,7 @@ TEST_F(CAPIInference, Basic) {
     ASSERT_NE(serverSettings, nullptr);
     ASSERT_NE(modelsSettings, nullptr);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_dummy.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_standard_dummy.json"));
 
     OVMS_Server* cserver = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
@@ -653,7 +653,7 @@ TEST_F(CAPIInference, ReuseInputRemoveAndAddData) {
     ASSERT_NE(serverSettings, nullptr);
     ASSERT_NE(modelsSettings, nullptr);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_dummy.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_standard_dummy.json"));
     OVMS_Server* cserver = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
@@ -865,7 +865,7 @@ TEST_F(CAPIInference, NegativeInference) {
     ASSERT_NE(serverSettings, nullptr);
     ASSERT_NE(modelsSettings, nullptr);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_dummy.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_standard_dummy.json"));
 
     OVMS_Server* cserver = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
@@ -957,7 +957,7 @@ TEST_F(CAPIInference, NegativeInference) {
 }
 TEST_F(CAPIInference, String) {
     using std::string;
-    ServerGuard serverGuard("/ovms/src/test/c_api/config_string.json");
+    ServerGuard serverGuard("/ovms/src/test/configs/config_string.json");
     OVMS_InferenceRequest* request{nullptr};
     const string MODEL_NAME = "passthrough";
     const string INPUT_NAME = "my_name";
@@ -1036,7 +1036,7 @@ TEST_F(CAPIInference, Scalar) {
     ASSERT_NE(serverSettings, nullptr);
     ASSERT_NE(modelsSettings, nullptr);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_scalar.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_standard_scalar.json"));
 
     OVMS_Server* cserver = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
@@ -1205,7 +1205,7 @@ public:
         ASSERT_NE(serverSettings, nullptr);
         ASSERT_NE(modelsSettings, nullptr);
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_metadata_all.json"));
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_metadata_all.json"));
         cserver = nullptr;
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
@@ -1491,7 +1491,7 @@ TEST_F(CAPIStateIntegration, Config) {
         OVMS_GetServableState(cserver, "pipeline1Dummy", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(
         OVMS_GetServableState(cserver, "mediaDummy", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
-    std::filesystem::copy("/ovms/src/test/c_api/config_metadata_all.json", configFilePath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
+    std::filesystem::copy("/ovms/src/test/configs/config_metadata_all.json", configFilePath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
     Server* server = reinterpret_cast<Server*>(cserver);
     const ovms::Module* servableModule = server->getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
     ModelManager* modelManager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
@@ -1715,7 +1715,7 @@ TEST_F(CAPIDagInference, BasicDummyDag) {
     //////////////////////
     // start server
     //////////////////////
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_dummy_dag.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_dummy_dag.json"));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
     ///////////////////////
     // request creation
@@ -1764,7 +1764,7 @@ TEST_F(CAPIDagInference, DynamicEntryDummyDag) {
     //////////////////////
     // start server
     //////////////////////
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_dummy_dynamic_entry_dag.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_dummy_dynamic_entry_dag.json"));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
     ///////////////////////
     // request creation
@@ -1852,7 +1852,7 @@ TEST(CAPI, MultipleThreadsStarting) {
             ASSERT_NE(modelsSettings, nullptr);
 
             ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 8000 + i));
-            ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config.json"));
+            ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config.json"));
             promisesThreadReady[i].set_value();
             futures[i].get();
             OVMS_Status* cstatus = OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings);
