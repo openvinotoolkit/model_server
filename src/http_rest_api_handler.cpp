@@ -575,7 +575,7 @@ void HttpRestApiHandler::convertRTInfo(Value& scope, Document& doc, ov::AnyMap& 
         rapidjson::Value rt_info_key, rt_info_value, subScope;
         rt_info_key.SetString(key.c_str(), doc.GetAllocator());
         if (value.is<ov::AnyMap>()) {
-            SPDLOG_INFO("building submap rest response : key: {};", key);
+            SPDLOG_DEBUG("building submap rest response : key: {};", key);
             subScope.SetObject();
             convertRTInfo(subScope, doc, value.as<ov::AnyMap>());
             scope.AddMember(rt_info_key, subScope, doc.GetAllocator());
@@ -583,7 +583,7 @@ void HttpRestApiHandler::convertRTInfo(Value& scope, Document& doc, ov::AnyMap& 
             try {
                 rt_info_value.SetString(value.as<std::string>().c_str(), doc.GetAllocator());
             } catch (const std::exception& e) {
-                SPDLOG_DEBUG("Error converting RT info value to string: {}", e.what());
+                SPDLOG_ERROR("Error converting RT info value to string: {}", e.what());
                 rt_info_value.SetString("Error converting value", doc.GetAllocator());
             }
             scope.AddMember(rt_info_key, rt_info_value, doc.GetAllocator());
