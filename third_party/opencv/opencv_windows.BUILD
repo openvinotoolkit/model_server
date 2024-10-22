@@ -1,7 +1,7 @@
 # Description:
 #   OpenCV libraries for video/image processing on Windows
 #
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ licenses(["notice"])  # BSD license
 
 exports_files(["LICENSE"])
 
-OPENCV_VERSION = "470"  # 4.7.0
+OPENCV_VERSION = "4100"  # 4.10.0
 
 config_setting(
     name = "opt_build",
@@ -32,7 +32,7 @@ config_setting(
     values = {"compilation_mode": "dbg"},
 )
 
-# The following build rule assumes that the executable "opencv-4.7.0-windows.exe"
+# The following build rule assumes that the executable "opencv-4.10.0-windows.exe"
 # is downloaded and the files are extracted to local.
 # If you install OpenCV separately, please modify the build rule accordingly.
 cc_library(

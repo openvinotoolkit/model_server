@@ -1050,6 +1050,7 @@ Status RequestValidator<RequestType, InputTensorType, IteratorType, ShapeType>::
         RETURN_IF_ERR(checkBatchSizeMismatch(proto, inputInfo->getBatchSize(), batchIndex, finalStatus, batchingMode, shapeMode));
         RETURN_IF_ERR(checkShapeMismatch(proto, *inputInfo, batchIndex, finalStatus, batchingMode, shapeMode));
         RETURN_IF_ERR(validateTensorContent(proto, inputInfo->getPrecision(), bufferId));
+        // TODO FIXME we need validation for output for C-API (if buffer is empty, shape against buffersize, type)
     }
     return finalStatus;
 }

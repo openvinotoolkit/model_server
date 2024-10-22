@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
     OVMS_ServerSettingsSetRestPort(serverSettings, 11338);
 
     OVMS_ServerSettingsSetLogLevel(serverSettings, OVMS_LOG_DEBUG);
-    OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_dummy.json");
+    OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_standard_dummy.json");
 
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings);
 

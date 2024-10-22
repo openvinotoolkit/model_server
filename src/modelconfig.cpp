@@ -23,7 +23,6 @@
 #include <sstream>
 #include <utility>
 
-#include <fmt/ranges.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>

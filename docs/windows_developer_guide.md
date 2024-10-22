@@ -42,13 +42,13 @@ yarn
 ```
 
 ## OPENCV install to - "C:\\opt\\opencv\\"
-https://github.com/opencv/opencv/releases/download/4.7.0/opencv-4.7.0-windows.exe
+https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe
 
 ## WGET
 https://eternallybored.org/misc/wget/1.21.4/64/wget.exe download to c:\opt
 Add c:\opt to system env PATH
 
-## Run Developer Command Prompt for VS 2022 as administrator
+## Run Developer Command Prompt for VS 2022
 ## Enable Developer mode on in windows system settings
 
 #### Boring SSL - not needed until md5 hash is needed.
@@ -128,3 +128,93 @@ pip install -r requirements.txt
 pip install numpy==1.23
 python object_detection.py --image coco_bike.jpg --output output.jpg --service_url localhost:9000
 ```
+
+# OpenVINO&trade; Model Server VS Code setup on Windows 11
+Install VS Code and c/c++ Extension
+
+Copy vscode/launch.json, vscode/tasks.json to .vscode directory.
+
+## Example launch.json
+```
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name" : "OVMS RLS",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bazel-out/x64_windows-opt/bin/src/ovms.exe",
+            "args": ["--help"],
+            "cwd": "${workspaceFolder}/bazel-out/x64_windows-opt/bin/src/",
+            "environment": [
+                {"name": "PATH", "value": "%PATH%;C:\\opt\\intel\\openvino_2024\\runtime\\bin\\intel64\\Release;C:\\Windows\\SysWOW64\\;C:\\opt\\intel\\openvino_2024\\runtime\\3rdparty\\tbb\\bin\\;C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Redist\\MSVC\\14.29.30133\\debug_nonredist\\x64\\Microsoft.VC142.DebugCRT\\"},
+            ],
+            "externalConsole": true,
+            "logging": {
+                "moduleLoad": false,
+                "trace": true
+            },
+            "sourceFileMap": {
+                "/c/users/rasapala/_bazel_rasapala/tpoq5oxa/execroot/ovms/": "${workspaceFolder}"
+            }
+        },
+        {
+            "name" : "OVMS DEBG",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bazel-out/x64_windows-dbg/bin/src/ovms.exe",
+            "args": ["--help"],
+            "cwd": "${workspaceFolder}/bazel-out/x64_windows-dbg/bin/src/",
+            "environment": [
+                {"name": "PATH", "value": "%PATH%;C:\\opt\\intel\\openvino_2024\\runtime\\bin\\intel64\\Release;C:\\Windows\\SysWOW64\\;C:\\opt\\intel\\openvino_2024\\runtime\\3rdparty\\tbb\\bin\\;C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Redist\\MSVC\\14.29.30133\\debug_nonredist\\x64\\Microsoft.VC142.DebugCRT\\"},
+            ],
+            "externalConsole": true,
+            "logging": {
+                "moduleLoad": false,
+                "trace": true
+            },
+            "sourceFileMap": {
+                "/c/users/rasapala/_bazel_rasapala/tpoq5oxa/execroot/ovms/": "${workspaceFolder}"
+            }
+        }
+    ]
+}
+```
+
+## Example tasks.json
+```
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build (Debug)",
+            "type": "shell",
+            "command": "bazel build -c dbg --config=windows --jobs=24 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 //src:ovms",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        },
+        {
+            "label": "Build (Release)",
+            "type": "shell",
+            "command": "bazel build -c opt --config=windows --jobs=24 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 //src:ovms",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        }
+    ]
+}
+```
+
+## Build
+Ctrl + Shift + B
+Choose Build (Debug) or Build (Release) in the task dropdown.
+
+## Debug
+Press "OVMS DEBUG(model_server)" at the bottom left task bar in visual code.
+or
+Press "OVMS RELEASE(model_server)" at the bottom left task bar in visual code.
+
+Breakpoints are available after building the Debug solution and choosing OVMS Debug task.
