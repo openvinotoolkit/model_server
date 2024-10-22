@@ -59,7 +59,6 @@ cc_library(
             })
          + select({
             "//:not_disable_mediapipe": [
-                "@zlib//:zlib_minizip",
                 "@mediapipe//mediapipe/framework:calculator_framework",
                 #"@mediapipe//mediapipe/framework/stream_handler:barrier_input_stream_handler",
                 #"@mediapipe//mediapipe/framework/stream_handler:default_input_stream_handler",

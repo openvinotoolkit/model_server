@@ -106,7 +106,7 @@ build --experimental_cc_shared_library
 build --check_visibility=true
 # Disable leaking LD_LIBRARY_PATH & PATH into build resulting in cache misses
 # and frequent rebuilds
-build --incompatible_strict_action_env
+#build --incompatible_strict_action_env
 build --cxxopt=-DOVMS_DUMP_TO_FILE=0
 # envs below are required to succesfully run binaries in bazel as bazel is
 # very strict in sandboxing
@@ -170,8 +170,8 @@ build:windows --host_copt=/W0
 
 # On Windows, `__cplusplus` is wrongly defined without this switch
 # See https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
-build:windows --copt=/Zc:__cplusplus
-build:windows --host_copt=/Zc:__cplusplus
+#build:windows --copt=/Zc:__cplusplus
+#build:windows --host_copt=/Zc:__cplusplus
 
 # Tensorflow uses M_* math constants that only get defined by MSVC headers if
 # _USE_MATH_DEFINES is defined.
@@ -185,8 +185,8 @@ build:windows --features=archive_param_file
 
 # Speed Windows compile times. Available in VS 16.4 (we are on 16.11). See
 # https://groups.google.com/a/tensorflow.org/d/topic/build/SsW98Eo7l3o/discussion
-build:windows --copt=/d2ReducedOptimizeHugeFunctions
-build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
+#build:windows --copt=/d2ReducedOptimizeHugeFunctions
+#build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
 
 build:windows --cxxopt=/std:c++17
 build:windows --host_cxxopt=/std:c++17
@@ -195,15 +195,15 @@ build:windows --host_cxxopt=/std:c++17
 build:windows --config=monolithic
 
 # Make sure to include as little of windows.h as possible
-build:windows --copt=-DWIN32_LEAN_AND_MEAN
-build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
-build:windows --copt=-DNOGDI
-build:windows --host_copt=-DNOGDI
+#build:windows --copt=-DWIN32_LEAN_AND_MEAN
+#build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
+#build:windows --copt=-DNOGDI
+#build:windows --host_copt=-DNOGDI
 
 # MSVC (Windows): Standards-conformant preprocessor mode
 # See https://docs.microsoft.com/en-us/cpp/preprocessor/preprocessor-experimental-overview
-build:windows --copt=/Zc:preprocessor
-build:windows --host_copt=/Zc:preprocessor
+#build:windows --copt=/Zc:preprocessor
+#build:windows --host_copt=/Zc:preprocessor
 
 # Misc build options we need for windows.
 build:windows --linkopt=/DEBUG
@@ -259,8 +259,5 @@ build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe
 test --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 # Compiling mediapipe
-build:windows --copt=/w
-# For using M_* math constants on Windows with MSVC.
-build:windows --copt=/D_USE_MATH_DEFINES
-build:windows --host_copt=/D_USE_MATH_DEFINES
+build:windows --per_file_copt=.*\.mm\$@-std=c++17
 
