@@ -42,7 +42,7 @@ yarn
 ```
 
 ## OPENCV install to - "C:\\opt\\opencv\\"
-https://github.com/opencv/opencv/releases/download/4.7.0/opencv-4.7.0-windows.exe
+https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe
 
 ## WGET
 https://eternallybored.org/misc/wget/1.21.4/64/wget.exe download to c:\opt
