@@ -30,6 +30,12 @@ create_config_settings()
 
 #To build without python use flags - bazel build --config=linux --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
 
+config_setting(
+    name = "windows",
+    values = {"cpu": "x64_windows"},
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
   name = "ovms_dependencies",
   deps = [
