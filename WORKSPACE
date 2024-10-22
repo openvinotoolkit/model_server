@@ -124,7 +124,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "9407697e8a18eebea664bab27d217a06bfa237fd", # Support ov::string in ovms model api adapter (#90)
+    commit = "35f260aab6a9073961a558a93cbc4aec5360d517",
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -419,7 +419,12 @@ new_git_repository(
     name = "model_api",
     remote = "https:///github.com/openvinotoolkit/model_api/",
     build_file = "@_model-api//:BUILD",
-    commit = "eb9fcfb1e1eebc047ff144707f76203b132e1aa6" # master Jun 24 15:02:17 2024 [cpp] Fix num classes check
+    commit = "9022adeb26ac0e5afe9814afa260fd208d09383a",
+)
+
+local_repository(
+    name = "geti_calculators",
+    path = "/geti_calculators",
 )
 
 new_local_repository(

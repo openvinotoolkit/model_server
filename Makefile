@@ -45,13 +45,14 @@ JOBS ?= $(CORES_TOTAL)
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu20 ubuntu22 redhat
-BASE_OS ?= ubuntu22
+BASE_OS ?= debian
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 22.04
 BASE_OS_TAG_REDHAT ?= 8.10
+BASE_OS_TAG_DEBIAN ?= 11
 
 INSTALL_RPMS_FROM_URL ?=
 
@@ -132,6 +133,8 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   TARGET_DISTRO_PARAMS = " --//:distro=ubuntu"
 else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
   TARGET_DISTRO_PARAMS = " --//:distro=redhat"
+else ifeq ($(findstring debian,$(BASE_OS)),debian)
+  TARGET_DISTRO_PARAMS = " --//:distro=debian"
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
@@ -182,6 +185,20 @@ ifeq ($(BASE_OS),redhat)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
   DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.5.0.16830.8e2dc85ddd0_x86_64.tgz
+endif
+ifeq ($(BASE_OS),debian)
+  BASE_OS_TAG=$(BASE_OS_TAG_DEBIAN)
+  OS=debian
+  ifeq ($(NVIDIA),1)
+    BASE_IMAGE=uknown_image
+    BASE_IMAGE_RELEASE=$(BASE_IMAGE)
+  else
+    BASE_IMAGE ?= debian:$(BASE_OS_TAG)
+    BASE_IMAGE_RELEASE=$(BASE_IMAGE)
+  endif
+  DIST_OS=debian
+  INSTALL_DRIVER_VERSION ?= "24.26.30049"
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.5.0.16830.8e2dc85ddd0_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server

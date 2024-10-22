@@ -95,7 +95,7 @@ ARG BASE_IMAGE
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=ubuntu"
+ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=debian"
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
             libgflags-dev \
@@ -221,7 +221,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     set -exuo pipefail ; \
     rm -f /etc/apt/apt.conf.d/docker-clean ; \
     if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
-    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then libcutensor_version=1.7.0.1-1; else libcutensor_version=1.6.1.5-1; fi;\
+    if [[ "$BASE_IMAGE" == *"Debian"* ]] ; then libcutensor_version=1.7.0.1-1; else libcutensor_version=1.6.1.5-1; fi;\
     apt-get update && apt-get install --no-install-recommends -y \
       libzstd-dev \
       libcudnn8=8.8.0.121-1+cuda11.8 \
@@ -358,7 +358,7 @@ FROM $BUILD_IMAGE as capi-build
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 # C api shared library
 # hadolint ignore=DL3059
-ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
+ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=debian"
 ARG JOBS=40
 ARG FUZZER_BUILD=0
 RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
@@ -388,7 +388,7 @@ RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
     ./bootstrap.sh && ./configure && make && make install
 
 WORKDIR /
-ARG BASE_OS=ubuntu
+ARG BASE_OS=debian
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
 ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg
@@ -448,7 +448,7 @@ RUN apt-get update ; \
 # for NVIDIA
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda apt package"; \
     apt-get install -y --no-install-recommends curl && \
-    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then libcutensor_version=1.7.0.1-1; else libcutensor_version=1.6.1.5-1; fi; \
+    if [[ "$BASE_IMAGE" == *"Debian"* ]] ; then libcutensor_version=1.7.0.1-1; else libcutensor_version=1.6.1.5-1; fi; \
     apt-get update && apt-get install -y --no-install-recommends libcudnn8=8.8.0.121-1+cuda11.8 libcutensor1="$libcutensor_version" libpng16-16 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
@@ -461,8 +461,7 @@ COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python
 # For image with Python enabled install Python library
 RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
     apt-get update -y ; \
-    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then python_version=3.10; else python_version=3.8; fi; \
-    apt-get install libpython$python_version --no-install-recommends -y && \
+    apt-get install libpython3.9 --no-install-recommends -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 ENV LD_LIBRARY_PATH=/ovms/lib

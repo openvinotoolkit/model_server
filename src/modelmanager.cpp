@@ -54,6 +54,9 @@
 #if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "inference/classification_calculator.h"
+#include "serialization/serialization_calculators.h"
+#include "utils/loop_calculators.h"
 #endif
 #include "metric_config.hpp"
 #include "metric_registry.hpp"
@@ -66,6 +69,14 @@ namespace ovms {
 
 static constexpr uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 3;
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
+
+// Just a simple check if geti calculators are build
+#if (MEDIAPIPE_DISABLE == 0)
+mediapipe::ClassificationCalculator classCalcInit;
+mediapipe::SerializationCalculator detserialize;
+mediapipe::BeginLoopRectanglePredictionCalculator loopbegin;
+mediapipe::EndLoopRectanglePredictionsCalculator endloop;
+#endif
 
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
     ieCore(std::make_unique<ov::Core>()),
