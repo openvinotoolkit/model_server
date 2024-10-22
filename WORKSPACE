@@ -105,12 +105,12 @@ http_archive(
     sha256 = "87407cd28e7a9c95d9f61a098a53cf031109d451a7763e7dd1253abf8b4df422",
     strip_prefix = "protobuf-3.19.1",
     urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.19.1.tar.gz"],
-    #patches = [
-    #    "@//third_party:com_google_protobuf_fixes.diff"
-    #],
-    #patch_args = [
-    #    "-p1",
-    #],
+    patches = [
+        "@mediapipe//third_party:com_google_protobuf_fixes.diff"
+    ],
+    patch_args = [
+        "-p1",
+    ],
 )
 
 ################################### Official/forked mediapipe repository #########
@@ -118,7 +118,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "9407697e8a18eebea664bab27d217a06bfa237fd", # Support ov::string in ovms model api adapter (#90)
+    commit = "d1104e524e147c91a3f858d1a77afb31bc799842", # 
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build

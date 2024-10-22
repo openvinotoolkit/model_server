@@ -75,7 +75,6 @@ build:linux --host_cxxopt=-std=c++17
 
 build:windows --host_cxxopt=/std:c++17
 build:windows --cxxopt=/std:c++17
-build:windows --action_env BAZEL_CXXOPTS="/std:c++17"
 
 # Fixing compiler errors:
 #build:windows --cxxopt=/translateInclude=no
@@ -95,7 +94,7 @@ build:linux --cxxopt=-Werror=format-security
 # Adding "--cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0" creates parity with TF
 # compilation options. It also addresses memory use due to
 # copy-on-write semantics of std::strings of the older ABI.
-build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
+#build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 
 # TODO Windows: may impact python nodes execution
 build:windows --noenable_bzlmod
@@ -255,4 +254,13 @@ build:windows --deleted_packages=tensorflow/core/tfrt/stubs,tensorflow/compiler/
 # Windows build ssl headers for GRPC workaround
 build:windows --override_repository="boringssl=C:\\opt\\boringSSL-SwiftPM"
 
+build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe
+
 test --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+
+# Compiling mediapipe
+build:windows --copt=/w
+# For using M_* math constants on Windows with MSVC.
+build:windows --copt=/D_USE_MATH_DEFINES
+build:windows --host_copt=/D_USE_MATH_DEFINES
+
