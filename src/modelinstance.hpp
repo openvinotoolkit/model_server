@@ -489,7 +489,19 @@ public:
         return inputsInfo;
     }
 
-    virtual ov::AnyMap getRTInfo() const;
+    /**
+           * @brief Get RTMap Info object
+           * @param path list of keys to get RTMap info
+           * @return const ov::AnyMap
+           */
+    ov::AnyMap getRTInfo(std::vector<std::string> path);
+
+    /**
+           * @brief Get RTMap Info object
+           *
+           * @return const ov::AnyMap
+         */
+    virtual ov::AnyMap getRTInfo();
 
     /**
          * @brief Get the Outputs Info object
