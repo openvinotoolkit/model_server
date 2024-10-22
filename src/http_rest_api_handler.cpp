@@ -568,25 +568,25 @@ void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
     }
 }
 
-void HttpRestApiHandler::convertRTInfo(Value& scope, Document& doc, ov::AnyMap& rt_info) {
+void HttpRestApiHandler::convertRTInfo(Value& scope, Document& doc, ov::AnyMap& rtInfo) {
     scope.SetObject();
-    for (auto& [key, value] : rt_info) {
+    for (auto& [key, value] : rtInfo) {
         SPDLOG_DEBUG("building rest response: rt_info: key: {}; value: {}", key, value.as<std::string>());
-        rapidjson::Value rt_info_key, rt_info_value, subScope;
-        rt_info_key.SetString(key.c_str(), doc.GetAllocator());
+        rapidjson::Value rtInfoKey, rtInfoValue, subScope;
+        rtInfoKey.SetString(key.c_str(), doc.GetAllocator());
         if (value.is<ov::AnyMap>()) {
             SPDLOG_DEBUG("building submap rest response : key: {};", key);
             subScope.SetObject();
             convertRTInfo(subScope, doc, value.as<ov::AnyMap>());
-            scope.AddMember(rt_info_key, subScope, doc.GetAllocator());
+            scope.AddMember(rtInfoKey, subScope, doc.GetAllocator());
         } else {
             try {
-                rt_info_value.SetString(value.as<std::string>().c_str(), doc.GetAllocator());
+                rtInfoValue.SetString(value.as<std::string>().c_str(), doc.GetAllocator());
             } catch (const std::exception& e) {
                 SPDLOG_ERROR("Error converting RT info value to string: {}", e.what());
-                rt_info_value.SetString("Error converting value", doc.GetAllocator());
+                rtInfoValue.SetString("Error converting value", doc.GetAllocator());
             }
-            scope.AddMember(rt_info_key, rt_info_value, doc.GetAllocator());
+            scope.AddMember(rtInfoKey, rtInfoValue, doc.GetAllocator());
         }
     }
 }
