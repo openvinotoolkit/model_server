@@ -36,7 +36,7 @@ int main() {
     OVMS_ServerSettingsSetRestPort(serverSettings, 11338);
 
     OVMS_ServerSettingsSetLogLevel(serverSettings, OVMS_LOG_DEBUG);
-    OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config.json");
+    OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config.json");
 
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings);
 
