@@ -446,25 +446,25 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
     HttpPayload request;
-    std::shared_ptr<Document> doc = std::make_shared<Document>();
+    Document doc;
     std::shared_ptr<MediapipeGraphExecutor> executor;
     bool streamFieldVal = false;
     {
         OVMS_PROFILE_SCOPE("rapidjson parse body");
-        doc->Parse(request_body.c_str());
+        doc.Parse(request_body.c_str());
     }
     {
         OVMS_PROFILE_SCOPE("rapidjson validate");
-        if (doc->HasParseError()) {
+        if (doc.HasParseError()) {
             return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
         }
 
-        if (!doc->IsObject()) {
+        if (!doc.IsObject()) {
             return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
         }
 
-        auto modelNameIt = doc->FindMember("model");
-        if (modelNameIt == doc->MemberEnd()) {
+        auto modelNameIt = doc.FindMember("model");
+        if (modelNameIt == doc.MemberEnd()) {
             return Status(StatusCode::JSON_INVALID, "model field is missing in JSON body");
         }
 
@@ -476,8 +476,8 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
         bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
         if (isTextGenerationEndpoint) {
-            auto streamIt = doc->FindMember("stream");
-            if (streamIt != doc->MemberEnd()) {
+            auto streamIt = doc.FindMember("stream");
+            if (streamIt != doc.MemberEnd()) {
                 if (!streamIt->value.IsBool()) {
                     return Status(StatusCode::JSON_INVALID, "stream field is not a boolean");
                 }
@@ -492,7 +492,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         // TODO: Possibly avoid making copy
         request.headers = request_components.headers;
         request.body = request_body;
-        request.parsedJson = doc;
+        request.parsedJson = &doc;
         request.uri = std::string(uri);
         request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
     }

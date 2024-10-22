@@ -46,7 +46,6 @@ Status HTTPServerModule::start(const ovms::Config& config) {
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", HTTP_SERVER_MODULE_NAME);
     SPDLOG_INFO("Started REST server at {}", server_address);
-    ovms::createAndStartDrogonServer(this->ovmsServer, workers);
     return StatusCode::OK;
 }
 void HTTPServerModule::shutdown() {
