@@ -43,6 +43,7 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "@aws-sdk-cpp//:aws-sdk-cpp",
         "@aws-sdk-cpp//:aws-sdk-cpp_cmake",
+        "@drogon//:drogon_cmake",
         "@azure//:storage",
         "@cpprest//:sdk",
         "@boost//:lib",
