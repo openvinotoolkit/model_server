@@ -8,7 +8,7 @@ Build the image from source to try this new feature. It will be included in the 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make release_image GPU=1
+make release_image
 ```
 It will create an image called `openvino/model_server:latest`.
 > **Note:** This operation might take 40min or more depending on your build host.
