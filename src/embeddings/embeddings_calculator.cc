@@ -31,6 +31,7 @@
 #include "../http_payload.hpp"
 #include "../logging.hpp"
 #include "../profiler.hpp"
+#include "../timer.hpp"
 #include "absl/strings/escaping.h"
 #include "src/embeddings/embeddings_calculator.pb.h"
 
@@ -85,6 +86,20 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
+        using std::chrono::microseconds;
+        #define LOGA(A, B) \
+            std::cout << A << " " << B << std::endl
+
+        enum : unsigned int {
+            INFER,
+            SER1,
+            SER2,
+            SER3,
+            TOTAL,
+            TIMER_END2
+        };
+        Timer<TIMER_END2> timer;
+        timer.start(TOTAL);
         OVMS_PROFILE_FUNCTION();
         RET_CHECK(tokenizer_session != nullptr);
         RET_CHECK(embeddings_session != nullptr);
@@ -143,7 +158,11 @@ public:
 
         ::InferenceOutput embeddingsOutputMap;
         try {
+            timer.start(SER1);
             ::InferenceOutput tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
+            timer.stop(SER1);
+            double time_ser1 = timer.elapsed<microseconds>(SER1);
+            LOGA("SER1", time_ser1/1000);
             ::InferenceInput embeddingsInputMap;
             // Check if tokenizer produced at least the number of outputs as there are inputs in embedding model
             RET_CHECK(tokenizerOutputMap.size() >= embeddingsInputNames.size());
@@ -163,13 +182,19 @@ public:
             RET_CHECK(false);
         }
 
-        const ov::Tensor* embeddingsTensor{nullptr};
+        timer.start(SER2);
+        const ov::Tensor* embeddingsTensorPtr{nullptr};
+        ov::Tensor embeddingsTensorLv;
+        timer.stop(SER2);
+        double time_ser2 = timer.elapsed<microseconds>(SER2);
+        LOGA("SER2", time_ser2/1000);
         if (embeddingsOutputMap.size() == 2) {  // GTE
             // Search by number of dimensions, should be 3
             bool found = false;
             for (const auto& [name, tensor] : embeddingsOutputMap) {
                 if (tensor.get_shape().size() == 3) {
-                    embeddingsTensor = &tensor;
+                    embeddingsTensorPtr = &tensor;
+                    embeddingsTensorLv = tensor;
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", name);
                     found = true;
                     break;
@@ -178,13 +203,15 @@ public:
             RET_CHECK(found);
         } else {  // BGE
             RET_CHECK(embeddingsOutputMap.size() == 1);
-            embeddingsTensor = &embeddingsOutputMap.begin()->second;
+            embeddingsTensorPtr = &embeddingsOutputMap.begin()->second;
+            embeddingsTensorLv = embeddingsOutputMap.begin()->second;
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", embeddingsOutputMap.begin()->first);
         }
+        const ov::Tensor& embeddingsTensor = *embeddingsTensorPtr;
 
-        RET_CHECK(embeddingsTensor->get_shape().size() == 3);
-        RET_CHECK(embeddingsTensor->get_shape()[0] == input_strings.size());
-        RET_CHECK(embeddingsTensor->get_element_type() == ov::element::f32);
+        RET_CHECK(embeddingsTensor.get_shape().size() == 3);
+        RET_CHECK(embeddingsTensor.get_shape()[0] == input_strings.size());
+        RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
 
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -199,12 +226,16 @@ public:
         bool normalize = options.normalize_embeddings();
         // TODO: mean pooling
 
-        const ov::Shape& outputShape = embeddingsTensor->get_shape();
+        const ov::Shape& outputShape = embeddingsTensor.get_shape();
         size_t batchSize = outputShape[0];
         for (size_t i = 0; i < batchSize; i++) {
             size_t stride = i * outputShape[1] * outputShape[2];
-            std::vector<float> data(reinterpret_cast<float*>(embeddingsTensor->data()) + stride, reinterpret_cast<float*>(embeddingsTensor->data()) + stride + outputShape[2]);
-            float* dataPtr = reinterpret_cast<float*>(embeddingsTensor->data()) + stride;
+            timer.start(SER3);
+            std::vector<float> data(reinterpret_cast<float*>(embeddingsTensor.data()) + stride, reinterpret_cast<float*>(embeddingsTensor.data()) + stride + outputShape[2]);
+            timer.stop(SER3);
+            double time_ser3 = timer.elapsed<microseconds>(SER3);
+            LOGA("SER3", time_ser3/1000);
+            float* dataPtr = reinterpret_cast<float*>(embeddingsTensor.data()) + stride;
             float* dataPtrEnd = dataPtr + outputShape[2];
             writer.StartObject();
             writer.String("object");
@@ -250,6 +281,9 @@ public:
         writer.EndArray();
         writer.EndObject();
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
+        timer.stop(TOTAL);
+        double time_total = timer.elapsed<microseconds>(TOTAL);
+        LOGA("TOTAL", time_total/1000);
         return absl::OkStatus();
     }
 };

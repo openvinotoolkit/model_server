@@ -48,6 +48,7 @@ cc_library(
         "//src:httppayload",
         "//src:libovmslogging",
         "//src:libovmsprofiler",
+        "//src:libovmstimer",
 	"embeddings_calculator_cc_proto",
     ],
     visibility = ["//visibility:public"],

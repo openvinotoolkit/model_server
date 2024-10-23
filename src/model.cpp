@@ -29,6 +29,7 @@
 #include "logging.hpp"
 #include "modelinstance.hpp"
 #include "statefulmodelinstance.hpp"
+#include "status.hpp"
 
 namespace ovms {
 

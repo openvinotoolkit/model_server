@@ -383,8 +383,8 @@ Status serializePredictResponse(
             bufferType,
             std::nullopt,  // TODO TBD
             copyBuffer);
-        SPDLOG_TRACE("Serialized output with name:{} for servable name:{}; version:{} with no buffer copy",
-            outputName, response->getServableName(), response->getServableVersion());
+        SPDLOG_TRACE("Serialized output with name:{}; for servable name:{}; version:{}; with buffer copy:{}",
+            outputName, response->getServableName(), response->getServableVersion(), copyBuffer);
         ++outputId;
     }
     return StatusCode::OK;

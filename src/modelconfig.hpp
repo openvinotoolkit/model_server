@@ -30,7 +30,7 @@
 #include "layout_configuration.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
-#include "status.hpp"
+#include "status.hpp"  // TODO fwd dec
 
 namespace ovms {
 class ModelVersionPolicy;
