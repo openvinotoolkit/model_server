@@ -191,7 +191,7 @@ TEST_F(MediapipeEmbeddingsTest, grpcInference) {
     const std::string modelName = "embeddings";
     request.Clear();
     response.Clear();
-    inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
+    inputs_info_t inputsMeta{{"input", {DUMMY_MODEL_SHAPE, precision}}};
     std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
     preparePredictRequest(request, inputsMeta, requestData1);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::NOT_FOUND);
