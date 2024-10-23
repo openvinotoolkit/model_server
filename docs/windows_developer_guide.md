@@ -36,7 +36,7 @@ nvm use 22.9.0
 npm cache clean --force
 ```
 
-If you want to compile without proxy, npm proxy needs to be reseted:
+If you want to compile without proxy, npm proxy needs to be reset:
 ```
 set http_proxy=
 set https_proxy=
