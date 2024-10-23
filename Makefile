@@ -81,7 +81,6 @@ OV_TOKENIZERS_BRANCH ?=  81c067c557d48011e6879a42d4a25147060eaeff # master 2024-
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
 
-TOKENIZERS ?= 1
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
 
@@ -225,7 +224,6 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg ov_source_org=$(OV_SOURCE_ORG)\
 	--build-arg ov_contrib_org=$(OV_CONTRIB_ORG)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\
-	--build-arg tokenizers=$(TOKENIZERS)\
 	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
 	--build-arg RUN_TESTS=$(RUN_TESTS)\
