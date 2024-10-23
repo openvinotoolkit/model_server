@@ -40,8 +40,8 @@ build:nativeopt --host_copt=-march=native
 build:nativeopt --copt=-O3
 
 # For Tensorflow building only
-build --action_env PYTHON_BIN_PATH="/usr/bin/python3"
-build --define PYTHON_BIN_PATH=/usr/bin/python3
+build:linux --action_env PYTHON_BIN_PATH="/usr/bin/python3"
+build:linux --define PYTHON_BIN_PATH=/usr/bin/python3
 
 build --spawn_strategy=standalone
 build --genrule_strategy=standalone
@@ -256,3 +256,6 @@ build:windows --deleted_packages=tensorflow/core/tfrt/stubs,tensorflow/compiler/
 build:windows --override_repository="boringssl=C:\\opt\\boringSSL-SwiftPM"
 
 test --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+
+# Compile ObjC++ files with C++17
+build --per_file_copt=.*\.mm\$@-std=c++17
