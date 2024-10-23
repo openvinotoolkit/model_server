@@ -97,6 +97,7 @@ cmake(
         "BUILD_ORM": "OFF",
         "BUILD_BROTLI": "OFF",
         "BUILD_YAML_CONFIG": "OFF",
+        "CMAKE_INSTALL_LIBDIR": "lib",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\"
     }} | select({{
