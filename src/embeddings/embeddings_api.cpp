@@ -83,7 +83,7 @@ absl::Status EmbeddingsHandler::parseRequest() {
     return absl::OkStatus();
 }
 
-std::variant<std::vector<std::string>, std::vector<std::vector<int>>> EmbeddingsHandler::getInput() const {
+std::variant<std::vector<std::string>, std::vector<std::vector<int>>>& EmbeddingsHandler::getInput() {
     return request.input;
 }
 EncodingFormat EmbeddingsHandler::getEncodingFormat() const {

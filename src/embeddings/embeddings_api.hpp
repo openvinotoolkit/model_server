@@ -46,7 +46,7 @@ public:
     EmbeddingsHandler(rapidjson::Document& document) :
         doc(document) {}
 
-    std::variant<std::vector<std::string>, std::vector<std::vector<int>>> getInput() const;
+    std::variant<std::vector<std::string>, std::vector<std::vector<int>>>& getInput();
     EncodingFormat getEncodingFormat() const;
 
     absl::Status parseRequest();
