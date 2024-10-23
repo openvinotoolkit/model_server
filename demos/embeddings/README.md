@@ -22,14 +22,14 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Install python dependencies for the conversion script:
 ```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-pip3 install optimum-intel@git+https://github.com/huggingface/optimum-intel.git  openvino-tokenizers[transformers]==2024.4.* openvino==2024.4.* nncf>=2.11.0 sentence_transformers==3.1.1 openai "transformers<4.45"
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
+pip3 install -U --pre optimum-intel@git+https://github.com/huggingface/optimum-intel.git  openvino-tokenizers[transformers]==2024.5.* openvino==2024.5.* nncf>=2.11.0 sentence_transformers==3.1.1 openai "transformers<4.45" einops
 ```
 
 Run optimum-cli to download and quantize the model:
 ```bash
 cd demos/embeddings
-convert_tokenizer -o models/gte-large-en-v1.5-tokenizer/1 Alibaba-NLP/gte-large-en-v1.5
+convert_tokenizer --not-add-special-tokens -o models/gte-large-en-v1.5-tokenizer/1 Alibaba-NLP/gte-large-en-v1.5
 optimum-cli export openvino --disable-convert-tokenizer --model Alibaba-NLP/gte-large-en-v1.5 --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/gte-large-en-v1.5-embeddings/1
 rm models/gte-large-en-v1.5-embeddings/1/*.json models/gte-large-en-v1.5-embeddings/1/vocab.txt 
 ```
@@ -126,7 +126,8 @@ Alternatively there could be used openai python client like in the example below
 ```bash
 pip3 install openai
 ```
-```python
+```bash
+echo '
 from openai import OpenAI
 
 client = OpenAI(
@@ -144,7 +145,9 @@ embedding_responses = client.embeddings.create(
 embedding_from_string1 = np.array(embedding_responses.data[0].embedding)
 embedding_from_string2 = np.array(embedding_responses.data[1].embedding)
 cos_sim = np.dot(embedding_from_string1, embedding_from_string2)/(np.linalg.norm(embedding_from_string1)*np.linalg.norm(embedding_from_string2))
-print("Similarity score as cos_sim", cos_sim)
+print("Similarity score as cos_sim", cos_sim)' >> openai_client.py
+
+python3 openai_client.py
 ```
 It will report results like `Similarity score as cos_sim 0.97654650115054`.
 
@@ -154,7 +157,7 @@ TBD
 
 ## RAG with Model Server
 
-Embeddings endpoint can be applied in RAG chains to deletated text feature extraction both for documented vectorization and in context retrieval.
+Embeddings endpoint can be applied in RAG chains to delegated text feature extraction both for documented vectorization and in context retrieval.
 Check this demo to see the langchain code example which is using OpenVINO Model Server both for text generation and embedding endpoint in [RAG application demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/continuous_batching/rag)
 
 ## Deploying multiple embedding models

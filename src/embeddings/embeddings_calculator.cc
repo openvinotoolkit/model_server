@@ -25,6 +25,7 @@
 #pragma GCC diagnostic pop
 
 #include <adapters/inference_adapter.h>
+#include <openvino/openvino.hpp>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
@@ -81,6 +82,7 @@ public:
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator  [Node: {}] Open start", cc->NodeName());
 
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator [Node: {}] Open end", cc->NodeName());
+
         return absl::OkStatus();
     }
 
@@ -153,6 +155,20 @@ public:
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embedding model input {} is connected with matching tokenizer output", embeddingsInputName);
                 embeddingsInputMap[embeddingsInputName] = it->second;
             }
+
+            size_t max_context_length = 512;  // default allowed input length. Otherwise, it will be read from model rt_info>config>max_position_embeddings in the model.xml file
+            try {
+                max_context_length = embeddings_session->getModelConfig().at("config").as<ov::AnyMap>().at("max_position_embeddings").as<size_t>();
+            } catch (...) {
+                LOG(INFO) << "Can not read config->max_position_embeddings from model rt_info. Using default value " << max_context_length;
+            }
+
+            size_t input_ids_size = tokenizerOutputMap["input_ids"].get_shape()[1];
+            if (input_ids_size > max_context_length) {
+                LOG(INFO) << "Input size " << input_ids_size << " exceeds max_context_length " << max_context_length;
+                return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
+            }
+
             embeddingsOutputMap = embeddings_session->infer(embeddingsInputMap);
             RET_CHECK(embeddingsOutputMap.size() > 0);
         } catch (const std::exception& e) {
