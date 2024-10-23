@@ -25,6 +25,7 @@
 #include <rapidjson/stringbuffer.h>
 
 #include "logging.hpp"
+#include "status.hpp"
 
 namespace ovms {
 const std::string DAG_DEFINITIONS = R"(

@@ -47,6 +47,7 @@ using OutputDataType = std::string;
 class EmbeddingsCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
+    static const std::string EMBEDDINGS_MODEL_INPUT_IDS_NAME;
 
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
@@ -106,15 +107,13 @@ public:
         // Automatically deduce tokenizer input name
         std::vector<std::string> tokenizerInputNames = tokenizer_session->getInputNames();
         std::vector<std::string> embeddingsInputNames = embeddings_session->getInputNames();
-
         RET_CHECK(tokenizerInputNames.size() == 1);
         const std::string& tokenizerInputName = tokenizerInputNames.at(0);
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Tokenizer input name detected: {}", tokenizerInputName);
 
         ::InferenceInput tokenizerInputMap;
-
-        ::InferenceOutput embeddingsOutputMap;
         size_t received_batch_size = 1;
+        ::InferenceOutput embeddingsOutputMap;
         try {
             ::InferenceOutput tokenizerOutputMap;
             auto input = handler.getInput();
@@ -138,28 +137,50 @@ public:
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embedding model input {} is connected with matching tokenizer output", embeddingsInputName);
                 embeddingsInputMap[embeddingsInputName] = it->second;
             }
-
             size_t max_context_length = 512;  // default allowed input length. Otherwise, it will be read from model rt_info>config>max_position_embeddings in the model.xml file
             try {
                 max_context_length = embeddings_session->getModelConfig().at("config").as<ov::AnyMap>().at("max_position_embeddings").as<size_t>();
             } catch (...) {
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Can not read config->max_position_embeddings from model rt_info. Using default value {}", max_context_length);
             }
-
-            RET_CHECK(tokenizerOutputMap["input_ids"].get_shape().size() == 2);
-            size_t input_ids_size = tokenizerOutputMap["input_ids"].get_shape()[1];
+            RET_CHECK(tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape().size() == 2);
+            size_t input_ids_size = tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape()[1];
             if (input_ids_size > max_context_length) {
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
                 return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
             }
-
-            embeddingsOutputMap = embeddings_session->infer(embeddingsInputMap);
-            if (embeddingsOutputMap.empty()) {
+            // creating output to avoid copying big tensor
+            ov::Shape outShape = embeddingsInputMap.at(EMBEDDINGS_MODEL_INPUT_IDS_NAME).get_shape();
+            bool foundMatchinEmbeddingOutput{false};
+            std::string outputNameToSet;
+            for (auto& name : embeddings_session->getOutputNames()) {
+                ov::PartialShape outPShape = embeddings_session->getOutputShape(name);
+                if (outPShape.size() != 3)
+                    continue;
+                try {
+                    outShape.emplace_back(outPShape[2].get_length());
+                    foundMatchinEmbeddingOutput = true;
+                    outputNameToSet = name;
+                    break;
+                } catch (std::exception& e) {
+                    LOG(ERROR) << "Failed to get 3rd dimension of output" << outputNameToSet;
+                    return absl::InternalError(absl::StrCat("Failed to get 3rd dimension of output: ", outputNameToSet));
+                }
+            }
+            if (!foundMatchinEmbeddingOutput) {
+                LOG(INFO) << "Failed to find matching output for correct output setting optimization";
+                return absl::InternalError("Could not find output with 3 dimensions in embeddings model");
+            }
+            ov::Tensor outputTensor(embeddings_session->getOutputDatatype(outputNameToSet), outShape);
+            embeddingsOutputMap.emplace(outputNameToSet, std::move(outputTensor));
+            embeddings_session->infer(embeddingsInputMap, embeddingsOutputMap);
+            if (0 == embeddingsOutputMap.size()) {  // TODO remove
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "No output from embeddings model");
                 return absl::InternalError("No output from embeddings model");
             }
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from session infer(): {}", e.what());
+            LOG(INFO) << e.what();
             RET_CHECK(false);
         } catch (...) {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught unknown exception from session infer()");
@@ -202,30 +223,32 @@ public:
         bool normalize = options.normalize_embeddings();
         // TODO: mean pooling
 
-        ov::Shape outputShape = embeddingsTensor.get_shape();
+        const ov::Shape& outputShape = embeddingsTensor.get_shape();
         size_t batchSize = outputShape[0];
         for (size_t i = 0; i < batchSize; i++) {
             size_t stride = i * outputShape[1] * outputShape[2];
-            std::vector<float> data(reinterpret_cast<float*>(embeddingsTensor.data()) + stride, reinterpret_cast<float*>(embeddingsTensor.data()) + stride + outputShape[2]);
+            size_t size = stride + outputShape[2];
+            float* dataPtr = reinterpret_cast<float*>(embeddingsTensor.data()) + stride;
+            float* dataPtrEnd = dataPtr + outputShape[2];
             writer.StartObject();
             writer.String("object");
             writer.String("embedding");
             writer.String("embedding");
             if (normalize) {
-                double square_sum = std::inner_product(data.begin(), data.end(), data.begin(), double(0.0));
+                double square_sum = std::inner_product(dataPtr, dataPtrEnd, dataPtr, double(0.0));
                 double denom = std::max(std::sqrt(square_sum), double(1e-12));
-                std::transform(data.begin(), data.end(), data.begin(),
+                std::transform(dataPtr, dataPtrEnd, dataPtr,
                     [denom](auto& element) { return element / denom; });
             }
             if (handler.getEncodingFormat() == EncodingFormat::BASE64) {
-                std::string_view sv(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
+                std::string_view sv2(reinterpret_cast<char*>(dataPtr), outputShape[2] * sizeof(float));
                 std::string escaped;
-                absl::Base64Escape(sv, &escaped);
+                absl::Base64Escape(sv2, &escaped);
                 writer.String(escaped.c_str());
             } else {
                 writer.StartArray();
-                for (auto value : data) {
-                    writer.Double(value);
+                for (size_t i = 0; i < size; ++i) {
+                    writer.Double(dataPtr[i]);
                 }
                 writer.EndArray();
             }
@@ -233,7 +256,6 @@ public:
             writer.Int(i);
             writer.EndObject();
         }
-
         writer.EndArray();
         writer.EndObject();
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
@@ -242,6 +264,7 @@ public:
 };
 const std::string EmbeddingsCalculator::INPUT_TAG_NAME{"REQUEST_PAYLOAD"};
 const std::string EmbeddingsCalculator::OUTPUT_TAG_NAME{"RESPONSE_PAYLOAD"};
+const std::string EmbeddingsCalculator::EMBEDDINGS_MODEL_INPUT_IDS_NAME{"input_ids"};
 
 REGISTER_CALCULATOR(EmbeddingsCalculator);
 

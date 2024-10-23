@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "../schema.hpp"
+#include "../status.hpp"
 
 TEST(SchemaTest, PipelineConfigMatchingSchema) {
     const char* pipelineConfigMatchingSchema = R"(
