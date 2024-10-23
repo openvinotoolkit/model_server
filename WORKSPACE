@@ -179,10 +179,14 @@ http_archive(
     url = "https://github.com/gflags/gflags/archive/v2.2.2.zip",
 )
 
-git_repository(
+# 2020-08-21
+http_archive(
     name = "com_github_glog_glog",
-    remote = "https://github.com/google/glog",
-    tag = "v0.5.0",
+    strip_prefix = "glog-3a0d4d22c5ae0b9a2216988411cfa6bf860cc372",
+    sha256 = "170d08f80210b82d95563f4723a15095eff1aad1863000e8eeb569c96a98fefb",
+    urls = [
+        "https://github.com/google/glog/archive/3a0d4d22c5ae0b9a2216988411cfa6bf860cc372.zip",
+    ],
 )
 
 load("@mediapipe//third_party:external_files.bzl", "external_files")
