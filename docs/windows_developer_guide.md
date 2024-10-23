@@ -17,7 +17,7 @@ make sure default "python --version" gets you 3.9
 
 ## OpenVINO
 OpenVINO Runtime: Download 2024.4 https://storage.openvinotoolkit.org/repositories/openvino/packages/2024.4/windows/w_openvino_toolkit_windows_2024.4.0.16579.c3152d32c9c_x86_64.zip
-unzipped in /opt/intel/openvino_2024
+unzipped in c:\opt\intel\openvino_2024
 
 ## BAZEL
 https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
@@ -29,10 +29,15 @@ Install in c:\opt\msys64 https://github.com/msys2/msys2-installer/releases/downl
 
 ## NPM YARN
 https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.exe
+Open command line cmd.exe and run:
 ```
 nvm install latest
 nvm use 22.9.0
 npm cache clean --force
+```
+
+If you want to compile without proxy, npm proxy needs to be reseted:
+```
 set http_proxy=
 set https_proxy=
 npm config rm https-proxy
