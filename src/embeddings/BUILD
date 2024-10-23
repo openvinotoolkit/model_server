@@ -40,7 +40,8 @@ mediapipe_proto_library(
 
 cc_library(
     name = "embeddingscalculator",
-    srcs = ["embeddings_calculator.cc", "embeddings_api.cpp", "embeddings_api.hpp"],
+    hdrs = ["embeddings_api.hpp"],
+    srcs = ["embeddings_calculator.cc", "embeddings_api.cpp"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",

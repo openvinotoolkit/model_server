@@ -19,6 +19,11 @@
 #include <variant>
 #include <vector>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/port/canonical_errors.h"
+#pragma GCC diagnostic pop
+
 #include "rapidjson/document.h"
 
 enum class EncodingFormat {
@@ -30,5 +35,19 @@ struct EmbeddingsRequest {
     std::variant<std::vector<std::string>, std::vector<std::vector<int>>> input;
     EncodingFormat encoding_format;
 
-    static std::variant<EmbeddingsRequest, std::string> from_json(rapidjson::Document* request);
+    static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request);
+};
+
+class EmbeddingsHandler {
+    rapidjson::Document& doc;
+    EmbeddingsRequest request;
+
+public:
+    EmbeddingsHandler(rapidjson::Document& document) :
+        doc(document) {}
+
+    std::variant<std::vector<std::string>, std::vector<std::vector<int>>> getInput();
+    EncodingFormat getEncodingFormat() const;
+
+    absl::Status parseRequest();
 };

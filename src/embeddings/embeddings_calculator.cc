@@ -95,11 +95,11 @@ public:
         InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
-        auto request = EmbeddingsRequest::from_json(payload.parsedJson);
-        if (auto error = std::get_if<std::string>(&request)) {
-            return absl::InvalidArgumentError(*error);
+        EmbeddingsHandler handler(*payload.parsedJson);
+        absl::Status status = handler.parseRequest();
+        if (!status.ok()) {
+            return status;
         }
-        EmbeddingsRequest embeddingsRequest = std::get<EmbeddingsRequest>(request);
 
         // Automatically deduce tokenizer input name
         std::vector<std::string> tokenizerInputNames = tokenizer_session->getInputNames();
@@ -112,18 +112,20 @@ public:
         ::InferenceInput tokenizerInputMap;
 
         ::InferenceOutput embeddingsOutputMap;
-        size_t expected_batch_size = 1;
+        size_t received_batch_size = 1;
         try {
             ::InferenceOutput tokenizerOutputMap;
-            if (auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input)) {
-                expected_batch_size = strings->size();
+            auto input = handler.getInput();
+            if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
+                received_batch_size = strings->size();
                 tokenizerInputMap[tokenizerInputName] = ov::Tensor{
                     ov::element::string,
-                    ov::Shape{expected_batch_size},
+                    ov::Shape{received_batch_size},
                     strings->data()};
                 tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
             } else {
                 // TODO: input already tokenized
+                return absl::InvalidArgumentError("not implemented");
             }
             ::InferenceInput embeddingsInputMap;
             // Check if tokenizer produced at least the number of outputs as there are inputs in embedding model
@@ -164,7 +166,7 @@ public:
         }
 
         RET_CHECK(embeddingsTensor.get_shape().size() == 3);
-        RET_CHECK(embeddingsTensor.get_shape()[0] == expected_batch_size);
+        RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
         RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
 
         StringBuffer buffer;
@@ -195,7 +197,7 @@ public:
                 std::transform(data.begin(), data.end(), data.begin(),
                     [denom](auto& element) { return element / denom; });
             }
-            if (embeddingsRequest.encoding_format == EncodingFormat::BASE64) {
+            if (handler.getEncodingFormat() == EncodingFormat::BASE64) {
                 std::string_view sv(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
                 std::string escaped;
                 absl::Base64Escape(sv, &escaped);

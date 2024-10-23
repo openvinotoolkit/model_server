@@ -18,9 +18,14 @@
 #include <string>
 #include <variant>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/port/canonical_errors.h"
+#pragma GCC diagnostic pop
+
 #include "rapidjson/document.h"
 
-std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::from_json(rapidjson::Document* parsedJson) {
+std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjson::Document* parsedJson) {
     EmbeddingsRequest request;
     std::vector<std::string> input_strings;
 
@@ -66,4 +71,21 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::from_json(rapidj
     // TODO: user (optional)
     request.input = input_strings;
     return request;
+}
+
+absl::Status EmbeddingsHandler::parseRequest() {
+    auto parsed = EmbeddingsRequest::fromJson(&(this->doc));
+
+    if (auto error = std::get_if<std::string>(&parsed)) {
+        return absl::InvalidArgumentError(*error);
+    }
+    this->request = std::get<EmbeddingsRequest>(parsed);
+    return absl::OkStatus();
+}
+
+std::variant<std::vector<std::string>, std::vector<std::vector<int>>> EmbeddingsHandler::getInput() {
+    return request.input;
+}
+EncodingFormat EmbeddingsHandler::getEncodingFormat() const {
+    return request.encoding_format;
 }

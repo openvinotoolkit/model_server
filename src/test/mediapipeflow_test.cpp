@@ -177,7 +177,7 @@ TEST_F(MediapipeEmbeddingsTest, startup) {
     ASSERT_TRUE(mediapipeGraphDefinition->getStatus().isAvailable());
 }
 
-TEST_F(MediapipeEmbeddingsTest, gprcInference) {
+TEST_F(MediapipeEmbeddingsTest, grpcInference) {
     auto start = std::chrono::high_resolution_clock::now();
     const int timeout = 5;
     while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
