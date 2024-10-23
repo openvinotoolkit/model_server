@@ -442,7 +442,7 @@ Status ModelConfig::parseModelMapping() {
     }
     auto itr = doc.FindMember("inputs");
     if (itr == doc.MemberEnd()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load inputs object from file {}", path.c_str());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load inputs object from file {}", path.string());
     } else {
         // Process inputs
         for (const auto& key : itr->value.GetObject()) {
@@ -453,7 +453,7 @@ Status ModelConfig::parseModelMapping() {
     }
     itr = doc.FindMember("outputs");
     if (itr == doc.MemberEnd()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load outputs object from file {}", path.c_str());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load outputs object from file {}", path.string());
     } else {
         // Process outputs
         const auto it = doc.FindMember("outputs");

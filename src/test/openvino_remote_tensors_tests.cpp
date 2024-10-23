@@ -1541,7 +1541,7 @@ TEST_F(CAPINonCopy, AsyncWithCallbackDummy) {
 
 class CAPIGPUPerfComparison : public TestWithTempDir {
 protected:
-    const uint afterConfigChangeLoadTimeMs = 50;
+    const uint32_t afterConfigChangeLoadTimeMs = 50;
     const int stressIterationsLimit = 5000;
 
     std::string configFilePath;

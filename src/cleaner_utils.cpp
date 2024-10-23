@@ -29,7 +29,10 @@ FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequ
 void FunctorSequenceCleaner::cleanup() {
     globalSequencesViewer.removeIdleSequences();
     SPDLOG_TRACE("malloc_trim(0)");
+#ifdef __linux__
     malloc_trim(0);
+#endif
+    // TODO: windows for malloc_trim(0);
 }
 
 FunctorSequenceCleaner::~FunctorSequenceCleaner() = default;

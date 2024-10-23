@@ -95,7 +95,7 @@ ARG BASE_IMAGE
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=ubuntu"
+ARG debug_bazel_flags="--config=linux --strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=ubuntu"
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
             libgflags-dev \
@@ -356,7 +356,7 @@ FROM $BUILD_IMAGE as capi-build
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 # C api shared library
 # hadolint ignore=DL3059
-ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
+ARG CAPI_FLAGS="--config=linux --strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
 ARG JOBS=40
 ARG FUZZER_BUILD=0
 RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared

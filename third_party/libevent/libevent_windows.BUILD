@@ -194,11 +194,13 @@ include_files = [
     "libevent/include/event2/visibility.h",
 ]
 
+WINDOWS_LIB_PATH = "c:\\opt\\libevent\\*"
+
 lib_files = [
-    "libevent/lib/libevent.a",
-    "libevent/lib/libevent_core.a",
-    "libevent/lib/libevent_extra.a",
-    "libevent/lib/libevent_pthreads.a",
+    "libevent/lib/event.lib",
+    "libevent/lib/event_core.lib",
+    "libevent/lib/event_extra.lib",
+    # TODO: windows compilation does not produce this: "libevent/lib/libevent_pthreads.lib",
 ]
 
 genrule(
@@ -215,17 +217,17 @@ genrule(
         "make install",
         "rm -rf $$TMP_DIR",
     ]),
+    # TODO windows: compile the libevent here instead of copying from hardcoded path, find a way to execute more than one command in cmd_bat on windows
+    cmd_bat = "xcopy /R /E /Y /F c:\\opt\\libevent\\ %cd%\\$(@D)\\libevent\\",
 )
 
 cc_library(
     name = "libevent",
     srcs = [
-        "libevent/lib/libevent.a",
-        "libevent/lib/libevent_pthreads.a",
+        "libevent/lib/libevent.lib",
     ],
     hdrs = include_files,
     includes = ["libevent/include"],
-    linkopts = ["-lpthread"],
     linkstatic = 1,
 )
 

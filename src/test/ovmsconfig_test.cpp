@@ -20,7 +20,12 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+// TODO: Write windows/linux specific status codes.
+#ifdef __linux__
 #include <sysexits.h>
+#elif _WIN32
+#include <ntstatus.h>
+#endif
 
 #include "spdlog/spdlog.h"
 

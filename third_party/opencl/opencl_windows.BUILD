@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,14 +14,16 @@
 # limitations under the License.
 #
 
-cc_library(
-   name = "boost",
-   srcs = [
-      "libboost_log_setup.a",
-      "libboost_log.a",
-      "libboost_thread.a",
-      "libboost_date_time.a",
-      "libboost_system.a",
-   ],
-   visibility = ["//visibility:public"],
+package(
+    default_visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "opencl",
+    hdrs = glob([
+        "include/**/*.*"
+    ]),
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+

@@ -63,7 +63,7 @@ In-case of problems, see [Debugging](#debugging).
 
 4. In the docker container context compile the source code via :
 	```bash
-	bazel build --define PYTHON_DISABLE=0 --cxxopt=-DPYTHON_DISABLE=0 //src:ovms
+	bazel build --config=linux --define PYTHON_DISABLE=0 --cxxopt=-DPYTHON_DISABLE=0 //src:ovms
 	```
 
 5. From the container, run a single unit test :
@@ -340,7 +340,7 @@ Debugging options are available. Click on the required option :
 	mkdir -p /models/1 && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
 	```
 	```bash
-	bazel build //src:ovms -c dbg
+	bazel build --config=linux //src:ovms -c dbg
 	```
 	```bash
 	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models
@@ -382,7 +382,7 @@ docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_ser
 
 3. Build OVMS with minitrace enabled.
 ```bash
-bazel build --copt="-DMTR_ENABLED" //src:ovms
+bazel build --config=linux --copt="-DMTR_ENABLED" //src:ovms
 ```
 
 4. Run OVMS with `--trace_path` specifying where to save flame graph JSON file.

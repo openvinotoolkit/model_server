@@ -76,8 +76,14 @@ using std::chrono::microseconds;
 extern "C" {
 #endif
 
+#ifdef __linux__
 #define DLL_PUBLIC __attribute__((visibility("default")))
 #define DLL_LOCAL __attribute__((visibility("hidden")))
+#elif _WIN32
+// TODO: Fix capi.cpp(86): error C2375: 'OVMS_ApiVersion': redefinition; different linkage
+// #define DLL_PUBLIC __declspec(dllexport)
+#define DLL_PUBLIC
+#endif
 
 DLL_PUBLIC OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor) {
     if (major == nullptr)
@@ -866,9 +872,9 @@ DLL_PUBLIC void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* res) {
 }
 
 namespace {
-enum : unsigned int {
-    TOTAL,
-    CALLBACK,
+enum : uint32_t {
+    TIMER_TOTAL,
+    TIMER_CALLBACK,
     TIMER_END
 };
 
@@ -926,7 +932,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
     OVMS_PROFILE_FUNCTION();
     using std::chrono::microseconds;
     Timer<TIMER_END> timer;
-    timer.start(TOTAL);
+    timer.start(TIMER_TOTAL);
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
@@ -979,8 +985,8 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
         return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
 
-    timer.stop(TOTAL);
-    double reqTotal = timer.elapsed<microseconds>(TOTAL);
+    timer.stop(TIMER_TOTAL);
+    double reqTotal = timer.elapsed<microseconds>(TIMER_TOTAL);
     if (pipelinePtr) {
         //  OBSERVE_IF_ENABLED(pipelinePtr->getMetricReporter().reqTimeGrpc, reqTotal);
     } else {
@@ -993,12 +999,12 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
     callback = req->getResponseCompleteCallback();
     // TODO cleanup all paths
     if (callback) {
-        timer.start(CALLBACK);
+        timer.start(TIMER_CALLBACK);
         auto completeCallbackData = req->getResponseCompleteCallbackData();
         SPDLOG_DEBUG("Calling response complete callback");
         callback(*response, 0, completeCallbackData);
-        timer.stop(CALLBACK);
-        double reqCallback = timer.elapsed<microseconds>(CALLBACK);
+        timer.stop(TIMER_CALLBACK);
+        double reqCallback = timer.elapsed<microseconds>(TIMER_CALLBACK);
         SPDLOG_DEBUG("Called response complete callback time: {} ms", reqCallback / 1000);
     }
     return nullptr;
@@ -1008,7 +1014,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceAsync(OVMS_Server* serverPtr, OVMS_Inferen
     OVMS_PROFILE_FUNCTION();
     using std::chrono::microseconds;
     Timer<TIMER_END> timer;
-    timer.start(TOTAL);
+    timer.start(TIMER_TOTAL);
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
@@ -1056,8 +1062,8 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceAsync(OVMS_Server* serverPtr, OVMS_Inferen
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
 
-    timer.stop(TOTAL);
-    double reqTotal = timer.elapsed<microseconds>(TOTAL);
+    timer.stop(TIMER_TOTAL);
+    double reqTotal = timer.elapsed<microseconds>(TIMER_TOTAL);
     SPDLOG_DEBUG("Total C-API req processing time: {} ms", reqTotal / 1000);
     return nullptr;
 }
@@ -1138,8 +1144,12 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableContext(OVMS_Server* serverPtr, const ch
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
+
+// TODO : Windows
+#ifdef __linux__
     const cl_context* oclCContext = modelInstance->getOclCContext();
     *reinterpret_cast<cl_context**>(oclContext) = const_cast<cl_context*>(oclCContext);
+#endif
     return nullptr;
 }
 
@@ -1346,7 +1356,10 @@ OVMS_Status* OVMS_ServerSetGlobalVADisplay(void* vaDisplay) {
     // we accept nullptr as it is a way to reset behavior for gpu tests
     // TODO
     // * allow to initializze only if server not started, but would require passing server
+// TODO: Windows
+#ifdef __linux__
     ovms::globalVaDisplay = vaDisplay;
+#endif
     return nullptr;
 }
 

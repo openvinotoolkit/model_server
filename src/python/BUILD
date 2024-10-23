@@ -108,7 +108,7 @@ cc_library(
     name = "pytensorovtensorconvertercalculator",
     srcs = ["pytensor_ovtensor_converter_calculator.cc",],
     deps = PYBIND_DEPS + [
-        "@linux_openvino//:openvino",
+        "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmsprecision",
         "ovmspytensor",
@@ -126,7 +126,7 @@ cc_library(
     name = "pythonexecutorcalculator",
     srcs = ["python_executor_calculator.cc",],
     deps = PYBIND_DEPS + [
-        "@linux_openvino//:openvino",
+        "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "ovmspytensor",
         "pythonexecutorcalculator_cc_proto",

@@ -350,12 +350,12 @@ bool MediapipeGraphDefinition::isReloadRequired(const MediapipeGraphConfig& conf
     return getMediapipeGraphConfig().isReloadRequired(config);
 }
 
-Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
+Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds) {
     unloadGuard = std::make_unique<MediapipeGraphDefinitionUnloadGuard>(*this);
 
-    const uint waitLoadedTimestepMicroseconds = 1000;
-    const uint waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
-    uint waitCheckpointsCounter = waitCheckpoints;
+    const uint32_t waitLoadedTimestepMicroseconds = 1000;
+    const uint32_t waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
+    uint32_t waitCheckpointsCounter = waitCheckpoints;
     std::mutex cvMtx;
     std::unique_lock<std::mutex> cvLock(cvMtx);
     while (waitCheckpointsCounter-- != 0) {

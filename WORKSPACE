@@ -54,29 +54,23 @@ http_archive(
     build_file = "@//third_party/libevent:BUILD",
 )
 
+http_archive(
+    name = "com_github_libevent_libevent_windows",
+    url = "https://github.com/libevent/libevent/archive/release-2.1.12-stable.zip",
+    sha256 = "8836ad722ab211de41cb82fe098911986604f6286f67d10dfb2b6787bf418f49",
+    strip_prefix = "libevent-release-2.1.12-stable",
+    build_file = "@//third_party/libevent:libevent_windows.BUILD",
+)
+
 # overriding tensorflow serving bazel dependency
 # alternative would be to use cmake build of grpc and flag
 # to use system ssl instead
 new_local_repository(
     name = "boringssl",
     path = "/usr/",
-    build_file_content = """
-cc_library(
-    name = "ssl",
-    hdrs = glob(["include/openssl/*"]),
-    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
-    copts = ["-lcrypto", "-lssl"],
-    visibility = ["//visibility:public"],
+    build_file = "@//third_party/boringssl:BUILD",
 )
-cc_library(
-    name = "crypto",
-    hdrs = glob(["include/openssl/*"]),
-    srcs = glob(["lib/x86_64-linux-gnu/libssl.so"]),
-    copts = ["-lcrypto", "-lssl"],
-    visibility = ["//visibility:public"],
-)
-""",
-)
+
 # overriding GCS curl dependency to force using system provided openssl
 new_local_repository(
     name = "libcurl",
@@ -201,9 +195,33 @@ new_local_repository(
 )
 
 new_local_repository(
+    name = "windows_openvino",
+    build_file = "@//third_party/openvino:openvino_windows.BUILD",
+    path = "C:\\opt\\intel\\openvino_2024\\runtime",
+)
+
+new_local_repository(
     name = "linux_opencv",
     build_file = "@//third_party/opencv:BUILD",
     path = "/opt/opencv/",
+)
+
+new_local_repository(
+    name = "windows_opencv",
+    build_file = "@//third_party/opencv:opencv_windows.BUILD",
+    path = "C:\\opt\\opencv\\build",
+)
+
+new_local_repository(
+    name = "windows_opencl",
+    build_file = "@//third_party/opencl:opencl_windows.BUILD",
+    path = "C:\\opt\\opencl\\external\\OpenCL-CLHPP",
+)
+
+new_local_repository(
+    name = "windows_opencl2",
+    build_file = "@//third_party/opencl:opencl_windows2.BUILD",
+    path = "C:\\opt\\opencl\\external\\OpenCL-Headers",
 )
 
 ########################################################### Mediapipe end
@@ -339,9 +357,15 @@ new_local_repository(
 # Boost (needed for Azure Storage SDK)
 
 new_local_repository(
-    name = "boost",
+    name = "linux_boost",
     path = "/usr/local/lib/",
     build_file = "@//third_party/boost:BUILD"
+)
+
+new_local_repository(
+    name = "windows_boost",
+    path = "C:\\local\\boost_1_69_0",
+    build_file = "@//third_party/boost:boost_windows.BUILD"
 )
 
 # Google Cloud SDK
@@ -425,7 +449,7 @@ new_git_repository(
 new_local_repository(
     name = "mediapipe_calculators",
     build_file = "@//third_party/mediapipe_calculators:BUILD",
-    path = "/ovms/third_party/mediapipe_calculators",
+    path = "third_party/mediapipe_calculators",
 )
 
 git_repository(

@@ -460,7 +460,7 @@ static Status deserializePredictRequest(
                     break;
                 case TensorInfo::ProcessingHint::IMAGE:
                     SPDLOG_DEBUG("Request contains input in native file format: {}", name);
-                    RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, tensorInfo, bufferLocation));
+                    RETURN_IF_ERR(convertNativeFileFormatRequestTensorToOVTensor(*requestInputItr, tensor, *tensorInfo, bufferLocation));
                     break;
                 default:
                     SPDLOG_DEBUG("Request input: {} requires conversion but endpoint specifies no processing hint. Number of dimensions: {}; precision: {}; demultiplexer: {}",

@@ -19,13 +19,16 @@
 #include <fstream>
 #include <regex>
 #include <set>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "logging.hpp"
 #include "model_version_policy.hpp"
+#ifdef __linux__
 #include "openssl/md5.h"
+#endif
 #include "status.hpp"
 
 namespace ovms {
@@ -123,6 +126,9 @@ public:
      */
 
     virtual StatusCode deleteFileFolder(const std::string& path) = 0;
+
+// TODO: Implement Windows version
+#ifdef __linux__
     /**
      * @brief Create a Temp Path
      *
@@ -144,6 +150,7 @@ public:
 
         return StatusCode::OK;
     }
+#endif
 
     static bool isPathEscaped(const std::string& path) {
         std::size_t lhs = path.find("../");
@@ -193,7 +200,7 @@ public:
     }
 
     static void setRootDirectoryPath(std::string& rootDirectoryPath, const std::string& givenPath) {
-        std::string currentWorkingDir = std::filesystem::current_path();
+        std::string currentWorkingDir = std::filesystem::current_path().string();
         if (givenPath.size() > 1 && givenPath.find_last_of("/\\") != std::string::npos) {
             auto configDirectory = givenPath.substr(0, givenPath.find_last_of("/\\") + 1);
             configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = std::move(configDirectory);
@@ -248,21 +255,26 @@ public:
     }
 
     static std::string getStringMD5(const std::string& str) {
+#ifdef __linux__
         unsigned char result[MD5_DIGEST_LENGTH];
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         MD5((unsigned char*)str.c_str(), str.size(), result);
-#pragma GCC diagnostic pop
-
         std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
+#pragma GCC diagnostic pop
+#else  // Windows TODO: Check how it works - tests ?
+        std::hash<std::string> hasher;
+        std::string md5sum = std::to_string(hasher(str));
+#endif
         return (md5sum);
     }
 
     StatusCode CreateLocalDir(const std::string& path) {
-        int status =
-            mkdir(const_cast<char*>(path.c_str()), S_IRUSR | S_IWUSR | S_IXUSR);
-        if (status == -1) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create local folder: {} {} ", path, strerror(errno));
+        try {
+            fs::create_directory(path);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create local folder: {} {} ", path, e.what());
             return StatusCode::PATH_INVALID;
         }
         return StatusCode::OK;

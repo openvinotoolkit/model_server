@@ -51,7 +51,7 @@ using testing::Return;
 
 using ::testing::ElementsAre;
 
-const uint NIREQ = 2;
+const uint32_t NIREQ = 2;
 
 template <typename Pair,
     typename RequestType = typename Pair::first_type,
@@ -3510,7 +3510,7 @@ TEST_F(EnsembleFlowTest, ExecuteOnPipelineCreatedBeforeRetireShouldPass) {
     ASSERT_TRUE(status.ok());
     pd.retire(managerWithDummyModel);
     pipelineBeforeRetire->execute(DEFAULT_TEST_CONTEXT);
-    uint dummySeriallyConnectedCount = 1;
+    uint32_t dummySeriallyConnectedCount = 1;
     checkDummyResponse(dummySeriallyConnectedCount);
 }
 
@@ -3658,7 +3658,7 @@ TEST_F(EnsembleFlowTest, WaitForLoadingPipelineDefinitionFromBeginStatus) {
     });
     status = pd.create(pipelineBeforeRetire, &request, &response, managerWithDummyModel);
     ASSERT_TRUE(status.ok()) << status.string();
-    uint dummySeriallyConnectedCount = 1;
+    uint32_t dummySeriallyConnectedCount = 1;
     pipelineBeforeRetire->execute(DEFAULT_TEST_CONTEXT);
     checkDummyResponse(dummySeriallyConnectedCount);
     t.join();
