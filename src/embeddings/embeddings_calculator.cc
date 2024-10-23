@@ -163,13 +163,13 @@ public:
             RET_CHECK(false);
         }
 
-        ov::Tensor embeddingsTensor;
+        const ov::Tensor* embeddingsTensor{nullptr};
         if (embeddingsOutputMap.size() == 2) {  // GTE
             // Search by number of dimensions, should be 3
             bool found = false;
             for (const auto& [name, tensor] : embeddingsOutputMap) {
                 if (tensor.get_shape().size() == 3) {
-                    embeddingsTensor = tensor;
+                    embeddingsTensor = &tensor;
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", name);
                     found = true;
                     break;
@@ -178,13 +178,13 @@ public:
             RET_CHECK(found);
         } else {  // BGE
             RET_CHECK(embeddingsOutputMap.size() == 1);
-            embeddingsTensor = embeddingsOutputMap.begin()->second;
+            embeddingsTensor = &embeddingsOutputMap.begin()->second;
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", embeddingsOutputMap.begin()->first);
         }
 
-        RET_CHECK(embeddingsTensor.get_shape().size() == 3);
-        RET_CHECK(embeddingsTensor.get_shape()[0] == input_strings.size());
-        RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
+        RET_CHECK(embeddingsTensor->get_shape().size() == 3);
+        RET_CHECK(embeddingsTensor->get_shape()[0] == input_strings.size());
+        RET_CHECK(embeddingsTensor->get_element_type() == ov::element::f32);
 
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -199,23 +199,39 @@ public:
         bool normalize = options.normalize_embeddings();
         // TODO: mean pooling
 
-        ov::Shape outputShape = embeddingsTensor.get_shape();
+        const ov::Shape& outputShape = embeddingsTensor->get_shape();
         size_t batchSize = outputShape[0];
         for (size_t i = 0; i < batchSize; i++) {
             size_t stride = i * outputShape[1] * outputShape[2];
-            std::vector<float> data(reinterpret_cast<float*>(embeddingsTensor.data()) + stride, reinterpret_cast<float*>(embeddingsTensor.data()) + stride + outputShape[2]);
+            std::vector<float> data(reinterpret_cast<float*>(embeddingsTensor->data()) + stride, reinterpret_cast<float*>(embeddingsTensor->data()) + stride + outputShape[2]);
+            float* dataPtr = reinterpret_cast<float*>(embeddingsTensor->data()) + stride;
+            float* dataPtrEnd = dataPtr + outputShape[2];
             writer.StartObject();
             writer.String("object");
             writer.String("embedding");
             writer.String("embedding");
             if (normalize) {
                 double square_sum = std::inner_product(data.begin(), data.end(), data.begin(), double(0.0));
+                double square_sum2 = std::inner_product(dataPtr, dataPtrEnd, dataPtr, double(0.0));
+                if (square_sum != square_sum2) {
+                    RET_CHECK(false);
+                }
                 double denom = std::max(std::sqrt(square_sum), double(1e-12));
+                double denom2 = std::max(std::sqrt(square_sum), double(1e-12));
                 std::transform(data.begin(), data.end(), data.begin(),
                     [denom](auto& element) { return element / denom; });
+                std::transform(dataPtr, dataPtrEnd, dataPtr,
+                    [denom2](auto& element) { return element / denom2; });
+                if (denom != denom2) {
+                    RET_CHECK(false);
+                }
             }
             if (isBase64) {
                 std::string_view sv(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
+                std::string_view sv2(reinterpret_cast<char*>(dataPtr), outputShape[2] * sizeof(float));
+                if (sv.size() != sv2.size()) {
+                    RET_CHECK(false);
+                }
                 std::string escaped;
                 absl::Base64Escape(sv, &escaped);
                 writer.String(escaped.c_str());
