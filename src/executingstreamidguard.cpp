@@ -30,20 +30,27 @@ ExecutingStreamIdGuard::CurrentRequestsMetricGuard::~CurrentRequestsMetricGuard(
 }
 
 ExecutingStreamIdGuard::ExecutingStreamIdGuard(OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter) :
+    StreamIdGuard(inferRequestsQueue),
     currentRequestsMetricGuard(reporter),
-    inferRequestsQueue_(inferRequestsQueue),
-    id_(inferRequestsQueue_.getIdleStream().get()),
-    inferRequest(inferRequestsQueue.getInferRequest(id_)),
     reporter(reporter) {
     INCREMENT_IF_ENABLED(this->reporter.inferReqActive);
 }
 
 ExecutingStreamIdGuard::~ExecutingStreamIdGuard() {
     DECREMENT_IF_ENABLED(this->reporter.inferReqActive);
+}
+
+StreamIdGuard::StreamIdGuard(OVInferRequestsQueue& inferRequestsQueue) :
+    inferRequestsQueue_(inferRequestsQueue),
+    id_(inferRequestsQueue_.getIdleStream().get()),
+    inferRequest(inferRequestsQueue.getInferRequest(id_)) {
+}
+
+StreamIdGuard::~StreamIdGuard() {
     this->inferRequestsQueue_.returnStream(this->id_);
 }
 
-int ExecutingStreamIdGuard::getId() { return this->id_; }
-ov::InferRequest& ExecutingStreamIdGuard::getInferRequest() { return this->inferRequest; }
+int StreamIdGuard::getId() { return this->id_; }
+ov::InferRequest& StreamIdGuard::getInferRequest() { return this->inferRequest; }
 
 }  //  namespace ovms

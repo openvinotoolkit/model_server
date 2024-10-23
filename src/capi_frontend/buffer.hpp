@@ -16,23 +16,27 @@
 //*****************************************************************************
 #include <memory>
 #include <optional>
+#include <string>
+#include <typeinfo>
+#include <utility>
+#include <vector>
 
 #include "../ovms.h"  // NOLINT
 namespace ovms {
-
 class Buffer {
-    const void* ptr;
-    size_t byteSize;
+    size_t byteSize{0};
     OVMS_BufferType bufferType;
     std::optional<uint32_t> bufferDeviceId;
     std::unique_ptr<char[]> ownedCopy = nullptr;
+    std::unique_ptr<std::vector<std::string>> stringVec;
+    const void* ptr{nullptr};
 
 public:
+    Buffer(std::unique_ptr<std::vector<std::string>>&& values);
     Buffer(const void* ptr, size_t byteSize, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt, bool createCopy = false);
     Buffer(size_t byteSize, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> bufferDeviceId = std::nullopt);
     ~Buffer();
     const void* data() const;
-    void* data();
     OVMS_BufferType getBufferType() const;
     const std::optional<uint32_t>& getDeviceId() const;
     size_t getByteSize() const;

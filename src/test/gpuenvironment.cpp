@@ -23,14 +23,14 @@ void GPUEnvironment::SetUp() {
     const char* runGpuTestsEnv = std::getenv("RUN_GPU_TESTS");
     if (runGpuTestsEnv) {
         std::string runGpuTestsEnvContent(runGpuTestsEnv);
-        if (runGpuTestsEnvContent == "ON") {
+        if (runGpuTestsEnvContent == "1") {
             GPUEnvironment::gpuTestsEnabled = true;
-            SPDLOG_INFO("RUN_GPU_TESTS was set to ON. Will run tests requiring GPU");
+            SPDLOG_INFO("RUN_GPU_TESTS was set to 1. Will run tests requiring GPU");
         } else {
-            SPDLOG_ERROR("Tests on GPU will be skipped since RUN_GPU_TESTS env variable was not set to ON. It was set to: {}", runGpuTestsEnvContent);
+            SPDLOG_ERROR("Tests on GPU will be skipped since RUN_GPU_TESTS env variable was not set to 1. It was set to: {}", runGpuTestsEnvContent);
         }
     } else {
-        SPDLOG_INFO("Tests on GPU will be skipped since RUN_GPU_TESTS env variable was not set to ON. Remember to use bazel test parameter --test_env when triggering tests using bazel.");
+        SPDLOG_INFO("Tests on GPU will be skipped since RUN_GPU_TESTS env variable was not set to 1. Remember to use bazel test parameter --test_env when triggering tests using bazel.");
     }
 }
 

@@ -127,7 +127,6 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
                 return StatusCode::MODEL_NAME_MISSING;
             }
             auto status = buildResponse(*mediapipeGraphDefinition, response);
-            // INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok())); TODO metrics
             return status;
 #else
             return StatusCode::MODEL_NAME_MISSING;
@@ -189,10 +188,11 @@ Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* contex
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response) {
-    return grpc(ModelMetadataImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelMetadata}));
+    KFSModelExtraMetadata extraMetadata;
+    return grpc(ModelMetadataImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelMetadata}, extraMetadata));
 }
 
-Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext) {
+Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext, KFSModelExtraMetadata& extraMetadata) {
     const auto& name = request->name();
     const auto& versionString = request->version();
 
@@ -209,7 +209,6 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
                 return StatusCode::MODEL_NAME_MISSING;
             }
             auto status = buildResponse(*mediapipeGraphDefinition, response);
-            // INCREMENT_IF_ENABLED(pipelineDefinition->getMetricReporter().getModelReadyMetric(executionContext, status.ok())); TODO metrics
             return status;
 #else
             return Status(StatusCode::MODEL_NAME_MISSING);
@@ -244,6 +243,8 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
         }
     }
     auto status = buildResponse(*model, *instance, response);
+    extraMetadata.rt_info = instance->getRTInfo();
+
     INCREMENT_IF_ENABLED(instance->getMetricReporter().getModelMetadataMetric(executionContext, status.ok()));
 
     return status;
@@ -425,7 +426,6 @@ Status KFSInferenceServiceImpl::buildResponse(
     for (const auto& output : instance.getOutputsInfo()) {
         convert(output, response->add_outputs());
     }
-
     return StatusCode::OK;
 }
 

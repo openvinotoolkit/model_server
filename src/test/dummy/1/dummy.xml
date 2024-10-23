@@ -96,4 +96,21 @@
 			<unset unset_cli_parameters="batch, counts, disable_fusing, disable_gfusing, finegrain_fusing, input_checkpoint, input_meta_graph, input_model, input_proto, input_symbol, mean_file, mean_file_offsets, nd_prefix_name, output, pretrained_model_name, saved_model_tags, scale, tensorboard_logdir, tensorflow_custom_layer_libraries, tensorflow_custom_operations_config_update, tensorflow_object_detection_api_pipeline_config, tensorflow_operation_patterns, tensorflow_subgraph_patterns, tensorflow_use_custom_operations_config, transformations_config"/>
 		</cli_parameters>
 	</meta_data>
+	<rt_info>
+		<MO_version	 value="2020.1.0-61-gd349c3ba4a" />
+		<conversion_parameters>
+			<blobs_as_inputs value="True" />
+			<caffe_parser_path value="DIR" />
+			<data_type value="float" />
+			<disable_nhwc_to_nchw value="False" />
+		</conversion_parameters>
+		<model_info>
+			<precision value="FP16" />
+			<resolution>
+				<height value="200" />
+				<width value="300" />
+			</resolution>
+		</model_info>
+		<optimization />
+	</rt_info>
 </net>

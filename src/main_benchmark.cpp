@@ -64,7 +64,7 @@ void BenchmarkCLIParser::parse(int argc, char** argv) {
                 "LOG_LEVEL")
             ("config_path",
                 "Config file path for OVMS to read",
-                cxxopts::value<std::string>()->default_value("/ovms/src/test/c_api/config_benchmark.json"),
+                cxxopts::value<std::string>()->default_value("/ovms/src/test/configs/config_benchmark.json"),
                 "CONFIG_PATH")
 // benchmark options
             ("niter",

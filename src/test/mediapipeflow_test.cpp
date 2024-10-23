@@ -146,6 +146,13 @@ public:
     }
 };
 
+class MediapipeEmbeddingsTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/embeddings/config_embeddings.json");
+    }
+};
+
 template <class W, class R>
 class MockedServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<W, R> {
 public:
@@ -154,6 +161,21 @@ public:
     MOCK_METHOD(bool, Read, (R * msg), (override));
     MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
 };
+
+TEST_F(MediapipeEmbeddingsTest, startup) {
+    auto start = std::chrono::high_resolution_clock::now();
+    const int timeout = 5;
+    while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
+    }
+
+    const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+    ASSERT_TRUE(servableModule != nullptr);
+    ModelManager* manager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
+    auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName("embeddings");
+    ASSERT_TRUE(mediapipeGraphDefinition != nullptr);
+    ASSERT_TRUE(mediapipeGraphDefinition->getStatus().isAvailable());
+}
 
 TEST_F(MediapipeFlowKfsTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -1557,7 +1579,7 @@ public:
     MockModelInstance(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
     }
-    ov::AnyMap getRTInfo() const override {
+    ov::AnyMap getRTInfo() override {
         std::vector<std::string> mockLabels;
         for (size_t i = 0; i < 5; i++) {
             mockLabels.emplace_back(std::to_string(i));
@@ -1639,7 +1661,7 @@ TEST(Mediapipe, AdapterRTInfo) {
     uint32_t portNum = ovms::stou32(port).value();
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, portNum));
     // we will use dummy model that will have mocked rt_info
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config.json"));
 
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
     const std::string mockedModelName = "dummy";
@@ -3410,6 +3432,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "DetectionSerializationCalculator",
         "DetectionsToRectsCalculator",
         "DetectionsToRenderDataCalculator",
+        "EmbeddingsCalculator",
         "EmptyLabelCalculator",
         "EmptyLabelClassificationCalculator",
         "EmptyLabelDetectionCalculator",

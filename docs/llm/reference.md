@@ -117,6 +117,8 @@ for chunk in stream:
         break
 ```
 
+> NOTE: To leverage LLM graph cancellation upon client disconnection, use `stream=True` parameter.
+
 ## Models Directory
 
 In node configuration we set `models_path` indicating location of the directory with files loaded by LLM engine. It loads following files:
@@ -187,7 +189,7 @@ There are several known limitations which are expected to be addressed in the co
 
 - Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. It is possible to track in the metrics the number of active generation requests using metric called `ovms_current_graphs`. Also tracking statistics for request and responses is possible. [Learn more](../metrics.md) 
 - Multi modal models are not supported yet. Images can't be sent now as the context.
-- `logprobs` parameter is not supported currently in greedy search (temperature=0) and in streaming mode. It includes only a single logprob and do not include values for input tokens.
+- `logprobs` parameter is not supported currently in streaming mode. It includes only a single logprob and do not include values for input tokens.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)

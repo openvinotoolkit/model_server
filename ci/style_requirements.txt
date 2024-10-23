@@ -2,3 +2,5 @@ bandit
 cppclean>=0.13
 cpplint==1.4.3
 clang-format==6.0.1
+codespell==2.3.0
+typing_extensions

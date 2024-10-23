@@ -15,6 +15,14 @@
 # limitations under the License.
 #
 # Script should be used only as a part of Dockerfiles
+
+# Check if INSTALL_DRIVER_VERSION is set
+# In case it is not set we reach default switch condition and leave apt in abnormal state
+if [ -z "$INSTALL_DRIVER_VERSION" ]; then
+    echo "Error: INSTALL_DRIVER_VERSION cannot be empty."
+    exit 1
+fi
+
 apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
 case $INSTALL_DRIVER_VERSION in \
 "21.48.21782") \

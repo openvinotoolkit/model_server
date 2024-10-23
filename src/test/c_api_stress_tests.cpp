@@ -50,6 +50,8 @@ using testing::Return;
 
 class StressCapiConfigChanges : public ConfigChangeStressTest {};
 
+class ConfigChangeStressTestSingleModel : public ConfigChangeStressTestAsync {};
+
 class StressModelCapiConfigChanges : public StressCapiConfigChanges {
     const std::string modelName = "dummy";
     const std::string modelInputName = "b";
@@ -63,6 +65,78 @@ public:
         SetUpCAPIServerInstance(initialClearConfig);
     }
 };
+
+TEST_F(ConfigChangeStressTestSingleModel, ChangeToEmptyConfigInference) {
+    bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK,
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &ConfigChangeStressTest::triggerCApiInferenceInALoopSingleModel,
+        &ConfigChangeStressTest::changeToEmptyConfig,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(ConfigChangeStressTestAsync, ChangeToEmptyConfigAsyncInference) {
+    bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK,
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {};
+    performStressTest(
+        &ConfigChangeStressTest::triggerCApiAsyncInferenceInALoop,
+        &ConfigChangeStressTest::changeToEmptyConfig,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(ConfigChangeStressTestAsync, ChangeToWrongShapeAsyncInference) {
+    bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::INVALID_SHAPE};
+    performStressTest(
+        &ConfigChangeStressTest::triggerCApiAsyncInferenceInALoop,
+        &ConfigChangeStressTest::changeToWrongShapeOneModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(ConfigChangeStressTestAsync, ChangeToAutoShapeDuringAsyncInference) {
+    bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MODEL_VERSION_NOT_LOADED_YET};
+    performStressTest(
+        &ConfigChangeStressTest::triggerCApiAsyncInferenceInALoop,
+        &ConfigChangeStressTest::changeToAutoShapeOneModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
+
+TEST_F(ConfigChangeStressTestAsyncStartEmpty, ChangeToLoadedModelDuringAsyncInference) {
+    bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK};  // we expect full continuity of operation
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::PIPELINE_DEFINITION_NAME_MISSING,
+        StatusCode::MODEL_NAME_MISSING,
+        StatusCode::MODEL_VERSION_MISSING};
+    performStressTest(
+        &ConfigChangeStressTest::triggerCApiAsyncInferenceInALoop,
+        &ConfigChangeStressTest::addFirstModel,
+        performWholeConfigReload,
+        requiredLoadResults,
+        allowedLoadResults);
+}
 
 TEST_F(StressCapiConfigChanges, AddNewVersionDuringPredictLoad) {
     bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
@@ -275,7 +349,7 @@ TEST_F(StressCapiConfigChanges, AddModelDuringGetModelStatusLoad) {
 
 class StressPipelineCustomNodesWithPreallocatedBuffersCapiConfigChanges : public StressCapiConfigChanges {
 public:
-    void checkInferResponse(OVMS_InferenceResponse* response) override {
+    void checkInferResponse(OVMS_InferenceResponse* response, std::string& expectedOutputName) override {
         ASSERT_NE(response, nullptr);
         uint32_t outputCount = 42;
         ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));

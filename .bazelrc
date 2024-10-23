@@ -48,20 +48,14 @@ build --genrule_strategy=standalone
 
 build --define=grpc_no_ares=true
 build --define=MEDIAPIPE_DISABLE_GPU=1
-coverage --define=MEDIAPIPE_DISABLE_GPU=1
-test --define=MEDIAPIPE_DISABLE_GPU=1
 
 build --define=MEDIAPIPE_DISABLE=0
-coverage --define=MEDIAPIPE_DISABLE=0
-test --define=MEDIAPIPE_DISABLE=0
 
 build --define=CLOUD_DISABLE=0
 coverage --define=CLOUD_DISABLE=0
 test --define=CLOUD_DISABLE=0
 
 build --define=PYTHON_DISABLE=0
-coverage --define=PYTHON_DISABLE=0
-test --define=PYTHON_DISABLE=0
 
 # sometimes failed logs exceed this threshold
 test --experimental_ui_max_stdouterr_bytes=104857600
@@ -111,10 +105,12 @@ build:linux --force_pic
 build --experimental_cc_shared_library
 
 build --check_visibility=true
-
+# Disable leaking LD_LIBRARY_PATH & PATH into build resulting in cache misses
+# and frequent rebuilds
+build --incompatible_strict_action_env
 build --cxxopt=-DOVMS_DUMP_TO_FILE=0
-coverage --cxxopt=-DOVMS_DUMP_TO_FILE=0
-test --cxxopt=-DOVMS_DUMP_TO_FILE=0
+# envs below are required to succesfully run binaries in bazel as bazel is
+# very strict in sandboxing
 test --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 # TF bazelrc settings
@@ -259,3 +255,4 @@ build:windows --deleted_packages=tensorflow/core/tfrt/stubs,tensorflow/compiler/
 # Windows build ssl headers for GRPC workaround
 build:windows --copt=-DGRPC_BAZEL_BUILD
 build:windows --override_repository="boringssl=C:\\git\\boring3\\boringSSL-SwiftPM" 
+test --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/

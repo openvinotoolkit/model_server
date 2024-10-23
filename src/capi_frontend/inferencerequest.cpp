@@ -40,6 +40,9 @@ Status InferenceRequest::addInput(const char* name, OVMS_DataType datatype, cons
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
 }
 Status InferenceRequest::addOutput(const char* name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount) {
+    if (datatype == OVMS_DATATYPE_STRING) {
+        return Status(StatusCode::NOT_IMPLEMENTED, "String is not supported for setting outputs in C-API");
+    }
     auto [it, emplaced] = outputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
 }
@@ -56,6 +59,13 @@ Status InferenceRequest::setOutputBuffer(const char* name, const void* addr, siz
         return StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER;
     }
     return it->second.setBuffer(addr, byteSize, bufferType, deviceId);
+}
+Status InferenceRequest::removeOutputBuffer(const char* name) {
+    auto it = outputs.find(name);
+    if (it == outputs.end()) {
+        return StatusCode::NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER;
+    }
+    return it->second.removeBuffer();
 }
 Status InferenceRequest::removeInputBuffer(const char* name) {
     auto it = inputs.find(name);
@@ -91,6 +101,13 @@ uint64_t InferenceRequest::getInputsSize() const {
 }
 Status InferenceRequest::removeInput(const char* name) {
     auto count = inputs.erase(name);
+    if (count) {
+        return StatusCode::OK;
+    }
+    return StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL;
+}
+Status InferenceRequest::removeOutput(const char* name) {
+    auto count = outputs.erase(name);
     if (count) {
         return StatusCode::OK;
     }
