@@ -32,7 +32,7 @@
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "absl/strings/escaping.h"
-#include "src/rerank/rerank.hpp"
+#include "src/rerank/rerank_utils.hpp"
 #include "src/rerank/rerank_calculator.pb.h"
 
 using namespace rapidjson;

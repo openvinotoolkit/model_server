@@ -14,12 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "rerank.hpp"
+#include "rerank_utils.hpp"
 
 #include <cmath>
 
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
+#include <rapidjson/document.h>
 
 #include "../logging.hpp"
 #include "../profiler.hpp"
@@ -64,7 +63,7 @@ absl::Status RerankHandler::parseRequest() {
                 }
                 request.documentsList.push_back(d.GetString());
             }
-            if (d.IsObject()) {
+            else if (d.IsObject()) {
                 if (request.documentsList.size() > 0) {
                     return absl::InvalidArgumentError("all documents have to be the same type (string or objects)");
                 }
@@ -90,6 +89,14 @@ absl::Status RerankHandler::parseRequest() {
         if (!it->value.IsInt())
             return absl::InvalidArgumentError("top_n accepts integer values");
         request.topN = it->value.GetInt();
+    }
+    else {
+        if(request.documentsList.size() > 0){
+            request.topN = request.documentsList.size();
+        }
+        else {
+            request.topN = request.documentsMap.size();
+        }
     }
     // rank_fields: list of strings; optional
     it = doc.FindMember("rank_fields");

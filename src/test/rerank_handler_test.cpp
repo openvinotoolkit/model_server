@@ -16,7 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../rerank/rerank.hpp"
+#include "../rerank/rerank_utils.hpp"
 
 using namespace ovms;
 
@@ -51,7 +51,8 @@ TEST_F(RerankHandlerTest, ValidRequestDocumentsMap) {
     ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
     EXPECT_STREQ(handler.getModel().c_str(), "model");
     EXPECT_STREQ(handler.getQuery().c_str(), "query");
-    ASSERT_FALSE(handler.getTopN().has_value());
+    ASSERT_TRUE(handler.getTopN().has_value());
+    EXPECT_EQ(handler.getTopN().value(), 2);
     ASSERT_FALSE(handler.getReturnDocuments().has_value());
     ASSERT_FALSE(handler.getRankFields().has_value());
     ASSERT_FALSE(handler.getMaxChunksPerDoc().has_value());
@@ -80,7 +81,8 @@ TEST_F(RerankHandlerTest, ValidRequestDocumentsList) {
     ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
     EXPECT_STREQ(handler.getModel().c_str(), "model");
     EXPECT_STREQ(handler.getQuery().c_str(), "query");
-    ASSERT_FALSE(handler.getTopN().has_value());
+    ASSERT_TRUE(handler.getTopN().has_value());
+    EXPECT_EQ(handler.getTopN().value(), 1);
     ASSERT_FALSE(handler.getReturnDocuments().has_value());
     ASSERT_FALSE(handler.getRankFields().has_value());
     ASSERT_FALSE(handler.getMaxChunksPerDoc().has_value());
@@ -192,7 +194,8 @@ TEST_F(RerankHandlerTest, ValidRankFields) {
     EXPECT_STREQ(handler.getModel().c_str(), "model");
     EXPECT_STREQ(handler.getQuery().c_str(), "query");
     ASSERT_FALSE(handler.getReturnDocuments().has_value());
-    ASSERT_FALSE(handler.getTopN().has_value());
+    ASSERT_TRUE(handler.getTopN().has_value());
+    EXPECT_EQ(handler.getTopN().value(), 1);
     ASSERT_FALSE(handler.getMaxChunksPerDoc().has_value());
     EXPECT_EQ(handler.getDocumentsList().size(), 1);
     ASSERT_EQ(handler.getDocumentsMap().size(), 0);
@@ -251,7 +254,8 @@ TEST_F(RerankHandlerTest, ValidReturnDocuments) {
     EXPECT_STREQ(handler.getModel().c_str(), "model");
     EXPECT_STREQ(handler.getQuery().c_str(), "query");
     ASSERT_FALSE(handler.getRankFields().has_value());
-    ASSERT_FALSE(handler.getTopN().has_value());
+    ASSERT_TRUE(handler.getTopN().has_value());
+    EXPECT_EQ(handler.getTopN().value(), 1);
     ASSERT_FALSE(handler.getMaxChunksPerDoc().has_value());
     EXPECT_EQ(handler.getDocumentsList().size(), 1);
     ASSERT_EQ(handler.getDocumentsMap().size(), 0);
@@ -293,7 +297,8 @@ TEST_F(RerankHandlerTest, ValidMaxChunksPerDoc) {
     EXPECT_STREQ(handler.getQuery().c_str(), "query");
     ASSERT_FALSE(handler.getReturnDocuments().has_value());
     ASSERT_FALSE(handler.getRankFields().has_value());
-    ASSERT_FALSE(handler.getTopN().has_value());
+    ASSERT_TRUE(handler.getTopN().has_value());
+    EXPECT_EQ(handler.getTopN().value(), 1);
     EXPECT_EQ(handler.getDocumentsList().size(), 1);
     ASSERT_EQ(handler.getDocumentsMap().size(), 0);
     EXPECT_STREQ(handler.getDocumentsList()[0].c_str(), "first document");

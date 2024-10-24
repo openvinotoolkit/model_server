@@ -60,8 +60,8 @@ cc_library(
 
 cc_library(
     name = "rerank_api_handler",
-    hdrs = ["rerank.hpp"],
-    srcs = ["rerank.cpp"],
+    hdrs = ["rerank_utils.hpp"],
+    srcs = ["rerank_utils.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
