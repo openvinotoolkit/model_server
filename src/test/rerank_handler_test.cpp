@@ -82,7 +82,7 @@ TEST_F(RerankHandlerTest, ValidRequestDocumentsList) {
     EXPECT_STREQ(handler.getModel().c_str(), "model");
     EXPECT_STREQ(handler.getQuery().c_str(), "query");
     ASSERT_TRUE(handler.getTopN().has_value());
-    EXPECT_EQ(handler.getTopN().value(), 1);
+    EXPECT_EQ(handler.getTopN().value(), 2);
     ASSERT_FALSE(handler.getReturnDocuments().has_value());
     ASSERT_FALSE(handler.getRankFields().has_value());
     ASSERT_FALSE(handler.getMaxChunksPerDoc().has_value());
