@@ -119,6 +119,7 @@ const Status EntryNode<RequestType>::validate() {
     return request_validation_utils::validate(
         *request,
         inputsInfo,
+        outputsInfo,
         getRequestServableName(*request),
         1,
         optionalInputNames);  // Pipelines are not versioned and always reports version 1

@@ -46,6 +46,7 @@ public:
     Status getInput(const char* name, const InferenceTensor** tensor) const;
     Status getOutput(const char* name, const InferenceTensor** tensor) const;
     uint64_t getInputsSize() const;
+    uint64_t getOutputsSize() const;
     Status removeInput(const char* name);
     Status removeOutput(const char* name);
     Status removeAllInputs();
