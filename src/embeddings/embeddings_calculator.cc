@@ -143,22 +143,26 @@ public:
             try {
                 max_context_length = embeddings_session->getModelConfig().at("config").as<ov::AnyMap>().at("max_position_embeddings").as<size_t>();
             } catch (...) {
-                LOG(INFO) << "Can not read config->max_position_embeddings from model rt_info. Using default value " << max_context_length;
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Can not read config->max_position_embeddings from model rt_info. Using default value {}", max_context_length);
             }
 
+            RET_CHECK(tokenizerOutputMap["input_ids"].get_shape().size() == 2);
             size_t input_ids_size = tokenizerOutputMap["input_ids"].get_shape()[1];
             if (input_ids_size > max_context_length) {
-                LOG(INFO) << "Input size " << input_ids_size << " exceeds max_context_length " << max_context_length;
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size,  max_context_length);
                 return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
             }
 
             embeddingsOutputMap = embeddings_session->infer(embeddingsInputMap);
-            RET_CHECK(embeddingsOutputMap.size() > 0);
+            if (embeddingsOutputMap.empty()) {
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "No output from embeddings model");
+                return absl::InternalError("No output from embeddings model");
+            }
         } catch (const std::exception& e) {
-            LOG(INFO) << "Caught exception from session infer():" << e.what();
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from session infer(): {}", e.what());
             RET_CHECK(false);
         } catch (...) {
-            LOG(INFO) << "Caught unknown exception from session infer()";
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught unknown exception from session infer()");
             RET_CHECK(false);
         }
 
