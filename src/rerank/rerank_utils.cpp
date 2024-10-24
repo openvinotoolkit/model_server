@@ -62,8 +62,7 @@ absl::Status RerankHandler::parseRequest() {
                     return absl::InvalidArgumentError("all documents have to be the same type (string or objects)");
                 }
                 request.documentsList.push_back(d.GetString());
-            }
-            else if (d.IsObject()) {
+            } else if (d.IsObject()) {
                 if (request.documentsList.size() > 0) {
                     return absl::InvalidArgumentError("all documents have to be the same type (string or objects)");
                 }
@@ -89,12 +88,10 @@ absl::Status RerankHandler::parseRequest() {
         if (!it->value.IsInt())
             return absl::InvalidArgumentError("top_n accepts integer values");
         request.topN = it->value.GetInt();
-    }
-    else {
-        if(request.documentsList.size() > 0){
+    } else {
+        if (request.documentsList.size() > 0) {
             request.topN = request.documentsList.size();
-        }
-        else {
+        } else {
             request.topN = request.documentsMap.size();
         }
     }
