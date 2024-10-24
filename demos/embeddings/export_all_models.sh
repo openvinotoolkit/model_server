@@ -20,6 +20,7 @@ tested_models=(
     nomic-ai/nomic-embed-text-v1.5
     Alibaba-NLP/gte-large-en-v1.5
     BAAI/bge-large-en-v1.5
+    BAAI/bge-large-zh-v1.5
     thenlper/gte-small
 )
 cp config.json config_all.json
@@ -27,7 +28,7 @@ cat config_all.json | jq 'del(.mediapipe_config_list[])' | tee config_all.json
 
 for i in "${tested_models[@]}"; do
     echo "$i"
-    convert_tokenizer -o models/$i/tokenizer/1 $i
+    convert_tokenizer --not-add-special-tokens -o models/$i/tokenizer/1 $i
     optimum-cli export openvino --disable-convert-tokenizer --model $i --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/$i/embeddings/1
     cp models/graph.pbtxt models/$i
     cp subconfig.json models/$i

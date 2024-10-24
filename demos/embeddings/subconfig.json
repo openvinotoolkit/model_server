@@ -1,0 +1,17 @@
+{
+    "model_config_list": [
+    { "config":
+            {
+                "name": "tokenizer_model",
+                "base_path": "tokenizer"
+            }
+        },
+    { "config":
+            {
+                "name": "embeddings_model",
+                "base_path": "embeddings",
+                "target_device": "CPU"
+            }
+        }
+   ]
+}
