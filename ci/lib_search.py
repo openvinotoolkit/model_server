@@ -58,6 +58,7 @@ def check_function(fd):
 def check_dir(start_dir):
     no_header = []
     exclude_files = [
+        '.user.bazelrc',
         '.bandit',
         '.bin',
         '.dockerignore',
