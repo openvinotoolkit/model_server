@@ -95,7 +95,7 @@ ARG BASE_IMAGE
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=ubuntu"
+ARG debug_bazel_flags="--config=linux --strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=ubuntu"
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
             libgflags-dev \
@@ -127,7 +127,6 @@ RUN apt-get update; apt-get install -y --no-install-recommends libxml2 && rm -rf
 
 ARG JOBS=8
 ARG ov_use_binary=0
-ARG tokenizers=1
 ARG ov_source_org=openvinotoolkit
 ARG ov_contrib_org=openvinotoolkit
 ARG DLDT_PACKAGE_URL
@@ -202,9 +201,9 @@ ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
 
 ARG ov_tokenizers_branch=master
 # hadolint ignore=DL3003
-RUN if [[ "$tokenizers" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
+RUN  git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 WORKDIR /openvino_tokenizers/build
-RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
+RUN cmake .. -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
@@ -357,7 +356,7 @@ FROM $BUILD_IMAGE as capi-build
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 # C api shared library
 # hadolint ignore=DL3059
-ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
+ARG CAPI_FLAGS="--config=linux --strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
 ARG JOBS=40
 ARG FUZZER_BUILD=0
 RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared

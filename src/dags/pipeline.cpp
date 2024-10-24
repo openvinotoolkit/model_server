@@ -113,8 +113,8 @@ Status Pipeline::execute(ExecutionContext context) {
         return status;
     }
     DeferredNodeSessions deferredNodeSessions;
-    const uint WAIT_FOR_FINISHED_NODE_TIMEOUT_MICROSECONDS = 5000;
-    const uint WAIT_FOR_DEFERRED_NODE_DISARM_TIMEOUT_MICROSECONDS = 500;
+    const uint32_t WAIT_FOR_FINISHED_NODE_TIMEOUT_MICROSECONDS = 5000;
+    const uint32_t WAIT_FOR_DEFERRED_NODE_DISARM_TIMEOUT_MICROSECONDS = 500;
     // process finished session nodes and if no one is finished check if any node session with deferred execution
     // has necessary resources already
     while (true) {

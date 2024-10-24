@@ -81,7 +81,6 @@ OV_TOKENIZERS_BRANCH ?=  ffff67e257c44565fbbd46f2cf76e310d7632e86 # master 2024-
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
 
-TOKENIZERS ?= 1
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
 
@@ -136,8 +135,8 @@ else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
-CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)" --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+CAPI_FLAGS = "--config=linux --strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)" --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+BAZEL_DEBUG_FLAGS="--config=linux --strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
@@ -225,7 +224,6 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg ov_source_org=$(OV_SOURCE_ORG)\
 	--build-arg ov_contrib_org=$(OV_CONTRIB_ORG)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\
-	--build-arg tokenizers=$(TOKENIZERS)\
 	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
 	--build-arg RUN_TESTS=$(RUN_TESTS)\
