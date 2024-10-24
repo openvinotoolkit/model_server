@@ -269,6 +269,8 @@ cc_library(
                     "httpservermodule.hpp",
                     "http_rest_api_handler.cpp",
                     "httpservermodule.cpp",
+                    "http_frontend/http_graph_executor_impl.cpp",
+                    "http_frontend/http_graph_executor_impl.hpp",
                 ],
                 "//src:windows" : [],
                 }) + [      
@@ -354,8 +356,6 @@ cc_library(
                 "mediapipe_internal/packettypes.hpp",
                 "kfs_frontend/kfs_graph_executor_impl.cpp",
                 "kfs_frontend/kfs_graph_executor_impl.hpp",
-                "http_frontend/http_graph_executor_impl.cpp",
-                "http_frontend/http_graph_executor_impl.hpp",
             ],
             "//:disable_mediapipe" : [],
         }),
@@ -413,10 +413,10 @@ cc_library(
             "//conditions:default": [
                 "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
                 "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
-                "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
+                # TODO: Java crash "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
                 "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
-                "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
-                #"libovmsmediapipe_utils",
+                # TODO: Java crash "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
+                "libovmsmediapipe_utils",
                 "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
                 "@mediapipe//mediapipe/calculators/geti/utils:utils",
                 "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",

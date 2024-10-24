@@ -115,17 +115,17 @@ http_archive(
 
 ################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
-git_repository(
-    name = "mediapipe",
-    remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "d1104e524e147c91a3f858d1a77afb31bc799842", # 
-)
+#git_repository(
+#    name = "mediapipe",
+#    remote = "https://github.com/openvinotoolkit/mediapipe",
+#    commit = "03f37e6ae85247ca2f204da6844ab5abb3a2760b", # Fix model_api cmake
+#)
 
 # DEV mediapipe 1 source - adjust local repository path for build
-#local_repository(
-#    name = "mediapipe",
-#    path = "/mediapipe/",
-#)
+local_repository(
+    name = "mediapipe",
+    path = "C:\\git\\mediapipe",
+)
 
 # Protobuf for Node dependencies
 http_archive(
@@ -262,10 +262,6 @@ http_archive(
     strip_prefix = "rules_python-0.18.1",
     url = "https://github.com/bazelbuild/rules_python/releases/download/0.18.1/rules_python-0.18.1.tar.gz",
 )
-
-load("@rules_python//python:repositories.bzl", "py_repositories")
-
-py_repositories()
 
 load("@rules_python//python:pip.bzl", "pip_parse")
 
