@@ -87,8 +87,8 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         using std::chrono::microseconds;
-        #define LOGA(A, B) \
-            std::cout << A << " " << B << std::endl
+#define LOGA(A, B) \
+    std::cout << A << " " << B << std::endl
 
         enum : unsigned int {
             INFER,
@@ -162,7 +162,7 @@ public:
             ::InferenceOutput tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
             timer.stop(SER1);
             double time_ser1 = timer.elapsed<microseconds>(SER1);
-            LOGA("SER1", time_ser1/1000);
+            LOGA("SER1", time_ser1 / 1000);
             ::InferenceInput embeddingsInputMap;
             // Check if tokenizer produced at least the number of outputs as there are inputs in embedding model
             RET_CHECK(tokenizerOutputMap.size() >= embeddingsInputNames.size());
@@ -187,7 +187,7 @@ public:
         ov::Tensor embeddingsTensorLv;
         timer.stop(SER2);
         double time_ser2 = timer.elapsed<microseconds>(SER2);
-        LOGA("SER2", time_ser2/1000);
+        LOGA("SER2", time_ser2 / 1000);
         if (embeddingsOutputMap.size() == 2) {  // GTE
             // Search by number of dimensions, should be 3
             bool found = false;
@@ -234,7 +234,7 @@ public:
             std::vector<float> data(reinterpret_cast<float*>(embeddingsTensor.data()) + stride, reinterpret_cast<float*>(embeddingsTensor.data()) + stride + outputShape[2]);
             timer.stop(SER3);
             double time_ser3 = timer.elapsed<microseconds>(SER3);
-            LOGA("SER3", time_ser3/1000);
+            LOGA("SER3", time_ser3 / 1000);
             float* dataPtr = reinterpret_cast<float*>(embeddingsTensor.data()) + stride;
             float* dataPtrEnd = dataPtr + outputShape[2];
             writer.StartObject();
@@ -283,7 +283,7 @@ public:
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
         timer.stop(TOTAL);
         double time_total = timer.elapsed<microseconds>(TOTAL);
-        LOGA("TOTAL", time_total/1000);
+        LOGA("TOTAL", time_total / 1000);
         return absl::OkStatus();
     }
 };
