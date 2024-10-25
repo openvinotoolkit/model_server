@@ -259,8 +259,4 @@ build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe
 test --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 # Compiling mediapipe
-build:windows --copt=/w
-# For using M_* math constants on Windows with MSVC.
-build:windows --copt=/D_USE_MATH_DEFINES
-build:windows --host_copt=/D_USE_MATH_DEFINES
-
+startup --output_user_root=C:/baze_tmp

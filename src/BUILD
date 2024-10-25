@@ -413,9 +413,9 @@ cc_library(
             "//conditions:default": [
                 "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
                 "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
-                # TODO: Java crash "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
+                "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
                 "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
-                # TODO: Java crash "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
+                "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
                 "libovmsmediapipe_utils",
                 "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
                 "@mediapipe//mediapipe/calculators/geti/utils:utils",
