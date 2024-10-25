@@ -37,4 +37,6 @@ for i in "${tested_models[@]}"; do
     sed -i -e "s/servable_name: \"tokenizer_model\"/servable_name: \"${i//[\/]/\\/}-tokenizer_model\"/g" models/$i/graph.pbtxt
     sed -i -e "s/servable_name: \"embeddings_model\"/servable_name: \"${i//[\/]/\\/}-embeddings_model\"/g" models/$i/graph.pbtxt
     cat config_all.json | jq ".mediapipe_config_list[.mediapipe_config_list | length] |= . + {\"name\": \"$i\", \"base_path\": \"models/$i\"}" | tee config_all.json
+    python add_rt_info.py --model_path models/$i/tokenizer/1/openvino_tokenizer.xml --config_path models/$i/embeddings/1/tokenizer_config.json
+    python add_rt_info.py --model_path models/$i/embeddings/1/openvino_model.xml --config_path models/$i/embeddings/1/config.json
 done
