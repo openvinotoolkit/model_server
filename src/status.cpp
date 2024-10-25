@@ -315,6 +315,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::DOUBLE_TENSOR_INSERT, "Cannot insert more than one tensor with the same name"},
     {StatusCode::DOUBLE_PARAMETER_INSERT, "Cannot insert more than one parameter with the same name"},
     {StatusCode::NONEXISTENT_BUFFER_FOR_REMOVAL, "Tried to remove nonexisting buffer"},
+    {StatusCode::NONEXISTENT_BUFFER, "Output does not contain buffer"},
     {StatusCode::NONEXISTENT_PARAMETER, "Tried to use nonexisting parameter"},
     {StatusCode::NONEXISTENT_TENSOR, "Tried to get nonexisting tensor"},
     {StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER, "Tried to set buffer for nonexisting tensor"},
