@@ -31,6 +31,8 @@ Run optimum-cli to download and quantize the model:
 cd demos/embeddings
 convert_tokenizer --not-add-special-tokens -o models/gte-large-en-v1.5-tokenizer/1 Alibaba-NLP/gte-large-en-v1.5
 optimum-cli export openvino --disable-convert-tokenizer --model Alibaba-NLP/gte-large-en-v1.5 --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/gte-large-en-v1.5-embeddings/1
+python add_rt_info.py --model_path models/gte-large-en-v1.5-tokenizer/1/openvino_tokenizer.xml --config_path models/gte-large-en-v1.5-embeddings/1/tokenizer_config.json
+python add_rt_info.py --model_path models/gte-large-en-v1.5-embeddings/1/openvino_model.xml --config_path models/gte-large-en-v1.5-embeddings/1/config.json
 rm models/gte-large-en-v1.5-embeddings/1/*.json models/gte-large-en-v1.5-embeddings/1/vocab.txt 
 ```
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
