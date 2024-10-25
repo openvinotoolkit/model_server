@@ -82,6 +82,10 @@ enum : unsigned int {
 };
 }  // namespace
 
+namespace ov {
+    struct Meta; // pure fwd declaration in getRTInfo
+}
+
 namespace ovms {
 
 // TODO windows
@@ -374,9 +378,8 @@ ov::AnyMap ModelInstance::getRTInfo(std::vector<std::string> path) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Failed to get RTInfo for path; unknown error");
         return anyMap;
     }
-    std::string type_name("St10shared_ptrIN2ov4MetaEE");
     for (const auto& [key, value] : rtMap) {
-        if (std::string(value.type_info().name()) == type_name) {
+        if ((typeid(std::shared_ptr<ov::Meta>) == value.type_info())) {
             path.push_back(key);
             anyMap[key] = getRTInfo(path);
             path.pop_back();
@@ -389,12 +392,13 @@ ov::AnyMap ModelInstance::getRTInfo(std::vector<std::string> path) {
 
 ov::AnyMap ModelInstance::getRTInfo() {
     OV_LOGGER("model: {}, ov::Model::get_rt_info<ov::AnyMap>()", reinterpret_cast<void*>(model.get()));
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Getting RTINFO");
     ov::AnyMap rtMap = this->model->get_rt_info();
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "RTINFO OK");
     ov::AnyMap anyMap;
     std::vector<std::string> path{};
-    std::string type_name("St10shared_ptrIN2ov4MetaEE");  // OV private type behind OV:Any in RTInfo which is shared_ptr<ov::Meta>
     for (const auto& [key, value] : rtMap) {
-        if (std::string(value.type_info().name()) == type_name) {
+        if ((typeid(std::shared_ptr<ov::Meta>) == value.type_info())) {
             path.push_back(key);
             anyMap[key] = getRTInfo(path);
             path.pop_back();

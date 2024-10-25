@@ -63,7 +63,9 @@ protected:
             status.setLoading();
             return ovms::StatusCode::OK;
         }
-
+        ov::AnyMap getRTInfo() override {
+            return {};
+        }
         MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
         MOCK_METHOD(const ovms::tensor_map_t&, getOutputsInfo, (), (const, override));
         MOCK_METHOD(const std::string&, getName, (), (const, override));
@@ -150,8 +152,8 @@ protected:
 
 TEST_F(ModelMetadataResponseBuild, BasicResponseMetadata) {
     prepare();
-
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
+    KFSModelExtraMetadata extraMetadata;
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response, extraMetadata), ovms::StatusCode::OK);
 
     EXPECT_EQ(response.name(), modelName);
     EXPECT_EQ(response.versions_size(), 1);
@@ -173,7 +175,8 @@ TEST_F(ModelMetadataResponseBuild, BasicResponseMetadata2Versions) {
              ModelVersionState::END}) {
         response.Clear();
         secondInstance->setState(state);
-        ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
+        KFSModelExtraMetadata extraMetadata;
+        ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response, extraMetadata), ovms::StatusCode::OK);
 
         EXPECT_EQ(response.name(), modelName);
         EXPECT_EQ(response.platform(), "OpenVINO");
@@ -191,21 +194,23 @@ TEST_F(ModelMetadataResponseBuild, BasicResponseMetadata2Versions) {
 TEST_F(ModelMetadataResponseBuild, ModelVersionNotLoadedAnymore) {
     prepare();
     instance->retireModel();
-    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+    KFSModelExtraMetadata extraMetadata;
+    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response, extraMetadata), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 }
 
 TEST_F(ModelMetadataResponseBuild, ModelVersionNotLoadedYet) {
     prepare();
     instance->loadModel(DUMMY_MODEL_CONFIG);
-    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
+    KFSModelExtraMetadata extraMetadata;
+    EXPECT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response, extraMetadata), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 }
 
 TEST_F(ModelMetadataResponseBuild, SingleInputSingleOutputValidResponse) {
     tensor_desc_map_t inputs = tensor_desc_map_t({{"SingleInput", {ovms::Precision::FP32, {1, 3, 224, 224}}}});
     tensor_desc_map_t outputs = tensor_desc_map_t({{"SingleOutput", {ovms::Precision::I32, {1, 2000}}}});
     prepare(inputs, outputs);
-
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
+    KFSModelExtraMetadata extraMetadata;
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response, extraMetadata), ovms::StatusCode::OK);
 
     EXPECT_EQ(response.inputs_size(), 1);
     auto input = response.inputs().at(0);
@@ -228,8 +233,8 @@ TEST_F(ModelMetadataResponseBuild, DoubleInputDoubleOutputValidResponse) {
     tensor_desc_map_t outputs = tensor_desc_map_t({{"FirstOutput", {ovms::Precision::I32, {1, 2000}}},
         {"SecondOutput", {ovms::Precision::FP32, {1, 3, 400, 400}}}});
     prepare(inputs, outputs);
-
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
+    KFSModelExtraMetadata extraMetadata;
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response, extraMetadata), ovms::StatusCode::OK);
 
     EXPECT_EQ(response.inputs_size(), 2);
     auto firstInput = response.inputs().at(0);
@@ -260,8 +265,8 @@ TEST_F(ModelMetadataResponseBuild, ScalarsValidResponse) {
     tensor_desc_map_t inputs = tensor_desc_map_t({{"SingleInput", {ovms::Precision::FP32, {}}}});
     tensor_desc_map_t outputs = tensor_desc_map_t({{"SingleOutput", {ovms::Precision::I32, {}}}});
     prepare(inputs, outputs);
-
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
+    KFSModelExtraMetadata extraMetadata;
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response, extraMetadata), ovms::StatusCode::OK);
 
     EXPECT_EQ(response.inputs_size(), 1);
     auto input = response.inputs().at(0);
@@ -282,8 +287,8 @@ TEST_F(ModelMetadataResponseBuild, StringValidRespone) {
     tensor_desc_map_t inputs = tensor_desc_map_t({{"SingleInput", {ovms::Precision::STRING, {}}}});
     tensor_desc_map_t outputs = tensor_desc_map_t({{"SingleOutput", {ovms::Precision::STRING, {}}}});
     prepare(inputs, outputs);
-
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response), ovms::StatusCode::OK);
+    KFSModelExtraMetadata extraMetadata;
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &response, extraMetadata), ovms::StatusCode::OK);
 
     EXPECT_EQ(response.inputs_size(), 1);
     auto input = response.inputs().at(0);

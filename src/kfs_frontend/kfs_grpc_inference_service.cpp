@@ -242,8 +242,7 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
             return Status(StatusCode::MODEL_VERSION_MISSING);
         }
     }
-    auto status = buildResponse(*model, *instance, response);
-    extraMetadata.rt_info = instance->getRTInfo();
+    auto status = buildResponse(*model, *instance, response, extraMetadata);
 
     INCREMENT_IF_ENABLED(instance->getMetricReporter().getModelMetadataMetric(executionContext, status.ok()));
 
@@ -404,7 +403,8 @@ static void addReadyVersions(Model& model,
 Status KFSInferenceServiceImpl::buildResponse(
     Model& model,
     ModelInstance& instance,
-    KFSModelMetadataResponse* response) {
+    KFSModelMetadataResponse* response,
+    KFSModelExtraMetadata& extraMetadata) {
 
     std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
 
@@ -413,7 +413,7 @@ Status KFSInferenceServiceImpl::buildResponse(
     if (!status.ok()) {
         return status;
     }
-
+    extraMetadata.rt_info = instance.getRTInfo();
     response->Clear();
     response->set_name(instance.getName());
     addReadyVersions(model, instance.getVersion(), response);
