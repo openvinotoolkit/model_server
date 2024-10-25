@@ -31,3 +31,4 @@ yarn.*
 bazel-openvino-model-server/
 bazel-model_server/
 out
+.user.bazelrc
