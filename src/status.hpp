@@ -94,7 +94,6 @@ enum class StatusCode {
     INVALID_MISSING_INPUT,            /*!< Missing one or more of inputs */
     INVALID_UNEXPECTED_INPUT,         /*!< Unexpected one or more of inputs */
     INVALID_MISSING_OUTPUT,           /*!< Missing one or more of outputs */
-    INVALID_MISSING_OUTPUT_BUFFER,    /*!< Missing one or more of output buffers */
     INVALID_NO_OF_SHAPE_DIMENSIONS,   /*!< Invalid number of shape dimensions */
     INVALID_BATCH_SIZE,               /*!< Input batch size other than required */
     INVALID_SHAPE,                    /*!< Invalid shape dimension number or dimension value */
@@ -326,6 +325,7 @@ enum class StatusCode {
     DOUBLE_BUFFER_SET,
     DOUBLE_TENSOR_INSERT,
     DOUBLE_PARAMETER_INSERT,
+    NONEXISTENT_BUFFER,
     NONEXISTENT_BUFFER_FOR_REMOVAL,
     NONEXISTENT_PARAMETER,
     NONEXISTENT_TENSOR,

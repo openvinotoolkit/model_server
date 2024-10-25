@@ -77,7 +77,7 @@ Status validateCapiTensorContent(const InferenceTensor& tensor, ovms::Precision 
            << "; is missing buffer for tensor: " << bufferId;
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
-        return Status(StatusCode::INVALID_MISSING_OUTPUT_BUFFER, details);
+        return Status(StatusCode::NONEXISTENT_BUFFER, details);
     }
     size_t expectedValueCount = 1;
     for (size_t i = 0; i < tensor.getShape().size(); i++) {
@@ -335,12 +335,7 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, ValidationChoic
 }
 template <>
 Status RequestValidator<ovms::InferenceRequest, InferenceTensor, ValidationChoice::OUTPUT, const InferenceTensor*, signed_shape_t>::validateNumberOfTensors() const {
-    size_t expectedNumberOfOutputs = outputsInfo.size();
-    if (request.getOutputsSize() >= 0 && expectedNumberOfOutputs <= static_cast<size_t>(request.getOutputsSize())) {
-        return StatusCode::OK;
-    }
-    SPDLOG_DEBUG("[servable name: {} version: {}] Invalid number of outputs - {}", servableName, servableVersion);
-    return Status(StatusCode::INTERNAL_ERROR);
+    return Status(StatusCode::OK);
 }
 
 template <typename RequestType, typename InputTensorType, ValidationChoice choice, typename InputIterator, typename ShapeType>
@@ -358,17 +353,20 @@ Status RequestValidator<RequestType, InputTensorType, choice, InputIterator, Sha
     }
 
     currentlyValidatedName = nullptr;
+    StatusCode code = StatusCode::INTERNAL_ERROR;
     std::stringstream ss;
     if (choice == ValidationChoice::INPUT) {
         ss << "Required input: ";
+        code = StatusCode::INVALID_MISSING_INPUT;
     }
     if (choice == ValidationChoice::OUTPUT) {
         ss << "Required output: ";
+        code = StatusCode::INVALID_MISSING_OUTPUT;
     }
     ss << name;
     const std::string details = ss.str();
-    SPDLOG_DEBUG("[servable name: {} version: {}] Missing input with specific name - {}", servableName, servableVersion, details);
-    return Status(status.getCode(), details);
+    SPDLOG_DEBUG("[servable name: {} version: {}] Missing tensor with specific name - {}", servableName, servableVersion, details);
+    return Status(code, details);
 }
 
 template <>
@@ -1054,10 +1052,8 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
         return StatusCode::NOT_IMPLEMENTED;
     }
     Status finalStatus = StatusCode::OK;
-
     RETURN_IF_ERR(validateNumberOfTensors());
     RETURN_IF_ERR(validateRequestCoherency());
-
     size_t bufferId = 0;
     for (const auto& [name, tensorInfo] : ((choice == ValidationChoice::INPUT) ? inputsInfo : outputsInfo)) {
         auto getTensorStatus = validateAndGetTensor(request, name, bufferId);

@@ -517,7 +517,7 @@ TEST_F(CAPIPredictValidation, RequestIncorrectInputWithNoBuffer) {
     std::array<int64_t, 4> shape{1, 1, 1, 1};
     request.addInput("Input_FP32_1_1_1_1_NHWC", OVMS_DATATYPE_FP32, shape.data(), shape.size());
     auto status = instance->mockValidate(&request);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::NONEXISTENT_BUFFER) << status.string();
 }
 
 TEST_F(CAPIPredictValidation, RequestIncorrectContentSizeZero) {
@@ -683,16 +683,16 @@ TEST_F(CAPIPredictValidation, OutputWithNoBuffer) {
     request.addOutput("Output_FP32_1_224_224_3_NHWC", OVMS_DATATYPE_FP32, shape.data(), 4);
 
     auto status = instance->mockValidate(&request);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_MISSING_OUTPUT_BUFFER);
+    EXPECT_EQ(status, ovms::StatusCode::NONEXISTENT_BUFFER);
 }
 
-TEST_F(CAPIPredictValidation, InvalidOutputName) {
+TEST_F(CAPIPredictValidation, InvalidOutputBufferName) {
     ovms::signed_shape_t shape = {1, 224, 224, 3};
     request.addOutput("Output_FP32_1_224_224_3_NHWC", OVMS_DATATYPE_FP32, shape.data(), 4);
     request.setOutputBuffer("Invalid", outputBuffer.data(), std::accumulate(begin(shape), end(shape), 1.0, std::multiplies<size_t>()) * ovms::DataTypeToByteSize(OVMS_DATATYPE_FP32), OVMS_BUFFERTYPE_CPU, std::nullopt);
 
     auto status = instance->mockValidate(&request);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE);
+    EXPECT_EQ(status, ovms::StatusCode::NONEXISTENT_BUFFER);
 }
 
 TEST_F(CAPIPredictValidation, InvalidOutputSize) {

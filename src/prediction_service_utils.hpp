@@ -109,17 +109,19 @@ public:
         if (bufferId == nullptr) {
             return StatusCode::INTERNAL_ERROR;
         }
+        size_t id = 0;
         auto it = request.inputs().begin();
         while (it != request.inputs().end()) {
             if (it->name() == name) {
                 break;
             }
             ++it;
-            ++bufferId;
+            ++id;
         }
         if (it == request.inputs().end()) {
             return StatusCode::NONEXISTENT_TENSOR;
         }
+        *bufferId = id;
         *tensor = &(*it);
         return StatusCode::OK;
     }
