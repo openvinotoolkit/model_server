@@ -47,4 +47,10 @@ message LLMCalculatorOptions {
     optional uint32 max_tokens_limit = 11 [default = 4096];
 
     optional bool enable_prefix_caching = 12 [default = false];
+
+    // speculative decoding enablement
+
+    optional string draft_models_path = 13;
+
+    optional string draft_models_device = 14 [default = "CPU"];
 }

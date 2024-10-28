@@ -348,6 +348,17 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
         request.numReturnSequences = it->value.GetUint();
     }
 
+    // Speculative decoding specific parameters
+    
+    // num_assistant_tokens: uint; optional - defaults to 0
+    it = doc.FindMember("num_assistant_tokens");
+    if (it != doc.MemberEnd()) {
+        if (!it->value.IsUint()) {
+            return absl::InvalidArgumentError("num_assistant_tokens must be an unsigned integer");
+        }
+        request.numAssistantTokens = it->value.GetUint();
+    }
+
     // use_beam_search: bool; optional - defaults to false
     // Extension from vLLM, unsupported by OpenAI API, not available directly in CB lib
     // Use best_of>1 to steer into beams search

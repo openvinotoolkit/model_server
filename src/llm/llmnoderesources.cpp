@@ -156,6 +156,11 @@ Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResou
 
     nodeResources->device = nodeOptions.device();
 
+    if (!nodeOptions.draft_models_path().empty()) {
+        auto draftModelConfig = ov::genai::draft_model(nodeOptions.draft_models_path(), nodeOptions.draft_models_device());
+        nodeResources->pluginConfig.insert(draftModelConfig);
+    }
+
     auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), nodeResources->pluginConfig);
     if (!status.ok()) {
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
@@ -164,7 +169,8 @@ Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResou
 
     try {
         plugin_config_t tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
-        nodeResources->initializeContinuousBatchingPipeline(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig, tokenizerPluginConfig);
+        nodeResources->initializeContinuousBatchingPipeline(basePath, nodeResources->schedulerConfig, nodeResources->device, 
+                                                            nodeResources->pluginConfig, tokenizerPluginConfig);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", basePath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;

@@ -66,6 +66,7 @@ struct OpenAIChatCompletionsRequest {
     StreamOptions streamOptions;
     std::string model;
     std::optional<int> maxTokens{std::nullopt};
+    std::optional<int> numAssistantTokens{std::nullopt};
     std::optional<float> frequencyPenalty{std::nullopt};
     std::optional<float> presencePenalty{std::nullopt};
     std::optional<float> diversityPenalty{std::nullopt};
@@ -120,7 +121,7 @@ struct OpenAIChatCompletionsRequest {
         // TODO: early_finish = ?
         // TODO use_beam_search is unused ?
 
-        // Multinomial specific
+        // Multinomial sampling specific
         if (temperature.has_value())
             config.temperature = temperature.value();
         if (topK.has_value())
@@ -138,6 +139,10 @@ struct OpenAIChatCompletionsRequest {
         if (presencePenalty.has_value())
             config.presence_penalty = presencePenalty.value();
         config.do_sample = config.temperature > 0.0f && config.num_beams == 1;
+
+        // Speculative decoding specific
+        if (numAssistantTokens.has_value())
+            config.num_assistant_tokens = numAssistantTokens.value();
 
         return config;
     }
