@@ -392,9 +392,6 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
     config.echo = false;
     ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
     ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
-    for (size_t i = 0; i < config.num_return_sequences; i++) {
-        std::cout << "Expected message: " << expectedMessages[i] << std::endl;
-    }
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
@@ -2442,12 +2439,10 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
         }
         }
     )";
-    std::cout << "------------------------A--------------------\n";
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
-    std::cout << "------------------------B--------------------\n";
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 8);
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
