@@ -16,7 +16,12 @@ pipeline {
         // Build windows
         stage("Build windows") {
             steps {
-                bat "build_windows.bat"
+                def status = bat(returnStatus: true, script: 'build_windows.bat')
+                if (status != 0) {
+                        echo "Error: Build exited with status ${status}"
+                    } else {
+                        echo "Build executed successfully"
+                    }
             }
         }
     }
