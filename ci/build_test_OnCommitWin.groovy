@@ -16,13 +16,13 @@ pipeline {
     //Post build steps
     post {
         success {
-            script{}
+            //script{}
         }
         unstable {
-            script{}
+            //script{}
         }
         failure {
-            script{}
+            //script{}
         }
         always {
             //junit allowEmptyResults: true, testResults: "logs/**/*.xml"
@@ -30,7 +30,7 @@ pipeline {
             archiveArtifacts allowEmptyArchive: true, artifacts: "environment.log"
             archiveArtifacts allowEmptyArchive: true, artifacts: "build.log"
 
-            script{}
+            //script{}
         }
     }
 }
