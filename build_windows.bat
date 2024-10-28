@@ -4,14 +4,15 @@ set setPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\
 set buildCommand=bazel build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 //src:ovms 2>&1 | tee build.log
 set envPath=environment.log
 
+@echo off
 :: Start VS 2019 Developer command line
-%vsDevPath%
+%vsDevPath% || (echo ERROR: vsDevPath failed & exit /b 1)
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
-set PATH=%setPath%
+set PATH=%setPath% || (echo ERROR: PATH=%setPath% failed & exit /b 1)
 
 :: Log all environment variables
-set > %envPath%
+set > %envPath% || (echo ERROR: set > %envPath% failed & exit /b 1)
 
 :: Start bazel build
-%buildCommand%
+%buildCommand% || (echo ERROR: buildCommand failed & exit /b 1)
