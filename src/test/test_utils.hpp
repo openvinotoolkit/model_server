@@ -713,6 +713,7 @@ public:
     MockedMetadataModelIns(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", 42, ieCore) {}
     MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
+    MOCK_METHOD(const ovms::tensor_map_t&, getOutputsInfo, (), (const, override));
     MOCK_METHOD(std::optional<ovms::Dimension>, getBatchSize, (), (const, override));
     MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
