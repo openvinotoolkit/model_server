@@ -303,7 +303,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsEchoWithCompletion) {
     // Since prompt is treated as a single entity and streamer returns chunk only after space or newline
     // we expect chunk with echoed prompt to contain space or new line at the end
     ASSERT_TRUE(chunks[0] == "What is OpenVINO?\n" || chunks[0] == "What is OpenVINO? ");
-    ASSERT_TRUE(chunks.size() > 1);
+    ASSERT_GT(chunks.size(), 1);
 }
 
 TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoOnly) {
