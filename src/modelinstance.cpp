@@ -392,9 +392,7 @@ ov::AnyMap ModelInstance::getRTInfo(std::vector<std::string> path) {
 
 ov::AnyMap ModelInstance::getRTInfo() {
     OV_LOGGER("model: {}, ov::Model::get_rt_info<ov::AnyMap>()", reinterpret_cast<void*>(model.get()));
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Getting RTINFO");
     ov::AnyMap rtMap = this->model->get_rt_info();
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "RTINFO OK");
     ov::AnyMap anyMap;
     std::vector<std::string> path{};
     for (const auto& [key, value] : rtMap) {
