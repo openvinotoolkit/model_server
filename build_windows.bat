@@ -6,13 +6,14 @@ set "buildCommand=bazel build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --v
 set "envPath=environment.log"
 
 :: Start VS 2019 Developer command line
-%vsDevPath% || (echo ERROR: vsDevPath failed & exit /b 1)
+%vsDevPath%
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
-set "PATH=%setPath%" || (echo ERROR: PATH=%setPath% failed & exit /b 1)
+set "PATH=%setPath%"
 
 :: Log all environment variables
-set > %envPath% || (echo ERROR: env > %envPath% failed & exit /b 1)
+set > %envPath%
 
 :: Start bazel build
-%buildCommand% || (echo ERROR: buildCommand failed & exit /b 1)
+%buildCommand%
+endlocal
