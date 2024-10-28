@@ -83,7 +83,6 @@ def check_dir(start_dir):
         'add.xml',
         'abseil_gcc_8.5_constant_expression.patch',
         'azure_sdk.patch',
-        'cb.patch',
         'bazel-',
         'check_coverage.bat',
         'genhtml',

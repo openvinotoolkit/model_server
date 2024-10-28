@@ -1,7 +1,6 @@
 client/common/resnet_labels.txt
 demos/common/python/classes.py
 demos/image_classification/go/labels.go
-external/cb.patch
 extras/nginx-mtls-auth/model_server.conf.template
 release_files/thirdparty-licenses/boringssl.LICENSE.txt
 src/shape.cpp:436: strIn
