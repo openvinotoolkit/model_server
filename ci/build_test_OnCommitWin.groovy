@@ -6,6 +6,13 @@ pipeline {
         label 'win_ovms'
     }
     stages {
+        stage ("Clean") {
+            steps {
+                script{
+                    def output1 = bat(returnStdout: true, script: 'clean_windows.bat')
+                }
+            }
+        }
         // Build windows
         stage("Build windows") {
             steps {
