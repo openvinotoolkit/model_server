@@ -37,6 +37,7 @@
 #include "../logging.hpp"
 #include "../stringutils.hpp"
 #include "src/python/utils.hpp"
+#include "src/llm/llm_calculator.pb.h"
 #include "text_processor.hpp"
 
 namespace ovms {
@@ -105,6 +106,7 @@ using plugin_config_t = std::map<std::string, ov::Any>;
 struct LLMNodeResources {
 public:
     std::shared_ptr<ov::genai::ContinuousBatchingPipeline> cbPipe = nullptr;
+    bool isSpeculativePipeline{false};
     std::string modelsPath;
     std::string device;
     plugin_config_t pluginConfig;
@@ -128,6 +130,7 @@ public:
 private:
     std::unique_ptr<LLMExecutorWrapper> llmExecutorWrapper;
     static std::unordered_map<std::string, std::string> prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath);
+    static ov::genai::SchedulerConfig prepareDraftModelSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions);
 
 public:
     virtual void initializeContinuousBatchingPipeline(
