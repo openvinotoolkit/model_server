@@ -58,6 +58,20 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
         return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
     }
 
+    // echo: bool; optional - defaults to false
+    it = doc.FindMember("echo");
+    if (it != doc.MemberEnd()) {
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("echo accepts values true or false");
+        request.echo = it->value.GetBool();
+    }
+
+    // specific part of max_tokens validation due to echo dependency
+    if (request.maxTokens == 0) {
+        if (!request.echo)
+            return absl::InvalidArgumentError("max_tokens value should be greater than 0 unless echo is set");
+    }
+
     return absl::OkStatus();
 }
 
@@ -94,6 +108,11 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart() {
     }
     if (request.logprobschat && request.stream) {
         return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
+    }
+
+    // specific part of max_tokens validation due to echo dependency
+    if (request.maxTokens == 0) {
+        return absl::InvalidArgumentError("max_tokens value should be greater than 0");
     }
 
     if (request.messages.size() <= 0) {
@@ -155,25 +174,14 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
         request.ignoreEOS = it->value.GetBool();
     }
 
-    // echo: bool; optional - defaults to false
-    it = doc.FindMember("echo");
-    if (it != doc.MemberEnd()) {
-        if (!it->value.IsBool())
-            return absl::InvalidArgumentError("echo accepts values true or false");
-        request.echo = it->value.GetBool();
-    }
-
     // max_tokens: uint; optional
+    // Common part checked here, specific parts are checked in parseCompletionsPart and parseChatCompletionsPart
     it = doc.FindMember("max_tokens");
     if (it != doc.MemberEnd()) {
         if (!it->value.IsUint()) {
             if (it->value.IsUint64())
                 return absl::InvalidArgumentError("max_tokens value can't be greater than 4294967295");
             return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
-        }
-        if (it->value.GetUint() == 0) {
-            if (!request.echo)
-                return absl::InvalidArgumentError("max_tokens value should be greater than 0");
         }
         if (!(it->value.GetUint() < maxTokensLimit))
             return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit));
@@ -372,10 +380,10 @@ void OpenAIChatCompletionsHandler::setPromptTokensUsage(int promptTokens) {
     usage.promptTokens = promptTokens;
 }
 
-void OpenAIChatCompletionsHandler::incrementProcessedTokens() {
-    processedTokens++;
+void OpenAIChatCompletionsHandler::incrementProcessedTokens(int numTokens) {
+    processedTokens += numTokens;
     if (!request.echo || processedTokens > usage.promptTokens)
-        usage.completionTokens++;
+        usage.completionTokens += numTokens;
 }
 
 ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig() const {

@@ -210,12 +210,11 @@ public:
                     OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
                     ov::genai::GenerationOutputs generationOutputs = this->generationHandle->read();
                     RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
-                    RET_CHECK(generationOutputs.begin()->second.generated_ids.size() == 1);
-                    this->apiHandler->incrementProcessedTokens();
+                    this->apiHandler->incrementProcessedTokens(generationOutputs.begin()->second.generated_ids.size());
 
                     // TODO(dkalinow): Move this logic to CB library
                     auto generationOutput = generationOutputs.begin()->second;
-                    auto chunk = this->streamer->put(generationOutput.generated_ids[0]);
+                    auto chunk = this->streamer->put(generationOutput.generated_ids);
                     ov::genai::GenerationFinishReason finishReason = generationOutputs.begin()->second.finish_reason;
                     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
                         if (chunk.has_value()) {

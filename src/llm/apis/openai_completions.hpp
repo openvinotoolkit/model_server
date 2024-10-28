@@ -175,7 +175,7 @@ public:
 
     void setPromptTokensUsage(int promptTokens);
 
-    void incrementProcessedTokens();
+    void incrementProcessedTokens(int numTokens = 1);
 
     ov::genai::GenerationConfig createGenerationConfig() const;
 

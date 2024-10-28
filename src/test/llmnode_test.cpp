@@ -118,11 +118,14 @@ public:
                     break;
                 i++;
                 std::vector<int64_t> tokens = out.generated_ids;
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
+                /*/
                 std::cout << "[" << i << "] Generated tokens: ";
                 for (int64_t token : tokens) {
                     std::cout << token << " ";
                 }
                 std::cout << std::endl;
+                */
                 std::string completion = tokenizer->decode(tokens);
                 expectedMessages.emplace_back(completion);
             }
@@ -255,6 +258,54 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoWithCompletion) {
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
 }
 
+TEST_F(LLMFlowHttpTest, streamCompletionsEchoWithCompletion) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 10,
+            "echo": true,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+    std::vector<std::string> chunks;
+    ON_CALL(writer, PartialReply).WillByDefault([this, &chunks](std::string response) {
+        rapidjson::Document d;
+        std::string dataPrefix = "data:";
+        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+        size_t pos = response.find("\n");
+        ASSERT_NE(pos, response.npos);
+        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Capacity(), 1);
+        int i = 0;
+        for (auto& choice : d["choices"].GetArray()) {
+            if (choice["finish_reason"].IsString()) {
+                EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+            } else {
+                ASSERT_TRUE(choice["finish_reason"].IsNull());
+            }
+            ASSERT_EQ(choice["index"], i++);
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+            ASSERT_TRUE(choice["text"].IsString());
+            chunks.push_back(std::string(choice["text"].GetString()));
+        }
+        EXPECT_STREQ(d["model"].GetString(), "llmDummyKFS");
+        EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
+    });
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+
+    // Since prompt is treated as a single entity and streamer returns chunk only after space or newline
+    // we expect chunk with echoed prompt to contain space or new line at the end
+    ASSERT_TRUE(chunks[0] == "What is OpenVINO?\n" || chunks[0] == "What is OpenVINO? ");
+    ASSERT_TRUE(chunks.size() > 1);
+}
+
 TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoOnly) {
     std::string requestBody = R"(
         {
@@ -303,6 +354,47 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoOnly) {
     ASSERT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), parsedResponse["choices"].GetArray()[0]["logprobs"].GetObject()["token_logprobs"].Size());
     EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+}
+
+TEST_F(LLMFlowHttpTest, streamCompletionsEchoOnly) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 0,
+            "echo": true,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+    EXPECT_CALL(writer, PartialReply(::testing::_)).WillOnce([this](std::string response) {
+        rapidjson::Document d;
+        std::string dataPrefix = "data:";
+        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+        size_t pos = response.find("\n");
+        ASSERT_NE(pos, response.npos);
+        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Capacity(), 1);
+        int i = 0;
+        for (auto& choice : d["choices"].GetArray()) {
+            if (choice["finish_reason"].IsString()) {
+                EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+            } else {
+                ASSERT_TRUE(choice["finish_reason"].IsNull());
+            }
+            ASSERT_EQ(choice["index"], i++);
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+            ASSERT_TRUE(choice["text"].IsString());
+            EXPECT_STREQ(choice["text"].GetString(), "What is OpenVINO?");
+        }
+        EXPECT_STREQ(d["model"].GetString(), "llmDummyKFS");
+        EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
+    });
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
 }
 
 TEST_F(LLMFlowHttpTest, unaryCompletionsJsonFinishReasonLength) {
