@@ -82,3 +82,42 @@ TEST_F(OpenVINO, CallbacksTest) {
     EXPECT_TRUE(outOvTensor.is<ov::Tensor>());
     EXPECT_TRUE(outAutoTensor.is<ov::Tensor>());
 }
+TEST_F(OpenVINO, ResetOutputTensors) {
+    Core core;
+    auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
+    ov::AnyMap config = {ov::hint::performance_mode(ov::hint::PerformanceMode::THROUGHPUT),
+        ov::auto_batch_timeout(0)};
+    auto compiledModel = core.compile_model(model, "CPU", config);
+    std::vector<float> in1(DUMMY_MODEL_INPUT_SIZE, 0.1);
+    ov::Shape shape;
+    shape.emplace_back(1);
+    shape.emplace_back(DUMMY_MODEL_INPUT_SIZE);
+    ov::element::Type_t dtype = ov::element::Type_t::f32;
+    ov::Tensor input1(dtype, shape, in1.data());
+    auto inferRequest = compiledModel.create_infer_request();
+    inferRequest.set_tensor(DUMMY_MODEL_INPUT_NAME, input1);
+    // keep original output tensor
+    ov::Tensor originalOutput = inferRequest.get_tensor(DUMMY_MODEL_OUTPUT_NAME);
+    // set output
+    std::vector<float> out(DUMMY_MODEL_INPUT_SIZE, 15124.1);
+    ov::Tensor output(dtype, shape, out.data());
+    inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, output);
+    inferRequest.infer();
+    for (size_t i = 0; i < DUMMY_MODEL_INPUT_SIZE; ++i) {
+        EXPECT_NEAR(in1[i] + 1, out[i], 0.0004) << "i:" << i;
+    }
+    std::vector<float> in2(DUMMY_MODEL_INPUT_SIZE, 42);
+    ov::Tensor input2(dtype, shape, in2.data());
+    inferRequest.set_tensor(DUMMY_MODEL_INPUT_NAME, input2);
+    inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, originalOutput);
+    inferRequest.infer();
+    auto secondOutput = inferRequest.get_tensor(DUMMY_MODEL_OUTPUT_NAME);
+    float* data2nd = reinterpret_cast<float*>(secondOutput.data());
+    for (size_t i = 1; i < DUMMY_MODEL_INPUT_SIZE; ++i) {
+        EXPECT_NEAR(in2[i] + 1, data2nd[i], 0.0004) << "i:" << i;
+    }
+    // now check if first output didn't change content
+    for (size_t i = 0; i < DUMMY_MODEL_INPUT_SIZE; ++i) {
+        EXPECT_NEAR(in1[i] + 1, out[i], 0.0004) << "i:" << i;
+    }
+}

@@ -70,7 +70,7 @@ cc_library(
         "//src:ovms_lib", # stringutils.hpp
         "ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
         "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
-        "@linux_openvino//:openvino",
+        "//third_party:openvino",
         "//src:ovms_header",
     ],
     linkopts = select({

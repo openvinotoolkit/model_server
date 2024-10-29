@@ -74,14 +74,13 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= d499a16453e4fa969a955700935de59db736b232  # master 2024-10-10
-OV_CONTRIB_BRANCH ?= e6eb43a32c98a04162a921a80d89f82b30910973  # master 2024-06-13
-OV_TOKENIZERS_BRANCH ?= 81c067c557d48011e6879a42d4a25147060eaeff  # master 2024-09-19
+OV_SOURCE_BRANCH ?= 03c9ae38292a90ecb5cbfe2c8d5472eed0ec1aa9  # master 2024-10-18
+OV_CONTRIB_BRANCH ?= 4272f47cb3ffbaf5c0fb5db569deb16856c578a1  # master 2024-10-11
+OV_TOKENIZERS_BRANCH ?=  ffff67e257c44565fbbd46f2cf76e310d7632e86 # master 2024-10-23
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
 
-TOKENIZERS ?= 1
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
 
@@ -99,10 +98,14 @@ else
 	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=0"
 endif
 
-ifeq ($(PYTHON_DISABLE),1)
-	DISABLE_PYTHON_PARAMS = " --define PYTHON_DISABLE=1"
+ifeq ($(MEDIAPIPE_DISABLE),1)
+  DISABLE_PARAMS = " --config=mp_off_py_off"
 else
-	DISABLE_PYTHON_PARAMS = " --define PYTHON_DISABLE=0"
+  ifeq ($(PYTHON_DISABLE),1)
+    DISABLE_PARAMS = " --config=mp_on_py_off"
+  else
+    DISABLE_PARAMS = " --config=mp_on_py_on"
+  endif
 endif
 
 FUZZER_BUILD_PARAMS ?= ""
@@ -136,8 +139,8 @@ else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
-CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)" --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
@@ -158,9 +161,9 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   endif
   ifeq  ($(BASE_OS_TAG),22.04)
-        OS=ubuntu22
+    OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.26.30049"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.5.0.16952.d499a16453e_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.5.0.17060.03c9ae38292_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -175,7 +178,7 @@ ifeq ($(BASE_OS),redhat)
   endif
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.5.0.16952.d499a16453e_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.5.0.17060.03c9ae38292_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -218,7 +221,6 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg ov_source_org=$(OV_SOURCE_ORG)\
 	--build-arg ov_contrib_org=$(OV_CONTRIB_ORG)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\
-	--build-arg tokenizers=$(TOKENIZERS)\
 	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
 	--build-arg RUN_TESTS=$(RUN_TESTS)\
@@ -664,7 +666,6 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
-		-v ${PWD}/out:/out:rw \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
@@ -673,13 +674,11 @@ ifeq ($(RUN_GPU_TESTS),1)
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
 		tail -200 test.log ; \
-		[ -f ./out/results.txt ] && cat ./out/results.txt || echo "The results file was not generated" ; \
 		exit $$exit_status
 else
 	docker run \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
-		-v ${PWD}/out:/out:rw \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e JOBS=$(JOBS) \
@@ -687,7 +686,6 @@ else
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
 		tail -200 test.log ; \
-		[ -f ./out/results.txt ] && cat ./out/results.txt || echo "The results file was not generated" ; \
 		exit $$exit_status
 endif
 

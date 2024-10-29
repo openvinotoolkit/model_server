@@ -167,8 +167,6 @@ class StreamClient:
                 if self.exact:
                     displayed_frame_id += 1
                 else:
-                    if self.benchmark:
-                        self.dropped_frames += sent_frame_id - displayed_frame_id
                     displayed_frame_id = sent_frame_id
             elif self.exact:
                 self.pq.put((sent_frame_id, received_frame, timestamp))
@@ -257,4 +255,4 @@ class StreamClient:
         self.output_backend.release()
         total_time = self.get_timestamp() - total_time_start
         if self.benchmark:
-            print(f"{{\"average_inference_latency\": {sum(self.inference_time)/len(self.inference_time)/1e6}, \"dropped_frames\": {self.dropped_frames}, \"frames\": {self.frames}, \"fps\": {self.frames/total_time}, \"total_time\": {total_time}, \"sent_all_frames\": {sent_all_frames}}}")
+            print(f"{{\"average_inference_latency\": {sum(self.inference_time)/len(self.inference_time)/1e6}, \"dropped_frames\": {self.dropped_frames}, \"frames\": {self.frames}, \"fps\": {self.frames/(total_time/1e6)}, \"total_time\": {total_time}, \"sent_all_frames\": {sent_all_frames}}}")

@@ -35,6 +35,15 @@ struct CNLIMWrapper {
     }
 };
 
-void* getCNLIMWrapperPtr(const std::shared_ptr<CNLIMWrapper>& wrapper);
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wunused-function"
+// TODO: move to class ?
+static void* getCNLIMWrapperPtr(const std::shared_ptr<CNLIMWrapper>& wrapper) {
+    if (wrapper == nullptr) {
+        return nullptr;
+    }
+    return wrapper->ptr;
+}
+#pragma GCC diagnostic pop
 }  // namespace ovms

@@ -26,7 +26,10 @@
 #include <utility>
 #include <vector>
 
+#ifdef __linux__
 #include <dlfcn.h>
+#include <sysexits.h>
+#endif
 #include <errno.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -40,7 +43,6 @@
 #include "customloaderconfig.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
-#include "dags/custom_node_library_internal_manager_wrapper.hpp"
 #include "dags/custom_node_library_manager.hpp"
 #include "dags/entry_node.hpp"  // need for ENTRY_NODE_NAME
 #include "dags/exit_node.hpp"   // need for EXIT_NODE_NAME
@@ -94,7 +96,12 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
             std::filesystem::create_directories(this->modelCacheDirectory);
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} did not exist, created", this->modelCacheDirectory);
         }
-        int result = access(this->modelCacheDirectory.c_str(), W_OK);
+        // TODO: check on windows
+#ifdef __linux__
+        int result = access(this->modelCacheDirectory.c_str(), EX_OK);
+#elif _WIN32
+        int result = access(this->modelCacheDirectory.c_str(), 0);
+#endif
         if (result != 0) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);
         } else {
@@ -613,12 +620,12 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", loaderConfig.getLibraryPath());
             return StatusCode::PATH_INVALID;
         }
+#ifdef __linux__
         void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
         if (!handleCL) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
             return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
         }
-
         // load the symbols
         createCustomLoader_t* customObj = (createCustomLoader_t*)dlsym(handleCL, "createCustomLoader");
         const char* dlsym_error = dlerror();
@@ -638,6 +645,14 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
             return StatusCode::CUSTOM_LOADER_INIT_FAILED;
         }
         customloaders.add(loaderName, customLoaderIfPtr, handleCL);
+#elif _WIN32
+        // TODO: implement LoadLibrary for windows
+        void* handleCL = NULL;
+        if (!handleCL) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), "e");
+            return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
+        }
+#endif
     } else {
         // Loader is already in the existing loaders. Move it to new loaders.
         // Reload of customloader is not supported yet
@@ -852,6 +867,8 @@ class LoudFileInfoReporter {
 
 public:
     LoudFileInfoReporter(const std::string& filename, std::ifstream& file) {
+        // TODO windows
+#ifdef __linux__
         struct stat statTime;
 
         if (stat(filename.c_str(), &statTime) != 0) {
@@ -870,6 +887,7 @@ public:
         }
         file.clear();
         file.seekg(0);
+#endif
     }
     void log() {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, ss.str());

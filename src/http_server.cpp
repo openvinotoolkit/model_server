@@ -15,6 +15,9 @@
 //*****************************************************************************
 #include "http_server.hpp"
 
+#ifdef _WIN32
+#include <map>
+#endif
 #include <memory>
 #include <regex>
 #include <string>
@@ -41,7 +44,11 @@ namespace ovms {
 namespace net_http = tensorflow::serving::net_http;
 
 static const net_http::HTTPStatusCode http(const ovms::Status& status) {
+#ifdef __linux__
     const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap = {
+#elif _WIN32
+    const std::map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap = {
+#endif
         {StatusCode::OK, net_http::HTTPStatusCode::OK},
         {StatusCode::OK_RELOADED, net_http::HTTPStatusCode::CREATED},
         {StatusCode::OK_NOT_RELOADED, net_http::HTTPStatusCode::OK},

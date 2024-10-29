@@ -39,10 +39,11 @@
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
-// TODO
+// TODO windows
+#ifdef __linux__
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
 #include <openvino/runtime/intel_gpu/ocl/va.hpp>
-
+#endif
 #include "openvino/runtime/remote_tensor.hpp"
 
 namespace ovms {
@@ -108,15 +109,20 @@ protected:
          */
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
+    // TODO windows
+#ifdef __linux__
     cl_context oclContextC;
 
 public:
     // TODO const correctness & ownership & thread safety
     const cl_context* getOclCContext() const { return &oclContextC; }
+#endif
 
 protected:
+#ifdef __linux__
     std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;
     std::unique_ptr<ov::intel_gpu::ocl::VAContext> vaContext;
+#endif
     std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> tensorFactories;
     /**
          * @brief Model name
@@ -312,6 +318,12 @@ protected:
     virtual Status loadInputTensorsImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
 
 private:
+    /**
+     * @brief Determines if during inference we are able to reset ov::InferRequest output tensor to original state, which is required for setting output functionality to be interoperable with both inferences with and without output set.
+     */
+    void checkForOutputTensorResetAbility();
+    bool supportOutputTensorsReset = true;
+    bool doesSupportOutputReset() const;
     Status gatherReshapeInfo(bool isBatchingModeAuto, const DynamicModelParameter& parameter, bool& isReshapeRequired, std::map<std::string, ov::PartialShape>& modelShapes);
 
     /**
@@ -483,7 +495,19 @@ public:
         return inputsInfo;
     }
 
-    virtual ov::AnyMap getRTInfo() const;
+    /**
+           * @brief Get RTMap Info object
+           * @param path list of keys to get RTMap info
+           * @return const ov::AnyMap
+           */
+    ov::AnyMap getRTInfo(std::vector<std::string> path);
+
+    /**
+           * @brief Get RTMap Info object
+           *
+           * @return const ov::AnyMap
+         */
+    virtual ov::AnyMap getRTInfo();
 
     /**
          * @brief Get the Outputs Info object
@@ -585,7 +609,7 @@ public:
          *
          * @return Status
          */
-    Status waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
+    Status waitForLoaded(const uint32_t waitForModelLoadedTimeoutMilliseconds,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuard);
 
     void subscribe(PipelineDefinition& pd);

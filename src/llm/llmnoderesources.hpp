@@ -22,7 +22,6 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/ranges.h>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/genai/scheduler_config.hpp>
 #include <openvino/openvino.hpp>
@@ -54,8 +53,10 @@ public:
     TextStreamer(std::shared_ptr<ov::genai::Tokenizer> tokenizer) :
         tokenizer(std::move(tokenizer)) {}
 
-    std::optional<std::string> put(int64_t token) {
-        tokenCache.push_back(token);
+    std::optional<std::string> put(std::vector<int64_t>& tokens) {
+        for (auto token : tokens) {
+            tokenCache.push_back(token);
+        }
         std::string text = tokenizer->decode(tokenCache);
         if (!text.empty() && '\n' == text.back() && text.size() > printLen) {
             // The chunk is ready if the generated text ends with new line.

@@ -20,6 +20,7 @@
 #include <utility>
 
 #include <grpcpp/server_context.h>
+#include <openvino/openvino.hpp>
 
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #include "src/kfserving_api/grpc_predict_v2.pb.h"
@@ -41,6 +42,11 @@ using KFSGetModelStatusResponse = inference::ModelReadyResponse;
 using KFSDataType = std::string;
 using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
 using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
+
+struct KFSModelExtraMetadata {
+    ov::AnyMap rt_info;
+    std::string mp_schema;
+};
 
 namespace ovms {
 class ExecutionContext;
@@ -64,7 +70,7 @@ protected:
 public:
     Status ModelReadyImpl(::grpc::ServerContext* context, const KFSGetModelStatusRequest* request, KFSGetModelStatusResponse* response, ExecutionContext executionContext);
     Status ServerMetadataImpl(::grpc::ServerContext* context, const KFSServerMetadataRequest* request, KFSServerMetadataResponse* response);
-    Status ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext);
+    Status ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext, KFSModelExtraMetadata& extraMetadata);
     Status ModelInferImpl(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut);
     Status ModelStreamInferImpl(::grpc::ServerContext* context, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream);
     KFSInferenceServiceImpl(const Server& server);
@@ -75,7 +81,7 @@ public:
     ::grpc::Status ModelMetadata(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response) override;
     ::grpc::Status ModelInfer(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response) override;
     ::grpc::Status ModelStreamInfer(::grpc::ServerContext* context, ::grpc::ServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) override;
-    static Status buildResponse(Model& model, ModelInstance& instance, KFSModelMetadataResponse* response);
+    static Status buildResponse(Model& model, ModelInstance& instance, KFSModelMetadataResponse* response, KFSModelExtraMetadata& extraMetadata);
     static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSModelMetadataResponse* response);
     static Status buildResponse(std::shared_ptr<ModelInstance> instance, KFSGetModelStatusResponse* response);
     static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSGetModelStatusResponse* response);

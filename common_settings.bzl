@@ -16,7 +16,7 @@
 ###############################
 # bazel config settings
 ###############################
-#To build without mediapipe use flags - bazel build --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 //src:ovms
+#To build without mediapipe use flags - bazel build --config=linux --define MEDIAPIPE_DISABLE=1 --cxxopt=-DMEDIAPIPE_DISABLE=1 //src:ovms
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
@@ -34,7 +34,18 @@ def create_config_settings():
         name = "not_disable_mediapipe",
         negate = ":disable_mediapipe",
     )
-    #To build without python use flags - bazel build --define PYTHON_DISABLE=1 //src:ovms
+    native.config_setting(
+        name = "disable_cloud",
+        define_values = {
+            "CLOUD_DISABLE": "1",
+        },
+        visibility = ["//visibility:public"],
+    )
+    more_selects.config_setting_negation(
+        name = "not_disable_cloud",
+        negate = ":disable_cloud",
+    )
+    #To build without python use flags - bazel build --config=linux --define PYTHON_DISABLE=1 //src:ovms
     native.config_setting(
         name = "disable_python",
         define_values = {
@@ -60,19 +71,47 @@ def create_config_settings():
 ###############################
 # compilation settings
 ###############################
-COMMON_STATIC_LIBS_COPTS = [
-    "-Wall",
-    "-Wno-unknown-pragmas",
-    "-Wno-sign-compare",
-    "-fvisibility=hidden", # Needed for pybind targets
-    "-Werror",
-]
-COMMON_STATIC_LIBS_LINKOPTS = [
-        "-lxml2",
-        "-luuid",
-        "-lstdc++fs",
-        "-lcrypto",
-]
+COMMON_STATIC_LIBS_COPTS = select({
+                "//conditions:default": [
+                    "-Wall",
+                    # TODO: was in ovms bin "-Wconversion",
+                    "-Wno-unknown-pragmas", 
+                    "-Wno-sign-compare",
+                    "-fvisibility=hidden", # Needed for pybind targets
+                    "-Werror",
+                ],
+                "//src:windows" : [
+                    "-Wall",
+                    ],
+                })
+
+COMMON_STATIC_LIBS_COPTS_VISIBLE = select({
+                "//conditions:default": [
+                    "-Wall",
+                    # TODO: was in ovms bin "-Wconversion",
+                    "-Wno-unknown-pragmas", 
+                    "-Wno-sign-compare",
+                    "-Werror",
+                ],
+                "//src:windows" : [
+                    "-Wall",
+                    ],
+                }) 
+
+COMMON_STATIC_LIBS_LINKOPTS = select({
+                "//conditions:default": [
+                    "-lxml2",
+                    "-luuid",
+                    "-lstdc++fs",
+                    "-lssl",
+                    "-lcrypto",
+                    # "-lovms_shared",  # Use for dynamic linking when necessary
+                ],
+                "//src:windows" : [
+                    "",
+                    ],
+                }) 
+
 COMMON_FUZZER_COPTS = [
     "-fsanitize=address",
     "-fprofile-generate",
