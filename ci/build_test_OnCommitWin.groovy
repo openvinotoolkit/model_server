@@ -2,6 +2,10 @@ pipeline {
     options {
         timeout(time: 2, unit: 'HOURS')
     }
+    environment {
+        DISABLE_AUTH = 'true'
+        DB_ENGINE = 'mysql'
+    }
     agent {
         label 'win_ovms'
     }
@@ -18,11 +22,12 @@ pipeline {
             steps {
                 script{
                   def status = bat(returnStatus: true, script: 'build_windows.bat')
+                  status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms.exe build.log | grep "Build completed successfully"')
                   if (status != 0) {
-                          echo "Error: Build exited with status ${status}"
+                          error "Error: Build failed ${status}"
                       } else {
-                          echo "Build executed successfully"
-                      }
+                          echo "Build successful"
+                      }                      
                   }
             }
         }
