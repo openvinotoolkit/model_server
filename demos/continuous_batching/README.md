@@ -34,9 +34,9 @@ Run optimum-cli to download and quantize the model:
 mkdir models 
 python demos/common/export_models/export_model.py --task text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --task_parameters '{"kv_cache_precision":"u8"}' --config_file_path models/config.json --model_repository_path models
 ```
-> **Note** Change the `--weight-format` to quantize the model to `int8` or `int4` precision to reduce memory consumption and improve performance.
+> **Note:** Change the `--weight-format` to quantize the model to `int8` or `int4` precision to reduce memory consumption and improve performance.
 > **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/meta-llama/Meta-Llama-3-8B) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`.
-> **Note** You can change the model used in the demo out of any topology [tested](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models) with OpenVINO.
+> **Note:** You can change the model used in the demo out of any topology [tested](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models) with OpenVINO.
 
 You should have a model folder like below:
 ```bash

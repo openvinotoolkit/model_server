@@ -384,8 +384,8 @@ TEST_F(ModelWithInputOutputNameMappedModel, GetModelMetadataOnKFSEndpoint) {
     ASSERT_NE(model, nullptr);
     instance = model->getDefaultModelInstance();
     ASSERT_NE(instance, nullptr);
-
-    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &kfsResponse), ovms::StatusCode::OK);
+    KFSModelExtraMetadata extraMetadata;
+    ASSERT_EQ(ovms::KFSInferenceServiceImpl::buildResponse(*model, *instance, &kfsResponse, extraMetadata), ovms::StatusCode::OK);
 
     EXPECT_EQ(kfsResponse.inputs_size(), 1);
     auto input = kfsResponse.inputs().at(0);
