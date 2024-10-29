@@ -368,10 +368,11 @@ cc_library(
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
                 "//src/llm:text_processor",
+            ],
+            "//:disable_python": [
                 "//src/embeddings:embeddingscalculator",
                 "//src/rerank:rerankcalculator",
-            ],
-            "//:disable_python": []
+            ]
         }) + [
             "cpp_headers",
             "libmodelconfigjsonparser",
