@@ -33,25 +33,25 @@ pipeline {
           }
         }
 
-        stage('style check') {
+        stage('Style check') {
             steps {
                 sh 'make style'
             }
         }
 
-        stage('sdl check') {
+        stage('Sdl check') {
             steps {
                 sh 'make sdl-check'
             }
         }
 
-        stage('Trigger Async Job') {
+        stage('Build windows') {
             steps {
-                build job: 'nex-swodt-aiworkflowsdevel/job/ovms/job/ovms-windows', wait: false
+                build job: 'ovms/ovms-windows', wait: false
             }
         }
         
-        stage('client test') {
+        stage('Client test') {
           when { expression { client_test_needed == "true" } }
           steps {
                 sh "make test_client_lib"
