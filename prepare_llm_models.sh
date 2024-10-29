@@ -23,7 +23,7 @@ fi
 if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then echo "Prepare models with python > 3.8."; exit 1 ; fi
 
 echo "Downloading LLM testing models to directory $1"
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly""
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 if [ "$2" = "docker" ]; then
     sed -i '/openvino~=/d' /openvino_tokenizers/pyproject.toml
     python3 -m pip wheel -v --no-deps --wheel-dir wheel /openvino_tokenizers
