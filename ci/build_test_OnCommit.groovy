@@ -44,6 +44,12 @@ pipeline {
                 sh 'make sdl-check'
             }
         }
+
+        stage('Trigger Async Job') {
+            steps {
+                build job: 'ovms-windows', wait: false
+            }
+        }
         
         stage('client test') {
           when { expression { client_test_needed == "true" } }

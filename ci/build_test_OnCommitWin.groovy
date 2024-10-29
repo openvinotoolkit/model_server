@@ -2,10 +2,6 @@ pipeline {
     options {
         timeout(time: 2, unit: 'HOURS')
     }
-    environment {
-        DISABLE_AUTH = 'true'
-        DB_ENGINE = 'mysql'
-    }
     agent {
         label 'win_ovms'
     }
@@ -35,7 +31,7 @@ pipeline {
     //Post build steps
     post {
         always {
-            //junit allowEmptyResults: true, testResults: "logs/**/*.xml"
+            // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
             archiveArtifacts allowEmptyArchive: true, artifacts: "bazel-bin\\src\\ovms.exe"
             archiveArtifacts allowEmptyArchive: true, artifacts: "environment.log"
             archiveArtifacts allowEmptyArchive: true, artifacts: "build.log"
