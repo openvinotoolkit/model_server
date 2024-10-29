@@ -47,7 +47,7 @@ pipeline {
 
         stage('Trigger Async Job') {
             steps {
-                build job: 'ovms-windows', wait: false
+                build job: 'nex-swodt-aiworkflowsdevel/job/ovms/job/ovms-windows', wait: false
             }
         }
         
