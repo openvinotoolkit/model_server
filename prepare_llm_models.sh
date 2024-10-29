@@ -33,23 +33,18 @@ else
     python3 -m venv .venv
     . .venv/bin/activate
     pip3 install -U pip
-    pip3 install --pre -U "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers sentence_transformers==3.1.1
+    pip3 install -U -r demos/common/export_models/requirements.txt
 fi
 
 if [ -d "$1/facebook/opt-125m" ]; then
   echo "Models directory $1/facebook/opt-125m exists. Skipping downloading models."
 else
-  optimum-cli export openvino --disable-convert-tokenizer --model facebook/opt-125m --weight-format int8 $1/facebook/opt-125m
-  convert_tokenizer -o $1/facebook/opt-125m --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens facebook/opt-125m
+  python demos/common/export_models/export_model.py --task text_generation --source_model facebook/opt-125m --weight-format int8 --task_parameters '{}' --model_repository_path $1
 fi
-
 
 if [ -d "$1/$EMBEDDING_MODEL" ]; then
   echo "Models directory $1/$EMBEDDING_MODEL exists. Skipping downloading models."
 else
-  optimum-cli export openvino --model "$EMBEDDING_MODEL" --task feature-extraction --library sentence_transformers "$1/$EMBEDDING_MODEL/embeddings/1"
-  convert_tokenizer --not-add-special-tokens -o "$1/$EMBEDDING_MODEL/tokenizer/1" "$EMBEDDING_MODEL"
-  rm "$1/$EMBEDDING_MODEL/embeddings/1/openvino_tokenizer.xml"
-  rm "$1/$EMBEDDING_MODEL/embeddings/1/openvino_tokenizer.bin"
+  python demos/common/export_models/export_model.py --task embeddings --source_model "$EMBEDDING_MODEL" --weight-format int8 --task_parameters '{}' --model_repository_path $1
 fi
 

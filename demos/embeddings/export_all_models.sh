@@ -23,20 +23,10 @@ tested_models=(
     BAAI/bge-large-zh-v1.5
     thenlper/gte-small
 )
-cp config.json config_all.json
-cat config_all.json | jq 'del(.mediapipe_config_list[])' | tee config_all.json
+
+mkdir -p models
 
 for i in "${tested_models[@]}"; do
     echo "$i"
-    convert_tokenizer --not-add-special-tokens -o models/$i/tokenizer/1 $i
-    optimum-cli export openvino --disable-convert-tokenizer --model $i --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/$i/embeddings/1
-    cp models/graph.pbtxt models/$i
-    cp subconfig.json models/$i
-    sed -i -e "s/\"tokenizer_model\"/\"${i//[\/]/\\/}-tokenizer_model\"/g" models/$i/subconfig.json
-    sed -i -e "s/\"embeddings_model\"/\"${i//[\/]/\\/}-embeddings_model\"/g" models/$i/subconfig.json
-    sed -i -e "s/servable_name: \"tokenizer_model\"/servable_name: \"${i//[\/]/\\/}-tokenizer_model\"/g" models/$i/graph.pbtxt
-    sed -i -e "s/servable_name: \"embeddings_model\"/servable_name: \"${i//[\/]/\\/}-embeddings_model\"/g" models/$i/graph.pbtxt
-    cat config_all.json | jq ".mediapipe_config_list[.mediapipe_config_list | length] |= . + {\"name\": \"$i\", \"base_path\": \"models/$i\"}" | tee config_all.json
-    python add_rt_info.py --model_path models/$i/tokenizer/1/openvino_tokenizer.xml --config_path models/$i/embeddings/1/tokenizer_config.json
-    python add_rt_info.py --model_path models/$i/embeddings/1/openvino_model.xml --config_path models/$i/embeddings/1/config.json
+    python ../common/export_models/export_model.py --task embeddings --source_model $i --precision int8 --task_parameters '{}' --config_path models/config_all.json
 done

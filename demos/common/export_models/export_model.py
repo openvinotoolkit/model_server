@@ -232,7 +232,7 @@ def export_llm_model(model_repository_path, source_model, model_name, precision,
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable2config(config_file_path, model_name, os.path.join(model_repository_path, model_name))
+    add_servable2config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
     
     
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path):
@@ -276,7 +276,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
     with open(os.path.join(model_repository_path, model_name, 'subconfig.json'), 'w') as f:
         f.write(subconfig_content)
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
-    add_servable2config(config_file_path, model_name, os.path.join(model_repository_path, model_name))
+    add_servable2config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
 def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path):
@@ -320,7 +320,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
     with open(os.path.join(model_repository_path, model_name, 'subconfig.json'), 'w') as f:
         f.write(subconfig_content)
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
-    add_servable2config(config_file_path, model_name, os.path.join(model_repository_path, model_name))
+    add_servable2config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
 if not os.path.isdir(args['model_repository_path']):

@@ -7,12 +7,7 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 ## Get the docker image
 
-Pull public image with CPU only support or including also GPU support.
-```bash
-docker pull openvino/model_server:latest-gpu
-docker pull openvino/model_server:latest
-```
-or build the image from source to try the latest enhancements in this feature.
+Build the image from source to try the latest enhancements in this feature.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
@@ -21,6 +16,7 @@ make release_image GPU=1
 It will create an image called `openvino/model_server:latest`.
 > **Note:** This operation might take 40min or more depending on your build host.
 > **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
+> **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. Check the [demo version from the last release](https://github.com/openvinotoolkit/model_server/tree/releases/2024/4/demos/continuous_batching) to use the public docker image.
 
 ## Model preparation
 > **Note** Python 3.9 or higher is need for that step
@@ -30,42 +26,37 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Install python dependencies for the conversion script:
 ```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-pip3 install optimum-intel@git+https://github.com/huggingface/optimum-intel.git  openvino-tokenizers[transformers]==2024.4.* openvino==2024.4.* nncf>=2.11.0 "transformers<4.45"
+pip3 install -U -r ../common/export_models/requirements.txt
 ```
 
 Run optimum-cli to download and quantize the model:
 ```bash
-cd demos/continuous_batching
-convert_tokenizer -o Meta-Llama-3-8B-Instruct --utf8_replace_mode replace --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens meta-llama/Meta-Llama-3-8B-Instruct
-optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 Meta-Llama-3-8B-Instruct
+mkdir models 
+python demos/common/export_models/export_model.py --task text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --task_parameters '{"kv_cache_precision":"u8"}' --config_file_path models/config.json --model_repository_path models
 ```
 > **Note** Change the `--weight-format` to quantize the model to `int8` or `int4` precision to reduce memory consumption and improve performance.
 > **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/meta-llama/Meta-Llama-3-8B) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`.
 > **Note** You can change the model used in the demo out of any topology [tested](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models) with OpenVINO.
 
-Copy the [graph.pbtxt](./graph.pbtxt) or [graph_gpu.pbtxt](./graph_gpu.pbtxt) to the model folder. 
-```bash
-cp graph.pbtxt Meta-Llama-3-8B-Instruct/
-```
-or `cp graph_gpu.pbtxt Meta-Llama-3-8B-Instruct/graph.pbtxt`.
-
 You should have a model folder like below:
 ```bash
-tree Meta-Llama-3-8B-Instruct/
-Meta-Llama-3-8B-Instruct/
+tree models
+models
 ├── config.json
-├── generation_config.json
-├── graph.pbtxt
-├── openvino_detokenizer.bin
-├── openvino_detokenizer.xml
-├── openvino_model.bin
-├── openvino_model.xml
-├── openvino_tokenizer.bin
-├── openvino_tokenizer.xml
-├── special_tokens_map.json
-├── tokenizer_config.json
-└── tokenizer.json
+└── meta-llama
+    └── Meta-Llama-3-8B-Instruct
+        ├── config.json
+        ├── generation_config.json
+        ├── graph.pbtxt
+        ├── openvino_detokenizer.bin
+        ├── openvino_detokenizer.xml
+        ├── openvino_model.bin
+        ├── openvino_model.xml
+        ├── openvino_tokenizer.bin
+        ├── openvino_tokenizer.xml
+        ├── special_tokens_map.json
+        ├── tokenizer_config.json
+        └── tokenizer.json
 ```
 
 The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. 
@@ -94,7 +85,9 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:l
 ```
 In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with GPU support and make sure you copy the graph.pbtxt tuned for GPU device. 
-Also make sure the export model quantization level and cache size fit to the GPU memory.
+They can be applied using the export command like below:
+`python demos/common/export_models/export_model.py --task text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --task_parameters '{"target_device":"GPU","block_size":"16","cache_size":"2"}' --config_file_path models/config.json --model_repository_path models`
+Make sure the export model quantization level and cache size fit to the GPU memory.
 ```
 
 
