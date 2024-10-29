@@ -42,6 +42,15 @@
 #include "http_rest_api_handler.hpp"
 #include "status.hpp"
 
+// TODO: Use the example when switching from net_http
+// #define DROGON
+#ifdef DROGON
+#include <chrono>
+#include <thread>
+
+#include <drogon/drogon.h>
+#endif
+
 namespace ovms {
 
 namespace net_http = tensorflow::serving::net_http;
@@ -260,6 +269,36 @@ private:
 };
 
 std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
+#ifdef DROGON
+    drogon::app().registerHandler("/stream", [](const drogon::HttpRequestPtr&, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+        SPDLOG_DEBUG("Received request for server side event");
+        auto resp = drogon::HttpResponse::newAsyncStreamResponse([](drogon::ResponseStreamPtr stream) {
+            std::thread([stream = std::shared_ptr<drogon::ResponseStream>{std::move(stream)}]() mutable {
+                for (int i = 0; i < 3; i++) {
+                    if (!stream->send("data: [hello] \n\n")) {
+                        break;
+                    }
+                    std::this_thread::sleep_for(std::chrono::seconds(2));
+                }
+                stream->close();
+            })
+                .detach();  // TODO: ?
+        });
+        resp->addHeader("Content-Type", "text/event-stream");
+        resp->addHeader("Cache-Control", "no-cache");
+        resp->addHeader("Connection", "keep-alive");
+        callback(resp);
+    });
+    std::thread([address, port, num_threads]() {
+        drogon::app()
+            .setThreadNum(num_threads)
+            .setIdleConnectionTimeout(0)
+            .addListener(address, port + 1)  // TODO: replace net_http with drogon
+            .run();
+    })
+        .detach();  // TODO: ?
+#endif
+
     auto options = std::make_unique<net_http::ServerOptions>();
     options->AddPort(static_cast<uint32_t>(port));
     options->SetAddress(address);
