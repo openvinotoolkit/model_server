@@ -76,7 +76,7 @@ FUZZER_BUILD ?= 0
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= 03c9ae38292a90ecb5cbfe2c8d5472eed0ec1aa9  # master 2024-10-18
 OV_CONTRIB_BRANCH ?= 4272f47cb3ffbaf5c0fb5db569deb16856c578a1  # master 2024-10-11
-OV_TOKENIZERS_BRANCH ?=  81c067c557d48011e6879a42d4a25147060eaeff # master 2024-09-19
+OV_TOKENIZERS_BRANCH ?=  ffff67e257c44565fbbd46f2cf76e310d7632e86 # master 2024-10-23
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -98,10 +98,14 @@ else
 	DISABLE_MEDIAPIPE_PARAMS = " --define MEDIAPIPE_DISABLE=0"
 endif
 
-ifeq ($(PYTHON_DISABLE),1)
-	DISABLE_PYTHON_PARAMS = " --define PYTHON_DISABLE=1"
+ifeq ($(MEDIAPIPE_DISABLE),1)
+  DISABLE_PARAMS = " --config=mp_off_py_off"
 else
-	DISABLE_PYTHON_PARAMS = " --define PYTHON_DISABLE=0"
+  ifeq ($(PYTHON_DISABLE),1)
+    DISABLE_PARAMS = " --config=mp_on_py_off"
+  else
+    DISABLE_PARAMS = " --config=mp_on_py_on"
+  endif
 endif
 
 FUZZER_BUILD_PARAMS ?= ""
@@ -135,8 +139,8 @@ else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
-CAPI_FLAGS = "--config=linux --strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)" --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
-BAZEL_DEBUG_FLAGS="--config=linux --strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_MEDIAPIPE_PARAMS)$(DISABLE_PYTHON_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:

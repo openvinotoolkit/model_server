@@ -29,8 +29,8 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 })
 
 mediapipe_proto_library(
-    name = "embeddings_calculator_proto", # embeddings_calculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-    srcs = ["embeddings_calculator.proto"],
+    name = "rerank_calculator_proto", # rerank_calculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["rerank_calculator.proto"],
     visibility = ["//visibility:private"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
@@ -39,9 +39,8 @@ mediapipe_proto_library(
 )
 
 cc_library(
-    name = "embeddingscalculator",
-    hdrs = ["embeddings_api.hpp"],
-    srcs = ["embeddings_calculator.cc", "embeddings_api.cpp"],
+    name = "rerankcalculator",
+    srcs = ["rerank_calculator.cc"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -49,10 +48,26 @@ cc_library(
         "//src:httppayload",
         "//src:libovmslogging",
         "//src:libovmsprofiler",
-	"embeddings_calculator_cc_proto",
+	    "rerank_calculator_cc_proto",
+        ":rerank_api_handler",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "rerank_api_handler",
+    hdrs = ["rerank_utils.hpp"],
+    srcs = ["rerank_utils.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
+        "//src:libovmsprofiler"
+    ],
+    visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
