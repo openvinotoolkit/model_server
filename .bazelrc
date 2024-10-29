@@ -94,7 +94,7 @@ build:linux --cxxopt=-Werror=format-security
 # Adding "--cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0" creates parity with TF
 # compilation options. It also addresses memory use due to
 # copy-on-write semantics of std::strings of the older ABI.
-#build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
+build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 
 # TODO Windows: may impact python nodes execution
 build:windows --noenable_bzlmod
