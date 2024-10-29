@@ -95,11 +95,13 @@ public:
         }
     }
 
-    int generateExpectedText(std::string prompt) {
+    int generateExpectedText(std::string prompt, bool addSpecialTokens = true) {
         try {
+            ov::Tensor promptIds = cbPipe->get_tokenizer().encode(prompt, ov::genai::add_special_tokens(addSpecialTokens)).input_ids;
+            std::cout << "Generated prompt ids: " << getPromptTokensString(promptIds) << std::endl;
             auto generationHandle = cbPipe->add_request(
                 currentRequestId++,
-                prompt,
+                promptIds,
                 config);
             if (generationHandle == nullptr) {
                 return -1;
@@ -204,6 +206,190 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
 }
 
+TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoWithCompletion) {
+    config.max_new_tokens = 5;
+    config.rng_seed = 1;
+    config.num_beams = 16;
+    config.echo = true;
+    ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
+    ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "best_of": 16,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?",
+            "echo": true
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    int i = 0;
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["text"].IsString());
+        EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
+        EXPECT_TRUE(std::string(choice["text"].GetString()).find("What is OpenVINO?") != std::string::npos);
+        EXPECT_EQ(std::string(choice["text"].GetString()).rfind("What is OpenVINO?", 0), 0);  // Check if prompt is at the beginning
+        ASSERT_EQ(choice["index"], i++);
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+}
+
+TEST_F(LLMFlowHttpTest, streamCompletionsEchoWithCompletion) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 10,
+            "echo": true,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+    std::vector<std::string> chunks;
+    ON_CALL(writer, PartialReply).WillByDefault([this, &chunks](std::string response) {
+        rapidjson::Document d;
+        std::string dataPrefix = "data:";
+        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+        size_t pos = response.find("\n");
+        ASSERT_NE(pos, response.npos);
+        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Capacity(), 1);
+        int i = 0;
+        for (auto& choice : d["choices"].GetArray()) {
+            if (choice["finish_reason"].IsString()) {
+                EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+            } else {
+                ASSERT_TRUE(choice["finish_reason"].IsNull());
+            }
+            ASSERT_EQ(choice["index"], i++);
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+            ASSERT_TRUE(choice["text"].IsString());
+            chunks.push_back(std::string(choice["text"].GetString()));
+        }
+        EXPECT_STREQ(d["model"].GetString(), "llmDummyKFS");
+        EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
+    });
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+
+    // Since prompt is treated as a single entity and streamer returns chunk only after space or newline
+    // we expect chunk with echoed prompt to contain space or new line at the end
+    ASSERT_TRUE(chunks[0] == "What is OpenVINO?\n" || chunks[0] == "What is OpenVINO? ");
+    ASSERT_GT(chunks.size(), 1);
+}
+
+TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoOnly) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_tokens": 0,
+            "prompt": "What is OpenVINO?",
+            "echo": true,
+            "logprobs": 1
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    int i = 0;
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+
+        ASSERT_TRUE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["logprobs"].GetObject()["token_logprobs"].IsArray());
+        for (size_t i = 0; i < choice["logprobs"].GetObject()["token_logprobs"].Size(); ++i) {
+            auto& logprob = choice["logprobs"].GetObject()["token_logprobs"][i];
+            if (i == 0) {
+                ASSERT_TRUE(logprob.IsNull());
+            } else {
+                ASSERT_TRUE(logprob.IsFloat());
+                ASSERT_LT(logprob.GetFloat(), 0);
+            }
+        }
+
+        ASSERT_TRUE(choice["text"].IsString());
+        EXPECT_STREQ(choice["text"].GetString(), "What is OpenVINO?");
+        ASSERT_EQ(choice["index"], i++);
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 0 /* max_tokens */);
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), parsedResponse["choices"].GetArray()[0]["logprobs"].GetObject()["token_logprobs"].Size());
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+}
+
+TEST_F(LLMFlowHttpTest, streamCompletionsEchoOnly) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 0,
+            "echo": true,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+    EXPECT_CALL(writer, PartialReply(::testing::_)).WillOnce([this](std::string response) {
+        rapidjson::Document d;
+        std::string dataPrefix = "data:";
+        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+        size_t pos = response.find("\n");
+        ASSERT_NE(pos, response.npos);
+        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Capacity(), 1);
+        int i = 0;
+        for (auto& choice : d["choices"].GetArray()) {
+            if (choice["finish_reason"].IsString()) {
+                EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+            } else {
+                ASSERT_TRUE(choice["finish_reason"].IsNull());
+            }
+            ASSERT_EQ(choice["index"], i++);
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+            ASSERT_TRUE(choice["text"].IsString());
+            EXPECT_STREQ(choice["text"].GetString(), "What is OpenVINO?");
+        }
+        EXPECT_STREQ(d["model"].GetString(), "llmDummyKFS");
+        EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
+    });
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
 TEST_F(LLMFlowHttpTest, unaryCompletionsJsonFinishReasonLength) {
     std::string requestBody = R"(
         {
@@ -288,6 +474,7 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
     config.rng_seed = 1;
     config.num_beams = 16;
     config.num_return_sequences = 8;
+    config.echo = false;
     ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
     ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
     std::string requestBody = R"(
@@ -353,7 +540,8 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
     config.rng_seed = 1;
     config.num_beams = 16;
     config.num_return_sequences = 8;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
+    config.echo = false;
+    ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
     ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
     std::string requestBody = R"(
         {
@@ -2336,12 +2524,10 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
         }
         }
     )";
-    std::cout << "------------------------A--------------------\n";
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
-    std::cout << "------------------------B--------------------\n";
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 8);
     ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
