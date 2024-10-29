@@ -63,7 +63,7 @@ pipeline {
             }
             stage('Build windows') {
               steps {
-                  build job: 'ovms/ovms-windows', wait: true
+                  build job: 'ovms/ovms-windows'
               }
             }
           }
