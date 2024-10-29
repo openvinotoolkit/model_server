@@ -17,8 +17,8 @@ pipeline {
         stage("Build windows") {
             steps {
                 script{
-                  echo ${env.JOB_NAME}
-                  echo ${env.JOB_BASE_NAME}
+                  println env.JOB_NAME
+                  println env.JOB_BASE_NAME
                   def status = bat(returnStatus: true, script: 'build_windows.bat')
                   status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms.exe build.log | grep "Build completed successfully"')
                   if (status != 0) {
