@@ -119,13 +119,6 @@ public:
                 i++;
                 std::vector<int64_t> tokens = out.generated_ids;
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
-                /*/
-                std::cout << "[" << i << "] Generated tokens: ";
-                for (int64_t token : tokens) {
-                    std::cout << token << " ";
-                }
-                std::cout << std::endl;
-                */
                 std::string completion = tokenizer->decode(tokens);
                 expectedMessages.emplace_back(completion);
             }
