@@ -133,7 +133,7 @@ Check OVMS logs for results (serialization is not implemented yet)
 0.343912 0.00104043 
 ```
 
-## Comparision with LangChain OpenVINOReranker
+## Comparison with LangChain OpenVINOReranker
 
 ```python
 from langchain_community.document_compressors.openvino_rerank import OpenVINOReranker, RerankRequest
