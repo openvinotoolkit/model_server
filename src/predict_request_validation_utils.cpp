@@ -369,7 +369,6 @@ Status RequestValidator<RequestType, InputTensorType, choice, InputIterator, Sha
     return Status(code, details);
 }
 
-template <>
 template <typename RequestType, typename InputTensorType, ValidationChoice choice, typename InputTensorIteratorType, typename ShapeType>
 Status RequestValidator<RequestType, InputTensorType, choice, InputTensorIteratorType, ShapeType>::checkIfShapeValuesNegative(const InputTensorType& proto) const {
     RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);

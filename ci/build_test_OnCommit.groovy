@@ -33,31 +33,40 @@ pipeline {
           }
         }
 
-        stage('style check') {
+        stage('Style check') {
             steps {
                 sh 'make style'
             }
         }
 
-        stage('sdl check') {
+        stage('Sdl check') {
             steps {
                 sh 'make sdl-check'
             }
         }
-        
-        stage('client test') {
+
+        stage('Client test') {
           when { expression { client_test_needed == "true" } }
           steps {
                 sh "make test_client_lib"
               }
         }
 
-        stage("Prepare build image") {
-          when { expression { image_build_needed == "true" } }
-          steps {
-                sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
-                sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+        stage('Build') {
+          parallel {
+            stage("Prepare linux build image") {
+              when { expression { image_build_needed == "true" } }
+                steps {
+                      sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
+                      sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                    }
+            }
+            stage('Build windows') {
+              steps {
+                  build job: 'ovms/ovms-windows/'+ env.JOB_BASE_NAME
               }
+            }
+          }
         }
 
         stage("Release image and tests in parallel") {
