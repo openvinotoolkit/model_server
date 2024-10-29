@@ -68,7 +68,7 @@ In-case of problems, see [Debugging](#debugging).
 
 5. From the container, run a single unit test :
 	```bash
-	bazel test --test_env PYTHONPATH=${PYTHONPATH} --define PYTHON_DISABLE=0 --cxxopt=-DPYTHON_DISABLE=0 --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --config=linux --test_env PYTHONPATH=${PYTHONPATH} --define PYTHON_DISABLE=0 --cxxopt=-DPYTHON_DISABLE=0 --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |

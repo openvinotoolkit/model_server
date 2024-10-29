@@ -37,7 +37,7 @@ pip3 install optimum-intel@git+https://github.com/huggingface/optimum-intel.git 
 Run optimum-cli to download and quantize the model:
 ```bash
 cd demos/continuous_batching
-convert_tokenizer -o Meta-Llama-3-8B-Instruct --utf8_replace_mode replace --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens meta-llama/Meta-Llama-3-8B-Instruct
+convert_tokenizer -o Meta-Llama-3-8B-Instruct --utf8_replace_mode replace --with-detokenizer --skip-special-tokens --streaming-detokenizer meta-llama/Meta-Llama-3-8B-Instruct
 optimum-cli export openvino --disable-convert-tokenizer --model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 Meta-Llama-3-8B-Instruct
 ```
 > **Note** Change the `--weight-format` to quantize the model to `int8` or `int4` precision to reduce memory consumption and improve performance.
