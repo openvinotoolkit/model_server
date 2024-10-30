@@ -51,8 +51,6 @@ build --define=MEDIAPIPE_DISABLE_GPU=1
 
 build --define=MEDIAPIPE_DISABLE=0
 
-build --define HTTP_DISABLE=0
-
 build --define=CLOUD_DISABLE=0
 coverage --define=CLOUD_DISABLE=0
 test --define=CLOUD_DISABLE=0
@@ -280,3 +278,6 @@ build:mp_off_py_off --define=MEDIAPIPE_DISABLE=1
 build:mp_off_py_off --define=PYTHON_DISABLE=1
 build:mp_off_py_off --disk_cache=/root/.cache/bazel_mp_off_py_off
 #build --remote_header=x-build-event-log=DEBUG
+
+#Add this parameter for windows local builds, its added on jenkins via build_windows.bat. Must be short path on C:\ for mediapipe to compile
+#startup --output_user_root=C:/b_tmp

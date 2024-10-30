@@ -262,6 +262,12 @@ cc_library(
         "get_model_metadata_impl.hpp",
         "global_sequences_viewer.hpp",
         "global_sequences_viewer.cpp",]
+        + select({
+            "//:mediapipe_windows_http": [],
+            "//conditions:default" : [
+                "http_frontend/http_graph_executor_impl.cpp",
+                "http_frontend/http_graph_executor_impl.hpp",],
+            })
         #TODO : add to server lib and cleanup headers too many includes
          + select({
                 "//conditions:default": [
@@ -271,8 +277,6 @@ cc_library(
                     "httpservermodule.hpp",
                     "http_rest_api_handler.cpp",
                     "httpservermodule.cpp",
-                    "http_frontend/http_graph_executor_impl.cpp",
-                    "http_frontend/http_graph_executor_impl.hpp",
                 ],
                 "//src:windows" : [],
                 }) + [      
@@ -424,8 +428,6 @@ cc_library(
                 "@mediapipe//mediapipe/calculators/geti/utils:utils",
                 "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
                 "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
-                #"//src:httppayload",
-                #"//src:libhttpclientconnection",
             ],
             "//:disable_mediapipe" : [],
         }),
