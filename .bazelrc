@@ -280,7 +280,3 @@ build:mp_off_py_off --define=MEDIAPIPE_DISABLE=1
 build:mp_off_py_off --define=PYTHON_DISABLE=1
 build:mp_off_py_off --disk_cache=/root/.cache/bazel_mp_off_py_off
 #build --remote_header=x-build-event-log=DEBUG
-
-# TODO: Compiling mediapipe on windows
-startup --output_user_root=C:/baze_tmp
-
