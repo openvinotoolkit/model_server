@@ -86,7 +86,7 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:l
 In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with GPU support and make sure you copy the graph.pbtxt tuned for GPU device. 
 They can be applied using the export command like below:
-`python demos/common/export_models/export_model.py --task text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --task_parameters '{"target_device":"GPU","block_size":"16","cache_size":"2"}' --config_file_path models/config.json --model_repository_path models`
+`python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --block_size 16 --cache_size 2 --config_file_path models/config.json --model_repository_path models`
 Make sure the export model quantization level and cache size fit to the GPU memory.
 ```
 

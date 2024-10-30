@@ -28,5 +28,5 @@ mkdir -p models
 
 for i in "${tested_models[@]}"; do
     echo "$i"
-    python ../common/export_models/export_model.py --task embeddings --source_model $i --precision int8 --task_parameters '{}' --config_path models/config_all.json
+    python export_model.py embeddings --source_model $i --weight-format int8  --config_path models/config_all.json
 done
