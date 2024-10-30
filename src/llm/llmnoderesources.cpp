@@ -35,7 +35,6 @@
 #pragma GCC diagnostic pop
 
 #include "../mediapipe_internal/mediapipe_utils.hpp"
-#include "src/llm/llm_calculator.pb.h"
 #include "src/llm/llm_executor.hpp"
 #include "src/llm/text_processor.hpp"
 
@@ -157,8 +156,12 @@ Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResou
     nodeResources->device = nodeOptions.device();
 
     if (!nodeOptions.draft_models_path().empty()) {
-        auto draftModelConfig = ov::genai::draft_model(nodeOptions.draft_models_path(), nodeOptions.draft_models_device());
+        auto draftSchedulerConfig = prepareDraftModelSchedulerConfig(nodeOptions);
+        std::cout << "####################   draft cache size: " << draftSchedulerConfig.cache_size << std::endl;
+        auto draftModelConfig = ov::genai::draft_model(nodeOptions.draft_models_path(), nodeOptions.draft_device(), 
+                                                       ov::genai::scheduler_config(draftSchedulerConfig));
         nodeResources->pluginConfig.insert(draftModelConfig);
+        nodeResources->isSpeculativePipeline = true;
     }
 
     auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), nodeResources->pluginConfig);
@@ -213,6 +216,17 @@ void LLMNodeResources::notifyExecutorThread() {
 std::unordered_map<std::string, std::string> LLMNodeResources::prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath) {
     std::unordered_map<std::string, std::string> LLMArguments;
     return LLMArguments;
+}
+
+ov::genai::SchedulerConfig LLMNodeResources::prepareDraftModelSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    return {
+        .max_num_batched_tokens = nodeOptions.has_draft_max_num_batched_tokens() ? nodeOptions.draft_max_num_batched_tokens() : nodeOptions.max_num_batched_tokens(),
+        .cache_size = nodeOptions.has_draft_cache_size() ? nodeOptions.draft_cache_size() : nodeOptions.cache_size(),
+        .block_size = nodeOptions.has_draft_block_size() ? nodeOptions.draft_block_size() : nodeOptions.block_size(),
+        .dynamic_split_fuse = nodeOptions.has_draft_dynamic_split_fuse() ? nodeOptions.draft_dynamic_split_fuse() : nodeOptions.dynamic_split_fuse(),
+        .max_num_seqs = nodeOptions.has_draft_max_num_seqs() ? nodeOptions.draft_max_num_seqs() : nodeOptions.max_num_seqs(),
+        .enable_prefix_caching = nodeOptions.enable_prefix_caching(),
+    };
 }
 
 }  // namespace ovms
