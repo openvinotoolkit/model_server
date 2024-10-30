@@ -35,7 +35,7 @@ enum class EncodingFormat {
 };
 
 struct EmbeddingsRequest {
-    std::variant<std::vector<std::string>, std::vector<std::vector<int>>> input;
+    std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>> input;
     EncodingFormat encoding_format;
 
     static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request);
@@ -50,7 +50,7 @@ public:
     EmbeddingsHandler(rapidjson::Document& document) :
         doc(document) {}
 
-    std::variant<std::vector<std::string>, std::vector<std::vector<int>>>& getInput();
+    std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& getInput();
     EncodingFormat getEncodingFormat() const;
 
     absl::Status parseRequest();

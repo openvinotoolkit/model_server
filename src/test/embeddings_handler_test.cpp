@@ -62,6 +62,168 @@ TEST(EmbeddingsDeserialization, multipleStringInput) {
     ASSERT_EQ(strings->at(2), "three");
 }
 
+TEST(EmbeddingsDeserialization, intInput) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [1, 2, 3]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = EmbeddingsRequest::fromJson(&d);
+    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
+    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
+    auto ints = std::get_if<std::vector<std::vector<int64_t>>>(&embeddingsRequest.input);
+    ASSERT_NE(ints, nullptr);
+    ASSERT_EQ(ints->size(), 1);
+    ASSERT_EQ(ints->at(0).size(), 3);
+    ASSERT_EQ(ints->at(0).at(0), 1);
+    ASSERT_EQ(ints->at(0).at(1), 2);
+    ASSERT_EQ(ints->at(0).at(2), 3);
+}
+
+TEST(EmbeddingsDeserialization, multipleIntInput) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[1, 2, 3], [4, 5, 6]]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = EmbeddingsRequest::fromJson(&d);
+    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
+    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
+    auto ints = std::get_if<std::vector<std::vector<int64_t>>>(&embeddingsRequest.input);
+    ASSERT_NE(ints, nullptr);
+    ASSERT_EQ(ints->size(), 2);
+    ASSERT_EQ(ints->at(0).size(), 3);
+    ASSERT_EQ(ints->at(0).at(0), 1);
+    ASSERT_EQ(ints->at(0).at(1), 2);
+    ASSERT_EQ(ints->at(0).at(2), 3);
+    ASSERT_EQ(ints->at(1).size(), 3);
+    ASSERT_EQ(ints->at(1).at(0), 4);
+    ASSERT_EQ(ints->at(1).at(1), 5);
+    ASSERT_EQ(ints->at(1).at(2), 6);
+}
+
+TEST(EmbeddingsDeserialization, multipleIntInputLengths) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[1, 2, 3, 4, 5, 6], [4, 5, 6, 7], [7, 8]]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = EmbeddingsRequest::fromJson(&d);
+    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
+    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
+    auto ints = std::get_if<std::vector<std::vector<int64_t>>>(&embeddingsRequest.input);
+    ASSERT_NE(ints, nullptr);
+    ASSERT_EQ(ints->size(), 3);
+    ASSERT_EQ(ints->at(0).size(), 6);
+    ASSERT_EQ(ints->at(0).at(0), 1);
+    ASSERT_EQ(ints->at(0).at(1), 2);
+    ASSERT_EQ(ints->at(0).at(2), 3);
+    ASSERT_EQ(ints->at(0).at(3), 4);
+    ASSERT_EQ(ints->at(0).at(4), 5);
+    ASSERT_EQ(ints->at(0).at(5), 6);
+    ASSERT_EQ(ints->at(1).size(), 4);
+    ASSERT_EQ(ints->at(1).at(0), 4);
+    ASSERT_EQ(ints->at(1).at(1), 5);
+    ASSERT_EQ(ints->at(1).at(2), 6);
+    ASSERT_EQ(ints->at(2).size(), 2);
+    ASSERT_EQ(ints->at(2).at(0), 7);
+    ASSERT_EQ(ints->at(2).at(1), 8);
+}
+
+TEST(EmbeddingsDeserialization, malformedMultipleIntInput) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[1, 2, 3], "string", [4, 5, 6]]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = EmbeddingsRequest::fromJson(&d);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "input must be homogeneous");
+}
+
+TEST(EmbeddingsDeserialization, malformedInput) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": ["one", 2, "three"]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = EmbeddingsRequest::fromJson(&d);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "input must be homogeneous");
+}
+
+TEST(EmbeddingsDeserialization, malformedInput2) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[62, 12, 4], 5, 2 ]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = EmbeddingsRequest::fromJson(&d);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "input must be homogeneous");
+}
+
+TEST(EmbeddingsDeserialization, malformedInput3) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[62, 71, true, 5, "abc", 1 ], [1, 2]]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = EmbeddingsRequest::fromJson(&d);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "input must be homogeneous");
+}
+
+TEST(EmbeddingsDeserialization, malformedInput4) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[62, 71, 5, 1 ], ["string"],  [1, 2]]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = EmbeddingsRequest::fromJson(&d);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "input must be homogeneous");
+}
+
 TEST(EmbeddingsDeserialization, handler) {
     std::string requestBody = R"(
         {
@@ -82,22 +244,6 @@ TEST(EmbeddingsDeserialization, handler) {
     ASSERT_EQ(strings->at(0), "one");
     ASSERT_EQ(strings->at(1), "two");
     ASSERT_EQ(strings->at(2), "three");
-}
-
-TEST(EmbeddingsDeserialization, malformedInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", 2, "three"]
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "every element in input array should be string");
 }
 
 TEST(EmbeddingsDeserialization, invalidEncoding) {
@@ -147,7 +293,7 @@ TEST(EmbeddingsDeserialization, malformedInputType) {
     auto request = EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "input should be string or array of strings");
+    ASSERT_EQ(error, "input should be string, array of strings or array of integers");
 }
 
 TEST(EmbeddingsDeserialization, noInput) {
@@ -211,7 +357,7 @@ TEST(EmbeddingsDeserialization, multipleStringInputFloat) {
     ASSERT_EQ(strings->at(2), "three");
 }
 
-TEST(EmbeddingsSerialization, simplePositive) {
+TEST(EmbeddingsDesrialization, simplePositive) {
     bool normalieEmbeddings = false;
     rapidjson::StringBuffer buffer;
     std::vector<float> tensorsData{1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
