@@ -22,7 +22,7 @@ using namespace ovms;
 
 using ::testing::ElementsAre;
 
-class RerankHandlerTest : public ::testing::Test {
+class RerankHandlerDeserializationTest : public ::testing::Test {
 protected:
     Document doc;
     std::string json;
@@ -30,7 +30,7 @@ protected:
     }
 };
 
-TEST_F(RerankHandlerTest, ValidRequestDocumentsMap) {
+TEST_F(RerankHandlerDeserializationTest, ValidRequestDocumentsMap) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -66,7 +66,7 @@ TEST_F(RerankHandlerTest, ValidRequestDocumentsMap) {
     EXPECT_STREQ(handler.getDocumentsMap().at("second document title").c_str(), "second document text");
 }
 
-TEST_F(RerankHandlerTest, ValidRequestDocumentsList) {
+TEST_F(RerankHandlerDeserializationTest, ValidRequestDocumentsList) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -92,7 +92,7 @@ TEST_F(RerankHandlerTest, ValidRequestDocumentsList) {
     EXPECT_STREQ(handler.getDocumentsList()[1].c_str(), "second document");
 }
 
-TEST_F(RerankHandlerTest, DocumentsArrayMixedElementTypes) {
+TEST_F(RerankHandlerDeserializationTest, DocumentsArrayMixedElementTypes) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -111,7 +111,7 @@ TEST_F(RerankHandlerTest, DocumentsArrayMixedElementTypes) {
     EXPECT_EQ(status, absl::InvalidArgumentError("all documents have to be the same type (string or objects)"));
 }
 
-TEST_F(RerankHandlerTest, InvalidDocuments) {
+TEST_F(RerankHandlerDeserializationTest, InvalidDocuments) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -124,7 +124,7 @@ TEST_F(RerankHandlerTest, InvalidDocuments) {
     EXPECT_EQ(status, absl::InvalidArgumentError("documents is not an array"));
 }
 
-TEST_F(RerankHandlerTest, InvalidDocumentsElement) {
+TEST_F(RerankHandlerDeserializationTest, InvalidDocumentsElement) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -137,7 +137,7 @@ TEST_F(RerankHandlerTest, InvalidDocumentsElement) {
     EXPECT_EQ(status, absl::InvalidArgumentError("documents array element is neither string nor object"));
 }
 
-TEST_F(RerankHandlerTest, ValidTopN) {
+TEST_F(RerankHandlerDeserializationTest, ValidTopN) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -162,7 +162,7 @@ TEST_F(RerankHandlerTest, ValidTopN) {
     EXPECT_EQ(handler.getTopN().value(), 1);
 }
 
-TEST_F(RerankHandlerTest, InvalidTopN) {
+TEST_F(RerankHandlerDeserializationTest, InvalidTopN) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -178,7 +178,7 @@ TEST_F(RerankHandlerTest, InvalidTopN) {
     EXPECT_EQ(status, absl::InvalidArgumentError("top_n accepts integer values"));
 }
 
-TEST_F(RerankHandlerTest, ValidRankFields) {
+TEST_F(RerankHandlerDeserializationTest, ValidRankFields) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -206,7 +206,7 @@ TEST_F(RerankHandlerTest, ValidRankFields) {
     EXPECT_STREQ(handler.getRankFields().value()[1].c_str(), "second");
 }
 
-TEST_F(RerankHandlerTest, InvalidRankFields) {
+TEST_F(RerankHandlerDeserializationTest, InvalidRankFields) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -222,7 +222,7 @@ TEST_F(RerankHandlerTest, InvalidRankFields) {
     EXPECT_EQ(status, absl::InvalidArgumentError("rank_fields is not an array"));
 }
 
-TEST_F(RerankHandlerTest, InvalidRankFieldsElement) {
+TEST_F(RerankHandlerDeserializationTest, InvalidRankFieldsElement) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -238,7 +238,7 @@ TEST_F(RerankHandlerTest, InvalidRankFieldsElement) {
     EXPECT_EQ(status, absl::InvalidArgumentError("rank_fields array element is not a string"));
 }
 
-TEST_F(RerankHandlerTest, ValidReturnDocuments) {
+TEST_F(RerankHandlerDeserializationTest, ValidReturnDocuments) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -264,7 +264,7 @@ TEST_F(RerankHandlerTest, ValidReturnDocuments) {
     EXPECT_TRUE(handler.getReturnDocuments().value());
 }
 
-TEST_F(RerankHandlerTest, InvalidReturnDocuments) {
+TEST_F(RerankHandlerDeserializationTest, InvalidReturnDocuments) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -280,7 +280,7 @@ TEST_F(RerankHandlerTest, InvalidReturnDocuments) {
     EXPECT_EQ(status, absl::InvalidArgumentError("return_documents accepts boolean values"));
 }
 
-TEST_F(RerankHandlerTest, ValidMaxChunksPerDoc) {
+TEST_F(RerankHandlerDeserializationTest, ValidMaxChunksPerDoc) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -306,7 +306,7 @@ TEST_F(RerankHandlerTest, ValidMaxChunksPerDoc) {
     EXPECT_EQ(handler.getMaxChunksPerDoc().value(), 2);
 }
 
-TEST_F(RerankHandlerTest, InvalidMaxChunksPerDoc) {
+TEST_F(RerankHandlerDeserializationTest, InvalidMaxChunksPerDoc) {
     json = R"({
     "model": "model",
     "query": "query",
@@ -320,4 +320,88 @@ TEST_F(RerankHandlerTest, InvalidMaxChunksPerDoc) {
     RerankHandler handler(doc);
     auto status = handler.parseRequest();
     EXPECT_EQ(status, absl::InvalidArgumentError("max_chunks_per_doc accepts integer values"));
+}
+
+TEST(RerankHandlerSerializationTest, simplePostivie) {
+    std::vector<float> scores = {5.36, 17.21, 3.01, 22.33, 9.4, 22.33};
+    std::string json = R"({
+    "model": "model",
+    "query": "query",
+    "documents": [
+        {
+        "title": "first document title",
+        "text": "first document text"
+        }
+    ]
+    })";
+
+    Document notUsed;
+    ASSERT_FALSE(notUsed.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(notUsed);
+    StringBuffer buffer;
+    auto status = handler.parseResponse(buffer, scores);
+    EXPECT_TRUE(status.ok());
+    std::string expectedResponse = R"({"results":[{"index":3,"relevance_score":22.32},{"index":5,"relevance_score":22.32},{"index":1,"relevance_score":17.2},{"index":4,"relevance_score":9.39},{"index":0,"relevance_score":5.36},{"index":2,"relevance_score":3.0}]})";
+    EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
+}
+
+TEST(RerankHandlerSerializationTest, positiveReturnDocumentsWithDocumentsList) {
+    std::vector<float> scores = {5.36, 17.21, 3.01};
+    std::string json = R"({
+    "model": "model",
+    "query": "query",
+    "return_documents": true,
+    "documents": [ "first", "second", "third"]
+    })";
+
+    Document d;
+    ASSERT_FALSE(d.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(d);
+    StringBuffer buffer;
+    ASSERT_TRUE(handler.parseRequest().ok());
+    auto status = handler.parseResponse(buffer, scores);
+    EXPECT_TRUE(status.ok());
+    std::string expectedResponse = R"({"results":[{"index":1,"relevance_score":17.2,"text":"second"},{"index":0,"relevance_score":5.36,"text":"first"},{"index":2,"relevance_score":3.0,"text":"third"}]})";
+    EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
+}
+
+TEST(RerankHandlerSerializationTest, negativeReturnDocumentsWithDocumentsMap) {  // TODO add support for return documents for documents map
+    std::vector<float> scores = {5.36, 17.21, 3.01, 22.33, 9.4, 22.33};
+    std::string json = R"({
+    "model": "model",
+    "query": "query",
+    "return_documents": true,
+    "documents": [
+        {
+        "title": "first document title",
+        "text": "first document text"
+        }
+    ]
+    })";
+
+    Document d;
+    ASSERT_FALSE(d.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(d);
+    ASSERT_TRUE(handler.parseRequest().ok());
+    StringBuffer buffer;
+    auto status = handler.parseResponse(buffer, scores);
+    EXPECT_FALSE(status.ok());
+}
+
+TEST(RerankHandlerSerializationTest, negativeReturnDocumentsWithDocumentsListWithLessDocumentsThanScores) {
+    std::vector<float> scores = {5.36, 17.21, 3.01, 4};
+    std::string json = R"({
+    "model": "model",
+    "query": "query",
+    "return_documents": true,
+    "documents": [ "first", "second", "third"]
+    })";
+
+    Document d;
+    ASSERT_FALSE(d.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(d);
+    ASSERT_TRUE(handler.parseRequest().ok());
+    StringBuffer buffer;
+    auto status = handler.parseResponse(buffer, scores);
+    EXPECT_FALSE(status.ok());
 }

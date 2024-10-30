@@ -16,9 +16,12 @@
 
 #include "rerank_utils.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <numeric>
 
 #include <rapidjson/document.h>
+#include <rapidjson/writer.h>
 
 #include "../logging.hpp"
 #include "../profiler.hpp"
@@ -125,6 +128,47 @@ absl::Status RerankHandler::parseRequest() {
             return absl::InvalidArgumentError("max_chunks_per_doc accepts integer values");
         request.maxChunksPerDoc = it->value.GetInt();
     }
+
+    return absl::OkStatus();
+}
+
+std::vector<size_t> getSortedIndexes(const std::vector<float>& scores) {
+    std::vector<size_t> indexes(scores.size());
+    std::iota(indexes.begin(), indexes.end(), 0);
+
+    std::stable_sort(indexes.begin(), indexes.end(),
+        [&scores](size_t i1, size_t i2) { return scores[i1] > scores[i2]; });
+
+    return indexes;
+}
+
+absl::Status RerankHandler::parseResponse(StringBuffer& buffer, std::vector<float>& scores) {
+    Writer<StringBuffer> writer(buffer);
+    writer.SetMaxDecimalPlaces(2);
+    writer.StartObject();
+
+    writer.String("results");
+    writer.StartArray();
+    auto sortedIndexes = getSortedIndexes(scores);
+    for (auto index : sortedIndexes) {
+        writer.StartObject();
+        writer.String("index");
+        writer.Int(index);
+        writer.String("relevance_score");
+        writer.Double(scores[index]);
+        if (request.returnDocuments) {
+            if (request.documentsList.size() > index) {
+                writer.String("text");
+                writer.String(request.documentsList[index].c_str());
+            } else {
+                return absl::InvalidArgumentError("document map not supported");  // TODO add support for document map
+            }
+            SPDLOG_DEBUG("Return documents");
+        }
+        writer.EndObject();
+    }
+    writer.EndArray();
+    writer.EndObject();
 
     return absl::OkStatus();
 }
