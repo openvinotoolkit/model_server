@@ -132,14 +132,14 @@ void configure_logger(const std::string& log_level, const std::string& log_path)
     register_loggers(log_level, sinks);
 #if (MEDIAPIPE_DISABLE == 0)
 #ifdef __linux__
-if (log_level == "DEBUG" || log_level == "TRACE")
+    if (log_level == "DEBUG" || log_level == "TRACE")
         FLAGS_minloglevel = google::INFO;
     else if (log_level == "WARNING")
         FLAGS_minloglevel = google::WARNING;
     else  // ERROR, FATAL
         FLAGS_minloglevel = google::ERROR;
 #elif _WIN32
-if (log_level == "DEBUG" || log_level == "TRACE")
+    if (log_level == "DEBUG" || log_level == "TRACE")
         FLAGS_minloglevel = google::GLOG_INFO;
     else if (log_level == "WARNING")
         FLAGS_minloglevel = google::GLOG_WARNING;
