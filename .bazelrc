@@ -51,6 +51,8 @@ build --define=MEDIAPIPE_DISABLE_GPU=1
 
 build --define=MEDIAPIPE_DISABLE=0
 
+build --define HTTP_DISABLE=0
+
 build --define=CLOUD_DISABLE=0
 coverage --define=CLOUD_DISABLE=0
 test --define=CLOUD_DISABLE=0

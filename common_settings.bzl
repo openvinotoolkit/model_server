@@ -45,6 +45,17 @@ def create_config_settings():
         name = "not_disable_cloud",
         negate = ":disable_cloud",
     )
+    native.config_setting(
+        name = "disable_http",
+        define_values = {
+            "HTTP_DISABLE": "1",
+        },
+        visibility = ["//visibility:public"],
+    )
+    more_selects.config_setting_negation(
+        name = "not_disable_http",
+        negate = ":disable_http",
+    )
     #To build without python use flags - bazel build --config=linux --define PYTHON_DISABLE=1 //src:ovms
     native.config_setting(
         name = "disable_python",

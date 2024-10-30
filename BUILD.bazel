@@ -88,6 +88,5 @@ cc_library(
                 ],
                 "//src:windows" : [],
             }),
-    linkstatic = False,
     visibility = ["//visibility:public"],
 )

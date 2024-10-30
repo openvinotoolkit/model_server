@@ -31,6 +31,9 @@ COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
 }) + select({
         "//conditions:default": ["-DCLOUD_DISABLE=1"],
         "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
+}) + select({
+        "//conditions:default": ["-DHTTP_DISABLE=1"],
+        "//:not_disable_cloud" : ["-DHTTP_DISABLE=0"],
 })
 
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
