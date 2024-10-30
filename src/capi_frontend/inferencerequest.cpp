@@ -99,6 +99,9 @@ Status InferenceRequest::getOutput(const char* name, const InferenceTensor** ten
 uint64_t InferenceRequest::getInputsSize() const {
     return inputs.size();
 }
+uint64_t InferenceRequest::getOutputsSize() const {
+    return outputs.size();
+}
 Status InferenceRequest::removeInput(const char* name) {
     auto count = inputs.erase(name);
     if (count) {

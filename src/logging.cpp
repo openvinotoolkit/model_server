@@ -34,6 +34,7 @@ std::shared_ptr<spdlog::logger> mediapipe_logger = std::make_shared<spdlog::logg
 std::shared_ptr<spdlog::logger> llm_executor_logger = std::make_shared<spdlog::logger>("llm_executor");
 std::shared_ptr<spdlog::logger> llm_calculator_logger = std::make_shared<spdlog::logger>("llm_calculator");
 std::shared_ptr<spdlog::logger> embeddings_calculator_logger = std::make_shared<spdlog::logger>("embeddings_calculator");
+std::shared_ptr<spdlog::logger> rerank_calculator_logger = std::make_shared<spdlog::logger>("rerank_calculator");
 #endif
 #if (OV_TRACING == 1)
 std::shared_ptr<spdlog::logger> ov_logger = std::make_shared<spdlog::logger>("openvino");
@@ -73,6 +74,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     mediapipe_logger->set_pattern(default_pattern);
     llm_executor_logger->set_pattern(default_pattern);
     llm_calculator_logger->set_pattern(default_pattern);
+    rerank_calculator_logger->set_pattern(default_pattern);
 #endif
 #if (OV_TRACING == 1)
     ov_logger->set_pattern(default_pattern);
@@ -89,6 +91,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
         mediapipe_logger->sinks().push_back(sink);
         llm_executor_logger->sinks().push_back(sink);
         llm_calculator_logger->sinks().push_back(sink);
+        rerank_calculator_logger->sinks().push_back(sink);
 #endif
 #if (OV_TRACING == 1)
         ov_logger->sinks().push_back(sink);
@@ -106,6 +109,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     set_log_level(log_level, mediapipe_logger);
     set_log_level(log_level, llm_executor_logger);
     set_log_level(log_level, llm_calculator_logger);
+    set_log_level(log_level, rerank_calculator_logger);
 #endif
 #if (OV_TRACING == 1)
     set_log_level(log_level, ov_logger);

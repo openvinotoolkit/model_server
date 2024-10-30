@@ -177,6 +177,26 @@ TEST_F(MediapipeEmbeddingsTest, startup) {
     ASSERT_TRUE(mediapipeGraphDefinition->getStatus().isAvailable());
 }
 
+TEST_F(MediapipeEmbeddingsTest, grpcInference) {
+    auto start = std::chrono::high_resolution_clock::now();
+    const int timeout = 5;
+    while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
+    }
+
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "embeddings";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{{"input", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::NOT_FOUND);
+}
+
 TEST_F(MediapipeFlowKfsTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -1579,7 +1599,7 @@ public:
     MockModelInstance(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
     }
-    ov::AnyMap getRTInfo() const override {
+    ov::AnyMap getRTInfo() override {
         std::vector<std::string> mockLabels;
         for (size_t i = 0; i < 5; i++) {
             mockLabels.emplace_back(std::to_string(i));
@@ -3433,6 +3453,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "DetectionsToRectsCalculator",
         "DetectionsToRenderDataCalculator",
         "EmbeddingsCalculator",
+        "RerankCalculator",
         "EmptyLabelCalculator",
         "EmptyLabelClassificationCalculator",
         "EmptyLabelDetectionCalculator",

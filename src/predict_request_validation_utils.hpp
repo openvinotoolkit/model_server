@@ -36,6 +36,7 @@ template <typename RequestType>
 Status validate(
     const RequestType& request,
     const tensor_map_t& inputsInfo,
+    const tensor_map_t& outputsInfo,
     const std::string& servableName,
     const model_version_t servableVersion,
     const std::set<std::string>& optionalAllowedInputNames = {},

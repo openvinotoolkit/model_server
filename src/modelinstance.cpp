@@ -82,6 +82,10 @@ enum : unsigned int {
 };
 }  // namespace
 
+namespace ov {
+struct Meta;  // pure fwd declaration in getRTInfo
+}
+
 namespace ovms {
 
 // TODO windows
@@ -363,16 +367,44 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
     return StatusCode::OK;
 }
 
-const std::string RT_INFO_KEY{"model_info"};
-
-ov::AnyMap ModelInstance::getRTInfo() const {
-    OV_LOGGER("model: {}, ov::Model::has_rt_info({})", reinterpret_cast<void*>(model.get()), RT_INFO_KEY);
-    if (this->model->has_rt_info(RT_INFO_KEY)) {
-        OV_LOGGER("model: {}, ov::Model::get_rt_info<ov::AnyMap>({})", reinterpret_cast<void*>(model.get()), RT_INFO_KEY);
-        return model->get_rt_info<ov::AnyMap>(RT_INFO_KEY);
+ov::AnyMap ModelInstance::getRTInfo(std::vector<std::string> path) {
+    ov::AnyMap anyMap, rtMap;
+    try {
+        rtMap = model->get_rt_info<ov::AnyMap>(path);
+    } catch (const ov::Exception& e) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Failed to get RTInfo; error:{}", e.what());
+        return anyMap;
+    } catch (...) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Failed to get RTInfo for path; unknown error");
+        return anyMap;
     }
-    OV_LOGGER("ov::AnyMap()");
-    return ov::AnyMap();
+    for (const auto& [key, value] : rtMap) {
+        if ((typeid(std::shared_ptr<ov::Meta>) == value.type_info())) {
+            path.push_back(key);
+            anyMap[key] = getRTInfo(path);
+            path.pop_back();
+        } else {
+            anyMap[key] = value;
+        }
+    }
+    return anyMap;
+}
+
+ov::AnyMap ModelInstance::getRTInfo() {
+    OV_LOGGER("model: {}, ov::Model::get_rt_info<ov::AnyMap>()", reinterpret_cast<void*>(model.get()));
+    ov::AnyMap rtMap = this->model->get_rt_info();
+    ov::AnyMap anyMap;
+    std::vector<std::string> path{};
+    for (const auto& [key, value] : rtMap) {
+        if ((typeid(std::shared_ptr<ov::Meta>) == value.type_info())) {
+            path.push_back(key);
+            anyMap[key] = getRTInfo(path);
+            path.pop_back();
+        } else {
+            anyMap[key] = value;
+        }
+    }
+    return anyMap;
 }
 
 Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
@@ -1300,6 +1332,7 @@ const Status ModelInstance::validate(const RequestType* request) {
     return request_validation_utils::validate(
         *request,
         getInputsInfo(),
+        getOutputsInfo(),
         getName(),
         getVersion(),
         this->getOptionalInputNames(),

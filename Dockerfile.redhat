@@ -129,7 +129,7 @@ RUN wget -q https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/o
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
-    python3 --version && python3 -m pip install "Jinja2==3.1.4" --no-cache-dir
+    python3 --version && python3 -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2" --no-cache-dir
 
 # Set up Bazel
 ENV BAZEL_VERSION 6.1.1
@@ -169,14 +169,13 @@ ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 ARG ov_source_branch=master
 ARG ov_contrib_branch=master
-ARG tokenizers=1
 ARG ov_source_org=openvinotoolkit
 ARG ov_contrib_org=openvinotoolkit
 ARG ov_use_binary=0
 ARG DLDT_PACKAGE_URL
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG CMAKE_BUILD_TYPE=Release
-ARG debug_bazel_flags="--config=linux --strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=redhat"
+ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 
 # hadolint ignore=DL3003
 RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
@@ -189,7 +188,7 @@ RUN dnf install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/
     dnf clean all
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; pip3 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; pip3 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
@@ -201,8 +200,8 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
     ln -s /opt/intel/openvino /opt/intel/openvino_2024
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/Release/python /opt/intel/openvino/
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/Release/python /opt/intel/openvino/
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
 ################## END OF OPENVINO SOURCE BUILD ######################
 
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
@@ -233,10 +232,9 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:
 
 ARG ov_tokenizers_branch=master
 # hadolint ignore=DL3003
-RUN if [[ "$tokenizers" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
+RUN git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 WORKDIR /openvino_tokenizers/build
-
-RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}"  && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}"  && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
@@ -285,7 +283,7 @@ COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
 # prebuild dependencies before copying sources
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
 # hadolint ignore=DL3059
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
@@ -301,7 +299,7 @@ COPY src/ /ovms/src/
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
-RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
+RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino/python/openvino-2024.5.dist-info && \
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.5' > /opt/intel/openvino/python/openvino-2024.5.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
@@ -332,7 +330,7 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 
 # OVMS
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms //src:ovms_test
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
@@ -354,7 +352,7 @@ RUN rm -Rf /etc/entitlement /etc/rhsm/ca
 
 FROM $BUILD_IMAGE as capi-build
 # C api shared library
-ARG CAPI_FLAGS="--config=linux --strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=redhat"
+ARG CAPI_FLAGS="--strip=always  --config=mp_off_py_off --//:distro=redhat"
 ARG JOBS=40
 RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
 
@@ -384,7 +382,7 @@ WORKDIR /
 ARG BASE_OS=redhat
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
-ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=redhat"
+ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
 COPY create_package.sh /
 RUN ./create_package.sh
@@ -426,7 +424,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     	source install_gpu_drivers.sh && rm -rf ./install_gpu_drivers.sh; \
     fi ; \
     # For image with Python enabled install Python library
-    if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then \
+    if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
         $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0 --nodocs; \
     fi ; \
     $DNF_TOOL install -y shadow-utils; \
@@ -446,7 +444,7 @@ ENV LD_LIBRARY_PATH=/ovms/lib
 COPY --from=pkg /ovms_release /ovms
 COPY --from=build /usr/local/lib/python3.*/site-packages/jinja2 /ovms/python_deps/jinja2
 COPY --from=build /usr/local/lib/python3.*/site-packages/jinja2-3.1.4.dist-info /ovms/python_deps/jinja2-3.1.4.dist-info
-COPY --from=build /usr/local/lib64/python3.*/site-packages/MarkupSafe-*.dist-info /ovms/python_deps/
+COPY --from=build /usr/local/lib64/python3.*/site-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
 COPY --from=build /usr/local/lib64/python3.*/site-packages/markupsafe /ovms/python_deps/markupsafe
 
 COPY --from=pkg /licenses /licenses

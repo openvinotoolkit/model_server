@@ -22,15 +22,17 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Install python dependencies for the conversion script:
 ```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-pip3 install optimum-intel@git+https://github.com/huggingface/optimum-intel.git  openvino-tokenizers[transformers]==2024.4.* openvino==2024.4.* nncf>=2.11.0 sentence_transformers==3.1.1 openai "transformers<4.45"
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
+pip3 install -U --pre optimum-intel@git+https://github.com/huggingface/optimum-intel.git  openvino-tokenizers[transformers]==2024.5.* openvino==2024.5.* nncf>=2.11.0 sentence_transformers==3.1.1 openai "transformers<4.45" einops
 ```
 
 Run optimum-cli to download and quantize the model:
 ```bash
 cd demos/embeddings
-convert_tokenizer -o models/gte-large-en-v1.5-tokenizer/1 Alibaba-NLP/gte-large-en-v1.5
+convert_tokenizer --not-add-special-tokens -o models/gte-large-en-v1.5-tokenizer/1 Alibaba-NLP/gte-large-en-v1.5
 optimum-cli export openvino --disable-convert-tokenizer --model Alibaba-NLP/gte-large-en-v1.5 --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/gte-large-en-v1.5-embeddings/1
+python add_rt_info.py --model_path models/gte-large-en-v1.5-tokenizer/1/openvino_tokenizer.xml --config_path models/gte-large-en-v1.5-embeddings/1/tokenizer_config.json
+python add_rt_info.py --model_path models/gte-large-en-v1.5-embeddings/1/openvino_model.xml --config_path models/gte-large-en-v1.5-embeddings/1/config.json
 rm models/gte-large-en-v1.5-embeddings/1/*.json models/gte-large-en-v1.5-embeddings/1/vocab.txt 
 ```
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
@@ -82,7 +84,6 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:l
 In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU. 
 Also make sure the export model quantization level and cache size fit to the GPU memory.
-```
 
 
 Wait for the model to load. You can check the status with a simple command:
@@ -126,8 +127,10 @@ Alternatively there could be used openai python client like in the example below
 ```bash
 pip3 install openai
 ```
-```python
+```bash
+echo '
 from openai import OpenAI
+import numpy as np
 
 client = OpenAI(
   base_url="http://localhost:8000/v3",
@@ -144,7 +147,9 @@ embedding_responses = client.embeddings.create(
 embedding_from_string1 = np.array(embedding_responses.data[0].embedding)
 embedding_from_string2 = np.array(embedding_responses.data[1].embedding)
 cos_sim = np.dot(embedding_from_string1, embedding_from_string2)/(np.linalg.norm(embedding_from_string1)*np.linalg.norm(embedding_from_string2))
-print("Similarity score as cos_sim", cos_sim)
+print("Similarity score as cos_sim", cos_sim)' >> openai_client.py
+
+python3 openai_client.py
 ```
 It will report results like `Similarity score as cos_sim 0.97654650115054`.
 
@@ -154,7 +159,7 @@ TBD
 
 ## RAG with Model Server
 
-Embeddings endpoint can be applied in RAG chains to deletated text feature extraction both for documented vectorization and in context retrieval.
+Embeddings endpoint can be applied in RAG chains to delegated text feature extraction both for documented vectorization and in context retrieval.
 Check this demo to see the langchain code example which is using OpenVINO Model Server both for text generation and embedding endpoint in [RAG application demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/continuous_batching/rag)
 
 ## Deploying multiple embedding models
@@ -209,7 +214,7 @@ Difference score with HF AutoModel: 0.024787274668209857
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
 ```
 pip install mteb
-python mteb_ovms.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
+python ovms_mteb.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
 
 

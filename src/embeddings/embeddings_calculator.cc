@@ -25,6 +25,7 @@
 #pragma GCC diagnostic pop
 
 #include <adapters/inference_adapter.h>
+#include <openvino/openvino.hpp>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
@@ -32,6 +33,7 @@
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "absl/strings/escaping.h"
+#include "embeddings_api.hpp"
 #include "src/embeddings/embeddings_calculator.pb.h"
 
 using namespace rapidjson;
@@ -81,6 +83,7 @@ public:
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator  [Node: {}] Open start", cc->NodeName());
 
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculator [Node: {}] Open end", cc->NodeName());
+
         return absl::OkStatus();
     }
 
@@ -88,62 +91,44 @@ public:
         OVMS_PROFILE_FUNCTION();
         RET_CHECK(tokenizer_session != nullptr);
         RET_CHECK(embeddings_session != nullptr);
-        std::vector<std::string> input_strings;
-        bool isBase64 = false;
-        if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
-            InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
-            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
-            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
-            if (!payload.parsedJson->IsObject())
-                return absl::InvalidArgumentError("Received json is not an object");
-            auto it = payload.parsedJson->FindMember("input");
-            if (it != payload.parsedJson->MemberEnd()) {
-                if (it->value.IsString()) {
-                    input_strings.push_back(it->value.GetString());
-                } else if (it->value.IsArray()) {
-                    for (auto& input : it->value.GetArray()) {
-                        if (!input.IsString())
-                            return absl::InvalidArgumentError("every element in input array should be string");
-                        input_strings.push_back(input.GetString());
-                    }
-                } else {
-                    return absl::InvalidArgumentError("input should be string or array of strings");
-                }
-            } else {
-                return absl::InvalidArgumentError("input field is required");
-            }
-            it = payload.parsedJson->FindMember("encoding_format");
-            if (it != payload.parsedJson->MemberEnd()) {
-                if (it->value.IsString()) {
-                    if (it->value.GetString() == std::string("base64")) {
-                        isBase64 = true;
-                    }
-                } else {
-                    return absl::InvalidArgumentError("encoding_format should be string");
-                }
-            }
-            // TODO: dimensions (optional)
-            // TODO: user (optional)
-        } else {
+        if (cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             return absl::InvalidArgumentError("Input is empty");
+        }
+        InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
+        EmbeddingsHandler handler(*payload.parsedJson);
+        absl::Status status = handler.parseRequest();
+        if (!status.ok()) {
+            return status;
         }
 
         // Automatically deduce tokenizer input name
         std::vector<std::string> tokenizerInputNames = tokenizer_session->getInputNames();
         std::vector<std::string> embeddingsInputNames = embeddings_session->getInputNames();
+
         RET_CHECK(tokenizerInputNames.size() == 1);
         const std::string& tokenizerInputName = tokenizerInputNames.at(0);
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Tokenizer input name detected: {}", tokenizerInputName);
 
         ::InferenceInput tokenizerInputMap;
-        tokenizerInputMap[tokenizerInputName] = ov::Tensor{
-            ov::element::string,
-            ov::Shape{input_strings.size()},
-            input_strings.data()};
 
         ::InferenceOutput embeddingsOutputMap;
+        size_t received_batch_size = 1;
         try {
-            ::InferenceOutput tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
+            ::InferenceOutput tokenizerOutputMap;
+            auto input = handler.getInput();
+            if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
+                received_batch_size = strings->size();
+                tokenizerInputMap[tokenizerInputName] = ov::Tensor{
+                    ov::element::string,
+                    ov::Shape{received_batch_size},
+                    strings->data()};
+                tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
+            } else {
+                // TODO: input already tokenized
+                return absl::InvalidArgumentError("not implemented");
+            }
             ::InferenceInput embeddingsInputMap;
             // Check if tokenizer produced at least the number of outputs as there are inputs in embedding model
             RET_CHECK(tokenizerOutputMap.size() >= embeddingsInputNames.size());
@@ -153,13 +138,31 @@ public:
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embedding model input {} is connected with matching tokenizer output", embeddingsInputName);
                 embeddingsInputMap[embeddingsInputName] = it->second;
             }
+
+            size_t max_context_length = 512;  // default allowed input length. Otherwise, it will be read from model rt_info>config>max_position_embeddings in the model.xml file
+            try {
+                max_context_length = embeddings_session->getModelConfig().at("config").as<ov::AnyMap>().at("max_position_embeddings").as<size_t>();
+            } catch (...) {
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Can not read config->max_position_embeddings from model rt_info. Using default value {}", max_context_length);
+            }
+
+            RET_CHECK(tokenizerOutputMap["input_ids"].get_shape().size() == 2);
+            size_t input_ids_size = tokenizerOutputMap["input_ids"].get_shape()[1];
+            if (input_ids_size > max_context_length) {
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
+                return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
+            }
+
             embeddingsOutputMap = embeddings_session->infer(embeddingsInputMap);
-            RET_CHECK(embeddingsOutputMap.size() > 0);
+            if (embeddingsOutputMap.empty()) {
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "No output from embeddings model");
+                return absl::InternalError("No output from embeddings model");
+            }
         } catch (const std::exception& e) {
-            LOG(INFO) << "Caught exception from session infer():" << e.what();
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from session infer(): {}", e.what());
             RET_CHECK(false);
         } catch (...) {
-            LOG(INFO) << "Caught unknown exception from session infer()";
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught unknown exception from session infer()");
             RET_CHECK(false);
         }
 
@@ -183,7 +186,7 @@ public:
         }
 
         RET_CHECK(embeddingsTensor.get_shape().size() == 3);
-        RET_CHECK(embeddingsTensor.get_shape()[0] == input_strings.size());
+        RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
         RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
 
         StringBuffer buffer;
@@ -214,7 +217,7 @@ public:
                 std::transform(data.begin(), data.end(), data.begin(),
                     [denom](auto& element) { return element / denom; });
             }
-            if (isBase64) {
+            if (handler.getEncodingFormat() == EncodingFormat::BASE64) {
                 std::string_view sv(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
                 std::string escaped;
                 absl::Base64Escape(sv, &escaped);

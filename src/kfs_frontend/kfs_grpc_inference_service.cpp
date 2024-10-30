@@ -188,10 +188,11 @@ Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* contex
 }
 
 ::grpc::Status KFSInferenceServiceImpl::ModelMetadata(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response) {
-    return grpc(ModelMetadataImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelMetadata}));
+    KFSModelExtraMetadata extraMetadata;
+    return grpc(ModelMetadataImpl(context, request, response, ExecutionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelMetadata}, extraMetadata));
 }
 
-Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext) {
+Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext, KFSModelExtraMetadata& extraMetadata) {
     const auto& name = request->name();
     const auto& versionString = request->version();
 
@@ -241,7 +242,8 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
             return Status(StatusCode::MODEL_VERSION_MISSING);
         }
     }
-    auto status = buildResponse(*model, *instance, response);
+    auto status = buildResponse(*model, *instance, response, extraMetadata);
+
     INCREMENT_IF_ENABLED(instance->getMetricReporter().getModelMetadataMetric(executionContext, status.ok()));
 
     return status;
@@ -401,7 +403,8 @@ static void addReadyVersions(Model& model,
 Status KFSInferenceServiceImpl::buildResponse(
     Model& model,
     ModelInstance& instance,
-    KFSModelMetadataResponse* response) {
+    KFSModelMetadataResponse* response,
+    KFSModelExtraMetadata& extraMetadata) {
 
     std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
 
@@ -410,7 +413,7 @@ Status KFSInferenceServiceImpl::buildResponse(
     if (!status.ok()) {
         return status;
     }
-
+    extraMetadata.rt_info = instance.getRTInfo();
     response->Clear();
     response->set_name(instance.getName());
     addReadyVersions(model, instance.getVersion(), response);
@@ -423,7 +426,6 @@ Status KFSInferenceServiceImpl::buildResponse(
     for (const auto& output : instance.getOutputsInfo()) {
         convert(output, response->add_outputs());
     }
-
     return StatusCode::OK;
 }
 

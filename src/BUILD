@@ -22,23 +22,23 @@ load("//:common_settings.bzl",
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
         "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-}) + select({
-        "//conditions:default": ["-DPYTHON_DISABLE=1"],
-        "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
-}) + select({
-        "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
-        "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
-}) + select({
-        "//conditions:default": ["-DCLOUD_DISABLE=1"],
-        "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
-}) + select({
-        "//conditions:default": ["-DHTTP_DISABLE=1"],
-        "//:not_disable_cloud" : ["-DHTTP_DISABLE=0"],
+})
+COPTS_PYTHON = select({
+    "//conditions:default": ["-DPYTHON_DISABLE=1"],
+    "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
+})
+COPTS_MEDIAPIPE = select({
+    "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
+    "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
 })
 
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
     "//conditions:default": [],
     "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
+})
+COPTS_CLOUD = select({
+    "//conditions:default": ["-DCLOUD_DISABLE=1"],
+    "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
 })
 
 COPTS_TESTS = [
@@ -159,7 +159,6 @@ cc_shared_library(
 )
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
-
 
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
@@ -370,6 +369,7 @@ cc_library(
                 "//src/llm:llmnoderesources",
                 "//src/llm:text_processor",
                 "//src/embeddings:embeddingscalculator",
+                "//src/rerank:rerankcalculator",
             ],
             "//:disable_python": []
         }) + [
@@ -431,10 +431,10 @@ cc_library(
         }),
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED + COPTS_PYTHON + COPTS_MEDIAPIPE,
     linkopts = LINKOPTS_ADJUSTED + select({
-                "//conditions:default": ["-lOpenCL"],
-                "//src:windows" : [],}),   
+                "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
+                "//src:windows" : [],}),
     data = select({
         "//:not_disable_python": [
             "//src/python/binding:pyovms.so",
@@ -783,7 +783,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED + COPTS_MEDIAPIPE,
     linkopts = LINKOPTS_ADJUSTED,
 )
 
@@ -1204,7 +1204,7 @@ cc_library(
             }),
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED + COPTS_CLOUD,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
@@ -1391,6 +1391,7 @@ cc_test(
                 "test/llmtemplate_test.cpp",
                 "test/pythonnode_test.cpp",
                 "test/text_streamer_test.cpp",
+                "test/rerank_handler_test.cpp",
             ],
             "//:disable_python" : [],
         }),
@@ -1494,24 +1495,6 @@ cc_test(
         "test/summator/1/summator.bin",
         "test/scalar/1/saved_model.xml",
         "test/scalar/1/saved_model.bin",
-    ],
-    linkopts = [
-        "-lxml2",
-        "-luuid",
-        "-lstdc++fs",
-        "-lcrypto",
-        "-lssl",
-    ],
-    deps = [
-            ":openvino_tests",
-            ":openvino_remote_tensors_tests",
-            ":inferencerequest_test",
-	":libtest_environment",
-	":libtest_gpuenvironment",
-    	":test_utils",
-        "//src:ovms_lib",
-        "//src:libovmsfilesystemfactory",
-        "//src:custom_nodes_common_lib",
         "//src:libsampleloader.so",
         "//src:lib_node_mock.so",
         "//src:lib_node_missing_implementation.so",
@@ -1526,7 +1509,26 @@ cc_test(
         "//src:libcustom_node_image_transformation.so",
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
-        "@com_google_googletest//:gtest",
+
+    ],
+    linkopts = [
+        "-lxml2",
+        "-luuid",
+        "-lstdc++fs",
+        "-lcrypto",
+        "-lssl",
+    ],
+    deps = [
+            ":openvino_tests",
+            ":openvino_remote_tensors_tests",
+            ":inferencerequest_test",
+            ":libtest_environment",
+            ":libtest_gpuenvironment",
+            ":test_utils",
+            "//src:ovms_lib",
+            "//src:libovmsfilesystemfactory",
+            "//src:custom_nodes_common_lib",
+            "@com_google_googletest//:gtest",
         ] + select({
             "//conditions:default": [
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
