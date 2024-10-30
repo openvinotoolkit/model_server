@@ -22,14 +22,14 @@ COPY ./cov-analysis-linux64-2023.12.2 /cov
 RUN apt-get remove --yes cmake && apt-get update && apt-get install -y rapidjson-dev && pip3 install cmake
 
 #WORKDIR /example_cpp_client/cpp
-#RUN bazel build --config=linux @org_tensorflow//tensorflow/core:framework
+#RUN bazel build @org_tensorflow//tensorflow/core:framework
 
 WORKDIR /ovms/
 RUN /cov/bin/cov-configure --gcc --config coverity_config.xml && \
     /cov/bin/cov-configure --comptype gcc --compiler /usr/bin/gcc && \
-    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --config=linux --spawn_strategy=standalone //src:static_analysis'
+    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:static_analysis'
 #    cd /example_cpp_client/cpp && \
-#    bazel build --config=linux --spawn_strategy=standalone //src:all'
+#    bazel build --spawn_strategy=standalone //src:all'
 
 WORKDIR /ovms/
 RUN tar czvf /model_server.tgz cov-int 

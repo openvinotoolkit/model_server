@@ -260,9 +260,6 @@ build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe
 
 test --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
-# Compiling mediapipe
-startup --output_user_root=C:/baze_tmp
-test --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 # genai hardcodes path during build time so without this so is not visible
 test --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
 
@@ -283,3 +280,7 @@ build:mp_off_py_off --define=MEDIAPIPE_DISABLE=1
 build:mp_off_py_off --define=PYTHON_DISABLE=1
 build:mp_off_py_off --disk_cache=/root/.cache/bazel_mp_off_py_off
 #build --remote_header=x-build-event-log=DEBUG
+
+# TODO: Compiling mediapipe on windows
+startup --output_user_root=C:/baze_tmp
+

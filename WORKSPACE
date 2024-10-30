@@ -115,17 +115,17 @@ http_archive(
 
 ################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
-#git_repository(
-#    name = "mediapipe",
-#    remote = "https://github.com/openvinotoolkit/mediapipe",
-#    commit = "03f37e6ae85247ca2f204da6844ab5abb3a2760b", # Fix model_api cmake
-#)
+git_repository(
+    name = "mediapipe",
+    remote = "https://github.com/openvinotoolkit/mediapipe",
+    commit = "6706adf8faabead546568754b1614e330e67fb59", #Windows mediapipe (#91)
+)
 
 # DEV mediapipe 1 source - adjust local repository path for build
-local_repository(
-    name = "mediapipe",
-    path = "C:\\git\\mediapipe",
-)
+#local_repository(
+#    name = "mediapipe",
+#    path = "C:\\git\\mediapipe",
+#)
 
 # Protobuf for Node dependencies
 http_archive(
