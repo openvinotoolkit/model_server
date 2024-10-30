@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,32 +23,37 @@ import shutil
 import tempfile
 import openvino as ov
 
-help_on_task_options = """The task parameter for "text_generation":
-- kv_cache_precision - u8 or empty (mode default). Reduced kv cache precision to u8 lower the cache size consumption. 
-- block_size - 32 for CPU and 16 for GPU
-- enable_prefix_caching - true or false, this algorithm is used to cache the prompt tokens. 
-- max_num_batched_tokens - empty or integer. The maximum number of tokens that can be batched together.
-- max_num_seqs - 256 by default. The maximum number of sequences that can be processed together.
-- cache_size - cache size in GB
-- target_device - CPU or GPU, default is CPU
-The task parameters for "embeddings":
-- normalize - default is true. Normalize the embeddings.
-- num_streams - 1 by default. The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.
-The task parameters for "rerank":
-- num_streams - 1 by default. The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.
-f"""
+def add_common_arguments(parser):
+    parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
+    parser.add_argument('--source_model', required=True, help='HF model name or path to the local folder with pytorch or OpenVINO model', dest='source_model')
+    parser.add_argument('--model_name', required=False, default=None, help='Model name that should be used in the deployment. Equal to source_name if HF model name is used', dest='model_name')
+    parser.add_argument('--weight-format', default='int8', help='precision of the exported model', dest='precision')
+    parser.add_argument('--config_file_path', default='config.json', help='path to the config file', dest='config_file_path')
+    parser.add_argument('--overwrite_models', default=False, action='store_true', help='version of the model', dest='overwrite_models')
 
-parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS models repository include all configuration for deployments',epilog=help_on_task_options, formatter_class=argparse.RawDescriptionHelpFormatter)
-parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
-parser.add_argument('--task', default='text_generation', choices=['text_generation', 'embeddings', 'rerank'], help='The use case of the model', dest='task')
-parser.add_argument('--source_model', required=True, help='HF model name or path to the local folder with pytorch or OpenVINO model', dest='source_model')
-parser.add_argument('--model_name', required=False, default=None, help='Model name that should be used in the deployment. Equal to source_name if HF model name is used', dest='model_name')
-parser.add_argument('--precision', default='int8', help='precision of the exported model', dest='precision')
-parser.add_argument('--task_parameters', default="", type=json.loads, help='json format of parameters and values list', dest='task_parameters')
-parser.add_argument('--version', default="1", help='version of the model', dest='version')
-parser.add_argument('--config_file_path', default='config.json', help='path to the config file', dest='config_file_path')
-parser.add_argument('--overwrite_models', default=False, type=bool, help='version of the model', dest='overwrite_models')
-parser
+parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS models repository including all configuration for deployments')
+
+subparsers = parser.add_subparsers(help='subcommand help', required=True, dest='task')
+parser_text = subparsers.add_parser('text_generation', help='export model for chat and completion endpoints')
+add_common_arguments(parser_text)
+parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
+parser_text.add_argument('--block_size', default="32", help='32 for CPU and 16 for GPU', dest='block_size')
+parser_text.add_argument('--enable_prefix_caching', action='store_true', help='this algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
+parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
+parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
+parser_text.add_argument('--max_num_seqs', default=None, help='256 by default. The maximum number of sequences that can be processed together.', dest='max_num_seqs')
+parser_text.add_argument('--cache_size', default=10, type=int, help='cache size in GB', dest='cache_size')
+parser_text.add_argument('--target_device', default="CPU", help='CPU or GPU, default is CPU', dest='device')
+parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
+add_common_arguments(parser_embeddings)
+parser_embeddings.add_argument('--skip_normalize', default=True, action='store_false', help='Normalize the embeddings.', dest='normalize')
+parser_embeddings.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_embeddings.add_argument('--version', default=1, type=int, help='version of the model', dest='version')
+
+parser_rerank = subparsers.add_parser('rerank', help='export model for rerank endpoint')
+add_common_arguments(parser_rerank)
+parser_rerank.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_rerank.add_argument('--version', default="1", help='version of the model', dest='version')
 args = vars(parser.parse_args())
 
 embedding_graph_template = """input_stream: "REQUEST_PAYLOAD:input"
@@ -79,7 +84,7 @@ node {
   output_stream: "RESPONSE_PAYLOAD:output"
   node_options: {
     [type.googleapis.com / mediapipe.EmbeddingsCalculatorOptions]: {
-      normalize_embeddings: {{normalize|default("true", true)}}
+      normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
     }
   }
 }
@@ -132,13 +137,16 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
           models_path: "{{model_path}}",
-          plugin_config: '{"KV_CACHE_PRECISION": "{{kv_cache_precision|default("", false)}}"}',
+          plugin_config: '{ {% if kv_cache_precision %}"KV_CACHE_PRECISION": "{{kv_cache_precision}}"{% endif %}}',
           block_size: {{block_size|default("32", true)}},
-          enable_prefix_caching: {{enable_prefix_caching|default("true", true)}},
+          enable_prefix_caching: {% if not enable_prefix_caching %}false{% else %} true{% endif%},
           cache_size: {{cache_size|default("10", true)}},
-          max_num_batched_tokens: {{max_num_batched_tokens|default("8120", false)}},
+          {%- if max_num_batched_tokens %}
+          max_num_batched_tokens: {{max_num_batched_tokens}},{% endif %}
+          {%- if not dynamic_split_fuse %}
+          dynamic_split_fuse: false, {% endif %}
           max_num_seqs: {{max_num_seqs|default("256", true)}},
-          device: "{{device|default("CPU", true)}}",
+          device: "{{target_device|default("CPU", true)}}",
 
       }
   }
@@ -207,13 +215,16 @@ def set_rt_info(model_folder_path, model_filename, config_filename):
     shutil.move(os.path.join(model_folder_path, temp_model_name), os.path.join(model_folder_path, model_filename))
     shutil.move(os.path.join(model_folder_path, temp_model_name.replace('.xml','.bin')), os.path.join(model_folder_path, model_filename.replace('.xml','.bin')))
 
-def add_servable2config(config_path, mediapipe_name, base_path):
+def add_servable_to_config(config_path, mediapipe_name, base_path):
+    print(config_path, mediapipe_name, base_path)
     if not os.path.isfile(config_path):
         print("Creating new config file")
         with open(config_path, 'w') as config_file:
             json.dump({'mediapipe_config_list': [], "model_config_list": []}, config_file, indent=4)
     with open(config_path, 'r') as config_file:
         config_data = json.load(config_file)
+        if 'mediapipe_config_list' not in config_data:
+            config_data['mediapipe_config_list'] = []
         mp_list = config_data['mediapipe_config_list']
         updated = False
         for mp_config in mp_list:
@@ -226,7 +237,7 @@ def add_servable2config(config_path, mediapipe_name, base_path):
         json.dump(config_data, config_file, indent=4)
     print("Added servable to config file", config_path)
 
-def export_llm_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
+def export_text_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     model_path = "./"
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
             print("OV model is source folder. Skipping conversion.")
@@ -236,7 +247,7 @@ def export_llm_model(model_repository_path, source_model, model_name, precision,
         print("Exporting LLM model to ", llm_model_path)
         if not os.path.isdir(llm_model_path) or args['overwrite_models']:
             optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, llm_model_path)
-            if (os.system(optimum_command)):
+            if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)
             print("Exporting tokenizer to ", llm_model_path)
             convert_tokenizer_command = "convert_tokenizer --utf8_replace_mode replace --with-detokenizer --skip-special-tokens --streaming-detokenizer -o {} {}".format(llm_model_path, source_model) 
@@ -248,7 +259,7 @@ def export_llm_model(model_repository_path, source_model, model_name, precision,
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable2config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
     
     
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path):
@@ -266,7 +277,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
             print("Exporting embeddings model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
                 optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, tmpdirname)
-                if (os.system(optimum_command)):
+                if os.system(optimum_command):
                     raise ValueError("Failed to export embeddings model", source_model)
                 set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
                 os.makedirs(embeddings_path, exist_ok=True)
@@ -292,7 +303,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
     with open(os.path.join(model_repository_path, model_name, 'subconfig.json'), 'w') as f:
         f.write(subconfig_content)
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
-    add_servable2config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
 def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path):
@@ -310,7 +321,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
             print("Exporting rerank model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
                 optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, tmpdirname)
-                if (os.system(optimum_command)):
+                if os.system(optimum_command):
                     raise ValueError("Failed to export rerank model", source_model)
                 set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
                 os.makedirs(embeddings_path, exist_ok=True)
@@ -336,7 +347,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
     with open(os.path.join(model_repository_path, model_name, 'subconfig.json'), 'w') as f:
         f.write(subconfig_content)
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
-    add_servable2config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
 if not os.path.isdir(args['model_repository_path']):
@@ -348,14 +359,16 @@ if args['model_name'] is None:
 if args['model_name'] is None and args['source_model'] is None:
     raise ValueError("Either model_name or source_model should be provided")
 
+template_parameters = {k: v for k, v in args.items() if k not in ['model_repository_path', 'source_model', 'model_name', 'precision', 'version', 'config_file_path', 'overwrite_models']}
+print("template params:",template_parameters)
 
 if args['task'] == 'text_generation':
-    export_llm_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], args['task_parameters'], args['config_file_path'])
+    export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'])
 
 elif args['task'] == 'embeddings':
-    export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], args['task_parameters'], args['version'], args['config_file_path'])
+    export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, str(args['version']), args['config_file_path'])
 
 elif args['task'] == 'rerank':
-    export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], args['task_parameters'], args['version'], args['config_file_path'])
+    export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'])
 
 

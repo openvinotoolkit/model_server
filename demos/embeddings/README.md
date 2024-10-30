@@ -28,13 +28,13 @@ pip3 install -U -r demos/common/export_models/requirements.txt
 Run optimum-cli to download and quantize the model:
 ```bash
 mkdir -p models
-python demos/common/export_models/export_model.py --task embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --task_parameters '{}' --config_path models/config.json
+python demos/common/export_models/export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config.json
 ```
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
 You should have a model folder like below:
 ```bash
 tree models
-models/
+models
 ├── Alibaba-NLP
 │   └── gte-large-en-v1.5
 │       ├── embeddings
@@ -52,13 +52,13 @@ models/
 ```
 > **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder.
 > In case you trained the pytorch model it can be exported like below:
-> `python ../common/export_models/export_model.py --task embeddings --source_model <pytorch model> --model_name Alibaba-NLP/gte-large-en-v1.5 --precision int8 --task_parameters '{}' --config_path models/config.json --version 2`
+> `python demo/common/export_models/export_model.py embeddings --source_model <pytorch model> --model_name Alibaba-NLP/gte-large-en-v1.5 --precision int8 --config_file_path models/config.json --version 2`
 
 > **Note** Check for other tested models in script `export_all_models.sh`.
 
-The default configuration of the `EmbeddingsCalulator` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. Runtime configuration for both models can be tuned in `subconfig.json` file. They can be set automatically via `task_parameters` in the `export_model.py` script.
-For exampleL
-``python ../common/export_models/export_model.py --task embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --precision int8 --task_parameters '{"num_streams":"2", "normalize":"false"}' --config_path models/config.json`
+The default configuration of the `EmbeddingsCalculator` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. Runtime configuration for both models can be tuned in `subconfig.json` file. They can be set automatically via export parameters in the `export_model.py` script.
+For example:
+`python demo/common/export_models/export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --precision int8 --num_streams 2 --skip_normalize --config_file_path models/config.json`
 
 
 ## Server configuration

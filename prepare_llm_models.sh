@@ -30,21 +30,22 @@ if [ "$2" = "docker" ]; then
     python3 -m pip install $(find wheel -name 'openvino_tokenizers*.whl')
     python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers==3.1.1
 else
-    python3 -m venv .venv
+    python3.10 -m venv .venv
     . .venv/bin/activate
     pip3 install -U pip
     pip3 install -U -r demos/common/export_models/requirements.txt
 fi
+mkdir -p $1
 
 if [ -d "$1/facebook/opt-125m" ]; then
   echo "Models directory $1/facebook/opt-125m exists. Skipping downloading models."
 else
-  python demos/common/export_models/export_model.py --task text_generation --source_model facebook/opt-125m --weight-format int8 --task_parameters '{}' --model_repository_path $1
+  python demos/common/export_models/export_model.py text_generation --source_model facebook/opt-125m --weight-format int8 --model_repository_path $1
 fi
 
 if [ -d "$1/$EMBEDDING_MODEL" ]; then
   echo "Models directory $1/$EMBEDDING_MODEL exists. Skipping downloading models."
 else
-  python demos/common/export_models/export_model.py --task embeddings --source_model "$EMBEDDING_MODEL" --weight-format int8 --task_parameters '{}' --model_repository_path $1
+  python demos/common/export_models/export_model.py embeddings --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1
 fi
 
