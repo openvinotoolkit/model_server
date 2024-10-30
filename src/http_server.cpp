@@ -17,12 +17,11 @@
 
 #ifdef _WIN32
 #include <map>
-#elif __linux__
-#include <unordered_map>
 #endif
 #include <memory>
 #include <regex>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
