@@ -411,14 +411,14 @@ cc_library(
                     "libovmsazurefilesystem",
                     ],
                 "//:disable_cloud": []
-                }) 
+                })
             + select({
                 "//conditions:default": [],
                 "//src:windows" : [
                     "@windows_opencl//:opencl",
                     "@windows_opencl2//:opencl2",
                     ],
-                })  
+                })
             + select({
             "//conditions:default": [
                 "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
