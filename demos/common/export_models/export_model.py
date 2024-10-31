@@ -30,6 +30,7 @@ def add_common_arguments(parser):
     parser.add_argument('--weight-format', default='int8', help='precision of the exported model', dest='precision')
     parser.add_argument('--config_file_path', default='config.json', help='path to the config file', dest='config_file_path')
     parser.add_argument('--overwrite_models', default=False, action='store_true', help='version of the model', dest='overwrite_models')
+    parser.add_argument('--target_device', default="CPU", help='CPU or GPU, default is CPU', dest='target_device')
 
 parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS models repository including all configuration for deployments')
 
@@ -43,7 +44,6 @@ parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', h
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
 parser_text.add_argument('--max_num_seqs', default=None, help='256 by default. The maximum number of sequences that can be processed together.', dest='max_num_seqs')
 parser_text.add_argument('--cache_size', default=10, type=int, help='cache size in GB', dest='cache_size')
-parser_text.add_argument('--target_device', default="CPU", help='CPU or GPU, default is CPU', dest='device')
 parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
 add_common_arguments(parser_embeddings)
 parser_embeddings.add_argument('--skip_normalize', default=True, action='store_false', help='Normalize the embeddings.', dest='normalize')
