@@ -38,7 +38,7 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
           models_path: "./",
-          plugin_config: '{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}',
+          plugin_config: '\''{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}'\'',
           cache_size: 4
       }
   }
