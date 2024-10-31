@@ -118,7 +118,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "6706adf8faabead546568754b1614e330e67fb59", #Windows mediapipe (#91)
+    commit = "aa8060b79cfc5190949feaecba50885e2a7ea6d7", #Windows mediapipe (#91)
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -262,6 +262,10 @@ http_archive(
     strip_prefix = "rules_python-0.18.1",
     url = "https://github.com/bazelbuild/rules_python/releases/download/0.18.1/rules_python-0.18.1.tar.gz",
 )
+
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
 
 load("@rules_python//python:pip.bzl", "pip_parse")
 
