@@ -54,7 +54,7 @@ pipeline {
 
         stage('Build') {
           parallel {
-            stage("Prepare linux build image") {
+            stage("Build linux") {
               when { expression { image_build_needed == "true" } }
                 steps {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
@@ -68,7 +68,6 @@ pipeline {
             }
           }
         }
-
         stage("Release image and tests in parallel") {
           when { expression { image_build_needed == "true" } }
           parallel {

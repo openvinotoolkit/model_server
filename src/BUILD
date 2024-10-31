@@ -262,6 +262,12 @@ cc_library(
         "get_model_metadata_impl.hpp",
         "global_sequences_viewer.hpp",
         "global_sequences_viewer.cpp",]
+        + select({
+            "//:is_windows_or_mediapipe_is_disabled_no_http": [],
+            "//conditions:default" : [
+                "http_frontend/http_graph_executor_impl.cpp",
+                "http_frontend/http_graph_executor_impl.hpp",],
+            })
         #TODO : add to server lib and cleanup headers too many includes
          + select({
                 "//conditions:default": [
@@ -356,8 +362,6 @@ cc_library(
                 "mediapipe_internal/packettypes.hpp",
                 "kfs_frontend/kfs_graph_executor_impl.cpp",
                 "kfs_frontend/kfs_graph_executor_impl.hpp",
-                "http_frontend/http_graph_executor_impl.cpp",
-                "http_frontend/http_graph_executor_impl.hpp",
             ],
             "//:disable_mediapipe" : [],
         }),
@@ -370,6 +374,11 @@ cc_library(
                 "//src/llm:text_processor",
             ],
             "//:disable_python": []
+        }) + select({
+            "//:is_windows_or_mediapipe_is_disabled_no_http": [],
+            "//conditions:default" : [
+                "//src/embeddings:embeddingscalculator",
+                "//src/rerank:rerankcalculator",],
         }) + [
             "cpp_headers",
             "libmodelconfigjsonparser",
@@ -422,10 +431,6 @@ cc_library(
                 "@mediapipe//mediapipe/calculators/geti/utils:utils",
                 "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
                 "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
-                "//src:httppayload",
-                "//src:libhttpclientconnection",
-                "//src/embeddings:embeddingscalculator",
-                "//src/rerank:rerankcalculator",
             ],
             "//:disable_mediapipe" : [],
         }),
