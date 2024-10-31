@@ -150,7 +150,7 @@ absl::Status RerankHandler::parseResponse(StringBuffer& buffer, std::vector<floa
     writer.StartArray();
     auto sortedIndexes = getSortedIndexes(scores);
     for (size_t i = 0; i < sortedIndexes.size(); i++) {
-        if(i >= request.topN){
+        if (i >= request.topN) {
             break;
         }
         auto index = sortedIndexes[i];
