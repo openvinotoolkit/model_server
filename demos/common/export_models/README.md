@@ -93,10 +93,10 @@ python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-fo
 The export commands above deploy the models in `models/` folder and the configuration file is created in `models/config_all.json`.
 
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
 
 In case GPU is the target device in any model, the following command can be applied:
 ```bash
-docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/:/workspace:ro openvino/model_server:latest-gpu --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
