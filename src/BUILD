@@ -372,8 +372,6 @@ cc_library(
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
                 "//src/llm:text_processor",
-                "//src/embeddings:embeddingscalculator",
-                "//src/rerank:rerankcalculator",
             ],
             "//:disable_python": []
         }) + [
@@ -428,6 +426,10 @@ cc_library(
                 "@mediapipe//mediapipe/calculators/geti/utils:utils",
                 "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
                 "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
+                "//src:httppayload",
+                "//src:libhttpclientconnection",
+                "//src/embeddings:embeddingscalculator",
+                "//src/rerank:rerankcalculator",
             ],
             "//:disable_mediapipe" : [],
         }),
@@ -1382,6 +1384,7 @@ cc_test(
                 "test/mediapipe_framework_test.cpp",
                 "test/mediapipe_validation_test.cpp",
                 "test/streaming_test.cpp",
+                "test/rerank_handler_test.cpp",
             ],
             "//:disable_mediapipe" : [],
         }) + select({
@@ -1393,7 +1396,6 @@ cc_test(
                 "test/llmtemplate_test.cpp",
                 "test/pythonnode_test.cpp",
                 "test/text_streamer_test.cpp",
-                "test/rerank_handler_test.cpp",
             ],
             "//:disable_python" : [],
         }),
