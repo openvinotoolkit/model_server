@@ -446,7 +446,7 @@ TEST(RerankHandlerSerializationTest, positiveTopNHigherThanNumberOfDocuments) {
     std::string json = R"({
     "model": "model",
     "query": "query",
-    "top_n": 3,
+    "top_n": 10,
     "documents": ["unused", "unused", "unused", "unused", "unused", "unused"]
     })";
 
