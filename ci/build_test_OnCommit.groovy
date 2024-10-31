@@ -52,7 +52,7 @@ pipeline {
               }
         }
 
-        stage('Build and test') {
+        stage('Build') {
           parallel {
             stage("Build linux") {
               when { expression { image_build_needed == "true" } }
@@ -60,36 +60,38 @@ pipeline {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                       sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                     }
-              when { expression { image_build_needed == "true" } }
-              parallel {
-                stage("Run linux unit tests") {
-                  steps {
-                      sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                  }
-                }
-                stage("Run linux internal tests") {
-                  steps {
-                    sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                    sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                    script {
-                      dir ('internal_tests'){ 
-                        checkout scmGit(
-                        branches: [[name: 'develop']],
-                        userRemoteConfigs: [[credentialsId: 'workflow-lab',
-                        url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
-                        sh 'pwd'
-                        sh "make create-venv && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_BASE_OS=redhat TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
-                      }
-                    }
-                  }            
-                }            
-              }
             }
             stage('Build windows') {
               steps {
                   build job: 'ovms/ovms-windows/'+ env.JOB_BASE_NAME
               }
             }
+          }
+        }
+        stage("Release image and tests in parallel") {
+          when { expression { image_build_needed == "true" } }
+          parallel {
+            stage("Run unit tests") {
+              steps {
+                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+              }
+            }
+            stage("Internal tests") {
+              steps {
+                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                script {
+                  dir ('internal_tests'){ 
+                    checkout scmGit(
+                    branches: [[name: 'develop']],
+                    userRemoteConfigs: [[credentialsId: 'workflow-lab',
+                    url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
+                    sh 'pwd'
+                    sh "make create-venv && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_BASE_OS=redhat TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
+                  }
+                }
+              }            
+            }            
           }
         }
     }
