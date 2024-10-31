@@ -70,7 +70,7 @@ def create_config_settings():
     )
 
     selects.config_setting_group(
-        name = "mediapipe_windows_http",
+        name = "is_windows_or_mediapipe_is_disabled_no_http",
         match_any = ["//src:windows", "//:disable_mediapipe"]
     )
 

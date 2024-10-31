@@ -179,7 +179,7 @@ http_archive(
     url = "https://github.com/gflags/gflags/archive/v2.2.2.zip",
 )
 
-# 2020-08-21
+# 2020-08-21 SHA 3a0d4d22c5ae0b9a2216988411cfa6bf860cc372
 http_archive(
     name = "com_github_glog_glog",
     strip_prefix = "glog-3a0d4d22c5ae0b9a2216988411cfa6bf860cc372",
