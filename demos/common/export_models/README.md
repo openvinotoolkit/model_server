@@ -1,10 +1,11 @@
 # Exporting GEN AI models for deployments in OpenVINO Model Server
 
-This script automated exporting models from Hugging Faces hub or fine-tunned in Pytorch format to the models repository for deployment for the model serving.
+This script automates exporting models from Hugging Faces hub or fine-tunned in Pytorch format to the models repository for deployment for the model serving.
 In one step it prepares a complete set of resources in the models repository for a supported GenAI use case.
 
 ```bash
-python demos/common/export_models/export_model.py --help --all
+pip install -q -r demos/common/export_models/requirements.txt
+python demos/common/export_models/export_model.py --help
 usage: export_model.py [-h] {text_generation,embeddings,rerank} ...
 
 Export Hugging face models to OVMS models repository including all configuration for deployments
@@ -42,7 +43,7 @@ options:
   --block_size BLOCK_SIZE
                         32 for CPU and 16 for GPU
   --enable_prefix_caching
-                        this algorithm is used to cache the prompt tokens.
+                        This algorithm is used to cache the prompt tokens.
   --disable_dynamic_split_fuse
                         The maximum number of tokens that can be batched together.
   --max_num_batched_tokens MAX_NUM_BATCHED_TOKENS
