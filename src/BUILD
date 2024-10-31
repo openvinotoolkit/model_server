@@ -266,9 +266,7 @@ cc_library(
             "//:is_windows_or_mediapipe_is_disabled_no_http": [],
             "//conditions:default" : [
                 "http_frontend/http_graph_executor_impl.cpp",
-                "http_frontend/http_graph_executor_impl.hpp",
-                "//src/embeddings:embeddingscalculator",
-                "//src/rerank:rerankcalculator",],
+                "http_frontend/http_graph_executor_impl.hpp",],
             })
         #TODO : add to server lib and cleanup headers too many includes
          + select({
@@ -376,6 +374,11 @@ cc_library(
                 "//src/llm:text_processor",
             ],
             "//:disable_python": []
+        }) + select({
+            "//:is_windows_or_mediapipe_is_disabled_no_http": [],
+            "//conditions:default" : [
+                "//src/embeddings:embeddingscalculator",
+                "//src/rerank:rerankcalculator",],
         }) + [
             "cpp_headers",
             "libmodelconfigjsonparser",
