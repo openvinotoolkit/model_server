@@ -26,7 +26,7 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Install python dependencies for the conversion script:
 ```bash
-pip3 install -U -r ../common/export_models/requirements.txt
+pip3 install -U -r demos/common/export_models/requirements.txt
 ```
 
 Run optimum-cli to download and quantize the model:
