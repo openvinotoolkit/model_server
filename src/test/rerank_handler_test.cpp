@@ -327,21 +327,36 @@ TEST(RerankHandlerSerializationTest, simplePostivie) {
     std::string json = R"({
     "model": "model",
     "query": "query",
-    "documents": [
-        {
-        "title": "first document title",
-        "text": "first document text"
-        }
-    ]
+    "documents": ["unused", "unused", "unused", "unused", "unused", "unused"]
     })";
 
-    Document notUsed;
-    ASSERT_FALSE(notUsed.Parse(json.c_str()).HasParseError());
-    RerankHandler handler(notUsed);
+    Document d;
+    ASSERT_FALSE(d.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(d);
+    ASSERT_TRUE(handler.parseRequest().ok());
     StringBuffer buffer;
     auto status = handler.parseResponse(buffer, scores);
     EXPECT_TRUE(status.ok());
-    std::string expectedResponse = R"({"results":[{"index":3,"relevance_score":22.32},{"index":5,"relevance_score":22.32},{"index":1,"relevance_score":17.2},{"index":4,"relevance_score":9.39},{"index":0,"relevance_score":5.36},{"index":2,"relevance_score":3.0}]})";
+    std::string expectedResponse = R"({"results":[{"index":3,"relevance_score":22.329999923706055},{"index":5,"relevance_score":22.329999923706055},{"index":1,"relevance_score":17.209999084472656},{"index":4,"relevance_score":9.399999618530273},{"index":0,"relevance_score":5.360000133514404},{"index":2,"relevance_score":3.009999990463257}]})";
+    EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
+}
+
+TEST(RerankHandlerSerializationTest, positiveSmallNumbers) {
+    std::vector<float> scores = {0.000000001, 0.000000002, 0.000000003};
+    std::string json = R"({
+    "model": "model",
+    "query": "query",
+    "documents": ["unused", "unused", "unused"]
+    })";
+
+    Document d;
+    ASSERT_FALSE(d.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(d);
+    ASSERT_TRUE(handler.parseRequest().ok());
+    StringBuffer buffer;
+    auto status = handler.parseResponse(buffer, scores);
+    EXPECT_TRUE(status.ok());
+    std::string expectedResponse = R"({"results":[{"index":2,"relevance_score":3.000000026176508e-9},{"index":1,"relevance_score":1.999999943436137e-9},{"index":0,"relevance_score":9.999999717180685e-10}]})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
 }
 
@@ -361,7 +376,7 @@ TEST(RerankHandlerSerializationTest, positiveReturnDocumentsWithDocumentsList) {
     ASSERT_TRUE(handler.parseRequest().ok());
     auto status = handler.parseResponse(buffer, scores);
     EXPECT_TRUE(status.ok());
-    std::string expectedResponse = R"({"results":[{"index":1,"relevance_score":17.2,"text":"second"},{"index":0,"relevance_score":5.36,"text":"first"},{"index":2,"relevance_score":3.0,"text":"third"}]})";
+    std::string expectedResponse = R"({"results":[{"index":1,"relevance_score":17.209999084472656,"document":{"text":"second"}},{"index":0,"relevance_score":5.360000133514404,"document":{"text":"first"}},{"index":2,"relevance_score":3.009999990463257,"document":{"text":"third"}}]})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
 }
 
@@ -404,4 +419,44 @@ TEST(RerankHandlerSerializationTest, negativeReturnDocumentsWithDocumentsListWit
     StringBuffer buffer;
     auto status = handler.parseResponse(buffer, scores);
     EXPECT_FALSE(status.ok());
+}
+
+TEST(RerankHandlerSerializationTest, positiveTopN) {
+    std::vector<float> scores = {5.36, 17.21, 3.01, 22.33, 9.4, 22.33};
+    std::string json = R"({
+    "model": "model",
+    "query": "query",
+    "top_n": 3,
+    "documents": ["unused", "unused", "unused", "unused", "unused", "unused"]
+    })";
+
+    Document d;
+    ASSERT_FALSE(d.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(d);
+    ASSERT_TRUE(handler.parseRequest().ok());
+    StringBuffer buffer;
+    auto status = handler.parseResponse(buffer, scores);
+    EXPECT_TRUE(status.ok());
+    std::string expectedResponse = R"({"results":[{"index":3,"relevance_score":22.329999923706055},{"index":5,"relevance_score":22.329999923706055},{"index":1,"relevance_score":17.209999084472656}]})";
+    EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
+}
+
+TEST(RerankHandlerSerializationTest, positiveTopNHigherThanNumberOfDocuments) {
+    std::vector<float> scores = {5.36, 17.21, 3.01, 22.33, 9.4, 22.33};
+    std::string json = R"({
+    "model": "model",
+    "query": "query",
+    "top_n": 3,
+    "documents": ["unused", "unused", "unused", "unused", "unused", "unused"]
+    })";
+
+    Document d;
+    ASSERT_FALSE(d.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(d);
+    ASSERT_TRUE(handler.parseRequest().ok());
+    StringBuffer buffer;
+    auto status = handler.parseResponse(buffer, scores);
+    EXPECT_TRUE(status.ok());
+    std::string expectedResponse = R"({"results":[{"index":3,"relevance_score":22.329999923706055},{"index":5,"relevance_score":22.329999923706055},{"index":1,"relevance_score":17.209999084472656},{"index":4,"relevance_score":9.399999618530273},{"index":0,"relevance_score":5.360000133514404},{"index":2,"relevance_score":3.009999990463257}]})";
+    EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
 }
