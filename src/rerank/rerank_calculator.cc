@@ -287,14 +287,12 @@ public:
             auto [input_ids, attention_mask] = PrepareInputsForRerankModel(handler);
             auto scores = ComputeScoresUsingRerankModel(input_ids, attention_mask);
 
-            // Print scores for verification until we have serialization
-            for (const auto& score : scores) {
-                std::cout << score << " ";
-                // 0.343912 0.00104043
+            StringBuffer buffer;
+            status = handler.parseResponse(buffer, scores);
+            if (!status.ok()) {
+                return status;
             }
-            std::cout << std::endl;
-
-            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string("TODO"), timestamp);  // Add serialization
+            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
             return absl::OkStatus();
         } catch (ov::AssertFailure& e) {
             SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "OpenVINO Assert Failure: {}", e.what());
