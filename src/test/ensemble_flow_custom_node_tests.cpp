@@ -505,7 +505,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
     ASSERT_EQ(pipeline.execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
     ASSERT_EQ(response.outputs().size(), 1);
 
-    this->checkResponse<float>(inputValues, [N, addValues, subValues](float value) -> float {
+    this->checkResponse<float>(inputValues, [N, addValues, subValues, PARAMETERS_PAIRS_COUNT](float value) -> float {
         for (int i = 0; i < PARAMETERS_PAIRS_COUNT; i++) {
             value += (N / PARAMETERS_PAIRS_COUNT) * addValues[i];
             value -= (N / PARAMETERS_PAIRS_COUNT) * subValues[i];
@@ -572,7 +572,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
         this->checkResponse<float>(
             pipelineOutputName + std::to_string(i),
             inputValues,
-            [i, addValues, subValues](float value) -> float {
+            [i, addValues, subValues, PARAMETERS_PAIRS_COUNT](float value) -> float {
                 value += addValues[i % PARAMETERS_PAIRS_COUNT];
                 value -= subValues[i % PARAMETERS_PAIRS_COUNT];
                 return value;

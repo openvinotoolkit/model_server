@@ -107,7 +107,7 @@ TEST(TestThreadSafeQueue, SeveralThreadsAllElementsPresent) {
     for (auto i = 0u; i < NUMBER_OF_PRODUCERS; ++i) {
         producers.emplace_back(thread(producer, std::ref(queue), startProduceSignal[i].get_future()));
     }
-    std::thread consumerThread(consumer, std::ref(queue), startConsumeSignal.get_future(), std::ref(consumed), (const uint)(NUMBER_OF_PRODUCERS * ELEMENTS_TO_INSERT));
+    std::thread consumerThread(consumer, std::ref(queue), startConsumeSignal.get_future(), std::ref(consumed), (const uint32_t)(NUMBER_OF_PRODUCERS * ELEMENTS_TO_INSERT));
     for (auto& signal : startProduceSignal) {
         signal.set_value();
     }

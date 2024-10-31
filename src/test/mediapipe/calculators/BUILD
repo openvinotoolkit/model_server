@@ -46,21 +46,27 @@ cc_library(
         "ovms_image_input_calculator.cc",
         "ovms_kfs_calculator.cc",
         "streaming_test_calculator.cpp",
-        "openai_chat_completions_mock_calculator.cpp",
         "two_input_calculator.cpp",
-    ],
-    copts = [
-        "-Wall",
-        "-Wno-unknown-pragmas",
-        "-Werror",
-        "-Wno-sign-compare",
-        ] + select({
+    ] +  select({
             "//conditions:default": [
+                "openai_chat_completions_mock_calculator.cpp",
+            ],
+            "//src:windows" : [],
+    }),
+    copts = select({
+            "//conditions:default": [
+                "-Wall",
+                "-Wno-unknown-pragmas",
+                "-Werror",
+                "-Wno-sign-compare",
             ],
             "//:fuzzer_build" : [
                 "-fsanitize=address",
                 "-fprofile-generate",
                 "-ftest-coverage",
+            ],
+            "//src:windows" : [
+                "-W0",
             ],
         }),
     visibility = [
