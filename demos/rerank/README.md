@@ -77,8 +77,6 @@ curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
     }
   ]
 }
-
-
 ```
 
 
