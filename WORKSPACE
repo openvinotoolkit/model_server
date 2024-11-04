@@ -118,7 +118,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "9ce4014907b7e5bb70147c6864282b8503418619", # Support getting output metadata in model api adapter
+    commit = "3f751211411496043d9aa899e789cf638c447185", # Enable no-copy API in Model API OVMS Adapter to optimize Embedding endpoint (#92)
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
