@@ -146,8 +146,7 @@ public:
                     max_context_length = modelConfig["max_position_embeddings"].as<size_t>();
                 } else if (modelConfig.count("max_trained_positions")) {
                     max_context_length = modelConfig["max_trained_positions"].as<size_t>();
-                } 
-                else {
+                } else {
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "model_info->max_position_embeddings nor max_trained_positions included in model rt_info. Using default value {}", max_context_length);
                 }
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Detected model context size: ", max_context_length);
