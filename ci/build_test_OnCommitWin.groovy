@@ -38,12 +38,12 @@ pipeline {
                     }
                 }
                 script {
-                    def status = bat(returnStatus: true, script: 'grep "[  PASSED  ]" build_test.log')
+                    def status = bat(returnStatus: true, script: 'grep "[  PASSED  ]" test.log')
                     if (status != 0) {
                             error "Error: Windows run test failed ${status}. Check test.log for details."
                     }
-                    
-                    status = bat(returnStatus: true, script: 'grep "[  FAILED  ]" build_test.log')
+
+                    status = bat(returnStatus: true, script: 'grep "[  FAILED  ]" test.log')
                     if (status == 0) {
                             error "Error: Windows run test failed ${status}. Check test.log for details."
                     } else {

@@ -25,4 +25,6 @@ set "PATH=%setPath%"
 %cleanCmd%
 rm -rf environment.log
 rm -rf build.log
+rm -rf build_test.log
+rm -rf test.log
 endlocal
