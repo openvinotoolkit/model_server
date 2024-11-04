@@ -3165,3 +3165,81 @@ TEST_F(EmbeddingsInvalidTokenizerConfigTest, simpleNegative) {
     Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
+
+class RerankHttpTest : public ::testing::Test {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
+
+    std::vector<std::pair<std::string, std::string>> headers;
+    ovms::HttpRequestComponents comp;
+    const std::string endpointRerank = "/v3/rerank";
+    MockedServerRequestInterface writer;
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(t, server, port, "/ovms/src/test/rerank/config.json");
+        auto start = std::chrono::high_resolution_clock::now();
+        const int numberOfRetries = 5;
+        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
+        }
+    }
+
+    void SetUp() {
+        ovms::Server& server = ovms::Server::instance();
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointRerank, headers), ovms::StatusCode::OK);
+    }
+
+    static void TearDownTestSuite() {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+
+    void TearDown() {
+        handler.reset();
+    }
+};
+std::unique_ptr<std::thread> RerankHttpTest::t;
+
+TEST_F(RerankHttpTest, simplePositive) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank-english-v3.0",
+            "query": "What is the capital of the United States?",
+            "top_n": 3,
+            "documents": ["Carson City is the capital city of the American state of Nevada.",
+                        "The Commonwealth of the Northern Mariana Islands is a group of islands in the Pacific Ocean. Its capital is Saipan.",
+                        "Washington, D.C. (also known as simply Washington or D.C., and officially as the District of Columbia) is the capital of the United States. It is a federal district.",
+                        "Capitalization or capitalisation in English grammar is the use of a capital letter at the start of a word. English usage varies from capitalization in other languages.",
+                        "Capital punishment (the death penalty) has existed in the United States since beforethe United States was a country. As of 2017, capital punishment is legal in 30 of the 50 states."]
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    // ASSERT_EQ(ok.Code(), 0);
+    // ASSERT_EQ(d["object"], "list");
+    // ASSERT_TRUE(d["data"].IsArray());
+    // ASSERT_EQ(d["data"].Size(), 1);
+    // ASSERT_EQ(d["data"][0]["object"], "embedding");
+    // ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    // ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    // double sum = 0;
+    // for (auto& value : d["data"][0]["embedding"].GetArray()) {
+    //     sum += value.GetDouble() * value.GetDouble();
+    // }
+    // double norm = std::max(std::sqrt(sum), double(1e-12));
+    // ASSERT_NEAR(norm, 1.0, 1e-6);
+    // ASSERT_EQ(d["data"][0]["index"], 0);
+}
