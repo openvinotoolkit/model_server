@@ -1095,7 +1095,7 @@ cc_library(
     srcs = ["layout.cpp",],
     deps = [
             "libovmsshape",
-            "@linux_openvino//:openvino",
+            "//third_party:openvino",
             "ovms_header",
             "libovmslogging",
             "libovmsstatus",
@@ -1110,8 +1110,8 @@ cc_library(
     hdrs = ["layout_configuration.hpp",],
     srcs = ["layout_configuration.cpp",],
     deps = [
+            "//third_party:openvino",
             "libovmslayout",
-            "@linux_openvino//:openvino",
             "ovms_header",
             "libovmsstatus",
             "libovmsstring_utils",
