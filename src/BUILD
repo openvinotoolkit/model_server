@@ -1367,16 +1367,13 @@ cc_test(
         ] + select({
             "//:is_windows_or_mediapipe_is_disabled_no_http": [],
             "//conditions:default" : [
+                "test/test_http_utils.hpp",
                 "test/http_rest_api_handler_test.cpp",
                 "test/metrics_flow_test.cpp",
                 "test/kfs_rest_test.cpp",
                 "test/http_openai_handler_test.cpp", # Mediapipe enabled
                 "test/mediapipe_framework_test.cpp", # Mediapipe enabled
                 "test/mediapipeflow_test.cpp", # Mediapipe enabled
-                
-               
-                
-
             ],
         }) + select({
             "//:not_disable_cloud": [

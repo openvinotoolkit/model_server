@@ -42,7 +42,6 @@
 #include "../config.hpp"
 #include "../dags/node_library.hpp"
 #include "../execution_context.hpp"
-//#include "../http_server.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
