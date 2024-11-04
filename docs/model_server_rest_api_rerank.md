@@ -1,11 +1,13 @@
 # Cohere API rerank endpoint {#ovms_docs_rest_api_rerank}
 
 ## API Reference
-OpenVINO Model Server includes now the `rerank` endpoint using Cohere API.
+OpenVINO Model Server includes now the `rerank` endpoint based on Cohere API.
 Please see the [Cohere rerank API Reference](https://docs.cohere.com/reference/rerank) for more information on the API.
-The endpoint is exposed via a path:
+The endpoint can be accessed via a path:
 
 <b>http://server_name:port/v3/rerank</b>
+
+In the cohere client library specify the `base_url=http://server_name:port/v3`.
 
 ### Example request
 
@@ -67,13 +69,13 @@ curl http://localhost:8000/v3/rerank \
 ## Error handling
 Endpoint can raise an error related to incorrect request in the following conditions:
 - incorrect format of any of the fields based on the schema
-- Amount of documents exceeds allowed configured value - default 500
+- Amount of documents exceeds allowed configured value - default 100
 - Number of chunks needed to split any of the input documents exceed the configured value - default 10
 
 
 ## References
 
-[End to end demo with embeddings endpoint](../demos/rerank/README.md)
+[End to end demo with rerank endpoint](../demos/rerank/README.md)
 
 [Code snippets](./clients_genai.md)
 

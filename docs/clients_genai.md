@@ -8,9 +8,11 @@ hidden:
 
 Chat completion API <ovms_docs_rest_api_chat>
 Completions API <ovms_docs_rest_api_completion>
-Demo - text generation<ovms_demos_continuous_batching>
 Embeddings API <ovms_docs_rest_api_embeddings>
+Reranking API <ovms_docs_rest_api_rerank>
+Demo - text generation<ovms_demos_continuous_batching>
 Demo - text embeddings <ovms_demos_embeddings>
+Demo - reranking <ovms_demos_rerank>
 ```
 ## Introduction
 Beside Tensorflow Serving API (`/v1`) and KServe API (`/v2`) frontends, the model server supports a range of endpoints for generative use cases (`v3`). They are extendible using MediaPipe graphs.
