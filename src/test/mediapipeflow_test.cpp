@@ -1604,11 +1604,12 @@ public:
         for (size_t i = 0; i < 5; i++) {
             mockLabels.emplace_back(std::to_string(i));
         }
-        ov::AnyMap configuration = {
+        ov::AnyMap modelInfo = {
             {"layout", "data:HWCN"},
             {"resize_type", "unnatural"},
             {"labels", mockLabels}};
-        return configuration;
+        ov::AnyMap rtInfo{{"model_info", modelInfo}};
+        return rtInfo;
     }
 };
 
