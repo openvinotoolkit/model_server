@@ -1,4 +1,4 @@
-# Generative AI Use Cases {#ovms_docs_clients_genai }
+# Generative AI Use Cases {#ovms_docs_clients_genai}
 
 ```{toctree}
 ---
