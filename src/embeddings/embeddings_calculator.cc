@@ -174,10 +174,6 @@ public:
             ov::Tensor outputTensor(embeddings_session->getOutputDatatype(outputNameToSet), outShape);
             embeddingsOutputMap.emplace(outputNameToSet, std::move(outputTensor));
             embeddings_session->infer(embeddingsInputMap, embeddingsOutputMap);
-            if (0 == embeddingsOutputMap.size()) {  // TODO remove
-                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "No output from embeddings model");
-                return absl::InternalError("No output from embeddings model");
-            }
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from session infer(): {}", e.what());
             LOG(INFO) << e.what();
