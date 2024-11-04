@@ -73,19 +73,19 @@ python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B
 Embeddings with deployment on a single CPU host:
 ```bash
 mkdir -p models
-python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8  --config_path models/config_all.json
+python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8  --config_file_path models/config_all.json
 ```
 
 Embeddings with deployment on a dual CPU host:
 ```bash
 mkdir -p models
-python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8  --config_path models/config_all.json --num_streams 2
+python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8  --config_file_path models/config_all.json --num_streams 2
 ```
 
 Reranking:
 ```bash
 mkdir -p models
-python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8  --config_path models/config_all.json --num_streams 2
+python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8  --config_file_path models/config_all.json --num_streams 2
 ```
 
 ## Deployment example
@@ -93,10 +93,10 @@ python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-fo
 The export commands above deploy the models in `models/` folder and the configuration file is created in `models/config_all.json`.
 
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config_all.json
 ```
 
 In case GPU is the target device in any model, the following command can be applied:
 ```bash
-docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --port 9000 --rest_port 8000 --config_path /workspace/config_all.json
 ```

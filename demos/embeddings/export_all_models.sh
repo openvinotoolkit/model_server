@@ -28,5 +28,5 @@ mkdir -p models
 
 for i in "${tested_models[@]}"; do
     echo "$i"
-    python export_model.py embeddings --source_model $i --weight-format int8  --config_path models/config_all.json
+    python export_model.py embeddings --source_model $i --weight-format int8  --config_file_path models/config_all.json
 done
