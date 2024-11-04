@@ -26,9 +26,9 @@ with open(args['config_path'], 'r') as config_file:
     config_data = json.load(config_file)
     for key, value in config_data.items():
         try:
-            model.set_rt_info(value, ['config', key])
+            model.set_rt_info(value, ['model_info', key])
         except Exception as e:
-            print(f"Error setting runtime info for key {key} value {value}: {e}")
+            model.set_rt_info(str(value), ['model_info', key])
 with tempfile.TemporaryDirectory() as tmpdirname:
     ov.save_model(model, os.path.join(tmpdirname, os.path.splitext(os.path.basename(args['model_path']))[0]+'.xml'))
     shutil.copy(os.path.join(tmpdirname, os.path.splitext(os.path.basename(args['model_path']))[0]+'.xml'), os.path.dirname(args['model_path']))
