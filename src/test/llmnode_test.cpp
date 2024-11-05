@@ -80,7 +80,6 @@ public:
             ov::genai::SchedulerConfig schedulerConfig = {
                 .max_num_batched_tokens = 256,
                 .cache_size = 1,
-                .block_size = 32,
                 .dynamic_split_fuse = true,
                 .max_num_seqs = 256,
             };
@@ -2530,7 +2529,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 8);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
     ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, false);
@@ -2560,7 +2558,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
                 models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
                 max_num_batched_tokens: 98
                 cache_size: 1
-                block_size: 16
             }
         }
         input_stream_handler {
@@ -2583,7 +2580,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
 
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 16);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
 }
@@ -2679,7 +2675,9 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
 
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 1024);
     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
+    // We create graph with block_size set in graph config to make sure setting it does not result in error
+    // TODO: Remove below commented assertion as well as block_size from the testPbtxt when block_size is removed from options proto.
+    // ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
     ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, true);
