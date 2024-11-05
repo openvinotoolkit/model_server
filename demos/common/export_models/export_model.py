@@ -38,7 +38,6 @@ subparsers = parser.add_subparsers(help='subcommand help', required=True, dest='
 parser_text = subparsers.add_parser('text_generation', help='export model for chat and completion endpoints')
 add_common_arguments(parser_text)
 parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
-parser_text.add_argument('--block_size', default="32", help='32 for CPU and 16 for GPU', dest='block_size')
 parser_text.add_argument('--enable_prefix_caching', action='store_true', help='This algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
@@ -138,7 +137,6 @@ node: {
       [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
           models_path: "{{model_path}}",
           plugin_config: '{ {% if kv_cache_precision %}"KV_CACHE_PRECISION": "{{kv_cache_precision}}"{% endif %}}',
-          block_size: {{block_size|default("32", true)}},
           enable_prefix_caching: {% if not enable_prefix_caching %}false{% else %} true{% endif%},
           cache_size: {{cache_size|default("10", true)}},
           {%- if max_num_batched_tokens %}

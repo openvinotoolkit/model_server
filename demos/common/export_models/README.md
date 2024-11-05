@@ -24,7 +24,7 @@ For every use case subcommand there is adjusted list of parameters:
 ```bash
 python export_model.py text_generation --help 
 usage: export_model.py text_generation [-h] [--model_repository_path MODEL_REPOSITORY_PATH] --source_model SOURCE_MODEL [--model_name MODEL_NAME] [--weight-format PRECISION] [--config_file_path CONFIG_FILE_PATH]
-                                       [--overwrite_models] [--kv_cache_precision {u8}] [--block_size BLOCK_SIZE] [--enable_prefix_caching] [--disable_dynamic_split_fuse]
+                                       [--overwrite_models] [--kv_cache_precision {u8}] [--enable_prefix_caching] [--disable_dynamic_split_fuse]
                                        [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS] [--max_num_seqs MAX_NUM_SEQS] [--cache_size CACHE_SIZE] [--target_device DEVICE]
 
 options:
@@ -42,8 +42,6 @@ options:
   --overwrite_models    Overwrite the model if it already exists in the models repository
   --kv_cache_precision {u8}
                         u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.
-  --block_size BLOCK_SIZE
-                        32 for CPU and 16 for GPU
   --enable_prefix_caching
                         This algorithm is used to cache the prompt tokens.
   --disable_dynamic_split_fuse
