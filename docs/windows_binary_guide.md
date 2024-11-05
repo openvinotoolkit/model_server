@@ -35,7 +35,7 @@ Add c:\opt to system env PATH
 Open cmd.exe in c:\opt
 ```
 md test\model\1
-c:\opt\intel\openvino_2024\setupvars.bat
+C:\opt\intel\openvino_2024\setupvars.bat
 C:\opt\opencv\build\setup_vars_opencv4.cmd
 xcopy /r /s /e /Y ovms.exe c:\opt\test
 cd c:\opt\test
