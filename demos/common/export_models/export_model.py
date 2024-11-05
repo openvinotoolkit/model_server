@@ -328,7 +328,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
             tokenizer_path = os.path.join(model_repository_path, model_name,'tokenizer', version)
             print("Exporting tokenizer to ",tokenizer_path)
             if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
-                convert_tokenizer_command = "convert_tokenizer --not-add-special-tokens -o {} {}".format(tmpdirname, source_model) 
+                convert_tokenizer_command = "convert_tokenizer --max_length 32000 --not-add-special-tokens -o {} {}".format(tmpdirname, source_model) 
                 if (os.system(convert_tokenizer_command)):
                     raise ValueError("Failed to export tokenizer model", source_model)
                 set_rt_info(tmpdirname, 'openvino_tokenizer.xml', 'tokenizer_config.json')
