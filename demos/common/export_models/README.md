@@ -4,6 +4,8 @@ This script automates exporting models from Hugging Faces hub or fine-tuned in P
 In one step it prepares a complete set of resources in the models repository for a supported GenAI use case.
 
 ```bash
+git clone https://github.com/openvinotoolkit/model_server
+cd model_server/demos/common/export_models
 pip install -q -r requirements.txt
 python export_model.py --help
 usage: export_model.py [-h] {text_generation,embeddings,rerank} ...

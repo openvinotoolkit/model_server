@@ -63,22 +63,6 @@ The default configuration of the `LLMExecutor` should work in most cases but the
 Note that the `models_path` parameter in the graph file can be an absolute path or relative to the `base_path` from `config.json`.
 Check the [LLM calculator documentation](../../docs/llm/reference.md) to learn about configuration options.
 
-## Server configuration
-Prepare config.json:
-```bash
-cat config.json
-{
-    "model_config_list": [],
-    "mediapipe_config_list": [
-        {
-            "name": "meta-llama/Meta-Llama-3-8B-Instruct",
-            "base_path": "Meta-Llama-3-8B-Instruct"
-        }
-    ]
-}
-```
-
-
 ## Start-up
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
@@ -88,8 +72,6 @@ to `docker run` command, use the image with GPU support and make sure you copy t
 They can be applied using the export command like below:
 `python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --block_size 16 --cache_size 2 --config_file_path models/config.json --model_repository_path models`
 Make sure the export model quantization level and cache size fit to the GPU memory.
-```
-
 
 Wait for the model to load. You can check the status with a simple command:
 ```bash
