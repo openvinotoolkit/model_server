@@ -38,6 +38,7 @@
 #include "opencv2/opencv.hpp"
 #include "ov_utils.hpp"
 #include "rapidjson/document.h"
+#include "test_http_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

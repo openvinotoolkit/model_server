@@ -40,6 +40,7 @@
 #include "mediapipe/framework/calculator_runner.h"
 #pragma GCC diagnostic pop
 
+#include "test_http_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

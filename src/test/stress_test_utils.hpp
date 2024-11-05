@@ -1355,7 +1355,7 @@ public:
             std::back_inserter(futureStopSignals),
             [](auto& p) { return p.get_future(); });
         std::unordered_map<StatusCode, std::atomic<uint64_t>> createPipelineRetCodesCounters;
-        for (uint32_t i = 0; i != static_cast<uint>(StatusCode::STATUS_CODE_END); ++i) {
+        for (uint32_t i = 0; i != static_cast<uint32_t>(StatusCode::STATUS_CODE_END); ++i) {
             createPipelineRetCodesCounters[static_cast<StatusCode>(i)] = 0;
         }
         // create worker threads
@@ -1393,16 +1393,16 @@ public:
         std::for_each(workerThreads.begin(), workerThreads.end(), [](auto& t) { t->join(); });
 
         for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
-            SPDLOG_TRACE("Create:[{}]={} -- {}", static_cast<uint>(retCode), counter, ovms::Status(retCode).string());
+            SPDLOG_TRACE("Create:[{}]={} -- {}", static_cast<uint32_t>(retCode), counter, ovms::Status(retCode).string());
             if (requiredLoadResults.find(retCode) != requiredLoadResults.end()) {
-                EXPECT_GT(counter, 0) << static_cast<uint>(retCode) << ":" << ovms::Status(retCode).string() << " did not occur. This may indicate fail or fail in test setup";
+                EXPECT_GT(counter, 0) << static_cast<uint32_t>(retCode) << ":" << ovms::Status(retCode).string() << " did not occur. This may indicate fail or fail in test setup";
                 continue;
             }
             if (counter == 0) {
                 continue;
             }
             EXPECT_TRUE(allowedLoadResults.find(retCode) != allowedLoadResults.end()) << "Ret code:"
-                                                                                      << static_cast<uint>(retCode) << " message: " << ovms::Status(retCode).string()
+                                                                                      << static_cast<uint32_t>(retCode) << " message: " << ovms::Status(retCode).string()
                                                                                       << " was not allowed in test but occurred during load";
         }
     }
@@ -1755,7 +1755,7 @@ public:
         }
         for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
             if (counter > 0) {
-                SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint>(retCode), ovms::Status(retCode).string(), counter);
+                SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), counter);
             }
         }
         EXPECT_GT(stressIterationsCounter, 0) << "Reaching 0 means that we might not test enough \"after config change\" operation was applied";
@@ -1934,7 +1934,7 @@ public:
             }
             for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
                 if (counter > 0) {
-                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint>(retCode), ovms::Status(retCode).string(), counter);
+                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), counter);
                 }
             }
 
@@ -2022,7 +2022,7 @@ public:
             }
             for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
                 if (counter > 0) {
-                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint>(retCode), ovms::Status(retCode).string(), counter);
+                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), counter);
                 }
             }
 
@@ -2082,7 +2082,7 @@ public:
             }
             for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
                 if (counter > 0) {
-                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint>(retCode), ovms::Status(retCode).string(), counter);
+                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), counter);
                 }
             }
 
