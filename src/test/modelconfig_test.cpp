@@ -24,7 +24,6 @@
 
 #include "../modelconfig.hpp"
 #include "../status.hpp"
-#include "test_utils.hpp"
 
 using namespace testing;
 using ::testing::UnorderedElementsAre;

@@ -20,7 +20,7 @@
 #include <regex>
 #include <thread>
 
-#include <spdlog/spdlog.h>
+#include "logging.hpp"
 // TODO: Write windows/linux specific status codes.
 #ifdef __linux__
 #include <sysexits.h>
