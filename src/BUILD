@@ -1600,7 +1600,7 @@ cc_test(
         "test/model_test.cpp",
         "test/model_version_policy_test.cpp",
         "test/modelconfig_test.cpp",
-        "test/modelinstance_test.cpp", # http
+        "test/modelinstance_test.cpp",
         "test/modelmanager_test.cpp",
         "test/modelversionstatus_test.cpp",
         "test/node_library_manager_test.cpp",
@@ -1837,7 +1837,7 @@ cc_library(
         ],
     data = [
     ],
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
     deps = [
         "//src:ovms_lib",
         "@com_google_googletest//:gtest",
