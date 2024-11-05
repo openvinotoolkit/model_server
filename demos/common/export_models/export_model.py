@@ -46,7 +46,7 @@ parser_text.add_argument('--max_num_seqs', default=None, help='256 by default. T
 parser_text.add_argument('--cache_size', default=10, type=int, help='cache size in GB', dest='cache_size')
 parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
 add_common_arguments(parser_embeddings)
-parser_embeddings.add_argument('--skip_normalize', default=True, action='store_false', help='Normalize the embeddings.', dest='normalize')
+parser_embeddings.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
 parser_embeddings.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_embeddings.add_argument('--version', default=1, type=int, help='version of the model', dest='version')
 
@@ -207,9 +207,9 @@ def set_rt_info(model_folder_path, model_filename, config_filename):
         config_data = json.load(config_file)
         for key, value in config_data.items():
           try:
-              model.set_rt_info(value, ['config', key])
+              model.set_rt_info(value, ['model_info', key])
           except Exception as e:
-              model.set_rt_info(str(value), ['config', key])
+              model.set_rt_info(str(value), ['model_info', key])
     temp_model_name = model_filename.replace('.xml', '_temp.xml')
     ov.save_model(model, os.path.join(model_folder_path, temp_model_name))
     shutil.move(os.path.join(model_folder_path, temp_model_name), os.path.join(model_folder_path, model_filename))
@@ -264,13 +264,13 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path):
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
-            print("OV model is source folder. Skipping conversion.")
-            os.makedirs(os.path.join(model_repository_path, model_name, 'embeddings', version), exist_ok=True)
-            os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
-            shutil.move(os.path.join(source_model, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
-            shutil.move(os.path.join(source_model, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
-            shutil.move(os.path.join(source_model, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.xml'))
-            shutil.move(os.path.join(source_model, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.bin'))
+        print("OV model is source folder. Skipping conversion.")
+        os.makedirs(os.path.join(model_repository_path, model_name, 'embeddings', version), exist_ok=True)
+        os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
+        shutil.move(os.path.join(source_model, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
+        shutil.move(os.path.join(source_model, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
+        shutil.move(os.path.join(source_model, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.xml'))
+        shutil.move(os.path.join(source_model, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.bin'))
     else: # assume HF model name
         with tempfile.TemporaryDirectory() as tmpdirname:
             embeddings_path = os.path.join(model_repository_path, model_name,'embeddings', version)
@@ -284,7 +284,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
                 shutil.move(os.path.join(tmpdirname, 'openvino_model.xml'), os.path.join(embeddings_path, 'model.xml'))
                 shutil.move(os.path.join(tmpdirname, 'openvino_model.bin'), os.path.join(embeddings_path, 'model.bin'))
             tokenizer_path = os.path.join(model_repository_path, model_name,'tokenizer', version)
-            print("Exporting tokenizer to ",tokenizer_path)
+            print("Exporting tokenizer to ", tokenizer_path)
             if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
                 convert_tokenizer_command = "convert_tokenizer -o {} {}".format(tmpdirname, source_model) 
                 if (os.system(convert_tokenizer_command)):
@@ -303,18 +303,18 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
     with open(os.path.join(model_repository_path, model_name, 'subconfig.json'), 'w') as f:
         f.write(subconfig_content)
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
 def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path):
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
-            print("OV model is source folder. Skipping conversion.")
-            os.makedirs(os.path.join(model_repository_path, model_name, 'rerank', version), exist_ok=True)
-            os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
-            shutil.move(os.path.join(source_model, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
-            shutil.move(os.path.join(source_model, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
-            shutil.move(os.path.join(source_model, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.xml'))
-            shutil.move(os.path.join(source_model, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.bin'))
+        print("OV model is source folder. Skipping conversion.")
+        os.makedirs(os.path.join(model_repository_path, model_name, 'rerank', version), exist_ok=True)
+        os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
+        shutil.move(os.path.join(source_model, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
+        shutil.move(os.path.join(source_model, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
+        shutil.move(os.path.join(source_model, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.xml'))
+        shutil.move(os.path.join(source_model, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.bin'))
     else: # assume HF model name
         with tempfile.TemporaryDirectory() as tmpdirname:
             embeddings_path = os.path.join(model_repository_path, model_name,'rerank', version)
