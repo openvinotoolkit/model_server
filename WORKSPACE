@@ -441,14 +441,8 @@ load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cp
 prometheus_cpp_repositories()
 
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
-load("@mediapipe//third_party/model_api:model_api.bzl", "model_api_repository")
-model_api_repository(name="_model-api")
-new_git_repository(
-    name = "model_api",
-    remote = "https:///github.com/openvinotoolkit/model_api/",
-    build_file = "@_model-api//:BUILD",
-    commit = "eb9fcfb1e1eebc047ff144707f76203b132e1aa6" # master Jun 24 15:02:17 2024 [cpp] Fix num classes check
-)
+load("@mediapipe//third_party/model_api:model_api.bzl", "workspace_model_api")
+workspace_model_api()
 
 new_local_repository(
     name = "mediapipe_calculators",

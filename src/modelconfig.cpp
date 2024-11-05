@@ -26,7 +26,6 @@
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include <spdlog/spdlog.h>
 
 #include "filesystem.hpp"
 #include "json_parser.hpp"
