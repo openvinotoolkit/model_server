@@ -19,12 +19,12 @@ That ensures faster initialization time, better performance and lower memory con
 
 Install python dependencies for the conversion script:
 ```bash
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/export-models-script/demos/common/export_models/requirements.txt
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 ```
 
 Run optimum-cli to download and quantize the model:
 ```bash
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/export-models-script/demos/common/export_models/export_model.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py
 mkdir models
 python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8 --config_file_path models/config.json --model_repository_path models 
 ```

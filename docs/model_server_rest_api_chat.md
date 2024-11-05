@@ -155,10 +155,11 @@ response = client.completions.create(
 
 ## References
 
+[LLM quick start guide](./llm/quickstart.md)
+
 [End to end demo with LLM model serving over OpenAI API](../demos/continuous_batching/README.md)
 
 [Code snippets](./clients_genai.md)
 
 [LLM calculator](./llm/reference.md#llm-calculator)
 
-[Developer guide for writing custom calculators with REST API extension](./mediapipe.md)

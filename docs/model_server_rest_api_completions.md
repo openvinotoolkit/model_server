@@ -133,6 +133,8 @@ response = client.completions.create(
 
 ## References
 
+[LLM quick start guide](./llm/quickstart.md)
+
 [End to end demo with LLM model serving over OpenAI API](../demos/continuous_batching/README.md)
 
 [Code snippets](./clients_genai.md)

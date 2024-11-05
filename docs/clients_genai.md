@@ -10,9 +10,6 @@ Chat completion API <ovms_docs_rest_api_chat>
 Completions API <ovms_docs_rest_api_completion>
 Embeddings API <ovms_docs_rest_api_embeddings>
 Reranking API <ovms_docs_rest_api_rerank>
-Demo - text generation<ovms_demos_continuous_batching>
-Demo - text embeddings <ovms_demos_embeddings>
-Demo - reranking <ovms_demos_rerank>
 ```
 ## Introduction
 Beside Tensorflow Serving API (`/v1`) and KServe API (`/v2`) frontends, the model server supports a range of endpoints for generative use cases (`v3`). They are extendible using MediaPipe graphs.
@@ -77,6 +74,8 @@ curl http://localhost:8000/v3/chat/completions \
 :::
 ::::
 
+Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text generation](../demos/continuous_batching/README.md).
+
 ### Request completions with unary calls
 
 ::::{tab-set}
@@ -113,7 +112,7 @@ curl http://localhost:8000/v3/completions \
 ```
 :::
 ::::
-
+Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text generation](../demos/continuous_batching/README.md).
 
 ### Request chat completions with streaming
 
@@ -138,6 +137,7 @@ for chunk in stream:
 ```
 :::
 ::::
+Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text generation](../demos/continuous_batching/README.md).
 
 ### Request completions with streaming
 
@@ -162,6 +162,7 @@ for chunk in stream:
 ```
 :::
 ::::
+Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text generation](../demos/continuous_batching/README.md).
 
 ### Text embeddings
 
@@ -198,7 +199,7 @@ curl http://localhost:8000/v3/embeddings \
 ```
 :::
 ::::
-
+Check [text embeddings end to end demo](../demos/embeddings/README.md).
 
 ## Cohere Python Client
 
@@ -245,3 +246,4 @@ curl http://localhost:8000/v3/rerank \
 ```
 :::
 ::::
+Check [documents reranking end to end demo](../demos/rerank/README.md).
