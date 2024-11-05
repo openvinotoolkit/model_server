@@ -360,7 +360,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, InputIterator, Sha
         code = StatusCode::INVALID_MISSING_INPUT;
     }
     if (choice == ValidationChoice::OUTPUT) {
-        ss << "Required output: ";
+        ss << "Optional output: ";
         code = StatusCode::INVALID_MISSING_OUTPUT;
     }
     ss << name;

@@ -118,7 +118,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "17ac06fb181c422f7ae9e83a609b8fc6f775f03c", # Fix adapter constructor (#94)
+    commit = "3f751211411496043d9aa899e789cf638c447185", # Enable no-copy API in Model API OVMS Adapter to optimize Embedding endpoint (#92)
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -441,14 +441,8 @@ load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cp
 prometheus_cpp_repositories()
 
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
-load("@mediapipe//third_party/model_api:model_api.bzl", "model_api_repository")
-model_api_repository(name="_model-api")
-new_git_repository(
-    name = "model_api",
-    remote = "https:///github.com/openvinotoolkit/model_api/",
-    build_file = "@_model-api//:BUILD",
-    commit = "eb9fcfb1e1eebc047ff144707f76203b132e1aa6" # master Jun 24 15:02:17 2024 [cpp] Fix num classes check
-)
+load("@mediapipe//third_party/model_api:model_api.bzl", "workspace_model_api")
+workspace_model_api()
 
 new_local_repository(
     name = "mediapipe_calculators",

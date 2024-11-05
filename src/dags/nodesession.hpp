@@ -43,7 +43,6 @@ class NodeSession {
 protected:
     std::unique_ptr<Timer<TIMER_END>> timer;
     std::unique_ptr<NodeInputHandler> inputHandler;
-    std::unique_ptr<NodeOutputHandler> outputHandler;
 
 public:
     NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
