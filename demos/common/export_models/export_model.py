@@ -25,11 +25,11 @@ import openvino as ov
 
 def add_common_arguments(parser):
     parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
-    parser.add_argument('--source_model', required=True, help='HF model name or path to the local folder with pytorch or OpenVINO model', dest='source_model')
+    parser.add_argument('--source_model', required=True, help='HF model name or path to the local folder with PyTorch or OpenVINO model', dest='source_model')
     parser.add_argument('--model_name', required=False, default=None, help='Model name that should be used in the deployment. Equal to source_name if HF model name is used', dest='model_name')
     parser.add_argument('--weight-format', default='int8', help='precision of the exported model', dest='precision')
     parser.add_argument('--config_file_path', default='config.json', help='path to the config file', dest='config_file_path')
-    parser.add_argument('--overwrite_models', default=False, action='store_true', help='version of the model', dest='overwrite_models')
+    parser.add_argument('--overwrite_models', default=False, action='store_true', help='Overwrite the model if it already exists in the models repository', dest='overwrite_models')
     parser.add_argument('--target_device', default="CPU", help='CPU or GPU, default is CPU', dest='target_device')
 
 parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS models repository including all configuration for deployments')

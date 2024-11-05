@@ -1,11 +1,11 @@
 # Exporting GEN AI models for deployments in OpenVINO Model Server
 
-This script automates exporting models from Hugging Faces hub or fine-tunned in Pytorch format to the models repository for deployment for the model serving.
+This script automates exporting models from Hugging Faces hub or fine-tuned in PyTorch format to the models repository for deployment for the model serving.
 In one step it prepares a complete set of resources in the models repository for a supported GenAI use case.
 
 ```bash
-pip install -q -r demos/common/export_models/requirements.txt
-python demos/common/export_models/export_model.py --help
+pip install -q -r requirements.txt
+python export_model.py --help
 usage: export_model.py [-h] {text_generation,embeddings,rerank} ...
 
 Export Hugging face models to OVMS models repository including all configuration for deployments
@@ -37,7 +37,7 @@ options:
                         precision of the exported model
   --config_file_path CONFIG_FILE_PATH
                         path to the config file
-  --overwrite_models    version of the model
+  --overwrite_models    Overwrite the model if it already exists in the models repository
   --kv_cache_precision {u8}
                         u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.
   --block_size BLOCK_SIZE
