@@ -23,8 +23,6 @@
 #include <sstream>
 #include <vector>
 
-#include <spdlog/spdlog.h>
-
 #include "logging.hpp"
 #include "profiler.hpp"
 #include "status.hpp"

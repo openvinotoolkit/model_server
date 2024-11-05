@@ -922,7 +922,7 @@ TEST(MetricsManyOps, MultipleThreads) {
     // Parallel execution
     const int numberOfOperations = 1000;
     for (int i = 0; i < numberOfWorkers; i++)
-        workers.emplace_back(std::make_unique<std::thread>([this, i, &signals, &counterMetrics, &gaugeMetrics, &histogramMetrics]() {
+        workers.emplace_back(std::make_unique<std::thread>([this, i, &numberOfOperations, &signals, &counterMetrics, &gaugeMetrics, &histogramMetrics]() {
             signals[i].get_future().get();
             for (int j = 0; j < numberOfOperations; j++) {
                 for (auto& metric : counterMetrics)

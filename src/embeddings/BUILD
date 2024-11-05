@@ -49,7 +49,7 @@ cc_library(
         "//src:httppayload",
         "//src:libovmslogging",
         "//src:libovmsprofiler",
-	"embeddings_calculator_cc_proto",
+        "embeddings_calculator_cc_proto",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,

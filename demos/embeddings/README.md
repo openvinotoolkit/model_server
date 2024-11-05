@@ -16,55 +16,55 @@ It will create an image called `openvino/model_server:latest`.
 
 ## Model preparation
 > **Note** Python 3.9 or higher is needed for that step
+> 
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
-LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Install python dependencies for the conversion script:
 ```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
-pip3 install -U --pre optimum-intel@git+https://github.com/huggingface/optimum-intel.git  openvino-tokenizers[transformers]==2024.5.* openvino==2024.5.* nncf>=2.11.0 sentence_transformers==3.1.1 openai "transformers<4.45" einops
+pip3 install -U -r demos/common/export_models/requirements.txt
 ```
 
 Run optimum-cli to download and quantize the model:
 ```bash
-cd demos/embeddings
-convert_tokenizer --not-add-special-tokens -o models/gte-large-en-v1.5-tokenizer/1 Alibaba-NLP/gte-large-en-v1.5
-optimum-cli export openvino --disable-convert-tokenizer --model Alibaba-NLP/gte-large-en-v1.5 --task feature-extraction --weight-format int8 --trust-remote-code --library sentence_transformers  models/gte-large-en-v1.5-embeddings/1
-python add_rt_info.py --model_path models/gte-large-en-v1.5-tokenizer/1/openvino_tokenizer.xml --config_path models/gte-large-en-v1.5-embeddings/1/tokenizer_config.json
-python add_rt_info.py --model_path models/gte-large-en-v1.5-embeddings/1/openvino_model.xml --config_path models/gte-large-en-v1.5-embeddings/1/config.json
-rm models/gte-large-en-v1.5-embeddings/1/*.json models/gte-large-en-v1.5-embeddings/1/vocab.txt 
+mkdir -p models
+python demos/common/export_models/export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config.json
 ```
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
-
 You should have a model folder like below:
 ```bash
-tree models/
-models/
-├── graph.pbtxt
-├── gte-large-en-v1.5-embeddings
-│   └── 1
-│       ├── openvino_model.bin
-│       └── openvino_model.xml
-├── gte-large-en-v1.5-tokenizer
-│   └── 1
-│       ├── openvino_tokenizer.bin
-│       └── openvino_tokenizer.xml
-└── subconfig.json
+tree models
+models
+├── Alibaba-NLP
+│   └── gte-large-en-v1.5
+│       ├── embeddings
+│       │   └── 1
+│       │       ├── model.bin
+│       │       └── model.xml
+│       ├── graph.pbtxt
+│       ├── subconfig.json
+│       └── tokenizer
+│           └── 1
+│               ├── model.bin
+│               └── model.xml
+└── config.json
 
 ```
-> **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder. The models can be also stored on the cloud storage like s3, gcs or azure storage.
+> **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder.
+> In case you trained the pytorch model it can be exported like below:
+> `python demo/common/export_models/export_model.py embeddings --source_model <pytorch model> --model_name Alibaba-NLP/gte-large-en-v1.5 --precision int8 --config_file_path models/config.json --version 2`
 
 > **Note** Check for other tested models in script `export_all_models.sh`.
 
-The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. 
-Runtime configuration for both models can be tuned in `subconfig.json` file. 
+The default configuration of the `EmbeddingsCalculator` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. Runtime configuration for both models can be tuned in `subconfig.json` file. They can be set automatically via export parameters in the `export_model.py` script.
+For example:
+`python demo/common/export_models/export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --precision int8 --num_streams 2 --skip_normalize --config_file_path models/config.json`
 
 
 ## Server configuration
 Prepare config.json:
 ```bash
-cat config.json
+cat models/config.json
 {
     "model_config_list": [],
     "mediapipe_config_list": [
@@ -79,10 +79,10 @@ cat config.json
 
 ## Start-up
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
 In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
-to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU. 
+to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU or export it with `task_parmaters='{"target_device":"GPU"}'`. 
 Also make sure the export model quantization level and cache size fit to the GPU memory.
 
 

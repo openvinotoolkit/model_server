@@ -87,7 +87,7 @@ absl::Status RerankHandler::parseRequest() {
     }
     // top_n: int; optional
     it = doc.FindMember("top_n");
-    if (it != doc.MemberEnd()) {
+    if ((it != doc.MemberEnd()) && (!it->value.IsNull())) {
         if (!it->value.IsInt())
             return absl::InvalidArgumentError("top_n accepts integer values");
         request.topN = it->value.GetInt();
@@ -100,7 +100,7 @@ absl::Status RerankHandler::parseRequest() {
     }
     // rank_fields: list of strings; optional
     it = doc.FindMember("rank_fields");
-    if (it != doc.MemberEnd()) {
+    if ((it != doc.MemberEnd()) && !(it->value.IsNull())) {
         if (!it->value.IsArray()) {
             return absl::InvalidArgumentError("rank_fields is not an array");
         } else {
@@ -115,7 +115,7 @@ absl::Status RerankHandler::parseRequest() {
     }
     // return_documents: boolean; optional
     it = doc.FindMember("return_documents");
-    if (it != doc.MemberEnd()) {
+    if ((it != doc.MemberEnd()) && !(it->value.IsNull())) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("return_documents accepts boolean values");
         request.returnDocuments = it->value.GetBool();
@@ -123,7 +123,7 @@ absl::Status RerankHandler::parseRequest() {
 
     // max_chunks_per_doc: int; optional
     it = doc.FindMember("max_chunks_per_doc");
-    if (it != doc.MemberEnd()) {
+    if ((it != doc.MemberEnd()) && !(it->value.IsNull())) {
         if (!it->value.IsInt())
             return absl::InvalidArgumentError("max_chunks_per_doc accepts integer values");
         request.maxChunksPerDoc = it->value.GetInt();
