@@ -187,4 +187,104 @@ std::optional<bool> RerankHandler::getReturnDocuments() const { return request.r
 std::optional<std::vector<std::string>> RerankHandler::getRankFields() const { return request.rankFields; }
 std::optional<int> RerankHandler::getMaxChunksPerDoc() const { return request.maxChunksPerDoc; }
 
+absl::Status chunkDocuments(
+    const ov::Tensor& in_input_ids, const ov::Tensor& in_attention_mask,
+    ov::Tensor& out_input_ids, ov::Tensor& out_attention_mask,
+    std::vector<size_t>& chunk_mapping, size_t max_tokens_per_chunk,
+    int64_t pad_token) {
+
+    if (max_tokens_per_chunk == 0) {
+        return absl::InvalidArgumentError("no space left for chunks");
+    }
+
+    if (in_input_ids.get_shape() != in_attention_mask.get_shape()) {
+        return absl::InvalidArgumentError("input_ids and attention_mask shapes do not match");
+    }
+
+    if (in_input_ids.get_shape().size() != 2) {
+        return absl::InvalidArgumentError("input_ids and attention_mask should be 2D tensors");
+    }
+
+    if (in_input_ids.get_element_type() != ov::element::i64) {
+        return absl::InvalidArgumentError("input_ids and attention_mask should be int64 tensors");
+    }
+
+    if (in_input_ids.get_element_type() != in_attention_mask.get_element_type()) {
+        return absl::InvalidArgumentError("input_ids and attention_mask should have the same element type");
+    }
+
+    size_t tokens_count_of_longest_document = in_input_ids.get_shape()[1];
+    size_t batch_size = in_input_ids.get_shape()[0];
+
+    if (tokens_count_of_longest_document <= max_tokens_per_chunk) {
+        out_input_ids = in_input_ids;
+        out_attention_mask = in_attention_mask;
+        chunk_mapping.resize(batch_size);
+        std::iota(chunk_mapping.begin(), chunk_mapping.end(), 0);
+        return absl::OkStatus();
+    }
+
+    size_t new_tokens_count_of_longest_document = 0;
+    for (size_t i = 0; i < batch_size; i++) {
+        int64_t* in_attention_mask_data = reinterpret_cast<int64_t*>(in_attention_mask.data()) + i * tokens_count_of_longest_document;
+        auto it = std::find(in_attention_mask_data, in_attention_mask_data + tokens_count_of_longest_document, 0);
+        size_t token_count = (it != in_attention_mask_data + tokens_count_of_longest_document) ? std::distance(in_attention_mask_data, it) : tokens_count_of_longest_document;
+        if (token_count > max_tokens_per_chunk) {
+            size_t number_of_new_chunks = (token_count + max_tokens_per_chunk - 1) / max_tokens_per_chunk;
+            for (size_t j = 0; j < number_of_new_chunks; j++) {
+                chunk_mapping.push_back(i);
+            }
+            new_tokens_count_of_longest_document = std::max(max_tokens_per_chunk, new_tokens_count_of_longest_document);
+        } else {
+            chunk_mapping.push_back(i);
+            new_tokens_count_of_longest_document = std::max(token_count, new_tokens_count_of_longest_document);
+        }
+    }
+
+    size_t new_batch_size = chunk_mapping.size();
+
+    if (new_batch_size != batch_size) {
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Chunking required, initial batch size: {}, final batch size: {}", batch_size, new_batch_size);
+    }
+
+    out_input_ids = ov::Tensor(ov::element::i64, ov::Shape{new_batch_size, new_tokens_count_of_longest_document});
+    out_attention_mask = ov::Tensor(ov::element::i64, ov::Shape{new_batch_size, new_tokens_count_of_longest_document});
+
+    size_t new_i = 0;
+    for (size_t i = 0; i < batch_size; i++) {
+        int64_t* in_input_ids_data = reinterpret_cast<int64_t*>(in_input_ids.data()) + i * tokens_count_of_longest_document;
+        int64_t* in_attention_mask_data = reinterpret_cast<int64_t*>(in_attention_mask.data()) + i * tokens_count_of_longest_document;
+        auto it = std::find(in_attention_mask_data, in_attention_mask_data + tokens_count_of_longest_document, 0);
+        size_t token_count = (it != in_attention_mask_data + tokens_count_of_longest_document) ? std::distance(in_attention_mask_data, it) : tokens_count_of_longest_document;
+        if (token_count > max_tokens_per_chunk) {
+            size_t number_of_new_chunks = (token_count + max_tokens_per_chunk - 1) / max_tokens_per_chunk;
+            for (size_t j = 0; j < number_of_new_chunks; j++) {
+                size_t start = j * max_tokens_per_chunk;
+                size_t end = std::min(start + max_tokens_per_chunk, token_count);
+                size_t new_chunk_size = end - start;
+
+                int64_t* new_doc_input_ids_data = reinterpret_cast<int64_t*>(out_input_ids.data()) + new_i * new_tokens_count_of_longest_document;
+                int64_t* new_doc_attention_mask_data = reinterpret_cast<int64_t*>(out_attention_mask.data()) + new_i * new_tokens_count_of_longest_document;
+
+                std::fill(new_doc_input_ids_data, new_doc_input_ids_data + new_tokens_count_of_longest_document, pad_token);
+                std::copy(in_input_ids_data + start, in_input_ids_data + start + new_chunk_size, new_doc_input_ids_data);
+                std::fill(new_doc_attention_mask_data, new_doc_attention_mask_data + new_tokens_count_of_longest_document, 0);
+                std::copy(in_attention_mask_data + start, in_attention_mask_data + start + new_chunk_size, new_doc_attention_mask_data);
+                new_i++;
+            }
+        } else {
+            int64_t* new_doc_input_ids_data = reinterpret_cast<int64_t*>(out_input_ids.data()) + new_i * new_tokens_count_of_longest_document;
+            int64_t* new_doc_attention_mask_data = reinterpret_cast<int64_t*>(out_attention_mask.data()) + new_i * new_tokens_count_of_longest_document;
+
+            std::fill(new_doc_input_ids_data, new_doc_input_ids_data + new_tokens_count_of_longest_document, pad_token);
+            std::copy(in_input_ids_data, in_input_ids_data + token_count, new_doc_input_ids_data);
+            std::fill(new_doc_attention_mask_data, new_doc_attention_mask_data + new_tokens_count_of_longest_document, 0);
+            std::copy(in_attention_mask_data, in_attention_mask_data + token_count, new_doc_attention_mask_data);
+            new_i++;
+        }
+    }
+
+    return absl::OkStatus();
+}
+
 }  // namespace ovms

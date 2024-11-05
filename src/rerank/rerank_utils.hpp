@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <openvino/openvino.hpp>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 
@@ -67,4 +68,11 @@ public:
     absl::Status parseRequest();
     absl::Status parseResponse(StringBuffer& buffer, std::vector<float>& scores);
 };
+
+absl::Status chunkDocuments(
+    const ov::Tensor& in_input_ids, const ov::Tensor& in_attention_mask,
+    ov::Tensor& out_input_ids, ov::Tensor& out_attention_mask,
+    std::vector<size_t>& chunk_mapping, size_t max_tokens_per_chunk,
+    int64_t pad_token);
+
 }  // namespace ovms

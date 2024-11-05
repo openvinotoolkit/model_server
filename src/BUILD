@@ -1668,6 +1668,7 @@ cc_test(
             "//:not_disable_mediapipe": [
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/rerank_handler_test.cpp",
+                "test/rerank_chunking_test.cpp",
                 "test/streaming_test.cpp", # Mediapipe enabled
                 "test/mediapipe_validation_test.cpp", # Mediapipe enabled
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
