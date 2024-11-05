@@ -68,6 +68,13 @@ def create_config_settings():
         name = "not_fuzzer_build",
         negate = ":fuzzer_build",
     )
+
+    selects.config_setting_group(
+        name = "is_windows_or_mediapipe_is_disabled_no_http",
+        match_any = ["//src:windows", "//:disable_mediapipe"]
+    )
+
+  
 ###############################
 # compilation settings
 ###############################

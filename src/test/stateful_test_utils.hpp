@@ -26,6 +26,7 @@
 
 #include "../sequence.hpp"
 #include "../sequence_manager.hpp"
+#include "../status.hpp"
 #include "../tensorinfo.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"

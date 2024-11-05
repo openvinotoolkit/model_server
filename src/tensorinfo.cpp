@@ -22,7 +22,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "stringutils.hpp"
 

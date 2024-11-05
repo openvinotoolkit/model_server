@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
 
 #include "absl/status/status.h"
 
@@ -64,5 +65,6 @@ public:
     std::optional<int> getMaxChunksPerDoc() const;
 
     absl::Status parseRequest();
+    absl::Status parseResponse(StringBuffer& buffer, std::vector<float>& scores);
 };
 }  // namespace ovms

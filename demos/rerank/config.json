@@ -1,0 +1,22 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "tokenizer",
+                "base_path": "/workspace/models/BAAI/bge-reranker-large-tokenizer"
+            }
+        },
+        {
+            "config": {
+                "name": "rerank_model",
+                "base_path": "/workspace/models/BAAI/bge-reranker-large-rerank"
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+        {
+            "name": "rerank",
+            "graph_path": "/workspace/models/graph.pbtxt"
+        }
+    ]
+}

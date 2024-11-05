@@ -360,7 +360,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, InputIterator, Sha
         code = StatusCode::INVALID_MISSING_INPUT;
     }
     if (choice == ValidationChoice::OUTPUT) {
-        ss << "Required output: ";
+        ss << "Optional output: ";
         code = StatusCode::INVALID_MISSING_OUTPUT;
     }
     ss << name;
@@ -369,7 +369,6 @@ Status RequestValidator<RequestType, InputTensorType, choice, InputIterator, Sha
     return Status(code, details);
 }
 
-template <>
 template <typename RequestType, typename InputTensorType, ValidationChoice choice, typename InputTensorIteratorType, typename ShapeType>
 Status RequestValidator<RequestType, InputTensorType, choice, InputTensorIteratorType, ShapeType>::checkIfShapeValuesNegative(const InputTensorType& proto) const {
     RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);

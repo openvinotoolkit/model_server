@@ -1274,11 +1274,11 @@ public:
                 EXPECT_EQ((*servableMetadataRtInfo).at("model_info").as<ov::AnyMap>().at("resolution").as<ov::AnyMap>().at("height").as<std::string>(), "200");
                 EXPECT_EQ((*servableMetadataRtInfo).at("conversion_parameters").as<ov::AnyMap>().at("data_type").as<std::string>(), "float");
                 EXPECT_EQ((*servableMetadataRtInfo).at("optimization").as<std::string>(), "");
-                EXPECT_EQ(5, servableMetadataRtInfo->size());
+                EXPECT_EQ(6, servableMetadataRtInfo->size());
             } else if (servableName == "scalar") {
                 EXPECT_EQ((*servableMetadataRtInfo).at("MO_version").as<std::string>(), "2023.0.0-10926-b4452d56304-releases/2023/0");
                 EXPECT_EQ((*servableMetadataRtInfo).at("conversion_parameters").as<ov::AnyMap>().at("layout").as<std::string>(), "...");
-                EXPECT_EQ(5, servableMetadataRtInfo->size());
+                EXPECT_EQ(6, servableMetadataRtInfo->size());
             } else if (servableName == "pipeline1Dummy") {
                 EXPECT_EQ(0, servableMetadataRtInfo->size());
             }
