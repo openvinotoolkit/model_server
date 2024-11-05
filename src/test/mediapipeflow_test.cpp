@@ -1608,7 +1608,7 @@ public:
             {"layout", "data:HWCN"},
             {"resize_type", "unnatural"},
             {"labels", mockLabels}};
-        ov::AnyMap rtInfo{{"model_info", modelInfo}};
+        ov::AnyMap rtInfo = {{"model_info", modelInfo}};
         return rtInfo;
     }
 };
@@ -1697,7 +1697,9 @@ TEST(Mediapipe, AdapterRTInfo) {
     ov::AnyMap notUsedAnyMap;
     adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
     ov::AnyMap modelConfig = adapter.getModelConfig();
+
     auto checkModelInfo = [](const ov::AnyMap& modelConfig) {
+        std::cout << "Model config size: " << modelConfig.size() << std::endl;
         ASSERT_EQ(modelConfig.size(), 3);
         auto it = modelConfig.find("resize_type");
         ASSERT_NE(modelConfig.end(), it);
@@ -1718,7 +1720,7 @@ TEST(Mediapipe, AdapterRTInfo) {
     const ov::AnyMap* servableMetadataRtInfo;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
     ASSERT_NE(nullptr, servableMetadataRtInfo);
-    checkModelInfo(*servableMetadataRtInfo);
+    checkModelInfo((*servableMetadataRtInfo).at("model_info").as<ov::AnyMap>());
     OVMS_ServableMetadataDelete(servableMetadata);
 }
 
