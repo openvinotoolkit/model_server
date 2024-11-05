@@ -92,6 +92,13 @@ HF reranking: [0.99640983 0.08154089]
 OVMS reranking: [0.9968273 0.0913821]
 ```
 
+## Tested models
+
+```
+BAAI/bge-reranker-large
+BAAI/bge-reranker-v2-m3
+BAAI/bge-reranker-base
+```
 
 ## Integration with Langchain
 
