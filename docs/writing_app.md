@@ -6,7 +6,7 @@ maxdepth: 1
 hidden:
 ---
 
-OpenAI API <ovms_docs_clients_openai>
+Generative AI Use Cases <ovms_docs_clients_genai>
 TensorFlow Serving API <ovms_docs_clients_tfs>
 KServe API <ovms_docs_clients_kfs>
 OpenVINO Model Server C-API <ovms_docs_c_api>
@@ -17,10 +17,12 @@ The APIs are:
 
 * one compatible with TensorFlow Serving,
 * KServe API for inference
-* OpenAPI for text generation.
+* OpenAI API for text generation.
+* OpenAI API for embeddings
+* Cohere API for reranking
 
 Both TFS and KServe APIs work on gRPC and REST interfaces.
-The OpenAI API `chat/completion` endpoint supports REST API calls with and without streamed responses.
+The REST API endpoints for generative use cases support both streamed and unary responses.
 
 Check the following articles to learn more about the supported APIs:
 
@@ -30,8 +32,10 @@ Check the following articles to learn more about the supported APIs:
 - [KServe REST API](./model_server_rest_api_kfs.md)
 - [OpenAI chat completions API](./model_server_rest_api_chat.md)
 - [OpenAI completions API](./model_server_rest_api_completions.md)
+- [OpenAI embeddings API](./model_server_rest_api_embeddings.md)
+- [Cohere rerank API](./model_server_rest_api_rerank.md)
 
 In this section you can find short code samples to interact with OpenVINO Model Server endpoints via:
 - [TensorFlow Serving API](./clients_tfs.md)
 - [KServe API](./clients_kfs.md)
-- [OpenAI API](./clients_openai.md)
+- [Generative AI clients](./clients_genai.md)

@@ -65,10 +65,10 @@ curl http://localhost/v3/chat/completions \
 |-----|----------|----------|----------|---------|-----|
 | model | ✅ | ✅ | ✅ | string (required) | Name of the model to use. From administrator point of view it is the name assigned to a MediaPipe graph configured to schedule generation using desired model.  |
 | stop | ✅ | ✅ | ✅ | string/array of strings (optional) | Up to 4 sequences where the API will stop generating further tokens. If `stream` is set to `false` matched stop string **is not** included in the output by default. If `stream` is set to `true` matched stop string **is** included in the output by default. It can be changed with `include_stop_str_in_output` parameter, but for `stream=true` setting `include_stop_str_in_output=false` is invalid. |
-| stream | ✅ | ✅ | ✅ | bool (optional, default: `false`) | If set to true, partial message deltas will be sent to the client. The generation chunks will be sent as data-only [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#event_stream_format) as they become available, with the stream terminated by a `data: [DONE]` message. [Example Python code](clients_openai.md) |
+| stream | ✅ | ✅ | ✅ | bool (optional, default: `false`) | If set to true, partial message deltas will be sent to the client. The generation chunks will be sent as data-only [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#event_stream_format) as they become available, with the stream terminated by a `data: [DONE]` message. [Example Python code](clients_genai.md) |
 | stream_options | ✅ | ✅ | ✅ | object (optional) | Options for streaming response. Only set this when you set stream: true |
 | stream_options.include_usage | ✅ | ✅ | ✅ | bool (optional) | Streaming option. If set, an additional chunk will be streamed before the data: [DONE] message. The usage field in this chunk shows the token usage statistics for the entire request, and the choices field will always be an empty array. All other chunks will also include a usage field, but with a null value. |
-| messages | ✅ | ✅ | ✅ | array (required) | A list of messages comprising the conversation so far. Each object in the list should contain `role` and `content` - both of string type. [Example Python code](clients_openai.md) |
+| messages | ✅ | ✅ | ✅ | array (required) | A list of messages comprising the conversation so far. Each object in the list should contain `role` and `content` - both of string type. [Example Python code](clients_genai.md) |
 | max_tokens | ✅ | ✅ | ✅ | integer | The maximum number of tokens that can be generated. If not set, the generation will stop once `EOS` token is generated. |
 | ignore_eos | ✅ | ❌ | ✅ | bool (default: `false`) | Whether to ignore the `EOS` token and continue generating tokens after the `EOS` token is generated. If set to `true`, the maximum allowed `max_tokens` value is `4000`. |
 | include_stop_str_in_output | ✅ | ❌ | ✅ | bool (default: `false` if `stream=false`, `true` if `stream=true`) | Whether to include matched stop string in output. Setting it to false when `stream=true` is invalid configuration and will result in error. |
@@ -141,13 +141,25 @@ curl http://localhost/v3/chat/completions \
 - choices.message.function_call
 - choices.logprobs.content
 
+> **NOTE**:
+OpenAI python client supports a limited list of parameters. Those native to OpenVINO Model Server, can be passed inside a generic container parameter `extra_body`. Below is an example how to encapsulated `top_k` value.
+```{code} python
+response = client.completions.create(
+    model=model,
+    messages=[{"role": "user", "content": "hello"}],
+    max_tokens=100,
+    extra_body={"top_k" : 1},
+    stream=False
+)
+```
 
 ## References
 
+[LLM quick start guide](./llm/quickstart.md)
+
 [End to end demo with LLM model serving over OpenAI API](../demos/continuous_batching/README.md)
 
-[Code snippets](./clients_openai.md)
+[Code snippets](./clients_genai.md)
 
 [LLM calculator](./llm/reference.md#llm-calculator)
 
-[Developer guide for writing custom calculators with REST API extension](./mediapipe.md)
