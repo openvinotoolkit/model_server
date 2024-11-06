@@ -17,7 +17,7 @@ Currently supported endpoints are:
 
 OpenAI compatible endpoints:
 - [chat/completions](./model_server_rest_api_chat.md)
-- [completions](./model_server_rest_api_completions.md).
+- [completions](./model_server_rest_api_completions.md)
 - [embeddings](./model_server_rest_api_embeddings.md)
 Cohere Compatible endpoint:
 - [rerank](./model_server_rest_api_rerank.md)
