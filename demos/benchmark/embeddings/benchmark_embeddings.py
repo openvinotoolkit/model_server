@@ -134,11 +134,9 @@ async def get_request(
     documents = documents_all.iter(batch_size=batch_size)
     for request in documents:
         yield request["text"]
-
         if request_rate == float("inf"):
             # If the request rate is infinity, then we don't need to wait.
             continue
-
         # Sample the request interval from the exponential distribution.
         interval = np.random.exponential(1.0 / request_rate)
         # The next request will be sent after the interval.
@@ -150,23 +148,17 @@ async def benchmark(docs, model, api_url, request_rate):
     semaphore = asyncio.Semaphore(100)
     async def limited_request_func(request_func_input, pbar):
         if semaphore is None:
-            return await request_func(request_func_input=request_func_input,
-                                    pbar=pbar)
+            return await request_func(request_func_input=request_func_input, pbar=pbar)
         async with semaphore:
-            return await request_func(request_func_input=request_func_input,
-                                    pbar=pbar)
+            return await request_func(request_func_input=request_func_input, pbar=pbar)
     benchmark_start_time = time.perf_counter()
     tasks: List[asyncio.Task] = []
 
     async for request in get_request(docs, request_rate):
-        request_func_input = RequestFuncInput(model=model,
-                                            documents=request,
-                                            api_url=api_url,
-                                            )
+        request_func_input = RequestFuncInput(model=model, documents=request, api_url=api_url)
         tasks.append(
             asyncio.create_task(
-                limited_request_func(request_func_input=request_func_input,
-                                    pbar=pbar)))
+                limited_request_func(request_func_input=request_func_input, pbar=pbar)))
     outputs: List[RequestFuncOutput] = await asyncio.gather(*tasks)
     benchmark_duration = time.perf_counter() - benchmark_start_time
     pbar.close()
@@ -174,6 +166,7 @@ async def benchmark(docs, model, api_url, request_rate):
     "duration": benchmark_duration,
     "errors": [output.error for output in outputs],
     "latencies": [output.latency for output in outputs],
+    "successes": [output.success for output in outputs],
     }
     return result
 
@@ -182,6 +175,7 @@ benchmark_results = asyncio.run(benchmark(docs=docs, model=args["model"], api_ur
 num_tokens = get_tokens(docs=docs,model=args["model"])
 #print(benchmark_results)
 print("Tokens:",num_tokens)
+print("Success rate: {}%. ({}/{})".format(sum(benchmark_results["successes"])/len(benchmark_results["successes"])*100, sum(benchmark_results["successes"]), len(benchmark_results["successes"])))
 print("Throughput - Tokens per second:",num_tokens / benchmark_results["duration"])
 print("Mean latency: {} ms".format(round(np.mean(benchmark_results["latencies"])*1000),3))
 print("Median latency: {} ms".format(round(np.median(benchmark_results["latencies"])*1000),3))

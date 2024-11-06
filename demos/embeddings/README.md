@@ -162,6 +162,7 @@ python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --d
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 1000/1000 [01:45<00:00,  9.50it/s]
 Tokens: 5000
+Success rate: 100.0%. (1000/1000)
 Throughput - Tokens per second: 47.49318830850219
 Mean latency: 21 ms
 Median latency: 19 ms
@@ -171,6 +172,7 @@ python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --r
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 50/50 [00:21<00:00,  2.32it/s]
 Tokens: 500000
+Success rate: 100.0%. (50/50)
 Throughput - Tokens per second: 23163.97840338802
 Mean latency: 11720 ms
 Median latency: 11825 ms
@@ -180,6 +182,7 @@ python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --r
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 1000/1000 [00:15<00:00, 64.02it/s]
 Tokens: 83208
+Success rate: 100.0%. (1000/1000)
 Throughput - Tokens per second: 5327.261481429372
 Mean latency: 1438 ms
 Median latency: 1465 ms
