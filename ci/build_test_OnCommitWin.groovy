@@ -9,7 +9,7 @@ pipeline {
         stage ("Clean") {
             steps {
                 script{
-                    def output1 = bat(returnStdout: true, script: 'clean_windows.bat ' + env.OVMS_CLEAN_EXPUNGE)
+                    def output1 = bat(returnStdout: true, script: 'clean_windows.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
                 }
             }
         }
