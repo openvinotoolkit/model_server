@@ -90,7 +90,6 @@ async def async_request_embeddings(
             "input": request_func_input.documents,
             "encoding_format": "base64",
         }
-        #print("PAYLOAD:",payload)
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}",
@@ -107,8 +106,6 @@ async def async_request_embeddings(
                             continue
                         chunk_bytes = chunk_bytes.decode("utf-8")
                         data = json.loads(chunk_bytes)
-                        #print("RESPOSE",data)
-                        #output.tokens_len = data["usage"]["total_tokens"]
                         timestamp = time.perf_counter()
                         output.success = True
                         output.latency =  timestamp - st
@@ -116,7 +113,6 @@ async def async_request_embeddings(
                     output.error = response.reason or ""
                     output.success = False
                     print("ERROR",response.reason)
-
 
         except Exception:
             output.success = False
