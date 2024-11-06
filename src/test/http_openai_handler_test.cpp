@@ -32,6 +32,7 @@
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 #pragma GCC diagnostic pop
 
+#include "test_http_utils.hpp"
 #include "test_utils.hpp"
 
 class HttpOpenAIHandlerTest : public ::testing::Test {

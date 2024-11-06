@@ -13,10 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <array>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "../schema.hpp"
+#include "../status.hpp"
 
 TEST(SchemaTest, PipelineConfigMatchingSchema) {
     const char* pipelineConfigMatchingSchema = R"(
@@ -773,9 +776,9 @@ TEST_P(ConfigSchema, DoubledFields) {
     EXPECT_THAT(result.string(), testing::HasSubstr(std::get<SchemaTestCasePart::ERROR_MSG>(GetParam())));
 }
 
-const size_t CONFIGS = 9;
+const uint32_t CONFIGS = 9;
 std::array<SchemaTestCase_t, CONFIGS> DOUBLED_MODEL_CONFIG_KEYS_CONFIGS = {
-    std::tuple("Doubled_ModelConfig", R"(
+    std::tuple(std::string("Doubled_ModelConfig"), std::string(R"(
       {
           "model_config_list": [
               {
@@ -789,9 +792,9 @@ std::array<SchemaTestCase_t, CONFIGS> DOUBLED_MODEL_CONFIG_KEYS_CONFIGS = {
                   }
               }
           ]
-  })",
-        "#/definitions/model_config. Keyword:maxProperties Key: #/model_config_list/0"),
-    std::tuple("Doubled_ModelConfigList", R"(
+  })"),
+        std::string("#/definitions/model_config. Keyword:maxProperties Key: #/model_config_list/0")),
+    std::tuple(std::string("Doubled_ModelConfigList"), std::string(R"(
       {
           "model_config_list": [],
           "model_config_list": [
@@ -802,9 +805,9 @@ std::array<SchemaTestCase_t, CONFIGS> DOUBLED_MODEL_CONFIG_KEYS_CONFIGS = {
                   }
               }
           ]
-  })",
-        "SKIPPED"),
-    std::tuple("Doubled_CustomLoaderConfig", R"(
+  })"),
+        std::string("SKIPPED")),
+    std::tuple(std::string("Doubled_CustomLoaderConfig"), std::string(R"(
       {
           "model_config_list": [],
           "custom_loader_config_list": [
@@ -813,9 +816,9 @@ std::array<SchemaTestCase_t, CONFIGS> DOUBLED_MODEL_CONFIG_KEYS_CONFIGS = {
                  "config":{ "loader_name": "A", "library_path":"B"}
              }
           ]
-  })",
-        "#/definitions/custom_loader_config. Keyword:maxProperties Key: #/custom_loader_config_list/0"),
-    std::tuple("Doubled_ModelConfigVersionPolicyAll", R"(
+  })"),
+        std::string("#/definitions/custom_loader_config. Keyword:maxProperties Key: #/custom_loader_config_list/0")),
+    std::tuple(std::string("Doubled_ModelConfigVersionPolicyAll"), std::string(R"(
       {
           "model_config_list": [
               {
@@ -829,9 +832,9 @@ std::array<SchemaTestCase_t, CONFIGS> DOUBLED_MODEL_CONFIG_KEYS_CONFIGS = {
                   }
               }
           ]
-  })",
-        "#/definitions/model_version_policy"),
-    std::tuple("Doubled_ModelConfigVersionPolicySpecific", R"(
+  })"),
+        std::string("#/definitions/model_version_policy")),
+    std::tuple(std::string("Doubled_ModelConfigVersionPolicySpecific"), std::string(R"(
       {
           "model_config_list": [
               {
@@ -849,9 +852,9 @@ std::array<SchemaTestCase_t, CONFIGS> DOUBLED_MODEL_CONFIG_KEYS_CONFIGS = {
                   }
               }
           ]
-  })",
-        "#/definitions/model_version_policy"),
-    std::tuple("Doubled_ModelConfigVersionPolicySpecificVersions", R"(
+  })"),
+        std::string("#/definitions/model_version_policy")),
+    std::tuple(std::string("Doubled_ModelConfigVersionPolicySpecificVersions"), std::string(R"(
       {
           "model_config_list": [
               {
@@ -867,9 +870,9 @@ std::array<SchemaTestCase_t, CONFIGS> DOUBLED_MODEL_CONFIG_KEYS_CONFIGS = {
                   }
               }
           ]
-  })",
-        "#/definitions/model_version_policy"),
-    std::tuple("Doubled_ModelConfigVersionPolicyLatest", R"(
+  })"),
+        std::string("#/definitions/model_version_policy")),
+    std::tuple(std::string("Doubled_ModelConfigVersionPolicyLatest"), std::string(R"(
       {
           "model_config_list": [
               {
@@ -887,9 +890,9 @@ std::array<SchemaTestCase_t, CONFIGS> DOUBLED_MODEL_CONFIG_KEYS_CONFIGS = {
                   }
               }
           ]
-  })",
-        "#/definitions/model_version_policy"),
-    std::tuple("Doubled_ModelConfigVersionPolicyLatestNumVersions", R"(
+  })"),
+        std::string("#/definitions/model_version_policy")),
+    std::tuple(std::string("Doubled_ModelConfigVersionPolicyLatestNumVersions"), std::string(R"(
       {
           "model_config_list": [
               {
@@ -905,9 +908,9 @@ std::array<SchemaTestCase_t, CONFIGS> DOUBLED_MODEL_CONFIG_KEYS_CONFIGS = {
                   }
               }
           ]
-  })",
-        "#/definitions/model_version_policy"),
-    std::tuple("Doubled_MonitoringMetrics", R"(
+  })"),
+        std::string("#/definitions/model_version_policy")),
+    std::tuple(std::string("Doubled_MonitoringMetrics"), std::string(R"(
       {
           "model_config_list": [],
           "monitoring": {
@@ -918,8 +921,8 @@ std::array<SchemaTestCase_t, CONFIGS> DOUBLED_MODEL_CONFIG_KEYS_CONFIGS = {
                   "enable" : true
               }
           }
-  })",
-        "#/properties/monitoring. Keyword:maxProperties Key: #/monitoring")};
+  })"),
+        std::string("#/properties/monitoring. Keyword:maxProperties Key: #/monitoring"))};
 
 INSTANTIATE_TEST_SUITE_P(Doubled,
     ConfigSchema,

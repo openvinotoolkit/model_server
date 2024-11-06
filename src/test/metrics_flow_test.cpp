@@ -38,6 +38,7 @@
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
+#include "test_http_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

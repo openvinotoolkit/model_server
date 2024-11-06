@@ -92,6 +92,21 @@ COMMON_STATIC_LIBS_COPTS = select({
                     ],
                 })
 
+COMMON_STATIC_TEST_COPTS = select({
+                "//conditions:default": [
+                    "-Wall",
+                    "-Wno-unknown-pragmas",
+                    "-Werror",
+                    "-Isrc",
+                    "-fconcepts", # for gmock related utils
+                    "-fvisibility=hidden",# Needed for pybind targets
+                ],
+                "//src:windows" : [
+                    "-W0",
+                    "-Isrc",
+                    ],
+                })
+
 COMMON_STATIC_LIBS_COPTS_VISIBLE = select({
                 "//conditions:default": [
                     "-Wall",

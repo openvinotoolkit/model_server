@@ -1664,7 +1664,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyBatchSizeAny) {
 
     typename TypeParam::second_type response;
 
-    for (size_t i : {1, 3, 5, 7, 11, 17, 21, 57, 99}) {
+    for (int32_t i : {1, 3, 5, 7, 11, 17, 21, 57, 99}) {
         ASSERT_EQ(this->performInferenceWithShape(response, {i, 10}), ovms::StatusCode::OK);
         this->checkOutputShape(response, {i, 10}, DUMMY_MODEL_OUTPUT_NAME);
     }

@@ -30,7 +30,6 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "nodeinputhandler.hpp"
-#include "nodeoutputhandler.hpp"
 #include "nodestreamidguard.hpp"
 
 namespace ovms {
