@@ -252,9 +252,9 @@ using TFSInterface = std::pair<TFSRequestType, TFSResponseType>;
 using KFSInterface = std::pair<KFSRequest, KFSResponse>;
 using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>;
 
-std::string getWindowsFullPathForSrcTest(std::string& linuxPath);
+std::string getWindowsFullPathForSrcTest(std::string linuxPath);
 std::string getWindowsFullPathForSrcTest(const char* linuxPath);
-std::string getWindowsFullPathForTmp(std::string& linuxPath);
+std::string getWindowsFullPathForTmp(std::string linuxPath);
 std::string getWindowsFullPathForTmp(const char* linuxPath);
 
 #pragma GCC diagnostic push
@@ -752,7 +752,8 @@ protected:
            << "/"
            << std::string(test_info->name());
         const std::string directoryName = ss.str();
-        directoryPath = getWindowsFullPathForTmp("/tmp/" + directoryName);
+        std::string path = "/tmp" + directoryName;
+        directoryPath = getWindowsFullPathForTmp(path);
         std::filesystem::remove_all(directoryPath);
         std::filesystem::create_directories(directoryPath);
     }

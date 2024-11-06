@@ -205,10 +205,10 @@ public:
             std::filesystem::path absolutePath = std::filesystem::absolute(filePath);
             return absolutePath == filePath;
         } catch (const std::exception& e) {
-            SPDLOG_ERROR("Exception during path absolute check for path:", filePath, e.what());
+            SPDLOG_ERROR("Exception during path absolute check for path:", inputPath, e.what());
             return false;
         } catch (...) {
-            SPDLOG_ERROR("Exception during path absolute check for path:", filePath);
+            SPDLOG_ERROR("Exception during path absolute check for path:", inputPath);
             return false;
         }
     }
