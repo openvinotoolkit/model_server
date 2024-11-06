@@ -1264,7 +1264,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenIn
 TEST_F(ModelManager, ConfigReloadingWithWrongInputName) {
     ovms::ModelConfig config;
     config.parseShapeParameter("{\"wrong_input_name\": \"(1,3,224,224)\"}");
-    config.setBasePath("/ovms/src/test/dummy");
+    config.setBasePath(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"));
     auto status = fixtureManager.reloadModelWithVersions(config);
     ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL);
 }

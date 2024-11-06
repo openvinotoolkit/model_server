@@ -998,6 +998,9 @@ void checkBuffers(const T* expected, const T* actual, size_t bufferSize) {
         << readableError(expected, actual, bufferSize / sizeof(T));
 }
 
+std::string getWindowsFullPathForSrcTest(std::string& linuxPath);
+std::string getWindowsFullPathForSrcTest(const char* linuxPath);
+
 #if (MEDIAPIPE_DISABLE == 0)
 class DummyMediapipeGraphDefinition : public ovms::MediapipeGraphDefinition {
 public:

@@ -188,7 +188,7 @@ public:
         } else if (!FileSystem::isLocalFilesystem(givenPath)) {
             // Cloud filesystem
             path = givenPath;
-        } else if (givenPath.size() > 0 && givenPath.at(0) == '/') {
+        } else if (givenPath.size() > 0 && isFullPath(givenPath)) {
             // Full path case
             path = givenPath;
         } else {
@@ -196,6 +196,20 @@ public:
             if (rootDirectoryPath.empty())
                 throw std::logic_error("Using relative path without setting graph directory path.");
             path = rootDirectoryPath + givenPath;
+        }
+    }
+
+    static bool isFullPath(const std::string& inputPath) {
+        std::filesystem::path filePath(inputPath);
+        try {
+            std::filesystem::path absolutePath = std::filesystem::absolute(filePath);
+            return absolutePath == filePath;
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Exception during path absolute check for path:", filePath, e.what());
+            return false;
+        } catch (...) {
+            SPDLOG_ERROR("Exception during path absolute check for path:", filePath);
+            return false;
         }
     }
 

@@ -700,3 +700,30 @@ std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_
         src->getShape(),
         src->getLayout());
 }
+
+std::string getWindowsFullPathForSrcTest(std::string& linuxPath){
+#ifdef __linux__
+    return linuxPath;
+#elif _WIN32
+    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
+
+    // Example linuxPath "/ovms/src/test/dummy"
+    std::size_t postOvmsIndex = linuxPath.find("/src/test");
+    if (bazelOutIndex > 0 && postOvmsIndex > 0) {
+        std::string winPath = linuxPath.substr(postOvmsIndex);
+        std::replace(winPath.begin(), winPath.end(), '/', '\\');
+        std::string basePath = cwd.string().substr(0, bazelOutIndex);
+        std::string finalWinPath = basePath + winPath;
+
+        std::cout << "[DEBUG] Changed path: " << linuxPath << "to path: " << finalWinPath << " for Windows";
+        return finalWinPath;
+    }
+#endif
+    return linuxPath;
+}
+
+std::string getWindowsFullPathForSrcTest(const char* linuxPath){
+    return getWindowsFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)));
+}

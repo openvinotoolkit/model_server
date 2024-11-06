@@ -328,7 +328,7 @@ TEST_F(ModelServiceDummyWith2Versions, all_versions) {
     tensorflow::serving::GetModelStatusRequest modelStatusRequest;
     tensorflow::serving::GetModelStatusResponse modelStatusResponse;
     auto config = DUMMY_MODEL_CONFIG;
-    config.setBasePath(modelPath);
+    config.setBasePath(getWindowsFullPathForSrcTest(modelPath));
     config.setModelVersionPolicy(std::make_shared<AllModelVersionPolicy>());
     ASSERT_EQ(manager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
 
@@ -349,7 +349,7 @@ TEST_F(ModelServiceDummyWith2Versions, getAllModelsStatuses_one_model_two_versio
     EXPECT_EQ(modelsStatuses.begin()->second.model_version_status_size(), 0);
 
     config = DUMMY_MODEL_CONFIG;
-    config.setBasePath(modelPath);
+    config.setBasePath(getWindowsFullPathForSrcTest(modelPath));
     config.setModelVersionPolicy(std::make_shared<AllModelVersionPolicy>());
     this->manager.reloadModelWithVersions(config);
     std::map<std::string, tensorflow::serving::GetModelStatusResponse> modelsStatusesAfterReload;
