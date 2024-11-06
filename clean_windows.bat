@@ -26,8 +26,6 @@ set "PATH=%setPath%"
 
 :: Log all environment variables
 %cleanCmd%
-rm -rf bazel-bin\src\ovms_test.exe
-rm -rf bazel-bin\src\ovms.exe
 rm -rf environment.log
 rm -rf build.log
 rm -rf build_test.log
