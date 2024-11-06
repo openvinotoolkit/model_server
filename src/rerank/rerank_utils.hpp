@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <openvino/openvino.hpp>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 
@@ -67,4 +68,14 @@ public:
     absl::Status parseRequest();
     absl::Status parseResponse(StringBuffer& buffer, std::vector<float>& scores);
 };
+
+// Takes tokenizer outputs: input_ids and attention_mask and chunks them into batches of smaller width (max_tokens_per_chunk param).
+// Preserves the chunk-original_document mapping for later use in chunk_mapping variable.
+// If max_tokens_per_chunk is bigger than the longest document, no chunking is needed.
+absl::Status chunkDocuments(
+    const ov::Tensor& in_input_ids, const ov::Tensor& in_attention_mask,
+    ov::Tensor& out_input_ids, ov::Tensor& out_attention_mask,
+    std::vector<size_t>& chunk_mapping, size_t max_tokens_per_chunk,
+    int64_t pad_token);
+
 }  // namespace ovms
