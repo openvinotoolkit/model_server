@@ -118,26 +118,28 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
     size_t batchSize = outputShape[0];
     for (size_t i = 0; i < batchSize; i++) {
         size_t stride = i * outputShape[1] * outputShape[2];
-        std::vector<float> data(reinterpret_cast<float*>(embeddingsTensor.data()) + stride, reinterpret_cast<float*>(embeddingsTensor.data()) + stride + outputShape[2]);
+        size_t size = outputShape[2];
+        float* dataPtr = reinterpret_cast<float*>(embeddingsTensor.data()) + stride;
+        float* dataPtrEnd = dataPtr + outputShape[2];
         writer.StartObject();
         writer.String("object");
         writer.String("embedding");
         writer.String("embedding");
         if (normalizeEmbeddings) {
-            double square_sum = std::inner_product(data.begin(), data.end(), data.begin(), double(0.0));
+            double square_sum = std::inner_product(dataPtr, dataPtrEnd, dataPtr, double(0.0));
             double denom = std::max(std::sqrt(square_sum), double(1e-12));
-            std::transform(data.begin(), data.end(), data.begin(),
+            std::transform(dataPtr, dataPtrEnd, dataPtr,
                 [denom](auto& element) { return element / denom; });
         }
-        if (this->getEncodingFormat() == EncodingFormat::BASE64) {
-            std::string_view sv(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
+        if (getEncodingFormat() == EncodingFormat::BASE64) {
+            std::string_view sv2(reinterpret_cast<char*>(dataPtr), outputShape[2] * sizeof(float));
             std::string escaped;
-            absl::Base64Escape(sv, &escaped);
+            absl::Base64Escape(sv2, &escaped);
             writer.String(escaped.c_str());
         } else {
             writer.StartArray();
-            for (auto value : data) {
-                writer.Double(value);
+            for (size_t i = 0; i < size; ++i) {
+                writer.Double(dataPtr[i]);
             }
             writer.EndArray();
         }
