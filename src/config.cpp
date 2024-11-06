@@ -31,7 +31,7 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
-#include "systeminfo.hpp"
+#include "systemfdfdinfo.hpp"
 
 namespace ovms {
 
