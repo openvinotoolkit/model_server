@@ -159,7 +159,7 @@ absl::Status RerankHandler::parseResponse(StringBuffer& buffer, std::vector<floa
         writer.Int(index);
         writer.String("relevance_score");
         writer.Double(scores[index]);
-        if (request.returnDocuments) {
+        if (request.returnDocuments.has_value() && request.returnDocuments.value()) {
             if (request.documentsList.size() > index) {
                 writer.String("document");
                 writer.StartObject();
