@@ -1434,20 +1434,23 @@ TEST_F(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
 }
 
 TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
-    const char* configWithTwoSameNames = R"({
+    std::string basePath = getWindowsFullPathForTmp("/tmp/");
+    std::string configWithTwoSameNames = R"({
    "model_config_list": [
     {
       "config": {
         "name": "same_name",
-        "base_path": "/tmp/ModelManager/ConfigReloadingWithTwoModelsWithTheSameName/models/dummy1"
+        "base_path": ")" + basePath + R"(ModelManager/ConfigReloadingWithTwoModelsWithTheSameName/models/dummy1"
       }
     },
     {
       "config": {
         "name": "same_name",
-        "base_path": "/tmp/ModelManager/ConfigReloadingWithTwoModelsWithTheSameName/models/dummy2"
+        "base_path": ")" + basePath + R"(ModelManager/ConfigReloadingWithTwoModelsWithTheSameName/models/dummy2"
       }
     }]})";
+
+    std::cout << "JSON: " << configWithTwoSameNames << std::endl;
     std::filesystem::create_directories(this->getFilePath("/models/dummy1/1"));
     std::filesystem::create_directories(this->getFilePath("/models/dummy2/1"));
     std::string fileToReload = this->getFilePath("/ovms_config_file2.json");

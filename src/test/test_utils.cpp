@@ -716,12 +716,12 @@ std::string getWindowsFullPathForSrcTest(std::string linuxPath) {
     if (bazelOutIndex > 0 && postOvmsIndex > 0) {
         // Setting winPath to "/src/test/dummy"
         std::string winPath = linuxPath.substr(postOvmsIndex);
-        // Change paths to windows separator
-        std::replace(winPath.begin(), winPath.end(), '/', '\\');
         // Set basePath to "C:\git\model_server\"
         std::string basePath = cwd.string().substr(0, bazelOutIndex);
         // Combine "C:\git\model_server\" + "/src/test/dummy"
         std::string finalWinPath = basePath + winPath;
+        // Change paths to linux separator for JSON parser compatyility in configs
+        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
 
         std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
         return finalWinPath;
@@ -751,11 +751,12 @@ std::string getWindowsFullPathForTmp(std::string linuxPath) {
     size_t postTmpIndex = linuxPath.find(tmpString) + tmpStringSize;
     if (bazelOutIndex > 0 && postTmpIndex > 0) {
         std::string winPath = linuxPath.substr(postTmpIndex);
-        std::replace(winPath.begin(), winPath.end(), '/', '\\');
         // Set basePath to "C:\git\model_server\"
         std::string basePath = cwd.string().substr(0, bazelOutIndex);
         // Combine "C:\git\model_server\" + "tmp" "\dummy"
         std::string finalWinPath = basePath + winTmpString + winPath;
+        // Change paths to linux separator for JSON parser compatyility in configs
+        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
 
         std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
         return finalWinPath;

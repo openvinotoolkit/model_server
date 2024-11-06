@@ -61,15 +61,20 @@
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
-const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
-const std::string dummy_fp64_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_fp64";
-const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model";
-const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
-const std::string passthrough_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough";
-const std::string passthrough_string_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough_string";
-const std::string dummy_saved_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model";
-const std::string dummy_tflite_location = std::filesystem::current_path().u8string() + "/src/test/dummy_tflite";
-const std::string scalar_model_location = std::filesystem::current_path().u8string() + "/src/test/scalar";
+std::string getWindowsFullPathForSrcTest(std::string linuxPath);
+std::string getWindowsFullPathForSrcTest(const char* linuxPath);
+std::string getWindowsFullPathForTmp(std::string linuxPath);
+std::string getWindowsFullPathForTmp(const char* linuxPath);
+
+const std::string dummy_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy");
+const std::string dummy_fp64_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_fp64");
+const std::string sum_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model");
+const std::string increment_1x3x4x5_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5");
+const std::string passthrough_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough");
+const std::string passthrough_string_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough_string");
+const std::string dummy_saved_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model");
+const std::string dummy_tflite_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_tflite");
+const std::string scalar_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/scalar");
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -251,11 +256,6 @@ using TFSOutputTensorIteratorType = google::protobuf::Map<std::string, TFSOutput
 using TFSInterface = std::pair<TFSRequestType, TFSResponseType>;
 using KFSInterface = std::pair<KFSRequest, KFSResponse>;
 using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>;
-
-std::string getWindowsFullPathForSrcTest(std::string linuxPath);
-std::string getWindowsFullPathForSrcTest(const char* linuxPath);
-std::string getWindowsFullPathForTmp(std::string linuxPath);
-std::string getWindowsFullPathForTmp(const char* linuxPath);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -752,8 +752,7 @@ protected:
            << "/"
            << std::string(test_info->name());
         const std::string directoryName = ss.str();
-        std::string path = "/tmp" + directoryName;
-        directoryPath = getWindowsFullPathForTmp(path);
+        directoryPath = getWindowsFullPathForTmp("/tmp/" + directoryName);
         std::filesystem::remove_all(directoryPath);
         std::filesystem::create_directories(directoryPath);
     }
