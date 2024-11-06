@@ -119,7 +119,7 @@ make
 ```
 
 - Command
-```
+```bash
 docker run openvino/model_server-capi:latest -c /ovms/bin/capi_benchmark
 OpenVINO Model Server
 Usage:
