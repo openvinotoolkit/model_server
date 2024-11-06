@@ -101,6 +101,6 @@ BAAI/bge-reranker-base
 
 ## Integration with Langchain
 
-TBD
+Check [RAG demo](../continuous_batching/rag/README.md) which employs `rerank` endpoint together with `chat/completions` and `embeddings`. 
 
 
