@@ -17,6 +17,7 @@
 import argparse
 import os
 from openvino_tokenizers import convert_tokenizer, connect_models
+from transformers import AutoTokenizer
 import jinja2
 import json
 import shutil
@@ -52,6 +53,7 @@ parser_embeddings.add_argument('--version', default=1, type=int, help='version o
 parser_rerank = subparsers.add_parser('rerank', help='export model for rerank endpoint')
 add_common_arguments(parser_rerank)
 parser_rerank.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_rerank.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
 parser_rerank.add_argument('--version', default="1", help='version of the model', dest='version')
 args = vars(parser.parse_args())
 
@@ -198,6 +200,12 @@ rerank_subconfig_template = """{
    ]
 }"""
 
+def export_rerank_tokenizer(source_model, destination_path, max_length):
+    hf_tokenizer = AutoTokenizer.from_pretrained(source_model)
+    hf_tokenizer.model_max_length = max_length
+    hf_tokenizer.save_pretrained(destination_path)
+    ov_tokenizer = convert_tokenizer(hf_tokenizer, add_special_tokens=False)
+    ov.save_model(ov_tokenizer, os.path.join(destination_path, "openvino_tokenizer.xml"))
 
 def set_rt_info(model_folder_path, model_filename, config_filename):
     model = ov.Core().read_model(os.path.join(model_folder_path, model_filename))
@@ -304,7 +312,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
-def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path):
+def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, max_doc_length):
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
         print("OV model is source folder. Skipping conversion.")
         os.makedirs(os.path.join(model_repository_path, model_name, 'rerank', version), exist_ok=True)
@@ -328,9 +336,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
             tokenizer_path = os.path.join(model_repository_path, model_name,'tokenizer', version)
             print("Exporting tokenizer to ",tokenizer_path)
             if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
-                convert_tokenizer_command = "convert_tokenizer --not-add-special-tokens -o {} {}".format(tmpdirname, source_model) 
-                if (os.system(convert_tokenizer_command)):
-                    raise ValueError("Failed to export tokenizer model", source_model)
+                export_rerank_tokenizer(source_model, tmpdirname, max_doc_length)
                 set_rt_info(tmpdirname, 'openvino_tokenizer.xml', 'tokenizer_config.json')
                 os.makedirs(tokenizer_path, exist_ok=True)
                 shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.xml'), os.path.join(tokenizer_path, 'model.xml'))
@@ -367,6 +373,6 @@ elif args['task'] == 'embeddings':
     export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, str(args['version']), args['config_file_path'])
 
 elif args['task'] == 'rerank':
-    export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'])
+    export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
 
 
