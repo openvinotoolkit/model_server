@@ -1804,8 +1804,6 @@ cc_test(
     deps = [
             ":test_utils",
             "//src/rerank:rerank_api_handler",
-            ":openvino_tests",
-            ":openvino_remote_tensors_tests",
             ":embeddings_handler_tests",
             ":inferencerequest_test",
             ":libtest_environment",
