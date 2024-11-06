@@ -53,7 +53,7 @@ Config& Config::parse(int argc, char** argv) {
 #ifdef __linux__
         exit(EX_USAGE);
 #elif _WIN32
-        4343434exit(3);
+        exit(3);
 #endif
     return *this;
 }
