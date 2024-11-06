@@ -88,33 +88,38 @@ public:
         rerank_session = cc->InputSidePackets().Tag("RERANK_SESSION").Get<std::shared_ptr<::InferenceAdapter>>();
 
         try {
-            this->bos_token = tokenizer_session->getModelConfig().at("bos_token_id").as<int64_t>();
-            this->eos_token = tokenizer_session->getModelConfig().at("eos_token_id").as<int64_t>();
-            if (tokenizer_session->getModelConfig().count("sep_token_id") == 0) {
+            this->bos_token = rerank_session->getModelConfig().at("bos_token_id").as<int64_t>();
+            this->eos_token = rerank_session->getModelConfig().at("eos_token_id").as<int64_t>();
+            if (rerank_session->getModelConfig().count("sep_token_id") == 0) {
                 this->sep_token = this->eos_token;
             } else {
-                this->sep_token = tokenizer_session->getModelConfig().at("sep_token_id").as<int64_t>();
+                this->sep_token = rerank_session->getModelConfig().at("sep_token_id").as<int64_t>();
             }
-            this->pad_token = tokenizer_session->getModelConfig().at("pad_token_id").as<int64_t>();
+            this->pad_token = rerank_session->getModelConfig().at("pad_token_id").as<int64_t>();
 
-            auto it = rerank_session->getModelConfig().find("config");
+            auto it = rerank_session->getModelConfig().find("max_position_embeddings");
             if (it != rerank_session->getModelConfig().end()) {
-                auto it = rerank_session->getModelConfig().at("config").as<ov::AnyMap>().find("max_position_embeddings");
-                if (it != rerank_session->getModelConfig().at("config").as<ov::AnyMap>().end()) {
-                    this->max_position_embeddings = it->second.as<int64_t>();
-                    SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model max_position_embeddings: {}", this->max_position_embeddings);
-                } else {
-                    SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model missing max_position_embeddings in config, using default value: {}", this->max_position_embeddings);
-                }
+                this->max_position_embeddings = it->second.as<int64_t>();
+                SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model max_position_embeddings: {}", this->max_position_embeddings);
             } else {
-                SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model missing config, using default max_position_embeddings value: {}", this->max_position_embeddings);
+                auto it = rerank_session->getModelConfig().find("max_trained_positions");
+                if (it != rerank_session->getModelConfig().end()) {
+                    this->max_position_embeddings = it->second.as<int64_t>();
+                    SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model max_position_embeddings (inherited from max_trained_positions): {}", this->max_position_embeddings);
+                } else {
+                    SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model missing max_position_embeddings and max_trained_positions in config, using default value: {}", this->max_position_embeddings);
+                }
             }
+
             if (this->max_position_embeddings <= 2 * NUMBER_OF_SPECIAL_TOKENS) {
                 SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
                 return absl::InvalidArgumentError("max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
             }
         } catch (ov::AssertFailure& e) {
             SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "OpenVINO Assert Failure: {}", e.what());
+            return absl::InternalError(e.what());
+        } catch (std::out_of_range& e) {
+            SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "{}", e.what());
             return absl::InternalError(e.what());
         } catch (...) {
             SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "Unknown error");
@@ -208,6 +213,8 @@ public:
         // Compute Document Tokens
         auto [doc_input_ids, doc_attention_mask] = ComputeTokensForBatchedString(handler.getDocumentsList());
 
+        // max_tokens_per_chunk can never be <= 0 since query_tokens.size() is at max half of max_position_embeddings
+        // and max_position_embeddings is at least 2 * NUMBER_OF_SPECIAL_TOKENS
         size_t max_tokens_per_chunk = this->max_position_embeddings - query_tokens.size() - NUMBER_OF_SPECIAL_TOKENS;
         ov::Tensor out_input_ids, out_attention_mask;
         auto status = chunkDocuments(
