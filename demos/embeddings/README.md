@@ -155,7 +155,36 @@ It will report results like `Similarity score as cos_sim 0.97654650115054`.
 
 ## Benchmarking feature extraction
 
-TBD
+An asynchronous benchmarking client can be use to access the model server performance with various load conditions:
+```bash
+pip install -r ../benchmark/embeddings/requirements.txt
+python benchmark_embeddings.py --api_url http://ov-spr-36.sclab.intel.com:8000/v3/embeddings --dataset synthetic_short --request_rate 10 --batch_size 1 --model Alibaba-NLP/gte-large-en-v1.5
+Number of documents: 1000
+100%|████████████████████████████████████████████████████████████████| 1000/1000 [01:45<00:00,  9.50it/s]
+Tokens: 5000
+Throughput - Tokens per second: 47.49318830850219
+Mean latency: 21 ms
+Median latency: 19 ms
+Average document length: 5.0 tokens
+
+python benchmark_embeddings.py --api_url http://ov-spr-36.sclab.intel.com:8000/v3/embeddings --request_rate inf --batch_size 20 --dataset synthetic_long
+Number of documents: 1000
+100%|████████████████████████████████████████████████████████████████| 50/50 [00:21<00:00,  2.32it/s]
+Tokens: 500000
+Throughput - Tokens per second: 23163.97840338802
+Mean latency: 11720 ms
+Median latency: 11825 ms
+Average document length: 500.0 tokens
+
+python benchmark_embeddings.py --api_url http://ov-spr-36.sclab.intel.com:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings
+Number of documents: 1000
+100%|████████████████████████████████████████████████████████████████| 1000/1000 [00:15<00:00, 64.02it/s]
+Tokens: 83208
+Throughput - Tokens per second: 5327.261481429372
+Mean latency: 1438 ms
+Median latency: 1465 ms
+Average document length: 83.208 tokens
+```
 
 ## RAG with Model Server
 
@@ -216,5 +245,4 @@ It is easy also to run model evaluation using [MTEB](https://github.com/embeddin
 pip install mteb
 python ovms_mteb.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
-
 
