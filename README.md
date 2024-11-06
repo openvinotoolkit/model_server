@@ -22,6 +22,7 @@ Read [release notes](https://github.com/openvinotoolkit/model_server/releases) t
 
 ### Key features:
 - **[NEW]** [Text Embeddings compatible with OpenAI API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demos_embeddings.html)
+- **[NEW]** [Reranking compatible with Cohere API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demo_rerank.html)
 - **[NEW]** [Efficient Text Generation via OpenAI API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demos_continuous_batching.html)
 - [Python code execution](https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html)
 - [gRPC streaming](https://docs.openvino.ai/nightly/ovms_docs_streaming_endpoints.html)
@@ -41,7 +42,7 @@ They are stored in:
 
 ## Run OpenVINO Model Server
 
-A demonstration on how to use OpenVINO Model Server can be found in [our quick-start guide](https://docs.openvino.ai/nightly/ovms_docs_quick_start_guide.html). 
+A demonstration on how to use OpenVINO Model Server can be found in our quick-start guide [for vision use case](https://docs.openvino.ai/nightly/ovms_docs_quick_start_guide.html) and [LLM text generation](https://docs.openvino.ai/nightly/ovms_docs_llm_quickstart.html). 
 For more information on using Model Server in various scenarios you can check the following guides:
 
 * [Model repository configuration](https://docs.openvino.ai/nightly/ovms_docs_models_repository.html)
