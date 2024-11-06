@@ -46,6 +46,7 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@model_api//:model_api",
         "//src:httppayload",
+        "//src:libhttpclientconnection",
         "//src:libovmslogging",
         "//src:libovmsprofiler",
 	    "rerank_calculator_cc_proto",

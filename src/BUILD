@@ -472,7 +472,7 @@ cc_library(
     hdrs = ["http_payload.hpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
-        "//src:libhttpclientconnection"
+        "libovmsclient_connection",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
@@ -481,9 +481,21 @@ cc_library(
 )
 
 cc_library(
-    name = "libhttpclientconnection",
-    hdrs = ["client_connection.hpp", "http_frontend/http_client_connection.hpp"],
+    name = "libovmsclient_connection",
+    hdrs = ["client_connection.hpp"],
     deps = [
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+cc_library(
+    name = "libhttpclientconnection",
+    hdrs = ["http_frontend/http_client_connection.hpp"],
+    deps = [
+        "libovmsclient_connection",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
     ],
     visibility = ["//visibility:public",],

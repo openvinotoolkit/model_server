@@ -138,10 +138,18 @@ public:
                 embeddingsInputMap[embeddingsInputName] = it->second;
             }
             size_t max_context_length = 512;  // default allowed input length. Otherwise, it will be read from model rt_info>config>max_position_embeddings in the model.xml file
+            ov::AnyMap modelConfig = embeddings_session->getModelConfig();
             try {
-                max_context_length = embeddings_session->getModelConfig().at("config").as<ov::AnyMap>().at("max_position_embeddings").as<size_t>();
+                if (modelConfig.count("max_position_embeddings")) {
+                    max_context_length = modelConfig["max_position_embeddings"].as<size_t>();
+                } else if (modelConfig.count("max_trained_positions")) {
+                    max_context_length = modelConfig["max_trained_positions"].as<size_t>();
+                } else {
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "model_info->max_position_embeddings nor max_trained_positions included in model rt_info. Using default value {}", max_context_length);
+                }
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Detected model context size: ", max_context_length);
             } catch (...) {
-                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Can not read config->max_position_embeddings from model rt_info. Using default value {}", max_context_length);
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Can not read model context length from rt_info. Using default value {}", max_context_length);
             }
             RET_CHECK(tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape().size() == 2);
             size_t input_ids_size = tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape()[1];
