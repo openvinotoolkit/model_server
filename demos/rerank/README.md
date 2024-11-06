@@ -19,14 +19,13 @@ That ensures faster initialization time, better performance and lower memory con
 
 Install python dependencies for the conversion script:
 ```bash
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+pip3 install -r demos/common/export_models/requirements.txt
 ```
 
 Run optimum-cli to download and quantize the model:
 ```bash
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py
 mkdir models
-python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8 --config_file_path models/config.json --model_repository_path models 
+python demos/common/export_models/export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8 --config_file_path models/config.json --model_repository_path models 
 ```
 
 You should have a model folder like below:
@@ -83,7 +82,7 @@ curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
 ## Comparison with Hugging Faces
 
 ```bash
-python compare_results.py --query "hello" --document "welcome" --document "farewell"
+python demos/embeddings/compare_results.py --query "hello" --document "welcome" --document "farewell"
 query hello
 documents ['welcome', 'farewell']
 HF Duration: 145.731 ms
