@@ -1317,20 +1317,20 @@ private:
 
 public:
     DummyModelDirectoryStructure(std::string modelName) :
-        modelSourcePath("/ovms/src/test/dummy/1/") {
+        modelSourcePath(getWindowsFullPathForSrcTest("/ovms/src/test/dummy/1/")) {
         name = modelName;
-        std::string modelPath = "/tmp/" + name;
+        std::string modelPath = getWindowsFullPathForTmp("/tmp/" + name);
         std::filesystem::remove_all(modelPath);
     }
     ~DummyModelDirectoryStructure() {
-        std::string modelPath = "/tmp/" + name;
+        std::string modelPath = getWindowsFullPathForTmp("/tmp/" + name);
         std::filesystem::remove_all(modelPath);
     }
 
     std::string name;
 
     void addVersion(int number, bool valid) {
-        std::string versionPath = "/tmp/" + name + "/" + std::to_string(number);
+        std::string versionPath = getWindowsFullPathForTmp("/tmp/" + name + "/" + std::to_string(number));
         std::filesystem::create_directories(versionPath);
         std::filesystem::copy(modelSourcePath, versionPath, std::filesystem::copy_options::recursive);
         if (!valid) {
@@ -1338,7 +1338,7 @@ public:
         }
     }
     void removeVersion(int number) {
-        std::string versionPath = "/tmp/" + name + "/" + std::to_string(number);
+        std::string versionPath = getWindowsFullPathForTmp("/tmp/" + name + "/" + std::to_string(number));
         std::filesystem::remove_all(versionPath);
     }
 };
@@ -1352,7 +1352,7 @@ TEST_F(ModelManager, HandlingInvalidLastVersion) {
     modelDirectory.addVersion(2, validVersion);
     modelDirectory.addVersion(3, !validVersion);
     ovms::ModelConfig config;
-    config.setBasePath("/tmp/" + modelDirectory.name);
+    config.setBasePath(getWindowsFullPathForTmp("/tmp/" + modelDirectory.name));
     config.setName(modelDirectory.name);
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
@@ -1404,7 +1404,7 @@ TEST_F(ModelManager, InitialFailedLoadingVersionSavesModelVersionWithProperStatu
     bool validVersion = true;
     modelDirectory.addVersion(1, !validVersion);
     ovms::ModelConfig config;
-    config.setBasePath("/tmp/" + modelDirectory.name);
+    config.setBasePath(getWindowsFullPathForTmp("/tmp/" + modelDirectory.name));
     config.setName(modelDirectory.name);
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
@@ -1423,7 +1423,7 @@ TEST_F(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
     bool validVersion = true;
     modelDirectory.addVersion(1, validVersion);
     ovms::ModelConfig config;
-    config.setBasePath("/tmp/" + modelDirectory.name);
+    config.setBasePath(getWindowsFullPathForTmp("/tmp/" + modelDirectory.name));
     config.setName(modelDirectory.name);
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
@@ -1943,7 +1943,7 @@ TEST_F(ReloadAvailableModelDueToConfigChange, SameConfig_ExpectNoReloads) {
 
 TEST_F(ReloadAvailableModelDueToConfigChange, ExpectReloadDueToBasePathChange) {
     mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, *ieCore, config);
-    config.setBasePath("/new/custom/path");
+    config.setBasePath(getWindowsFullPathForTmp("/tmp/new/custom/path"));
     ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }

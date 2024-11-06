@@ -252,6 +252,11 @@ using TFSInterface = std::pair<TFSRequestType, TFSResponseType>;
 using KFSInterface = std::pair<KFSRequest, KFSResponse>;
 using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>;
 
+std::string getWindowsFullPathForSrcTest(std::string& linuxPath);
+std::string getWindowsFullPathForSrcTest(const char* linuxPath);
+std::string getWindowsFullPathForTmp(std::string& linuxPath);
+std::string getWindowsFullPathForTmp(const char* linuxPath);
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 ovms::tensor_map_t prepareTensors(
@@ -747,7 +752,7 @@ protected:
            << "/"
            << std::string(test_info->name());
         const std::string directoryName = ss.str();
-        directoryPath = "/tmp/" + directoryName;
+        directoryPath = getWindowsFullPathForTmp("/tmp/" + directoryName);
         std::filesystem::remove_all(directoryPath);
         std::filesystem::create_directories(directoryPath);
     }
@@ -997,9 +1002,6 @@ void checkBuffers(const T* expected, const T* actual, size_t bufferSize) {
     EXPECT_EQ(0, std::memcmp(actual, expected, bufferSize))
         << readableError(expected, actual, bufferSize / sizeof(T));
 }
-
-std::string getWindowsFullPathForSrcTest(std::string& linuxPath);
-std::string getWindowsFullPathForSrcTest(const char* linuxPath);
 
 #if (MEDIAPIPE_DISABLE == 0)
 class DummyMediapipeGraphDefinition : public ovms::MediapipeGraphDefinition {

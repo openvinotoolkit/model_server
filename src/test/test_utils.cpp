@@ -701,6 +701,8 @@ std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_
         src->getLayout());
 }
 
+// Function changes linux docker container path /ovms/src/test/dummy to windows workspace "C:\git\model_server\src\test\dummy"
+// Depending on the ovms_test.exe location after build
 std::string getWindowsFullPathForSrcTest(std::string& linuxPath){
 #ifdef __linux__
     return linuxPath;
@@ -712,12 +714,16 @@ std::string getWindowsFullPathForSrcTest(std::string& linuxPath){
     // Example linuxPath "/ovms/src/test/dummy"
     std::size_t postOvmsIndex = linuxPath.find("/src/test");
     if (bazelOutIndex > 0 && postOvmsIndex > 0) {
+        // Setting winPath to "/src/test/dummy"
         std::string winPath = linuxPath.substr(postOvmsIndex);
+        // Change paths to windows separator
         std::replace(winPath.begin(), winPath.end(), '/', '\\');
+        // Set basePath to "C:\git\model_server\"
         std::string basePath = cwd.string().substr(0, bazelOutIndex);
+        // Combine "C:\git\model_server\" + "/src/test/dummy"
         std::string finalWinPath = basePath + winPath;
 
-        std::cout << "[DEBUG] Changed path: " << linuxPath << "to path: " << finalWinPath << " for Windows";
+        std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
         return finalWinPath;
     }
 #endif
@@ -726,4 +732,38 @@ std::string getWindowsFullPathForSrcTest(std::string& linuxPath){
 
 std::string getWindowsFullPathForSrcTest(const char* linuxPath){
     return getWindowsFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)));
+}
+
+// Function changes docker linux paths starting with /tmp: "/tmp/dummy" to windows C:\git\model_server\tmp\dummy
+std::string getWindowsFullPathForTmp(std::string& linuxPath){
+#ifdef __linux__
+    return linuxPath;
+#elif _WIN32
+    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
+    std::filesystem::path cwd = std::filesystem::current_path();
+    size_t bazelOutIndex = cwd.string().find("bazel-out");
+
+    // Example linuxPath "/tmp/dummy"
+    const std::string tmpString = "/tmp";
+    const std::string winTmpString = "tmp";
+    const size_t tmpStringSize = 4;
+
+    size_t postTmpIndex = linuxPath.find(tmpString) + tmpStringSize;
+    if (bazelOutIndex > 0 && postTmpIndex > 0) {
+        std::string winPath = linuxPath.substr(postTmpIndex);
+        std::replace(winPath.begin(), winPath.end(), '/', '\\');
+        // Set basePath to "C:\git\model_server\"
+        std::string basePath = cwd.string().substr(0, bazelOutIndex);
+        // Combine "C:\git\model_server\" + "tmp" "\dummy"
+        std::string finalWinPath = basePath + winTmpString + winPath;
+
+        std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        return finalWinPath;
+    }
+#endif
+    return linuxPath;
+}
+
+std::string getWindowsFullPathForTmp(const char* linuxPath){
+    return getWindowsFullPathForTmp(std::string(linuxPath, strlen(linuxPath)));
 }
