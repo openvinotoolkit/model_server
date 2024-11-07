@@ -11,6 +11,7 @@ transformers==4.40
 diffusers==0.26.3
 datasets==2.18.0
 numpy<2.0
+huggingface_hub==0.24.7
 
 # Required for RAG Chatbot Demo:
 langchain==0.2.9
