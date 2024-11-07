@@ -256,7 +256,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)
             print("Exporting tokenizer to ", llm_model_path)
-            convert_tokenizer_command = "convert_tokenizer --utf8_replace_mode replace --with-detokenizer --skip-special-tokens --streaming-detokenizer -o {} {}".format(llm_model_path, source_model) 
+            convert_tokenizer_command = "convert_tokenizer --utf8_replace_mode replace --with-detokenizer --skip-special-tokens ---not-add-special-tokens -streaming-detokenizer -o {} {}".format(llm_model_path, source_model) 
             if (os.system(convert_tokenizer_command)):
                 raise ValueError("Failed to export tokenizer model", source_model)
     os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
