@@ -120,7 +120,7 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
         size_t stride = i * outputShape[1] * outputShape[2];
         size_t size = outputShape[2];
         float* dataPtr = reinterpret_cast<float*>(embeddingsTensor.data()) + stride;
-        float* dataPtrEnd = dataPtr + outputShape[2];
+        float* dataPtrEnd = dataPtr + size;
         writer.StartObject();
         writer.String("object");
         writer.String("embedding");
