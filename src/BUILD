@@ -1636,17 +1636,17 @@ cc_test(
         ] + select({
                 "//conditions:default": [
                     "test/kfs_rest_test.cpp",
+                    "test/metrics_flow_test.cpp",
+                    "test/http_rest_api_handler_test.cpp",
+                    "test/http_openai_handler_test.cpp", # Mediapipe enabled
+                    "test/test_http_utils.hpp",
                 ],
                 "//src:windows" : [],
         }) + select({
             "//:is_windows_or_mediapipe_is_disabled_no_http": [],
             "//conditions:default" : [
-                "test/metrics_flow_test.cpp",
                 "test/mediapipeflow_test.cpp", # Mediapipe enabled
                 "test/mediapipe_framework_test.cpp", # Mediapipe enabled
-                "test/http_rest_api_handler_test.cpp",
-                "test/http_openai_handler_test.cpp", # Mediapipe enabled
-                "test/test_http_utils.hpp",
             ],
         }) + select({
             "//:not_disable_cloud": [
