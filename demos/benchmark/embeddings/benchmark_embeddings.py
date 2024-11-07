@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Method to benchmark embeddings endpoint is based on https://github.com/vllm-project/vllm/blob/main/benchmarks/benchmark_latency.py
+# It simulates concurrent clients that send requests to the embeddings endpoint and measures the latency and throughput of the endpoint.
 
 import asyncio
 from datasets import load_dataset, arrow_dataset , Dataset
@@ -156,10 +158,10 @@ async def benchmark(docs, model, api_url, request_rate):
     benchmark_duration = time.perf_counter() - benchmark_start_time
     pbar.close()
     result = {
-    "duration": benchmark_duration,
-    "errors": [output.error for output in outputs],
-    "latencies": [output.latency for output in outputs],
-    "successes": [output.success for output in outputs],
+        "duration": benchmark_duration,
+        "errors": [output.error for output in outputs],
+        "latencies": [output.latency for output in outputs],
+        "successes": [output.success for output in outputs],
     }
     return result
 
