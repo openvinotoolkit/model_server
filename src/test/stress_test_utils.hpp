@@ -1118,7 +1118,7 @@ public:
     }
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
-        const std::string modelPathToReplace{getWindowsFullPathForSrcTest("/ovms/src/test/dummy")};
+        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
         auto it = ovmsConfig.find(modelPathToReplace);
         if (it != std::string::npos) {
             ovmsConfig.replace(it, modelPathToReplace.size(), modelPath);
@@ -1136,9 +1136,12 @@ public:
         std::string port = "9178";
         std::string restPort = "9178";
         modelPath = directoryPath + "/dummy/";
+        std::cout << "Exception1" << std::endl;
         SetUpConfig(initialConfigContent);
-        std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
+        std::cout << "Exception2" << std::endl;
+        std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(), modelPath, std::filesystem::copy_options::recursive);
 
+        std::cout << "Exception3" << std::endl;
         OVMS_ServerSettings* serverSettings = nullptr;
         OVMS_ModelsSettings* modelsSettings = nullptr;
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
@@ -1147,7 +1150,7 @@ public:
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, std::stoi(restPort)));  // required for metrics
         // ideally we would want to have emptyConfigWithMetrics
-        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getWindowsFullPathForSrcTestChar("/ovms/src/test/configs/emptyConfigWithMetrics.json")));  // the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getWindowsFullPathForSrcTest("/ovms/src/test/configs/emptyConfigWithMetrics.json").c_str()));  // the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(serverSettings, 0));                                      // set to 0 to reload only through test and avoid races
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
