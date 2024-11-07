@@ -1339,7 +1339,21 @@ public:
     }
     void removeVersion(int number) {
         std::string versionPath = getWindowsFullPathForTmp("/tmp/" + name + "/" + std::to_string(number));
-        std::filesystem::remove_all(versionPath);
+        
+        try {
+            std::filesystem::path dir_path = versionPath;
+            for (const auto& entry : std::filesystem::directory_iterator(dir_path)) {
+                std::cout << entry.path().string() << std::endl;
+            }
+            std::filesystem::remove_all(versionPath);
+        } catch (std::filesystem::filesystem_error& e) {
+            spdlog::error("Couldn't access path {}", e.what());
+            std::filesystem::path dir_path = versionPath;
+            for (const auto& entry : std::filesystem::directory_iterator(dir_path)) {
+                std::cout << entry.path().string() << std::endl;
+            }
+            //std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+        }
     }
 };
 
