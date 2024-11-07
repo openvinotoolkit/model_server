@@ -162,6 +162,7 @@ cc_library(
     deps = PYBIND_DEPS + [
         "//src:cpp_headers", # TODO make ovmslib depend on that
         "//src:libovmslogging",
+        "//src:libovms_module",
         "//src:libovmsmediapipe_utils",
         "ovmspytensor",
         "pytensorovtensorconvertercalculator",

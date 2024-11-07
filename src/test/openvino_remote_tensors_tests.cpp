@@ -1209,7 +1209,7 @@ TEST_F(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     // TODO cleanup settings
     OVMS_ServerDelete(cserver);
 }
-static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
+static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPIOpenCLCorrectness(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 
 const float INITIAL_VALUE{0.13666};
 const float GARBAGE_VALUE = 42.66613;
@@ -1275,7 +1275,7 @@ TEST_F(CAPINonCopy, SyncWithCallbackDummy) {
     callbackStruct.queue = &queue;
     SPDLOG_ERROR("ER:{}", (void*)&callbackStruct);
 
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse, reinterpret_cast<void*>(&callbackStruct)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPIOpenCLCorrectness, reinterpret_cast<void*>(&callbackStruct)));
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
     // check is done in callback
     auto callbackReturnValue = unblockSignal.get();
@@ -1299,31 +1299,6 @@ static OVMS_Server* startCAPIServerFromConfig(const std::string configPath) {
     return cserver;
 }
 
-static void checkDummyResponse(OVMS_InferenceResponse* response, double expectedValue, double tolerance) {
-    const void* voutputData{nullptr};
-    size_t bytesize = 42;
-    uint32_t outputId = 0;
-    OVMS_DataType datatype = (OVMS_DataType)199;
-    const int64_t* shape{nullptr};
-    size_t dimCount = 42;
-    OVMS_BufferType bufferType = (OVMS_BufferType)199;
-    uint32_t ovmsDeviceId = 42;
-    const char* outputName{nullptr};
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, outputId, &outputName, &datatype, &shape, &dimCount, &voutputData, &bytesize, &bufferType, &ovmsDeviceId));
-    ASSERT_EQ(std::string(DUMMY_MODEL_OUTPUT_NAME), outputName);
-    EXPECT_EQ(datatype, OVMS_DATATYPE_FP32);
-    EXPECT_EQ(dimCount, 2);
-    EXPECT_EQ(bufferType, OVMS_BUFFERTYPE_CPU);
-    EXPECT_EQ(ovmsDeviceId, 0);
-    std::vector<int> expectedShape{1, 10};
-    for (size_t i = 0; i < DUMMY_MODEL_SHAPE.size(); ++i) {
-        EXPECT_EQ(expectedShape[i], shape[i]) << "Different at:" << i << " place.";
-    }
-    const float* outputData = reinterpret_cast<const float*>(voutputData);
-    for (int i = 0; i < expectedShape[1]; ++i) {
-        EXPECT_NEAR(expectedValue, outputData[i], tolerance) << "Different at:" << i << " place.";
-    }
-}
 TEST_F(CAPINonCopy, OpenCL_SyncWithCallbackDummyCheckResetOutputGPU) {
     ServerGuard serverGuard(DUMMY_MODEL_GPU_CONFIG_PATH);
     OVMS_Server* cserver = serverGuard.server;
@@ -1369,7 +1344,7 @@ TEST_F(CAPINonCopy, OpenCL_SyncWithCallbackDummyCheckResetOutputGPU) {
     auto unblockSignal = callbackStruct.signal.get_future();
     callbackStruct.bufferAddr = &openCLCppOutputBuffer;
     callbackStruct.queue = &queue;
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse, reinterpret_cast<void*>(&callbackStruct)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPIOpenCLCorrectness, reinterpret_cast<void*>(&callbackStruct)));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceAsync(cserver, request));
     auto callbackReturnValue = unblockSignal.get();
     openCLCppInputBufferPtr.reset();
@@ -1470,7 +1445,7 @@ TEST_F(CAPINonCopy, AsyncDummyCheckResetOutputCPU) {
     }
 }
 
-static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
+static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPIOpenCLCorrectness(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
 static void callbackUnblockingAndFreeingRequest(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
 
 cl::CommandQueue* globalQueue = nullptr;
@@ -1522,7 +1497,7 @@ TEST_F(CAPINonCopy, AsyncWithCallbackDummy) {
     auto unblockSignal = callbackStruct.signal.get_future();
     callbackStruct.bufferAddr = &openCLCppOutputBuffer;
     callbackStruct.queue = &queue;
-    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse, reinterpret_cast<void*>(&callbackStruct)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPIOpenCLCorrectness, reinterpret_cast<void*>(&callbackStruct)));
     // infer
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceAsync(cserver, request));
     // check
@@ -1892,8 +1867,8 @@ static void checkDummyOpenCLResponse(OVMS_InferenceResponse* response, cl::Comma
     }
 }
 
-static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
-    SPDLOG_INFO("Using callback: callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPICorrectnessAndDeletingResponse!");
+static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPIOpenCLCorrectness(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
+    SPDLOG_INFO("Using callback: callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPIOpenCLCorrectness!");
     CallbackUnblockingStructWithQueue* callbackUnblockingStruct = reinterpret_cast<CallbackUnblockingStructWithQueue*>(userStruct);
     SPDLOG_ERROR("ER:{}", userStruct);
     SPDLOG_ERROR("ER:{}", (void*)&callbackUnblockingStruct->signal);

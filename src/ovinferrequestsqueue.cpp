@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,17 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#include "ovinferrequestsqueue.hpp"
 
 #include <openvino/openvino.hpp>
 
-#include "queue.hpp"
+#include "logging.hpp"
 
 namespace ovms {
-
-class OVInferRequestsQueue : public Queue<ov::InferRequest> {
-public:
-    OVInferRequestsQueue(ov::CompiledModel& compiledModel, int streamsLength);
-};
-
+OVInferRequestsQueue::OVInferRequestsQueue(ov::CompiledModel& compiledModel, int streamsLength) :
+    Queue(streamsLength) {
+    for (int i = 0; i < streamsLength; ++i) {
+        streams[i] = i;
+        OV_LOGGER("ov::CompiledModel: {} compiledModel.create_infer_request()", reinterpret_cast<void*>(&compiledModel));
+        inferRequests.push_back(compiledModel.create_infer_request());
+    }
+}
 }  // namespace ovms

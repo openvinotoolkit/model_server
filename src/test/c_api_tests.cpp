@@ -1921,3 +1921,98 @@ TEST(CAPI, MultipleThreadsStarting) {
     EXPECT_EQ(started, 1);
     EXPECT_EQ(alreadyStarted + alreadyStarting, threadsCount - 1);
 }
+struct CallbackUnblockingAndCheckingStruct : CallbackUnblockingStruct {
+    std::promise<void> signal;
+    float expectedValue{-1231571};
+};
+
+static void callbackCheckingIfErrorReported(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
+    SPDLOG_DEBUG("Using callback: callbackCheckingIfErrorReported!");
+    EXPECT_NE(flag, 0);
+    CallbackUnblockingAndCheckingStruct* callbackStruct = reinterpret_cast<CallbackUnblockingAndCheckingStruct*>(userStruct);
+    callbackStruct->signal.set_value();
+}
+static void callbackUnblockingAndCheckingResponse(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
+    EXPECT_EQ(flag, 0);
+    SPDLOG_DEBUG("Using callback: callbackUnblockingAndFreeingRequest!");
+    CallbackUnblockingAndCheckingStruct* callbackStruct = reinterpret_cast<CallbackUnblockingAndCheckingStruct*>(userStruct);
+    callbackStruct->signal.set_value();
+    checkDummyResponse(response, callbackStruct->expectedValue, 0);
+    OVMS_InferenceResponseDelete(response);
+}
+const std::string DUMMY_MODEL_CPU_CONFIG_PATH{"/ovms/src/test/configs/config_cpu_dummy.json"};
+class MockModelInstanceWithSetOutputInfo : public ovms::ModelInstance {
+public:
+    MockModelInstanceWithSetOutputInfo(ov::Core& ieCore) :
+        ModelInstance(std::string("UNUSED_NAME"), 0, ieCore, nullptr, nullptr) {
+        status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::START);
+    }
+    virtual ~MockModelInstanceWithSetOutputInfo() {}
+    ovms::Status loadModel(const ovms::ModelConfig& config) override {
+        ModelInstance::loadModel(config);
+        return ovms::StatusCode::OK;
+    }
+    void setOutputsInfo(const tensor_map_t& outputsInfo) {
+        this->outputsInfo = outputsInfo;
+    }
+};
+
+const float INITIAL_VALUE{0.13666};
+const float GARBAGE_VALUE = 42.66613;
+const float FLOAT_TOLLERANCE{0.001};
+TEST_F(CAPIInference, AsyncWithCallbackDummy) {
+    std::vector<float> in(10, INITIAL_VALUE);
+    std::vector<float> out(10, GARBAGE_VALUE);
+    size_t inputByteSize = sizeof(float) * in.size();
+    // start CAPI server
+    ServerGuard serverGuard(DUMMY_MODEL_CPU_CONFIG_PATH);
+    OVMS_Server* cserver = serverGuard.server;
+    // prepare request
+    OVMS_InferenceRequest* request{nullptr};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddOutput(request, DUMMY_MODEL_OUTPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
+    std::vector<float> data(DUMMY_MODEL_INPUT_SIZE, INITIAL_VALUE);
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, in.data(), inputByteSize, OVMS_BUFFERTYPE_CPU, 0));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputSetData(request, DUMMY_MODEL_OUTPUT_NAME, out.data(), inputByteSize, OVMS_BUFFERTYPE_CPU, 0));
+    // set callback
+    CallbackUnblockingAndCheckingStruct callbackStruct;
+    auto unblockSignal = callbackStruct.signal.get_future();
+    callbackStruct.bufferAddr = out.data();
+    callbackStruct.expectedValue = INITIAL_VALUE + 1;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, callbackUnblockingAndCheckingResponse, reinterpret_cast<void*>(&callbackStruct)));
+    // infer
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceAsync(cserver, request));
+    // check
+    unblockSignal.get();
+
+    const float* outputData = reinterpret_cast<const float*>(out.data());
+    for (size_t i = 0; i < data.size(); ++i) {
+        EXPECT_NEAR(in[i] + 1, outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
+    }
+    SPDLOG_INFO("Using callbacks!");
+}
+TEST_F(CAPIInference, AsyncErrorHandling) {
+    ov::Core core;
+    MockModelInstanceWithSetOutputInfo instance(core);
+    instance.loadModel(DUMMY_MODEL_CONFIG);
+    std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;  // we do not need it to be set
+    ovms::InferenceRequest request("dummy", 0);
+    std::vector<float> in(10, INITIAL_VALUE);
+    request.addInput(DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size());
+    request.setInputBuffer(DUMMY_MODEL_INPUT_NAME, in.data(), DUMMY_MODEL_SHAPE[1] * sizeof(float), OVMS_BUFFERTYPE_CPU, 0);
+    ovms::InferenceResponse response;
+    auto outputInfo = instance.getOutputsInfo();
+    outputInfo["NOT_EXISTING"] = std::make_shared<ovms::TensorInfo>("BADUMTSSS", ovms::Precision::UNDEFINED, shape_t{});
+    instance.waitForLoaded(0, unloadGuard);
+    CallbackUnblockingAndCheckingStruct callbackStruct;
+    auto unblockSignal = callbackStruct.signal.get_future();
+    request.setCompletionCallback(callbackCheckingIfErrorReported, &callbackStruct);
+    instance.setOutputsInfo(outputInfo);
+    auto status = instance.inferAsync<ovms::InferenceRequest, ovms::InferenceResponse>(&request, unloadGuard);
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+    unblockSignal.get();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    unloadGuard.reset();
+    instance.retireModel();
+}
