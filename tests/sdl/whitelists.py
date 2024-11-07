@@ -84,7 +84,6 @@ libraries = {
         'libcpprest.so',
         'libface_detection_cc_proto.so',
         'libface_detection_options_registry.so',
-        'libgtest.so',
         'libinference_calculator_cc_proto.so',
         'libinference_calculator_options_registry.so',
         'libOpenCL.so',
