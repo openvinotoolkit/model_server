@@ -703,7 +703,7 @@ std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_
 
 // Function changes linux docker container path /ovms/src/test/dummy to windows workspace "C:\git\model_server\src\test\dummy"
 // Depending on the ovms_test.exe location after build
-std::string getWindowsFullPathForSrcTest(std::string linuxPath) {
+std::string getWindowsFullPathForSrcTest(std::string linuxPath, bool logChange) {
 #ifdef __linux__
     return linuxPath;
 #elif _WIN32
@@ -723,19 +723,29 @@ std::string getWindowsFullPathForSrcTest(std::string linuxPath) {
         // Change paths to linux separator for JSON parser compatyility in configs
         std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
 
-        std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        if (logChange) {
+            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        }
         return finalWinPath;
     }
 #endif
     return linuxPath;
 }
 
-std::string getWindowsFullPathForSrcTest(const char* linuxPath) {
-    return getWindowsFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)));
+std::string getWindowsFullPathForSrcTest(const char* linuxPath, bool logChange) {
+    return getWindowsFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath), logChange));
+}
+
+const char* getWindowsFullPathForSrcTestChar(const char* linuxPath, bool logChange) {
+    return getWindowsFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath), logChange)).c_str();
+}
+
+const char* getWindowsFullPathForSrcTestChar(std::string linuxPath, bool logChange) {
+    return getWindowsFullPathForSrcTest(linuxPath, logChange).c_str();
 }
 
 // Function changes docker linux paths starting with /tmp: "/tmp/dummy" to windows C:\git\model_server\tmp\dummy
-std::string getWindowsFullPathForTmp(std::string linuxPath) {
+std::string getWindowsFullPathForTmp(std::string linuxPath, bool logChange) {
 #ifdef __linux__
     return linuxPath;
 #elif _WIN32
@@ -757,13 +767,15 @@ std::string getWindowsFullPathForTmp(std::string linuxPath) {
         // Change paths to linux separator for JSON parser compatyility in configs
         std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
 
-        std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        if (logChange) {
+            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        }
         return finalWinPath;
     }
 #endif
     return linuxPath;
 }
 
-std::string getWindowsFullPathForTmp(const char* linuxPath) {
-    return getWindowsFullPathForTmp(std::string(linuxPath, strlen(linuxPath)));
+std::string getWindowsFullPathForTmp(const char* linuxPath, bool logChange) {
+    return getWindowsFullPathForTmp(std::string(linuxPath, strlen(linuxPath), logChange));
 }

@@ -1118,7 +1118,7 @@ public:
     }
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
-        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
+        const std::string modelPathToReplace{getWindowsFullPathForSrcTest("/ovms/src/test/dummy")};
         auto it = ovmsConfig.find(modelPathToReplace);
         if (it != std::string::npos) {
             ovmsConfig.replace(it, modelPathToReplace.size(), modelPath);
@@ -1137,7 +1137,7 @@ public:
         std::string restPort = "9178";
         modelPath = directoryPath + "/dummy/";
         SetUpConfig(initialConfigContent);
-        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+        std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
 
         OVMS_ServerSettings* serverSettings = nullptr;
         OVMS_ModelsSettings* modelsSettings = nullptr;
@@ -1147,7 +1147,7 @@ public:
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, std::stoi(restPort)));  // required for metrics
         // ideally we would want to have emptyConfigWithMetrics
-        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/emptyConfigWithMetrics.json"));  // the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getWindowsFullPathForSrcTestChar("/ovms/src/test/configs/emptyConfigWithMetrics.json")));  // the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(serverSettings, 0));                                      // set to 0 to reload only through test and avoid races
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
@@ -1176,7 +1176,7 @@ public:
     }
     void defaultVersionAdd() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/2", std::filesystem::copy_options::recursive);
+        std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy/1"), modelPath + "/2", std::filesystem::copy_options::recursive);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void addFirstModel() {
@@ -1229,7 +1229,7 @@ public:
     }
     void retireSpecificVersionUsed() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/2", std::filesystem::copy_options::recursive);
+        std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy/1"), modelPath + "/2", std::filesystem::copy_options::recursive);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
     void removeCustomLibraryUsed() {

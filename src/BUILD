@@ -1634,12 +1634,16 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
+                "//conditions:default": [
+                    "test/kfs_rest_test.cpp",
+                ],
+                "//src:windows" : [],
+        }) + select({
             "//:is_windows_or_mediapipe_is_disabled_no_http": [],
             "//conditions:default" : [
                 "test/metrics_flow_test.cpp",
                 "test/mediapipeflow_test.cpp", # Mediapipe enabled
                 "test/mediapipe_framework_test.cpp", # Mediapipe enabled
-                "test/kfs_rest_test.cpp",
                 "test/http_rest_api_handler_test.cpp",
                 "test/http_openai_handler_test.cpp", # Mediapipe enabled
                 "test/test_http_utils.hpp",

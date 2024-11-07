@@ -61,20 +61,22 @@
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
-std::string getWindowsFullPathForSrcTest(std::string linuxPath);
-std::string getWindowsFullPathForSrcTest(const char* linuxPath);
-std::string getWindowsFullPathForTmp(std::string linuxPath);
-std::string getWindowsFullPathForTmp(const char* linuxPath);
+std::string getWindowsFullPathForSrcTest(std::string linuxPath, bool logChange = false);
+std::string getWindowsFullPathForSrcTest(const char* linuxPath, bool logChange = false);
+std::string getWindowsFullPathForTmp(std::string linuxPath, bool logChange = false);
+std::string getWindowsFullPathForTmp(const char* linuxPath, bool logChange = false);
+const char* getWindowsFullPathForSrcTestChar(const char* linuxPath, bool logChange = false);
+const char* getWindowsFullPathForSrcTestChar(std::string linuxPath, bool logChange = false);
 
-const std::string dummy_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy");
-const std::string dummy_fp64_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_fp64");
-const std::string sum_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model");
-const std::string increment_1x3x4x5_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5");
-const std::string passthrough_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough");
-const std::string passthrough_string_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough_string");
-const std::string dummy_saved_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model");
-const std::string dummy_tflite_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_tflite");
-const std::string scalar_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/scalar");
+const std::string dummy_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy", false);
+const std::string dummy_fp64_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_fp64", false);
+const std::string sum_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model", false);
+const std::string increment_1x3x4x5_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5", false);
+const std::string passthrough_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough", false);
+const std::string passthrough_string_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough_string", false);
+const std::string dummy_saved_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model", false);
+const std::string dummy_tflite_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_tflite", false);
+const std::string scalar_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/scalar", false);
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
