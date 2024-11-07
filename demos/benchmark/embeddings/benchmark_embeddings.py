@@ -32,21 +32,18 @@ import aiohttp
 
 AIOHTTP_TIMEOUT = aiohttp.ClientTimeout(total=6 * 60 * 60)
 
-parser = argparse.ArgumentParser(description='Run benchmark for embeddings endpoints')
-parser.add_argument('--dataset', required=False, default='Cohere/wikipedia-22-12-simple-embeddings', help='Dataset for load generation from HF or a keyword synthetic_short or synthetic_long', dest='dataset')
+parser = argparse.ArgumentParser(description='Run benchmark for embeddings endpoints', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--dataset', required=False, default='Cohere/wikipedia-22-12-simple-embeddings', help='Dataset for load generation from HF or a keyword "synthetic"', dest='dataset')
+parser.add_argument('--synthetic_length', required=False, default=510, type=int, help='Length of the synthetic dataset', dest='length')
 parser.add_argument('--api_url', required=False, default='http://localhost:8000/v3/embeddings', help='API URL for embeddings endpoint', dest='api_url')
 parser.add_argument('--model', required=False, default='Alibaba-NLP/gte-large-en-v1.5', help='HF model name', dest='model')
-parser.add_argument('--request_rate', required=False, default='inf', help='Request rate', dest='request_rate')
-parser.add_argument('--batch_size', required=False, type=int, default=16, help='Batch size', dest='batch_size')
+parser.add_argument('--request_rate', required=False, default='inf', help='Average amount of requests per seconds in random distribution', dest='request_rate')
+parser.add_argument('--batch_size', required=False, type=int, default=16, help='Number of strings in every requests', dest='batch_size')
 
 args = vars(parser.parse_args())
 docs = Dataset.from_dict({})
-if args["dataset"] == 'synthetic_short':
-    dummy_text = "hi " * 5
-    for i in range(1000):
-        docs = docs.add_item({"text":dummy_text})
-elif args["dataset"] == 'synthetic_long':
-    dummy_text = "hi " * 500
+if args["dataset"] == 'synthetic':
+    dummy_text = "hi " * args["length"]
     for i in range(1000):
         docs = docs.add_item({"text":dummy_text})
 else:
@@ -56,7 +53,7 @@ print("Number of documents:",len(docs))
 
 batch_size = args['batch_size']
 
-def get_tokens(docs, model):
+def count_tokens(docs, model):
     tokenizer = AutoTokenizer.from_pretrained(model)
     documents = docs.iter(batch_size=1)
     num_tokens = 0
@@ -84,7 +81,7 @@ async def async_request_embeddings(
 ) -> RequestFuncOutput:
     api_url = request_func_input.api_url
 
-    async with aiohttp.ClientSession(timeout=AIOHTTP_TIMEOUT) as session:
+    async with aiohttp.ClientSession(timeout=AIOHTTP_TIMEOUT, read_bufsize=100000) as session:
         payload = {
             "model": request_func_input.model,
             "input": request_func_input.documents,
@@ -104,8 +101,8 @@ async def async_request_embeddings(
                     async for chunk_bytes in response.content:
                         if not chunk_bytes:
                             continue
-                        chunk_bytes = chunk_bytes.decode("utf-8")
-                        data = json.loads(chunk_bytes)
+                        #chunk_bytes = chunk_bytes.decode("utf-8")
+                        # data = json.loads(chunk_bytes)
                         timestamp = time.perf_counter()
                         output.success = True
                         output.latency =  timestamp - st
@@ -168,8 +165,8 @@ async def benchmark(docs, model, api_url, request_rate):
 
 benchmark_results = asyncio.run(benchmark(docs=docs, model=args["model"], api_url=args["api_url"],request_rate=float(args["request_rate"])))
 
-num_tokens = get_tokens(docs=docs,model=args["model"])
-#print(benchmark_results)
+num_tokens = count_tokens(docs=docs,model=args["model"])
+print(benchmark_results)
 print("Tokens:",num_tokens)
 print("Success rate: {}%. ({}/{})".format(sum(benchmark_results["successes"])/len(benchmark_results["successes"])*100, sum(benchmark_results["successes"]), len(benchmark_results["successes"])))
 print("Throughput - Tokens per second:",num_tokens / benchmark_results["duration"])

@@ -150,41 +150,44 @@ It will report results like `Similarity score as cos_sim 0.97654650115054`.
 
 ## Benchmarking feature extraction
 
-An asynchronous benchmarking client can be use to access the model server performance with various load conditions:
+An asynchronous benchmarking client can be use to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Xeon(R) CPU Max 9480.
 ```bash
 popd
 pushd .
 cd demos/benchmark/embeddings/
 pip install -r requirements.txt
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic_short --request_rate 10 --batch_size 1 --model Alibaba-NLP/gte-large-en-v1.5
+python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model Alibaba-NLP/gte-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 1000/1000 [01:45<00:00,  9.50it/s]
 Tokens: 5000
 Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 47.49318830850219
-Mean latency: 21 ms
-Median latency: 19 ms
+Throughput - Tokens per second: 48.588129701166125
+Mean latency: 17 ms
+Median latency: 16 ms
 Average document length: 5.0 tokens
 
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 20 --dataset synthetic_long
+
+python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model Alibaba-NLP/gte-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 50/50 [00:21<00:00,  2.32it/s]
-Tokens: 500000
-Success rate: 100.0%. (50/50)
-Throughput - Tokens per second: 23163.97840338802
-Mean latency: 11720 ms
-Median latency: 11825 ms
-Average document length: 500.0 tokens
+32it [00:18,  1.76it/s]
+Tokens: 510000
+Success rate: 100.0%. (32/32)
+Throughput - Tokens per second: 27995.652060806977
+Mean latency: 10113 ms
+Median latency: 10166 ms
+Average document length: 510.0 tokens
+
 
 python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 1000/1000 [00:15<00:00, 64.02it/s]
 Tokens: 83208
 Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 5327.261481429372
-Mean latency: 1438 ms
-Median latency: 1465 ms
-Average document length: 83.208 tokens
+Throughput - Tokens per second: 5433.913083411673
+Mean latency: 1424 ms
+Median latency: 1451 ms
+Average document length: 83.208 token
 ```
 
 ## RAG with Model Server
