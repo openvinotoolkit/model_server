@@ -86,6 +86,7 @@ libraries = {
         'libface_detection_options_registry.so',
         'libinference_calculator_cc_proto.so',
         'libinference_calculator_options_registry.so',
+        'libOpenCL.so',
         'libopencv_calib3d.so',
         'libopencv_core.so',
         'libopencv_features2d.so',
@@ -182,21 +183,8 @@ packages = {
     },
     OvmsBaseImageType.UBUNTU_NGINX: {'dumb-init', 'libbrotli1', 'nginx',},
     OvmsBaseImageType.REDHAT: {
-        'libpkgconf',
         'libsemanage',
-        'numactl',
-        'numactl-debuginfo',
-        'numactl-debugsource',
-        'numactl-devel',
-        'numactl-libs',
-        'numactl-libs-debuginfo',
-        'ocl-icd',
-        'opencl-headers',
-        'pkgconf',
-        'pkgconf-m4',
-        'pkgconf-pkg-config',
         'shadow-utils',
-        'tbb',
     },
     OvmsBaseImageType.REDHAT_PYTHON: {
         'expat',
@@ -214,6 +202,7 @@ packages = {
         'intel-opencl',
         'level-zero',
         'libedit',
+        'ocl-icd',
     },
 }
 
@@ -231,5 +220,3 @@ whitelisted_packages = {
     OvmsImageType.REDHAT_GPU: {"default":  packages[OvmsBaseImageType.REDHAT] | packages[OvmsBaseImageType.REDHAT_GPU],
                                "python": packages[OvmsBaseImageType.REDHAT_PYTHON]},
 }
-
-
