@@ -136,6 +136,10 @@ public:
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embedding model input {} is connected with matching tokenizer output", embeddingsInputName);
                 embeddingsInputMap[embeddingsInputName] = it->second;
                 if (embeddingsInputName == "attention_mask") {
+                    if(received_batch_size == 1){
+                        handler.setPromptTokensUsage(it->second.get_size());
+                        continue;
+                    }
                     size_t attendedTokens = 0;
                     if (it->second.get_element_type() == ov::element::Type_t::i64) {
                         for (int i = 0; i < it->second.get_size(); i++) {
