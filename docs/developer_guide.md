@@ -53,7 +53,7 @@ In-case of problems, see [Debugging](#debugging).
 
 2. Download test LLM models
    ```bash
-   ./prepare_llm_models.sh llm_testing
+   ./prepare_llm_models.sh ./src/test/llm_testing
    ```
 
 3. Mount the source code in the Docker container :
