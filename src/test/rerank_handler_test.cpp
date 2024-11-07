@@ -482,6 +482,26 @@ TEST(RerankHandlerSerializationTest, positiveReturnDocumentsWithDocumentsList) {
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
 }
 
+TEST(RerankHandlerSerializationTest, positiveReturnDocumentsFalseWithDocumentsList) {
+    std::vector<float> scores = {5.36, 17.21, 3.01};
+    std::string json = R"({
+    "model": "model",
+    "query": "query",
+    "return_documents": false,
+    "documents": [ "first", "second", "third"]
+    })";
+
+    Document d;
+    ASSERT_FALSE(d.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(d);
+    StringBuffer buffer;
+    ASSERT_TRUE(handler.parseRequest().ok());
+    auto status = handler.parseResponse(buffer, scores);
+    EXPECT_TRUE(status.ok());
+    std::string expectedResponse = R"({"results":[{"index":1,"relevance_score":17.209999084472656},{"index":0,"relevance_score":5.360000133514404},{"index":2,"relevance_score":3.009999990463257}]})";
+    EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
+}
+
 TEST(RerankHandlerSerializationTest, negativeReturnDocumentsWithDocumentsMap) {  // TODO add support for return documents for documents map
     std::vector<float> scores = {5.36, 17.21, 3.01, 22.33, 9.4, 22.33};
     std::string json = R"({
