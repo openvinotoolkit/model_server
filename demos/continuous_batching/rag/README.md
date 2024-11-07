@@ -17,7 +17,7 @@ python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-fo
 ## Deploying the model server
 
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config_all.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config_all.json
 ```
 
 ## Using RAG
