@@ -1,4 +1,5 @@
-git+https://github.com/huggingface/optimum-intel.git
+# Note that using unreleased optimum from master might not work.
+# git+https://github.com/huggingface/optimum-intel.git
 # Optimum here is needed to download the model
 onnx
 nncf

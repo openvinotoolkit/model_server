@@ -65,7 +65,7 @@ Check the [LLM calculator documentation](../../docs/llm/reference.md) to learn a
 
 ## Start-up
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
 In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with GPU support and make sure you copy the graph.pbtxt tuned for GPU device. 
