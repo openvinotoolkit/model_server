@@ -127,6 +127,14 @@ git_repository(
     commit = "35f260aab6a9073961a558a93cbc4aec5360d517",
 )
 
+http_archive(
+    name = "ada-url",
+    sha256 = "b2cce630590b490d79ea4f4460ba77efd5fb29c5a87a4e8cb7ebc4859bc4b564",
+    type = "zip",
+    url = "https://github.com/ada-url/ada/releases/download/v2.9.2/singleheader.zip",
+    build_file = "@//third_party:ada-url.BUILD"
+)
+
 # DEV mediapipe 1 source - adjust local repository path for build
 #local_repository(
 #    name = "mediapipe",
@@ -419,7 +427,7 @@ new_git_repository(
     name = "model_api",
     remote = "https:///github.com/openvinotoolkit/model_api/",
     build_file = "@_model-api//:BUILD",
-    commit = "5a06e0c535471deb44e7a0554ae5a64786ae9900",
+    commit = "7108eeedd9d16fbdcb717a642a06fca34878551e",
 )
 
 local_repository(
