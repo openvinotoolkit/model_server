@@ -31,6 +31,7 @@
 #include "absl/synchronization/notification.h"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
+#include <iostream>
 
 using testing::_;
 using testing::ContainerEq;
@@ -1339,12 +1340,7 @@ public:
     }
     void removeVersion(int number) {
         std::string versionPath = getWindowsFullPathForTmp("/tmp/" + name + "/" + std::to_string(number));
-        
         try {
-            std::filesystem::path dir_path = versionPath;
-            for (const auto& entry : std::filesystem::directory_iterator(dir_path)) {
-                std::cout << entry.path().string() << std::endl;
-            }
             std::filesystem::remove_all(versionPath);
         } catch (std::filesystem::filesystem_error& e) {
             spdlog::error("Couldn't access path {}", e.what());
@@ -1352,7 +1348,6 @@ public:
             for (const auto& entry : std::filesystem::directory_iterator(dir_path)) {
                 std::cout << entry.path().string() << std::endl;
             }
-            //std::this_thread::sleep_for(std::chrono::milliseconds(10000));
         }
     }
 };
@@ -1384,6 +1379,10 @@ TEST_F(ModelManager, HandlingInvalidLastVersion) {
     modelInstanceUnloadGuard.reset();
     ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 
+#ifdef _WIN32
+    // Manual unload required because OVCOORE keeps the file handle opened after modelLoad, preventing the test to remove the directory.
+    modelInstance2->unloadModelComponents();
+#endif
     // dropped versions 2 and 3
     // expected version 1 as available, 2 as ended
     modelDirectory.removeVersion(3);

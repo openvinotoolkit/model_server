@@ -745,7 +745,6 @@ std::string getWindowsFullPathForTmp(std::string linuxPath) {
 
     // Example linuxPath "/tmp/dummy"
     const std::string tmpString = "/tmp";
-    const std::string winTmpString = "tmp";
     const size_t tmpStringSize = 4;
 
     size_t postTmpIndex = linuxPath.find(tmpString) + tmpStringSize;
@@ -754,7 +753,7 @@ std::string getWindowsFullPathForTmp(std::string linuxPath) {
         // Set basePath to "C:\git\model_server\"
         std::string basePath = cwd.string().substr(0, bazelOutIndex);
         // Combine "C:\git\model_server\" + "tmp" "\dummy"
-        std::string finalWinPath = basePath + winTmpString + winPath;
+        std::string finalWinPath = basePath + tmpString + winPath;
         // Change paths to linux separator for JSON parser compatyility in configs
         std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
 

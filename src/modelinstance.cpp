@@ -762,7 +762,10 @@ uint32_t ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelCo
 
 std::shared_ptr<ov::Model> ModelInstance::loadOVModelPtr(const std::string& modelFile) {
     OV_LOGGER("ov::Core: {}, model = ieCore.read_model(\"{}\")", reinterpret_cast<const void*>(&this->ieCore), modelFile);
-    return this->ieCore.read_model(modelFile);
+    std::cout << " PRE read_model" << std::endl;
+    auto p = this->ieCore.read_model(modelFile);
+    std::cout << " POST read_model" << std::endl;
+    return p;
 }
 
 Status ModelInstance::loadOVModel() {
