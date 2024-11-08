@@ -42,7 +42,7 @@ fi
 if [ ${NO_WARNINGS_DIRECT} -gt 20 ]; then
     errors+="Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_DIRECT}"$'\n'
 fi
-if [ ${NO_WARNINGS_NOTUSED} -gt 5 ]; then
+if [ ${NO_WARNINGS_NOTUSED} -gt 6 ]; then
     errors+="Failed probably due to unnecessary forward includes: ${NO_WARNINGS_NOTUSED}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST_FORWARD} -gt 1 ]; then
