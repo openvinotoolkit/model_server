@@ -13,13 +13,3 @@ datasets==2.18.0
 numpy<2.0
 huggingface_hub==0.24.7
 
-# Required for RAG Chatbot Demo:
-langchain==0.2.9
-langchain-community==0.2.9
-scikit-learn==1.5.0
-chromadb==0.4.24
-pysqlite3-binary==0.5.2.post3  # Workaround: https://docs.trychroma.com/troubleshooting#sqlite
-unstructured==0.13.2
-markdown==3.6
-nncf==2.10.0
-nltk==3.8.1
