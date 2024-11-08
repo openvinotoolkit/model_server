@@ -395,19 +395,8 @@ TEST(CAPIInferenceResponse, Basic) {
 }
 
 TEST_F(CAPIInference, Validation) {
-    std::string port = "9000";
-    randomizePort(port);
-    OVMS_ServerSettings* serverSettings = nullptr;
-    OVMS_ModelsSettings* modelsSettings = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
-    ASSERT_NE(serverSettings, nullptr);
-    ASSERT_NE(modelsSettings, nullptr);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_standard_dummy.json"));
-    OVMS_Server* cserver = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ServerGuard serverGuard("/ovms/src/test/configs/config_standard_dummy.json");
+    OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
     OVMS_InferenceRequest* request{nullptr};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
@@ -423,7 +412,6 @@ TEST_F(CAPIInference, Validation) {
     OVMS_InferenceResponse* response = nullptr;
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_PRECISION);
     OVMS_InferenceRequestDelete(request);
-    OVMS_ServerDelete(cserver);
 }
 TEST_F(CAPIInference, AcceptInputRejectOutputStringPrecision) {
     ServerGuard serverGuard("/ovms/src/test/configs/config_string.json");
@@ -443,19 +431,8 @@ TEST_F(CAPIInference, AcceptInputRejectOutputStringPrecision) {
 }
 
 TEST_F(CAPIInference, TwoInputs) {
-    std::string port = "9000";
-    randomizePort(port);
-    OVMS_ServerSettings* serverSettings = nullptr;
-    OVMS_ModelsSettings* modelsSettings = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
-    ASSERT_NE(serverSettings, nullptr);
-    ASSERT_NE(modelsSettings, nullptr);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_double_dummy.json"));
-    OVMS_Server* cserver = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ServerGuard serverGuard("/ovms/src/test/configs/config_double_dummy.json");
+    OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
     OVMS_InferenceRequest* request{nullptr};
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "pipeline1Dummy", 1));
@@ -507,28 +484,13 @@ TEST_F(CAPIInference, TwoInputs) {
     }
     OVMS_InferenceResponseDelete(response);
     OVMS_InferenceRequestDelete(request);
-    OVMS_ServerDelete(cserver);
 }
 TEST_F(CAPIInference, Basic) {
     //////////////////////
     // start server
     //////////////////////
-    // remove when C-API start implemented
-    std::string port = "9000";
-    randomizePort(port);
-    // prepare options
-    OVMS_ServerSettings* serverSettings = nullptr;
-    OVMS_ModelsSettings* modelsSettings = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
-    ASSERT_NE(serverSettings, nullptr);
-    ASSERT_NE(modelsSettings, nullptr);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_standard_dummy.json"));
-
-    OVMS_Server* cserver = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ServerGuard serverGuard("/ovms/src/test/configs/config_standard_dummy.json");
+    OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
     ///////////////////////
     // request creation
@@ -641,22 +603,10 @@ TEST_F(CAPIInference, Basic) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_InferenceRequestRemoveInput(request, nullptr), StatusCode::NONEXISTENT_PTR);
     OVMS_InferenceRequestDelete(nullptr);
     OVMS_InferenceRequestDelete(request);
-    OVMS_ServerDelete(cserver);
 }
 TEST_F(CAPIInference, ReuseInputRemoveAndAddData) {
-    std::string port = "9000";
-    randomizePort(port);
-    OVMS_ServerSettings* serverSettings = nullptr;
-    OVMS_ModelsSettings* modelsSettings = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
-    ASSERT_NE(serverSettings, nullptr);
-    ASSERT_NE(modelsSettings, nullptr);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_standard_dummy.json"));
-    OVMS_Server* cserver = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ServerGuard serverGuard("/ovms/src/test/configs/config_standard_dummy.json");
+    OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
     ///////////////////////
     // request creation
@@ -744,23 +694,11 @@ TEST_F(CAPIInference, ReuseInputRemoveAndAddData) {
     }
     OVMS_InferenceResponseDelete(response);
     OVMS_InferenceRequestDelete(request);
-    OVMS_ServerDelete(cserver);
 }
 
 TEST_F(CAPIInference, ReuseRequestRemoveAndAddInput) {
-    std::string port = "9000";
-    randomizePort(port);
-    OVMS_ServerSettings* serverSettings = nullptr;
-    OVMS_ModelsSettings* modelsSettings = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
-    ASSERT_NE(serverSettings, nullptr);
-    ASSERT_NE(modelsSettings, nullptr);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_dummy_dynamic_shape.json"));
-    OVMS_Server* cserver = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ServerGuard serverGuard("/ovms/src/test/configs/config_dummy_dynamic_shape.json");
+    OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
     ///////////////////////
     // request creation
@@ -850,7 +788,6 @@ TEST_F(CAPIInference, ReuseRequestRemoveAndAddInput) {
     }
     OVMS_InferenceResponseDelete(response);
     OVMS_InferenceRequestDelete(request);
-    OVMS_ServerDelete(cserver);
 }
 
 TEST_F(CAPIInference, NegativeInference) {
@@ -1025,22 +962,8 @@ TEST_F(CAPIInference, Scalar) {
     //////////////////////
     // start server
     //////////////////////
-    // remove when C-API start implemented
-    std::string port = "9000";
-    randomizePort(port);
-    // prepare options
-    OVMS_ServerSettings* serverSettings = nullptr;
-    OVMS_ModelsSettings* modelsSettings = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
-    ASSERT_NE(serverSettings, nullptr);
-    ASSERT_NE(modelsSettings, nullptr);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_standard_scalar.json"));
-
-    OVMS_Server* cserver = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ServerGuard serverGuard("/ovms/src/test/configs/config_standard_scalar.json");
+    OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
     ///////////////////////
     // request creation
@@ -1064,6 +987,7 @@ TEST_F(CAPIInference, Scalar) {
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
     // verify GetOutputCount
     uint32_t outputCount = 42;
+    ASSERT_NE(nullptr, response);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutputCount(response, &outputCount));
     ASSERT_EQ(outputCount, 1);
     // verify GetOutput
@@ -1090,7 +1014,6 @@ TEST_F(CAPIInference, Scalar) {
     ///////////////
     OVMS_InferenceResponseDelete(response);
     OVMS_InferenceRequestDelete(request);
-    OVMS_ServerDelete(cserver);
 }
 
 namespace {
