@@ -59,7 +59,7 @@ static const int SERVER_SHUTDOWN_DEADLINE_SECONDS = 5;
 
 // TODO windows
 #ifdef __linux__
-static bool isPortAvailable(uint64_t port) {
+bool GRPCServerModule::isPortAvailable(uint64_t port) {
     struct sockaddr_in addr;
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if (s == -1) {
@@ -78,7 +78,7 @@ static bool isPortAvailable(uint64_t port) {
     return true;
 }
 #else
-static bool isPortAvailable(uint64_t port) {
+bool GRPCServerModule::isPortAvailable(uint64_t port) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         SPDLOG_ERROR("WSAStartup error.");
@@ -86,8 +86,8 @@ static bool isPortAvailable(uint64_t port) {
     }
 
     // Create a socket
-    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock == INVALID_SOCKET) {
+    this->sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (this->sock == INVALID_SOCKET) {
         SPDLOG_ERROR("INVALID_SOCKET error.");
         WSACleanup();
         return false;
@@ -98,17 +98,13 @@ static bool isPortAvailable(uint64_t port) {
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     addr.sin_port = htons(port);
-    if (bind(sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
+    if (bind(this->sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
         SPDLOG_ERROR("Bind port {} error: {}", port, WSAGetLastError());
-        close(sock);
+        closesocket(this->sock);
         WSACleanup();
         return false;
     }
 
-    // TODO: windows - check when can we close and cleanup, destructor ? add as member and store.
-    // Does not work when we close here as in linux.
-    // close(sock);
-    // WSACleanup();
     return true;
 }
 #endif
@@ -245,6 +241,12 @@ void GRPCServerModule::shutdown() {
         server->Shutdown(serverDeadline);
         SPDLOG_INFO("Shutdown gRPC server");
     }
+
+#ifdef _WIN32
+    closesocket(this->sock);
+    WSACleanup();
+#endif
+
     servers.clear();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", GRPC_SERVER_MODULE_NAME);

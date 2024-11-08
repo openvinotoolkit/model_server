@@ -365,11 +365,11 @@ void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]
 }
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage("/ovms/src/test/binaryutils/rgb.jpg", filesize, image_bytes);
+    return readImage(getWindowsFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg"), filesize, image_bytes);
 }
 
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage("/ovms/src/test/binaryutils/rgb4x4.jpg", filesize, image_bytes);
+    return readImage(getWindowsFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), filesize, image_bytes);
 }
 
 void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) {

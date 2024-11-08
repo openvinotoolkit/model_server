@@ -68,7 +68,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, "/ovms/src/test/llm/config_llm_dummy_kfs.json");
+        ::SetUpServer(t, server, port, getWindowsFullPathForSrcTest("/ovms/src/test/llm/config_llm_dummy_kfs.json"));
         auto start = std::chrono::high_resolution_clock::now();
         const int numberOfRetries = 5;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
@@ -87,7 +87,7 @@ public:
             };
             plugin_config_t pluginConfig;
             JsonParser::parsePluginConfig("", pluginConfig);
-            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>("/ovms/src/test/llm_testing/facebook/opt-125m", schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
+            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getWindowsFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
             llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(cbPipe);
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error during llm node initialization for models_path exception: {}", e.what());
@@ -2810,7 +2810,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, "/ovms/src/test/embeddings/config_embeddings.json");
+        ::SetUpServer(t, server, port, getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json"));
         auto start = std::chrono::high_resolution_clock::now();
         const int numberOfRetries = 5;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
@@ -2935,8 +2935,8 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        const char* configPath = "/ovms/src/test/embeddings/config_embeddings.json";
-        const char* extensionPath = "/ovms/src/example/SampleCpuExtension/libcustom_relu_cpu_extension.so";
+        const char* configPath = getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json").c_str();
+        const char* extensionPath = getWindowsFullPathForSrcTest("/ovms/src/example/SampleCpuExtension/libcustom_relu_cpu_extension.so").c_str();
         server.setShutdownRequest(0);
         randomizePort(port);
         char* argv[] = {(char*)"ovms",
@@ -3205,7 +3205,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        const char* configPath = "/ovms/src/test/embeddings/invalid_config_embeddings.json";
+        const char* configPath = getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_embeddings.json"_.c_str();
         server.setShutdownRequest(0);
         randomizePort(port);
         char* argv[] = {(char*)"ovms",
@@ -3259,7 +3259,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        const char* configPath = "/ovms/src/test/embeddings/invalid_config_tokenizer.json";
+        const char* configPath = getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_tokenizer.json").c_str();
         server.setShutdownRequest(0);
         randomizePort(port);
         char* argv[] = {(char*)"ovms",

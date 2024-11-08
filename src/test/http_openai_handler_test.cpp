@@ -61,7 +61,7 @@ protected:
     }
 
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock.json");
+        SetUpServer(getWindowsFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock.json"));
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
     }
 

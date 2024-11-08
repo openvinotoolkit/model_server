@@ -84,7 +84,7 @@ protected:
     std::string port = "9178";
 
     void SetUpServer(const char* configPath) {
-        ::SetUpServer(this->t, this->server, this->port, configPath);
+        ::SetUpServer(this->t, this->server, this->port, getWindowsFullPathForSrcTest(configPath));
     }
 
     void SetUp() override {
@@ -99,28 +99,24 @@ protected:
 class MediapipeFlowAddTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json");
     }
 };
 
 class MediapipeFlowKfsTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_kfs.json");
     }
 };
 
 class MediapipeTFTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mp_tf_passthrough.json");
     }
 };
 
 class MediapipeTensorTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/relative_paths/config_mp_passthrough.json");
     }
 };
 
@@ -128,13 +124,11 @@ public:
 class MediapipePyTensorOvTensorConverterTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_pytensor_ovtensor_converter.json");
     }
 };
 class MediapipeOvTensorPyTensorConverterTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_ovtensor_pytensor_converter.json");
     }
 };
 #endif
@@ -142,14 +136,12 @@ public:
 class MediapipeTfLiteTensorTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/relative_paths/config_tflite_passthrough.json");
     }
 };
 
 class MediapipeEmbeddingsTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/embeddings/config_embeddings.json");
     }
 };
 
@@ -435,60 +427,51 @@ TEST_F(MediapipeTFTest, DummyInferZeroData) {
 class MediapipeFlowDummyTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json");
     }
 };
 class MediapipeFlowDummyNegativeTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_nonexistent_calculator.json");
     }
 };
 class MediapipeFlowScalarTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_scalar.json");
     }
 };
 
 class MediapipeFlowDynamicZeroDimTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_dynamic.json");
     }
 };
 class MediapipeFlowDummyPathsRelativeToBasePathTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full_relative_to_base_path.json");
     }
 };
 
 class MediapipeFlowDummyNoGraphPathTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full_no_graph_path.json");
     }
 };
 
 class MediapipeFlowDummyOnlyGraphNameSpecified : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/relative_paths/graph_only_name/config_mediapipe_dummy_adapter_full_only_name_specified.json");
     }
 };
 
 class MediapipeFlowDummySubconfigTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full_subconfig.json");
     }
 };
 
 class MediapipeFlowDummyDefaultSubconfigTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_default_subconfig.json");
     }
 };
 
@@ -512,7 +495,6 @@ static size_t convertKFSDataTypeToMatFormat(const KFSDataType& datatype) {
 class MediapipeFlowImageInput : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_image_input.json");
     }
 
     void PerformTestWithGivenDatatype(KFSDataType datatype) {
@@ -523,7 +505,6 @@ public:
         const std::string modelName = "mediapipeImageInput";
         request.Clear();
         response.Clear();
-        cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
         ASSERT_TRUE(!imageRaw.empty());
         cv::Mat image;
         size_t matFormat = convertKFSDataTypeToMatFormat(datatype);
@@ -562,7 +543,6 @@ public:
         const std::string modelName = "mediapipeImageInput";
         request.Clear();
         response.Clear();
-        cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/grayscale.jpg", cv::IMREAD_UNCHANGED);
         ASSERT_TRUE(!imageRaw.empty());
         cv::Mat grayscaled;
         size_t matFormat = convertKFSDataTypeToMatFormat(datatype);
@@ -629,7 +609,6 @@ TEST_F(MediapipeFlowImageInput, InvalidShape) {
     const std::string modelName = "mediapipeImageInput";
     request.Clear();
     response.Clear();
-    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat image;
     size_t matFormat = convertKFSDataTypeToMatFormat("UINT8");
@@ -682,7 +661,6 @@ TEST_F(MediapipeFlowImageInput, InvalidDatatype) {
     const std::string modelName = "mediapipeImageInput";
     request.Clear();
     response.Clear();
-    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat image;
     size_t matFormat = convertKFSDataTypeToMatFormat("INT64");
@@ -712,7 +690,6 @@ TEST_F(MediapipeFlowImageInput, Float32_4Channels) {
     const std::string modelName = "mediapipeImageInput";
     request.Clear();
     response.Clear();
-    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat imageFP32;
     imageRaw.convertTo(imageFP32, CV_32F);
@@ -791,7 +768,6 @@ INSTANTIATE_TEST_SUITE_P(
 class MediapipeFlowDummyEmptySubconfigTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_empty_subconfig.json");
     }
 };
 
@@ -859,7 +835,6 @@ TEST_F(MediapipeFlowDummySubconfigTest, Infer) {
 class MediapipeFlowTwoOutputsTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_two_outputs.json");
     }
 };
 
@@ -909,7 +884,6 @@ TEST_F(MediapipeFlowTwoOutputsTest, Infer) {
 class MediapipeFlowTwoOutputsDagTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_two_outputs_dag.json");
     }
 };
 
@@ -985,7 +959,6 @@ TEST_F(MediapipeFlowTwoOutputsDagTest, Infer) {
 class MediapipeFlowDummyDummyInSubconfigAndConfigTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full_dummy_in_both_config_and_subconfig.json");
     }
 };
 
@@ -1383,7 +1356,6 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
         MediapipeGraphConfig mgc{
             this->modelName,
             "",                                               // default base path
-            "/ovms/src/test/mediapipe/graphscalar_tf.pbtxt",  // graphPath - valid but includes missing models, will fail for new streams
             "",                                               // default subconfig path
             ""                                                // dummy md5
         };
@@ -1458,7 +1430,6 @@ TEST_P(MediapipeFlowAddTest, InferStreamDisconnectionBeforeFirstRequest) {
 }
 
 TEST_F(MediapipeFlowTest, InferWithParams) {
-    SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_graph_with_side_packets.json");
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -1541,7 +1512,6 @@ TEST_F(MediapipeFlowTest, InferWithParams) {
 }
 
 TEST_F(MediapipeFlowTest, InferWithRestrictedParamName) {
-    SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_graph_with_side_packets.json");
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     for (auto restrictedParamName : std::vector<std::string>{"py"}) {
@@ -1582,7 +1552,6 @@ TEST_F(MediapipeFlowAddTest, AdapterMetadata) {
 }
 
 TEST_F(MediapipeFlowTest, AdapterMetadataDynamicShape) {
-    SetUpServer("/ovms/src/test/configs/config_dummy_dynamic_shape.json");
     mediapipe::ovms::OVMSInferenceAdapter adapter("dummy");
     const std::shared_ptr<const ov::Model> model;
     ov::Core unusedCore;
@@ -1681,7 +1650,6 @@ TEST(Mediapipe, AdapterRTInfo) {
     uint32_t portNum = ovms::stou32(port).value();
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, portNum));
     // we will use dummy model that will have mocked rt_info
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config.json"));
 
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
     const std::string mockedModelName = "dummy";
@@ -1723,7 +1691,6 @@ TEST(Mediapipe, AdapterRTInfo) {
 
 TEST(Mediapipe, MetadataDummy) {
     ConstructorEnabledModelManager manager;
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", "/ovms/src/test/mediapipe/graphdummy.pbtxt"};
     ovms::MediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc);
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     tensor_map_t inputs = mediapipeDummy.getInputsInfo();
@@ -1981,7 +1948,6 @@ TEST_F(MediapipeNoTagMapping, DummyUppercase) {
     "model_config_list": [
         {"config": {
                 "name": "dummyUpper",
-                "base_path": "/ovms/src/test/dummyUppercase"
         }
         }
     ],
@@ -2217,7 +2183,6 @@ const std::string MediapipeConfigChanges::configFileWithGraphPathToReplace = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
         }
         }
     ],
@@ -2235,7 +2200,6 @@ const std::string MediapipeConfigChanges::configFileWithEmptyBasePath = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
         }
         }
     ],
@@ -2253,7 +2217,6 @@ const std::string MediapipeConfigChanges::configFileWithNoBasePath = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
         }
         }
     ],
@@ -2295,7 +2258,6 @@ const std::string MediapipeConfigChanges::configFileWithoutGraph = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
         }
         }
     ]
@@ -2747,7 +2709,6 @@ TEST(MediapipeStreamTypes, Recognition) {
 
 // TEST_F(MediapipeConfig, MediapipeFullRelativePathsSubconfigNegative) {
 //     ConstructorEnabledModelManager manager;
-//     auto status = manager.startFromFile("/ovms/src/test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json");
 //     EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
 //     manager.join();
 // }
@@ -2832,18 +2793,15 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     "model_config_list": [
         {"config": {
             "name": "dummy",
-            "base_path": "/ovms/src/test/dummy"
             }
         }
     ],
     "mediapipe_config_list": [
     {
         "name":"mediapipeDummy",
-        "graph_path": "/ovms/src/test/mediapipe/graphdummyadapterfull.pbtxt"
     },
     {
         "name": "mediapipeLongLoading",
-        "graph_path": "/ovms/src/test/mediapipe/negative/graph_long_loading.pbtxt"
     }
     ]
 }
@@ -2923,7 +2881,6 @@ protected:
     "model_config_list": [
         {"config": {
             "name": "dummy",
-            "base_path": "/ovms/src/test/dummy"
             }
         }
     ],

@@ -190,7 +190,7 @@ TYPED_TEST(ModelServiceTest, pipeline) {
 
 #if (MEDIAPIPE_DISABLE == 0)
 TYPED_TEST(ModelServiceTest, MediapipeGraph) {
-    std::string fileToReload = "/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json";
+    std::string fileToReload = getWindowsFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json");
     ASSERT_EQ(this->manager.startFromFile(fileToReload), StatusCode::OK);
 
     const std::string name = "mediaDummyADAPTFULL";
