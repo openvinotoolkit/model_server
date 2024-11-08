@@ -22,13 +22,15 @@ That ensures faster initialization time, better performance and lower memory con
 
 Install python dependencies for the conversion script:
 ```bash
-pip3 install -U -r demos/common/export_models/requirements.txt
+pushd .
+cd demos/common/export_models
+pip3 install -U -r requirements.txt
 ```
 
 Run optimum-cli to download and quantize the model:
 ```bash
 mkdir -p models
-python demos/common/export_models/export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config.json
+python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config.json
 ```
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
 You should have a model folder like below:
@@ -52,30 +54,23 @@ models
 ```
 > **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder.
 > In case you trained the pytorch model it can be exported like below:
-> `python demo/common/export_models/export_model.py embeddings --source_model <pytorch model> --model_name Alibaba-NLP/gte-large-en-v1.5 --precision int8 --config_file_path models/config.json --version 2`
-
-> **Note** Check for other tested models in script `export_all_models.sh`.
+> `python export_model.py embeddings --source_model <pytorch model> --model_name Alibaba-NLP/gte-large-en-v1.5 --precision int8 --config_file_path models/config.json --version 2`
 
 The default configuration of the `EmbeddingsCalculator` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. Runtime configuration for both models can be tuned in `subconfig.json` file. They can be set automatically via export parameters in the `export_model.py` script.
+
 For example:
-`python demo/common/export_models/export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --precision int8 --num_streams 2 --skip_normalize --config_file_path models/config.json`
+`python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --precision int8 --num_streams 2 --skip_normalize --config_file_path models/config.json`
 
 
-## Server configuration
-Prepare config.json:
-```bash
-cat models/config.json
-{
-    "model_config_list": [],
-    "mediapipe_config_list": [
-        {
-            "name": "Alibaba-NLP/gte-large-en-v1.5",
-            "base_path": "models"
-        }
-    ]
-}
+## Tested models
+All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. In serving validation are included Hugging Face models:
 ```
-
+    nomic-ai/nomic-embed-text-v1.5
+    Alibaba-NLP/gte-large-en-v1.5
+    BAAI/bge-large-en-v1.5
+    BAAI/bge-large-zh-v1.5
+    thenlper/gte-small
+```
 
 ## Start-up
 ```bash
@@ -155,26 +150,50 @@ It will report results like `Similarity score as cos_sim 0.97654650115054`.
 
 ## Benchmarking feature extraction
 
-TBD
+An asynchronous benchmarking client can be use to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Xeon(R) CPU Max 9480.
+```bash
+popd
+pushd .
+cd demos/benchmark/embeddings/
+pip install -r requirements.txt
+python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model Alibaba-NLP/gte-large-en-v1.5
+Number of documents: 1000
+100%|████████████████████████████████████████████████████████████████| 1000/1000 [01:45<00:00,  9.50it/s]
+Tokens: 5000
+Success rate: 100.0%. (1000/1000)
+Throughput - Tokens per second: 48.588129701166125
+Mean latency: 17 ms
+Median latency: 16 ms
+Average document length: 5.0 tokens
+
+
+python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model Alibaba-NLP/gte-large-en-v1.5
+Number of documents: 1000
+100%|████████████████████████████████████████████████████████████████| 50/50 [00:21<00:00,  2.32it/s]
+32it [00:18,  1.76it/s]
+Tokens: 510000
+Success rate: 100.0%. (32/32)
+Throughput - Tokens per second: 27995.652060806977
+Mean latency: 10113 ms
+Median latency: 10166 ms
+Average document length: 510.0 tokens
+
+
+python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings
+Number of documents: 1000
+100%|████████████████████████████████████████████████████████████████| 1000/1000 [00:15<00:00, 64.02it/s]
+Tokens: 83208
+Success rate: 100.0%. (1000/1000)
+Throughput - Tokens per second: 5433.913083411673
+Mean latency: 1424 ms
+Median latency: 1451 ms
+Average document length: 83.208 token
+```
 
 ## RAG with Model Server
 
 Embeddings endpoint can be applied in RAG chains to delegated text feature extraction both for documented vectorization and in context retrieval.
 Check this demo to see the langchain code example which is using OpenVINO Model Server both for text generation and embedding endpoint in [RAG application demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/continuous_batching/rag)
-
-## Deploying multiple embedding models
-
-It is possible to deploy multiple graphs and models on a single model server instance. For each model the same export steps should be repeated and each pipeline should be added to the configuration file.
-The following script prepares the repository with all tested models:
-```bash
-./export_all_models.sh
-```
-It creates `config_all.json` with models structure including IR files, `graph.pbtxt` definitions and `subconfig.json` subconfigs.
-
-All those models can be deployed together via:
-```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config_all.json
-```
 
 
 ## Testing the model accuracy over serving API
@@ -183,6 +202,8 @@ A simple method of testing the response accuracy is via comparing the response f
 
 The script [compare_results.py](./compare_results.py) can assist with such experiment.
 ```bash
+popd
+cd demos/embeddings
 python compare_results.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']
@@ -212,9 +233,8 @@ Difference score with HF AutoModel: 0.024787274668209857
 ```
 
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
-```
+```bash
 pip install mteb
 python ovms_mteb.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
-
 

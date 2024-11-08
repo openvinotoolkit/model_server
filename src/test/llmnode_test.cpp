@@ -28,7 +28,6 @@
 #include <openvino/openvino.hpp>
 #include <pybind11/embed.h>
 
-#include "../embeddings/embeddings_api.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/llm_executor.hpp"
@@ -2628,6 +2627,54 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
 }
 
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                plugin_config: '{"A": "B", "C": "D"}'
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
+
+    ASSERT_EQ(nodeResources->pluginConfig.size(), 2);
+    ASSERT_EQ(nodeResources->pluginConfig.count("A"), 1);
+    ASSERT_EQ(nodeResources->pluginConfig.count("C"), 1);
+    ASSERT_EQ(nodeResources->pluginConfig["A"], "B");
+    ASSERT_EQ(nodeResources->pluginConfig["C"], "D");
+}
+
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -2654,6 +2701,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
                 max_num_seqs: 95
                 dynamic_split_fuse: false
                 enable_prefix_caching: true
+                max_tokens_limit: 700
+                best_of_limit: 3
             }
         }
         input_stream_handler {
@@ -2682,6 +2731,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
     ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, true);
+    ASSERT_EQ(nodeResources->maxTokensLimit, 700);
+    ASSERT_EQ(nodeResources->bestOfLimit, 3);
 }
 
 class GetPromptTokensString : public ::testing::Test {
@@ -2856,6 +2907,12 @@ TEST_F(EmbeddingsHttpTest, simplePositive) {
     ASSERT_EQ(d["data"][0]["object"], "embedding");
     ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_TRUE(d.HasMember("usage"));
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].HasMember("prompt_tokens"));
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].HasMember("total_tokens"));
+    ASSERT_TRUE(d["usage"]["total_tokens"].IsInt());
     double sum = 0;
     for (auto& value : d["data"][0]["embedding"].GetArray()) {
         sum += value.GetDouble() * value.GetDouble();
@@ -2884,6 +2941,12 @@ TEST_F(EmbeddingsHttpTest, simplePositiveNoNorm) {
     ASSERT_EQ(d["data"][0]["object"], "embedding");
     ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_TRUE(d.HasMember("usage"));
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].HasMember("prompt_tokens"));
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].HasMember("total_tokens"));
+    ASSERT_TRUE(d["usage"]["total_tokens"].IsInt());
     double sum = 0;
     for (auto& value : d["data"][0]["embedding"].GetArray()) {
         sum += value.GetDouble() * value.GetDouble();
@@ -2914,6 +2977,12 @@ TEST_F(EmbeddingsHttpTest, simplePositiveBase64) {
     ASSERT_TRUE(d["data"][0]["embedding"].IsString());
     ASSERT_EQ(d["data"][0]["embedding"].Size(), ((4 * (EMBEDDING_OUTPUT_SIZE * sizeof(float)) / 3) + 3) & ~3);  // In base64 each symbol represents 3/4 of a byte rounded up
     ASSERT_EQ(d["data"][0]["index"], 0);
+    ASSERT_TRUE(d.HasMember("usage"));
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].HasMember("prompt_tokens"));
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].HasMember("total_tokens"));
+    ASSERT_TRUE(d["usage"]["total_tokens"].IsInt());
 }
 
 class EmbeddingsExtensionTest : public ::testing::Test {
@@ -2993,197 +3062,6 @@ TEST_F(EmbeddingsExtensionTest, simplePositive) {
     ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
     ASSERT_EQ(d["data"][0]["index"], 0);
-}
-
-TEST(EmbeddingsSerialization, singleStringInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 1);
-    ASSERT_EQ(strings->at(0), "dummyInput");
-}
-
-TEST(EmbeddingsSerialization, multipleStringInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"]
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
-}
-
-TEST(EmbeddingsSerialization, handler) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"]
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    EmbeddingsHandler handler(d);
-    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
-    ASSERT_EQ(handler.getEncodingFormat(), EncodingFormat::FLOAT);
-    auto input = handler.getInput();
-    auto strings = std::get_if<std::vector<std::string>>(&input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
-}
-
-TEST(EmbeddingsSerialization, malformedInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", 2, "three"]
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "every element in input array should be string");
-}
-
-TEST(EmbeddingsSerialization, invalidEncoding) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "three"],
-"encoding_format": "dummy"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "encoding_format should either base64 or float");
-}
-
-TEST(EmbeddingsSerialization, invalidEncodingType) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "three"],
-"encoding_format": 42
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "encoding_format should be string");
-}
-
-TEST(EmbeddingsSerialization, malformedInputType) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": 1
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "input should be string or array of strings");
-}
-
-TEST(EmbeddingsSerialization, noInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "input field is required");
-}
-
-TEST(EmbeddingsSerialization, multipleStringInputBase64) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"],
-"encoding_format": "base64"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::BASE64);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
-}
-
-TEST(EmbeddingsSerialization, multipleStringInputFloat) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"],
-"encoding_format": "float"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
 }
 
 class EmbeddingsInvalidConfigTest : public ::testing::Test {
