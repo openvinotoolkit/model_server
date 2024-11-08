@@ -40,8 +40,8 @@ mediapipe_proto_library(
 
 cc_library(
     name = "embeddingscalculator",
-    hdrs = ["embeddings_api.hpp"],
-    srcs = ["embeddings_calculator.cc", "embeddings_api.cpp"],
+    hdrs = [],
+    srcs = ["embeddings_calculator.cc"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -51,9 +51,23 @@ cc_library(
         "//src:libovmslogging",
         "//src:libovmsprofiler",
         "embeddings_calculator_cc_proto",
+        ":embeddings_api",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "embeddings_api",
+    hdrs = ["embeddings_api.hpp"],
+    srcs = ["embeddings_api.cpp"],
+    deps = ["@mediapipe//mediapipe/framework:calculator_framework",
+            "//third_party:openvino",
+            "@com_github_tencent_rapidjson//:rapidjson",],
+    visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,

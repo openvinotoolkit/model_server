@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <algorithm>
 #include <string>
 #include <unordered_map>
 
@@ -25,14 +24,12 @@
 #pragma GCC diagnostic pop
 
 #include <adapters/inference_adapter.h>
-#include <openvino/openvino.hpp>
-#include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
 #include "../http_payload.hpp"
 #include "../logging.hpp"
+#include "../precision.hpp"
 #include "../profiler.hpp"
-#include "absl/strings/escaping.h"
 #include "embeddings_api.hpp"
 #include "src/embeddings/embeddings_calculator.pb.h"
 
@@ -50,7 +47,6 @@ class EmbeddingsCalculator : public CalculatorBase {
     static const std::string EMBEDDINGS_MODEL_INPUT_IDS_NAME;
 
     mediapipe::Timestamp timestamp{0};
-    std::chrono::time_point<std::chrono::system_clock> created;
 
 protected:
     std::shared_ptr<::InferenceAdapter> tokenizer_session{nullptr};
@@ -99,10 +95,13 @@ public:
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
         EmbeddingsHandler handler(*payload.parsedJson);
+        auto parseRequestStartTime = std::chrono::high_resolution_clock::now();
         absl::Status status = handler.parseRequest();
         if (!status.ok()) {
             return status;
         }
+        double time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - parseRequestStartTime).count();
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings request deserialization time: {} ms", time / 1000);
 
         // Automatically deduce tokenizer input name
         std::vector<std::string> tokenizerInputNames = tokenizer_session->getInputNames();
@@ -136,6 +135,27 @@ public:
                 RET_CHECK(it != tokenizerOutputMap.end());
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embedding model input {} is connected with matching tokenizer output", embeddingsInputName);
                 embeddingsInputMap[embeddingsInputName] = it->second;
+                if (embeddingsInputName == "attention_mask") {
+                    if (received_batch_size == 1) {
+                        handler.setPromptTokensUsage(it->second.get_size());
+                        continue;
+                    }
+                    size_t attendedTokens = 0;
+                    if (it->second.get_element_type() == ov::element::Type_t::i64) {
+                        for (int i = 0; i < it->second.get_size(); i++) {
+                            attendedTokens += reinterpret_cast<int64_t*>(it->second.data())[i];
+                        }
+                    } else if (it->second.get_element_type() == ov::element::Type_t::i32) {
+                        for (int i = 0; i < it->second.get_size(); i++) {
+                            attendedTokens += reinterpret_cast<int32_t*>(it->second.data())[i];
+                        }
+                    } else {
+                        for (int i = 0; i < it->second.get_byte_size(); i++) {
+                            attendedTokens += reinterpret_cast<uint8_t*>(it->second.data())[i];
+                        }
+                    }
+                    handler.setPromptTokensUsage(attendedTokens);
+                }
             }
             size_t max_context_length = 512;  // default allowed input length. Otherwise, it will be read from model rt_info>config>max_position_embeddings in the model.xml file
             ov::AnyMap modelConfig = embeddings_session->getModelConfig();
@@ -190,7 +210,6 @@ public:
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught unknown exception from session infer()");
             RET_CHECK(false);
         }
-
         ov::Tensor embeddingsTensor;
         if (embeddingsOutputMap.size() == 2) {  // GTE
             // Search by number of dimensions, should be 3
@@ -214,54 +233,14 @@ public:
         RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
         RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
 
+        auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        writer.StartObject();
-
-        writer.String("object");
-        writer.String("list");
-
-        writer.String("data");
-        writer.StartArray();
-        const auto& options = cc->Options<EmbeddingsCalculatorOptions>();
-        bool normalize = options.normalize_embeddings();
-        // TODO: mean pooling
-
-        const ov::Shape& outputShape = embeddingsTensor.get_shape();
-        size_t batchSize = outputShape[0];
-        for (size_t i = 0; i < batchSize; i++) {
-            size_t stride = i * outputShape[1] * outputShape[2];
-            size_t size = stride + outputShape[2];
-            float* dataPtr = reinterpret_cast<float*>(embeddingsTensor.data()) + stride;
-            float* dataPtrEnd = dataPtr + outputShape[2];
-            writer.StartObject();
-            writer.String("object");
-            writer.String("embedding");
-            writer.String("embedding");
-            if (normalize) {
-                double square_sum = std::inner_product(dataPtr, dataPtrEnd, dataPtr, double(0.0));
-                double denom = std::max(std::sqrt(square_sum), double(1e-12));
-                std::transform(dataPtr, dataPtrEnd, dataPtr,
-                    [denom](auto& element) { return element / denom; });
-            }
-            if (handler.getEncodingFormat() == EncodingFormat::BASE64) {
-                std::string_view sv2(reinterpret_cast<char*>(dataPtr), outputShape[2] * sizeof(float));
-                std::string escaped;
-                absl::Base64Escape(sv2, &escaped);
-                writer.String(escaped.c_str());
-            } else {
-                writer.StartArray();
-                for (size_t i = 0; i < size; ++i) {
-                    writer.Double(dataPtr[i]);
-                }
-                writer.EndArray();
-            }
-            writer.String("index");
-            writer.Int(i);
-            writer.EndObject();
+        status = handler.parseResponse(buffer, embeddingsTensor, cc->Options<EmbeddingsCalculatorOptions>().normalize_embeddings());
+        if (!status.ok()) {
+            return status;
         }
-        writer.EndArray();
-        writer.EndObject();
+        time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - parseResponseStartTime).count();
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings response deserialization time: {} ms", time / 1000);
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
         return absl::OkStatus();
     }
