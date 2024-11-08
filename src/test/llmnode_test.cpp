@@ -3047,6 +3047,33 @@ TEST_F(EmbeddingsHttpTest, simplePositiveMultipleInts) {
     ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
 }
 
+TEST_F(EmbeddingsHttpTest, simplePositiveMultipleIntLengths) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[1, 2, 3, 4, 5, 6], [4, 5, 6, 7], [7, 8]]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 3);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_EQ(d["data"][1]["object"], "embedding");
+    ASSERT_TRUE(d["data"][1]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_TRUE(d["data"][2]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][2]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
 TEST_F(EmbeddingsHttpTest, simplePositiveMultipleStrings) {
     std::string requestBody = R"(
         {
