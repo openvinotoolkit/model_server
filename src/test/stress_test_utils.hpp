@@ -1139,7 +1139,9 @@ public:
         std::cout << "Exception1" << std::endl;
         SetUpConfig(initialConfigContent);
         std::cout << "Exception2" << std::endl;
-        std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(), modelPath, std::filesystem::copy_options::recursive);
+        std::string inputPath = getWindowsFullPathForSrcTest("/ovms/src/test/dummy");
+        std::cout << "modelPath:" << modelPath << std::endl;
+        std::filesystem::copy(inputPath.c_str(), modelPath, std::filesystem::copy_options::recursive);
 
         std::cout << "Exception3" << std::endl;
         OVMS_ServerSettings* serverSettings = nullptr;

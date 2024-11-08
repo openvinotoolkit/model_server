@@ -245,7 +245,7 @@ static const char* modelMetricsBadEndpoint = R"(
 
 TEST_F(ModelManagerMetricsTest, DISABLED_WrongConfigFileEndpoint) {
     SetUpConfig(modelMetricsBadEndpoint);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
     ConstructorEnabledModelManager manager;
@@ -279,7 +279,7 @@ static const char* modelMetricsInvalidMetricName = R"(
 
 TEST_F(ModelManagerMetricsTest, WrongConfigFileMetricName) {
     SetUpConfig(modelMetricsBadEndpoint);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(modelMetricsInvalidMetricName, configFilePath);
 
     ConstructorEnabledModelManager manager;
@@ -331,7 +331,7 @@ public:
 };
 
 TEST_F(ModelManagerMappingTest, MappingConfig) {
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     SetUpConfig(modelDummyNireq100);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     createConfigFileWithContent(mappingConfigContent, modelPath + "/1/mapping_config.json");
@@ -425,7 +425,7 @@ static const char* modelMetricsMissingPortWithDisabledMetricsV2 = R"(
 })";
 TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
     SetUpConfig(modelMetricsMissingPort);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
     ConstructorEnabledModelManager manager;
@@ -435,7 +435,7 @@ TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
 
 TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetricsV2) {
     SetUpConfig(modelMetricsMissingPortWithDisabledMetricsV2);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--metrics_enable", (char*)"--rest_port", (char*)"8000"};
     int arg_count = 8;
@@ -447,7 +447,7 @@ TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetricsV2) {
 
 TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetrics) {
     SetUpConfig(modelMetricsMissingPortWithDisabledMetrics);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--metrics_enable", (char*)"--rest_port", (char*)"8000", (char*)"--metrics_list", (char*)"ovms_streams"};
     int arg_count = 10;

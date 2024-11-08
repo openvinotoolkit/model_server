@@ -1469,7 +1469,7 @@ TEST_F(CAPIStateIntegration, LiveReadyFromConfig) {
     ASSERT_TRUE(!isLive);
     OVMS_ServerReady(server, &isReady);
     ASSERT_TRUE(!isReady);
-    std::filesystem::copy("/ovms/src/test/configs/emptyConfigWithMetrics.json", configFilePath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/configs/emptyConfigWithMetrics.json"), configFilePath, std::filesystem::copy_options::recursive);
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(server, serverSettings, modelsSettings));
     OVMS_ServerLive(server, &isLive);
@@ -1500,7 +1500,7 @@ TEST_F(CAPIStateIntegration, Config) {
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(
         OVMS_ModelsSettingsNew(&modelsSettings));
-    std::filesystem::copy("/ovms/src/test/configs/emptyConfigWithMetrics.json", configFilePath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/configs/emptyConfigWithMetrics.json"), configFilePath, std::filesystem::copy_options::recursive);
     ASSERT_CAPI_STATUS_NULL(
         OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
     ASSERT_CAPI_STATUS_NULL(
@@ -1512,7 +1512,7 @@ TEST_F(CAPIStateIntegration, Config) {
         OVMS_GetServableState(cserver, "pipeline1Dummy", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(
         OVMS_GetServableState(cserver, "mediaDummy", servableVersion, &state), StatusCode::MODEL_NAME_MISSING);
-    std::filesystem::copy("/ovms/src/test/configs/config_metadata_all.json", configFilePath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
+    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_metadata_all.json"), configFilePath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
     Server* server = reinterpret_cast<Server*>(cserver);
     const ovms::Module* servableModule = server->getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
     ModelManager* modelManager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
@@ -1526,7 +1526,7 @@ TEST_F(CAPIStateIntegration, Config) {
         OVMS_GetServableState(cserver, "pipeline1Dummy", servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
 #if (MEDIAPIPE_DISABLE == 0)
-    std::filesystem::copy("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json", configFilePath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
+    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_dummy_adapter_full.json"), configFilePath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
     waitForOVMSConfigReload(*modelManager);
     ASSERT_CAPI_STATUS_NULL(
         OVMS_GetServableState(cserver, "mediaDummy", servableVersion, &state));

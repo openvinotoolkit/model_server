@@ -733,7 +733,7 @@ std::string getWindowsFullPathForSrcTest(std::string linuxPath, bool logChange) 
 }
 
 std::string getWindowsFullPathForSrcTest(const char* linuxPath, bool logChange) {
-    return getWindowsFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath), logChange));
+    return getWindowsFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)), logChange);
 }
 
 // Function changes docker linux paths starting with /tmp: "/tmp/dummy" to windows C:\git\model_server\tmp\dummy

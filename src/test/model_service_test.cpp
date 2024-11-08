@@ -304,15 +304,15 @@ protected:
             ::testing::UnitTest::GetInstance()->current_test_info();
 
         const std::string directoryName = std::string(test_info->test_suite_name());
-        directoryPath = "/tmp/" + directoryName;
+        directoryPath = getWindowsFullPathForTmp("/tmp/" + directoryName);
         modelPath = directoryPath + "/dummy";
 
         // Copy dummy model to temporary destination
         std::filesystem::remove_all(directoryPath);
         std::filesystem::create_directories(modelPath + "/1/");
         std::filesystem::create_directories(modelPath + "/2/");
-        std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/1", std::filesystem::copy_options::recursive);
-        std::filesystem::copy("/ovms/src/test/dummy/1", modelPath + "/2", std::filesystem::copy_options::recursive);
+        std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy/1"), modelPath + "/1", std::filesystem::copy_options::recursive);
+        std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy/1"), modelPath + "/2", std::filesystem::copy_options::recursive);
     }
 
     void TearDown() override {

@@ -49,7 +49,7 @@ protected:
         modelPath = directoryPath + "/dummy";
         mappingConfigPath = modelPath + "/1/mapping_config.json";
 
-        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+        std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     }
 
     std::string configPath;
