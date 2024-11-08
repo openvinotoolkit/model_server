@@ -943,7 +943,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
         ~CallbackGuard() {
             if (!success) {
                 if (!userCallback)
-                   return;
+                    return;
                 SPDLOG_DEBUG("Calling user provided callback with success: {}", success);
                 Timer<TIMER_END> timer;
                 timer.start(TIMER_CALLBACK);
