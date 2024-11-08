@@ -1575,9 +1575,9 @@ Status ModelInstance::inferAsync(const RequestType* request,
 */
     timer.start(GET_INFER_REQUEST);
     OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
-    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
-    int executingInferId = executingStreamIdGuard.getId();
-    ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
+    auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(getInferRequestsQueue(), this->getMetricReporter());
+    int executingInferId = executingStreamIdGuard->getId();
+    ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
     OVMS_PROFILE_SYNC_END("getInferRequest");
     timer.stop(GET_INFER_REQUEST);
     double getInferRequestTime = timer.elapsed<microseconds>(GET_INFER_REQUEST);
@@ -1599,7 +1599,7 @@ Status ModelInstance::inferAsync(const RequestType* request,
     bool isPipeline = false;
     std::shared_ptr<OutputKeeper> outKeeper;
     if (this->doesSupportOutputReset()) {
-        outKeeper = std::make_shared<OutputKeeper>(executingStreamIdGuard.getInferRequest(), getOutputsInfo());
+        outKeeper = std::make_shared<OutputKeeper>(executingStreamIdGuard->getInferRequest(), getOutputsInfo());
     }
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*request, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
     timer.stop(DESERIALIZE);
@@ -1620,70 +1620,72 @@ Status ModelInstance::inferAsync(const RequestType* request,
     void* userCallbackData = request->getResponseCompleteCallbackData();
     // here pass by copy into callback
     {
-        inferRequest.set_callback([this, request, &inferRequest, movedOutputKeeper = std::move(outKeeper), userCallback, userCallbackData, modelUnloadGuardPtrMoved = std::shared_ptr<ModelInstanceUnloadGuard>(std::move(modelUnloadGuardPtr))](std::exception_ptr exception) mutable {
-            struct CallbackGuard {
-                OVMS_InferenceRequestCompletionCallback_t userCallback{nullptr};
-                void* userCallbackData{nullptr};
-                bool success{false};
-                ov::InferRequest& request;
-                OVMS_InferenceResponse* response{nullptr};
-                CallbackGuard(OVMS_InferenceRequestCompletionCallback_t userCallback, void* userCallbackData, ov::InferRequest& request) :
-                    userCallback(userCallback),
-                    userCallbackData(userCallbackData),
-                    request(request) {}
-                ~CallbackGuard() {
-                    SPDLOG_DEBUG("Calling user provided callback with success: {}", success);
-                    if (!success) {
-                        userCallback(nullptr, 1, userCallbackData);
-                    } else {
-                        userCallback(response, 0, userCallbackData);
-                    }
-                    SPDLOG_DEBUG("Called user provided callback");
+        // order is important here - destructors are called in order from right to left
+        inferRequest.set_callback(
+            [this, request, &inferRequest, userCallback, userCallbackData, modelUnloadGuardPtrMoved = std::shared_ptr<ModelInstanceUnloadGuard>(std::move(modelUnloadGuardPtr)), streamIdGuardMoved = std::move(executingStreamIdGuard), movedOutputKeeper = std::move(outKeeper)](std::exception_ptr exception) mutable {
+                struct CallbackGuard {
+                    OVMS_InferenceRequestCompletionCallback_t userCallback{nullptr};
+                    void* userCallbackData{nullptr};
+                    bool success{false};
+                    ov::InferRequest& request;
+                    OVMS_InferenceResponse* response{nullptr};
+                    CallbackGuard(OVMS_InferenceRequestCompletionCallback_t userCallback, void* userCallbackData, ov::InferRequest& request) :
+                        userCallback(userCallback),
+                        userCallbackData(userCallbackData),
+                        request(request) {}
+                    ~CallbackGuard() {
+                        SPDLOG_DEBUG("Calling user provided callback with success: {}", success);
+                        if (!success) {
+                            userCallback(nullptr, 1, userCallbackData);
+                        } else {
+                            userCallback(response, 0, userCallbackData);
+                        }
+                        SPDLOG_DEBUG("Called user provided callback");
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wterminate"
-                    try {
-                        OV_LOGGER("ov::InferRequest: {} set_callback() with empty lambda", (void*)&request);
-                        request.set_callback([](std::exception_ptr exception_ptr) {});
-                    } catch (std::exception& e) {
-                        SPDLOG_ERROR("Caught critical exception from OpenVINO InferRequest", e.what());
-                        throw e;
-                    } catch (...) {
-                        SPDLOG_ERROR("Caught critical exception from OpenVINO InferRequest");
-                        throw;
-                    }
+                        try {
+                            OV_LOGGER("ov::InferRequest: {} set_callback() with empty lambda", (void*)&request);
+                            request.set_callback([](std::exception_ptr exception_ptr) {});
+                        } catch (std::exception& e) {
+                            SPDLOG_ERROR("Caught critical exception from OpenVINO InferRequest", e.what());
+                            throw e;
+                        } catch (...) {
+                            SPDLOG_ERROR("Caught critical exception from OpenVINO InferRequest");
+                            throw;
+                        }
 #pragma GCC diagnostic pop
+                    }
+                };
+                SPDLOG_DEBUG("Entry of ov::InferRequest callback call");
+                CallbackGuard callbackGuard(userCallback, userCallbackData, inferRequest);
+                if (exception) {
+                    try {
+                        SPDLOG_DEBUG("rethrow_exception");
+                        std::rethrow_exception(exception);
+                    } catch (const std::exception& e) {
+                        SPDLOG_DEBUG("got exception in ov::InferRequest callback: {}", e.what());
+                    } catch (...) {
+                        SPDLOG_DEBUG("got exception in ov::InferRequest callback");
+                        return;
+                    }
                 }
-            };
-            SPDLOG_DEBUG("Entry of ov::InferRequest callback call");
-            CallbackGuard callbackGuard(userCallback, userCallbackData, inferRequest);
-            if (exception) {
+                std::unique_ptr<ResponseType> res(new ResponseType(this->getName(), this->getVersion()));
+                OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
                 try {
-                    SPDLOG_DEBUG("rethrow_exception");
-                    std::rethrow_exception(exception);
-                } catch (const std::exception& e) {
-                    SPDLOG_DEBUG("got exception in ov::InferRequest callback: {}", e.what());
+                    // TODO created filter based on what is in request, then perform casual serialization for what was NOT in request, and rewrite tensors from request to response for those that were
+                    auto status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), request, res.get(), getTensorInfoName, useSharedOutputContentFn(request));
+                    if (!status.ok()) {
+                        SPDLOG_DEBUG("Encountered issue during response serialization:{}", status.string());
+                        return;
+                    }
+                } catch (std::exception& e) {
+                    SPDLOG_DEBUG("caught exception in ov::InferRequest callback: {}", e.what());
                 } catch (...) {
-                    SPDLOG_DEBUG("got exception in ov::InferRequest callback");
-                    return;
+                    SPDLOG_DEBUG("caught exception in ov::InferRequest callback");
                 }
-            }
-            std::unique_ptr<ResponseType> res(new ResponseType(this->getName(), this->getVersion()));
-            OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-            try {
-                // TODO created filter based on what is in request, then perform casual serialization for what was NOT in request, and rewrite tensors from request to response for those that were
-                auto status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), request, res.get(), getTensorInfoName, useSharedOutputContentFn(request));
-                if (!status.ok()) {
-                    SPDLOG_DEBUG("Encountered issue during response serialization:{}", status.string());
-                    return;
-                }
-            } catch (std::exception& e) {
-                SPDLOG_DEBUG("caught exception in ov::InferRequest callback: {}", e.what());
-            } catch (...) {
-                SPDLOG_DEBUG("caught exception in ov::InferRequest callback");
-            }
-            callbackGuard.response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
-            callbackGuard.success = true;
-        });
+                callbackGuard.response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
+                callbackGuard.success = true;
+            });
     }
 
     try {

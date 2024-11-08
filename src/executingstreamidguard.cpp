@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "executingstreamidguard.hpp"
 
+#include "logging.hpp"
 #include "model_metric_reporter.hpp"
 #include "ovinferrequestsqueue.hpp"
 
@@ -44,6 +45,7 @@ StreamIdGuard::StreamIdGuard(OVInferRequestsQueue& inferRequestsQueue) :
     inferRequestsQueue_(inferRequestsQueue),
     id_(inferRequestsQueue_.getIdleStream().get()),
     inferRequest(inferRequestsQueue.getInferRequest(id_)) {
+    SPDLOG_TRACE("Got request id:{}", getId());
 }
 
 StreamIdGuard::~StreamIdGuard() {
