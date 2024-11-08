@@ -2627,6 +2627,54 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
 }
 
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                plugin_config: '{"A": "B", "C": "D"}'
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
+
+    ASSERT_EQ(nodeResources->pluginConfig.size(), 2);
+    ASSERT_EQ(nodeResources->pluginConfig.count("A"), 1);
+    ASSERT_EQ(nodeResources->pluginConfig.count("C"), 1);
+    ASSERT_EQ(nodeResources->pluginConfig["A"], "B");
+    ASSERT_EQ(nodeResources->pluginConfig["C"], "D");
+}
+
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -2653,6 +2701,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
                 max_num_seqs: 95
                 dynamic_split_fuse: false
                 enable_prefix_caching: true
+                max_tokens_limit: 700
+                best_of_limit: 3
             }
         }
         input_stream_handler {
@@ -2681,6 +2731,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
     ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, true);
+    ASSERT_EQ(nodeResources->maxTokensLimit, 700);
+    ASSERT_EQ(nodeResources->bestOfLimit, 3);
 }
 
 class GetPromptTokensString : public ::testing::Test {
