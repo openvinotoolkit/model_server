@@ -168,7 +168,7 @@ async def benchmark(docs, model, api_url, request_rate):
 benchmark_results = asyncio.run(benchmark(docs=docs, model=args["model"], api_url=args["api_url"],request_rate=float(args["request_rate"])))
 
 num_tokens = count_tokens(docs=docs,model=args["model"])
-print(benchmark_results)
+#print(benchmark_results)
 print("Tokens:",num_tokens)
 print("Success rate: {}%. ({}/{})".format(sum(benchmark_results["successes"])/len(benchmark_results["successes"])*100, sum(benchmark_results["successes"]), len(benchmark_results["successes"])))
 print("Throughput - Tokens per second:",num_tokens / benchmark_results["duration"])
