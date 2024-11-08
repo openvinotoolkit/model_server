@@ -357,7 +357,7 @@ TEST(EmbeddingsDeserialization, multipleStringInputFloat) {
     ASSERT_EQ(strings->at(2), "three");
 }
 
-TEST(EmbeddingsDesrialization, simplePositive) {
+TEST(EmbeddingsSerialization, simplePositive) {
     bool normalieEmbeddings = false;
     rapidjson::StringBuffer buffer;
     std::vector<float> tensorsData{1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};

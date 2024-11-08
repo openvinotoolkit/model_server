@@ -166,10 +166,13 @@ public:
             } else if (auto ints = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
                 size_t token_count_of_longest_document = 0;
                 int64_t pad_token = modelConfig["pad_token_id"].as<int64_t>();
+                size_t tokens = 0;
                 received_batch_size = ints->size();
                 for (auto i : *ints) {
                     token_count_of_longest_document = std::max(token_count_of_longest_document, i.size());
+                    tokens += i.size();
                 }
+                handler.setPromptTokensUsage(tokens);
                 received_batch_size = ints->size();
                 embeddingsInputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME] = ov::Tensor{
                     ov::element::i64,
