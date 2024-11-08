@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <condition_variable>
+#include <iostream>
 #include <mutex>
 
 #include <gmock/gmock.h>
@@ -31,7 +32,6 @@
 #include "absl/synchronization/notification.h"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
-#include <iostream>
 
 using testing::_;
 using testing::ContainerEq;
