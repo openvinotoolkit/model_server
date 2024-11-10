@@ -24,7 +24,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
+#include <curl/curl.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
@@ -654,6 +654,8 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         return StatusCode::REST_UNSUPPORTED_METHOD;
     }
 
+    SPDLOG_DEBUG("PATH:{}.{}", request_path, urlDecode(request_path));
+
     if (FileSystem::isPathEscaped(request_path)) {
         SPDLOG_DEBUG("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
@@ -662,7 +664,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     if (http_method == "POST") {
         if (std::regex_match(request_path, sm, predictionRegex)) {
             requestComponents.type = Predict;
-            requestComponents.model_name = sm[2];
+            requestComponents.model_name = urlDecode(sm[2]);
 
             std::string model_version_str = sm[3];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
@@ -680,7 +682,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         }
         if (std::regex_match(request_path, sm, kfs_inferRegex, std::regex_constants::match_any)) {
             requestComponents.type = KFS_Infer;
-            requestComponents.model_name = sm[1];
+            requestComponents.model_name = urlDecode(sm[1]);
             std::string model_version_str = sm[2];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
@@ -716,7 +718,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
 
     } else if (http_method == "GET") {
         if (std::regex_match(request_path, sm, modelstatusRegex)) {
-            requestComponents.model_name = sm[2];
+            requestComponents.model_name = urlDecode(sm[2]);
             std::string model_version_str = sm[3];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
@@ -752,7 +754,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, kfs_modelmetadataRegex)) {
-            requestComponents.model_name = sm[1];
+            requestComponents.model_name = urlDecode(sm[1]);
             std::string model_version_str = sm[2];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
@@ -761,7 +763,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, kfs_modelreadyRegex)) {
-            requestComponents.model_name = sm[1];
+            requestComponents.model_name = urlDecode(sm[1]);
             std::string model_version_str = sm[2];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
@@ -1121,6 +1123,15 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
     }
 
     return StatusCode::OK;
+}
+
+std::string urlDecode(const std::string& encoded)
+{
+    int output_length;
+    const auto decoded_value = curl_easy_unescape(nullptr, encoded.c_str(), static_cast<int>(encoded.length()), &output_length);
+    std::string result(decoded_value, output_length);
+    curl_free(decoded_value);
+    return result;
 }
 
 }  // namespace ovms

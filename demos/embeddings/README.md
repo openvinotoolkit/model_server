@@ -81,10 +81,13 @@ to `docker run` command, use the image with GPU support and make sure set the ta
 Also make sure the export model quantization level and cache size fit to the GPU memory.
 
 
-Wait for the model to load. You can check the status with a simple command:
+Wait for the model to load. You can check the status with a simple command below. Note that the slash `/` in the model name needs to be escaped with `%2F`:
 ```bash
-curl -s http://localhost:8000/v1/config | jq -c .
-{"Alibaba-NLP/gte-large-en-v1.5":{"model_version_status":[{"version":"1","state":"AVAILABLE","status":{"error_code":"OK","error_message":"OK"}}]},"embeddings_model":{"model_version_status":[{"version":"1","state":"AVAILABLE","status":{"error_code":"OK","error_message":"OK"}}]},"tokenizer":{"model_version_status":[{"version":"1","state":"AVAILABLE","status":{"error_code":"OK","error_message":"OK"}}]}}
+curl -i http://localhost:8000/v2/models/Alibaba-NLP%2Fgte-large-en-v1.5/ready
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Sat, 09 Nov 2024 23:19:27 GMT
+Content-Length: 0
 ```
 
 ## Client code
