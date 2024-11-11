@@ -1222,7 +1222,6 @@ TEST_F(ConfigStatus, configWithMediapipeRemoved) {
 }
 #endif
 
-
 TEST_F(ConfigStatus, url_decode) {
     std::string input = "a%20b%20c%20d";
     std::string expected = "a b c d";

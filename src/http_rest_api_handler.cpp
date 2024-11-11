@@ -24,6 +24,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
 #include <curl/curl.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -1125,8 +1126,7 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
     return StatusCode::OK;
 }
 
-std::string urlDecode(const std::string& encoded)
-{
+std::string urlDecode(const std::string& encoded) {
     int output_length;
     const auto decoded_value = curl_easy_unescape(nullptr, encoded.c_str(), static_cast<int>(encoded.length()), &output_length);
     std::string result(decoded_value, output_length);
