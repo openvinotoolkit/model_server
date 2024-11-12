@@ -16,23 +16,6 @@ pipeline {
         string(name: 'failed_tests', defaultValue: '283')
     }
     stages {
-        stage('Branch indexing: abort') {
-            /*when {
-                allOf {
-                    triggeredBy cause: "BranchIndexingCause"
-                    not { 
-                        changeRequest() 
-                    }
-                }
-            }*/
-            steps {
-                script {
-                    def buildCauses = currentBuild.getBuildCauses()
-                    println "BUILD CAUSE: ${buildCauses}"
-                    println "BUILD NUMBER: ${currentBuild.getNumber()}" 
-                }
-            }
-        }
         stage ("Clean") {
             steps {
                 script{
