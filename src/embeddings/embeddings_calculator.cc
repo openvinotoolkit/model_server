@@ -192,7 +192,7 @@ public:
                         std::fill(attention_mask_start, attention_mask_start + tokenized_documents->at(i).size(), 1);
                     }
                 } catch (std::out_of_range& e) {
-                    SPDLOG_LOGGER_ERROR(embeddings_calculator_logger, "Caught exception from preparing embeddings inputs(): {}", e.what());
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from preparing embeddings inputs(): {}", e.what());
                     RET_CHECK(false);
                 } catch (std::exception& e) {
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught generic exception from preparing embeddings inputs: {}", e.what());
