@@ -31,6 +31,13 @@
 
 using namespace rapidjson;
 
+enum class InputType {
+    NONE,
+    STRING,
+    INT,
+    INT_VEC
+};
+
 std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjson::Document* parsedJson) {
     EmbeddingsRequest request;
     std::vector<std::string> input_strings;
@@ -44,12 +51,12 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
         if (it->value.IsString()) {
             input_strings.push_back(it->value.GetString());
         } else if (it->value.IsArray()) {
-            int input_type = -1;
+            InputType input_type = InputType::NONE;
             for (auto& input : it->value.GetArray()) {
                 if (input.IsArray()) {
-                    if (input_type != -1 && input_type != 1)
+                    if (input_type != InputType::NONE && input_type != InputType::INT_VEC)
                         return "input must be homogeneous";
-                    input_type = 1;
+                    input_type = InputType::INT_VEC;
                     std::vector<int64_t> ints;
                     for (auto& val : input.GetArray()) {
                         if (val.IsInt())
@@ -59,14 +66,14 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
                     }
                     input_tokens.push_back(ints);
                 } else if (input.IsString()) {
-                    if (input_type != -1 && input_type != 2)
+                    if (input_type != InputType::NONE && input_type != InputType::STRING)
                         return "input must be homogeneous";
-                    input_type = 2;
+                    input_type = InputType::STRING;
                     input_strings.push_back(input.GetString());
                 } else if (input.IsInt()) {
-                    if (input_type != -1 && input_type != 3)
+                    if (input_type != InputType::NONE && input_type != InputType::INT)
                         return "input must be homogeneous";
-                    input_type = 3;
+                    input_type = InputType::INT;
                     if (input_tokens.size() == 0) {
                         input_tokens.push_back(std::vector<int64_t>());
                     }

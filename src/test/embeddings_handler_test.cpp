@@ -238,6 +238,7 @@ TEST(EmbeddingsDeserialization, handler) {
     ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
     ASSERT_EQ(handler.getEncodingFormat(), EncodingFormat::FLOAT);
     auto input = handler.getInput();
+    ASSERT_EQ(std::get_if<std::vector<std::vector<int64_t>>>(&input), nullptr);
     auto strings = std::get_if<std::vector<std::string>>(&input);
     ASSERT_NE(strings, nullptr);
     ASSERT_EQ(strings->size(), 3);

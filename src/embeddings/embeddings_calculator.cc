@@ -163,31 +163,39 @@ public:
                         handler.setPromptTokensUsage(attendedTokens);
                     }
                 }
-            } else if (auto ints = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
+            } else if (auto tokenized_documents = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
                 size_t token_count_of_longest_document = 0;
-                int64_t pad_token = modelConfig["pad_token_id"].as<int64_t>();
                 size_t tokens = 0;
-                received_batch_size = ints->size();
-                for (auto i : *ints) {
-                    token_count_of_longest_document = std::max(token_count_of_longest_document, i.size());
-                    tokens += i.size();
+                received_batch_size = tokenized_documents->size();
+                for (const auto& document_tokens : *tokenized_documents) {
+                    token_count_of_longest_document = std::max(token_count_of_longest_document, document_tokens.size());
+                    tokens += document_tokens.size();
                 }
                 handler.setPromptTokensUsage(tokens);
-                received_batch_size = ints->size();
+                received_batch_size = tokenized_documents->size();
                 embeddingsInputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME] = ov::Tensor{
                     ov::element::i64,
                     ov::Shape{received_batch_size, token_count_of_longest_document}};
                 embeddingsInputMap[EMBEDDINGS_MODEL_ATTENTION_MASK_NAME] = ov::Tensor{
                     ov::element::i64,
                     ov::Shape{received_batch_size, token_count_of_longest_document}};
-                for (size_t i = 0; i < received_batch_size; i++) {
-                    int64_t* input_ids_start = reinterpret_cast<int64_t*>(embeddingsInputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].data()) + i * token_count_of_longest_document;
-                    std::fill(input_ids_start, input_ids_start + token_count_of_longest_document, pad_token);
-                    std::copy(ints->at(i).data(), ints->at(i).data() + ints->at(i).size(), input_ids_start);
+                try {
+                    int64_t pad_token = modelConfig.at("pad_token_id").as<int64_t>();
+                    for (size_t i = 0; i < received_batch_size; i++) {
+                        int64_t* input_ids_start = reinterpret_cast<int64_t*>(embeddingsInputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].data()) + i * token_count_of_longest_document;
+                        std::fill(input_ids_start, input_ids_start + token_count_of_longest_document, pad_token);
+                        std::copy(tokenized_documents->at(i).data(), tokenized_documents->at(i).data() + tokenized_documents->at(i).size(), input_ids_start);
 
-                    int64_t* attention_mask_start = reinterpret_cast<int64_t*>(embeddingsInputMap[EMBEDDINGS_MODEL_ATTENTION_MASK_NAME].data()) + i * token_count_of_longest_document;
-                    std::fill(attention_mask_start, attention_mask_start + token_count_of_longest_document, 0);
-                    std::fill(attention_mask_start, attention_mask_start + ints->at(i).size(), 1);
+                        int64_t* attention_mask_start = reinterpret_cast<int64_t*>(embeddingsInputMap[EMBEDDINGS_MODEL_ATTENTION_MASK_NAME].data()) + i * token_count_of_longest_document;
+                        std::fill(attention_mask_start, attention_mask_start + token_count_of_longest_document, 0);
+                        std::fill(attention_mask_start, attention_mask_start + tokenized_documents->at(i).size(), 1);
+                    }
+                } catch (std::out_of_range& e) {
+                    SPDLOG_LOGGER_ERROR(embeddings_calculator_logger, "Caught exception from preparing embeddings inputs(): {}", e.what());
+                    RET_CHECK(false);
+                } catch (std::exception& e) {
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught generic exception from preparing embeddings inputs: {}", e.what());
+                    RET_CHECK(false);
                 }
 
                 if (embeddings_session->getInputNames().size() == 3) {
