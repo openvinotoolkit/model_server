@@ -23,7 +23,7 @@ set "bazelStartupCmd=--output_user_root=%BAZEL_SHORT_PATH%"
 set "buildCommand=bazel %bazelStartupCmd% build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms 2>&1 | tee build.log"
 set "buildTestCommand=bazel %bazelStartupCmd% build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee build_test.log"
 set "changeConfigsCmd=windows_change_test_configs.py"
-set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee test.log"
+set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee full_test.log"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
@@ -58,5 +58,5 @@ set > %envPath%
 
 :: Cut tests log to results
 set regex="\[  .* ms"
-grep -a %regex% test.log 2>&1 | tee test.log
+grep -a %regex% full_test.log 2>&1 | tee test.log
 endlocal
