@@ -2666,7 +2666,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
-    ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
+    ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(*nodeResources, config.node(0), ""), StatusCode::OK);
 
     ASSERT_EQ(nodeResources->pluginConfig.size(), 2);
     ASSERT_EQ(nodeResources->pluginConfig.count("A"), 1);
