@@ -58,6 +58,17 @@ def create_config_settings():
         negate = ":disable_python",
     )
     native.config_setting(
+        name = "disable_ov_trace",
+        define_values = {
+            "OV_TRACE": "0",
+        },
+        visibility = ["//visibility:public"],
+    )
+    more_selects.config_setting_negation(
+        name = "not_disable_ov_trace",
+        negate = ":disable_ov_trace",
+    )
+    native.config_setting(
         name = "fuzzer_build",
         define_values = {
             "FUZZER_BUILD": "1",

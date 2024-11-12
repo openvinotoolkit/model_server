@@ -143,7 +143,8 @@ TEST_F(RerankHandlerDeserializationTest, ValidTopN) {
     "query": "query",
     "top_n": 1,
     "documents": [
-        "first document"
+        "first document",
+        "second document"
     ]
     })";
 
@@ -155,11 +156,37 @@ TEST_F(RerankHandlerDeserializationTest, ValidTopN) {
     ASSERT_FALSE(handler.getReturnDocuments().has_value());
     ASSERT_FALSE(handler.getRankFields().has_value());
     ASSERT_FALSE(handler.getMaxChunksPerDoc().has_value());
-    EXPECT_EQ(handler.getDocumentsList().size(), 1);
+    EXPECT_EQ(handler.getDocumentsList().size(), 2);
     ASSERT_EQ(handler.getDocumentsMap().size(), 0);
     EXPECT_STREQ(handler.getDocumentsList()[0].c_str(), "first document");
     ASSERT_TRUE(handler.getTopN().has_value());
     EXPECT_EQ(handler.getTopN().value(), 1);
+}
+
+TEST_F(RerankHandlerDeserializationTest, TopNNull) {
+    json = R"({
+    "model": "model",
+    "query": "query",
+    "top_n": null,
+    "documents": [
+        "first document",
+        "second document"
+    ]
+    })";
+
+    ASSERT_FALSE(doc.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(doc);
+    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
+    EXPECT_STREQ(handler.getModel().c_str(), "model");
+    EXPECT_STREQ(handler.getQuery().c_str(), "query");
+    ASSERT_FALSE(handler.getReturnDocuments().has_value());
+    ASSERT_FALSE(handler.getRankFields().has_value());
+    ASSERT_FALSE(handler.getMaxChunksPerDoc().has_value());
+    EXPECT_EQ(handler.getDocumentsList().size(), 2);
+    ASSERT_EQ(handler.getDocumentsMap().size(), 0);
+    EXPECT_STREQ(handler.getDocumentsList()[0].c_str(), "first document");
+    ASSERT_TRUE(handler.getTopN().has_value());
+    EXPECT_EQ(handler.getTopN().value(), 2);
 }
 
 TEST_F(RerankHandlerDeserializationTest, InvalidTopN) {
@@ -204,6 +231,31 @@ TEST_F(RerankHandlerDeserializationTest, ValidRankFields) {
     ASSERT_EQ(handler.getRankFields().value().size(), 2);
     EXPECT_STREQ(handler.getRankFields().value()[0].c_str(), "first");
     EXPECT_STREQ(handler.getRankFields().value()[1].c_str(), "second");
+}
+
+TEST_F(RerankHandlerDeserializationTest, RankFieldsNull) {
+    json = R"({
+    "model": "model",
+    "query": "query",
+    "rank_fields": null,
+    "documents": [
+        "first document"
+    ]
+    })";
+
+    ASSERT_FALSE(doc.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(doc);
+    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
+    EXPECT_STREQ(handler.getModel().c_str(), "model");
+    EXPECT_STREQ(handler.getQuery().c_str(), "query");
+    ASSERT_FALSE(handler.getReturnDocuments().has_value());
+    ASSERT_TRUE(handler.getTopN().has_value());
+    EXPECT_EQ(handler.getTopN().value(), 1);
+    ASSERT_FALSE(handler.getMaxChunksPerDoc().has_value());
+    EXPECT_EQ(handler.getDocumentsList().size(), 1);
+    ASSERT_EQ(handler.getDocumentsMap().size(), 0);
+    EXPECT_STREQ(handler.getDocumentsList()[0].c_str(), "first document");
+    ASSERT_FALSE(handler.getRankFields().has_value());
 }
 
 TEST_F(RerankHandlerDeserializationTest, InvalidRankFields) {
@@ -264,6 +316,31 @@ TEST_F(RerankHandlerDeserializationTest, ValidReturnDocuments) {
     EXPECT_TRUE(handler.getReturnDocuments().value());
 }
 
+TEST_F(RerankHandlerDeserializationTest, ReturnDocumentsNull) {
+    json = R"({
+    "model": "model",
+    "query": "query",
+    "return_documents": null,
+    "documents": [
+        "first document"
+    ]
+    })";
+
+    ASSERT_FALSE(doc.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(doc);
+    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
+    EXPECT_STREQ(handler.getModel().c_str(), "model");
+    EXPECT_STREQ(handler.getQuery().c_str(), "query");
+    ASSERT_FALSE(handler.getRankFields().has_value());
+    ASSERT_TRUE(handler.getTopN().has_value());
+    EXPECT_EQ(handler.getTopN().value(), 1);
+    ASSERT_FALSE(handler.getMaxChunksPerDoc().has_value());
+    EXPECT_EQ(handler.getDocumentsList().size(), 1);
+    ASSERT_EQ(handler.getDocumentsMap().size(), 0);
+    EXPECT_STREQ(handler.getDocumentsList()[0].c_str(), "first document");
+    ASSERT_FALSE(handler.getReturnDocuments().has_value());
+}
+
 TEST_F(RerankHandlerDeserializationTest, InvalidReturnDocuments) {
     json = R"({
     "model": "model",
@@ -304,6 +381,31 @@ TEST_F(RerankHandlerDeserializationTest, ValidMaxChunksPerDoc) {
     EXPECT_STREQ(handler.getDocumentsList()[0].c_str(), "first document");
     ASSERT_TRUE(handler.getMaxChunksPerDoc().has_value());
     EXPECT_EQ(handler.getMaxChunksPerDoc().value(), 2);
+}
+
+TEST_F(RerankHandlerDeserializationTest, MaxChunksPerDocNull) {
+    json = R"({
+    "model": "model",
+    "query": "query",
+    "max_chunks_per_doc": null,
+    "documents": [
+        "first document"
+    ]
+    })";
+
+    ASSERT_FALSE(doc.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(doc);
+    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
+    EXPECT_STREQ(handler.getModel().c_str(), "model");
+    EXPECT_STREQ(handler.getQuery().c_str(), "query");
+    ASSERT_FALSE(handler.getReturnDocuments().has_value());
+    ASSERT_FALSE(handler.getRankFields().has_value());
+    ASSERT_TRUE(handler.getTopN().has_value());
+    EXPECT_EQ(handler.getTopN().value(), 1);
+    EXPECT_EQ(handler.getDocumentsList().size(), 1);
+    ASSERT_EQ(handler.getDocumentsMap().size(), 0);
+    EXPECT_STREQ(handler.getDocumentsList()[0].c_str(), "first document");
+    ASSERT_FALSE(handler.getMaxChunksPerDoc().has_value());
 }
 
 TEST_F(RerankHandlerDeserializationTest, InvalidMaxChunksPerDoc) {
@@ -377,6 +479,26 @@ TEST(RerankHandlerSerializationTest, positiveReturnDocumentsWithDocumentsList) {
     auto status = handler.parseResponse(buffer, scores);
     EXPECT_TRUE(status.ok());
     std::string expectedResponse = R"({"results":[{"index":1,"relevance_score":17.209999084472656,"document":{"text":"second"}},{"index":0,"relevance_score":5.360000133514404,"document":{"text":"first"}},{"index":2,"relevance_score":3.009999990463257,"document":{"text":"third"}}]})";
+    EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
+}
+
+TEST(RerankHandlerSerializationTest, positiveReturnDocumentsFalseWithDocumentsList) {
+    std::vector<float> scores = {5.36, 17.21, 3.01};
+    std::string json = R"({
+    "model": "model",
+    "query": "query",
+    "return_documents": false,
+    "documents": [ "first", "second", "third"]
+    })";
+
+    Document d;
+    ASSERT_FALSE(d.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(d);
+    StringBuffer buffer;
+    ASSERT_TRUE(handler.parseRequest().ok());
+    auto status = handler.parseResponse(buffer, scores);
+    EXPECT_TRUE(status.ok());
+    std::string expectedResponse = R"({"results":[{"index":1,"relevance_score":17.209999084472656},{"index":0,"relevance_score":5.360000133514404},{"index":2,"relevance_score":3.009999990463257}]})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
 }
 

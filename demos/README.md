@@ -5,6 +5,7 @@
 maxdepth: 1
 hidden:
 ---
+ovms_demos_rerank
 ovms_demos_embeddings
 ovms_demos_continuous_batching
 ovms_demo_clip_image_classification
@@ -42,6 +43,7 @@ ovms_string_output_model_demo
 OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities.
 ### Check Out New Generative AI Demos
  - [OpenAI API text embeddings ](embeddings/README.md)
+ - [Reranking with Cohere API](rerank/README.md)
  - [Text Generation with continuous batching](continuous_batching/README.md)
  - [RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
 

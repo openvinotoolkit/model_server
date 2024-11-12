@@ -46,6 +46,7 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@model_api//:model_api",
         "//src:httppayload",
+        "//src:libhttpclientconnection",
         "//src:libovmslogging",
         "//src:libovmsprofiler",
 	    "rerank_calculator_cc_proto",
@@ -65,7 +66,8 @@ cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
-        "//src:libovmsprofiler"
+        "//src:libovmsprofiler",
+        "//third_party:openvino",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,

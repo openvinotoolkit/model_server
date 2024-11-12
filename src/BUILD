@@ -19,6 +19,10 @@ load("//:common_settings.bzl",
      "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS_VISIBLE", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
      "create_config_settings")
 
+COPTS_OV_TRACE = select({
+    "//conditions:default": ["-DOV_TRACE=0"],
+    "//:not_disable_ov_trace" : ["-DOV_TRACE=1"],
+})
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
         "//:fuzzer_build" : COMMON_FUZZER_COPTS,
@@ -41,16 +45,7 @@ COPTS_CLOUD = select({
     "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
 })
 
-COPTS_TESTS = COMMON_STATIC_TEST_COPTS + select({
-        "//conditions:default": ["-DPYTHON_DISABLE=1"],
-        "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
-}) + select({
-        "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
-        "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
-}) + select({
-        "//conditions:default": ["-DCLOUD_DISABLE=1"],
-        "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
-})
+COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_CLOUD
 
 config_setting(
     name = "windows",
@@ -59,14 +54,14 @@ config_setting(
 )
 
 cc_library(
-    name = "custom_nodes_common_lib",
+    name = "custom_nodes_common_buffersqueue",
     linkstatic = 1,
     hdrs = ["custom_nodes/common/buffersqueue.hpp"],
     srcs = [
-        "queue.hpp",
         "custom_nodes/common/buffersqueue.hpp",
         "custom_nodes/common/buffersqueue.cpp",
     ],
+    deps = ["libovms_queue"],
     copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
 )
 
@@ -164,6 +159,26 @@ mediapipe_proto_library(
 )
 
 cc_library(
+    name = "libovms_queue",
+    hdrs = ["queue.hpp"],
+    copts = [],
+    visibility = ["//visibility:public",],
+    linkopts = [],
+)
+cc_library(
+    name = "libovms_ovinferrequestsqueue",
+    hdrs = ["ovinferrequestsqueue.hpp"],
+    srcs = ["ovinferrequestsqueue.cpp"],
+    deps = [
+        "libovms_queue",
+        "libovmslogging",
+        "//third_party:openvino",
+    ],
+    copts = [],
+    visibility = ["//visibility:public",],
+    linkopts = [],
+)
+cc_library(
     name = "ovms_header",
     hdrs = ["ovms.h"],
     copts = [],
@@ -171,7 +186,152 @@ cc_library(
     linkopts = [],
     alwayslink = 1,
 )
-
+cc_library(
+    name = "libovms_server_settings",
+    hdrs = ["capi_frontend/server_settings.hpp"],
+    srcs = [],
+    deps = [],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovms_version",
+    hdrs = ["version.hpp"],
+    srcs = [],
+    deps = [],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovms_systeminfo",
+    hdrs = ["systeminfo.hpp"],
+    srcs = ["systeminfo.cpp"],
+    deps = [
+        "libovmslogging",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovms_config",
+    hdrs = ["config.hpp"],
+    srcs = ["config.cpp"],
+    deps = [
+        "libovms_server_settings",
+        "libovmslogging",
+        "libovmsmodelconfig",
+        "libovms_cliparser",
+        "libovms_systeminfo",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovms_cliparser",
+    hdrs = ["cli_parser.hpp"],
+    srcs = ["cli_parser.cpp"],
+    deps = [
+        "@com_github_jarro2783_cxxopts//:cxxopts",
+        "libovms_server_settings",
+        "libovms_version",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovms_capi_servable_metadata",
+    hdrs = ["capi_frontend/servablemetadata.hpp"],
+    srcs = ["capi_frontend/servablemetadata.cpp"],
+    deps = [
+        "libovms_tensorinfo",
+        "libovmsmodelversion",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovms_sequence",
+    hdrs = ["sequence.hpp"],
+    srcs = ["sequence.cpp"],
+    deps = [
+        "libovmsstatus",
+        "libovms_ov_utils",
+        "//third_party:openvino",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovms_sequence_manager",
+    hdrs = ["sequence_manager.hpp"],
+    srcs = ["sequence_manager.cpp"],
+    deps = [
+        "libovms_sequence",
+        "libovmsmodelversion",
+        "libovmsstatus",
+        "libovmslogging",
+        "libovms_sequence_processing_spec",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovms_sequence_processing_spec",
+    hdrs = ["sequence_processing_spec.hpp"],
+    deps = [],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovms_kfs_utils",
+    hdrs = ["kfs_frontend/kfs_utils.hpp"],
+    srcs = ["kfs_frontend/kfs_utils.cpp"],
+    deps = [
+        "//src/kfserving_api:kfserving_api_cpp",
+        "libovmslogging",
+        "libovmsstatus",
+        "libovmsprofiler",
+        "libovms_tensorinfo",
+        "libovmsprecision",
+        "libovmsmodelversion",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "libovms_kfs_grpc_inference_service_h",
+    hdrs = ["kfs_frontend/kfs_grpc_inference_service.hpp"],
+    deps = [
+        "//src/kfserving_api:kfserving_api_cpp",
+        "//third_party:openvino",
+        "@com_github_grpc_grpc//:grpc++",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
 cc_library(
     name = "ovms_lib",
     hdrs = ["ovms.h",
@@ -179,15 +339,8 @@ cc_library(
     ],
     srcs = [
         "capi_frontend/capi.cpp",
-        "capi_frontend/servablemetadata.cpp",
-        "capi_frontend/servablemetadata.hpp",
-        "capi_frontend/server_settings.hpp",
         "cleaner_utils.cpp",
         "cleaner_utils.hpp",
-        "cli_parser.cpp",
-        "cli_parser.hpp",
-        "config.cpp",
-        "config.hpp",
         "custom_node_interface.h",
         "customloaderconfig.hpp",
         "customloaders.hpp",
@@ -260,9 +413,6 @@ cc_library(
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
         "kfs_frontend/kfs_grpc_inference_service.cpp",
-        "kfs_frontend/kfs_grpc_inference_service.hpp",
-        "kfs_frontend/kfs_utils.cpp",
-        "kfs_frontend/kfs_utils.hpp",
         "model.cpp",
         "model.hpp",
         "modelchangesubscription.cpp",
@@ -277,10 +427,6 @@ cc_library(
         "model_service.cpp",
         "model_metric_reporter.cpp",
         "model_metric_reporter.hpp",
-        "module.hpp",
-        "ovinferrequestsqueue.hpp",
-        "ov_utils.cpp",
-        "ov_utils.hpp",
         "ovms.h",
         "ovms_exit_codes.hpp",
         "prediction_service.cpp",
@@ -299,19 +445,8 @@ cc_library(
         "servablemanagermodule.hpp",
         "server.cpp",
         "server.hpp",
-        "sequence.cpp",
-        "sequence.hpp",
-        "sequence_manager.cpp",
-        "sequence_manager.hpp",
-        "sequence_processing_spec.hpp",
         "statefulmodelinstance.cpp",
         "statefulmodelinstance.hpp",
-        "systeminfo.cpp",
-        "systeminfo.hpp",
-        "queue.hpp",
-        "tensorinfo.cpp",
-        "tensorinfo.hpp",
-        "version.hpp",
         "tensor_conversion.hpp",
         "tensor_conversion.cpp",
          ] + select({
@@ -346,6 +481,7 @@ cc_library(
                 "//src/rerank:rerankcalculator",],
         }) + [
             "cpp_headers",
+            "libovms_capi_servable_metadata",
             "libmodelconfigjsonparser",
             "libovmsmodelconfig",
             "libovmscapibuffer",
@@ -354,6 +490,8 @@ cc_library(
             "libovmscapiinferencerequest",
             "libovmscapiinferenceresponse",
             "libovmscapiinferencetensor",
+            "libovms_cliparser",
+            "libovms_config",
             "libovmsdagspipelinedefinitionstatus",
             "libovms_dags_aliases",
             "libovms_dags_node",
@@ -366,18 +504,28 @@ cc_library(
             "libovmsfilesystem",
             "libovmsfilesystemfactory_h",
             "libovmsfilesystemfactory", # TODO FIXME missing symbols @atobisze when not in ovms_lib
+            "libovms_kfs_utils",
+            "libovms_kfs_grpc_inference_service_h",
             "libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
             "libovmsmetrics",
+            "libovms_ov_utils",
             "libovmsprecision",
             "libovmsshape",
             "libovmsschema",
             "libovmslayout",
             "libovmslayout_configuration",
+            "libovms_tensorinfo",
             "libovmstimer",
             "libovmstfs_grpc",
-            "//src:libovmsprofiler",
+            "libovms_version",
+            "libovmsprofiler",
             "libovmsstatus",
+            "libovms_sequence",
+            "libovms_sequence_manager",
+            "libovms_sequence_processing_spec",
+            "libovms_queue",
+            "libovms_ovinferrequestsqueue",
             "libovmstensor_utils",
             "libovms_dags_tensormap",
             "libovmsstring_utils",
@@ -417,7 +565,7 @@ cc_library(
         }),
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED + COPTS_PYTHON + COPTS_MEDIAPIPE,
+    copts = COPTS_ADJUSTED + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_OV_TRACE,
     linkopts = LINKOPTS_ADJUSTED + select({
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : [],}),
@@ -439,6 +587,7 @@ cc_library(
         "profilermodule.cpp",],
     deps = [
         "@minitrace//:trace",
+        "libovms_module",
         "//src:cpp_headers",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -462,7 +611,7 @@ cc_library(
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED + COPTS_OV_TRACE,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
@@ -472,7 +621,7 @@ cc_library(
     hdrs = ["http_payload.hpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
-        "//src:libhttpclientconnection"
+        "libovmsclient_connection",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
@@ -481,9 +630,21 @@ cc_library(
 )
 
 cc_library(
-    name = "libhttpclientconnection",
-    hdrs = ["client_connection.hpp", "http_frontend/http_client_connection.hpp"],
+    name = "libovmsclient_connection",
+    hdrs = ["client_connection.hpp"],
     deps = [
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+cc_library(
+    name = "libhttpclientconnection",
+    hdrs = ["http_frontend/http_client_connection.hpp"],
+    deps = [
+        "libovmsclient_connection",
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
     ],
     visibility = ["//visibility:public",],
@@ -493,6 +654,14 @@ cc_library(
     alwayslink = 1,
 )
 
+cc_library(
+    name = "libovms_module",
+    hdrs = ["module.hpp"],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
 cc_library(
     name = "libovmsprecision",
     hdrs = ["precision.hpp"],
@@ -616,14 +785,15 @@ cc_binary(
     name = "libcustom_node_add_one.so",
     srcs = [
         "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/buffersqueue.hpp",
-        "custom_nodes/common/buffersqueue.cpp",
         "custom_nodes/common/custom_node_library_internal_manager.hpp",
         "custom_nodes/common/custom_node_library_internal_manager.cpp",
-        "queue.hpp",
         "custom_nodes/add_one/add_one.cpp",
         "custom_node_interface.h",
         "custom_nodes/add_one/add_one_internal_manager.hpp"
+    ],
+    deps = [
+        "custom_nodes_common_buffersqueue",
+        "libovms_queue",
     ],
     linkshared = 1,
     copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
@@ -634,16 +804,15 @@ cc_binary(
     srcs = [
         "custom_nodes/common/utils.hpp",
         "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/common/buffersqueue.hpp",
-        "custom_nodes/common/buffersqueue.cpp",
         "custom_nodes/common/custom_node_library_internal_manager.hpp",
         "custom_nodes/common/custom_node_library_internal_manager.cpp",
-        "queue.hpp",
         "custom_nodes/model_zoo_intel_object_detection/model_zoo_intel_object_detection.cpp",
         "custom_node_interface.h",
     ],
     deps = [
+        "custom_nodes_common_buffersqueue",
         "//third_party:opencv",
+        "libovms_queue",
     ],
     linkshared = 1,
     copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
@@ -742,6 +911,7 @@ cc_library( # TODO split dependencies
         "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
+        "libovms_module",
         "libovmslogging",
         "libovmsprofiler",
         "libovmsstatus",
@@ -793,6 +963,7 @@ cc_library(
         "@com_github_jupp0r_prometheus_cpp//core",
         "@com_github_tencent_rapidjson//:rapidjson",
         "cpp_headers",
+        "libovms_module",
         "libovmslogging",
         "libovmsschema",
         "libovmsstatus",
@@ -1503,7 +1674,7 @@ cc_library( # TODO split further
         "status.hpp",
         "module_names.hpp",
         "module_names.cpp",
-        "module.hpp",],
+    ],
     deps = [],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1660,6 +1831,7 @@ cc_test(
             "//:not_disable_mediapipe": [
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/rerank_handler_test.cpp",
+                "test/rerank_chunking_test.cpp",
                 "test/streaming_test.cpp", # Mediapipe enabled
                 "test/mediapipe_validation_test.cpp", # Mediapipe enabled
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
@@ -1796,12 +1968,13 @@ cc_test(
     deps = [
             ":test_utils",
             "//src/rerank:rerank_api_handler",
+            ":embeddings_handler_tests",
             ":inferencerequest_test",
             ":libtest_environment",
             ":libtest_gpuenvironment",
             "//src:ovms_lib",
             "//src:libovmsfilesystemfactory",
-            "//src:custom_nodes_common_lib",
+            "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
             ] + select({
                 "//conditions:default": [
@@ -1961,6 +2134,19 @@ cc_library(
     deps = [
         ":test_utils",
         "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+    linkopts = [],
+)
+cc_library(
+    name = "embeddings_handler_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/embeddings_handler_test.cpp"],
+    data = [],
+    deps = [
+        "//src/embeddings:embeddings_api",
         "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,

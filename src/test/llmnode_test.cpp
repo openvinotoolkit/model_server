@@ -28,7 +28,6 @@
 #include <openvino/openvino.hpp>
 #include <pybind11/embed.h>
 
-#include "../embeddings/embeddings_api.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/llm_executor.hpp"
@@ -81,7 +80,6 @@ public:
             ov::genai::SchedulerConfig schedulerConfig = {
                 .max_num_batched_tokens = 256,
                 .cache_size = 1,
-                .block_size = 32,
                 .dynamic_split_fuse = true,
                 .max_num_seqs = 256,
             };
@@ -2531,7 +2529,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 8);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
     ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, false);
@@ -2561,7 +2558,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
                 models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
                 max_num_batched_tokens: 98
                 cache_size: 1
-                block_size: 16
             }
         }
         input_stream_handler {
@@ -2584,7 +2580,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
 
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 16);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
 }
@@ -2632,6 +2627,54 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
 }
 
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                plugin_config: '{"A": "B", "C": "D"}'
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
+
+    ASSERT_EQ(nodeResources->pluginConfig.size(), 2);
+    ASSERT_EQ(nodeResources->pluginConfig.count("A"), 1);
+    ASSERT_EQ(nodeResources->pluginConfig.count("C"), 1);
+    ASSERT_EQ(nodeResources->pluginConfig["A"], "B");
+    ASSERT_EQ(nodeResources->pluginConfig["C"], "D");
+}
+
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -2658,6 +2701,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
                 max_num_seqs: 95
                 dynamic_split_fuse: false
                 enable_prefix_caching: true
+                max_tokens_limit: 700
+                best_of_limit: 3
             }
         }
         input_stream_handler {
@@ -2680,10 +2725,14 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
 
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 1024);
     ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
+    // We create graph with block_size set in graph config to make sure setting it does not result in error
+    // TODO: Remove below commented assertion as well as block_size from the testPbtxt when block_size is removed from options proto.
+    // ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
     ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
     ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, true);
+    ASSERT_EQ(nodeResources->maxTokensLimit, 700);
+    ASSERT_EQ(nodeResources->bestOfLimit, 3);
 }
 
 class GetPromptTokensString : public ::testing::Test {
@@ -2793,29 +2842,28 @@ TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
     }
 }
 
-class EmbeddingsHttpTest : public ::testing::Test {
-protected:
-    static std::unique_ptr<std::thread> t;
-
+class V3HttpTest : public ::testing::Test {
 public:
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
 
     std::vector<std::pair<std::string, std::string>> headers;
     ovms::HttpRequestComponents comp;
     const std::string endpointEmbeddings = "/v3/embeddings";
+    const std::string endpointRerank = "/v3/rerank";
     MockedServerRequestInterface writer;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
 
-    static void SetUpTestSuite() {
-        std::string port = "9173";
+    static void SetUpSuite(std::string& port, std::string& configPath, std::unique_ptr<std::thread>& t) {
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json").c_str());
+        ::SetUpServer(t, server, port, getWindowsFullPathForSrcTest(configPath).c_str());
         auto start = std::chrono::high_resolution_clock::now();
         const int numberOfRetries = 5;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
         }
+    }
+    static void SetUpTestSuite() {
     }
 
     void SetUp() {
@@ -2824,7 +2872,7 @@ public:
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
     }
 
-    static void TearDownTestSuite() {
+    static void TearDownSuite(std::unique_ptr<std::thread>& t) {
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(1);
         t->join();
@@ -2833,6 +2881,22 @@ public:
 
     void TearDown() {
         handler.reset();
+    }
+};
+
+class EmbeddingsHttpTest : public V3HttpTest {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        std::string configPath = "/ovms/src/test/embeddings/config_embeddings.json";
+        SetUpSuite(port, configPath, t);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
     }
 };
 std::unique_ptr<std::thread> EmbeddingsHttpTest::t;
@@ -2858,6 +2922,12 @@ TEST_F(EmbeddingsHttpTest, simplePositive) {
     ASSERT_EQ(d["data"][0]["object"], "embedding");
     ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_TRUE(d.HasMember("usage"));
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].HasMember("prompt_tokens"));
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].HasMember("total_tokens"));
+    ASSERT_TRUE(d["usage"]["total_tokens"].IsInt());
     double sum = 0;
     for (auto& value : d["data"][0]["embedding"].GetArray()) {
         sum += value.GetDouble() * value.GetDouble();
@@ -2886,6 +2956,12 @@ TEST_F(EmbeddingsHttpTest, simplePositiveNoNorm) {
     ASSERT_EQ(d["data"][0]["object"], "embedding");
     ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_TRUE(d.HasMember("usage"));
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].HasMember("prompt_tokens"));
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].HasMember("total_tokens"));
+    ASSERT_TRUE(d["usage"]["total_tokens"].IsInt());
     double sum = 0;
     for (auto& value : d["data"][0]["embedding"].GetArray()) {
         sum += value.GetDouble() * value.GetDouble();
@@ -2916,6 +2992,12 @@ TEST_F(EmbeddingsHttpTest, simplePositiveBase64) {
     ASSERT_TRUE(d["data"][0]["embedding"].IsString());
     ASSERT_EQ(d["data"][0]["embedding"].Size(), ((4 * (EMBEDDING_OUTPUT_SIZE * sizeof(float)) / 3) + 3) & ~3);  // In base64 each symbol represents 3/4 of a byte rounded up
     ASSERT_EQ(d["data"][0]["index"], 0);
+    ASSERT_TRUE(d.HasMember("usage"));
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].HasMember("prompt_tokens"));
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].HasMember("total_tokens"));
+    ASSERT_TRUE(d["usage"]["total_tokens"].IsInt());
 }
 
 class EmbeddingsExtensionTest : public ::testing::Test {
@@ -2997,248 +3079,19 @@ TEST_F(EmbeddingsExtensionTest, simplePositive) {
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 
-TEST(EmbeddingsSerialization, singleStringInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 1);
-    ASSERT_EQ(strings->at(0), "dummyInput");
-}
-
-TEST(EmbeddingsSerialization, multipleStringInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"]
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
-}
-
-TEST(EmbeddingsSerialization, handler) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"]
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    EmbeddingsHandler handler(d);
-    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
-    ASSERT_EQ(handler.getEncodingFormat(), EncodingFormat::FLOAT);
-    auto input = handler.getInput();
-    auto strings = std::get_if<std::vector<std::string>>(&input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
-}
-
-TEST(EmbeddingsSerialization, malformedInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", 2, "three"]
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "every element in input array should be string");
-}
-
-TEST(EmbeddingsSerialization, invalidEncoding) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "three"],
-"encoding_format": "dummy"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "encoding_format should either base64 or float");
-}
-
-TEST(EmbeddingsSerialization, invalidEncodingType) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "three"],
-"encoding_format": 42
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "encoding_format should be string");
-}
-
-TEST(EmbeddingsSerialization, malformedInputType) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": 1
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "input should be string or array of strings");
-}
-
-TEST(EmbeddingsSerialization, noInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "input field is required");
-}
-
-TEST(EmbeddingsSerialization, multipleStringInputBase64) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"],
-"encoding_format": "base64"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::BASE64);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
-}
-
-TEST(EmbeddingsSerialization, multipleStringInputFloat) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"],
-"encoding_format": "float"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
-}
-
-class EmbeddingsInvalidConfigTest : public ::testing::Test {
+class EmbeddingsInvalidConfigTest : public V3HttpTest {
 protected:
     static std::unique_ptr<std::thread> t;
 
 public:
-    std::unique_ptr<ovms::HttpRestApiHandler> handler;
-
-    std::vector<std::pair<std::string, std::string>> headers;
-    ovms::HttpRequestComponents comp;
-    const std::string endpointEmbeddings = "/v3/embeddings";
-    MockedServerRequestInterface writer;
-    std::string response;
-    ovms::HttpResponseComponents responseComponents;
-
     static void SetUpTestSuite() {
         std::string port = "9173";
-        ovms::Server& server = ovms::Server::instance();
-        const char* configPath = getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_embeddings.json").c_str();
-        server.setShutdownRequest(0);
-        randomizePort(port);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--config_path",
-            (char*)configPath,
-            (char*)"--port",
-            (char*)port.c_str()};
-        int argc = 5;
-        t.reset(new std::thread([&argc, &argv, &server]() {
-            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-        }));
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
-    }
-
-    void SetUp() {
-        ovms::Server& server = ovms::Server::instance();
-        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
-        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
+        std::string configPath = getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_embeddings.json");
+        SetUpSuite(port, configPath, t);
     }
 
     static void TearDownTestSuite() {
-        ovms::Server& server = ovms::Server::instance();
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
-    }
-
-    void TearDown() {
-        handler.reset();
+        TearDownSuite(t);
     }
 };
 std::unique_ptr<std::thread> EmbeddingsInvalidConfigTest::t;
@@ -3254,30 +3107,22 @@ TEST_F(EmbeddingsInvalidConfigTest, simpleNegative) {
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
 
-class EmbeddingsInvalidTokenizerConfigTest : public EmbeddingsInvalidConfigTest {
+class EmbeddingsInvalidTokenizerConfigTest : public V3HttpTest {
+protected:
+    static std::unique_ptr<std::thread> t;
+
 public:
     static void SetUpTestSuite() {
         std::string port = "9173";
-        ovms::Server& server = ovms::Server::instance();
-        const char* configPath = getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_tokenizer.json").c_str();
-        server.setShutdownRequest(0);
-        randomizePort(port);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--config_path",
-            (char*)configPath,
-            (char*)"--port",
-            (char*)port.c_str()};
-        int argc = 5;
-        t.reset(new std::thread([&argc, &argv, &server]() {
-            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-        }));
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
+        std::string configPath = getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_tokenizer.json");
+        SetUpSuite(port, configPath, t);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
     }
 };
+std::unique_ptr<std::thread> EmbeddingsInvalidTokenizerConfigTest::t;
 
 TEST_F(EmbeddingsInvalidTokenizerConfigTest, simpleNegative) {
     std::string requestBody = R"(
@@ -3288,4 +3133,121 @@ TEST_F(EmbeddingsInvalidTokenizerConfigTest, simpleNegative) {
     )";
     Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
+class RerankHttpTest : public V3HttpTest {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        std::string configPath = "/ovms/src/test/rerank/config.json";
+        SetUpSuite(port, configPath, t);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
+    }
+};
+std::unique_ptr<std::thread> RerankHttpTest::t;
+
+TEST_F(RerankHttpTest, simplePositive) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank",
+            "query": "What is the capital of the United States?",
+            "documents": ["Carson City is the capital city of the American state of Nevada.",
+                        "The Commonwealth of the Northern Mariana Islands is a group of islands in the Pacific Ocean. Its capital is Saipan.",
+                        "Washington, D.C. (also known as simply Washington or D.C., and officially as the District of Columbia) is the capital of the United States. It is a federal district.",
+                        "Capitalization or capitalisation in English grammar is the use of a capital letter at the start of a word. English usage varies from capitalization in other languages.",
+                        "Capital punishment (the death penalty) has existed in the United States since beforethe United States was a country. As of 2017, capital punishment is legal in 30 of the 50 states."]
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d.HasMember("results"));
+    ASSERT_TRUE(d["results"].IsArray());
+    ASSERT_EQ(d["results"].Size(), 5);
+    for (auto& v : d["results"].GetArray()) {
+        ASSERT_TRUE(v.IsObject());
+        EXPECT_EQ(v.Size(), 2);
+        ASSERT_TRUE(v.HasMember("index"));
+        EXPECT_TRUE(v["index"].IsInt());
+        ASSERT_TRUE(v.HasMember("relevance_score"));
+        EXPECT_TRUE(v["relevance_score"].IsDouble());
+    }
+}
+
+TEST_F(RerankHttpTest, positiveTopN) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank",
+            "query": "What is the capital of the United States?",
+            "top_n": 3,
+            "documents": ["Carson City is the capital city of the American state of Nevada.",
+                        "The Commonwealth of the Northern Mariana Islands is a group of islands in the Pacific Ocean. Its capital is Saipan.",
+                        "Washington, D.C. (also known as simply Washington or D.C., and officially as the District of Columbia) is the capital of the United States. It is a federal district.",
+                        "Capitalization or capitalisation in English grammar is the use of a capital letter at the start of a word. English usage varies from capitalization in other languages.",
+                        "Capital punishment (the death penalty) has existed in the United States since beforethe United States was a country. As of 2017, capital punishment is legal in 30 of the 50 states."]
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d.HasMember("results"));
+    ASSERT_TRUE(d["results"].IsArray());
+    ASSERT_EQ(d["results"].Size(), 3);
+    for (auto& v : d["results"].GetArray()) {
+        ASSERT_TRUE(v.IsObject());
+        EXPECT_EQ(v.Size(), 2);
+        ASSERT_TRUE(v.HasMember("index"));
+        EXPECT_TRUE(v["index"].IsInt());
+        ASSERT_TRUE(v.HasMember("relevance_score"));
+        EXPECT_TRUE(v["relevance_score"].IsDouble());
+    }
+}
+
+TEST_F(RerankHttpTest, positiveReturnDocuments) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank",
+            "query": "What is the capital of the United States?",
+            "return_documents": true,
+            "documents": ["Carson City is the capital city of the American state of Nevada.",
+                        "The Commonwealth of the Northern Mariana Islands is a group of islands in the Pacific Ocean. Its capital is Saipan.",
+                        "Washington, D.C. (also known as simply Washington or D.C., and officially as the District of Columbia) is the capital of the United States. It is a federal district.",
+                        "Capitalization or capitalisation in English grammar is the use of a capital letter at the start of a word. English usage varies from capitalization in other languages.",
+                        "Capital punishment (the death penalty) has existed in the United States since beforethe United States was a country. As of 2017, capital punishment is legal in 30 of the 50 states."]
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d.HasMember("results"));
+    ASSERT_TRUE(d["results"].IsArray());
+    ASSERT_EQ(d["results"].Size(), 5);
+    for (auto& v : d["results"].GetArray()) {
+        ASSERT_TRUE(v.IsObject());
+        EXPECT_EQ(v.Size(), 3);
+        ASSERT_TRUE(v.HasMember("index"));
+        EXPECT_TRUE(v["index"].IsInt());
+        ASSERT_TRUE(v.HasMember("relevance_score"));
+        EXPECT_TRUE(v["relevance_score"].IsDouble());
+        ASSERT_TRUE(v.HasMember("document"));
+        EXPECT_TRUE(v["document"].IsObject());
+        EXPECT_EQ(v["document"].Size(), 1);
+        ASSERT_TRUE(v["document"].HasMember("text"));
+        EXPECT_TRUE(v["document"]["text"].IsString());
+    }
 }

@@ -80,8 +80,8 @@ struct OpenAIChatCompletionsRequest {
     std::optional<bool> includeStopStrInOutput{std::nullopt};
     std::optional<int> bestOf{std::nullopt};
     std::optional<bool> ignoreEOS{std::nullopt};
-    bool logprobs = 0;
-    int logprobschat = false;
+    int logprobs = 0;
+    bool logprobschat = false;
     bool echo{false};
 
     OpenAIChatCompletionsRequest() = default;
@@ -138,6 +138,9 @@ struct OpenAIChatCompletionsRequest {
         if (presencePenalty.has_value())
             config.presence_penalty = presencePenalty.value();
         config.do_sample = config.temperature > 0.0f && config.num_beams == 1;
+
+        if (logprobschat || logprobs > 0)
+            config.logprobs = 1;
 
         return config;
     }
