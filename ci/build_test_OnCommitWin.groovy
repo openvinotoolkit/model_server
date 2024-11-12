@@ -57,12 +57,14 @@ pipeline {
                 script {
                     def status = bat(returnStatus: true, script: 'grep "       OK " test.log | wc -l | grep 1818')
                     if (status != 0) {
+                            status = bat(returnStatus: true, script: 'diff ci\\win_test_pattern.log test.log 2>&1 | tee test_diff.log')
                             error "Error: Windows run test failed ${status}. Expecting 1816 passed tests. Check test.log for details."
                     }
 
                     // TODO Windows: Currently some tests fail change to no fail when fixed.
                     status = bat(returnStatus: true, script: 'grep "  FAILED  " test.log | wc -l | grep 283')
                     if (status != 0) {
+                            status = bat(returnStatus: true, script: 'diff ci\\win_test_pattern.log test.log 2>&1 | tee test_diff.log')
                             error "Error: Windows run test failed ${status}. Expecting 285 failed tests. Check test.log for details."
                     } else {
                         echo "Run test successful."
@@ -80,6 +82,7 @@ pipeline {
             archiveArtifacts allowEmptyArchive: true, artifacts: "build.log"
             archiveArtifacts allowEmptyArchive: true, artifacts: "build_test.log"
             archiveArtifacts allowEmptyArchive: true, artifacts: "test.log"
+            archiveArtifacts allowEmptyArchive: true, artifacts: "test_diff.log"
         }
     }
 }
