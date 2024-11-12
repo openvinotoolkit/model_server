@@ -18,8 +18,25 @@
 
 #include "../modelversion.hpp"
 #include "../precision.hpp"
-#include "kfs_grpc_inference_service.hpp"
+#include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
+#include "src/kfserving_api/grpc_predict_v2.pb.h"
 
+using KFSServerMetadataRequest = inference::ServerMetadataRequest;
+using KFSServerMetadataResponse = inference::ServerMetadataResponse;
+using KFSModelMetadataRequest = inference::ModelMetadataRequest;
+using KFSModelMetadataResponse = inference::ModelMetadataResponse;
+using KFSRequest = inference::ModelInferRequest;
+using KFSResponse = inference::ModelInferResponse;
+using KFSStreamResponse = inference::ModelStreamInferResponse;
+using KFSServerReaderWriter = ::grpc::ServerReaderWriterInterface<KFSStreamResponse, KFSRequest>;
+using KFSTensorInputProto = inference::ModelInferRequest::InferInputTensor;
+using KFSTensorOutputProto = inference::ModelInferResponse::InferOutputTensor;
+using KFSShapeType = google::protobuf::RepeatedField<int64_t>;
+using KFSGetModelStatusRequest = inference::ModelReadyRequest;
+using KFSGetModelStatusResponse = inference::ModelReadyResponse;
+using KFSDataType = std::string;
+using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
+using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
 namespace ovms {
 class Status;
 std::string tensorShapeToString(const KFSShapeType& tensorShape);

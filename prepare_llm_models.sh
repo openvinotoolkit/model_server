@@ -16,7 +16,8 @@
 #
 
 EMBEDDING_MODEL="thenlper/gte-small"
-if [ -d "$1/facebook/opt-125m" ] && [ -d "$1/$EMBEDDING_MODEL" ]; then
+RERANK_MODEL="BAAI/bge-reranker-base"
+if [ -d "$1/facebook/opt-125m" ] && [ -d "$1/$EMBEDDING_MODEL" ] && [ -d "$1/$RERANK_MODEL" ]; then
   echo "Models directory $1 exists. Skipping downloading models."
   exit 0
 fi
@@ -49,3 +50,8 @@ else
   python demos/common/export_models/export_model.py embeddings --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1
 fi
 
+if [ -d "$1/$RERANK_MODEL" ]; then
+  echo "Models directory $1/$RERANK_MODEL exists. Skipping downloading models."
+else
+  python demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int4 --model_repository_path $1
+fi

@@ -621,8 +621,19 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
 
     convertShapeType(doc["inputs"], doc);
     convertShapeType(doc["outputs"], doc);
-    doc.AddMember("rt_info", Value(rapidjson::kObjectType), doc.GetAllocator());
-    convertRTInfo(doc["rt_info"], doc, extraMetadata.rt_info);
+    if (extraMetadata.rt_info.count("model_info")) {
+        rapidjson::Value modelInfoScope, rtInfoScope;
+        modelInfoScope.SetObject();
+        rtInfoScope.SetObject();
+        try {
+            convertRTInfo(modelInfoScope, doc, extraMetadata.rt_info["model_info"].as<ov::AnyMap>());
+        } catch (const std::exception& e) {
+            SPDLOG_DEBUG("Error converting RT info: {}", e.what());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        rtInfoScope.AddMember("model_info", modelInfoScope, doc.GetAllocator());
+        doc.AddMember("rt_info", rtInfoScope, doc.GetAllocator());
+    }
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);

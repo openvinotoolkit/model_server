@@ -36,7 +36,7 @@ std::shared_ptr<spdlog::logger> llm_calculator_logger = std::make_shared<spdlog:
 std::shared_ptr<spdlog::logger> embeddings_calculator_logger = std::make_shared<spdlog::logger>("embeddings_calculator");
 std::shared_ptr<spdlog::logger> rerank_calculator_logger = std::make_shared<spdlog::logger>("rerank_calculator");
 #endif
-#if (OV_TRACING == 1)
+#if (OV_TRACE == 1)
 std::shared_ptr<spdlog::logger> ov_logger = std::make_shared<spdlog::logger>("openvino");
 #endif
 const std::string default_pattern = "[%Y-%m-%d %T.%e][%t][%n][%l][%s:%#] %v";
@@ -77,7 +77,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     rerank_calculator_logger->set_pattern(default_pattern);
     embeddings_calculator_logger->set_pattern(default_pattern);
 #endif
-#if (OV_TRACING == 1)
+#if (OV_TRACE == 1)
     ov_logger->set_pattern(default_pattern);
 #endif
     for (auto& sink : sinks) {
@@ -95,7 +95,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
         rerank_calculator_logger->sinks().push_back(sink);
         embeddings_calculator_logger->sinks().push_back(sink);
 #endif
-#if (OV_TRACING == 1)
+#if (OV_TRACE == 1)
         ov_logger->sinks().push_back(sink);
 #endif
     }
@@ -114,7 +114,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     set_log_level(log_level, rerank_calculator_logger);
     set_log_level(log_level, embeddings_calculator_logger);
 #endif
-#if (OV_TRACING == 1)
+#if (OV_TRACE == 1)
     set_log_level(log_level, ov_logger);
 #endif
     spdlog::set_default_logger(serving_logger);

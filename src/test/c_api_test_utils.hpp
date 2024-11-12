@@ -137,3 +137,4 @@ struct CallbackUnblockingStruct {
     void* bufferAddr = nullptr;
 };
 void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
+void checkDummyResponse(OVMS_InferenceResponse* response, double expectedValue, double tolerance);
