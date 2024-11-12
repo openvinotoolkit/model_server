@@ -87,7 +87,7 @@ class LLMExecutorWrapper {
                     stepCounter++;
                     llmExecutor->step();
                 } else {
-                    SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {:.1f}%;", 0, 0, 0.0);
+                    SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {};", 0, 0);
                     llmExecutor->waitForRequests(receivedEndSignal);
                 }
             } catch (std::exception& e) {
