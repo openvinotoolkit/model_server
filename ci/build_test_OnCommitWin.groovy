@@ -1,9 +1,21 @@
+def log_unit_tests_results(){
+    def failed = bat(returnStdout: true, script: 'grep "  FAILED  " test.log | wc -l')
+    def passed = bat(returnStdout: true, script: 'grep "       OK " test.log | wc -l')
+    def status = bat(returnStatus: true, arguments: [passed], script: 'echo "NUMBER OF PASSED TESTS: %1 | tee test_diff.log')
+    status = bat(returnStatus: true, arguments: [failed], script: 'echo "NUMBER OF FAILED TESTS: %1 | tee -a test_diff.log')
+    status = bat(returnStatus: true, script: 'diff ci\\win_test_pattern.log test.log 2>&1 | tee -a test_diff.log')
+}
+
 pipeline {
     options {
         timeout(time: 2, unit: 'HOURS')
     }
     agent {
         label 'win_ovms'
+    }
+    parameters {
+        string(name: 'passed_tests', defaultValue: '1816')
+        string(name: 'failed_tests', defaultValue: '283')
     }
     stages {
         stage('Branch indexing: abort') {
@@ -55,17 +67,17 @@ pipeline {
                     }
                 }
                 script {
-                    def status = bat(returnStatus: true, script: 'grep "       OK " test.log | wc -l | grep 1818')
+                    def status = bat(returnStatus: true, arguments: [params.passed_tests], script: 'grep "       OK " test.log | wc -l | grep %1')
                     if (status != 0) {
-                            status = bat(returnStatus: true, script: 'diff ci\\win_test_pattern.log test.log 2>&1 | tee test_diff.log')
-                            error "Error: Windows run test failed ${status}. Expecting 1816 passed tests. Check test.log for details."
+                            log_unit_tests_results()
+                            error "Error: Windows run test failed ${status}. Expecting ${params.passed_tests} passed tests. Check unit_test.log and test.log for details."
                     }
 
                     // TODO Windows: Currently some tests fail change to no fail when fixed.
-                    status = bat(returnStatus: true, script: 'grep "  FAILED  " test.log | wc -l | grep 283')
+                    status = bat(returnStatus: true, arguments: [params.failed_tests], script: 'grep "  FAILED  " test.log | wc -l | grep %1')
                     if (status != 0) {
-                            status = bat(returnStatus: true, script: 'diff ci\\win_test_pattern.log test.log 2>&1 | tee test_diff.log')
-                            error "Error: Windows run test failed ${status}. Expecting 285 failed tests. Check test.log for details."
+                            log_unit_tests_results()
+                            error "Error: Windows run test failed ${status}. Expecting ${params.failed_tests} failed tests. Check unit_test.log and test.log for details."
                     } else {
                         echo "Run test successful."
                     }
