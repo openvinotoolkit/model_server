@@ -875,14 +875,47 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsStopStringEmpty) {
         ovms::StatusCode::OK);
 }
 
+TEST_F(LLMFlowHttpTest, streamBeamSearchCompletions) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "best_of": 2,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_F(LLMFlowHttpTest, streamBeamSearchChatCompletions) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "best_of": 2,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
 TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
             "stream": true,
-            "seed" : 1,
-            "max_tokens": 5,
-            "ignore_eos": true,
+            "best_of" : 2,
             "prompt": "What is OpenVINO?"
         }
     )";
