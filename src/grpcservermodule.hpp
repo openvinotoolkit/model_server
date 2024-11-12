@@ -51,6 +51,7 @@ public:
 
     const GetModelMetadataImpl& getTFSModelMetadataImpl() const;
     KFSInferenceServiceImpl& getKFSGrpcImpl() const;
+
 private:
     bool isPortAvailable(uint64_t port);
 };

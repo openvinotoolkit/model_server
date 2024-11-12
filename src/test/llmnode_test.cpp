@@ -68,7 +68,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, getWindowsFullPathForSrcTest("/ovms/src/test/llm/config_llm_dummy_kfs.json"));
+        ::SetUpServer(t, server, port, getWindowsFullPathForSrcTest("/ovms/src/test/llm/config_llm_dummy_kfs.json").c_str());
         auto start = std::chrono::high_resolution_clock::now();
         const int numberOfRetries = 5;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
@@ -2810,7 +2810,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json"));
+        ::SetUpServer(t, server, port, getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json").c_str());
         auto start = std::chrono::high_resolution_clock::now();
         const int numberOfRetries = 5;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
@@ -3205,7 +3205,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        const char* configPath = getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_embeddings.json"_.c_str();
+        const char* configPath = getWindowsFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_embeddings.json").c_str();
         server.setShutdownRequest(0);
         randomizePort(port);
         char* argv[] = {(char*)"ovms",
