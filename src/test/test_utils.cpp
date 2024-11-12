@@ -769,5 +769,5 @@ std::string getWindowsFullPathForTmp(std::string linuxPath, bool logChange) {
 }
 
 std::string getWindowsFullPathForTmp(const char* linuxPath, bool logChange) {
-    return getWindowsFullPathForTmp(std::string(linuxPath, strlen(linuxPath), logChange));
+    return getWindowsFullPathForTmp(std::string(linuxPath, strlen(linuxPath)), logChange);
 }

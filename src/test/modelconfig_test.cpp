@@ -24,6 +24,7 @@
 
 #include "../modelconfig.hpp"
 #include "../status.hpp"
+#include "test_utils.hpp"
 
 using namespace testing;
 using ::testing::UnorderedElementsAre;
@@ -35,14 +36,14 @@ TEST(ModelConfig, getters_setters) {
     auto name = config.getName();
     EXPECT_EQ(name, "alexnet");
 
-    config.setBasePath("/path");
+    config.setBasePath(getWindowsFullPathForTmp("/tmp/path"));
     auto path = config.getBasePath();
-    EXPECT_EQ(path, "/path");
+    EXPECT_EQ(path, getWindowsFullPathForTmp("/tmp/path"));
 
-    config.setRootDirectoryPath("/pathto/");
+    config.setRootDirectoryPath(getWindowsFullPathForTmp("/tmp/pathto/"));
     config.setBasePath("relative/path");
     path = config.getBasePath();
-    EXPECT_EQ(path, "/pathto/relative/path");
+    EXPECT_EQ(path, getWindowsFullPathForTmp("/tmp/pathto/relative/path"));
 
     config.setTargetDevice("GPU");
     auto device = config.getTargetDevice();
