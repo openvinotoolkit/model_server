@@ -41,7 +41,7 @@ mkdir -p $1
 if [ -d "$1/facebook/opt-125m" ]; then
   echo "Models directory $1/facebook/opt-125m exists. Skipping downloading models."
 else
-  python demos/common/export_models/export_model.py text_generation --source_model facebook/opt-125m --weight-format fp16 --model_repository_path $1
+  python demos/common/export_models/export_model.py text_generation --source_model facebook/opt-125m --weight-format int8 --model_repository_path $1
 fi
 
 if [ -d "$1/$EMBEDDING_MODEL" ]; then
