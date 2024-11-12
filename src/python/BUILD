@@ -22,12 +22,6 @@ load("//:common_settings.bzl",
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
         "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-}) + select({
-        "//conditions:default": ["-DPYTHON_DISABLE=1"],
-        "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
-}) + select({
-        "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
-        "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
 })
 
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
@@ -153,7 +147,6 @@ cc_library(
     alwayslink = 1,
     #data = [":pyovms.so"], #todo split to header?
 )
-
 
 cc_library(
     name = "libovmspythonmodule",

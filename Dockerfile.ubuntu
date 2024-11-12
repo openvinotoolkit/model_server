@@ -104,6 +104,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             curl \
             default-jdk \
             lcov \
+            less \
             libpugixml1v5 \
             libusb-dev \
             libusb-1.0-0-dev \
