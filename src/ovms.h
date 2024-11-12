@@ -33,7 +33,7 @@ typedef struct OVMS_ServableMetadata_ OVMS_ServableMetadata;
 typedef struct OVMS_Metadata_ OVMS_Metadata;
 
 #define OVMS_API_VERSION_MAJOR 1
-#define OVMS_API_VERSION_MINOR 1
+#define OVMS_API_VERSION_MINOR 2
 
 // Function to retrieve OVMS API version.
 //
@@ -579,12 +579,17 @@ OVMS_Status* OVMS_InferenceAsync(OVMS_Server* server, OVMS_InferenceRequest* req
 // Flag specifies if the response is final coming from inference request, and if there were errors in execution
 //
 // \param response resp
-// \param flag Flag specifying if the response is final response for request
+// \param flag Flag specifying if the call was successful - 0, or not
 // \param userStruct Data provided to callback, set in OVMS_InferenceRequestSetCompletionCallback
 typedef void (* OVMS_InferenceRequestCompletionCallback_t)(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 
-// TODO description
-// TODO consider allocators
+// Set callback for inference request
+//
+// Setting completion callback with OVMS_InferenceRequestSetCompletionCallback is required to receive a reply.
+//
+// \param server The server object
+// \param completeCallback The callback
+// \return OVMS_Status object in case of failure to set callback
 OVMS_Status* OVMS_InferenceRequestSetCompletionCallback(OVMS_InferenceRequest*, OVMS_InferenceRequestCompletionCallback_t completeCallback, void* userStruct);
 
 // Get OVMS_ServableMetadata object

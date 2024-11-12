@@ -23,7 +23,6 @@
 #include <vector>
 
 #include <openvino/openvino.hpp>
-#include <spdlog/spdlog.h>
 
 namespace ovms {
 

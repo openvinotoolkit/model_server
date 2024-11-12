@@ -74,7 +74,7 @@ Status validateCapiTensorContent(const InferenceTensor& tensor, ovms::Precision 
         std::stringstream ss;
         ss << "Servable: " << servableName
            << "; version: " << servableVersion
-           << "; is missing buffer for tensor: " << bufferId;
+           << "; is missing buffer for tensor: " << tensorName;
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
         return Status(StatusCode::NONEXISTENT_BUFFER, details);
@@ -719,7 +719,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
 
     if (buffer->getBufferType() == OVMS_BUFFERTYPE_CPU && buffer->getDeviceId() != std::nullopt && buffer->getDeviceId() != 0) {
         std::stringstream ss;
-        ss << "Required input ";
+        ss << "Required input " << getCurrentlyValidatedTensorName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Has invalid device id for buffer, input with specific name - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_DEVICE_ID, details);

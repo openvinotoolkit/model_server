@@ -127,7 +127,7 @@ else
 endif
 
 ifeq ($(OV_TRACING_ENABLE),1)
-  OV_TRACING_PARAMS = " --cxxopt=-DOV_TRACING=1"
+  OV_TRACING_PARAMS = " --define OV_TRACE=1"
 else
   OV_TRACING_PARAMS = ""
 endif
