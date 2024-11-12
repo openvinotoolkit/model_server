@@ -6,6 +6,37 @@ pipeline {
         label 'win_ovms'
     }
     stages {
+        stage('Check build triggers') {
+            steps {
+                script {
+                    def buildCauses = currentBuild.getBuildCauses()
+                    println "BUILD CAUSE: ${buildCauses}"
+                    println "BUILD NUMBER: ${currentBuild.getNumber()}"
+                }
+                script
+                {
+                    // BRANCH INDEXING BUILD CAUSE: [[_class:jenkins.branch.BranchIndexingCause, shortDescription:Branch indexing]]
+                    def isTriggeredByIndexing = currentBuild.getBuildCauses('jenkins.branch.BranchIndexingCause').size()
+                    // ON COMMIT TRIGGER BUILD CAUSE: [[_class:org.jenkinsci.plugins.workflow.support.steps.build.BuildUpstreamCause, 
+                    def isTriggeredByOnCommit = currentBuild.getBuildCauses('org.jenkinsci.plugins.workflow.support.steps.build.BuildUpstreamCause').size()  
+                    def isTriggeredByUser = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause').size()  
+                    def isTriggeredByTimer = currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause').size()
+
+                    if (isTriggeredByIndexing) {
+                        if (currentBuild.getNumber() == 1) {
+                            echo "First build on branch discovered by branch indexing"
+                            echo "Continue building"
+                        }
+                        else {
+                            echo "Branch discovered by branch indexing"
+                            currentBuild.result = 'SUCCESS'
+                            error "Caught branch indexing for subsequent build. Canceling build"
+                        }
+                    }
+                }
+            }
+            
+        }
         stage ("Clean") {
             steps {
                 script{
