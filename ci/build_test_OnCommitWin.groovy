@@ -1,4 +1,4 @@
-// Helper function to procude unit tests results difference on windows
+// Helper function to produce unit tests results difference on windows versus ci\\win_test_pattern.log file.
 // Added so that a developer can easily see what has changed in the UT execution except the number of passing, failing tests
 // Will be remove once we have all passing UT
 // To produce a new win_test_pattern.log file run:
