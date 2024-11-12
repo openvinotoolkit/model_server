@@ -2842,29 +2842,28 @@ TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
     }
 }
 
-class EmbeddingsHttpTest : public ::testing::Test {
-protected:
-    static std::unique_ptr<std::thread> t;
-
+class V3HttpTest : public ::testing::Test {
 public:
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
 
     std::vector<std::pair<std::string, std::string>> headers;
     ovms::HttpRequestComponents comp;
     const std::string endpointEmbeddings = "/v3/embeddings";
+    const std::string endpointRerank = "/v3/rerank";
     MockedServerRequestInterface writer;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
 
-    static void SetUpTestSuite() {
-        std::string port = "9173";
+    static void SetUpSuite(std::string& port, std::string& configPath, std::unique_ptr<std::thread>& t) {
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, "/ovms/src/test/embeddings/config_embeddings.json");
+        ::SetUpServer(t, server, port, configPath.c_str());
         auto start = std::chrono::high_resolution_clock::now();
         const int numberOfRetries = 5;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
         }
+    }
+    static void SetUpTestSuite() {
     }
 
     void SetUp() {
@@ -2873,7 +2872,7 @@ public:
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
     }
 
-    static void TearDownTestSuite() {
+    static void TearDownSuite(std::unique_ptr<std::thread>& t) {
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(1);
         t->join();
@@ -2882,6 +2881,22 @@ public:
 
     void TearDown() {
         handler.reset();
+    }
+};
+
+class EmbeddingsHttpTest : public V3HttpTest {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        std::string configPath = "/ovms/src/test/embeddings/config_embeddings.json";
+        SetUpSuite(port, configPath, t);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
     }
 };
 std::unique_ptr<std::thread> EmbeddingsHttpTest::t;
@@ -3064,57 +3079,19 @@ TEST_F(EmbeddingsExtensionTest, simplePositive) {
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 
-class EmbeddingsInvalidConfigTest : public ::testing::Test {
+class EmbeddingsInvalidConfigTest : public V3HttpTest {
 protected:
     static std::unique_ptr<std::thread> t;
 
 public:
-    std::unique_ptr<ovms::HttpRestApiHandler> handler;
-
-    std::vector<std::pair<std::string, std::string>> headers;
-    ovms::HttpRequestComponents comp;
-    const std::string endpointEmbeddings = "/v3/embeddings";
-    MockedServerRequestInterface writer;
-    std::string response;
-    ovms::HttpResponseComponents responseComponents;
-
     static void SetUpTestSuite() {
         std::string port = "9173";
-        ovms::Server& server = ovms::Server::instance();
-        const char* configPath = "/ovms/src/test/embeddings/invalid_config_embeddings.json";
-        server.setShutdownRequest(0);
-        randomizePort(port);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--config_path",
-            (char*)configPath,
-            (char*)"--port",
-            (char*)port.c_str()};
-        int argc = 5;
-        t.reset(new std::thread([&argc, &argv, &server]() {
-            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-        }));
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
-    }
-
-    void SetUp() {
-        ovms::Server& server = ovms::Server::instance();
-        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
-        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
+        std::string configPath = "/ovms/src/test/embeddings/invalid_config_embeddings.json";
+        SetUpSuite(port, configPath, t);
     }
 
     static void TearDownTestSuite() {
-        ovms::Server& server = ovms::Server::instance();
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
-    }
-
-    void TearDown() {
-        handler.reset();
+        TearDownSuite(t);
     }
 };
 std::unique_ptr<std::thread> EmbeddingsInvalidConfigTest::t;
@@ -3130,30 +3107,22 @@ TEST_F(EmbeddingsInvalidConfigTest, simpleNegative) {
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
 
-class EmbeddingsInvalidTokenizerConfigTest : public EmbeddingsInvalidConfigTest {
+class EmbeddingsInvalidTokenizerConfigTest : public V3HttpTest {
+protected:
+    static std::unique_ptr<std::thread> t;
+
 public:
     static void SetUpTestSuite() {
         std::string port = "9173";
-        ovms::Server& server = ovms::Server::instance();
-        const char* configPath = "/ovms/src/test/embeddings/invalid_config_tokenizer.json";
-        server.setShutdownRequest(0);
-        randomizePort(port);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--config_path",
-            (char*)configPath,
-            (char*)"--port",
-            (char*)port.c_str()};
-        int argc = 5;
-        t.reset(new std::thread([&argc, &argv, &server]() {
-            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-        }));
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
+        std::string configPath = "/ovms/src/test/embeddings/invalid_config_tokenizer.json";
+        SetUpSuite(port, configPath, t);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
     }
 };
+std::unique_ptr<std::thread> EmbeddingsInvalidTokenizerConfigTest::t;
 
 TEST_F(EmbeddingsInvalidTokenizerConfigTest, simpleNegative) {
     std::string requestBody = R"(
@@ -3164,4 +3133,121 @@ TEST_F(EmbeddingsInvalidTokenizerConfigTest, simpleNegative) {
     )";
     Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
+class RerankHttpTest : public V3HttpTest {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        std::string configPath = "/ovms/src/test/rerank/config.json";
+        SetUpSuite(port, configPath, t);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
+    }
+};
+std::unique_ptr<std::thread> RerankHttpTest::t;
+
+TEST_F(RerankHttpTest, simplePositive) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank",
+            "query": "What is the capital of the United States?",
+            "documents": ["Carson City is the capital city of the American state of Nevada.",
+                        "The Commonwealth of the Northern Mariana Islands is a group of islands in the Pacific Ocean. Its capital is Saipan.",
+                        "Washington, D.C. (also known as simply Washington or D.C., and officially as the District of Columbia) is the capital of the United States. It is a federal district.",
+                        "Capitalization or capitalisation in English grammar is the use of a capital letter at the start of a word. English usage varies from capitalization in other languages.",
+                        "Capital punishment (the death penalty) has existed in the United States since beforethe United States was a country. As of 2017, capital punishment is legal in 30 of the 50 states."]
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d.HasMember("results"));
+    ASSERT_TRUE(d["results"].IsArray());
+    ASSERT_EQ(d["results"].Size(), 5);
+    for (auto& v : d["results"].GetArray()) {
+        ASSERT_TRUE(v.IsObject());
+        EXPECT_EQ(v.Size(), 2);
+        ASSERT_TRUE(v.HasMember("index"));
+        EXPECT_TRUE(v["index"].IsInt());
+        ASSERT_TRUE(v.HasMember("relevance_score"));
+        EXPECT_TRUE(v["relevance_score"].IsDouble());
+    }
+}
+
+TEST_F(RerankHttpTest, positiveTopN) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank",
+            "query": "What is the capital of the United States?",
+            "top_n": 3,
+            "documents": ["Carson City is the capital city of the American state of Nevada.",
+                        "The Commonwealth of the Northern Mariana Islands is a group of islands in the Pacific Ocean. Its capital is Saipan.",
+                        "Washington, D.C. (also known as simply Washington or D.C., and officially as the District of Columbia) is the capital of the United States. It is a federal district.",
+                        "Capitalization or capitalisation in English grammar is the use of a capital letter at the start of a word. English usage varies from capitalization in other languages.",
+                        "Capital punishment (the death penalty) has existed in the United States since beforethe United States was a country. As of 2017, capital punishment is legal in 30 of the 50 states."]
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d.HasMember("results"));
+    ASSERT_TRUE(d["results"].IsArray());
+    ASSERT_EQ(d["results"].Size(), 3);
+    for (auto& v : d["results"].GetArray()) {
+        ASSERT_TRUE(v.IsObject());
+        EXPECT_EQ(v.Size(), 2);
+        ASSERT_TRUE(v.HasMember("index"));
+        EXPECT_TRUE(v["index"].IsInt());
+        ASSERT_TRUE(v.HasMember("relevance_score"));
+        EXPECT_TRUE(v["relevance_score"].IsDouble());
+    }
+}
+
+TEST_F(RerankHttpTest, positiveReturnDocuments) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank",
+            "query": "What is the capital of the United States?",
+            "return_documents": true,
+            "documents": ["Carson City is the capital city of the American state of Nevada.",
+                        "The Commonwealth of the Northern Mariana Islands is a group of islands in the Pacific Ocean. Its capital is Saipan.",
+                        "Washington, D.C. (also known as simply Washington or D.C., and officially as the District of Columbia) is the capital of the United States. It is a federal district.",
+                        "Capitalization or capitalisation in English grammar is the use of a capital letter at the start of a word. English usage varies from capitalization in other languages.",
+                        "Capital punishment (the death penalty) has existed in the United States since beforethe United States was a country. As of 2017, capital punishment is legal in 30 of the 50 states."]
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d.HasMember("results"));
+    ASSERT_TRUE(d["results"].IsArray());
+    ASSERT_EQ(d["results"].Size(), 5);
+    for (auto& v : d["results"].GetArray()) {
+        ASSERT_TRUE(v.IsObject());
+        EXPECT_EQ(v.Size(), 3);
+        ASSERT_TRUE(v.HasMember("index"));
+        EXPECT_TRUE(v["index"].IsInt());
+        ASSERT_TRUE(v.HasMember("relevance_score"));
+        EXPECT_TRUE(v["relevance_score"].IsDouble());
+        ASSERT_TRUE(v.HasMember("document"));
+        EXPECT_TRUE(v["document"].IsObject());
+        EXPECT_EQ(v["document"].Size(), 1);
+        ASSERT_TRUE(v["document"].HasMember("text"));
+        EXPECT_TRUE(v["document"]["text"].IsString());
+    }
 }
