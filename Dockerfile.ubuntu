@@ -267,7 +267,7 @@ RUN /tmp/install_gpu_drivers.sh && \
 # GPU testing in build img
 
 # Build OpenVINO Model Server
-COPY .bazelrc .bazelversion WORKSPACE /ovms/
+COPY .bazelrc .user.bazelr[c] .bazelversion WORKSPACE /ovms/
 COPY external /ovms/external/
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
