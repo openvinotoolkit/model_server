@@ -1463,7 +1463,6 @@ TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
       }
     }]})";
 
-    std::cout << "JSON: " << configWithTwoSameNames << std::endl;
     std::filesystem::create_directories(this->getFilePath("/models/dummy1/1"));
     std::filesystem::create_directories(this->getFilePath("/models/dummy2/1"));
     std::string fileToReload = this->getFilePath("/ovms_config_file2.json");
