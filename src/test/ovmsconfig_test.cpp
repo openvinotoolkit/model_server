@@ -349,7 +349,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--file_system_poll_wait_seconds", "2",
         "--sequence_cleaner_poll_wait_minutes", "7",
         "--custom_node_resources_cleaner_interval_seconds", "8",
-// TODO Windows: enable extesions and model cache
+// TODO Windows: enable extensions and model cache
 #ifdef __linux__
         "--cpu_extension", "/ovms",
         "--cache_dir", "/tmp/model_cache",
@@ -378,7 +378,7 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
-// TODO Windows: enable extesions and model cache
+// TODO Windows: enable extensions and model cache
 #ifdef __linux__
     EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
@@ -413,7 +413,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "7",
         "--custom_node_resources_cleaner_interval_seconds",
         "8",
-// TODO Windows: enable extesions and model cache
+// TODO Windows: enable extensions and model cache
 #ifdef __linux__
         "--cpu_extension",
         "/ovms",
@@ -469,7 +469,7 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
-// TODO Windows: enable extesions and model cache
+// TODO Windows: enable extensions and model cache
 #ifdef __linux__
     EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
