@@ -1882,7 +1882,7 @@ public:
 
 const float INITIAL_VALUE{0.13666};
 const float GARBAGE_VALUE = 42.66613;
-const float FLOAT_TOLLERANCE{0.001};
+const float FLOAT_TOLERANCE{0.001};
 TEST_F(CAPIInference, AsyncWithCallbackDummy) {
     std::vector<float> in(10, INITIAL_VALUE);
     std::vector<float> out(10, GARBAGE_VALUE);
@@ -1911,7 +1911,7 @@ TEST_F(CAPIInference, AsyncWithCallbackDummy) {
 
     const float* outputData = reinterpret_cast<const float*>(out.data());
     for (size_t i = 0; i < data.size(); ++i) {
-        EXPECT_NEAR(in[i] + 1, outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
+        EXPECT_NEAR(in[i] + 1, outputData[i], FLOAT_TOLERANCE) << "Different at:" << i << " place.";
     }
     SPDLOG_INFO("Using callbacks!");
 }

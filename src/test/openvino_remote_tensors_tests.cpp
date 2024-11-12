@@ -1213,7 +1213,7 @@ static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPIOpenCLCorr
 
 const float INITIAL_VALUE{0.13666};
 const float GARBAGE_VALUE = 42.66613;
-const float FLOAT_TOLLERANCE{0.001};
+const float FLOAT_TOLERANCE{0.001};
 
 TEST_F(CAPINonCopy, SyncWithCallbackDummy) {
     std::string port = "9000";
@@ -1355,13 +1355,13 @@ TEST_F(CAPINonCopy, OpenCL_SyncWithCallbackDummyCheckResetOutputGPU) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputRemoveData(request, DUMMY_MODEL_OUTPUT_NAME));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestRemoveOutput(request, DUMMY_MODEL_OUTPUT_NAME));
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
-    checkDummyResponse(response, INITIAL_VALUE * 2 + 1, FLOAT_TOLLERANCE);
+    checkDummyResponse(response, INITIAL_VALUE * 2 + 1, FLOAT_TOLERANCE);
     OVMS_InferenceResponseDelete(response);
     std::vector<float> dataFromPreviousOutputBuffer(10, 1231521);
     // now we need to check if previous output wasn't changed
     EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, dataFromPreviousOutputBuffer.data()));
     for (int i = 0; i < DUMMY_MODEL_INPUT_SIZE; ++i) {
-        EXPECT_NEAR(dataFromPreviousOutputBuffer[i], INITIAL_VALUE + 1, FLOAT_TOLLERANCE) << " at place i:" << i;
+        EXPECT_NEAR(dataFromPreviousOutputBuffer[i], INITIAL_VALUE + 1, FLOAT_TOLERANCE) << " at place i:" << i;
     }
 }
 TEST_F(CAPINonCopy, SyncWithoutCallbackDummyCheckResetOutputCPU) {
@@ -1382,7 +1382,7 @@ TEST_F(CAPINonCopy, SyncWithoutCallbackDummyCheckResetOutputCPU) {
     OVMS_InferenceResponse* response = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
     // check
-    checkDummyResponse(response, INITIAL_VALUE + 1, FLOAT_TOLLERANCE);
+    checkDummyResponse(response, INITIAL_VALUE + 1, FLOAT_TOLERANCE);
     OVMS_InferenceResponseDelete(response);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestSetCompletionCallback(request, nullptr, nullptr));
     // now check with default output buffer
@@ -1392,10 +1392,10 @@ TEST_F(CAPINonCopy, SyncWithoutCallbackDummyCheckResetOutputCPU) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputRemoveData(request, DUMMY_MODEL_OUTPUT_NAME));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestRemoveOutput(request, DUMMY_MODEL_OUTPUT_NAME));
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
-    checkDummyResponse(response, INITIAL_VALUE + 42 + 1, FLOAT_TOLLERANCE);
+    checkDummyResponse(response, INITIAL_VALUE + 42 + 1, FLOAT_TOLERANCE);
     // intentional check for original output buffer if they were not overridden
     for (size_t i = 0; i < out1.size(); ++i) {
-        EXPECT_NEAR(INITIAL_VALUE + 1, out1[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
+        EXPECT_NEAR(INITIAL_VALUE + 1, out1[i], FLOAT_TOLERANCE) << "Different at:" << i << " place.";
     }
     OVMS_InferenceResponseDelete(response);
 }
@@ -1422,7 +1422,7 @@ TEST_F(CAPINonCopy, AsyncDummyCheckResetOutputCPU) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceAsync(cserver, request));
     unblockSignal.get();
     // check
-    checkDummyResponse(callbackStruct.response, INITIAL_VALUE + 1, FLOAT_TOLLERANCE);
+    checkDummyResponse(callbackStruct.response, INITIAL_VALUE + 1, FLOAT_TOLERANCE);
     OVMS_InferenceResponseDelete(callbackStruct.response);
     callbackStruct.response = nullptr;
     // perform 2nd inference
@@ -1437,11 +1437,11 @@ TEST_F(CAPINonCopy, AsyncDummyCheckResetOutputCPU) {
 
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceAsync(cserver, request));
     unblockSignal.get();
-    checkDummyResponse(callbackStruct.response, INITIAL_VALUE + 42 + 1, FLOAT_TOLLERANCE);
+    checkDummyResponse(callbackStruct.response, INITIAL_VALUE + 42 + 1, FLOAT_TOLERANCE);
     OVMS_InferenceResponseDelete(callbackStruct.response);
     // intentional check for original output buffer if they were not overridden
     for (size_t i = 0; i < out1.size(); ++i) {
-        EXPECT_NEAR(INITIAL_VALUE + 1, out1[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
+        EXPECT_NEAR(INITIAL_VALUE + 1, out1[i], FLOAT_TOLERANCE) << "Different at:" << i << " place.";
     }
 }
 
@@ -1506,7 +1506,7 @@ TEST_F(CAPINonCopy, AsyncWithCallbackDummy) {
     EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, outputBufferData));
     const float* outputData = reinterpret_cast<const float*>(outputBufferData);
     for (size_t i = 0; i < data.size(); ++i) {
-        EXPECT_NEAR(in[i] + 1, outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
+        EXPECT_NEAR(in[i] + 1, outputData[i], FLOAT_TOLERANCE) << "Different at:" << i << " place.";
     }
     ASSERT_EQ(42, callbackReturnValue);
     SPDLOG_INFO("Using callbacks!");
@@ -1726,7 +1726,7 @@ TEST_F(OpenVINOGPUContextFromModel, OutputTensorHasBiggerUnderlyingOCLBufferThan
     EXPECT_EQ(0, queueFromModelContext->enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, outputByteSize, bufferOut));
     const float* outputData = reinterpret_cast<const float*>(bufferOut);
     for (size_t i = 0; i < out.size(); ++i) {
-        EXPECT_NEAR(in[i] + 1, outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
+        EXPECT_NEAR(in[i] + 1, outputData[i], FLOAT_TOLERANCE) << "Different at:" << i << " place.";
     }
     // TODO separate test for below - extracting what kind of tensor in output it isa
     ov::Tensor outOvTensor = inferRequest->get_tensor(output);
@@ -1863,7 +1863,7 @@ static void checkDummyOpenCLResponse(OVMS_InferenceResponse* response, cl::Comma
     EXPECT_EQ(0, clError);
     const float* outputData = reinterpret_cast<const float*>(bufferOut);
     for (size_t i = 0; i < out.size(); ++i) {
-        EXPECT_NEAR(expectedValue, outputData[i], FLOAT_TOLLERANCE) << "Different at:" << i << " place.";
+        EXPECT_NEAR(expectedValue, outputData[i], FLOAT_TOLERANCE) << "Different at:" << i << " place.";
     }
 }
 
@@ -1873,7 +1873,7 @@ static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPIOpenCLCorr
     SPDLOG_ERROR("ER:{}", userStruct);
     SPDLOG_ERROR("ER:{}", (void*)&callbackUnblockingStruct->signal);
     callbackUnblockingStruct->signal.set_value(42);
-    checkDummyOpenCLResponse(response, *callbackUnblockingStruct->queue, INITIAL_VALUE + 1, FLOAT_TOLLERANCE);
+    checkDummyOpenCLResponse(response, *callbackUnblockingStruct->queue, INITIAL_VALUE + 1, FLOAT_TOLERANCE);
     OVMS_InferenceResponseDelete(response);
 }
 static void callbackUnblockingAndFreeingRequest(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct) {
