@@ -60,6 +60,8 @@ class RerankCalculator : public CalculatorBase {
 
     int64_t max_position_embeddings{512};
 
+    size_t max_allowed_chunks{0};  // Read from options in ::Open()
+
 protected:
     std::shared_ptr<::InferenceAdapter> tokenizer_session{nullptr};
     std::shared_ptr<::InferenceAdapter> rerank_session{nullptr};
@@ -87,7 +89,12 @@ public:
         tokenizer_session = cc->InputSidePackets().Tag("TOKENIZER_SESSION").Get<std::shared_ptr<::InferenceAdapter>>();
         rerank_session = cc->InputSidePackets().Tag("RERANK_SESSION").Get<std::shared_ptr<::InferenceAdapter>>();
 
+        const auto& options = cc->Options<RerankCalculatorOptions>();
+        this->max_allowed_chunks = options.max_allowed_chunks();
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Max allowed chunks: {}", this->max_allowed_chunks);
+
         try {
+            // special tokens
             this->bos_token = rerank_session->getModelConfig().at("bos_token_id").as<int64_t>();
             this->eos_token = rerank_session->getModelConfig().at("eos_token_id").as<int64_t>();
             if (rerank_session->getModelConfig().count("sep_token_id") == 0) {
@@ -97,20 +104,27 @@ public:
             }
             this->pad_token = rerank_session->getModelConfig().at("pad_token_id").as<int64_t>();
 
-            auto it = rerank_session->getModelConfig().find("max_position_embeddings");
-            if (it != rerank_session->getModelConfig().end()) {
-                this->max_position_embeddings = it->second.as<int64_t>();
-                SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model max_position_embeddings: {}", this->max_position_embeddings);
+            // max_position_embeddings
+            if (options.has_max_position_embeddings()) {
+                this->max_position_embeddings = options.max_position_embeddings();
+                SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Options defined max_position_embeddings: {}", this->max_position_embeddings);
             } else {
-                auto it = rerank_session->getModelConfig().find("max_trained_positions");
+                auto it = rerank_session->getModelConfig().find("max_position_embeddings");
                 if (it != rerank_session->getModelConfig().end()) {
                     this->max_position_embeddings = it->second.as<int64_t>();
-                    SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model max_position_embeddings (inherited from max_trained_positions): {}", this->max_position_embeddings);
+                    SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model max_position_embeddings: {}", this->max_position_embeddings);
                 } else {
-                    SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model missing max_position_embeddings and max_trained_positions in config, using default value: {}", this->max_position_embeddings);
+                    auto it = rerank_session->getModelConfig().find("max_trained_positions");
+                    if (it != rerank_session->getModelConfig().end()) {
+                        this->max_position_embeddings = it->second.as<int64_t>();
+                        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model max_position_embeddings (inherited from max_trained_positions): {}", this->max_position_embeddings);
+                    } else {
+                        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model missing max_position_embeddings and max_trained_positions in config, using default value: {}", this->max_position_embeddings);
+                    }
                 }
             }
 
+            // post-validation
             if (this->max_position_embeddings <= 2 * NUMBER_OF_SPECIAL_TOKENS) {
                 SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
                 return absl::InvalidArgumentError("max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
@@ -168,7 +182,9 @@ public:
         auto tokenizer_input_name = tokenizer_session->getInputNames()[0];
         ::InferenceInput tokenizer_input_map;
         tokenizer_input_map[tokenizer_input_name] = ov::Tensor(ov::element::string, ov::Shape{strings.size()}, strings.data());
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Starting inference tokenizer model");
         ::InferenceOutput tokenizer_output_map = tokenizer_session->infer(tokenizer_input_map);
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Finished inference tokenizer model");
 
         if (tokenizer_output_map.size() != 2)
             throw std::runtime_error("Tokenizer session should have only two outputs");
@@ -197,6 +213,11 @@ public:
     }
 
     std::pair<ov::Tensor, ov::Tensor> PrepareInputsForRerankModel(const RerankHandler& handler, std::vector<size_t>& chunk_mapping) const {
+        // Validate batch size before tokenizing
+        if (handler.getDocumentsList().size() > this->max_allowed_chunks)
+            throw std::runtime_error("Number of documents exceeds max_allowed_chunks");
+        // TODO: Validate max string length for some arbitrary size
+
         // Compute Query Tokens
         auto query_tokens = ComputeTokensForString(handler.getQuery());
 
@@ -213,6 +234,10 @@ public:
         // Compute Document Tokens
         auto [doc_input_ids, doc_attention_mask] = ComputeTokensForBatchedString(handler.getDocumentsList());
 
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "\nMax position embeddings: {}\nQuery tokens: {}\nSpecial tokens: {}\nRemaining space for chunk: {}",
+            this->max_position_embeddings, query_tokens.size(), NUMBER_OF_SPECIAL_TOKENS, this->max_position_embeddings - query_tokens.size() - NUMBER_OF_SPECIAL_TOKENS);
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Number of documents: {}; with max token count: {} before chunking", doc_input_ids.get_shape()[0], doc_input_ids.get_shape()[1]);
+
         // max_tokens_per_chunk can never be <= 0 since query_tokens.size() is at max half of max_position_embeddings
         // and max_position_embeddings is at least 2 * NUMBER_OF_SPECIAL_TOKENS
         size_t max_tokens_per_chunk = this->max_position_embeddings - query_tokens.size() - NUMBER_OF_SPECIAL_TOKENS;
@@ -222,7 +247,7 @@ public:
             doc_attention_mask,
             out_input_ids, out_attention_mask,
             chunk_mapping, max_tokens_per_chunk,
-            this->pad_token);
+            this->max_allowed_chunks, this->pad_token);
         if (!status.ok()) {
             throw std::runtime_error(std::string{"Chunking failed: "} + std::string(status.message()));
         }
@@ -230,11 +255,12 @@ public:
         doc_input_ids = out_input_ids;
         doc_attention_mask = out_attention_mask;
 
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Number of chunks: {}; with max token count: {} after chunking", doc_input_ids.get_shape()[0], doc_input_ids.get_shape()[1]);
+
         size_t tokens_count_of_longest_document = doc_input_ids.get_shape()[1];
         if (tokens_count_of_longest_document > max_tokens_per_chunk)
             throw std::runtime_error("tokens_count_of_longest_document exceeds max_tokens_per_chunk");  // should never happen
         size_t total_tokens_count_per_batch = tokens_count_of_longest_document + NUMBER_OF_SPECIAL_TOKENS + query_tokens.size();
-        // TODO: CVS-156600 Control max chunks and max batch size
         size_t batch_size = doc_input_ids.get_shape()[0];
         if (batch_size != chunk_mapping.size())
             throw std::runtime_error("error");  // should never happen
@@ -303,7 +329,9 @@ public:
         rerank_input_map["input_ids"] = input_ids;
         rerank_input_map["attention_mask"] = attention_mask;
 
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Starting inference rerank model");
         ::InferenceOutput rerank_output_map = rerank_session->infer(rerank_input_map);
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Finished inference rerank model");
         if (rerank_output_map.size() != 1)
             throw std::runtime_error("Rerank model results should have 1 output");
         if (rerank_output_map.count("logits") != 1)

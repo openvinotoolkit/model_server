@@ -37,6 +37,8 @@
 #include "opencv2/opencv.hpp"
 #include "ov_utils.hpp"
 #include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"  // TODO: Move out together with rerank tests
+#include "rapidjson/writer.h"        // TODO: Move out together with rerank tests
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"
 
@@ -3384,4 +3386,177 @@ TEST_F(RerankHttpTest, positiveReturnDocuments) {
         ASSERT_TRUE(v["document"].HasMember("text"));
         EXPECT_TRUE(v["document"]["text"].IsString());
     }
+}
+
+class RerankWithParamsHttpTest : public V3HttpTest {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    const size_t MAX_POSITION_EMBEDDINGS = 12;
+    const size_t MAX_ALLOWED_CHUNKS = 4;
+
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        /*
+            Setup with:
+            max_position_embeddings: 12
+            max_allowed_chunks: 4
+
+            Meaning query is trimmed to contain at most 6 tokens (half of max_position_embeddings)
+            And maximum number of documents or chunks (after chunking process) can be 4
+            Allowed space for chunk is 12-6-4=2 tokens
+        */
+        std::string configPath = "/ovms/src/test/rerank/with_params/config.json";
+        SetUpSuite(port, configPath, t);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
+    }
+};
+std::unique_ptr<std::thread> RerankWithParamsHttpTest::t;
+
+TEST_F(RerankWithParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
+    // Create a JSON document
+    rapidjson::Document document;
+    document.SetObject();
+    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+
+    // Populate the JSON document with data
+    document.AddMember("model", "rerank", allocator);
+    document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
+
+    rapidjson::Value documents(rapidjson::kArrayType);
+
+    for (size_t i = 0; i < MAX_ALLOWED_CHUNKS; i++) {
+        documents.PushBack("Test", allocator);  // Short document to not exceed 2 token space for chunks
+    }
+    document.AddMember("documents", documents, allocator);
+
+    // Convert JSON document to string
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> wr(buffer);
+    document.Accept(wr);
+
+    std::string requestBody = buffer.GetString();
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededByDocumentsBeforeChunking) {
+    // Create a JSON document
+    rapidjson::Document document;
+    document.SetObject();
+    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+
+    // Populate the JSON document with data
+    document.AddMember("model", "rerank", allocator);
+    document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
+
+    // Test fail due number of documents exceeding number of max chunks
+    rapidjson::Value documents(rapidjson::kArrayType);
+
+    for (size_t i = 0; i < MAX_ALLOWED_CHUNKS + 1; i++) {
+        documents.PushBack("Test", allocator);  // Short document to not exceed 2 token space for chunks
+    }
+    document.AddMember("documents", documents, allocator);
+
+    // Convert JSON document to string
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> wr(buffer);
+    document.Accept(wr);
+
+    std::string requestBody = buffer.GetString();
+    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("Number of documents exceeds max_allowed_chunks"));  // 5 because we prepared 1 document more than allowed
+}
+
+TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
+    // Create a JSON document
+    rapidjson::Document document;
+    document.SetObject();
+    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+
+    // Populate the JSON document with data
+    document.AddMember("model", "rerank", allocator);
+    document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
+
+    // Test fail due number of documents exceeding number of max chunks
+    rapidjson::Value documents(rapidjson::kArrayType);
+
+    // There are 4 documents - which is supported by max_allowed_chunks,
+    // but one document is long and chunking will the number of allowed documents (4)
+    for (size_t i = 0; i < MAX_ALLOWED_CHUNKS - 1; i++) {
+        documents.PushBack("Test", allocator);  // Short document to not exceed 2 token space for chunks
+    }
+    documents.PushBack("This is a long document that will be chunked", allocator);  // Long document
+    document.AddMember("documents", documents, allocator);
+
+    // Convert JSON document to string
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> wr(buffer);
+    document.Accept(wr);
+
+    std::string requestBody = buffer.GetString();
+    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("Chunking failed: exceeding max_allowed_chunks after chunking limit: 4; actual: 8"));  // 8 because of the last document which was chunked to 5 documents, 3 + 5 = 8
+}
+
+class RerankWithInvalidParamsHttpTest : public V3HttpTest {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    const size_t MAX_POSITION_EMBEDDINGS = 8;
+    const size_t MAX_ALLOWED_CHUNKS = 4;
+
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        /*
+            Setup with:
+            max_position_embeddings: 8
+            max_allowed_chunks: 4
+
+            This is invalid setup since there is reservation for 4 special tokens and space for query is max half of max_position_embeddings (4) - meaning 0 token space for document
+        */
+        std::string configPath = "/ovms/src/test/rerank/with_params/invalid_config.json";
+        SetUpSuite(port, configPath, t);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
+    }
+};
+std::unique_ptr<std::thread> RerankWithInvalidParamsHttpTest::t;
+
+TEST_F(RerankWithInvalidParamsHttpTest, AnyRequestNegativeWithInvalidSetup) {
+    // Create a JSON document
+    rapidjson::Document document;
+    document.SetObject();
+    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+
+    // Populate the JSON document with data
+    document.AddMember("model", "rerank", allocator);
+    document.AddMember("query", "What is the capital of the United States?", allocator);
+
+    rapidjson::Value documents(rapidjson::kArrayType);
+
+    for (size_t i = 0; i < MAX_ALLOWED_CHUNKS; i++) {
+        documents.PushBack("Test", allocator);  // Not even 1 token documents fit the space
+    }
+    document.AddMember("documents", documents, allocator);
+
+    // Convert JSON document to string
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> wr(buffer);
+    document.Accept(wr);
+
+    std::string requestBody = buffer.GetString();
+    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS"));
 }
