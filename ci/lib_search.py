@@ -145,6 +145,7 @@ def check_dir(start_dir):
         "lib_custom_nodes_files",
         "spelling-whitelist.txt",
         "results.txt",
+        "ci/win_test_pattern.log",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
