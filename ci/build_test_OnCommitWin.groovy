@@ -38,13 +38,13 @@ pipeline {
                     }
                 }
                 script {
-                    def status = bat(returnStatus: true, script: 'grep "\[       OK \]" retest.log | wc -l | grep 1816')
+                    def status = bat(returnStatus: true, script: 'grep "       OK " test.log | wc -l | grep 1816')
                     if (status != 0) {
                             error "Error: Windows run test failed ${status}. Expecting 1816 passed tests. Check test.log for details."
                     }
 
                     // TODO Windows: Currently some tests fail change to no fail when fixed.
-                    status = bat(returnStatus: true, script: 'grep "\[  FAILED  \]" retest.log | wc -l | grep 285')
+                    status = bat(returnStatus: true, script: 'grep "  FAILED  " test.log | wc -l | grep 285')
                     if (status != 0) {
                             error "Error: Windows run test failed ${status}. Expecting 285 failed tests. Check test.log for details."
                     } else {
