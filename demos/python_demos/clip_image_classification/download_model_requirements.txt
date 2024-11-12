@@ -1,5 +1,5 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
-openvino==2023.3.0
+openvino==2024.4.0
 transformers==4.40.2
 pillow==10.3.0
 torch==2.2.0+cpu
