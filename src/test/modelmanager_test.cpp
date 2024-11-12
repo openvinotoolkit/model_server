@@ -1380,7 +1380,7 @@ TEST_F(ModelManager, HandlingInvalidLastVersion) {
     ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 
 #ifdef _WIN32
-    // Manual unload required because OVCOORE keeps the file handle opened after modelLoad, preventing the test to remove the directory.
+    // Manual unload required because OVCORE keeps the file handle opened after modelLoad, preventing the test to remove the directory.
     modelInstance2->unloadModelComponents();
 #endif
     // dropped versions 2 and 3

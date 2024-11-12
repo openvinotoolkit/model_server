@@ -1,3 +1,11 @@
+// Helper function to procude unit tests results difference on windows
+// Added so that a developer can easily see what has changed in the UT execution except the number of passing, failing tests
+// Will be remove once we have all passing UT
+// To produce a new win_test_pattern.log file run:
+// bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee full_test.log
+// set regex="\[  .* ms"
+// set sed="s/ (.* ms)//g"
+// grep -a %regex% full_test.log | sed %sed% | tee ci\win_test_pattern.log
 def log_unit_tests_results(failed, passed){
     // TODO: Add info about test cases here
     //def status = bat(returnStatus: true, script: 'echo "NUMBER OF PASSED TESTS: "' + passed + '> test_diff.log')

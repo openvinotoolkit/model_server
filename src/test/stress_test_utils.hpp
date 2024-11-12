@@ -1136,14 +1136,9 @@ public:
         std::string port = "9178";
         std::string restPort = "9178";
         modelPath = directoryPath + "/dummy/";
-        std::cout << "Exception1" << std::endl;
         SetUpConfig(initialConfigContent);
-        std::cout << "Exception2" << std::endl;
         std::string inputPath = getWindowsFullPathForSrcTest("/ovms/src/test/dummy");
-        std::cout << "modelPath:" << modelPath << std::endl;
         std::filesystem::copy(inputPath.c_str(), modelPath, std::filesystem::copy_options::recursive);
-
-        std::cout << "Exception3" << std::endl;
         OVMS_ServerSettings* serverSettings = nullptr;
         OVMS_ModelsSettings* modelsSettings = nullptr;
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
