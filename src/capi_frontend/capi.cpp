@@ -944,7 +944,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
             if (!success) {
                 if (!userCallback)
                     return;
-                SPDLOG_DEBUG("Calling user provided callback with success: {}", success);
+                SPDLOG_DEBUG("Calling user provided callback with failure");
                 Timer<TIMER_END> timer;
                 timer.start(TIMER_CALLBACK);
                 userCallback(nullptr, 1, userCallbackData);
@@ -955,6 +955,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
                 if (userCallback) {
                     Timer<TIMER_END> timer;
                     *userResponsePtr = reinterpret_cast<OVMS_InferenceResponse*>(response.release());
+                    SPDLOG_DEBUG("Calling user provided callback with success");
                     timer.start(TIMER_CALLBACK);
                     userCallback(*userResponsePtr, 0, userCallbackData);
                     timer.stop(TIMER_CALLBACK);
