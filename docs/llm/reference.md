@@ -161,6 +161,12 @@ convert_tokenizer -o {target folder name} --utf8_replace_mode replace --with-det
 
 Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models).
 
+## Input preprocessing
+
+When loading the pipeline, model server loads not only model files, but also tokenizer configuration present in `tokenizer_config.json`. Make sure your tokenizer configuration is correct - results accuracy might depend on it. Also note that `tokenizer_config.json` with fields filled with incorrect datatypes (for example `"bos_token": {"key": "val"}`) **will not work at all and the pipeline with such tokenizer config will not load**. 
+
+With correct `tokenizer_config.json`, on `completions` endpoint model server **will add `bos_token` at the beginning of the prompt** during tokenization.
+
 ### Chat template
 
 Chat template is used only on `/chat/completions` endpoint. Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`. 
@@ -172,7 +178,7 @@ Loading chat template proceeds as follows:
 
 **Note**: If both `template.jinja` file and `chat_completion` field from `tokenizer_config.json` are successfully loaded, `template.jinja` takes precedence over `tokenizer_config.json`.
 
-If there are errors in loading or reading files or fields (they exist but are wrong) no template is loaded and servable will not respond to `/chat/completions` calls. 
+If there are errors in loading or reading files or fields (they exist but are wrong) servable will not load at all.
 
 If no chat template has been specified, default template is applied. The template looks as follows:
 ```
