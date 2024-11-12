@@ -655,8 +655,6 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         return StatusCode::REST_UNSUPPORTED_METHOD;
     }
 
-    SPDLOG_DEBUG("PATH:{}.{}", request_path, urlDecode(request_path));
-
     if (FileSystem::isPathEscaped(request_path)) {
         SPDLOG_DEBUG("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
@@ -1128,10 +1126,18 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
 
 std::string urlDecode(const std::string& encoded) {
     int output_length;
-    const auto decoded_value = curl_easy_unescape(nullptr, encoded.c_str(), static_cast<int>(encoded.length()), &output_length);
-    std::string result(decoded_value, output_length);
-    curl_free(decoded_value);
-    return result;
+    CURL *curl = curl_easy_init();
+    if(curl) {
+        const auto decoded_value = curl_easy_unescape(curl, encoded.c_str(), static_cast<int>(encoded.length()), &output_length);
+        if(decoded_value) {
+            std::string result(decoded_value, output_length);
+            curl_free(decoded_value);
+            curl_easy_cleanup(curl);
+            return result;
+        }
+        curl_easy_cleanup(curl);
+    }
+    return encoded;
 }
 
 }  // namespace ovms
