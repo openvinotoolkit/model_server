@@ -7,19 +7,19 @@ pipeline {
     }
     stages {
         stage('Branch indexing: abort') {
-            when {
+            /*when {
                 allOf {
                     triggeredBy cause: "BranchIndexingCause"
                     not { 
                         changeRequest() 
                     }
                 }
-            }
+            }*/
             steps {
                 script {
-                    echo "Branch discovered by branch indexing"
-                    currentBuild.result = 'SUCCESS' 
-                    error "Caught branch indexing..."
+                    def buildCauses = currentBuild.getBuildCauses()
+                    println "BUILD CAUSE: ${buildCauses}"
+                    println "BUILD NUMBER: ${currentBuild.buildNumber}" 
                 }
             }
         }
