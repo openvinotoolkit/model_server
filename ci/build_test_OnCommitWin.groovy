@@ -31,7 +31,7 @@ pipeline {
                 script {
                     def buildCauses = currentBuild.getBuildCauses()
                     println "BUILD CAUSE: ${buildCauses}"
-                    println "BUILD NUMBER: ${currentBuild.buildNumber}" 
+                    println "BUILD NUMBER: ${currentBuild.getNumber()}" 
                 }
             }
         }
