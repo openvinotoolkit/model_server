@@ -32,5 +32,6 @@ set "PATH=%setPath%"
 rm -rf environment.log
 rm -rf build.log
 rm -rf build_test.log
+rm -rf full_test.log
 rm -rf test.log
 endlocal
