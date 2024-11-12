@@ -96,7 +96,7 @@ public:
         InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
-        EmbeddingsHandler handler(*payload.parsedJson);
+        ovms::EmbeddingsHandler handler(*payload.parsedJson);
         auto parseRequestStartTime = std::chrono::high_resolution_clock::now();
         absl::Status status = handler.parseRequest();
         if (!status.ok()) {
@@ -130,6 +130,7 @@ public:
                 tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
                 // Check if tokenizer produced at least the number of outputs as there are inputs in embedding model
                 RET_CHECK(tokenizerOutputMap.size() >= embeddingsInputNames.size());
+                RET_CHECK(tokenizerOutputMap.find(EMBEDDINGS_MODEL_INPUT_IDS_NAME) != tokenizerOutputMap.end());
                 RET_CHECK(tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape().size() == 2);
                 size_t input_ids_size = tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape()[1];
                 if (input_ids_size > max_context_length) {

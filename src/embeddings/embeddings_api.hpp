@@ -29,12 +29,13 @@
 
 #include "rapidjson/document.h"
 
-enum class EncodingFormat {
-    FLOAT,
-    BASE64
-};
+namespace ovms {
 
 struct EmbeddingsRequest {
+    enum class EncodingFormat {
+        FLOAT,
+        BASE64
+    };
     std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>> input;
     EncodingFormat encoding_format;
 
@@ -51,9 +52,10 @@ public:
         doc(document) {}
 
     std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& getInput();
-    EncodingFormat getEncodingFormat() const;
+    EmbeddingsRequest::EncodingFormat getEncodingFormat() const;
 
     absl::Status parseRequest();
     absl::Status parseResponse(rapidjson::StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings);
     void setPromptTokensUsage(int promptTokens);
 };
+}  // namespace ovms

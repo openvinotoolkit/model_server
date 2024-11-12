@@ -31,14 +31,15 @@
 
 using namespace rapidjson;
 
-enum class InputType {
-    NONE,
-    STRING,
-    INT,
-    INT_VEC
-};
+namespace ovms {
 
 std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjson::Document* parsedJson) {
+    enum class InputType {
+        NONE,
+        STRING,
+        INT,
+        INT_VEC
+    };
     EmbeddingsRequest request;
     std::vector<std::string> input_strings;
     std::vector<std::vector<int64_t>> input_tokens;
@@ -58,6 +59,7 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
                         return "input must be homogeneous";
                     input_type = InputType::INT_VEC;
                     std::vector<int64_t> ints;
+                    ints.reserve(input.GetArray().Size());
                     for (auto& val : input.GetArray()) {
                         if (val.IsInt())
                             ints.push_back(val.GetInt());
@@ -129,7 +131,7 @@ absl::Status EmbeddingsHandler::parseRequest() {
 std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& EmbeddingsHandler::getInput() {
     return request.input;
 }
-EncodingFormat EmbeddingsHandler::getEncodingFormat() const {
+EmbeddingsRequest::EncodingFormat EmbeddingsHandler::getEncodingFormat() const {
     return request.encoding_format;
 }
 
@@ -168,7 +170,7 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
             std::transform(dataPtr, dataPtrEnd, dataPtr,
                 [denom](auto& element) { return element / denom; });
         }
-        if (getEncodingFormat() == EncodingFormat::BASE64) {
+        if (getEncodingFormat() == EmbeddingsRequest::EncodingFormat::BASE64) {
             std::string_view sv2(reinterpret_cast<char*>(dataPtr), outputShape[2] * sizeof(float));
             std::string escaped;
             absl::Base64Escape(sv2, &escaped);
@@ -198,3 +200,4 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
     writer.EndObject();
     return absl::OkStatus();
 }
+}  // namespace ovms
