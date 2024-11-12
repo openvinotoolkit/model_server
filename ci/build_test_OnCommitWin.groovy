@@ -1,8 +1,6 @@
-def log_unit_tests_results(){
-    def failed = bat(returnStdout: true, script: 'grep "  FAILED  " test.log | wc -l')
-    def passed = bat(returnStdout: true, script: 'grep "       OK " test.log | wc -l')
-    def status = bat(returnStatus: true, arguments: [passed], script: 'echo "NUMBER OF PASSED TESTS: %1 | tee test_diff.log')
-    status = bat(returnStatus: true, arguments: [failed], script: 'echo "NUMBER OF FAILED TESTS: %1 | tee -a test_diff.log')
+def log_unit_tests_results(failed, passed){
+    def status = bat(returnStatus: true, script: 'echo "NUMBER OF PASSED TESTS: "' + passed + '> test_diff.log')
+    status = bat(returnStatus: true, script: 'echo "NUMBER OF FAILED TESTS: "' + failed + '>>test_diff.log')
     status = bat(returnStatus: true, script: 'diff ci\\win_test_pattern.log test.log 2>&1 | tee -a test_diff.log')
 }
 
@@ -67,17 +65,21 @@ pipeline {
                     }
                 }
                 script {
-                    def status = bat(returnStatus: true, arguments: [params.passed_tests], script: 'grep "       OK " test.log | wc -l | grep %1')
+                    def status = bat(returnStatus: true, script: 'grep "       OK " test.log | wc -l | grep ' + params.passed_tests)
                     if (status != 0) {
-                            log_unit_tests_results()
-                            error "Error: Windows run test failed ${status}. Expecting ${params.passed_tests} passed tests. Check unit_test.log and test.log for details."
+                            def failed = bat(returnStdout: true, script: 'grep "  FAILED  " test.log | wc -l')
+                            def passed = bat(returnStdout: true, script: 'grep "       OK " test.log | wc -l')
+                            log_unit_tests_results(failed, passed)
+                            error "Error: Windows run test failed ${status}. Expecting ${params.passed_tests} passed tests got ${passed}. Check unit_test.log and test.log for details."
                     }
 
                     // TODO Windows: Currently some tests fail change to no fail when fixed.
-                    status = bat(returnStatus: true, arguments: [params.failed_tests], script: 'grep "  FAILED  " test.log | wc -l | grep %1')
+                    status = bat(returnStatus: true, script: 'grep "  FAILED  " test.log | wc -l | grep ' + params.failed_tests)
                     if (status != 0) {
-                            log_unit_tests_results()
-                            error "Error: Windows run test failed ${status}. Expecting ${params.failed_tests} failed tests. Check unit_test.log and test.log for details."
+                            def failed = bat(returnStdout: true, script: 'grep "  FAILED  " test.log | wc -l')
+                            def passed = bat(returnStdout: true, script: 'grep "       OK " test.log | wc -l')
+                            log_unit_tests_results(failed, passed)
+                            error "Error: Windows run test failed ${status}. Expecting ${params.failed_tests} failed tests got ${failed}. Check unit_test.log and test.log for details."
                     } else {
                         echo "Run test successful."
                     }
