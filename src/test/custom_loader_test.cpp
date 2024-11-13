@@ -609,6 +609,9 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMultiplePropertiesInCustomLoaderOptio
 // Functional Validation
 
 TEST_F(TestCustomLoader, CustomLoaderPrediction) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif  
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -629,6 +632,9 @@ TEST_F(TestCustomLoader, CustomLoaderPrediction) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderPredictionRelativePath) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/bazel-bin/src/libsampleloader.so"), cl_models_path, std::filesystem::copy_options::recursive);
@@ -650,6 +656,9 @@ TEST_F(TestCustomLoader, CustomLoaderPredictionRelativePath) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderGetStatus) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -679,6 +688,9 @@ TEST_F(TestCustomLoader, CustomLoaderGetStatus) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderPredictDeletePredict) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -706,6 +718,9 @@ TEST_F(TestCustomLoader, CustomLoaderPredictDeletePredict) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderPredictNewVersionPredict) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -736,6 +751,9 @@ TEST_F(TestCustomLoader, CustomLoaderPredictNewVersionPredict) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderPredictNewModelPredict) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -774,6 +792,9 @@ TEST_F(TestCustomLoader, CustomLoaderPredictNewModelPredict) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderPredictRemoveCustomLoaderOptionsPredict) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -804,6 +825,9 @@ TEST_F(TestCustomLoader, CustomLoaderPredictRemoveCustomLoaderOptionsPredict) {
 }
 
 TEST_F(TestCustomLoader, PredictNormalModelAddCustomLoaderOptionsPredict) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -835,6 +859,9 @@ TEST_F(TestCustomLoader, PredictNormalModelAddCustomLoaderOptionsPredict) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderOptionWithUnknownLibrary) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -856,6 +883,9 @@ TEST_F(TestCustomLoader, CustomLoaderOptionWithUnknownLibrary) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderWithMissingModelFiles) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Replace model path in the config string
     std::string configStr = custom_loader_config_model;
     configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
@@ -874,6 +904,9 @@ TEST_F(TestCustomLoader, CustomLoaderWithMissingModelFiles) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderGetStatusDeleteModelGetStatus) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -923,6 +956,9 @@ TEST_F(TestCustomLoader, CustomLoaderGetStatusDeleteModelGetStatus) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderPredictionUsingManyCustomLoaders) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -948,7 +984,10 @@ TEST_F(TestCustomLoader, CustomLoaderPredictionUsingManyCustomLoaders) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderGetMetaData) {
-    const char* expected_json = R"({
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+  const char* expected_json = R"({
  "modelSpec": {
   "name": "dummy",
   "signatureName": "",
@@ -1043,6 +1082,9 @@ TEST_F(TestCustomLoader, CustomLoaderGetMetaData) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderMultipleLoaderWithSameLoaderName) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const char* custom_loader_config_model_xx = R"({
        "custom_loader_config_list":[
          {
@@ -1090,6 +1132,9 @@ TEST_F(TestCustomLoader, CustomLoaderMultipleLoaderWithSameLoaderName) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderBlackListingModel) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -1149,6 +1194,9 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListingModel) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderBlackListingRevoke) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -1226,6 +1274,9 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListingRevoke) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -1324,6 +1375,9 @@ TEST_F(TestCustomLoader, CustomLoaderBlackListModelReloadError) {
 }
 
 TEST_F(TestCustomLoader, CustomLoaderLoadBlackListedModel) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 

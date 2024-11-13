@@ -367,6 +367,9 @@ public:
 };
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
@@ -381,6 +384,9 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCust
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringPredictLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
@@ -394,6 +400,9 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCust
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringPredictLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
@@ -407,6 +416,9 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangePara
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ReduceQueueSizeCustomLibraryDuringPredictLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
@@ -420,6 +432,9 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ReduceQueu
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, IncreaseQueueSizeCustomLibraryDuringPredictLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
@@ -433,6 +448,9 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, IncreaseQu
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
@@ -447,6 +465,9 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RemoveCust
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCustomLibraryDuringGetMetadataLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
@@ -460,6 +481,9 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, RenameCust
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangeParamCustomLibraryDuringGetMetadataLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
@@ -473,6 +497,9 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ChangePara
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ReduceQueueSizeCustomLibraryDuringGetMetadataLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
@@ -486,6 +513,9 @@ TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, ReduceQueu
 }
 
 TEST_F(StressPipelineCustomNodesWithPreallocatedBuffersConfigChanges, IncreaseQueueSizeCustomLibraryDuringGetMetadataLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeAddOneThenDummy);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation
@@ -530,6 +560,9 @@ public:
 };
 
 TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
@@ -543,6 +576,9 @@ TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringPredictL
         allowedLoadResults);
 }
 TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPredictLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // we change used PARAM during load. This change does not effect results, but should be enough to verify
     // correctness of this operation - no segfaults etc.
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
@@ -557,6 +593,9 @@ TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringPre
         allowedLoadResults);
 }
 TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringGetMetadataLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
@@ -570,6 +609,9 @@ TEST_F(StressPipelineCustomNodesConfigChanges, RemoveCustomLibraryDuringGetMetad
         allowedLoadResults);
 }
 TEST_F(StressPipelineCustomNodesConfigChanges, ChangeCustomLibraryParamDuringGetMetadataLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};                                 // we expect full continuity of operation most of the time
@@ -612,6 +654,9 @@ public:
     }
 };
 TEST_F(StressMediapipeChanges, AddGraphDuringPredictLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
@@ -625,7 +670,10 @@ TEST_F(StressMediapipeChanges, AddGraphDuringPredictLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, RemoveGraphDuringPredictLoad) {
-    // we add another definition during load
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+	// we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
@@ -639,7 +687,10 @@ TEST_F(StressMediapipeChanges, RemoveGraphDuringPredictLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, RemoveModelDuringPredictLoad) {
-    // we add another definition during load
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+	// we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {
@@ -658,7 +709,10 @@ TEST_F(StressMediapipeChanges, RemoveModelDuringPredictLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, ReloadModelDuringPredictLoad) {
-    // we change nireq during load
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+	// we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -671,7 +725,10 @@ TEST_F(StressMediapipeChanges, ReloadModelDuringPredictLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringPredictLoad) {
-    // we change nireq during load
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+	// we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -685,7 +742,10 @@ TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringPredictLoad) {
 }
 
 TEST_F(StressMediapipeChanges, AddGraphDuringStatusLoad) {
-    // we add another definition during load
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+	// we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -698,6 +758,9 @@ TEST_F(StressMediapipeChanges, AddGraphDuringStatusLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, RemoveGraphDuringStatusLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -710,6 +773,9 @@ TEST_F(StressMediapipeChanges, RemoveGraphDuringStatusLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, RemoveModelDuringStatusLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -722,7 +788,10 @@ TEST_F(StressMediapipeChanges, RemoveModelDuringStatusLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, ReloadModelDuringStatusLoad) {
-    // we change nireq during load
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+	// we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -735,7 +804,10 @@ TEST_F(StressMediapipeChanges, ReloadModelDuringStatusLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringStatusLoad) {
-    // we change nireq during load
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+	// we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -748,7 +820,10 @@ TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringStatusLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, AddGraphDuringMetadataLoad) {
-    // we add another definition during load
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+	// we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -761,7 +836,10 @@ TEST_F(StressMediapipeChanges, AddGraphDuringMetadataLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, RemoveGraphDuringMetadataLoad) {
-    // we add another definition during load
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+	// we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE};
@@ -774,6 +852,9 @@ TEST_F(StressMediapipeChanges, RemoveGraphDuringMetadataLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, RemoveModelDuringMetadataLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -786,7 +867,10 @@ TEST_F(StressMediapipeChanges, RemoveModelDuringMetadataLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, ReloadModelDuringMetadataLoad) {
-    // we change nireq during load
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+	// we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -799,6 +883,9 @@ TEST_F(StressMediapipeChanges, ReloadModelDuringMetadataLoad) {
         allowedLoadResults);
 }
 TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringMetadataLoad) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation

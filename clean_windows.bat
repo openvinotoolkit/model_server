@@ -34,5 +34,4 @@ rm -rf build.log
 rm -rf build_test.log
 rm -rf full_test.log
 rm -rf test.log
-rm -rf test_diff.log
 endlocal
