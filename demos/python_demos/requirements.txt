@@ -3,10 +3,10 @@
 git+https://github.com/dtrawins/optimum-intel.git@concurrency_support_cloneall
 ## used a fork to provide support for multi concurrency https://github.com/huggingface/optimum-intel/pull/519
 
-onnx==1.16.0
+onnx==1.17.0
 pillow==10.3.0
 optimum[diffusers]==1.17.1
-tritonclient[grpc]==2.37.0.9383150  # Required to use batch string serialization/deserialization (4byte length prepend)
+tritonclient[grpc]==2.51.0  # Required to use batch string serialization/deserialization (4byte length prepend)
 transformers==4.40
 diffusers==0.26.3
 datasets==2.18.0
