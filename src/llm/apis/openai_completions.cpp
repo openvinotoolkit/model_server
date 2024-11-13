@@ -330,6 +330,8 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
             return absl::InvalidArgumentError("best_of value should be greater than 0");
         if (!(it->value.GetUint() < bestOfLimit))
             return absl::InvalidArgumentError(absl::StrCat("best_of exceeds limit provided in graph config: ", bestOfLimit));
+        if (request.stream)
+            return absl::InvalidArgumentError("best_of cannot be used in streaming mode");
         request.bestOf = it->value.GetUint();
     }
 
