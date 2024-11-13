@@ -25,4 +25,8 @@ message RerankCalculatorOptions {
     // no rule to obtain this
     optional RerankCalculatorOptions ext = 113473741;
     }
+
+    optional uint64 max_allowed_chunks = 1 [default = 10000];  // Default taken from Cohere API documentation
+
+    optional uint64 max_position_embeddings = 2;
 }
