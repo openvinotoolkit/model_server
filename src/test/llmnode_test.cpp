@@ -84,7 +84,7 @@ public:
                 .max_num_seqs = 256,
             };
             plugin_config_t pluginConfig;
-            JsonParser::parsePluginConfig("", pluginConfig);
+            JsonParser::parsePluginConfig("{\"INFERENCE_PRECISION_HINT\":\"f32\"}", pluginConfig);
             cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>("/ovms/src/test/llm_testing/facebook/opt-125m", schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
             llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(cbPipe);
         } catch (const std::exception& e) {
@@ -2525,15 +2525,15 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     )";
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
-    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 8);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
-    ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, false);
-    ASSERT_EQ(nodeResources->device, "CPU");
-    ASSERT_EQ(nodeResources->pluginConfig.size(), 0);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_batched_tokens, 256);
+    ASSERT_EQ(nodeResources.schedulerConfig.cache_size, 8);
+    ASSERT_EQ(nodeResources.schedulerConfig.dynamic_split_fuse, true);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources.schedulerConfig.enable_prefix_caching, false);
+    ASSERT_EQ(nodeResources.device, "CPU");
+    ASSERT_EQ(nodeResources.pluginConfig.size(), 0);
 }
 
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
@@ -2575,13 +2575,13 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
-    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_batched_tokens, 98);
+    ASSERT_EQ(nodeResources.schedulerConfig.cache_size, 1);
+    ASSERT_EQ(nodeResources.schedulerConfig.dynamic_split_fuse, true);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_seqs, 256);
 }
 
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
@@ -2623,7 +2623,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
 }
 
@@ -2666,7 +2666,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
-    ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
+    ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(*nodeResources, config.node(0), ""), StatusCode::OK);
 
     ASSERT_EQ(nodeResources->pluginConfig.size(), 2);
     ASSERT_EQ(nodeResources->pluginConfig.count("A"), 1);
@@ -2720,19 +2720,19 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 1024);
-    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_batched_tokens, 1024);
+    ASSERT_EQ(nodeResources.schedulerConfig.cache_size, 1);
     // We create graph with block_size set in graph config to make sure setting it does not result in error
     // TODO: Remove below commented assertion as well as block_size from the testPbtxt when block_size is removed from options proto.
-    // ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
-    ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, true);
-    ASSERT_EQ(nodeResources->maxTokensLimit, 700);
-    ASSERT_EQ(nodeResources->bestOfLimit, 3);
+    // ASSERT_EQ(nodeResources.schedulerConfig.block_size, 8);
+    ASSERT_EQ(nodeResources.schedulerConfig.dynamic_split_fuse, false);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_seqs, 95);
+    ASSERT_EQ(nodeResources.schedulerConfig.enable_prefix_caching, true);
+    ASSERT_EQ(nodeResources.maxTokensLimit, 700);
+    ASSERT_EQ(nodeResources.bestOfLimit, 3);
 }
 
 class GetPromptTokensString : public ::testing::Test {
@@ -2998,6 +2998,105 @@ TEST_F(EmbeddingsHttpTest, simplePositiveBase64) {
     ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
     ASSERT_TRUE(d["usage"].HasMember("total_tokens"));
     ASSERT_TRUE(d["usage"]["total_tokens"].IsInt());
+}
+
+TEST_F(EmbeddingsHttpTest, simplePositiveInt) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [111, 222, 121]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 1);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
+TEST_F(EmbeddingsHttpTest, simplePositiveMultipleInts) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[111, 222, 121], [123, 221, 311]]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 2);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_EQ(d["data"][1]["object"], "embedding");
+    ASSERT_TRUE(d["data"][1]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
+TEST_F(EmbeddingsHttpTest, simplePositiveMultipleIntLengths) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[1, 2, 3, 4, 5, 6], [4, 5, 6, 7], [7, 8]]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 3);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_EQ(d["data"][1]["object"], "embedding");
+    ASSERT_TRUE(d["data"][1]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_TRUE(d["data"][2]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][2]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
+TEST_F(EmbeddingsHttpTest, simplePositiveMultipleStrings) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": ["one", "two"]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 2);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_EQ(d["data"][1]["object"], "embedding");
+    ASSERT_TRUE(d["data"][1]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
 }
 
 class EmbeddingsExtensionTest : public ::testing::Test {

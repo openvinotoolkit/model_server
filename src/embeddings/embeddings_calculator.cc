@@ -45,6 +45,8 @@ class EmbeddingsCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
     static const std::string EMBEDDINGS_MODEL_INPUT_IDS_NAME;
+    static const std::string EMBEDDINGS_MODEL_ATTENTION_MASK_NAME;
+    static const std::string EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME;
 
     mediapipe::Timestamp timestamp{0};
 
@@ -94,7 +96,7 @@ public:
         InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
-        EmbeddingsHandler handler(*payload.parsedJson);
+        ovms::EmbeddingsHandler handler(*payload.parsedJson);
         auto parseRequestStartTime = std::chrono::high_resolution_clock::now();
         absl::Status status = handler.parseRequest();
         if (!status.ok()) {
@@ -111,8 +113,11 @@ public:
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Tokenizer input name detected: {}", tokenizerInputName);
 
         ::InferenceInput tokenizerInputMap;
-        size_t received_batch_size = 1;
         ::InferenceOutput embeddingsOutputMap;
+        ::InferenceInput embeddingsInputMap;
+        size_t received_batch_size = 1;
+        size_t max_context_length = 512;  // default allowed input length. Otherwise, it will be read from model rt_info>config>max_position_embeddings in the model.xml file
+        ov::AnyMap modelConfig = embeddings_session->getModelConfig();
         try {
             ::InferenceOutput tokenizerOutputMap;
             auto input = handler.getInput();
@@ -123,42 +128,85 @@ public:
                     ov::Shape{received_batch_size},
                     strings->data()};
                 tokenizerOutputMap = tokenizer_session->infer(tokenizerInputMap);
-            } else {
-                // TODO: input already tokenized
-                return absl::InvalidArgumentError("not implemented");
-            }
-            ::InferenceInput embeddingsInputMap;
-            // Check if tokenizer produced at least the number of outputs as there are inputs in embedding model
-            RET_CHECK(tokenizerOutputMap.size() >= embeddingsInputNames.size());
-            for (const auto& embeddingsInputName : embeddingsInputNames) {
-                auto it = tokenizerOutputMap.find(embeddingsInputName);
-                RET_CHECK(it != tokenizerOutputMap.end());
-                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embedding model input {} is connected with matching tokenizer output", embeddingsInputName);
-                embeddingsInputMap[embeddingsInputName] = it->second;
-                if (embeddingsInputName == "attention_mask") {
-                    if (received_batch_size == 1) {
-                        handler.setPromptTokensUsage(it->second.get_size());
-                        continue;
+                // Check if tokenizer produced at least the number of outputs as there are inputs in embedding model
+                RET_CHECK(tokenizerOutputMap.size() >= embeddingsInputNames.size());
+                RET_CHECK(tokenizerOutputMap.find(EMBEDDINGS_MODEL_INPUT_IDS_NAME) != tokenizerOutputMap.end());
+                RET_CHECK(tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape().size() == 2);
+                size_t input_ids_size = tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape()[1];
+                if (input_ids_size > max_context_length) {
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
+                    return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
+                }
+                for (const auto& embeddingsInputName : embeddingsInputNames) {
+                    auto it = tokenizerOutputMap.find(embeddingsInputName);
+                    RET_CHECK(it != tokenizerOutputMap.end());
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embedding model input {} is connected with matching tokenizer output", embeddingsInputName);
+                    embeddingsInputMap[embeddingsInputName] = it->second;
+                    if (embeddingsInputName == "attention_mask") {
+                        if (received_batch_size == 1) {
+                            handler.setPromptTokensUsage(it->second.get_size());
+                            continue;
+                        }
+                        size_t attendedTokens = 0;
+                        if (it->second.get_element_type() == ov::element::Type_t::i64) {
+                            for (int i = 0; i < it->second.get_size(); i++) {
+                                attendedTokens += reinterpret_cast<int64_t*>(it->second.data())[i];
+                            }
+                        } else if (it->second.get_element_type() == ov::element::Type_t::i32) {
+                            for (int i = 0; i < it->second.get_size(); i++) {
+                                attendedTokens += reinterpret_cast<int32_t*>(it->second.data())[i];
+                            }
+                        } else {
+                            for (int i = 0; i < it->second.get_byte_size(); i++) {
+                                attendedTokens += reinterpret_cast<uint8_t*>(it->second.data())[i];
+                            }
+                        }
+                        handler.setPromptTokensUsage(attendedTokens);
                     }
-                    size_t attendedTokens = 0;
-                    if (it->second.get_element_type() == ov::element::Type_t::i64) {
-                        for (int i = 0; i < it->second.get_size(); i++) {
-                            attendedTokens += reinterpret_cast<int64_t*>(it->second.data())[i];
-                        }
-                    } else if (it->second.get_element_type() == ov::element::Type_t::i32) {
-                        for (int i = 0; i < it->second.get_size(); i++) {
-                            attendedTokens += reinterpret_cast<int32_t*>(it->second.data())[i];
-                        }
-                    } else {
-                        for (int i = 0; i < it->second.get_byte_size(); i++) {
-                            attendedTokens += reinterpret_cast<uint8_t*>(it->second.data())[i];
-                        }
+                }
+            } else if (auto tokenized_documents = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
+                size_t token_count_of_longest_document = 0;
+                size_t tokens = 0;
+                received_batch_size = tokenized_documents->size();
+                for (const auto& document_tokens : *tokenized_documents) {
+                    token_count_of_longest_document = std::max(token_count_of_longest_document, document_tokens.size());
+                    tokens += document_tokens.size();
+                }
+                handler.setPromptTokensUsage(tokens);
+                received_batch_size = tokenized_documents->size();
+                embeddingsInputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME] = ov::Tensor{
+                    ov::element::i64,
+                    ov::Shape{received_batch_size, token_count_of_longest_document}};
+                embeddingsInputMap[EMBEDDINGS_MODEL_ATTENTION_MASK_NAME] = ov::Tensor{
+                    ov::element::i64,
+                    ov::Shape{received_batch_size, token_count_of_longest_document}};
+                try {
+                    int64_t pad_token = modelConfig.at("pad_token_id").as<int64_t>();
+                    for (size_t i = 0; i < received_batch_size; i++) {
+                        int64_t* input_ids_start = reinterpret_cast<int64_t*>(embeddingsInputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].data()) + i * token_count_of_longest_document;
+                        std::fill(input_ids_start, input_ids_start + token_count_of_longest_document, pad_token);
+                        std::copy(tokenized_documents->at(i).data(), tokenized_documents->at(i).data() + tokenized_documents->at(i).size(), input_ids_start);
+
+                        int64_t* attention_mask_start = reinterpret_cast<int64_t*>(embeddingsInputMap[EMBEDDINGS_MODEL_ATTENTION_MASK_NAME].data()) + i * token_count_of_longest_document;
+                        std::fill(attention_mask_start, attention_mask_start + token_count_of_longest_document, 0);
+                        std::fill(attention_mask_start, attention_mask_start + tokenized_documents->at(i).size(), 1);
                     }
-                    handler.setPromptTokensUsage(attendedTokens);
+                } catch (std::out_of_range& e) {
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from preparing embeddings inputs(): {}", e.what());
+                    RET_CHECK(false);
+                } catch (std::exception& e) {
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught generic exception from preparing embeddings inputs: {}", e.what());
+                    RET_CHECK(false);
+                }
+
+                if (embeddings_session->getInputNames().size() == 3) {
+                    embeddingsInputMap[EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME] = ov::Tensor{
+                        ov::element::i64,
+                        ov::Shape{received_batch_size, token_count_of_longest_document}};
+                    int64_t* token_type_ids_start = reinterpret_cast<int64_t*>(embeddingsInputMap[EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME].data());
+                    std::fill(token_type_ids_start, token_type_ids_start + received_batch_size * token_count_of_longest_document, 1);
                 }
             }
-            size_t max_context_length = 512;  // default allowed input length. Otherwise, it will be read from model rt_info>config>max_position_embeddings in the model.xml file
-            ov::AnyMap modelConfig = embeddings_session->getModelConfig();
             try {
                 if (modelConfig.count("max_position_embeddings")) {
                     max_context_length = modelConfig["max_position_embeddings"].as<size_t>();
@@ -170,12 +218,6 @@ public:
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Detected model context size: ", max_context_length);
             } catch (...) {
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Can not read model context length from rt_info. Using default value {}", max_context_length);
-            }
-            RET_CHECK(tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape().size() == 2);
-            size_t input_ids_size = tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape()[1];
-            if (input_ids_size > max_context_length) {
-                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
-                return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
             }
             // creating output to avoid copying big tensor
             ov::Shape outShape = embeddingsInputMap.at(EMBEDDINGS_MODEL_INPUT_IDS_NAME).get_shape();
@@ -248,6 +290,8 @@ public:
 const std::string EmbeddingsCalculator::INPUT_TAG_NAME{"REQUEST_PAYLOAD"};
 const std::string EmbeddingsCalculator::OUTPUT_TAG_NAME{"RESPONSE_PAYLOAD"};
 const std::string EmbeddingsCalculator::EMBEDDINGS_MODEL_INPUT_IDS_NAME{"input_ids"};
+const std::string EmbeddingsCalculator::EMBEDDINGS_MODEL_ATTENTION_MASK_NAME{"attention_mask"};
+const std::string EmbeddingsCalculator::EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME{"token_type_ids"};
 
 REGISTER_CALCULATOR(EmbeddingsCalculator);
 

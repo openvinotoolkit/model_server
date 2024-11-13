@@ -80,7 +80,7 @@ node {
           }
           tag_to_input_tensor_names {
             key: "OVTENSOR1"
-            value: "attention_mask"
+            value: "1132"
           }
           tag_to_input_tensor_names {
             key: "OVTENSOR2"
@@ -88,7 +88,7 @@ node {
           }
           tag_to_output_tensor_names {
             key: "OVTENSOR"
-            value: "35"
+            value: "out_0"
           }
         }
   }
