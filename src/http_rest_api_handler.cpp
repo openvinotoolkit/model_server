@@ -1137,10 +1137,10 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
 
 std::string urlDecode(const std::string& encoded) {
     int output_length;
-    CURL *curl = curl_easy_init();
-    if(curl) {
+    CURL* curl = curl_easy_init();
+    if (curl) {
         const auto decoded_value = curl_easy_unescape(curl, encoded.c_str(), static_cast<int>(encoded.length()), &output_length);
-        if(decoded_value) {
+        if (decoded_value) {
             std::string result(decoded_value, output_length);
             curl_free(decoded_value);
             curl_easy_cleanup(curl);
