@@ -84,7 +84,7 @@ public:
                 .max_num_seqs = 256,
             };
             plugin_config_t pluginConfig;
-            JsonParser::parsePluginConfig("", pluginConfig);
+            JsonParser::parsePluginConfig("{\"INFERENCE_PRECISION_HINT\":\"f32\"}", pluginConfig);
             cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>("/ovms/src/test/llm_testing/facebook/opt-125m", schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
             llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(cbPipe);
         } catch (const std::exception& e) {
