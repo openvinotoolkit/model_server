@@ -9,6 +9,9 @@ pipeline {
     stages {
         stage('Configure') {
           steps {
+            script{
+              println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
+            }
             script {
               shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
               echo shortCommit
