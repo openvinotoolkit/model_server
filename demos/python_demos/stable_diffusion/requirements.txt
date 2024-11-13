@@ -4,4 +4,4 @@
 onnx
 nncf
 openvino
-optimum[diffusers,openvino]
+optimum[diffusers,openvino]==1.22.0
