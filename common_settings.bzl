@@ -143,8 +143,15 @@ COMMON_STATIC_LIBS_LINKOPTS = select({
                 "//src:windows" : [
                     "",
                     ],
-                }) 
-
+                })
+COPTS_PYTHON = select({
+    "//conditions:default": ["-DPYTHON_DISABLE=1"],
+    "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
+})
+COPTS_MEDIAPIPE = select({
+    "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
+    "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+})
 COMMON_FUZZER_COPTS = [
     "-fsanitize=address",
     "-fprofile-generate",
