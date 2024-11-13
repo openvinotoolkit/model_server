@@ -15,6 +15,11 @@
 # limitations under the License.
 #
 
+if [ -z "$1" ]; then
+  echo "Error: No directory specified."
+  exit 1
+fi
+
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
 if [ -d "$1/facebook/opt-125m" ] && [ -d "$1/$EMBEDDING_MODEL" ] && [ -d "$1/$RERANK_MODEL" ]; then

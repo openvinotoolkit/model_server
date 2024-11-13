@@ -1797,6 +1797,7 @@ cc_test(
         "test/unit_tests.cpp",
         ] + select({
             "//:is_windows_or_mediapipe_is_disabled_no_http": [],
+            # Tests that require MediaPipe and HTTP (windows does not have HTTP yet)
             "//conditions:default" : [
                 "test/metrics_flow_test.cpp",
                 "test/mediapipeflow_test.cpp", # Mediapipe enabled
@@ -1805,6 +1806,8 @@ cc_test(
                 "test/http_rest_api_handler_test.cpp",
                 "test/http_openai_handler_test.cpp", # Mediapipe enabled
                 "test/test_http_utils.hpp",
+                "test/reranknode_test.cpp",
+                "test/embeddingsnode_test.cpp",
             ],
         }) + select({
             "//:not_disable_cloud": [
