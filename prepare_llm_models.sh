@@ -53,5 +53,5 @@ fi
 if [ -d "$1/$RERANK_MODEL" ]; then
   echo "Models directory $1/$RERANK_MODEL exists. Skipping downloading models."
 else
-  python demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int4 --model_repository_path $1
+  python demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
 fi
