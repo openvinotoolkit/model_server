@@ -6,15 +6,11 @@ pipeline {
         label 'win_ovms'
     }
     stages {
-        stage('Check build triggers') {
+        stage('Configure') {
             steps {
-                script {
-                    def buildCauses = currentBuild.getBuildCauses()
-                    println "BUILD CAUSE: ${buildCauses}"
-                    println "BUILD NUMBER: ${currentBuild.getNumber()}"
-                }
                 script
                 {
+                    println "BUILD CAUSE: ${currentBuild.getBuildCauses()}"
                     // BRANCH INDEXING BUILD CAUSE: [[_class:jenkins.branch.BranchIndexingCause, shortDescription:Branch indexing]]
                     def isTriggeredByIndexing = currentBuild.getBuildCauses('jenkins.branch.BranchIndexingCause').size()
                     // ON COMMIT TRIGGER BUILD CAUSE: [[_class:org.jenkinsci.plugins.workflow.support.steps.build.BuildUpstreamCause, 
@@ -33,6 +29,27 @@ pipeline {
                             echo "Caught branch indexing for subsequent build. Canceling build"
                         }
                     }
+                }
+                script {
+                    shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
+                    echo shortCommit
+                    echo sh(script: 'env|sort', returnStdout: true)
+                    def git_diff = ""
+                    if (env.CHANGE_ID){ // PR - check changes between target branch
+                        sh 'git fetch origin ${CHANGE_TARGET}'
+                        git_diff = sh (script: "git diff --name-only \$(git merge-base FETCH_HEAD HEAD)", returnStdout: true).trim()
+                        println("git diff:\n${git_diff}")
+                    } else {  // branches without PR - check changes in last commit
+                        git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
+                    }
+                    def matched = (git_diff =~ /src|third_party|external|ci|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|\.bat|\.groovy/)
+                    if (matched){
+                        image_build_needed = "true"
+                    } else {
+                        currentBuild.result = 'ABORTED'
+                        echo "No changes matched required files to start build."
+                    }
+
                 }
             }
             
