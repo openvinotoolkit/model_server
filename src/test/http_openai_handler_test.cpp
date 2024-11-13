@@ -83,10 +83,10 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/completions/", requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor("/v1/v3/completions/", requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(/v3/completions/
+    std::string expectedResponse = R"(/v1/v3/completions/
 
         {
             "model": "gpt",

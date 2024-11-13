@@ -116,9 +116,9 @@ public:
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
                 Endpoint endpoint;
-                if (payload.uri == "/v3/chat/completions") {
+                if (payload.uri.find("/chat/completions") != std::string::npos) {
                     endpoint = Endpoint::CHAT_COMPLETIONS;
-                } else if (payload.uri == "/v3/completions") {
+                } else if (payload.uri.find("/completions") != std::string::npos) {
                     endpoint = Endpoint::COMPLETIONS;
                 } else {
                     return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v3/chat/completions, /v3/completions");
