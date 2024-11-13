@@ -25,8 +25,8 @@ pipeline {
                         }
                         else {
                             echo "Branch discovered by branch indexing"
-                            echo "Caught branch indexing for subsequent build. Canceling build"
-                            abortPipeline 'ABORTED'
+                            currentBuild.result = 'ABORTED'
+                            error "Caught branch indexing for subsequent build. Canceling build"
                         }
                     }
                 }
@@ -44,8 +44,8 @@ pipeline {
                     }
                     def matched = (git_diff =~ /src|third_party|external|ci|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|\.bat|\.groovy/)
                     if (!matched){
-                        echo "No changes matched required files to start build."
-                        abortPipeline 'ABORTED'
+                        currentBuild.result = 'ABORTED'
+                        error "No changes matched required files to start build."
                     }
                 }
             }
