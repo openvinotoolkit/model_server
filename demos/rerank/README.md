@@ -82,7 +82,8 @@ curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
 ## Comparison with Hugging Faces
 
 ```bash
-python demos/embeddings/compare_results.py --query "hello" --document "welcome" --document "farewell"
+pip3 install cohere
+python demos/rerank/compare_results.py --query "hello" --document "welcome" --document "farewell"
 query hello
 documents ['welcome', 'farewell']
 HF Duration: 145.731 ms

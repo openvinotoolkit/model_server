@@ -260,7 +260,7 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
-COPY .bazelrc .bazelversion WORKSPACE /ovms/
+COPY .bazelrc .user.bazelr[c] .bazelversion WORKSPACE /ovms/
 # since bazel does not have easy way to pass if down the dependencies to have select the sources
 # for libcurl & ssl we hack it this way
 RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
