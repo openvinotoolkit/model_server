@@ -29,8 +29,8 @@ pipeline {
                         }
                         else {
                             echo "Branch discovered by branch indexing"
-                            currentBuild.result = 'SUCCESS'
-                            error "Caught branch indexing for subsequent build. Canceling build"
+                            currentBuild.result = 'ABORTED'
+                            echo "Caught branch indexing for subsequent build. Canceling build"
                         }
                     }
                 }
