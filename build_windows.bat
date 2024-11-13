@@ -59,5 +59,6 @@ set > %envPath%
 :: Cut tests log to results
 set regex="\[  .* ms"
 set sed="s/ (.* ms)//g"
-grep -a %regex% full_test.log | sed %sed% | tee test.log
+set sed_cut="/listed below/,$p"
+grep -a %regex% full_test.log | sed %sed% | sed_cut %sed% | tee test.log
 endlocal
