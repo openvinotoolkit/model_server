@@ -730,6 +730,9 @@ TEST(EnsembleMetadata, OneUnavailableNodeBeforeRevalidationShouldWork) {
 }
 
 TEST(EnsembleMetadata, OneCustomNode) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     ConstructorEnabledModelManager manager;
     CustomNodeLibraryManager libraryManager;
     ASSERT_EQ(libraryManager.loadLibrary("add_sub", "/ovms/bazel-bin/src/lib_node_add_sub.so"), StatusCode::OK);

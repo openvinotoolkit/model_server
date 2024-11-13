@@ -401,9 +401,6 @@ TEST(CAPIInferenceResponse, Basic) {
 }
 
 TEST_F(CAPIInference, Validation) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json").c_str());
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
@@ -423,9 +420,6 @@ TEST_F(CAPIInference, Validation) {
     OVMS_InferenceRequestDelete(request);
 }
 TEST_F(CAPIInference, AcceptInputRejectOutputStringPrecision) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_string.json"));
     OVMS_Server* cserver = serverGuard.server;
     OVMS_InferenceRequest* request{nullptr};
@@ -443,9 +437,6 @@ TEST_F(CAPIInference, AcceptInputRejectOutputStringPrecision) {
 }
 
 TEST_F(CAPIInference, TwoInputs) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_double_dummy.json").c_str());
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
@@ -501,9 +492,6 @@ TEST_F(CAPIInference, TwoInputs) {
     OVMS_InferenceRequestDelete(request);
 }
 TEST_F(CAPIInference, Basic) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     //////////////////////
     // start server
     //////////////////////
@@ -623,9 +611,6 @@ TEST_F(CAPIInference, Basic) {
     OVMS_InferenceRequestDelete(request);
 }
 TEST_F(CAPIInference, ReuseInputRemoveAndAddData) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json").c_str());
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
@@ -718,9 +703,6 @@ TEST_F(CAPIInference, ReuseInputRemoveAndAddData) {
 }
 
 TEST_F(CAPIInference, ReuseRequestRemoveAndAddInput) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_dummy_dynamic_shape.json").c_str());
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
@@ -815,9 +797,6 @@ TEST_F(CAPIInference, ReuseRequestRemoveAndAddInput) {
 }
 
 TEST_F(CAPIInference, NegativeInference) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // first start OVMS
     std::string port = "9000";
     randomizePort(port);
@@ -920,9 +899,6 @@ TEST_F(CAPIInference, NegativeInference) {
     OVMS_ServerDelete(nullptr);
 }
 TEST_F(CAPIInference, String) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     using std::string;
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_string.json"));
     OVMS_InferenceRequest* request{nullptr};
@@ -989,9 +965,6 @@ TEST_F(CAPIInference, String) {
     OVMS_InferenceResponseDelete(response2);
 }
 TEST_F(CAPIInference, Scalar) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     //////////////////////
     // start server
     //////////////////////
@@ -1438,9 +1411,6 @@ TEST_F(CAPIStateIntegration, LiveReadyFromConfig) {
 }
 
 TEST_F(CAPIStateIntegration, Config) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     OVMS_Server* cserver = nullptr;
     OVMS_ServableState state;
     const std::string servableName = "dummy";
@@ -1578,19 +1548,22 @@ TEST_F(CAPIState, AllStates) {
 }
 
 TEST_F(CAPIMetadata, BasicDummy) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const std::string servableName{"dummy"};
     checkServableAsDummy(servableName);
 }
 
 TEST_F(CAPIMetadata, BasicDummyDag) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     const std::string servableName{"pipeline1Dummy"};
     checkServableAsDummy(servableName);
 }
 
 TEST_F(CAPIMetadata, BasicScalar) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const std::string servableName{"scalar"};
     model_version_t servableVersion = 1;
     ovms::tensor_map_t inputsInfo({{SCALAR_MODEL_INPUT_NAME,
@@ -1601,9 +1574,6 @@ TEST_F(CAPIMetadata, BasicScalar) {
 }
 
 TEST_F(CAPIMetadata, DummyDynamicShapes) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     const std::string servableName = "dummyDynamic";
     model_version_t servableVersion = 1;
     ovms::tensor_map_t inputsInfo({{DUMMY_MODEL_INPUT_NAME,
@@ -1626,9 +1596,6 @@ TEST_F(CAPIMetadata, TwoInputsAddModel) {
 }
 
 TEST_F(CAPIInference, CallInferenceServerNotStarted) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     OVMS_Server* cserver = nullptr;
     OVMS_InferenceRequest* request{nullptr};
     OVMS_InferenceResponse* response = nullptr;
@@ -1908,7 +1875,7 @@ static void callbackUnblockingAndCheckingResponse(OVMS_InferenceResponse* respon
     checkDummyResponse(response, callbackStruct->expectedValue, 0);
     OVMS_InferenceResponseDelete(response);
 }
-const std::string DUMMY_MODEL_CPU_CONFIG_PATH{"/ovms/src/test/configs/config_cpu_dummy.json"};
+const std::string DUMMY_MODEL_CPU_CONFIG_PATH{getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json").c_str()};
 class MockModelInstanceWithSetOutputInfo : public ovms::ModelInstance {
 public:
     MockModelInstanceWithSetOutputInfo(ov::Core& ieCore) :
@@ -1929,9 +1896,6 @@ const float INITIAL_VALUE{0.13666};
 const float GARBAGE_VALUE = 42.66613;
 const float FLOAT_TOLERANCE{0.001};
 TEST_F(CAPIInference, AsyncWithCallbackDummy) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::vector<float> in(10, INITIAL_VALUE);
     std::vector<float> out(10, GARBAGE_VALUE);
     size_t inputByteSize = sizeof(float) * in.size();

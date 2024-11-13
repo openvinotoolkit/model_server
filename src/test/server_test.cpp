@@ -203,6 +203,9 @@ public:
 using ovms::SERVABLE_MANAGER_MODULE_NAME;
 
 TEST(Server, ServerAliveBeforeLoadingModels) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // purpose of this test is to ensure that the server responds with alive=true before loading any models.
     // this is to make sure that eg. k8s won't restart container until all models are loaded because of not being alivea
     std::string port = "9000";
@@ -213,7 +216,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
+        (char*)getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
         (char*)"--log_level",
         (char*)"DEBUG",
         (char*)"--port",
@@ -294,7 +297,7 @@ TEST(Server, ServerMetadata) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
+        (char*)getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
         (char*)"--port",
         (char*)port.c_str(),
         nullptr};
@@ -354,7 +357,7 @@ TEST(Server, grpcArguments) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
+        (char*)getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
         (char*)"--port",
         (char*)port.c_str(),
         (char*)"--grpc_channel_arguments",

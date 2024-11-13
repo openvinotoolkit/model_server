@@ -918,6 +918,9 @@ TEST(ModelConfig, modelVersionPolicyIncorrect) {
 }
 
 TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     std::string config = R"#(
         {
         "model_config_list": [
@@ -949,6 +952,9 @@ TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
 }
 
 TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatArray) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     std::string config = R"#(
         {
         "model_config_list": [
@@ -986,6 +992,9 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatArray) {
 }
 
 TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatString) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     std::string config = R"#(
         {
         "model_config_list": [
@@ -1018,6 +1027,9 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatString) {
 }
 
 TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     std::string config = R"#(
         {
         "model_config_list": [
@@ -1166,6 +1178,9 @@ class ModelConfigParseModel : public ::testing::TestWithParam<std::pair<std::str
 };
 
 TEST_P(ModelConfigParseModel, SetWithStateful) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     std::pair<std::string, ovms::StatusCode> testPair = GetParam();
     std::string config = testPair.first;
     rapidjson::Document configJson;

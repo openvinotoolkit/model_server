@@ -1,4 +1,3 @@
-#No header files detected
 # Copyright (c) 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,6 +49,8 @@ def main():
     
     print("Replacing back set to: " + str(replace_back))
 
+    # Change c:\something\else to c:\\something\\else for json parser compatybility
+    windows_path = windows_path.replace("\\","\\\\")
     if replace_back:
         tmp_path = windows_path
         windows_path = linux_path

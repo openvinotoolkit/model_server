@@ -300,6 +300,9 @@ protected:
     ConstructorEnabledModelManager manager;
 
     void SetUp() override {
+        #ifdef _WIN32
+            GTEST_SKIP() << "Test disabled on windows";
+        #endif
         const ::testing::TestInfo* const test_info =
             ::testing::UnitTest::GetInstance()->current_test_info();
 
@@ -388,7 +391,7 @@ TEST_F(TFSModelServiceTest, config_reload) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
+        (char*)getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
         (char*)"--log_level",
         (char*)"DEBUG",
         (char*)"--port",

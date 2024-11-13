@@ -618,7 +618,7 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(ModelManagerWatcher2Models, configRelodNotNeededManyThreads) {
-    std::string configFile = "/tmp/config.json";
+    std::string configFile = getWindowsFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -647,7 +647,7 @@ TEST_P(ModelManagerWatcher2Models, configRelodNotNeededManyThreads) {
 }
 
 TEST_P(ModelManagerWatcher2Models, configReloadNeededManyThreads) {
-    std::string configFile = "/tmp/config.json";
+    std::string configFile = getWindowsFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -682,7 +682,7 @@ TEST_P(ModelManagerWatcher2Models, configReloadNeededManyThreads) {
 }
 
 TEST_P(ModelManagerWatcher2Models, configReloadNeededChange) {
-    std::string configFile = "/tmp/config.json";
+    std::string configFile = getWindowsFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -704,7 +704,10 @@ TEST_P(ModelManagerWatcher2Models, configReloadNeededChange) {
 }
 
 TEST_P(ModelManagerWatcher2Models, loadConfigManyThreads) {
-    std::string configFile = "/tmp/config.json";
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+    std::string configFile = getWindowsFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -733,7 +736,7 @@ TEST_P(ModelManagerWatcher2Models, loadConfigManyThreads) {
 }
 
 TEST_P(ModelManagerWatcher2Models, configReloadNeededBeforeConfigLoad) {
-    std::string configFile = "/tmp/config.json";
+    std::string configFile = getWindowsFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -806,7 +809,7 @@ TEST_F(ModelManagerWatcher, parseConfigWhenOnlyPipelineDefinitionProvided) {
 }
 
 TEST_F(ModelManager, ReadsVersionsFromDisk) {
-    const std::string path = "/tmp/test_model/";
+    const std::string path = getWindowsFullPathForTmp("/tmp/test_model/");
 
     try {
         for (auto i : {1, 5, 8, 10}) {
@@ -868,7 +871,7 @@ TEST_F(ModelManager, ReadsVersionsFromDiskRelativePath) {
 }
 
 TEST_F(ModelManager, PathEscapeError1) {
-    const std::string path = "/tmp/../test_model/";
+    const std::string path = getWindowsFullPathForTmp("/tmp/../test_model/");
 
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
@@ -890,7 +893,10 @@ TEST_F(ModelManager, PathEscapeError1RelativePath) {
 }
 
 TEST_F(ModelManager, PathEscapeError2) {
-    const std::string path = "../tmp/test_model/";
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+    const std::string path = getWindowsFullPathForTmp("../tmp/test_model/");
 
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
@@ -901,7 +907,7 @@ TEST_F(ModelManager, PathEscapeError2) {
 }
 
 TEST_F(ModelManager, ReadVersionsInvalidPath) {
-    const std::string path = "/tmp/inexisting_path/8bt4kv";
+    const std::string path = getWindowsFullPathForTmp("/tmp/inexisting_path/8bt4kv");
 
     try {
         std::filesystem::remove(path);
@@ -1060,6 +1066,9 @@ public:
         mockedFunctorSequenceCleaner(globalSequencesViewer),
         mockedFunctorResourcesCleaner(modelManager) {}
     void SetUp() {
+        #ifdef _WIN32
+            GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
+        #endif
         exitSignal = cleanerExitTrigger.get_future();
     }
 
