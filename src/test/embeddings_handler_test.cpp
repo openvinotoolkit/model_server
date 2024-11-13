@@ -30,10 +30,10 @@ TEST(EmbeddingsDeserialization, singleStringInput) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
+    auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
     auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
     ASSERT_NE(strings, nullptr);
     ASSERT_EQ(strings->size(), 1);
@@ -50,10 +50,10 @@ TEST(EmbeddingsDeserialization, multipleStringInput) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
+    auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
     auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
     ASSERT_NE(strings, nullptr);
     ASSERT_EQ(strings->size(), 3);
@@ -62,26 +62,102 @@ TEST(EmbeddingsDeserialization, multipleStringInput) {
     ASSERT_EQ(strings->at(2), "three");
 }
 
-TEST(EmbeddingsDeserialization, handler) {
+TEST(EmbeddingsDeserialization, intInput) {
     std::string requestBody = R"(
         {
             "model": "embeddings",
-            "input": ["one", "two", "three"]
+            "input": [1, 2, 3]
         }
     )";
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    EmbeddingsHandler handler(d);
-    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
-    ASSERT_EQ(handler.getEncodingFormat(), EncodingFormat::FLOAT);
-    auto input = handler.getInput();
-    auto strings = std::get_if<std::vector<std::string>>(&input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
+    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
+    auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
+    auto ints = std::get_if<std::vector<std::vector<int64_t>>>(&embeddingsRequest.input);
+    ASSERT_NE(ints, nullptr);
+    ASSERT_EQ(ints->size(), 1);
+    ASSERT_EQ(ints->at(0).size(), 3);
+    ASSERT_EQ(ints->at(0).at(0), 1);
+    ASSERT_EQ(ints->at(0).at(1), 2);
+    ASSERT_EQ(ints->at(0).at(2), 3);
+}
+
+TEST(EmbeddingsDeserialization, multipleIntInput) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[1, 2, 3], [4, 5, 6]]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
+    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
+    auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
+    auto ints = std::get_if<std::vector<std::vector<int64_t>>>(&embeddingsRequest.input);
+    ASSERT_NE(ints, nullptr);
+    ASSERT_EQ(ints->size(), 2);
+    ASSERT_EQ(ints->at(0).size(), 3);
+    ASSERT_EQ(ints->at(0).at(0), 1);
+    ASSERT_EQ(ints->at(0).at(1), 2);
+    ASSERT_EQ(ints->at(0).at(2), 3);
+    ASSERT_EQ(ints->at(1).size(), 3);
+    ASSERT_EQ(ints->at(1).at(0), 4);
+    ASSERT_EQ(ints->at(1).at(1), 5);
+    ASSERT_EQ(ints->at(1).at(2), 6);
+}
+
+TEST(EmbeddingsDeserialization, multipleIntInputLengths) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[1, 2, 3, 4, 5, 6], [4, 5, 6, 7], [7, 8]]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
+    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
+    auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
+    auto ints = std::get_if<std::vector<std::vector<int64_t>>>(&embeddingsRequest.input);
+    ASSERT_NE(ints, nullptr);
+    ASSERT_EQ(ints->size(), 3);
+    ASSERT_EQ(ints->at(0).size(), 6);
+    ASSERT_EQ(ints->at(0).at(0), 1);
+    ASSERT_EQ(ints->at(0).at(1), 2);
+    ASSERT_EQ(ints->at(0).at(2), 3);
+    ASSERT_EQ(ints->at(0).at(3), 4);
+    ASSERT_EQ(ints->at(0).at(4), 5);
+    ASSERT_EQ(ints->at(0).at(5), 6);
+    ASSERT_EQ(ints->at(1).size(), 4);
+    ASSERT_EQ(ints->at(1).at(0), 4);
+    ASSERT_EQ(ints->at(1).at(1), 5);
+    ASSERT_EQ(ints->at(1).at(2), 6);
+    ASSERT_EQ(ints->at(2).size(), 2);
+    ASSERT_EQ(ints->at(2).at(0), 7);
+    ASSERT_EQ(ints->at(2).at(1), 8);
+}
+
+TEST(EmbeddingsDeserialization, malformedMultipleIntInput) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[1, 2, 3], "string", [4, 5, 6]]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "input must be homogeneous");
 }
 
 TEST(EmbeddingsDeserialization, malformedInput) {
@@ -94,10 +170,81 @@ TEST(EmbeddingsDeserialization, malformedInput) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "every element in input array should be string");
+    ASSERT_EQ(error, "input must be homogeneous");
+}
+
+TEST(EmbeddingsDeserialization, malformedInput2) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[62, 12, 4], 5, 2 ]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "input must be homogeneous");
+}
+
+TEST(EmbeddingsDeserialization, malformedInput3) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[62, 71, true, 5, "abc", 1 ], [1, 2]]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "input must be homogeneous");
+}
+
+TEST(EmbeddingsDeserialization, malformedInput4) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[62, 71, 5, 1 ], ["string"],  [1, 2]]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "input must be homogeneous");
+}
+
+TEST(EmbeddingsDeserialization, handler) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": ["one", "two", "three"]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ovms::EmbeddingsHandler handler(d);
+    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
+    ASSERT_EQ(handler.getEncodingFormat(), ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
+    auto input = handler.getInput();
+    ASSERT_EQ(std::get_if<std::vector<std::vector<int64_t>>>(&input), nullptr);
+    auto strings = std::get_if<std::vector<std::string>>(&input);
+    ASSERT_NE(strings, nullptr);
+    ASSERT_EQ(strings->size(), 3);
+    ASSERT_EQ(strings->at(0), "one");
+    ASSERT_EQ(strings->at(1), "two");
+    ASSERT_EQ(strings->at(2), "three");
 }
 
 TEST(EmbeddingsDeserialization, invalidEncoding) {
@@ -111,7 +258,7 @@ TEST(EmbeddingsDeserialization, invalidEncoding) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "encoding_format should either base64 or float");
@@ -128,7 +275,7 @@ TEST(EmbeddingsDeserialization, invalidEncodingType) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "encoding_format should be string");
@@ -144,10 +291,10 @@ TEST(EmbeddingsDeserialization, malformedInputType) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "input should be string or array of strings");
+    ASSERT_EQ(error, "input should be string, array of strings or array of integers");
 }
 
 TEST(EmbeddingsDeserialization, noInput) {
@@ -159,7 +306,7 @@ TEST(EmbeddingsDeserialization, noInput) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "input field is required");
@@ -176,10 +323,10 @@ TEST(EmbeddingsDeserialization, multipleStringInputBase64) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::BASE64);
+    auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::BASE64);
     auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
     ASSERT_NE(strings, nullptr);
     ASSERT_EQ(strings->size(), 3);
@@ -199,10 +346,10 @@ TEST(EmbeddingsDeserialization, multipleStringInputFloat) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
+    auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
     auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
     ASSERT_NE(strings, nullptr);
     ASSERT_EQ(strings->size(), 3);
@@ -218,7 +365,7 @@ TEST(EmbeddingsSerialization, simplePositive) {
     std::vector<size_t> shape{2, 3, 3};
     ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, shape, tensorsData.data());
     rapidjson::Document notUsed;
-    EmbeddingsHandler handler(notUsed);
+    ovms::EmbeddingsHandler handler(notUsed);
     auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings);
     ASSERT_TRUE(status.ok());
     std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[1.0,2.0,3.0],"index":0},{"object":"embedding","embedding":[1.0,2.0,3.0],"index":1}],"usage":{"prompt_tokens":0,"total_tokens":0}})";
@@ -232,7 +379,7 @@ TEST(EmbeddingsSerialization, positiveNormalization) {
     std::vector<size_t> shape{2, 3, 3};
     ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, shape, tensorsData.data());
     rapidjson::Document notUsed;
-    EmbeddingsHandler handler(notUsed);
+    ovms::EmbeddingsHandler handler(notUsed);
     auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings);
     ASSERT_TRUE(status.ok());
     std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[0.26726123690605164,0.5345224738121033,0.8017837405204773],"index":0},{"object":"embedding","embedding":[0.26726123690605164,0.5345224738121033,0.8017837405204773],"index":1}],"usage":{"prompt_tokens":0,"total_tokens":0}})";
@@ -255,7 +402,7 @@ TEST(EmbeddingsSerialization, positiveBase64) {
     rapidjson::Document document;
     rapidjson::ParseResult ok = document.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    EmbeddingsHandler handler(document);
+    ovms::EmbeddingsHandler handler(document);
     auto status = handler.parseRequest();
     ASSERT_TRUE(status.ok());
     status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings);
@@ -271,7 +418,7 @@ TEST(EmbeddingsSerialization, positiveUsage) {
     std::vector<size_t> shape{2, 3, 3};
     ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, shape, tensorsData.data());
     rapidjson::Document notUsed;
-    EmbeddingsHandler handler(notUsed);
+    ovms::EmbeddingsHandler handler(notUsed);
     handler.setPromptTokensUsage(50);
     auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings);
     ASSERT_TRUE(status.ok());
