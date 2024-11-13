@@ -1066,9 +1066,9 @@ public:
         mockedFunctorSequenceCleaner(globalSequencesViewer),
         mockedFunctorResourcesCleaner(modelManager) {}
     void SetUp() {
-        #ifdef _WIN32
-            GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
-        #endif
+#ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
+#endif
         exitSignal = cleanerExitTrigger.get_future();
     }
 

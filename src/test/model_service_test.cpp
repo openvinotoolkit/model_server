@@ -300,9 +300,9 @@ protected:
     ConstructorEnabledModelManager manager;
 
     void SetUp() override {
-        #ifdef _WIN32
-            GTEST_SKIP() << "Test disabled on windows";
-        #endif
+#ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows";
+#endif
         const ::testing::TestInfo* const test_info =
             ::testing::UnitTest::GetInstance()->current_test_info();
 

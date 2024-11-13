@@ -673,7 +673,7 @@ TEST_F(StressMediapipeChanges, RemoveGraphDuringPredictLoad) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-	// we add another definition during load
+    // we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
@@ -690,7 +690,7 @@ TEST_F(StressMediapipeChanges, RemoveModelDuringPredictLoad) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-	// we add another definition during load
+    // we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {
@@ -712,7 +712,7 @@ TEST_F(StressMediapipeChanges, ReloadModelDuringPredictLoad) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-	// we change nireq during load
+    // we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -728,7 +728,7 @@ TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringPredictLoad) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-	// we change nireq during load
+    // we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -745,7 +745,7 @@ TEST_F(StressMediapipeChanges, AddGraphDuringStatusLoad) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-	// we add another definition during load
+    // we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -791,7 +791,7 @@ TEST_F(StressMediapipeChanges, ReloadModelDuringStatusLoad) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-	// we change nireq during load
+    // we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -807,7 +807,7 @@ TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringStatusLoad) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-	// we change nireq during load
+    // we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -823,7 +823,7 @@ TEST_F(StressMediapipeChanges, AddGraphDuringMetadataLoad) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-	// we add another definition during load
+    // we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
@@ -839,7 +839,7 @@ TEST_F(StressMediapipeChanges, RemoveGraphDuringMetadataLoad) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-	// we add another definition during load
+    // we add another definition during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE};
@@ -870,7 +870,7 @@ TEST_F(StressMediapipeChanges, ReloadModelDuringMetadataLoad) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-	// we change nireq during load
+    // we change nireq during load
     SetUpConfig(basicMediapipeConfig);
     bool performWholeConfigReload = true;
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation

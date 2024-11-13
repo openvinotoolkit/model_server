@@ -62,7 +62,7 @@ const uint32_t AVAILABLE_CORES = std::thread::hardware_concurrency();
 TEST(CAPIConfigTest, MultiModelConfiguration) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
-#endif    
+#endif
     OVMS_ServerSettings* _serverSettings = nullptr;
     OVMS_ModelsSettings* _modelsSettings = nullptr;
 

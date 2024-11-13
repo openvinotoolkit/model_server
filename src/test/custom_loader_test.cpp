@@ -611,7 +611,7 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMultiplePropertiesInCustomLoaderOptio
 TEST_F(TestCustomLoader, CustomLoaderPrediction) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
-#endif  
+#endif
     // Copy dummy model to temporary destination
     std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
@@ -987,7 +987,7 @@ TEST_F(TestCustomLoader, CustomLoaderGetMetaData) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-  const char* expected_json = R"({
+    const char* expected_json = R"({
  "modelSpec": {
   "name": "dummy",
   "signatureName": "",

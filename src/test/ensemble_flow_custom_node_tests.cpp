@@ -58,9 +58,9 @@ using tensorflow::serving::PredictResponse;
 class EnsembleFlowCustomNodePipelineExecutionTest : public TestWithTempDir {
 protected:
     void SetUp() override {
-        #ifdef _WIN32
-            GTEST_SKIP() << "Test disabled on windows";
-        #endif
+#ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows";
+#endif
         TestWithTempDir::SetUp();
 
         reporter = std::make_unique<ModelMetricReporter>(&this->metricConfig, &this->registry, "example_pipeline_name", 1);
@@ -272,9 +272,9 @@ protected:
     const int32_t demultiplyCount = 4;  // different ops library has (1,4,10) as output
 
     void SetUp() override {
-        #ifdef _WIN32
-            GTEST_SKIP() << "Test disabled on windows";
-        #endif
+#ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows";
+#endif
         EnsembleFlowCustomNodePipelineExecutionTest::SetUp();
         // increasing default nireq == 1 to speed up the tests
         // in multilayered demultiplication we still will have more than
@@ -1896,9 +1896,9 @@ static const char* pipelineCustomNodeDifferentOperationsConfig = R"(
 class EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest : public EnsembleFlowCustomNodeLoadConfigThenExecuteTest {
 protected:
     void SetUp() override {
-        #ifdef _WIN32
-            GTEST_SKIP() << "Test disabled on windows";
-        #endif
+#ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows";
+#endif
         EnsembleFlowCustomNodeLoadConfigThenExecuteTest::SetUp();
         configJsonFilePath = directoryPath + "/ovms_config_file.json";
     }
@@ -2647,9 +2647,9 @@ struct LibraryParamControlledMetadata {
 class EnsembleConfigurationValidationWithCustomNode : public ::testing::Test {
 protected:
     void SetUp() override {
-        #ifdef _WIN32
-            GTEST_SKIP() << "Test disabled on windows";
-        #endif
+#ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows";
+#endif
         mockedLibrary = createLibraryMock<LibraryParamControlledMetadata>();
         ASSERT_TRUE(mockedLibrary.isValid());
     }
@@ -4503,9 +4503,9 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerWithoutGat
 class EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest : public EnsembleFlowCustomNodeLoadConfigThenExecuteTest {
 protected:
     void SetUp() override {
-        #ifdef _WIN32
-            GTEST_SKIP() << "Test disabled on windows";
-        #endif
+#ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows";
+#endif
         EnsembleFlowCustomNodeLoadConfigThenExecuteTest::SetUp();
         configJsonFilePath = directoryPath + "/ovms_config_file.json";
     }
@@ -5987,9 +5987,9 @@ template <typename Pair,
 class EnsembleFlowStringInput : public ::testing::Test {
 public:
     void SetUp() override {
-        #ifdef _WIN32
-            GTEST_SKIP() << "Test disabled on windows";
-        #endif
+#ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows";
+#endif
     }
 
     RequestType request;
