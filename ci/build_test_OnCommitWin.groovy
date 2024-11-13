@@ -21,7 +21,7 @@ pipeline {
         label 'win_ovms'
     }
     parameters {
-        string(name: 'passed_tests', defaultValue: '1816')
+        string(name: 'passed_tests', defaultValue: '1848')
         string(name: 'failed_tests', defaultValue: '283')
     }
     stages {
