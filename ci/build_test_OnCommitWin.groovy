@@ -6,36 +6,6 @@ pipeline {
         label 'win_ovms'
     }
     stages {
-        stage('Configure') {
-            steps {
-                script
-                {
-                    println "BUILD CAUSE: ${currentBuild.getBuildCauses()}"
-                    // BRANCH INDEXING BUILD CAUSE: [[_class:jenkins.branch.BranchIndexingCause, shortDescription:Branch indexing]]
-                    def isTriggeredByIndexing = currentBuild.getBuildCauses('jenkins.branch.BranchIndexingCause').size()
-                    // ON COMMIT TRIGGER BUILD CAUSE: [[_class:org.jenkinsci.plugins.workflow.support.steps.build.BuildUpstreamCause, 
-                    def isTriggeredByOnCommit = currentBuild.getBuildCauses('org.jenkinsci.plugins.workflow.support.steps.build.BuildUpstreamCause').size()
-                    // Below are just examples how to find specific build trigger in case we wanted to change this in future.
-                    def isTriggeredByUser = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause').size()  
-                    def isTriggeredByTimer = currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause').size()
-
-                    // Indexing trigger
-                    if (isTriggeredByIndexing) {
-                        // First build for indexing is allowed so that onCommit will see this configuration once it starts.
-                        if (currentBuild.getNumber() == 1) {
-                            echo "First build on branch discovered by branch indexing"
-                            echo "Continue building"
-                        }
-                        else {
-                            echo "Branch discovered by branch indexing"
-                            currentBuild.result = 'ABORTED'
-                            error "Caught branch indexing for subsequent build. Canceling build"
-                        }
-                    }
-                }
-            }
-            
-        }
         stage ("Clean") {
             steps {
                 script{
