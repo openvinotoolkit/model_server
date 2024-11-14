@@ -75,8 +75,8 @@ pipeline {
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
-                  load 'ci/build_test_OnCommitWin.groovy'
-            }
+                  load 'ci/loadWin.groovy'
+              }
             }
           }
         }
