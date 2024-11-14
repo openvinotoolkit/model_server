@@ -40,7 +40,7 @@ pipeline {
                 script {
                     def status = bat(returnStatus: true, script: 'grep "       OK " test.log')
                     if (status != 0) {
-                            error "Error: Windows run test failed ${status}. Expecting passed tests but got ${passed} passed tests. Check test.log for details."
+                            error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check test.log for details."
                     }
 
                     status = bat(returnStatus: true, script: 'grep "  FAILED  " test.log')
