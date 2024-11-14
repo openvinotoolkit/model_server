@@ -161,9 +161,15 @@ convert_tokenizer -o {target folder name} --utf8_replace_mode replace --with-det
 
 Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models).
 
-### Chat template
+## Input preprocessing
 
-Chat template is used only on `/chat/completions` endpoint. Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`. 
+### Completions
+
+When sending a request to `/completions` endpoint, model server adds `bos_token_id` during tokenization, so **there is not need to add `bos_token` to the prompt**.
+
+### Chat Completions
+
+When sending a request to `/chat/completions` endpoint, model server will try to apply chat template to request `messages` contents.
 
 Loading chat template proceeds as follows:
 1. If `tokenizer.jinja` is present, try to load template from it.
@@ -172,14 +178,17 @@ Loading chat template proceeds as follows:
 
 **Note**: If both `template.jinja` file and `chat_completion` field from `tokenizer_config.json` are successfully loaded, `template.jinja` takes precedence over `tokenizer_config.json`.
 
-If there are errors in loading or reading files or fields (they exist but are wrong) no template is loaded and servable will not respond to `/chat/completions` calls. 
-
 If no chat template has been specified, default template is applied. The template looks as follows:
 ```
 "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
 ```
 
 When default template is loaded, servable accepts `/chat/completions` calls when `messages` list contains only single element (otherwise returns error) and treats `content` value of that single message as an input prompt for the model.
+
+**Note:** Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`.
+
+Errors during configuration files processing (access issue, corrupted file, incorrect content) result in servable loading failure.
+
 
 
 ## Limitations
