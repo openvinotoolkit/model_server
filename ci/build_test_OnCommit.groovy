@@ -68,10 +68,12 @@ pipeline {
               when { expression { image_build_needed == "true" } }
               steps {
                   script {
-                    powershell dir   
-                  }
-                  script {
-                    powershell Get-Variable
+                    def status = bat(returnStatus: true, script: 'dir')
+                    if (status != 0) {
+                            error "Error: ${status}."
+                    } else {
+                        echo "Build successful."
+                    }
                   }
             }
             }
