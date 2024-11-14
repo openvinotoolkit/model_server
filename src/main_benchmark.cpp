@@ -167,7 +167,7 @@ static void installSignalHandlers() {
     SetConsoleCtrlHandler(onConsoleEvent, TRUE);
     signal(SIGINT, onInterrupt);
     signal(SIGTERM, onTerminate);
-    signal(SIGILL, onIllegal); 
+    signal(SIGILL, onIllegal);
 }
 
 #endif
