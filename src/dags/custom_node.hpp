@@ -24,13 +24,12 @@
 #include "node.hpp"
 #include "node_library.hpp"
 #include "nodeinfo.hpp"
-#include "pipelineeventqueue.hpp"
 
 namespace ovms {
 
-class NodeLibrary;
 class Status;
 class CNLIMWrapper;
+//class PipelineEventQueue;
 
 class CustomNode : public Node {
     NodeLibrary library;
