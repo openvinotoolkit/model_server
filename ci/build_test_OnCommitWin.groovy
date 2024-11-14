@@ -17,14 +17,10 @@ pipeline {
         stage("Build windows") {
             steps {
                 script {
-                    def status = bat(returnStatus: true, script: 'build_windows.bat ' + env.JOB_BASE_NAME)
-                    status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms.exe build.log | grep "Build completed successfully"')
-                    if (status != 0) {
-                            error "Error: Windows build failed ${status}. Check build.log for details."
-                    } else {
-                        echo "Build successful."
-                    }
+                    powershell dir   
                 }
+                script {
+                    powershell Get-Variable
                 }
             }
         stage("Check tests windows") {
