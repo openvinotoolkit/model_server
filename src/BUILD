@@ -1800,15 +1800,18 @@ cc_test(
                     "test/kfs_rest_test.cpp",
                     "test/metrics_flow_test.cpp",
                     "test/http_rest_api_handler_test.cpp",
-                    "test/http_openai_handler_test.cpp", # Mediapipe enabled
+                    "test/http_openai_handler_test.cpp",
                     "test/test_http_utils.hpp",
                 ],
                 "//src:windows" : [],
         }) + select({
             "//:is_windows_or_mediapipe_is_disabled_no_http": [],
+            # Tests that require MediaPipe and HTTP (windows does not have HTTP yet)
             "//conditions:default" : [
-                "test/mediapipeflow_test.cpp", # Mediapipe enabled
-                "test/mediapipe_framework_test.cpp", # Mediapipe enabled
+                "test/mediapipeflow_test.cpp",
+                "test/mediapipe_framework_test.cpp",
+                "test/reranknode_test.cpp",
+                "test/embeddingsnode_test.cpp",
             ],
         }) + select({
             "//:not_disable_cloud": [

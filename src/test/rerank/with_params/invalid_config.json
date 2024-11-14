@@ -1,0 +1,26 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "tokenizer_model",
+                "base_path": "/ovms/src/test/llm_testing/BAAI/bge-reranker-base/tokenizer"
+            }
+        },
+        {
+            "config": {
+                "name": "rerank_model",
+                "base_path": "/ovms/src/test/llm_testing/BAAI/bge-reranker-base/rerank",
+                "target_device": "CPU",
+                "plugin_config": {
+                    "NUM_STREAMS": 1
+                }
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+        {
+            "name": "rerank",
+            "graph_path": "/ovms/src/test/rerank/with_params/invalid_graph.pbtxt"
+        }
+    ]
+}

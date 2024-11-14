@@ -24,7 +24,10 @@ using namespace ovms;
 
 using ::testing::ElementsAre;
 
-class RerankChunkingTest : public ::testing::Test {};
+class RerankChunkingTest : public ::testing::Test {
+protected:
+    size_t max_allowed_chunks = 10;
+};
 
 TEST_F(RerankChunkingTest, ChunkingTest) {
     // w=4, h=6
@@ -53,7 +56,7 @@ TEST_F(RerankChunkingTest, ChunkingTest) {
         in_input_ids, in_attention_mask,
         out_input_ids, out_attention_mask,
         chunk_mapping, max_tokens_per_chunk,
-        pad_token);
+        this->max_allowed_chunks, pad_token);
 
     ASSERT_EQ(status, absl::OkStatus());
 
@@ -124,7 +127,7 @@ TEST_F(RerankChunkingTest, NoChunkingNeededTest) {
         in_input_ids, in_attention_mask,
         out_input_ids, out_attention_mask,
         chunk_mapping, max_tokens_per_chunk,
-        pad_token);
+        this->max_allowed_chunks, pad_token);
 
     ASSERT_EQ(status, absl::OkStatus());
 
@@ -172,7 +175,7 @@ TEST_F(RerankChunkingTest, InputIdsAndAttentionMaskShapesMismatchTest) {
         in_input_ids, in_attention_mask,
         out_input_ids, out_attention_mask,
         chunk_mapping, max_tokens_per_chunk,
-        pad_token);
+        this->max_allowed_chunks, pad_token);
 
     ASSERT_EQ(status, absl::InvalidArgumentError("input_ids and attention_mask shapes do not match"));
 }
@@ -180,7 +183,7 @@ TEST_F(RerankChunkingTest, InputIdsAndAttentionMaskShapesMismatchTest) {
 TEST_F(RerankChunkingTest, InputIdsAndAttentionMaskPrecisionMismatchTest) {
     std::vector<int64_t> input_ids_data = {
         101, 102, 1,    // 2 tokens
-        101, 102, 103,  // 2 tokens
+        101, 102, 103,  // 3 tokens
     };
     std::vector<int32_t> attention_mask_data = {
         1, 1, 0,  // 2 tokens
@@ -199,7 +202,7 @@ TEST_F(RerankChunkingTest, InputIdsAndAttentionMaskPrecisionMismatchTest) {
         in_input_ids, in_attention_mask,
         out_input_ids, out_attention_mask,
         chunk_mapping, max_tokens_per_chunk,
-        pad_token);
+        this->max_allowed_chunks, pad_token);
 
     ASSERT_EQ(status, absl::InvalidArgumentError("input_ids and attention_mask should have the same element type"));
 }
@@ -207,7 +210,7 @@ TEST_F(RerankChunkingTest, InputIdsAndAttentionMaskPrecisionMismatchTest) {
 TEST_F(RerankChunkingTest, InputIdsWrongPrecisionTest) {
     std::vector<int32_t> input_ids_data = {
         101, 102, 1,    // 2 tokens
-        101, 102, 103,  // 2 tokens
+        101, 102, 103,  // 3 tokens
     };
     std::vector<int32_t> attention_mask_data = {
         1, 1, 0,  // 2 tokens
@@ -226,7 +229,7 @@ TEST_F(RerankChunkingTest, InputIdsWrongPrecisionTest) {
         in_input_ids, in_attention_mask,
         out_input_ids, out_attention_mask,
         chunk_mapping, max_tokens_per_chunk,
-        pad_token);
+        this->max_allowed_chunks, pad_token);
 
     ASSERT_EQ(status, absl::InvalidArgumentError("input_ids and attention_mask should be int64 tensors"));
 }
@@ -234,7 +237,7 @@ TEST_F(RerankChunkingTest, InputIdsWrongPrecisionTest) {
 TEST_F(RerankChunkingTest, InputIdsWrongShapeTest) {
     std::vector<int32_t> input_ids_data = {
         101, 102, 1,    // 2 tokens
-        101, 102, 103,  // 2 tokens
+        101, 102, 103,  // 3 tokens
     };
     std::vector<int32_t> attention_mask_data = {
         1, 1, 0,  // 2 tokens
@@ -253,7 +256,7 @@ TEST_F(RerankChunkingTest, InputIdsWrongShapeTest) {
         in_input_ids, in_attention_mask,
         out_input_ids, out_attention_mask,
         chunk_mapping, max_tokens_per_chunk,
-        pad_token);
+        this->max_allowed_chunks, pad_token);
 
     ASSERT_EQ(status, absl::InvalidArgumentError("input_ids and attention_mask should be 2D tensors"));
 }
@@ -261,7 +264,7 @@ TEST_F(RerankChunkingTest, InputIdsWrongShapeTest) {
 TEST_F(RerankChunkingTest, NoSpaceLeftForChunkingTest) {
     std::vector<int32_t> input_ids_data = {
         101, 102, 1,    // 2 tokens
-        101, 102, 103,  // 2 tokens
+        101, 102, 103,  // 3 tokens
     };
     std::vector<int32_t> attention_mask_data = {
         1, 1, 0,  // 2 tokens
@@ -280,7 +283,63 @@ TEST_F(RerankChunkingTest, NoSpaceLeftForChunkingTest) {
         in_input_ids, in_attention_mask,
         out_input_ids, out_attention_mask,
         chunk_mapping, max_tokens_per_chunk,
-        pad_token);
+        this->max_allowed_chunks, pad_token);
 
     ASSERT_EQ(status, absl::InvalidArgumentError("no space left for chunks"));
+}
+
+TEST_F(RerankChunkingTest, MaxAllowedChunkExceededBeforeChunkingTest) {
+    std::vector<int64_t> input_ids_data = {
+        101, 102, 1,    // 2 tokens
+        101, 102, 103,  // 3 tokens
+    };
+    std::vector<int64_t> attention_mask_data = {
+        1, 1, 0,  // 2 tokens
+        1, 1, 1,  // 3 tokens
+    };
+    size_t max_tokens_per_chunk = 3;  //  does not require chunking
+    int64_t pad_token = 1;
+
+    ov::Tensor in_input_ids(ov::element::i64, ov::Shape{2, 3}, input_ids_data.data());
+    ov::Tensor in_attention_mask(ov::element::i64, ov::Shape{2, 3}, attention_mask_data.data());
+
+    ov::Tensor out_input_ids, out_attention_mask;
+
+    std::vector<size_t> chunk_mapping;
+    const size_t tested_max_allowed_chunks = 1;
+    auto status = chunkDocuments(
+        in_input_ids, in_attention_mask,
+        out_input_ids, out_attention_mask,
+        chunk_mapping, max_tokens_per_chunk,
+        tested_max_allowed_chunks, pad_token);
+
+    ASSERT_EQ(status, absl::InvalidArgumentError("exceeding max_allowed_chunks before chunking limit: 1; actual: 2"));
+}
+
+TEST_F(RerankChunkingTest, MaxAllowedChunkExceededAfterChunkingTest) {
+    std::vector<int64_t> input_ids_data = {
+        101, 102, 1,    // 2 tokens
+        101, 102, 103,  // 3 tokens
+    };
+    std::vector<int64_t> attention_mask_data = {
+        1, 1, 0,  // 2 tokens
+        1, 1, 1,  // 3 tokens
+    };
+    size_t max_tokens_per_chunk = 2;  // makes the total chunks to be 3
+    int64_t pad_token = 1;
+
+    ov::Tensor in_input_ids(ov::element::i64, ov::Shape{2, 3}, input_ids_data.data());
+    ov::Tensor in_attention_mask(ov::element::i64, ov::Shape{2, 3}, attention_mask_data.data());
+
+    ov::Tensor out_input_ids, out_attention_mask;
+
+    std::vector<size_t> chunk_mapping;
+    const size_t tested_max_allowed_chunks = 2;
+    auto status = chunkDocuments(
+        in_input_ids, in_attention_mask,
+        out_input_ids, out_attention_mask,
+        chunk_mapping, max_tokens_per_chunk,
+        tested_max_allowed_chunks, pad_token);
+
+    ASSERT_EQ(status, absl::InvalidArgumentError("exceeding max_allowed_chunks after chunking limit: 2; actual: 3"));
 }
