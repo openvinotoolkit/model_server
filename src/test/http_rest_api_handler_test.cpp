@@ -1221,3 +1221,14 @@ TEST_F(ConfigStatus, configWithMediapipeRemoved) {
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 }
 #endif
+
+TEST_F(ConfigStatus, url_decode) {
+    std::string input = "a%20b%20c%20d";
+    std::string expected = "a b c d";
+    std::string output = ovms::urlDecode(input);
+    EXPECT_EQ(expected, output);
+    input = "model%2Fname";
+    expected = "model/name";
+    output = ovms::urlDecode(input);
+    EXPECT_EQ(expected, output);
+}
