@@ -36,7 +36,6 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #pragma warning(pop)
-#include <spdlog/spdlog.h>
 
 #include "config.hpp"
 #include "dags/pipeline.hpp"
@@ -70,6 +69,13 @@
 #include "http_frontend/http_graph_executor_impl.hpp"
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
+
+#include "kfs_frontend/kfs_utils.hpp"
+#include "tfs_frontend/tfs_utils.hpp"
+#include "kfs_frontend/deserialization.hpp"
+#include "tfs_frontend/deserialization.hpp"
+#include "deserialization_main.hpp"
+#include "inference_executor.hpp"
 
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
@@ -929,7 +935,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     if (modelVersion.has_value()) {
         requestProto.mutable_model_spec()->mutable_version()->set_value(modelVersion.value());
     }
-    status = modelInstance->infer(&requestProto, &responseProto, modelInstanceUnloadGuard);
+    status = infer(*modelInstance, &requestProto, &responseProto, modelInstanceUnloadGuard);
     INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::Predict}, status.ok()));
     return status;
 }

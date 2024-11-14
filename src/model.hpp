@@ -36,7 +36,7 @@ namespace ovms {
 class FileSystem;
 class GlobalSequencesViewer;
 class ModelInstance;
-class PipelineDefinition;
+class NotifyReceiver;
 class MetricConfig;
 class MetricRegistry;
 class Status;
@@ -224,8 +224,8 @@ public:
          */
     Status reloadVersions(std::shared_ptr<model_versions_t>& versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t>& versionsFailed);
 
-    void subscribe(PipelineDefinition& pd);
-    void unsubscribe(PipelineDefinition& pd);
+    void subscribe(NotifyReceiver& pd);
+    void unsubscribe(NotifyReceiver& pd);
     /**
          * @brief Set the custom loader name
          *

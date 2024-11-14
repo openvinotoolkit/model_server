@@ -14,8 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #include "deserialization.hpp"
-
-#include "capi_frontend/buffer.hpp"
 #include "itensorfactory.hpp"
 #include "logging.hpp"
 
@@ -41,104 +39,5 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
         return status;
     }
     return status;
-}
-
-//////
-//
-// Move to tfs
-//
-//////
-ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo) {
-    OVMS_PROFILE_FUNCTION();
-    OV_LOGGER("ov::Shape()");
-    ov::Shape shape;
-    for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
-        OV_LOGGER("ov::Shape::push_back({})", requestInput.tensor_shape().dim(i).size());
-        shape.push_back(requestInput.tensor_shape().dim(i).size());
-    }
-    ov::element::Type_t precision = tensorInfo->getOvPrecision();
-    if (!requestInput.tensor_content().size()) {
-        OV_LOGGER("ov::Tensor({}, shape)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
-        return ov::Tensor(precision, shape);
-    }
-    OV_LOGGER("ov::Tensor({}, shape, data)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
-    return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(requestInput.tensor_content().data())));
-}
-
-//////
-//
-// Move to kfs
-//
-//////
-ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo,
-    const std::string& buffer) {
-    OVMS_PROFILE_FUNCTION();
-    OV_LOGGER("ov::Shape()");
-    ov::Shape shape;
-    for (int i = 0; i < requestInput.shape_size(); i++) {
-        OV_LOGGER("ov::Shape::push_back({})", requestInput.shape().at(i));
-        shape.push_back(requestInput.shape().at(i));
-    }
-    ov::element::Type precision = tensorInfo->getOvPrecision();
-    if (!buffer.size()) {
-        OV_LOGGER("ov::Tensor({}, shape)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
-        return ov::Tensor(precision, shape);
-    }
-    OV_LOGGER("ov::Tensor({}, shape, data)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
-    return ov::Tensor(precision, shape, const_cast<void*>(reinterpret_cast<const void*>(buffer.data())));
-}
-ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo) {
-    OVMS_PROFILE_FUNCTION();
-    OV_LOGGER("ov::Shape()");
-    ov::Shape shape;
-    for (int i = 0; i < requestInput.shape_size(); i++) {
-        OV_LOGGER("ov::Shape::push_back({})", requestInput.shape().at(i));
-        shape.push_back(requestInput.shape().at(i));
-    }
-
-    ov::element::Type precision = tensorInfo->getOvPrecision();
-    OV_LOGGER("ov::Tensor({}, shape)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
-    ov::Tensor tensor(precision, shape);
-    return tensor;
-}
-
-//////
-//
-// Move to capi
-//
-//////
-ov::Tensor makeTensor(const InferenceTensor& requestInput,
-    const std::shared_ptr<const TensorInfo>& tensorInfo, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
-    OVMS_PROFILE_FUNCTION();
-    ov::Shape shape;
-    OV_LOGGER("ov::Shape(): {}", (void*)&shape);
-    for (const auto& dim : requestInput.getShape()) {
-        OV_LOGGER("ov::Shape::push_back({})", dim);
-        shape.push_back(dim);
-    }
-    ov::element::Type_t precision = tensorInfo->getOvPrecision();
-    if (!requestInput.getBuffer()->getByteSize()) {
-        OV_LOGGER("ov::Tensor({}, shape)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
-        return ov::Tensor(precision, shape);
-    }
-    // TODO FIXME validation shouldn't allow setting unsupported memory types
-    // in inputs/outputs for particular device
-    // validation shouldn't allow unsupporeted buffer types
-    // write test
-    auto it = factories.find(requestInput.getBuffer()->getBufferType());
-    if (it == factories.end()) {
-        SPDLOG_ERROR("Could not find appropriate tensor factory for buffer type:{}", requestInput.getBuffer()->getBufferType());
-        throw std::runtime_error("Could not find appropriate tensor factory");
-    }
-    IOVTensorFactory* factory = it->second.get();
-    return factory->create(precision, shape, requestInput.getBuffer()->data());
-}
-
-template <>
-Status getTensor(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
-    return request.getInput(name.c_str(), tensor);
 }
 }  // namespace ovms

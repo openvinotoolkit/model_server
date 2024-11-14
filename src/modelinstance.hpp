@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include  <chrono>
 #include <condition_variable>
 #include <functional>
 #include <map>
@@ -29,15 +30,25 @@
 
 #include <openvino/openvino.hpp>
 
-#include "kfs_frontend/kfs_grpc_inference_service.hpp"
+//#include "deserialization.hpp"
+//#include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "logging.hpp"
+//#include "requestprocessor.hpp"
+//#include "executingstreamidguard.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
-#include "modelinstanceunloadguard.hpp"
+//#include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
+#include "ovms.h"  // NOLINT
 #include "ovinferrequestsqueue.hpp"
+//#include "predict_request_validation_utils.hpp"
+//#include "profiler.hpp"
+//#include "serialization.hpp"
+#include "status.hpp"
+#include "servable.hpp"
 #include "tensorinfo.hpp"
-#include "tfs_frontend/tfs_utils.hpp"
+//#include "tfs_frontend/tfs_utils.hpp"
 
 // TODO windows
 #ifdef __linux__
@@ -47,12 +58,15 @@
 #include "openvino/runtime/remote_tensor.hpp"
 
 namespace ovms {
+namespace {
+}
 class MetricRegistry;
 class ModelInstanceUnloadGuard;
 class InferenceRequest;
 class InferenceResponse;
 class IOVTensorFactory;
-class PipelineDefinition;
+class NotifyReceiver;
+class SequenceManager;
 class Status;
 template <typename T1, typename T2>
 class RequestProcessor;
@@ -85,7 +99,7 @@ private:
 /**
      * @brief This class contains all the information about model
      */
-class ModelInstance {
+class ModelInstance : public Servable {
 protected:
     /**
          * @brief Performs model loading
@@ -114,11 +128,13 @@ protected:
     cl_context oclContextC{nullptr};
 
 public:
+    virtual const std::shared_ptr<SequenceManager>& getSequenceManager() const { return this->sequenceManager;}
     // TODO const correctness & ownership & thread safety
     const cl_context* getOclCContext() const { return &oclContextC; }
 #endif
 
 protected:
+    std::shared_ptr<SequenceManager> sequenceManager;
 #ifdef __linux__
     std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;
     std::unique_ptr<ov::intel_gpu::ocl::VAContext> vaContext;
@@ -262,8 +278,6 @@ protected:
          */
     Status loadOVModelUsingCustomLoader();
 
-    template <typename RequestType>
-    const Status validate(const RequestType* request);
 
 private:
     /**
@@ -326,7 +340,9 @@ private:
     void checkForOutputTensorResetAbility();
     Status adjustForEmptyOutputNames();
     bool supportOutputTensorsReset = true;
+public:
     bool doesSupportOutputReset() const;
+private:
     Status gatherReshapeInfo(bool isBatchingModeAuto, const DynamicModelParameter& parameter, bool& isReshapeRequired, std::map<std::string, ov::PartialShape>& modelShapes);
 
     /**
@@ -404,6 +420,9 @@ public:
          * @return model name
          */
     virtual const std::string& getName() const {
+        return name;
+    }
+    const std::string& getTargetDevice() const { // TODO @atobisze
         return name;
     }
 
@@ -615,43 +634,29 @@ public:
     Status waitForLoaded(const uint32_t waitForModelLoadedTimeoutMilliseconds,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuard);
 
-    void subscribe(PipelineDefinition& pd);
+    void subscribe(NotifyReceiver& pd);
 
-    void unsubscribe(PipelineDefinition& pd);
+    void unsubscribe(NotifyReceiver& pd);
 
     const ModelChangeSubscription& getSubscribtionManager() const { return subscriptionManager; }
 
     Status performInference(ov::InferRequest& inferRequest);
 
-    template <typename RequestType, typename ResponseType>
-    Status infer(const RequestType* requestProto,
-        ResponseType* responseProto,
-        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-    template <typename RequestType, typename ResponseType>
-    Status inferAsync(const RequestType* requestProto,
-        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }
 
     uint32_t getOptimalNumberOfInferRequests() const;
     uint32_t getNumOfStreams() const;
+    const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> getTensorFactories() { return this->tensorFactories;}
 
     template <class ArrayType>
     void fetchModelFiles(bool& found, ArrayType ext);
-    virtual std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*);
+    /*virtual std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*);
     virtual std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> createRequestProcessor(const KFSRequest*, KFSResponse*);
-    virtual std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> createRequestProcessor(const InferenceRequest*, InferenceResponse*);
+    virtual std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> createRequestProcessor(const InferenceRequest*, InferenceResponse*);*/
     virtual const std::set<std::string>& getOptionalInputNames();
 };
-template <typename RequestType, typename ResponseType>
-class RequestProcessor {
-public:
-    RequestProcessor();
-    virtual ~RequestProcessor();
-    virtual Status extractRequestParameters(const RequestType* request);
-    virtual Status prepare();
-    virtual Status preInferenceProcessing(ov::InferRequest& inferRequest);
-    virtual Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest);
-    virtual Status release();
-};
+template <typename RequestType>
+static OVMS_InferenceRequestCompletionCallback_t getCallback(RequestType request) {
+    return nullptr;
+}
 }  // namespace ovms

@@ -54,24 +54,7 @@ size_t DataTypeToByteSize(OVMS_DataType datatype) {
     return it->second;
 }
 
-OVMS_ServableState convertToServableState(ovms::PipelineDefinitionStateCode code) {
-    switch (code) {
-    case ovms::PipelineDefinitionStateCode::BEGIN:
-        return OVMS_ServableState::OVMS_STATE_BEGIN;
-    case ovms::PipelineDefinitionStateCode::RELOADING:
-        return OVMS_ServableState::OVMS_STATE_LOADING;
-    case ovms::PipelineDefinitionStateCode::AVAILABLE:
-    case ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION:
-        return OVMS_ServableState::OVMS_STATE_AVAILABLE;
-    case ovms::PipelineDefinitionStateCode::RETIRED:
-        return OVMS_ServableState::OVMS_STATE_RETIRED;
-    case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED:
-    case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION:
-        return OVMS_ServableState::OVMS_STATE_LOADING_FAILED;
-    }
-    throw new std::exception();
-}
-
+template<>
 std::string tensorShapeToString(const signed_shape_t& shape) {
     return shapeToString(shape);
 }
@@ -187,44 +170,18 @@ Status isNativeFileFormatUsed(const InferenceRequest& request, const std::string
 const std::string& getRequestServableName(const ovms::InferenceRequest& request) {
     return request.getServableName();
 }
-Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size) {
-    InferenceTensor* outputTensor{nullptr};
-    Status status = response->addOutput(
-        name,
-        getPrecisionAsOVMSDataType(ovElementTypeToOvmsPrecision(precision)),
-        reinterpret_cast<const int64_t*>(shape.data()),
-        shape.size());
-    if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to prepare consolidated tensor, servable: {}; tensor with name: {}", response->getServableName(), name);
-        return StatusCode::INTERNAL_ERROR;
-    }
-    const std::string* outputNameFromCapiTensor = nullptr;
-    size_t outputId = 0;
-    auto outputCount = response->getOutputCount();
-    while (outputId < outputCount) {
-        status = response->getOutput(outputId, &outputNameFromCapiTensor, &outputTensor);
-        if (status.ok() &&
-            (nullptr != outputNameFromCapiTensor) &&
-            (name == *outputNameFromCapiTensor)) {
-            if (precision == ov::element::string) {
-                std::string msg{"String format is not supported in DAG in demultiplexing scenarios as of now"};
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, msg);
-                return Status(StatusCode::NOT_IMPLEMENTED, std::move(msg));
-            }
-
-            auto consolidatedBuffer = std::make_unique<Buffer>(size, OVMS_BUFFERTYPE_CPU, std::nullopt);
-            // const cast is ok here since we own the buffer
-            bufferOut = reinterpret_cast<char*>(const_cast<void*>(consolidatedBuffer->data()));
-            outputTensor->setBuffer(std::move(consolidatedBuffer));
-            return StatusCode::OK;
-        }
-        ++outputId;
-    }
-    SPDLOG_LOGGER_ERROR(dag_executor_logger, "Cannot serialize output with name:{} for servable name:{}; version:{}; error: cannot find output",
-        name, response->getServableName(), response->getServableVersion());
-    return StatusCode::INTERNAL_ERROR;
-}
 bool requiresPreProcessing(const InferenceTensor& tensor) {
     return false;
+}
+int getBinaryInputsSize(const InferenceTensor& tensor) {
+    throw std::runtime_error("Not implemented");;
+}
+const std::string& getBinaryInput(const InferenceTensor& tensor, size_t i) {
+    throw std::runtime_error("Not implemented");;
+}
+Status validateTensor(const TensorInfo& tensorInfo,
+    const InferenceTensor& src,
+    const std::string* buffer) {
+        return StatusCode::NOT_IMPLEMENTED;
 }
 }  // namespace ovms

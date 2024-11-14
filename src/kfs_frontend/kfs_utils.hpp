@@ -53,11 +53,20 @@ bool requiresPreProcessing(const KFSTensorInputProto& proto);
 std::string& createOrGetString(KFSTensorOutputProto& proto, int index);
 void setBatchSize(KFSTensorOutputProto& proto, int64_t batch);
 void setStringPrecision(KFSTensorOutputProto& proto);
-Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width);
 /**
  * Check if request is using only one of:
  * - request.raw_input_content
  * - request.inputs[i].content
  */
 Status validateRequestCoherencyKFS(const KFSRequest& request, const std::string servableName, model_version_t servableVersion);
+size_t getElementsCount(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision);
+int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tensor);
+class TensorInfo;
+Status validateTensor(const TensorInfo& tensorInfo,
+    const ::KFSRequest::InferInputTensor& src,
+    const std::string* buffer);
+
+Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+const std::string& getBinaryInput(const ::KFSRequest::InferInputTensor& tensor, size_t i);
+int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tensor);
 }  // namespace ovms
