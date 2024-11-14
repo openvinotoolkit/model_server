@@ -8,7 +8,11 @@ pipeline {
     stages {
         stage ("Build and test windows") {
             steps {
-                  load 'ci/loadWin.groovy'
+                  windows = load 'ci/loadWin.groovy'
+                  windows.clean()
+                  windows.build_and_test()
+                  windows.check_tests()
+                  windows.archive_artifacts()
               }
         }
     }

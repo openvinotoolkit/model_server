@@ -75,7 +75,11 @@ pipeline {
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
-                  load 'ci/loadWin.groovy'
+                  windows = load 'ci/loadWin.groovy'
+                  windows.clean()
+                  windows.build_and_test()
+                  windows.check_tests()
+                  windows.archive_artifacts()
               }
             }
           }
