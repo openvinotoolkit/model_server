@@ -67,8 +67,13 @@ pipeline {
               }
               when { expression { image_build_needed == "true" } }
               steps {
-                  build job: 'ovms/ovms-windows/'+ env.JOB_BASE_NAME
-              }
+                  script {
+                    powershell dir   
+                  }
+                  script {
+                    powershell Get-Variable
+                  }
+            }
             }
           }
         }
