@@ -34,7 +34,6 @@
 #include "../server.hpp"
 #include "../version.hpp"
 #include "mockmodelinstancechangingstates.hpp"
-#include "test_utils.hpp"
 
 using ovms::ModelManager;
 using ovms::Module;
