@@ -15,8 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#include <openvino/openvino.hpp>
-
 #include "../custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
 

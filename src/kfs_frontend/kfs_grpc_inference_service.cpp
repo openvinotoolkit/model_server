@@ -22,14 +22,16 @@
 #include <unordered_map>
 #include <vector>
 
+#include "deserialization.hpp" // TODO @atobisze we need typetraits - where is the best place to put it?
+#include "kfs_utils.hpp"
+#include "kfs_request_utils.hpp"
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../dags/pipelinedefinitionunloadguard.hpp"
-#include "../deserialization.hpp"
+//#include "../deserialization.hpp"
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
-#include "kfs_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 // clang-format off
 // kfs_graph_executor_impl needs to be included before mediapipegraphexecutor
@@ -41,11 +43,13 @@
 #endif
 #include "../metric.hpp"
 #include "../modelinstance.hpp"
+#include "../deserialization_main.hpp"
+#include "../inference_executor.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../ovinferrequestsqueue.hpp"
-#include "../prediction_service_utils.hpp"
-#include "../serialization.hpp"
+//#include "../prediction_service_utils.hpp"
+//#include "../serialization.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../status.hpp"
@@ -284,7 +288,7 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
     return grpc(status);
 }
 
-::grpc::Status KFSInferenceServiceImpl::ModelStreamInfer(::grpc::ServerContext* context, ::grpc::ServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) {
+::grpc::Status KFSInferenceServiceImpl::ModelStreamInfer(::grpc::ServerContext* context, ::grpc::ServerReaderWriter<::inference::ModelStreamInferResponse, KFSRequest>* stream) {
     return grpc(ModelStreamInferImpl(context, stream));
 }
 
@@ -326,7 +330,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         status = pipelinePtr->execute(executionContext);
     } else if (modelInstance) {
         reporterOut = &modelInstance->getMetricReporter();
-        status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
+        status = infer(*modelInstance, request, response, modelInstanceUnloadGuard);
     }
     INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, status.ok()));
     if (!status.ok()) {
@@ -336,10 +340,10 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
     return StatusCode::OK;
 }
 
-Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* context, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* serverReaderWriter) {
+Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* context, ::grpc::ServerReaderWriterInterface<::inference::ModelStreamInferResponse, KFSRequest>* serverReaderWriter) {
     OVMS_PROFILE_FUNCTION();
 #if (MEDIAPIPE_DISABLE == 0)
-    ::inference::ModelInferRequest firstRequest;
+    KFSRequest firstRequest;
     if (!serverReaderWriter->Read(&firstRequest)) {
         Status status = StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE;
         SPDLOG_DEBUG(status.string());

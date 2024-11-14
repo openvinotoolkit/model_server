@@ -70,7 +70,6 @@ ModelConfig::ModelConfig(const std::string& name,
     setBatchingParams(configBatchSize);
 }
 
-const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 
 bool ModelConfig::isDeviceUsed(const std::string& device) const {
@@ -711,6 +710,9 @@ std::string ModelConfig::layoutConfigurationToString() const {
 }
 void ModelConfig::setBasePath(const std::string& basePath) {
     FileSystem::setPath(this->basePath, basePath, this->rootDirectoryPath);
+}
+const std::string ModelConfig::getPath() const {
+    return getLocalPath() + FileSystem::getOsSeparator() + std::to_string(version);
 }
 
 }  // namespace ovms

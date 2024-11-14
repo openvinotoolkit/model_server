@@ -26,12 +26,10 @@
 #include <utility>
 #include <vector>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
 #include "../modelversion.hpp"
+#include "../notifyreceiver.hpp"
 #include "../tensorinfo.hpp"
 #include "aliases.hpp"
 #include "nodeinfo.hpp"
@@ -48,7 +46,7 @@ class Pipeline;
 class PipelineDefinitionUnloadGuard;
 class Status;
 
-class PipelineDefinition {
+class PipelineDefinition : public NotifyReceiver {
     friend NodeValidator;
     friend PipelineDefinitionUnloadGuard;
     struct ValidationResultNotifier {
@@ -131,11 +129,14 @@ public:
     std::vector<NodeInfo> calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos);
     void deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff);
 
-    const std::string& getName() const { return pipelineName; }
+    const std::string& getName() const override { return pipelineName; }
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     const model_version_t getVersion() const { return VERSION; }
 
     void notifyUsedModelChanged(const std::string& ownerDetails) {
+        this->status.handle(UsedModelChangedEvent(ownerDetails));
+    } // TODO @atobisze dispose
+    void receiveNotification(const std::string& ownerDetails) override {
         this->status.handle(UsedModelChangedEvent(ownerDetails));
     }
 
