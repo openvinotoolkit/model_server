@@ -9,11 +9,15 @@ pipeline {
         stage ("Build and test windows") {
             steps {
                 script {
-                    windows = load 'ci/loadWin.groovy'
-                    windows.clean()
-                    windows.build_and_test()
-                    windows.check_tests()
-                    windows.archive_artifacts()
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        windows.clean()
+                        windows.build_and_test()
+                        windows.check_tests()
+                        windows.archive_artifacts()
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
                 }
             }
         }
