@@ -37,8 +37,9 @@ extern std::shared_ptr<spdlog::logger> mediapipe_logger;
 extern std::shared_ptr<spdlog::logger> llm_executor_logger;
 extern std::shared_ptr<spdlog::logger> llm_calculator_logger;
 extern std::shared_ptr<spdlog::logger> embeddings_calculator_logger;
+extern std::shared_ptr<spdlog::logger> rerank_calculator_logger;
 #endif
-#if (OV_TRACING == 1)
+#if (OV_TRACE == 1)
 extern std::shared_ptr<spdlog::logger> ov_logger;
 #define OV_LOGGER(...) SPDLOG_LOGGER_TRACE(ov_logger, __VA_ARGS__)
 #else

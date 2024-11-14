@@ -80,8 +80,9 @@ struct OpenAIChatCompletionsRequest {
     std::optional<bool> includeStopStrInOutput{std::nullopt};
     std::optional<int> bestOf{std::nullopt};
     std::optional<bool> ignoreEOS{std::nullopt};
-    bool logprobs = 0;
-    int logprobschat = false;
+    int logprobs = 0;
+    bool logprobschat = false;
+    bool echo{false};
 
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
@@ -95,6 +96,8 @@ struct OpenAIChatCompletionsRequest {
         // TODO: max_length = ?
         if (ignoreEOS.has_value())
             config.ignore_eos = ignoreEOS.value();
+
+        config.echo = echo;
 
         // Beam search specific
         config.num_beam_groups = 1;  // OpenAI hardcoded
@@ -136,6 +139,9 @@ struct OpenAIChatCompletionsRequest {
             config.presence_penalty = presencePenalty.value();
         config.do_sample = config.temperature > 0.0f && config.num_beams == 1;
 
+        if (logprobschat || logprobs > 0)
+            config.logprobs = 1;
+
         return config;
     }
 };
@@ -149,6 +155,7 @@ class OpenAIChatCompletionsHandler {
     OpenAIChatCompletionsRequest request;
     std::chrono::time_point<std::chrono::system_clock> created;
     ov::genai::Tokenizer tokenizer;
+    size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart();
@@ -171,7 +178,7 @@ public:
 
     void setPromptTokensUsage(int promptTokens);
 
-    void incrementCompletionTokensUsage();
+    void incrementProcessedTokens(int numTokens = 1);
 
     ov::genai::GenerationConfig createGenerationConfig() const;
 

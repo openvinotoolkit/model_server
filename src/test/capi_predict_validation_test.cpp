@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "../capi_frontend/buffer.hpp"
+#include "../capi_frontend/capi_utils.hpp"
 #include "../capi_frontend/inferencerequest.hpp"
 #include "../modelconfig.hpp"
 #include "../predict_request_validation_utils.hpp"
@@ -41,9 +42,11 @@ protected:
     ovms::InferenceRequest request{"model_name", 1};
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
+    ovms::tensor_map_t servableOutputs;
     bool createCopy{false};
     uint32_t decrementBufferSize{0};
     std::vector<float> requestData{10000000};
+    std::vector<float> outputBuffer{10000000};
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
@@ -61,7 +64,19 @@ protected:
                 std::make_shared<ovms::TensorInfo>("Input_U16_1_2_8_4_NCHW", ovms::Precision::U16, ovms::shape_t{1, 2, 8, 4}, ovms::Layout{"NCHW"})},
         });
 
+        servableOutputs = ovms::tensor_map_t({
+            {"Output_FP32_1_224_224_3_NHWC",
+                std::make_shared<ovms::TensorInfo>("Output_FP32_1_3_224_224_NHWC", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, ovms::Layout{"NHWC"})},
+            {"Output_U8_1_3_62_62_NCHW",
+                std::make_shared<ovms::TensorInfo>("Output_U8_1_3_62_62_NCHW", ovms::Precision::U8, ovms::shape_t{1, 3, 62, 62}, ovms::Layout{"NCHW"})},
+            {"Output_I64_1_6_128_128_16_NCDHW",
+                std::make_shared<ovms::TensorInfo>("Output_I64_1_6_128_128_16_NCDHW", ovms::Precision::I64, ovms::shape_t{1, 6, 128, 128, 16}, ovms::Layout{"NCDHW"})},
+            {"Output_U16_1_2_8_4_NCHW",
+                std::make_shared<ovms::TensorInfo>("Output_U16_1_2_8_4_NCHW", ovms::Precision::U16, ovms::shape_t{1, 2, 8, 4}, ovms::Layout{"NCHW"})},
+        });
+
         ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(servableInputs));
+        ON_CALL(*instance, getOutputsInfo()).WillByDefault(ReturnRef(servableOutputs));
         ON_CALL(*instance, getBatchSize()).WillByDefault(Return(1));
         ON_CALL(*instance, getModelConfig()).WillByDefault(ReturnRef(modelConfig));
 
@@ -502,7 +517,7 @@ TEST_F(CAPIPredictValidation, RequestIncorrectInputWithNoBuffer) {
     std::array<int64_t, 4> shape{1, 1, 1, 1};
     request.addInput("Input_FP32_1_1_1_1_NHWC", OVMS_DATATYPE_FP32, shape.data(), shape.size());
     auto status = instance->mockValidate(&request);
-    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
+    EXPECT_EQ(status, ovms::StatusCode::NONEXISTENT_BUFFER) << status.string();
 }
 
 TEST_F(CAPIPredictValidation, RequestIncorrectContentSizeZero) {
@@ -645,6 +660,77 @@ TEST_F(CAPIPredictValidation, RequestIncorrectContentSizeShapeAuto) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }
 
+TEST_F(CAPIPredictValidation, ValidRequestWithOutputs) {
+    ovms::signed_shape_t shape = {1, 224, 224, 3};
+    request.addOutput("Output_FP32_1_224_224_3_NHWC", OVMS_DATATYPE_FP32, shape.data(), 4);
+    request.setOutputBuffer("Output_FP32_1_224_224_3_NHWC", outputBuffer.data(), std::accumulate(begin(shape), end(shape), 1.0, std::multiplies<size_t>()) * ovms::DataTypeToByteSize(OVMS_DATATYPE_FP32), OVMS_BUFFERTYPE_CPU, std::nullopt);
+    shape = {1, 3, 62, 62};
+    request.addOutput("Output_U8_1_3_62_62_NCHW", OVMS_DATATYPE_U8, shape.data(), 4);
+    request.setOutputBuffer("Output_U8_1_3_62_62_NCHW", outputBuffer.data(), std::accumulate(begin(shape), end(shape), 1.0, std::multiplies<size_t>()) * ovms::DataTypeToByteSize(OVMS_DATATYPE_U8), OVMS_BUFFERTYPE_CPU, std::nullopt);
+    shape = {1, 6, 128, 128, 16};
+    request.addOutput("Output_U8_1_3_62_62_NCHW", OVMS_DATATYPE_I64, shape.data(), 5);
+    request.setOutputBuffer("Output_U8_1_3_62_62_NCHW", outputBuffer.data(), std::accumulate(begin(shape), end(shape), 1.0, std::multiplies<size_t>()) * ovms::DataTypeToByteSize(OVMS_DATATYPE_I64), OVMS_BUFFERTYPE_CPU, std::nullopt);
+    shape = {1, 2, 8, 4};
+    request.addOutput("Output_U8_1_3_62_62_NCHW", OVMS_DATATYPE_U16, shape.data(), 4);
+    request.setOutputBuffer("Output_U8_1_3_62_62_NCHW", outputBuffer.data(), std::accumulate(begin(shape), end(shape), 1.0, std::multiplies<size_t>()) * ovms::DataTypeToByteSize(OVMS_DATATYPE_U16), OVMS_BUFFERTYPE_CPU, std::nullopt);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_TRUE(status.ok()) << status.string();
+}
+
+TEST_F(CAPIPredictValidation, OutputWithNoBuffer) {
+    ovms::signed_shape_t shape = {1, 224, 224, 3};
+    request.addOutput("Output_FP32_1_224_224_3_NHWC", OVMS_DATATYPE_FP32, shape.data(), 4);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::NONEXISTENT_BUFFER);
+}
+
+TEST_F(CAPIPredictValidation, InvalidOutputBufferName) {
+    ovms::signed_shape_t shape = {1, 224, 224, 3};
+    request.addOutput("Output_FP32_1_224_224_3_NHWC", OVMS_DATATYPE_FP32, shape.data(), 4);
+    request.setOutputBuffer("Invalid", outputBuffer.data(), std::accumulate(begin(shape), end(shape), 1.0, std::multiplies<size_t>()) * ovms::DataTypeToByteSize(OVMS_DATATYPE_FP32), OVMS_BUFFERTYPE_CPU, std::nullopt);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::NONEXISTENT_BUFFER);
+}
+
+TEST_F(CAPIPredictValidation, InvalidOutputSize) {
+    ovms::signed_shape_t shape = {1, 224, 224, 3};
+    request.addOutput("Output_FP32_1_224_224_3_NHWC", OVMS_DATATYPE_FP32, shape.data(), 4);
+    request.setOutputBuffer("Output_FP32_1_224_224_3_NHWC", outputBuffer.data(), 1, OVMS_BUFFERTYPE_CPU, std::nullopt);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE);
+}
+
+TEST_F(CAPIPredictValidation, InvalidOutputBufferType) {
+    ovms::signed_shape_t shape = {1, 224, 224, 3};
+    request.addOutput("Output_FP32_1_224_224_3_NHWC", OVMS_DATATYPE_FP32, shape.data(), 4);
+    request.setOutputBuffer("Output_FP32_1_224_224_3_NHWC", outputBuffer.data(), std::accumulate(begin(shape), end(shape), 1.0, std::multiplies<size_t>()) * ovms::DataTypeToByteSize(OVMS_DATATYPE_FP32), (OVMS_BufferType)199, std::nullopt);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_BUFFER_TYPE);
+}
+
+TEST_F(CAPIPredictValidation, InvalidShape) {
+    ovms::signed_shape_t shape = {1, 1, 1, 1};
+    request.addOutput("Output_FP32_1_224_224_3_NHWC", OVMS_DATATYPE_FP32, shape.data(), 4);
+    request.setOutputBuffer("Output_FP32_1_224_224_3_NHWC", outputBuffer.data(), std::accumulate(begin(shape), end(shape), 1.0, std::multiplies<size_t>()) * ovms::DataTypeToByteSize(OVMS_DATATYPE_FP32), OVMS_BUFFERTYPE_CPU, std::nullopt);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_SHAPE);
+}
+
+TEST_F(CAPIPredictValidation, InvalidDeviceId) {
+    ovms::signed_shape_t shape = {1, 224, 224, 3};
+    request.addOutput("Output_FP32_1_224_224_3_NHWC", OVMS_DATATYPE_FP32, shape.data(), 4);
+    request.setOutputBuffer("Output_FP32_1_224_224_3_NHWC", outputBuffer.data(), std::accumulate(begin(shape), end(shape), 1.0, std::multiplies<size_t>()) * ovms::DataTypeToByteSize(OVMS_DATATYPE_FP32), OVMS_BUFFERTYPE_CPU, 1);
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_DEVICE_ID);
+}
+
 class CAPIPredictValidationInputTensorContent : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     std::unique_ptr<ov::Core> ieCore;
@@ -653,11 +739,13 @@ protected:
 
     ovms::ModelConfig modelConfig{"model_name", "model_path"};
     ovms::tensor_map_t servableInputs;
+    ovms::tensor_map_t servableOutputs = ovms::tensor_map_t({});
     std::vector<float> requestData{10000000};
 
     void SetUp() override {
         ieCore = std::make_unique<ov::Core>();
         instance = std::make_unique<NiceMock<MockedMetadataModelIns>>(*ieCore);
+        ON_CALL(*instance, getOutputsInfo()).WillByDefault(ReturnRef(servableOutputs));
         std::iota(requestData.begin(), requestData.end(), 1.0);
     }
 };
@@ -895,6 +983,7 @@ protected:
 
     const char* tensorName = DUMMY_MODEL_INPUT_NAME;
     ovms::tensor_map_t mockedInputsInfo;
+    ovms::tensor_map_t mockedOutputsInfo;
 };
 
 TEST_P(CAPIPredictValidationPrecision, ValidPrecisions) {
@@ -906,7 +995,7 @@ TEST_P(CAPIPredictValidationPrecision, ValidPrecisions) {
                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, testedPrecision}},
         },
         requestData);
-    auto status = ovms::request_validation_utils::validate(request, mockedInputsInfo, "dummy", ovms::model_version_t{1});
+    auto status = ovms::request_validation_utils::validate(request, mockedInputsInfo, mockedOutputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::OK) << "Precision validation failed:"
                                             << toString(testedPrecision)
                                             << " should pass validation";

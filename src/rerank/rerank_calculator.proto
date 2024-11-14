@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "nodeoutputhandler.hpp"
 
-namespace ovms {
-void NodeOutputHandler::setInput(const std::string& name, ov::Tensor& tensorPtr) {}
-}  // namespace ovms
+syntax = "proto2";
+package mediapipe;
+
+import "mediapipe/framework/calculator.proto";
+
+message RerankCalculatorOptions {
+  extend mediapipe.CalculatorOptions {
+    // https://github.com/google/mediapipe/issues/634 have to be unique in app
+    // no rule to obtain this
+    optional RerankCalculatorOptions ext = 113473741;
+    }
+
+    optional uint64 max_allowed_chunks = 1 [default = 10000];  // Default taken from Cohere API documentation
+
+    optional uint64 max_position_embeddings = 2;
+}

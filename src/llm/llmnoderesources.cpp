@@ -43,7 +43,7 @@ namespace ovms {
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
 
-void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources, const std::string& chatTemplateDirectory) {
+void LLMNodeResources::loadTextProcessor(LLMNodeResources& nodeResources, const std::string& chatTemplateDirectory) {
     py::gil_scoped_acquire acquire;
     try {
         auto locals = py::dict("templates_directory"_a = chatTemplateDirectory);
@@ -101,9 +101,9 @@ void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& node
         )",
             py::globals(), locals);
 
-        nodeResources->textProcessor.bosToken = locals["bos_token"].cast<std::string>();
-        nodeResources->textProcessor.eosToken = locals["eos_token"].cast<std::string>();
-        nodeResources->textProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
+        nodeResources.textProcessor.bosToken = locals["bos_token"].cast<std::string>();
+        nodeResources.textProcessor.eosToken = locals["eos_token"].cast<std::string>();
+        nodeResources.textProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
@@ -119,7 +119,7 @@ void LLMNodeResources::loadTextProcessor(std::shared_ptr<LLMNodeResources>& node
     }
 }
 
-Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
+Status LLMNodeResources::initializeLLMNodeResources(LLMNodeResources& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
@@ -131,7 +131,7 @@ Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResou
         basePath = fsModelsPath.string();
     }
 
-    nodeResources->modelsPath = basePath;
+    nodeResources.modelsPath = basePath;
     if (basePath.empty()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} is empty. ", basePath);
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
@@ -145,18 +145,22 @@ Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResou
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
 
-    nodeResources->schedulerConfig = {
+    // TODO: Remove along with block_size option in the proto in 2025.x release
+    if (nodeOptions.has_block_size()) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Since 2024.5, block_size is selected automatically and setting it explicitly is ineffective. "
+                                                "Please remove it from the configuration as in 2025.0 it will cause error.");
+    }
+    nodeResources.schedulerConfig = {
         .max_num_batched_tokens = nodeOptions.max_num_batched_tokens(),
         .cache_size = nodeOptions.cache_size(),
-        .block_size = nodeOptions.block_size(),
         .dynamic_split_fuse = nodeOptions.dynamic_split_fuse(),
         .max_num_seqs = nodeOptions.max_num_seqs(),
         .enable_prefix_caching = nodeOptions.enable_prefix_caching(),
     };
 
-    nodeResources->device = nodeOptions.device();
+    nodeResources.device = nodeOptions.device();
 
-    auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), nodeResources->pluginConfig);
+    auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), nodeResources.pluginConfig);
     if (!status.ok()) {
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
         return status;
@@ -164,7 +168,7 @@ Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResou
 
     try {
         plugin_config_t tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
-        nodeResources->initializeContinuousBatchingPipeline(basePath, nodeResources->schedulerConfig, nodeResources->device, nodeResources->pluginConfig, tokenizerPluginConfig);
+        nodeResources.initializeContinuousBatchingPipeline(basePath, nodeResources.schedulerConfig, nodeResources.device, nodeResources.pluginConfig, tokenizerPluginConfig);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", basePath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
@@ -173,12 +177,12 @@ Status LLMNodeResources::initializeLLMNodeResources(std::shared_ptr<LLMNodeResou
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
-    loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
-    nodeResources->maxTokensLimit = nodeOptions.max_tokens_limit();
-    nodeResources->bestOfLimit = nodeOptions.best_of_limit();
+    nodeResources.maxTokensLimit = nodeOptions.max_tokens_limit();
+    nodeResources.bestOfLimit = nodeOptions.best_of_limit();
 
-    nodeResources->initiateGeneration();
+    nodeResources.initiateGeneration();
 
     return StatusCode::OK;
 }

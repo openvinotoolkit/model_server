@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,16 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-
-#include <memory>
-#include <string>
+#include "ovinferrequestsqueue.hpp"
 
 #include <openvino/openvino.hpp>
 
+#include "logging.hpp"
+
 namespace ovms {
-class NodeOutputHandler {
-public:
-    void setInput(const std::string& inputName, ov::Tensor& tensorPtr);
-};
+OVInferRequestsQueue::OVInferRequestsQueue(ov::CompiledModel& compiledModel, int streamsLength) :
+    Queue(streamsLength) {
+    for (int i = 0; i < streamsLength; ++i) {
+        streams[i] = i;
+        OV_LOGGER("ov::CompiledModel: {} compiledModel.create_infer_request()", reinterpret_cast<void*>(&compiledModel));
+        inferRequests.push_back(compiledModel.create_infer_request());
+    }
+}
 }  // namespace ovms

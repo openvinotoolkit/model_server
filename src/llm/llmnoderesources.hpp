@@ -53,8 +53,10 @@ public:
     TextStreamer(std::shared_ptr<ov::genai::Tokenizer> tokenizer) :
         tokenizer(std::move(tokenizer)) {}
 
-    std::optional<std::string> put(int64_t token) {
-        tokenCache.push_back(token);
+    std::optional<std::string> put(std::vector<int64_t>& tokens) {
+        for (auto token : tokens) {
+            tokenCache.push_back(token);
+        }
         std::string text = tokenizer->decode(tokenCache);
         if (!text.empty() && '\n' == text.back() && text.size() > printLen) {
             // The chunk is ready if the generated text ends with new line.
@@ -111,8 +113,8 @@ public:
     int maxTokensLimit;
     int bestOfLimit;
 
-    static Status initializeLLMNodeResources(std::shared_ptr<LLMNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
-    static void loadTextProcessor(std::shared_ptr<LLMNodeResources>& nodeResources, const std::string& chatTemplateDirectory);
+    static Status initializeLLMNodeResources(LLMNodeResources& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
+    static void loadTextProcessor(LLMNodeResources& nodeResources, const std::string& chatTemplateDirectory);
 
     LLMNodeResources(const LLMNodeResources&) = delete;
     LLMNodeResources& operator=(LLMNodeResources&) = delete;

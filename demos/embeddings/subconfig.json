@@ -1,17 +1,17 @@
 {
     "model_config_list": [
-    { "config": 
-	    {
+    { "config":
+            {
                 "name": "tokenizer_model",
-                "base_path": "gte-large-en-v1.5-tokenizer"
+                "base_path": "tokenizer"
             }
-	},
-    { "config": 
-	    {
+        },
+    { "config":
+            {
                 "name": "embeddings_model",
-                "base_path": "gte-large-en-v1.5-embeddings",
+                "base_path": "embeddings",
                 "target_device": "CPU"
             }
-	}
+        }
    ]
 }

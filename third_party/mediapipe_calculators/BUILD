@@ -47,7 +47,6 @@ cc_library(
         "@mediapipe//mediapipe/calculators/core:matrix_subtract_calculator",
         "@mediapipe//mediapipe/calculators/core:mux_calculator",
         "@mediapipe//mediapipe/calculators/core:non_zero_calculator",
-        "@mediapipe//mediapipe/calculators/core:packet_cloner_calculator",
         "@mediapipe//mediapipe/calculators/core:packet_inner_join_calculator",
         "@mediapipe//mediapipe/calculators/core:packet_thinner_calculator",
         "@mediapipe//mediapipe/calculators/core:pass_through_calculator",
@@ -80,8 +79,6 @@ cc_library(
         "@mediapipe//mediapipe/calculators/util:detection_label_id_to_text_calculator",
         "@mediapipe//mediapipe/calculators/util:detections_to_render_data_calculator",
         "@mediapipe//mediapipe/calculators/util:non_max_suppression_calculator",
-        "@mediapipe//mediapipe/calculators/video:opencv_video_decoder_calculator",
-        "@mediapipe//mediapipe/calculators/video:opencv_video_encoder_calculator",
         "@mediapipe//mediapipe/calculators/image:color_convert_calculator",
         "@mediapipe//mediapipe/calculators/image:opencv_encoded_image_to_image_frame_calculator",
         "@mediapipe//mediapipe/calculators/image:opencv_image_encoder_calculator",
@@ -105,13 +102,20 @@ cc_library(
         #VISIBILITY_PRIVATE_THUS_SINK_BELOW"@mediapipe//mediapipe/calculators/internal:callback_packet_calculator",
         "@mediapipe//mediapipe/framework/tool:sink",
         "@mediapipe//mediapipe/calculators/video:flow_to_image_calculator",
-        "@mediapipe//mediapipe/calculators/video:tvl1_optical_flow_calculator",
         "@mediapipe//mediapipe/calculators/video:motion_analysis_calculator",
         "@mediapipe//mediapipe/calculators/video:flow_packager_calculator",
         "@mediapipe//mediapipe/calculators/video:box_tracker_calculator",
         "@mediapipe//mediapipe/calculators/video:box_detector_calculator",
         "@mediapipe//mediapipe/calculators/video:tracked_detection_manager_calculator",
         "@mediapipe//mediapipe/calculators/video:video_pre_stream_calculator",
-    ],
+    ]  + select({
+        "//conditions:default": [
+            "@mediapipe//mediapipe/calculators/core:packet_cloner_calculator", # TODO windows: stdc++20 required
+            "@mediapipe//mediapipe/calculators/video:tvl1_optical_flow_calculator", # TODO windows: 'opencv2/optflow.hpp': No such file - will be available with opencv cmake on windows
+            "@mediapipe//mediapipe/calculators/video:opencv_video_decoder_calculator",
+            "@mediapipe//mediapipe/calculators/video:opencv_video_encoder_calculator",
+        ],
+        "@ovms//src:windows" : [],
+        }),
     linkstatic=1,
 )

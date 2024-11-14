@@ -64,7 +64,7 @@ struct LLMExecutor {
     void printMetrics() {
         ov::genai::PipelineMetrics metrics = pipe->get_metrics();
         SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {}; Cache usage {:.1f}%;",
-            metrics.requests, metrics.scheduled_requests, metrics.cache_usage * 100);
+            metrics.requests, metrics.scheduled_requests, metrics.cache_usage);
     }
 };
 #pragma GCC diagnostic pop
@@ -87,6 +87,7 @@ class LLMExecutorWrapper {
                     stepCounter++;
                     llmExecutor->step();
                 } else {
+                    SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {};", 0, 0);
                     llmExecutor->waitForRequests(receivedEndSignal);
                 }
             } catch (std::exception& e) {

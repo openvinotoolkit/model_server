@@ -22,26 +22,10 @@
 #include <grpcpp/server_context.h>
 #include <openvino/openvino.hpp>
 
+#include "kfs_utils.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #include "src/kfserving_api/grpc_predict_v2.pb.h"
-
 using inference::GRPCInferenceService;
-using KFSServerMetadataRequest = inference::ServerMetadataRequest;
-using KFSServerMetadataResponse = inference::ServerMetadataResponse;
-using KFSModelMetadataRequest = inference::ModelMetadataRequest;
-using KFSModelMetadataResponse = inference::ModelMetadataResponse;
-using KFSRequest = inference::ModelInferRequest;
-using KFSResponse = inference::ModelInferResponse;
-using KFSStreamResponse = inference::ModelStreamInferResponse;
-using KFSServerReaderWriter = ::grpc::ServerReaderWriterInterface<KFSStreamResponse, KFSRequest>;
-using KFSTensorInputProto = inference::ModelInferRequest::InferInputTensor;
-using KFSTensorOutputProto = inference::ModelInferResponse::InferOutputTensor;
-using KFSShapeType = google::protobuf::RepeatedField<int64_t>;
-using KFSGetModelStatusRequest = inference::ModelReadyRequest;
-using KFSGetModelStatusResponse = inference::ModelReadyResponse;
-using KFSDataType = std::string;
-using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
-using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
 
 struct KFSModelExtraMetadata {
     ov::AnyMap rt_info;
@@ -81,7 +65,7 @@ public:
     ::grpc::Status ModelMetadata(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response) override;
     ::grpc::Status ModelInfer(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response) override;
     ::grpc::Status ModelStreamInfer(::grpc::ServerContext* context, ::grpc::ServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) override;
-    static Status buildResponse(Model& model, ModelInstance& instance, KFSModelMetadataResponse* response);
+    static Status buildResponse(Model& model, ModelInstance& instance, KFSModelMetadataResponse* response, KFSModelExtraMetadata& extraMetadata);
     static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSModelMetadataResponse* response);
     static Status buildResponse(std::shared_ptr<ModelInstance> instance, KFSGetModelStatusResponse* response);
     static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSGetModelStatusResponse* response);

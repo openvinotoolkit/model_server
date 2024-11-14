@@ -30,6 +30,16 @@ using namespace ov;
 class OpenVINO : public ::testing::Test {
 };
 
+TEST_F(OpenVINO, TensorCopyDoesNotCopyUnderlyingData) {
+    std::vector<float> data{1, 2, 3};
+    ov::Shape shape{3};
+    ov::Tensor t(ov::element::f32, shape, data.data());
+    ov::Tensor t2(ov::element::f32, shape);
+    EXPECT_NE(t2.data(), t.data());
+    t2 = t;
+    EXPECT_EQ(t2.data(), t.data());
+}
+
 TEST_F(OpenVINO, String) {
     std::vector<std::string> data{{"Intel"}, {"CCGafawfaw"}, {"aba"}};
     ov::Shape shape{3};

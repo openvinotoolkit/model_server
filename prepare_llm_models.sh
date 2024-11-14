@@ -15,41 +15,48 @@
 # limitations under the License.
 #
 
+if [ -z "$1" ]; then
+  echo "Error: No directory specified."
+  exit 1
+fi
+
 EMBEDDING_MODEL="thenlper/gte-small"
-if [ -d "$1/facebook/opt-125m" ] && [ -d "$1/$EMBEDDING_MODEL" ]; then
+RERANK_MODEL="BAAI/bge-reranker-base"
+if [ -d "$1/facebook/opt-125m" ] && [ -d "$1/$EMBEDDING_MODEL" ] && [ -d "$1/$RERANK_MODEL" ]; then
   echo "Models directory $1 exists. Skipping downloading models."
   exit 0
 fi
 if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then echo "Prepare models with python > 3.8."; exit 1 ; fi
 
 echo "Downloading LLM testing models to directory $1"
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 if [ "$2" = "docker" ]; then
     sed -i '/openvino~=/d' /openvino_tokenizers/pyproject.toml
     python3 -m pip wheel -v --no-deps --wheel-dir wheel /openvino_tokenizers
     python3 -m pip install $(find wheel -name 'openvino_tokenizers*.whl')
-    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf
+    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers==3.1.1
 else
-    python3 -m venv .venv
+    python3.10 -m venv .venv
     . .venv/bin/activate
     pip3 install -U pip
-    pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
+    pip3 install -U -r demos/common/export_models/requirements.txt
 fi
+mkdir -p $1
 
 if [ -d "$1/facebook/opt-125m" ]; then
   echo "Models directory $1/facebook/opt-125m exists. Skipping downloading models."
 else
-  optimum-cli export openvino --disable-convert-tokenizer --model facebook/opt-125m --weight-format int8 $1/facebook/opt-125m
-  convert_tokenizer -o $1/facebook/opt-125m --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens facebook/opt-125m
+  python demos/common/export_models/export_model.py text_generation --source_model facebook/opt-125m --weight-format int8 --model_repository_path $1
 fi
-
 
 if [ -d "$1/$EMBEDDING_MODEL" ]; then
   echo "Models directory $1/$EMBEDDING_MODEL exists. Skipping downloading models."
 else
-  optimum-cli export openvino --model "$EMBEDDING_MODEL" --task feature-extraction "$1/$EMBEDDING_MODEL/embeddings/1"
-  convert_tokenizer -o "$1/$EMBEDDING_MODEL/tokenizer/1" "$EMBEDDING_MODEL"
-  rm "$1/$EMBEDDING_MODEL/embeddings/1/openvino_tokenizer.xml"
-  rm "$1/$EMBEDDING_MODEL/embeddings/1/openvino_tokenizer.bin"
+  python demos/common/export_models/export_model.py embeddings --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1
 fi
 
+if [ -d "$1/$RERANK_MODEL" ]; then
+  echo "Models directory $1/$RERANK_MODEL exists. Skipping downloading models."
+else
+  python demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
+fi

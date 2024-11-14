@@ -47,5 +47,4 @@ public:
         */
     static Status parsePluginConfig(std::string command, plugin_config_t& pluginConfig);
 };
-
 }  // namespace ovms

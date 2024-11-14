@@ -64,5 +64,4 @@ bool Sequence::isTerminated() const {
 void Sequence::setTerminated() {
     this->terminated = true;
 }
-
 }  // namespace ovms

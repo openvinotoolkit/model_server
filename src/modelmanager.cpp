@@ -30,13 +30,6 @@
 #include <dlfcn.h>
 #include <sysexits.h>
 #endif
-
-#ifdef _WIN32
-#include <iomanip>
-
-#include <windows.h>
-#endif
-
 #include <errno.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -928,6 +921,7 @@ public:
         }
         file.clear();
         file.seekg(0);
+#endif
     }
     void log() {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, ss.str());

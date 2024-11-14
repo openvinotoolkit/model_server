@@ -44,15 +44,34 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     // logprobs: int; 1 value allowed
     it = doc.FindMember("logprobs");
     if (it != doc.MemberEnd()) {
-        if (!it->value.IsInt())
+        if (it->value.IsNull()) {
+            request.logprobs = 0;
+        } else if (!it->value.IsInt()) {
             return absl::InvalidArgumentError("logprobs accepts integer values");
-        if (it->value.GetInt() != 1)
+        } else if (it->value.GetInt() != 1) {
             return absl::InvalidArgumentError("accepted logprobs value is currently 1 only");
-        request.logprobs = it->value.GetInt();
+        } else {
+            request.logprobs = it->value.GetInt();
+        }
     }
     if (request.logprobs && request.stream) {
         return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
     }
+
+    // echo: bool; optional - defaults to false
+    it = doc.FindMember("echo");
+    if (it != doc.MemberEnd()) {
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("echo accepts values true or false");
+        request.echo = it->value.GetBool();
+    }
+
+    // specific part of max_tokens validation due to echo dependency
+    if (request.maxTokens == 0) {
+        if (!request.echo)
+            return absl::InvalidArgumentError("max_tokens value should be greater than 0 unless echo is set");
+    }
+
     return absl::OkStatus();
 }
 
@@ -89,6 +108,11 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart() {
     }
     if (request.logprobschat && request.stream) {
         return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
+    }
+
+    // specific part of max_tokens validation due to echo dependency
+    if (request.maxTokens == 0) {
+        return absl::InvalidArgumentError("max_tokens value should be greater than 0");
     }
 
     if (request.messages.size() <= 0) {
@@ -151,6 +175,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
     }
 
     // max_tokens: uint; optional
+    // Common part checked here, specific parts are checked in parseCompletionsPart and parseChatCompletionsPart
     it = doc.FindMember("max_tokens");
     if (it != doc.MemberEnd()) {
         if (!it->value.IsUint()) {
@@ -158,8 +183,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
                 return absl::InvalidArgumentError("max_tokens value can't be greater than 4294967295");
             return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
         }
-        if (it->value.GetUint() == 0)
-            return absl::InvalidArgumentError("max_tokens value should be greater than 0");
         if (!(it->value.GetUint() < maxTokensLimit))
             return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit));
         request.maxTokens = it->value.GetUint();
@@ -307,6 +330,8 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
             return absl::InvalidArgumentError("best_of value should be greater than 0");
         if (!(it->value.GetUint() < bestOfLimit))
             return absl::InvalidArgumentError(absl::StrCat("best_of exceeds limit provided in graph config: ", bestOfLimit));
+        if (request.stream)
+            return absl::InvalidArgumentError("best_of cannot be used in streaming mode");
         request.bestOf = it->value.GetUint();
     }
 
@@ -357,8 +382,10 @@ void OpenAIChatCompletionsHandler::setPromptTokensUsage(int promptTokens) {
     usage.promptTokens = promptTokens;
 }
 
-void OpenAIChatCompletionsHandler::incrementCompletionTokensUsage() {
-    usage.completionTokens++;
+void OpenAIChatCompletionsHandler::incrementProcessedTokens(int numTokens) {
+    processedTokens += numTokens;
+    if (!request.echo || processedTokens > usage.promptTokens)
+        usage.completionTokens += numTokens;
 }
 
 ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig() const {
@@ -398,6 +425,8 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
 
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
         usage.completionTokens += generationOutput.generated_ids.size();
+        if (request.echo)
+            usage.completionTokens -= usage.promptTokens;
         std::string completeResponse = tokenizer.decode(generationOutput.generated_ids);
         writer.StartObject();  // {
         // finish_reason: string;

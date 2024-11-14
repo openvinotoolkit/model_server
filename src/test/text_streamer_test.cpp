@@ -41,7 +41,7 @@ public:
     static void SetUpTestSuite() {
         py::initialize_interpreter();
         ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-        ASSERT_EQ(ovms::LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), ovms::StatusCode::OK);
+        ASSERT_EQ(ovms::LLMNodeResources::initializeLLMNodeResources(*nodeResources, config.node(0), ""), ovms::StatusCode::OK);
         tokenizer = std::make_shared<ov::genai::Tokenizer>("/ovms/src/test/llm_testing/facebook/opt-125m");
         streamer = std::make_shared<ovms::TextStreamer>(tokenizer);
     }
@@ -58,10 +58,12 @@ public:
 };
 
 TEST_F(TextStreamerTest, noValueReturnedStringWithoutNewLineOrSpace) {
-    auto tokens = tokenizer->encode("TEST").input_ids;
+    std::string testPrompt = "TEST";
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
+        std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
+        std::optional<std::string> partialResponseText = this->streamer->put(singleTokenVector);
         EXPECT_FALSE(partialResponseText.has_value());
     }
     std::string endOfMessage = this->streamer->end();
@@ -70,10 +72,11 @@ TEST_F(TextStreamerTest, noValueReturnedStringWithoutNewLineOrSpace) {
 
 TEST_F(TextStreamerTest, putReturnsValue) {
     std::string testPrompt = "TEST\n";
-    auto tokens = tokenizer->encode(testPrompt).input_ids;
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
+        std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
+        std::optional<std::string> partialResponseText = this->streamer->put(singleTokenVector);
         if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_FALSE(partialResponseText.has_value());
         } else {
@@ -85,17 +88,19 @@ TEST_F(TextStreamerTest, putReturnsValue) {
 
 TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
     std::string testPrompt1 = "TEST";
-    auto tokens = tokenizer->encode(testPrompt1).input_ids;
+    auto tokens = tokenizer->encode(testPrompt1, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
+        std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
+        std::optional<std::string> partialResponseText = this->streamer->put(singleTokenVector);
         EXPECT_FALSE(partialResponseText.has_value());
     }
     std::string testPrompt2 = "TEST\n";
-    tokens = tokenizer->encode(testPrompt2).input_ids;
+    tokens = tokenizer->encode(testPrompt2, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
+        std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
+        std::optional<std::string> partialResponseText = this->streamer->put(singleTokenVector);
         if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_FALSE(partialResponseText.has_value());
         } else {
@@ -107,10 +112,11 @@ TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
 
 TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
     std::string testPrompt = "TEST\n";
-    auto tokens = tokenizer->encode(testPrompt).input_ids;
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
+        std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
+        std::optional<std::string> partialResponseText = this->streamer->put(singleTokenVector);
         if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_FALSE(partialResponseText.has_value());
         } else {
@@ -118,9 +124,10 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
             EXPECT_EQ(partialResponseText.value().compare(testPrompt), 0);
         }
     }
-    tokens = tokenizer->encode(testPrompt).input_ids;
+    tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
+        std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
+        std::optional<std::string> partialResponseText = this->streamer->put(singleTokenVector);
         if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_FALSE(partialResponseText.has_value());
         } else {
@@ -132,11 +139,12 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
 
 TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
     std::string testPrompt = "TEST TEST TEST TEST";
-    auto tokens = tokenizer->encode(testPrompt).input_ids;
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> expectedTokens = {565, 4923, 41759, 41759, 41759};
     assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
+        std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
+        std::optional<std::string> partialResponseText = this->streamer->put(singleTokenVector);
         size_t numberOfTokensBeforeValueReturned = 2;  // No value returned until third token with space passed to tokenizer
         if (i < numberOfTokensBeforeValueReturned) {
             EXPECT_FALSE(partialResponseText.has_value());
@@ -153,39 +161,47 @@ TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
 
 TEST_F(TextStreamerTest, putReturnsValueTextWithNewLineInTheMiddle) {
     std::string testPrompt = "TEST\nTEST";
-    auto tokens = tokenizer->encode(testPrompt).input_ids;
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> expectedTokens = {565, 4923, 50118, 565, 4923};
     assertTokensValues(tokens, expectedTokens);
-    std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[0]);
+    std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[0]};
+    std::optional<std::string> partialResponseText = this->streamer->put(singleTokenVector);
     EXPECT_FALSE(partialResponseText.has_value());
-    partialResponseText = this->streamer->put(tokens.data<int64_t>()[1]);
+    singleTokenVector = {tokens.data<int64_t>()[1]};
+    partialResponseText = this->streamer->put(singleTokenVector);
     EXPECT_FALSE(partialResponseText.has_value());
-    partialResponseText = this->streamer->put(tokens.data<int64_t>()[2]);
+    singleTokenVector = {tokens.data<int64_t>()[2]};
+    partialResponseText = this->streamer->put(singleTokenVector);
     EXPECT_TRUE(partialResponseText.has_value());
     EXPECT_EQ(partialResponseText.value().compare("TEST\n"), 0);
-    partialResponseText = this->streamer->put(tokens.data<int64_t>()[3]);
+    singleTokenVector = {tokens.data<int64_t>()[3]};
+    partialResponseText = this->streamer->put(singleTokenVector);
     EXPECT_FALSE(partialResponseText.has_value());
-    partialResponseText = this->streamer->put(tokens.data<int64_t>()[4]);
+    singleTokenVector = {tokens.data<int64_t>()[4]};
+    partialResponseText = this->streamer->put(singleTokenVector);
     EXPECT_FALSE(partialResponseText.has_value());
     std::string endOfMessage = this->streamer->end();
     ASSERT_EQ(endOfMessage.compare("TEST"), 0);
 }
 
 TEST_F(TextStreamerTest, putReturnsValueAfterEndCalled) {
-    auto tokens = tokenizer->encode("TEST").input_ids;
+    std::string testPrompt = "TEST";
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
+        std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
+        std::optional<std::string> partialResponseText = this->streamer->put(singleTokenVector);
         EXPECT_FALSE(partialResponseText.has_value());
     }
     std::string endOfMessage = this->streamer->end();
     ASSERT_EQ(endOfMessage.compare("TEST"), 0);
 
-    std::string testPrompt = "TEST\n";
-    tokens = tokenizer->encode(testPrompt).input_ids;
+    testPrompt = "TEST\n";
+    tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        std::optional<std::string> partialResponseText = this->streamer->put(tokens.data<int64_t>()[i]);
+        std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
+        std::optional<std::string> partialResponseText = this->streamer->put(singleTokenVector);
         if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_FALSE(partialResponseText.has_value());
         } else {
