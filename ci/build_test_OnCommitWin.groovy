@@ -63,7 +63,6 @@ pipeline {
             archiveArtifacts allowEmptyArchive: true, artifacts: "build.log"
             archiveArtifacts allowEmptyArchive: true, artifacts: "build_test.log"
             archiveArtifacts allowEmptyArchive: true, artifacts: "test.log"
-            archiveArtifacts allowEmptyArchive: true, artifacts: "test_diff.log"
         }
     }
 }
