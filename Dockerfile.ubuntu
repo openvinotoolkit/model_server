@@ -302,7 +302,7 @@ COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classi
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
-RUN make && mv libcustom_relu_cpu_extension.so /opt
+RUN make && cp libcustom_relu_cpu_extension.so /opt
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino/python/openvino-2024.5.dist-info && \
