@@ -910,7 +910,7 @@ public:
         SYSTEMTIME stUTC;
         FileTimeToSystemTime(&lastWriteTime, &stUTC);
 
-        ULARGE_INTEGER fileTimeAsUint;  //FILETIME units are 100 nanoseconds
+        ULARGE_INTEGER fileTimeAsUint;  // FILETIME units are 100 nanoseconds
         fileTimeAsUint.LowPart = lastAccessTime.dwLowDateTime;
         fileTimeAsUint.HighPart = lastAccessTime.dwHighDateTime;
         uint64_t timeInNanoseconds = fileTimeAsUint.QuadPart * 100;
