@@ -35,6 +35,7 @@
 
 #ifdef _WIN32
 #include <csignal>
+
 #include <ntstatus.h>
 #include <windows.h>
 #endif

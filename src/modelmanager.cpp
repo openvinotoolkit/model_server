@@ -32,8 +32,9 @@
 #endif
 
 #ifdef _WIN32
-#include <windows.h>
 #include <iomanip>
+
+#include <windows.h>
 #endif
 
 #include <errno.h>
@@ -909,10 +910,10 @@ public:
         SYSTEMTIME stUTC;
         FileTimeToSystemTime(&lastWriteTime, &stUTC);
 
-        ULARGE_INTEGER fileTimeAsUint;   //FILETIME units are 100 nanoseconds
+        ULARGE_INTEGER fileTimeAsUint;  //FILETIME units are 100 nanoseconds
         fileTimeAsUint.LowPart = lastAccessTime.dwLowDateTime;
         fileTimeAsUint.HighPart = lastAccessTime.dwHighDateTime;
-        uint64_t timeInNanoseconds = fileTimeAsUint.QuadPart * 100; 
+        uint64_t timeInNanoseconds = fileTimeAsUint.QuadPart * 100;
 
         ss << "FileInfoReporter: " << filename
            << " time modification [s]: " << std::setfill('0') << std::setw(2) << stUTC.wSecond

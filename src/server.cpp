@@ -37,8 +37,9 @@
 #include <sys/socket.h>
 #include <sysexits.h>
 #elif _WIN32
-#include <ntstatus.h>
 #include <csignal>
+
+#include <ntstatus.h>
 #include <windows.h>
 #endif
 #include <unistd.h>
@@ -173,7 +174,6 @@ static void installSignalHandlers() {
     signal(SIGINT, onInterrupt);
     signal(SIGTERM, onTerminate);
     signal(SIGILL, onIllegal);
-    
 }
 
 #endif
