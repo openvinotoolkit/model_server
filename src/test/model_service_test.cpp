@@ -391,7 +391,7 @@ TEST_F(TFSModelServiceTest, config_reload) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
+        (char*)"/ovms/src/test/dummy",
         (char*)"--log_level",
         (char*)"DEBUG",
         (char*)"--port",

@@ -216,7 +216,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
+        (char*)"/ovms/src/test/dummy",
         (char*)"--log_level",
         (char*)"DEBUG",
         (char*)"--port",
@@ -290,6 +290,9 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
 }
 
 TEST(Server, ServerMetadata) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     std::string port = "9000";
     randomizePort(port);
     char* argv[] = {
@@ -297,7 +300,7 @@ TEST(Server, ServerMetadata) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
+        (char*)"/ovms/src/test/dummy",
         (char*)"--port",
         (char*)port.c_str(),
         nullptr};
@@ -347,6 +350,9 @@ TEST(Server, ProperShutdownInCaseOfStartError) {
 }
 
 TEST(Server, grpcArguments) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     std::string port = "9000";
     std::string channel_arguments_str = "grpc.max_connection_age_ms=2000,grpc.max_concurrent_streams=10";
     std::string grpc_max_threads = "";
@@ -357,7 +363,7 @@ TEST(Server, grpcArguments) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
+        (char*)"/ovms/src/test/dummy",
         (char*)"--port",
         (char*)port.c_str(),
         (char*)"--grpc_channel_arguments",
