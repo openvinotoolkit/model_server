@@ -56,6 +56,15 @@ models
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
 
+Readiness of the model can be reported with a simple curl command. 
+```bash
+curl -i http://localhost:8000/v2/models/BAAI%2Fbge-reranker-large/ready
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Sat, 09 Nov 2024 23:19:27 GMT
+Content-Length: 0
+```
+
 ## Client code
 
 
