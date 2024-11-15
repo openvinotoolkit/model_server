@@ -565,7 +565,8 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest*
     if (inputName == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
     }
-    if (data == nullptr) {  // TODO FIXME - it is legal for VAAPI to pass 0 as it is surface id, not a pointer
+    if (data == nullptr) {  // TODO - it is legal for VAAPI to pass 0 as it is surface id, not a pointer
+        // we should eventually have more specific check & test for that
         // return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
@@ -1146,7 +1147,7 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char
     *state = modelInstance->getStatus().isFailedLoading() ? OVMS_STATE_LOADING_FAILED : static_cast<OVMS_ServableState>(static_cast<int>(modelInstance->getStatus().getState()) / 10 - 1);
     return nullptr;
 }
-DLL_PUBLIC OVMS_Status* OVMS_GetServableContext(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, void** oclContext) {
+OVMS_Status* OVMS_GetServableContext(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, void** oclContext) {
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
@@ -1166,7 +1167,6 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableContext(OVMS_Server* serverPtr, const ch
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
     std::shared_ptr<ovms::ModelInstance> modelInstance = modelManager->findModelInstance(servableName, servableVersion);
-    // TODO FIXME guard or dispose this from API if not needed
 
     if (!status.ok()) {
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
@@ -1380,10 +1380,11 @@ DLL_PUBLIC void OVMS_ServableMetadataDelete(OVMS_ServableMetadata* metadata) {
     delete reinterpret_cast<ovms::ServableMetadata*>(metadata);
 }
 
-OVMS_Status* OVMS_ServerSetGlobalVADisplay(void* vaDisplay) {
+DLL_PUBLIC OVMS_Status* OVMS_ServerSetGlobalVADisplay(OVMS_Server* server, void* vaDisplay) {
     // we accept nullptr as it is a way to reset behavior for gpu tests
     // TODO
     // * allow to initializze only if server not started, but would require passing server
+    // * keep globalVaDisplay as server not global variable
 // TODO: Windows
 #ifdef __linux__
     ovms::globalVaDisplay = vaDisplay;

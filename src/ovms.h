@@ -578,10 +578,10 @@ OVMS_Status* OVMS_InferenceAsync(OVMS_Server* server, OVMS_InferenceRequest* req
 // Type of function called when response is completed and set with OVMS_InferenceRequestSetCompletionCallback. Callback function takes ownership of OVMS_InferenceResponse object.
 // Flag specifies if the response is final coming from inference request, and if there were errors in execution
 //
-// \param response resp
+// \param response Response
 // \param flag Flag specifying if the call was successful - 0, or not
 // \param userStruct Data provided to callback, set in OVMS_InferenceRequestSetCompletionCallback
-typedef void (* OVMS_InferenceRequestCompletionCallback_t)(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
+typedef void (* OVMS_InferenceRequestCompletionCallback_t)(OVMS_InferenceResponse* response, uint32_t flag, void* userstruct);
 
 // Set callback for inference request
 //
@@ -666,9 +666,9 @@ OVMS_Status* OVMS_ServableMetadataInfo(OVMS_ServableMetadata* metadata, const vo
 // This needs to be called before server start.
 // Ensure availability of VA Display during server usage.
 //
+// \param server server for which we set VA Display
 // \param vaDisplay VADisplay that will be used to compile models
-// TODO should we accept server argument as well?
-OVMS_Status* OVMS_ServerSetGlobalVADisplay(void* vaDisplay);
+OVMS_Status* OVMS_ServerSetGlobalVADisplay(OVMS_Server* server, void* vaDisplay);
 
 // Deallocates a status object.
 //
