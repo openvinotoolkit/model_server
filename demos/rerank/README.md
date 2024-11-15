@@ -92,7 +92,7 @@ curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
 
 ```bash
 pip3 install cohere
-python demos/rerank/compare_results.py --query "hello" --document "welcome" --document "farewell"
+python demos/rerank/compare_results.py --query "hello" --document "welcome" --document "farewell" --base_url http://localhost:8000/v3/
 query hello
 documents ['welcome', 'farewell']
 HF Duration: 145.731 ms
