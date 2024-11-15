@@ -8,8 +8,8 @@ pipeline {
     stages {
         stage ("Build and test windows") {
             steps {
-                def windows = load 'ci/loadWin.groovy'
                 script {
+                    def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         windows.clean()
                         windows.build_and_test()

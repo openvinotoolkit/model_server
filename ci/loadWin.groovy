@@ -43,3 +43,5 @@ def archive_artifacts(){
     archiveArtifacts allowEmptyArchive: true, artifacts: "build_test.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "test.log"
 }
+
+return this

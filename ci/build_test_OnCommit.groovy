@@ -75,8 +75,8 @@ pipeline {
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
-                  def windows = load 'ci/loadWin.groovy'
                   script {
+                      def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
                           windows.clean()
                           windows.build_and_test()
