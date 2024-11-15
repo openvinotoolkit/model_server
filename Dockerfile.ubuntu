@@ -402,7 +402,9 @@ RUN chown -R ovms:ovms /ovms_release && \
 # Remove capi library
 RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; fi ;
 
-RUN cp -R /usr/local/lib/python3*/dist-packages/ /ovms_release/python_deps/ && rm -Rf /ovms_release/python_deps/numpy*
+RUN cp -R /usr/local/lib/python3*/dist-packages/jinja2* /ovms_release/python_deps/ && \
+    cp -R /usr/local/lib/python3*/dist-packages/MarkupSafe* /ovms_release/python_deps/ && \
+    cp -R /usr/local/lib/python3*/dist-packages/markupsafe /ovms_release/python_deps/
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
