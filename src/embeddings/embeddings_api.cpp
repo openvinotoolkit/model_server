@@ -112,8 +112,11 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
     if (input_strings.size() > 0) {
         request.input = input_strings;
     }
-    if (input_tokens.size() > 0) {
+    else if (input_tokens.size() > 0) {
         request.input = input_tokens;
+    }
+    else {
+        return "no input provided in request";
     }
     return request;
 }
