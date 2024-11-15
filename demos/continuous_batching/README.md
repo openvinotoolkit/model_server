@@ -67,7 +67,7 @@ Check the [LLM calculator documentation](../../docs/llm/reference.md) to learn a
 
 ### CPU
 
-Run this command starts the container with CPU only target device:
+Running this command starts the container with CPU only target device:
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
