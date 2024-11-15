@@ -74,6 +74,8 @@ struct HttpResponseComponents {
 
 using HandlerCallbackFn = std::function<Status(const std::string_view, const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&, tensorflow::serving::net_http::ServerRequestInterface*)>;
 
+std::string urlDecode(const std::string& encoded);
+
 class HttpRestApiHandler {
 public:
     static const std::string predictionRegexExp;

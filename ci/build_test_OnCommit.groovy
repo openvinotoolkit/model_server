@@ -9,6 +9,9 @@ pipeline {
     stages {
         stage('Configure') {
           steps {
+            script{
+              println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
+            }
             script {
               shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
               echo shortCommit
@@ -21,7 +24,7 @@ pipeline {
               } else {  // branches without PR - check changes in last commit
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
-              def matched = (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|(\n|^)run_unit_tests\.sh/)
+              def matched = (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|WORKSPACE|(\n|^)run_unit_tests\.sh/)
                 if (matched){
                   image_build_needed = "true"
               }
