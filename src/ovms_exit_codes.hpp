@@ -24,15 +24,15 @@
 namespace ovms {
 
 #ifdef __linux__
-#define OVMS_EX_OK      EX_OK
+#define OVMS_EX_OK EX_OK
 #define OVMS_EX_FAILURE 1
 #define OVMS_EX_WARNING 2
-#define OVMS_EX_USAGE   EX_USAGE
+#define OVMS_EX_USAGE EX_USAGE
 #elif _WIN32
-#define OVMS_EX_OK      0
+#define OVMS_EX_OK 0
 #define OVMS_EX_FAILURE 1
 #define OVMS_EX_WARNING 2
-#define OVMS_EX_USAGE   3
+#define OVMS_EX_USAGE 3
 #endif
 
 }  // namespace ovms

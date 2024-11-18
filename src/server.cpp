@@ -391,10 +391,10 @@ int Server::start(int argc, char** argv) {
         return result;
     }
 
-    #ifdef _WIN32
+#ifdef _WIN32
     WSACleanup();
-    #endif
-    
+#endif
+
     return EXIT_SUCCESS;
 }
 
