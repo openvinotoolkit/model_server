@@ -305,9 +305,13 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
     }
 
     OV_LOGGER("ov::Model: {}, model->outputs()", reinterpret_cast<void*>(model.get()));
-    for (const ov::Output<ov::Node>& output : model->outputs()) {
+    for (ov::Output<ov::Node>& output : model->outputs()) {
         try {
             OV_LOGGER("ov::Output<ov::Node> output: {}, output.get_any_name()", reinterpret_cast<const void*>(&output));
+            if (output.get_names().size() == 0){
+                std::unordered_set<std::string> dummy_name{"out_"+std::to_string(output.get_index())};
+                output.add_names(dummy_name);
+            }
             std::string name = output.get_any_name();
             std::string mappedName = config.getMappingOutputByKey(name).empty() ? name : config.getMappingOutputByKey(name);
             if (config.getLayouts().count(mappedName) > 0) {
