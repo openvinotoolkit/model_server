@@ -78,10 +78,13 @@ pipeline {
                   script {
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
+                        try {
                           windows.clean()
                           windows.build_and_test()
                           windows.check_tests()
+                        } finally {
                           windows.archive_artifacts()
+                        }
                       } else {
                           error "Cannot load ci/loadWin.groovy file."
                       }
