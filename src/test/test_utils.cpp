@@ -703,7 +703,7 @@ std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_
 
 // Function changes linux docker container path /ovms/src/test/dummy to windows workspace "C:\git\model_server\src\test\dummy"
 // Depending on the ovms_test.exe location after build
-std::string getWindowsFullPathForSrcTest(std::string linuxPath, bool logChange) {
+std::string getWindowsFullPathForSrcTest(const std::string& linuxPath, bool logChange) {
 #ifdef __linux__
     return linuxPath;
 #elif _WIN32
@@ -733,11 +733,14 @@ std::string getWindowsFullPathForSrcTest(std::string linuxPath, bool logChange) 
 }
 
 std::string getWindowsFullPathForSrcTest(const char* linuxPath, bool logChange) {
+    std::cout << "LEN CHAR: " << strlen(linuxPath) << std::endl;
+    std::cout << "CHAR: " << linuxPath << std::endl;
+    std::cout << "STRING: " << std::string(linuxPath, strlen(linuxPath)) << std::endl;
     return getWindowsFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)), logChange);
 }
 
 // Function changes docker linux paths starting with /tmp: "/tmp/dummy" to windows C:\git\model_server\tmp\dummy
-std::string getWindowsFullPathForTmp(std::string linuxPath, bool logChange) {
+std::string getWindowsFullPathForTmp(const std::string& linuxPath, bool logChange) {
 #ifdef __linux__
     return linuxPath;
 #elif _WIN32
@@ -769,5 +772,8 @@ std::string getWindowsFullPathForTmp(std::string linuxPath, bool logChange) {
 }
 
 std::string getWindowsFullPathForTmp(const char* linuxPath, bool logChange) {
+    std::cout << "LEN CHAR: " << strlen(linuxPath) << std::endl;
+    std::cout << "CHAR: " << linuxPath << std::endl;
+    std::cout << "STRING: " << std::string(linuxPath, strlen(linuxPath)) << std::endl;
     return getWindowsFullPathForTmp(std::string(linuxPath, strlen(linuxPath)), logChange);
 }

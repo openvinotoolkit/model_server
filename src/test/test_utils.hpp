@@ -61,9 +61,9 @@
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
-std::string getWindowsFullPathForSrcTest(std::string linuxPath, bool logChange = true);
+std::string getWindowsFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
 std::string getWindowsFullPathForSrcTest(const char* linuxPath, bool logChange = true);
-std::string getWindowsFullPathForTmp(std::string linuxPath, bool logChange = true);
+std::string getWindowsFullPathForTmp(const std::string& linuxPath, bool logChange = true);
 std::string getWindowsFullPathForTmp(const char* linuxPath, bool logChange = true);
 
 const std::string dummy_model_location = getWindowsFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy", false);
