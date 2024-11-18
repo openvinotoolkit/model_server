@@ -417,7 +417,6 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     writer.String("choices");
     writer.StartArray();  // [
     int index = 0;
-    int n = request.numReturnSequences.value_or(1);
     usage.completionTokens = 0;
     for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
