@@ -20,7 +20,7 @@ def check_tests(){
         echo "Build test successful."
     }
 
-    status = bat(returnStatus: true, script: 'grep "  PASSED  " win_test.log')
+    status = bat(returnStatus: true, script: 'grep "       OK " win_test.log')
     if (status != 0) {
             error "Error: Windows run test failed ${status}. Check win_test.log for details."
     }
