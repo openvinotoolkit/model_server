@@ -1,7 +1,23 @@
-# OpenVINO&trade; Model Server Developer Guide for Windows
-## No MEDIAPIPE support
-## No PYTHON NODES support
-## No REST API support
+# OpenVINO&trade; Model Server Deployment Guide for Windows 11 (Experimental/Alpha)
+This document describes experimental/alpha windows deployment for ovms.exe binary.
+Follow the instructions once you have compiled ovms.exe and you want to deploy the binary on a Windows 11 system.
+
+OpenVINO&trade; Model Server is in experimental/alpha stage of windows enabling with limited functionality and quality.
+It is recommended to use the top of main repository branch for more feature enabled code and better software quality for windows.
+
+## List of enabled features:
+### Limited model server basic functionality
+### GRPC API
+### Mediapipe graphs execution
+
+## List of disabled features:
+### Full ovms feature parity with Linux implementation
+### No LLM support
+### No PYTHON NODES support
+### No REST API support
+### No Custom nodes support
+### No Cloud storage support
+### No Model cache support
 
 # Install prerequisites
 ```
@@ -9,8 +25,8 @@ md c:\git
 md c:\opt
 ```
 
-## VISAUL
-Visual Studio 2022 with C++ - https://visualstudio.microsoft.com/downloads/
+## VISUAL STUDIO
+Visual Studio 2019 with C++ - https://visualstudio.microsoft.com/downloads/
 
 ## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
 Python3. (Python 3.11.9 is tested)
