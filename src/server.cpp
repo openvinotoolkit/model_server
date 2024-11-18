@@ -344,28 +344,9 @@ void Server::shutdownModules() {
 
 static int statusToExitCode(const Status& status) {
     if (status.ok()) {
-#ifdef __linux__
-        return EX_OK;
-#elif _WIN32
-        return 0;
-#endif
-    } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
-#ifdef __linux__
-        return EX_USAGE;
-#elif _WIN32
-        return 3;
-#endif
-    }
-    return EXIT_FAILURE;
-}
-
-static int statusToExitCode(const Status& status) {
-    if (status.ok()) {
         return OVMS_EX_OK;
     } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
         return OVMS_EX_USAGE;
-    } else if (status == StatusCode::WARNING) {
-        return OVMS_EX_WARNING;
     }
     return OVMS_EX_FAILURE;
 }
