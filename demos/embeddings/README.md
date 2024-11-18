@@ -73,13 +73,23 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 ```
 
 ## Start-up
+
+### CPU
+
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
-In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
-to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU or export it with `task_parmaters='{"target_device":"GPU"}'`. 
-Also make sure the export model quantization level and cache size fit to the GPU memory.
+### GPU
 
+In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
+to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU. Also make sure the export model quantization level and cache size fit to the GPU memory. All of that can be applied with the commands:
+
+```
+python demos/common/export_models/export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+
+docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
+```
+### Check readiness
 
 Wait for the model to load. You can check the status with a simple command below. Note that the slash `/` in the model name needs to be escaped with `%2F`:
 ```bash
@@ -196,7 +206,7 @@ Average document length: 83.208 token
 ## RAG with Model Server
 
 Embeddings endpoint can be applied in RAG chains to delegated text feature extraction both for documented vectorization and in context retrieval.
-Check this demo to see the langchain code example which is using OpenVINO Model Server both for text generation and embedding endpoint in [RAG application demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/continuous_batching/rag)
+Check this demo to see the langchain code example which is using OpenVINO Model Server both for text generation and embedding endpoint in [RAG application demo](https://github.com/openvinotoolkit/model_server/tree/releases/2024/5/demos/continuous_batching/rag)
 
 
 ## Testing the model accuracy over serving API

@@ -54,8 +54,8 @@ Open second cmd.exe terminal
 cd c:\opt
 md client
 cd client
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/object_detection.py
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/requirements.txt
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2024/5/demos/object_detection/python/object_detection.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2024/5/demos/object_detection/python/requirements.txt
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_91cl.txt
 wget https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg
 
