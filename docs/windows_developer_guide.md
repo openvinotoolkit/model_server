@@ -1,22 +1,4 @@
-# OpenVINO&trade; Model Server Developer Guide for Windows (Experimental/Alpha)
-This document describes experimental/alpha windows development and compilation guide for ovms.exe binary.
-
-OpenVINO&trade; Model Server is in experimental/alpha stage of windows enabling with limited functionality and quality.
-It is recommended to use the top of main repository branch for more feature enabled code and better software quality for windows.
-
-## List of enabled features:
-### Limited model server basic functionality
-### GRPC API
-### Mediapipe graphs execution
-
-## List of disabled features:
-### Full ovms feature parity with Linux implementation
-### No LLM support
-### No PYTHON NODES support
-### No REST API support
-### No Custom nodes support
-### No Cloud storage support
-### No Model cache support
+# OpenVINO&trade; Model Server Developer Guide for Windows
 
 # Install prerequisites
 ```
@@ -24,8 +6,8 @@ md c:\git
 md c:\opt
 ```
 
-## VISUAL STUDIO
-Visual Studio 2019 with C++ - https://visualstudio.microsoft.com/downloads/
+## VISAUL
+Visual Studio 2022 with C++ - https://visualstudio.microsoft.com/downloads/
 
 ## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
 Python3. (Python 3.11.9 is tested)
@@ -71,13 +53,26 @@ https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.
 https://eternallybored.org/misc/wget/1.21.4/64/wget.exe download to c:\opt
 Add c:\opt to system env PATH
 
-## Run Developer Command Prompt for VS 2019
+## Run Developer Command Prompt for VS 2022
 ## Enable Developer mode on in windows system settings
 
 #### Boring SSL - not needed until md5 hash is needed.
 Clone in in c:\opt\
 ```
 git clone https://github.com/firebase/boringSSL-SwiftPM.git
+```
+
+## Libevent - ovms link phase
+```git clone https://github.com/libevent/libevent
+git co release-2.1.12-stable
+md build && cd build
+C:\git\libevent\build>cmake -G "Visual Studio 17 2022" -DEVENT__DISABLE_OPENSSL=1 -DEVENT_LIBRARY_SHARED=0 ..
+cmake --build . --config Release
+md c:\opt\libevent
+xcopy lib\Release\* c:\opt\libevent\lib\
+xcopy /s /e include\event2\* c:\opt\libevent\include\event2\
+cd ..
+xcopy /s /e include\ c:\opt\libevent\include\
 ```
 
 # Opencl headers
