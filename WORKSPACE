@@ -33,6 +33,14 @@ bazel_skylib_workspace()
 load("@bazel_skylib//lib:versions.bzl", "versions")
 versions.check(minimum_bazel_version = "6.0.0")
 
+http_archive(
+    name = "zlib",
+    build_file = "@mediapipe//third_party:zlib.BUILD",
+    sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
+    strip_prefix = "zlib-1.3.1",
+    url = "http://zlib.net/fossils/zlib-1.3.1.tar.gz",
+)
+
 # RapidJSON
 # Must be defined earlier than tensorflow_serving because TFS is using older rapidjson
 # Version must match openvino.genai -> jinja2cpp -> rapidjson
@@ -112,6 +120,17 @@ http_archive(
         "-p1",
     ],
 )
+
+http_archive( # 1.60.0
+    name = "com_github_grpc_grpc",
+    urls = [
+        "https://github.com/grpc/grpc/archive/0ef13a7555dbaadd4633399242524129eef5e231.tar.gz",
+    ],
+    strip_prefix = "grpc-0ef13a7555dbaadd4633399242524129eef5e231",
+)
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+grpc_deps()
 
 ################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
@@ -393,16 +412,6 @@ switched_rules_by_language(
 
 load("@com_github_googleapis_google_cloud_cpp_common//bazel:google_cloud_cpp_common_deps.bzl", "google_cloud_cpp_common_deps")
 google_cloud_cpp_common_deps()
-
-load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-grpc_deps()
-http_archive( # 1.60.0
-    name = "com_github_grpc_grpc",
-    urls = [
-        "https://github.com/grpc/grpc/archive/0ef13a7555dbaadd4633399242524129eef5e231.tar.gz",
-    ],
-    strip_prefix = "grpc-0ef13a7555dbaadd4633399242524129eef5e231",
-)
 
 # cxxopts
 http_archive(
