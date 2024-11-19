@@ -1317,7 +1317,6 @@ void ModelInstance::unloadModelComponents() {
         }
     }
 
-
 #ifdef __linux__
     malloc_trim(0);
 #else if _WIN32
