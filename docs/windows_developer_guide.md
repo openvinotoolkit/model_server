@@ -5,18 +5,20 @@ OpenVINO&trade; Model Server is in experimental/alpha stage of windows enabling 
 It is recommended to use the top of main repository branch for more feature enabled code and better software quality for windows.
 
 ## List of enabled features:
-### Limited model server basic functionality
+### Limited model server basic functionality besides disabled features
 ### GRPC API
 ### Mediapipe graphs execution
+### Serving single models in all formats
 
 ## List of disabled features:
-### No ovms feature parity with Linux implementation
-### No LLM support
-### No PYTHON NODES support
-### No REST API support
-### No Custom nodes support
-### No Cloud storage support
-### No Model cache support
+### Ovms feature parity with Linux implementation
+### LLM support
+### PYTHON NODES support
+### REST API support
+### Custom nodes support
+### Cloud storage support
+### Model cache support
+### DAG pipelines
 
 # Install prerequisites
 ```
