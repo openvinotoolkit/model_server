@@ -116,7 +116,7 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     // TODO: implement LoadLibrary for windows with GetProcAddress
     HMODULE handle = LoadLibraryA(basePath.c_str());
     DWORD error = GetLastError();
-    //void* handle = NULL;
+    // void* handle = NULL;
     if (!handle) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Library name: {} failed to open base_path: {} with error: {}", name, basePath, "e");
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN;
