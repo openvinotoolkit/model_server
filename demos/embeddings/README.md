@@ -200,7 +200,7 @@ Success rate: 100.0%. (1000/1000)
 Throughput - Tokens per second: 5433.913083411673
 Mean latency: 1424 ms
 Median latency: 1451 ms
-Average document length: 83.208 token
+Average document length: 83.208 tokens
 ```
 
 ## RAG with Model Server
