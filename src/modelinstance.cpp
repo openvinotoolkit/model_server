@@ -41,6 +41,7 @@
 
 #include "capi_frontend/inferencerequest.hpp"
 #include "capi_frontend/inferenceresponse.hpp"
+#include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
@@ -1315,10 +1316,14 @@ void ModelInstance::unloadModelComponents() {
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());
         }
     }
+
+
 #ifdef __linux__
     malloc_trim(0);
-#endif
+#else if _WIN32
     // TODO: windows for malloc_trim(0);
+    malloc_trim_win();
+#endif
 }
 
 const std::set<std::string>& ModelInstance::getOptionalInputNames() {

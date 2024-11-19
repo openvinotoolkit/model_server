@@ -42,6 +42,3 @@ local-completions (model=meta-llama/Meta-Llama-3-8B,base_url=http://localhost:80
 ```
 
 > **Note** The same procedure can be used to validate vLLM component. The only needed change would be updating base_url including replacing `/v3/` with `/v1/`.  
-
-## Limitations
-OpenVINO Model Server has partial implementation of `logprobs` parameter so metrics based on `loglikelihood` can't be calculated.
