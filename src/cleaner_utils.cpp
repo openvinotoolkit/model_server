@@ -26,13 +26,37 @@ namespace ovms {
 FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
     globalSequencesViewer(globalSequencesViewer) {}
 
+#ifdef _WIN32
+bool malloc_trim_win() {
+    HANDLE heap = GetProcessHeap();
+    if (heap == NULL) {
+        std::cerr << "Failed to get process heap" << std::endl;
+        return false;
+    }
+
+    ULONG_PTR freed_bytes = HeapCompact(heap, 0);
+    if (freed_bytes == 0) {
+        DWORD error = GetLastError();
+        if (error != 0) {
+            std::cerr << "HeapCompact failed with error: " << error << std::endl;
+            return false;
+        }
+    }
+    std::cout << "HeapCompact freed " << freed_bytes << " bytes" << std::endl;
+    return true;
+}
+#endif
+
 void FunctorSequenceCleaner::cleanup() {
     globalSequencesViewer.removeIdleSequences();
     SPDLOG_TRACE("malloc_trim(0)");
 #ifdef __linux__
     malloc_trim(0);
-#endif
+#else if _WIN32
     // TODO: windows for malloc_trim(0);
+    malloc_trim_win();
+#endif
+    
 }
 
 FunctorSequenceCleaner::~FunctorSequenceCleaner() = default;
