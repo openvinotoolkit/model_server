@@ -419,6 +419,63 @@ TEST_F(CAPIInference, Validation) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_PRECISION);
     OVMS_InferenceRequestDelete(request);
 }
+
+TEST_F(CAPIInference, ValidationMaliciousTensorStaticShapeModel) {
+    // Prepare request with tensor shape not alligining with data size with overflow attempt
+    ServerGuard serverGuard("/ovms/src/test/configs/config_standard_dummy.json");
+    OVMS_Server* cserver = serverGuard.server;
+    ASSERT_NE(cserver, nullptr);
+    OVMS_InferenceRequest* request{nullptr};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
+    ASSERT_NE(nullptr, request);
+    int64_t shape[2] = {std::numeric_limits<size_t>::max() / 5 + 2, 5};
+    // multiplication will overflow size_t
+    size_t numElements = shape[0] * shape[1];
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, shape, 2));
+    std::vector<float> data(numElements);
+    for (size_t i = 0; i < numElements; ++i) {
+        data[i] = static_cast<float>(i);
+    }
+    uint32_t notUsedNum = 0;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
+    InferenceRequest* ir = reinterpret_cast<InferenceRequest*>(request);
+    size_t size = 0;
+    ASSERT_EQ(ir->getBatchSize(size, 10), StatusCode::INTERNAL_ERROR);
+    ASSERT_EQ(ir->getBatchSize(size, 0), StatusCode::OK);
+    OVMS_InferenceResponse* response = nullptr;
+    // Validation captures shape mismatch with model defined static shape
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_BATCH_SIZE);
+    OVMS_InferenceRequestDelete(request);
+}
+
+TEST_F(CAPIInference, ValidationMaliciousTensorDynamicShapeModel) {
+    // Prepare request with tensor shape not alligining with data size with overflow attempt
+    ServerGuard serverGuard("/ovms/src/test/configs/config_dummy_full_dynamic_shape.json");
+    OVMS_Server* cserver = serverGuard.server;
+    ASSERT_NE(cserver, nullptr);
+    OVMS_InferenceRequest* request{nullptr};
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, "dummy", 1));
+    ASSERT_NE(nullptr, request);
+    int64_t shape[2] = {std::numeric_limits<size_t>::max() / 5 + 2, 5};
+    // multiplication will overflow size_t
+    size_t numElements = shape[0] * shape[1];
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, shape, 2));
+    std::vector<float> data(numElements);
+    for (size_t i = 0; i < numElements; ++i) {
+        data[i] = static_cast<float>(i);
+    }
+    uint32_t notUsedNum = 0;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, notUsedNum));
+    InferenceRequest* ir = reinterpret_cast<InferenceRequest*>(request);
+    size_t size = 0;
+    ASSERT_EQ(ir->getBatchSize(size, 10), StatusCode::INTERNAL_ERROR);
+    ASSERT_EQ(ir->getBatchSize(size, 0), StatusCode::OK);
+    OVMS_InferenceResponse* response = nullptr;
+    // For models with dynamic shape validation captures shape overflow
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_Inference(cserver, request, &response), StatusCode::INVALID_SHAPE);
+    OVMS_InferenceRequestDelete(request);
+}
+
 TEST_F(CAPIInference, AcceptInputRejectOutputStringPrecision) {
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_string.json"));
     OVMS_Server* cserver = serverGuard.server;

@@ -60,7 +60,7 @@ cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
     static_deps = [
-        #"//src:libovmsfilesystemfactory", // TODO FIXME missing symbols @atobisze
+        #"//src:libovmsfilesystemfactory", // TODO missing symbols
         "@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
         "@com_github_gabime_spdlog//:__subpackages__",
@@ -494,7 +494,7 @@ cc_library(
             "libovms_execution_context",
             "libovmsfilesystem",
             "libovmsfilesystemfactory_h",
-            "libovmsfilesystemfactory", # TODO FIXME missing symbols @atobisze when not in ovms_lib
+            "libovmsfilesystemfactory", # TODO missing symbols when not in ovms_lib
             "libovms_kfs_utils",
             "libovms_kfs_grpc_inference_service_h",
             "libovmslocalfilesystem", # indirectly & directly through factory

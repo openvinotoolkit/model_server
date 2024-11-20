@@ -58,7 +58,7 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_se
 
 Readiness of the model can be reported with a simple curl command. 
 ```bash
-curl -i http://localhost:8000/v2/models/BAAI%2Fbge-reranker-large/ready
+curl -i http://localhost:8000/v3/models/BAAI%2Fbge-reranker-large/ready
 HTTP/1.1 200 OK
 Content-Type: application/json
 Date: Sat, 09 Nov 2024 23:19:27 GMT
@@ -69,7 +69,7 @@ Content-Length: 0
 
 
 ```bash
-curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
+curl http://localhost:8000/v2/rerank  -H "Content-Type: application/json" \
 -d '{ "model": "BAAI/bge-reranker-large", "query": "welcome", "documents":["good morning","farewell"]}' | jq .
 ```
 ```json
@@ -92,7 +92,7 @@ curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
 
 ```bash
 pip3 install cohere
-python demos/rerank/compare_results.py --query "hello" --document "welcome" --document "farewell"
+python demos/rerank/compare_results.py --query "hello" --document "welcome" --document "farewell" --base_url http://localhost:8000/v3/
 query hello
 documents ['welcome', 'farewell']
 HF Duration: 145.731 ms
