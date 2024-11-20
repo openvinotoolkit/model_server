@@ -435,7 +435,7 @@ public:
 };
 
 TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSeparately) {
-    std::string configFilePath{getWindowsFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_two_inputs.json")};
+    std::string configFilePath{getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_two_inputs.json")};
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
     SetUpServer(configFilePath.c_str());

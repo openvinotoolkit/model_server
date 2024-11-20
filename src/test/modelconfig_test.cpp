@@ -36,14 +36,14 @@ TEST(ModelConfig, getters_setters) {
     auto name = config.getName();
     EXPECT_EQ(name, "alexnet");
 
-    config.setBasePath(getWindowsFullPathForTmp("/tmp/path"));
+    config.setBasePath(getGenericFullPathForTmp("/tmp/path"));
     auto path = config.getBasePath();
-    EXPECT_EQ(path, getWindowsFullPathForTmp("/tmp/path"));
+    EXPECT_EQ(path, getGenericFullPathForTmp("/tmp/path"));
 
-    config.setRootDirectoryPath(getWindowsFullPathForTmp("/tmp/pathto/"));
+    config.setRootDirectoryPath(getGenericFullPathForTmp("/tmp/pathto/"));
     config.setBasePath("relative/path");
     path = config.getBasePath();
-    EXPECT_EQ(path, getWindowsFullPathForTmp("/tmp/pathto/relative/path"));
+    EXPECT_EQ(path, getGenericFullPathForTmp("/tmp/pathto/relative/path"));
 
     config.setTargetDevice("GPU");
     auto device = config.getTargetDevice();

@@ -365,11 +365,11 @@ void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]
 }
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage(getWindowsFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg"), filesize, image_bytes);
+    return readImage(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg"), filesize, image_bytes);
 }
 
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage(getWindowsFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), filesize, image_bytes);
+    return readImage(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), filesize, image_bytes);
 }
 
 void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) {
@@ -719,7 +719,7 @@ const std::string& getPathFromMap(std::string inputPath, std::string outputPath)
 
 // Function changes linux docker container path /ovms/src/test/dummy to windows workspace "C:\git\model_server\src\test\dummy"
 // Depending on the ovms_test.exe location after build
-const std::string& getWindowsFullPathForSrcTest(const std::string& linuxPath, bool logChange) {
+const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange) {
 #ifdef __linux__
     return getPathFromMap(linuxPath, linuxPath);
 #elif _WIN32
@@ -748,12 +748,12 @@ const std::string& getWindowsFullPathForSrcTest(const std::string& linuxPath, bo
     return getPathFromMap(linuxPath, linuxPath);
 }
 
-const std::string& getWindowsFullPathForSrcTest(const char* linuxPath, bool logChange) {
-    return getWindowsFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)), logChange);
+const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange) {
+    return getGenericFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)), logChange);
 }
 
 // Function changes docker linux paths starting with /tmp: "/tmp/dummy" to windows C:\git\model_server\tmp\dummy
-const std::string& getWindowsFullPathForTmp(const std::string& linuxPath, bool logChange) {
+const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange) {
 #ifdef __linux__
     return getPathFromMap(linuxPath, linuxPath);
 #elif _WIN32
@@ -784,6 +784,6 @@ const std::string& getWindowsFullPathForTmp(const std::string& linuxPath, bool l
     return getPathFromMap(linuxPath, linuxPath);
 }
 
-const std::string& getWindowsFullPathForTmp(const char* linuxPath, bool logChange) {
-    return getWindowsFullPathForTmp(std::string(linuxPath, strlen(linuxPath)), logChange);
+const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange) {
+    return getGenericFullPathForTmp(std::string(linuxPath, strlen(linuxPath)), logChange);
 }

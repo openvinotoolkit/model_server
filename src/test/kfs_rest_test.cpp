@@ -70,7 +70,7 @@ public:
             (char*)"--model_name",
             (char*)"dummy",
             (char*)"--model_path",
-            (char*)getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
             (char*)"--log_level",
             (char*)"DEBUG",
             (char*)"--batch_size",
@@ -114,7 +114,7 @@ public:
             (char*)"--model_name",
             (char*)"scalar",
             (char*)"--model_path",
-            (char*)getWindowsFullPathForSrcTest("/ovms/src/test/scalar").c_str(),
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/scalar").c_str(),
             (char*)"--log_level",
             (char*)"DEBUG",
             (char*)"--port",
@@ -142,7 +142,7 @@ public:
             (char*)"--model_name",
             (char*)"dummy",
             (char*)"--model_path",
-            (char*)getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
             (char*)"--shape",
             (char*)"(-1,-1)",
             (char*)"--log_level",
@@ -172,7 +172,7 @@ public:
             (char*)"--model_name",
             (char*)"string",
             (char*)"--model_path",
-            (char*)getWindowsFullPathForSrcTest("/ovms/src/test/passthrough_string").c_str(),
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/passthrough_string").c_str(),
             (char*)"--log_level",
             (char*)"DEBUG",
             (char*)"--port",
@@ -262,7 +262,7 @@ protected:
     }
 
     void SetUp() {
-        SetUpServer(getWindowsFullPathForSrcTest("/ovms/src/test/mediapipe/config_python_summator.json").c_str());
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_python_summator.json").c_str());
     }
 
     void TearDown() {
@@ -276,7 +276,7 @@ protected:
 class HttpRestApiHandlerWithMediapipePassthrough : public HttpRestApiHandlerWithMediapipe {
 protected:
     void SetUp() {
-        SetUpServer(getWindowsFullPathForSrcTest("/ovms/src/test/mediapipe/config_mp_pytensor_passthrough.json").c_str());
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mp_pytensor_passthrough.json").c_str());
     }
 };
 

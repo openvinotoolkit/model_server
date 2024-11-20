@@ -254,7 +254,7 @@ TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
     createConfigFileWithContent(configStr, fileToReload);
 
     // Copy dummy model to temporary destination
-    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
     ASSERT_EQ(manager.loadConfig(fileToReload), ovms::StatusCode::OK);
 

@@ -245,7 +245,7 @@ static const char* modelMetricsBadEndpoint = R"(
 
 TEST_F(ModelManagerMetricsTest, DISABLED_WrongConfigFileEndpoint) {
     SetUpConfig(modelMetricsBadEndpoint);
-    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
     ConstructorEnabledModelManager manager;
@@ -279,7 +279,7 @@ static const char* modelMetricsInvalidMetricName = R"(
 
 TEST_F(ModelManagerMetricsTest, WrongConfigFileMetricName) {
     SetUpConfig(modelMetricsBadEndpoint);
-    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(modelMetricsInvalidMetricName, configFilePath);
 
     ConstructorEnabledModelManager manager;
@@ -331,7 +331,7 @@ public:
 };
 
 TEST_F(ModelManagerMappingTest, MappingConfig) {
-    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     SetUpConfig(modelDummyNireq100);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     createConfigFileWithContent(mappingConfigContent, modelPath + "/1/mapping_config.json");
@@ -425,7 +425,7 @@ static const char* modelMetricsMissingPortWithDisabledMetricsV2 = R"(
 })";
 TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
     SetUpConfig(modelMetricsMissingPort);
-    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
     ConstructorEnabledModelManager manager;
@@ -435,7 +435,7 @@ TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
 
 TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetricsV2) {
     SetUpConfig(modelMetricsMissingPortWithDisabledMetricsV2);
-    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--metrics_enable", (char*)"--rest_port", (char*)"8000"};
     int arg_count = 8;
@@ -447,7 +447,7 @@ TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetricsV2) {
 
 TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetrics) {
     SetUpConfig(modelMetricsMissingPortWithDisabledMetrics);
-    std::filesystem::copy(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--metrics_enable", (char*)"--rest_port", (char*)"8000", (char*)"--metrics_list", (char*)"ovms_streams"};
     int arg_count = 10;
@@ -618,7 +618,7 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(ModelManagerWatcher2Models, configRelodNotNeededManyThreads) {
-    std::string configFile = getWindowsFullPathForTmp("/tmp/config.json");
+    std::string configFile = getGenericFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -647,7 +647,7 @@ TEST_P(ModelManagerWatcher2Models, configRelodNotNeededManyThreads) {
 }
 
 TEST_P(ModelManagerWatcher2Models, configReloadNeededManyThreads) {
-    std::string configFile = getWindowsFullPathForTmp("/tmp/config.json");
+    std::string configFile = getGenericFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -682,7 +682,7 @@ TEST_P(ModelManagerWatcher2Models, configReloadNeededManyThreads) {
 }
 
 TEST_P(ModelManagerWatcher2Models, configReloadNeededChange) {
-    std::string configFile = getWindowsFullPathForTmp("/tmp/config.json");
+    std::string configFile = getGenericFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -707,7 +707,7 @@ TEST_P(ModelManagerWatcher2Models, loadConfigManyThreads) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-    std::string configFile = getWindowsFullPathForTmp("/tmp/config.json");
+    std::string configFile = getGenericFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -736,7 +736,7 @@ TEST_P(ModelManagerWatcher2Models, loadConfigManyThreads) {
 }
 
 TEST_P(ModelManagerWatcher2Models, configReloadNeededBeforeConfigLoad) {
-    std::string configFile = getWindowsFullPathForTmp("/tmp/config.json");
+    std::string configFile = getGenericFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -809,7 +809,7 @@ TEST_F(ModelManagerWatcher, parseConfigWhenOnlyPipelineDefinitionProvided) {
 }
 
 TEST_F(ModelManager, ReadsVersionsFromDisk) {
-    const std::string path = getWindowsFullPathForTmp("/tmp/test_model/");
+    const std::string path = getGenericFullPathForTmp("/tmp/test_model/");
 
     try {
         for (auto i : {1, 5, 8, 10}) {
@@ -871,7 +871,7 @@ TEST_F(ModelManager, ReadsVersionsFromDiskRelativePath) {
 }
 
 TEST_F(ModelManager, PathEscapeError1) {
-    const std::string path = getWindowsFullPathForTmp("/tmp/../test_model/");
+    const std::string path = getGenericFullPathForTmp("/tmp/../test_model/");
 
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
@@ -896,7 +896,7 @@ TEST_F(ModelManager, PathEscapeError2) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-    const std::string path = getWindowsFullPathForTmp("../tmp/test_model/");
+    const std::string path = getGenericFullPathForTmp("../tmp/test_model/");
 
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
@@ -907,7 +907,7 @@ TEST_F(ModelManager, PathEscapeError2) {
 }
 
 TEST_F(ModelManager, ReadVersionsInvalidPath) {
-    const std::string path = getWindowsFullPathForTmp("/tmp/inexisting_path/8bt4kv");
+    const std::string path = getGenericFullPathForTmp("/tmp/inexisting_path/8bt4kv");
 
     try {
         std::filesystem::remove(path);
@@ -1274,7 +1274,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenIn
 TEST_F(ModelManager, ConfigReloadingWithWrongInputName) {
     ovms::ModelConfig config;
     config.parseShapeParameter("{\"wrong_input_name\": \"(1,3,224,224)\"}");
-    config.setBasePath(getWindowsFullPathForSrcTest("/ovms/src/test/dummy"));
+    config.setBasePath(getGenericFullPathForSrcTest("/ovms/src/test/dummy"));
     auto status = fixtureManager.reloadModelWithVersions(config);
     ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL);
 }
@@ -1327,20 +1327,20 @@ private:
 
 public:
     DummyModelDirectoryStructure(std::string modelName) :
-        modelSourcePath(getWindowsFullPathForSrcTest("/ovms/src/test/dummy/1/")) {
+        modelSourcePath(getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/")) {
         name = modelName;
-        std::string modelPath = getWindowsFullPathForTmp("/tmp/" + name);
+        std::string modelPath = getGenericFullPathForTmp("/tmp/" + name);
         std::filesystem::remove_all(modelPath);
     }
     ~DummyModelDirectoryStructure() {
-        std::string modelPath = getWindowsFullPathForTmp("/tmp/" + name);
+        std::string modelPath = getGenericFullPathForTmp("/tmp/" + name);
         std::filesystem::remove_all(modelPath);
     }
 
     std::string name;
 
     void addVersion(int number, bool valid) {
-        std::string versionPath = getWindowsFullPathForTmp("/tmp/" + name + "/" + std::to_string(number));
+        std::string versionPath = getGenericFullPathForTmp("/tmp/" + name + "/" + std::to_string(number));
         std::filesystem::create_directories(versionPath);
         std::filesystem::copy(modelSourcePath, versionPath, std::filesystem::copy_options::recursive);
         if (!valid) {
@@ -1348,7 +1348,7 @@ public:
         }
     }
     void removeVersion(int number) {
-        std::string versionPath = getWindowsFullPathForTmp("/tmp/" + name + "/" + std::to_string(number));
+        std::string versionPath = getGenericFullPathForTmp("/tmp/" + name + "/" + std::to_string(number));
         try {
             std::filesystem::remove_all(versionPath);
         } catch (std::filesystem::filesystem_error& e) {
@@ -1370,7 +1370,7 @@ TEST_F(ModelManager, HandlingInvalidLastVersion) {
     modelDirectory.addVersion(2, validVersion);
     modelDirectory.addVersion(3, !validVersion);
     ovms::ModelConfig config;
-    config.setBasePath(getWindowsFullPathForTmp("/tmp/" + modelDirectory.name));
+    config.setBasePath(getGenericFullPathForTmp("/tmp/" + modelDirectory.name));
     config.setName(modelDirectory.name);
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
@@ -1426,7 +1426,7 @@ TEST_F(ModelManager, InitialFailedLoadingVersionSavesModelVersionWithProperStatu
     bool validVersion = true;
     modelDirectory.addVersion(1, !validVersion);
     ovms::ModelConfig config;
-    config.setBasePath(getWindowsFullPathForTmp("/tmp/" + modelDirectory.name));
+    config.setBasePath(getGenericFullPathForTmp("/tmp/" + modelDirectory.name));
     config.setName(modelDirectory.name);
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
@@ -1445,7 +1445,7 @@ TEST_F(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
     bool validVersion = true;
     modelDirectory.addVersion(1, validVersion);
     ovms::ModelConfig config;
-    config.setBasePath(getWindowsFullPathForTmp("/tmp/" + modelDirectory.name));
+    config.setBasePath(getGenericFullPathForTmp("/tmp/" + modelDirectory.name));
     config.setName(modelDirectory.name);
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
@@ -1456,7 +1456,7 @@ TEST_F(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
 }
 
 TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
-    std::string basePath = getWindowsFullPathForTmp("/tmp/");
+    std::string basePath = getGenericFullPathForTmp("/tmp/");
     std::string configWithTwoSameNames = R"({
    "model_config_list": [
     {
@@ -1967,7 +1967,7 @@ TEST_F(ReloadAvailableModelDueToConfigChange, SameConfig_ExpectNoReloads) {
 
 TEST_F(ReloadAvailableModelDueToConfigChange, ExpectReloadDueToBasePathChange) {
     mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, *ieCore, config);
-    config.setBasePath(getWindowsFullPathForTmp("/tmp/new/custom/path"));
+    config.setBasePath(getGenericFullPathForTmp("/tmp/new/custom/path"));
     ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }
