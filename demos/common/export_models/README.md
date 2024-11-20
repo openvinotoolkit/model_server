@@ -64,10 +64,16 @@ mkdir -p models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config_all.json --model_repository_path models 
 ```
 
-Text generation for GPU target device with limited memory:
+Text generation for GPU target device with limited memory without dynamic split fuse algorithm (recommended for usage in low concurrency):
 ```bash
 mkdir -p models
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --block_size 16 --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192 --cache_size 2
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192 --cache_size 2
+```
+
+Text generation for GPU target device with limited memory with enabled dynamic split fuse algorithm (recommended for usage in high concurrency):
+```bash
+mkdir -p models
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2
 ```
 
 Embeddings with deployment on a single CPU host:

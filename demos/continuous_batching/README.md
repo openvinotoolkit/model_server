@@ -292,3 +292,10 @@ Check this simple [text generation scaling demo](https://github.com/openvinotool
 ## Testing the model accuracy over serving API
 
 Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/releases/2024/5/demos/continuous_batching/accuracy/README.md)
+
+
+## References
+- [Chat Completions API](../../docs/model_server_rest_api_chat.md)
+- [Completions API](../../docs/model_server_rest_api_completions.md)
+- [Writing client code](../../docs/clients_genai.md)
+- [LLM calculator reference](../../docs/llm/reference.md)
