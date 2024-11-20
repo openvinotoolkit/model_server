@@ -701,11 +701,27 @@ std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_
         src->getLayout());
 }
 
+// Static map workaround for char* pointers as paths
+const std::string& getPathFromMap(std::string inputPath, std::string outputPath) {
+    static std::mutex mtx;
+    std::unique_lock<std::mutex> lock(mtx);
+    static std::unordered_map<std::string, std::string> inputMap = {};
+    auto it = inputMap.find(inputPath);
+    if (it != inputMap.end()) {
+        // element exists
+        return inputMap.at(inputPath);
+    } else {
+        // element does not exist
+        inputMap.emplace(inputPath, outputPath);
+        return inputMap.at(inputPath);
+    }
+}
+
 // Function changes linux docker container path /ovms/src/test/dummy to windows workspace "C:\git\model_server\src\test\dummy"
 // Depending on the ovms_test.exe location after build
-std::string getWindowsFullPathForSrcTest(const std::string& linuxPath, bool logChange) {
+const std::string& getWindowsFullPathForSrcTest(const std::string& linuxPath, bool logChange) {
 #ifdef __linux__
-    return linuxPath;
+    return getPathFromMap(linuxPath, linuxPath);
 #elif _WIN32
     // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
     std::filesystem::path cwd = std::filesystem::current_path();
@@ -726,23 +742,20 @@ std::string getWindowsFullPathForSrcTest(const std::string& linuxPath, bool logC
         if (logChange) {
             std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
         }
-        return finalWinPath;
+        return return getPathFromMap(linuxPath, finalWinPath);
     }
 #endif
-    return linuxPath;
+    return getPathFromMap(linuxPath, linuxPath);
 }
 
-std::string getWindowsFullPathForSrcTest(const char* linuxPath, bool logChange) {
-    std::cout << "LEN CHAR: " << strlen(linuxPath) << std::endl;
-    std::cout << "CHAR: " << linuxPath << std::endl;
-    std::cout << "STRING: " << std::string(linuxPath, strlen(linuxPath)) << std::endl;
+const std::string& getWindowsFullPathForSrcTest(const char* linuxPath, bool logChange) {
     return getWindowsFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)), logChange);
 }
 
 // Function changes docker linux paths starting with /tmp: "/tmp/dummy" to windows C:\git\model_server\tmp\dummy
-std::string getWindowsFullPathForTmp(const std::string& linuxPath, bool logChange) {
+const std::string& getWindowsFullPathForTmp(const std::string& linuxPath, bool logChange) {
 #ifdef __linux__
-    return linuxPath;
+    return getPathFromMap(linuxPath, linuxPath);
 #elif _WIN32
     // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
     std::filesystem::path cwd = std::filesystem::current_path();
@@ -765,15 +778,12 @@ std::string getWindowsFullPathForTmp(const std::string& linuxPath, bool logChang
         if (logChange) {
             std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
         }
-        return finalWinPath;
+        return getPathFromMap(linuxPath, finalWinPath);
     }
 #endif
-    return linuxPath;
+    return getPathFromMap(linuxPath, linuxPath);
 }
 
-std::string getWindowsFullPathForTmp(const char* linuxPath, bool logChange) {
-    std::cout << "LEN CHAR: " << strlen(linuxPath) << std::endl;
-    std::cout << "CHAR: " << linuxPath << std::endl;
-    std::cout << "STRING: " << std::string(linuxPath, strlen(linuxPath)) << std::endl;
+const std::string& getWindowsFullPathForTmp(const char* linuxPath, bool logChange) {
     return getWindowsFullPathForTmp(std::string(linuxPath, strlen(linuxPath)), logChange);
 }

@@ -386,13 +386,12 @@ TEST_F(TFSModelServiceTest, getAllModelsStatuses_two_models_with_one_versions) {
 TEST_F(TFSModelServiceTest, config_reload) {
     std::string port = "9000";
     randomizePort(port);
-    std::string path = getWindowsFullPathForSrcTest("/ovms/src/test/dummy");
     char* argv[] = {
         (char*)"OpenVINO Model Server",
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)path.c_str(),
+        (char*)getWindowsFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
         (char*)"--log_level",
         (char*)"DEBUG",
         (char*)"--port",
