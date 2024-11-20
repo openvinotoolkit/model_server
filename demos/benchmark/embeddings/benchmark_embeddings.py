@@ -215,7 +215,7 @@ async def benchmark(docs, model, api_url, request_rate, backend_function):
 
 if args["backend"] == "ovms-embeddings":
     backend_function = async_request_embeddings
-    default_api_url = "http://localhost:8000/v3/models/embeddings"
+    default_api_url = "http://localhost:8000/v3/embeddings"
 elif args["backend"] == "tei-embed":
     backend_function = async_request_embeddings_tei
     default_api_url = "http://localhost:8080/embed"
