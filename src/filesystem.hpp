@@ -163,7 +163,7 @@ public:
         char tmp_folder_ctr[MAX_PATH];
         strncpy(tmp_folder_ctr, tmp_folder.c_str(), MAX_PATH);
         for (int i = strlen(tmp_folder_ctr) - 6; i < strlen(tmp_folder_ctr); ++i) {
-            tmp_folder_ctr[i] = "A" + (rand() % 26);
+            tmp_folder_ctr[i] = "A" + (rand_r() % 26);
         }
 
         if (!CreateDirectoryA(tmp_folder_ctr, NULL)) {
