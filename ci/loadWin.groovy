@@ -22,7 +22,7 @@ def check_tests(){
 
     status = bat(returnStatus: true, script: 'grep "       OK " win_test.log')
     if (status != 0) {
-            error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check test.log for details."
+            error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test.log for details."
     }
 
     status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test.log')
