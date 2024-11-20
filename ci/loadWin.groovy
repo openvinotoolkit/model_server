@@ -13,22 +13,22 @@ def build_and_test(){
 }
 
 def check_tests(){
-    def status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms_test.exe build_test.log | grep "Build completed successfully"')
+    def status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms_test.exe win_build_test.log | grep "Build completed successfully"')
     if (status != 0) {
-            error "Error: Windows build test failed ${status}. Check build_test.log for details."
+            error "Error: Windows build test failed ${status}. Check win_build_test.log for details."
     } else {
         echo "Build test successful."
     }
 
-    status = bat(returnStatus: true, script: 'grep "       OK " test.log')
+    status = bat(returnStatus: true, script: 'grep "       OK " win_test.log')
     if (status != 0) {
             error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check test.log for details."
     }
 
-    status = bat(returnStatus: true, script: 'grep "  FAILED  " test.log')
+    status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test.log')
     if (status == 0) {
-            def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " test.log | wc -l')
-            error "Error: Windows run test failed ${status}. ${failed} failed tests . Check test.log for details."
+            def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test.log | wc -l')
+            error "Error: Windows run test failed ${status}. ${failed} failed tests . Check win_test.log for details."
     } else {
         echo "Run test successful."
     }
