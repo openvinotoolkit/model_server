@@ -7,16 +7,14 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 ## Get the docker image
 
-Build the image from source to try the latest enhancements in this feature.
+Pull the image from Dockerhub with CPU support:
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make release_image GPU=1
+docker pull openvino/model_server:2024.5
 ```
-It will create an image called `openvino/model_server:latest`.
-> **Note:** This operation might take 40min or more depending on your build host.
-> **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
-> **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. Check the [demo version from the last release](https://github.com/openvinotoolkit/model_server/tree/releases/2024/4/demos/continuous_batching) to use the public docker image.
+or if you want to include also the support for GPU execution:
+```bash
+docker pull openvino/model_server:2024.5-gpu
+```
 
 ## Model preparation
 > **Note** Python 3.9 or higher is need for that step
