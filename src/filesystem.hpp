@@ -150,6 +150,36 @@ public:
 
         return StatusCode::OK;
     }
+#else if _WIN32
+    static StatusCode createTempPath(std::string* local_path) {
+        char temp_path[MAX_PATH] = {0};
+        if (GetTempPath(MAX_PATH, temp_path) == 0) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get temporary directory : {}", GetLastError());
+            return StatusCode::FILESYSTEM_ERROR;
+        }
+
+        std::string tmp_folder = temp_path;
+        tmp_folder += "fileXXXXXX";
+        char tmp_folder_ctr[MAX_PATH];
+        strncpy(tmp_folder_ctr, tmp_folder.c_str(), MAX_PATH);
+        for (int i = strlen(tmp_folder_ctr) - 6; i < strlen(tmp_folder_ctr); ++i) {
+            tmp_folder_ctr[i] = "A" + (rand() % 26);
+        }
+
+        if (!CreateDirectoryA(tmp_folder_ctr, NULL)) {
+            DWORD error = GetLastError();
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create local temp folder: {} {}", tmp_folder_ctr, strerror(errno));
+            return StatusCode::FILESYSTEM_ERROR;
+        }
+
+        fs::permission(tmp_folder_ctr,
+            fs::perms::others_all | fs::perms::group_all,
+            fs::perm_options::remove);
+
+        *local_path = std::string(tmp_folder_ctr);
+
+        return StatusCode::OK;
+    }
 #endif
 
     static bool isPathEscaped(const std::string& path) {
