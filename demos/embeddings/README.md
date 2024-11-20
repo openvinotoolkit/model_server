@@ -4,15 +4,13 @@ Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
 ## Get the docker image
 
-Build the image from source to try this new feature. It will be included in the public image in the coming version 2024.5.
+Pull the image from Dockerhub with CPU support:
 ```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make release_image GPU=1
+docker pull openvino/model_server:2024.5
 ```
-It will create an image called `openvino/model_server:latest`.
-> **Note:** This operation might take 40min or more depending on your build host.
-> **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
+or if you want to include also the support for GPU execution:
+```bash
+docker pull openvino/model_server:2024.5-gpu
 
 ## Model preparation
 > **Note** Python 3.9 or higher is needed for that step
@@ -77,17 +75,17 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 ### CPU
 
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:2024.5 --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
 ### GPU
 
 In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU. Also make sure the export model quantization level and cache size fit to the GPU memory. All of that can be applied with the commands:
 
-```
+```bash
 python demos/common/export_models/export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 
-docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:2024.5-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 ### Check readiness
 
