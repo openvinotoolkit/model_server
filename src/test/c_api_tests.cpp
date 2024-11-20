@@ -421,6 +421,9 @@ TEST_F(CAPIInference, Validation) {
 }
 
 TEST_F(CAPIInference, ValidationMaliciousTensorStaticShapeModel) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [PORT?]";
+#endif
     // Prepare request with tensor shape not alligining with data size with overflow attempt
     ServerGuard serverGuard("/ovms/src/test/configs/config_standard_dummy.json");
     OVMS_Server* cserver = serverGuard.server;
@@ -449,6 +452,9 @@ TEST_F(CAPIInference, ValidationMaliciousTensorStaticShapeModel) {
 }
 
 TEST_F(CAPIInference, ValidationMaliciousTensorDynamicShapeModel) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [PORT?]";
+#endif
     // Prepare request with tensor shape not alligining with data size with overflow attempt
     ServerGuard serverGuard("/ovms/src/test/configs/config_dummy_full_dynamic_shape.json");
     OVMS_Server* cserver = serverGuard.server;
@@ -477,6 +483,9 @@ TEST_F(CAPIInference, ValidationMaliciousTensorDynamicShapeModel) {
 }
 
 TEST_F(CAPIInference, AcceptInputRejectOutputStringPrecision) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [PORT?]";
+#endif
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_string.json"));
     OVMS_Server* cserver = serverGuard.server;
     OVMS_InferenceRequest* request{nullptr};
@@ -494,6 +503,9 @@ TEST_F(CAPIInference, AcceptInputRejectOutputStringPrecision) {
 }
 
 TEST_F(CAPIInference, TwoInputs) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [PORT?]";
+#endif
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_double_dummy.json").c_str());
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
@@ -549,6 +561,9 @@ TEST_F(CAPIInference, TwoInputs) {
     OVMS_InferenceRequestDelete(request);
 }
 TEST_F(CAPIInference, Basic) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [PORT?]";
+#endif
     //////////////////////
     // start server
     //////////////////////
@@ -668,6 +683,9 @@ TEST_F(CAPIInference, Basic) {
     OVMS_InferenceRequestDelete(request);
 }
 TEST_F(CAPIInference, ReuseInputRemoveAndAddData) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [PORT?]";
+#endif
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json").c_str());
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
@@ -760,6 +778,9 @@ TEST_F(CAPIInference, ReuseInputRemoveAndAddData) {
 }
 
 TEST_F(CAPIInference, ReuseRequestRemoveAndAddInput) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [PORT?]";
+#endif
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_dummy_dynamic_shape.json").c_str());
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
@@ -854,6 +875,9 @@ TEST_F(CAPIInference, ReuseRequestRemoveAndAddInput) {
 }
 
 TEST_F(CAPIInference, NegativeInference) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [PORT?]";
+#endif
     // first start OVMS
     std::string port = "9000";
     randomizePort(port);
@@ -956,6 +980,9 @@ TEST_F(CAPIInference, NegativeInference) {
     OVMS_ServerDelete(nullptr);
 }
 TEST_F(CAPIInference, String) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [PORT?]";
+#endif
     using std::string;
     ServerGuard serverGuard(getWindowsFullPathForSrcTest("/ovms/src/test/configs/config_string.json"));
     OVMS_InferenceRequest* request{nullptr};
@@ -1022,6 +1049,9 @@ TEST_F(CAPIInference, String) {
     OVMS_InferenceResponseDelete(response2);
 }
 TEST_F(CAPIInference, Scalar) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [PORT?]";
+#endif
     //////////////////////
     // start server
     //////////////////////

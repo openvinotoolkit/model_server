@@ -742,7 +742,7 @@ const std::string& getWindowsFullPathForSrcTest(const std::string& linuxPath, bo
         if (logChange) {
             std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
         }
-        return return getPathFromMap(linuxPath, finalWinPath);
+        return getPathFromMap(linuxPath, finalWinPath);
     }
 #endif
     return getPathFromMap(linuxPath, linuxPath);
