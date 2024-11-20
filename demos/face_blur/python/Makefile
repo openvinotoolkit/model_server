@@ -18,6 +18,8 @@
 
 default: setup_repository
 
+BASE_OS?=ubuntu
+
 setup_repository:
 # Download face detection model
 	mkdir -p workspace/face-detection-retail-0004/1
@@ -25,9 +27,9 @@ setup_repository:
 	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin	-o workspace/face-detection-retail-0004/1/face-detection-retail-0004.bin
 # Build face_blur custom node
 	cd ../../../src/custom_nodes && \
-	make BASE_OS=ubuntu NODES=face_blur && \
+	make BASE_OS=${BASE_OS} NODES=face_blur && \
 	mkdir -p ../../demos/face_blur/python/workspace/lib/ && \
-	mv lib/ubuntu/libcustom_node_face_blur.so ../../demos/face_blur/python/workspace/lib/libcustom_node_face_blur.so
+	mv lib/${BASE_OS}/libcustom_node_face_blur.so ../../demos/face_blur/python/workspace/lib/libcustom_node_face_blur.so
 # Copy configuration file to workspace directory
 	cp config.json workspace/.
 
