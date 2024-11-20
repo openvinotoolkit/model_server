@@ -83,6 +83,7 @@ def check_dir(start_dir):
         '__pycache__',
         'add.xml',
         'azure_sdk.patch',
+        'cb.patch',
         'bazel-',
         'check_coverage.bat',
         'genhtml',
