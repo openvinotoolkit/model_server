@@ -253,7 +253,7 @@ TEST(CAPIStartTest, StartFlow) {
     // Cannot start due to configuration error
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 5555));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 5555));  // The same port
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getGenericFullPathForSrcTest("configs/config.json").c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getGenericFullPathForSrcTest("/ovms/src/test/configs/config.json").c_str()));
 
     // Expect fail
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings),
