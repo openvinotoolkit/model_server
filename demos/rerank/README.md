@@ -51,7 +51,7 @@ models
 ## Deployment 
 
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:2024.5 --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
 
 Readiness of the model can be reported with a simple curl command. 
