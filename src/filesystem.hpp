@@ -150,7 +150,7 @@ public:
 
         return StatusCode::OK;
     }
-#else if _WIN32
+#elif _WIN32
     static StatusCode createTempPath(std::string* local_path) {
         char temp_path[MAX_PATH] = {0};
         if (GetTempPath(MAX_PATH, temp_path) == 0) {
