@@ -105,7 +105,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         int result = _access(this->modelCacheDirectory.c_str(), 6);
 #endif
         if (result != 0) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}, error: {}", this->modelCacheDirectory, result);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);
         } else {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Model cache is enabled: {}", this->modelCacheDirectory);
         }
