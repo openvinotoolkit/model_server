@@ -34,6 +34,11 @@
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
 
+#include <fstream>
+
+#include <rapidjson/error/en.h>
+#include <rapidjson/istreamwrapper.h>
+
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "src/llm/llm_calculator.pb.h"
 #include "src/llm/llm_executor.hpp"
@@ -119,6 +124,30 @@ void LLMNodeResources::loadTextProcessor(LLMNodeResources& nodeResources, const 
     }
 }
 
+std::optional<uint> LLMNodeResources::parseMaxModelLength(std::string& modelsPath) {
+    std::string configPath = modelsPath + "/config.json";
+    std::optional<uint> maxModelLength;
+    if (std::filesystem::exists(configPath.c_str())) {
+        std::ifstream ifs(configPath);
+        if (!ifs.is_open()) {
+            return maxModelLength;
+        }
+        rapidjson::Document modelConfig;
+        rapidjson::IStreamWrapper isw(ifs);
+        rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
+        if (parseResult.Code()) {
+            return maxModelLength;
+        }
+        std::vector<std::string> maxLengthFields = {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window"};
+        for (auto field : maxLengthFields) {
+            if (modelConfig.HasMember(field.c_str()) && modelConfig[field.c_str()].IsUint()) {
+                maxModelLength = modelConfig[field.c_str()].GetUint();
+            }
+        }
+    }
+    return maxModelLength;
+}
+
 Status LLMNodeResources::initializeLLMNodeResources(LLMNodeResources& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
@@ -144,6 +173,7 @@ Status LLMNodeResources::initializeLLMNodeResources(LLMNodeResources& nodeResour
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} is not a directory. ", basePath);
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
+    nodeResources.maxModelLength = parseMaxModelLength(basePath);
 
     nodeResources.schedulerConfig = {
         .max_num_batched_tokens = nodeOptions.max_num_batched_tokens(),

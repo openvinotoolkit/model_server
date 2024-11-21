@@ -156,6 +156,7 @@ class OpenAIChatCompletionsHandler {
     std::chrono::time_point<std::chrono::system_clock> created;
     ov::genai::Tokenizer tokenizer;
     size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
+    std::optional<uint> maxModelLength;
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart();
@@ -180,7 +181,7 @@ public:
 
     void incrementProcessedTokens(int numTokens = 1);
 
-    ov::genai::GenerationConfig createGenerationConfig() const;
+    ov::genai::GenerationConfig createGenerationConfig(std::optional<uint> maxModelLength) const;
 
     absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit);
 
