@@ -145,11 +145,6 @@ Status LLMNodeResources::initializeLLMNodeResources(LLMNodeResources& nodeResour
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
 
-    // TODO: Remove along with block_size option in the proto in 2025.x release
-    if (nodeOptions.has_block_size()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Since 2024.5, block_size is selected automatically and setting it explicitly is ineffective. "
-                                                "Please remove it from the configuration as in 2025.0 it will cause error.");
-    }
     nodeResources.schedulerConfig = {
         .max_num_batched_tokens = nodeOptions.max_num_batched_tokens(),
         .cache_size = nodeOptions.cache_size(),
