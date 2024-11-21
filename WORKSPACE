@@ -108,19 +108,6 @@ git_repository(
 )
 
 ########################################################### Mediapipe
-http_archive(
-    name = "com_google_protobuf",
-    sha256 = "87407cd28e7a9c95d9f61a098a53cf031109d451a7763e7dd1253abf8b4df422",
-    strip_prefix = "protobuf-3.19.1",
-    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.19.1.tar.gz"],
-    patches = [
-        "@mediapipe//third_party:com_google_protobuf_fixes.diff"
-    ],
-    patch_args = [
-        "-p1",
-    ],
-)
-
 http_archive( # 1.60.0
     name = "com_github_grpc_grpc",
     urls = [
@@ -131,6 +118,9 @@ http_archive( # 1.60.0
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
+
+load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
+grpc_extra_deps()
 
 ################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
@@ -145,6 +135,19 @@ git_repository(
 #    name = "mediapipe",
 #    path = "C:\\git\\mediapipe",
 #)
+
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "87407cd28e7a9c95d9f61a098a53cf031109d451a7763e7dd1253abf8b4df422",
+    strip_prefix = "protobuf-3.19.1",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.19.1.tar.gz"],
+    patches = [
+        "@mediapipe//third_party:com_google_protobuf_fixes.diff"
+    ],
+    patch_args = [
+        "-p1",
+    ],
+)
 
 # Protobuf for Node dependencies
 http_archive(
