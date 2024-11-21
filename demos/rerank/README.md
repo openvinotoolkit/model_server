@@ -89,7 +89,7 @@ curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
 }
 ```
 
-Alternatively there could be used openai python client like in the example below:
+Alternatively there could be used cohere python client like in the example below:
 ```bash
 pip3 install cohere
 ```
