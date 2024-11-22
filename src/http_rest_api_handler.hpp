@@ -32,9 +32,9 @@
 #include "rest_parser.hpp"
 #include "status.hpp"
 
-namespace tensorflow::serving::net_http {
-class ServerRequestInterface;
-}
+// namespace tensorflow::serving::net_http {
+// class ServerRequestInterface;
+// }
 
 namespace ovms {
 class ServableMetricReporter;

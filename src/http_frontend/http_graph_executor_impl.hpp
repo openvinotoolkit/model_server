@@ -37,9 +37,9 @@
 
 #include "../drogon_http_async_writer_interface.hpp"
 
-namespace tensorflow::serving::net_http {
-class ServerRequestInterface;
-}
+// namespace tensorflow::serving::net_http {
+// class ServerRequestInterface;
+// }
 
 namespace ovms {
 
