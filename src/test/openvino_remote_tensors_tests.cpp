@@ -1175,7 +1175,7 @@ TEST_F(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     cl_command_queue_properties oclQueueProperties = false ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : CL_NONE;
     auto queue = cl::CommandQueue(openCLCppContext, device, oclQueueProperties);
     // create OpenCL buffers
-    std::vector<float> in(10, 42);
+    std::vector<float> in(10, INITIAL_VALUE);
     void* inputBufferData = in.data();
     std::vector<float> out(10, 13.1);
     void* outputBufferData = out.data();
@@ -1201,7 +1201,7 @@ TEST_F(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     cl::vector<cl::Event> readEvents;
     EXPECT_EQ(0, queue.enqueueReadBuffer(openCLCppOutputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, outputBufferData, &readEvents));
     readEvents[0].wait();
-    checkDummyOpenCLResponse(response, queue, 10 + 1, FLOAT_TOLERANCE);
+    checkDummyOpenCLResponse(response, queue, INITIAL_VALUE + 1, FLOAT_TOLERANCE);
 }
 static void callbackMarkingItWasUsedWith42AndUnblockingAndCheckingCAPIOpenCLCorrectness(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
 
