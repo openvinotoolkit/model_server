@@ -32,15 +32,12 @@
 #include <stdlib.h>
 
 // TODO: Write windows/linux specific status codes.
-#include "ovms_exit_codes.hpp"
 #ifdef __linux__
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sysexits.h>
 #elif _WIN32
 #include <ntstatus.h>
-#include <winsock2.h>
-#pragma comment(lib, "ws2_32.lib")
 #endif
 #include <unistd.h>
 
@@ -344,11 +341,19 @@ void Server::shutdownModules() {
 
 static int statusToExitCode(const Status& status) {
     if (status.ok()) {
-        return OVMS_EX_OK;
+#ifdef __linux__
+        return EX_OK;
+#elif _WIN32
+        return 0;
+#endif
     } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
-        return OVMS_EX_USAGE;
+#ifdef __linux__
+        return EX_USAGE;
+#elif _WIN32
+        return 3;
+#endif
     }
-    return OVMS_EX_FAILURE;
+    return EXIT_FAILURE;
 }
 
 // OVMS Start
@@ -357,44 +362,23 @@ int Server::start(int argc, char** argv) {
 #ifdef __linux__
     installSignalHandlers();
 #endif
-
-#ifdef _WIN32
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        SPDLOG_ERROR("Failed to initialize Winsock");
-        return OVMS_EX_FAILURE;
+    CLIParser parser;
+    ServerSettingsImpl serverSettings;
+    ModelsSettingsImpl modelsSettings;
+    parser.parse(argc, argv);
+    parser.prepare(&serverSettings, &modelsSettings);
+    Status ret = start(&serverSettings, &modelsSettings);
+    ModulesShutdownGuard shutdownGuard(*this);
+    if (!ret.ok()) {
+        return statusToExitCode(ret);
     }
-#endif
-    int result = OVMS_EX_OK;
-
-    try {
-        CLIParser parser;
-        ServerSettingsImpl serverSettings;
-        ModelsSettingsImpl modelsSettings;
-        parser.parse(argc, argv);
-        parser.prepare(&serverSettings, &modelsSettings);
-        Status ret = start(&serverSettings, &modelsSettings);
-        ModulesShutdownGuard shutdownGuard(*this);
-        if (!ret.ok()) {
-            return statusToExitCode(ret);
-        }
-        while (!shutdown_request) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-        if (shutdown_request == 2) {
-            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
-        }
-        SPDLOG_INFO("Shutting down");
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Exception; {}", e.what());
-        result = OVMS_EX_FAILURE;
-        return result;
+    while (!shutdown_request) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
-
-#ifdef _WIN32
-    WSACleanup();
-#endif
-
+    if (shutdown_request == 2) {
+        SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
+    }
+    SPDLOG_INFO("Shutting down");
     return EXIT_SUCCESS;
 }
 

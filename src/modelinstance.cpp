@@ -1319,7 +1319,7 @@ void ModelInstance::unloadModelComponents() {
 
 #ifdef __linux__
     malloc_trim(0);
-#else if _WIN32
+#elif _WIN32
     // TODO: windows for malloc_trim(0);
     malloc_trim_win();
 #endif
