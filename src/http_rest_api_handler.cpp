@@ -30,11 +30,11 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-#pragma GCC diagnostic pop
+// #pragma GCC diagnostic push
+// #pragma GCC diagnostic ignored "-Wall"
+// #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+// #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
+// #pragma GCC diagnostic pop
 
 #include "config.hpp"
 #include "dags/pipeline.hpp"

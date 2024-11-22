@@ -18,17 +18,17 @@
 #include <memory>
 #include <string>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
-#pragma GCC diagnostic pop
+// #pragma GCC diagnostic push
+// #pragma GCC diagnostic ignored "-Wall"
+// #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
+// #pragma GCC diagnostic pop
 
 #include "drogon_http_server.hpp"
 
 namespace ovms {
 class Server;
 
-using http_server = tensorflow::serving::net_http::HTTPServerInterface;
+// using http_server = tensorflow::serving::net_http::HTTPServerInterface;
 
 /**
  * @brief Creates a and starts Http Server
