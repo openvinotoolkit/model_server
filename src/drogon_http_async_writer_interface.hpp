@@ -15,23 +15,30 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
+#include <functional>
 #include <string>
-#include <utility>
-#include <vector>
-
-#include <rapidjson/document.h>
-
-#include "client_connection.hpp"
 
 namespace ovms {
 
-struct HttpPayload {
-    std::string uri;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::string body;                                 // always
-    std::shared_ptr<rapidjson::Document> parsedJson;  // pre-parsed body             = null
-    std::shared_ptr<ClientConnection> client;
+enum class HTTPStatus : int {
+    OK = 200,
+    INVALID = 403,
+};
+
+class DrogonHttpAsyncWriter {
+public:
+    // Used by V3 handler
+    virtual void OverwriteResponseHeader(const std::string& key, const std::string& value) = 0;
+    virtual void PartialReplyWithStatus(std::string message, HTTPStatus status) = 0;
+    virtual void PartialReplyBegin(std::function<void()> callback) = 0;
+    virtual void PartialReplyEnd() = 0;
+
+    // Used by graph executor impl
+    virtual void PartialReply(std::string message) = 0;
+
+    // Used by calculator via HttpClientConnection
+    virtual bool IsDisconnected() = 0;
+    virtual void RegisterDisconnectionCallback(std::function<void()> callback) = 0;
 };
 
 }  // namespace ovms

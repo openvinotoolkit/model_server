@@ -15,23 +15,39 @@
 //*****************************************************************************
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
-#include <utility>
-#include <vector>
 
-#include <rapidjson/document.h>
+#include <drogon/drogon.h>
 
-#include "client_connection.hpp"
+#include "drogon_http_async_writer_interface.hpp"
+#include "mediapipe/framework/port/threadpool.h"
 
 namespace ovms {
 
-struct HttpPayload {
-    std::string uri;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::string body;                                 // always
-    std::shared_ptr<rapidjson::Document> parsedJson;  // pre-parsed body             = null
-    std::shared_ptr<ClientConnection> client;
+class DrogonHttpServer {
+    std::unique_ptr<mediapipe::ThreadPool> pool_;
+    int port_;
+    std::string address_;
+    std::function<void(
+        const drogon::HttpRequestPtr&,
+        std::function<void(const drogon::HttpResponsePtr&)>&&)>
+        dispatcher_;
+
+public:
+    DrogonHttpServer(size_t num_workers, int port, const std::string& address);
+
+    void startAcceptingRequests();
+    void terminate();
+
+    mediapipe::ThreadPool& getPool();
+
+    void registerRequestDispatcher(
+        std::function<void(
+            const drogon::HttpRequestPtr&,
+            std::function<void(const drogon::HttpResponsePtr&)>&&)>
+            dispatcher);
 };
 
 }  // namespace ovms
