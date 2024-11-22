@@ -2734,7 +2734,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
                 models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
                 max_num_batched_tokens: 1024
                 cache_size: 1
-                block_size: 8
                 max_num_seqs: 95
                 dynamic_split_fuse: false
                 enable_prefix_caching: true
@@ -2762,9 +2761,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
 
     ASSERT_EQ(nodeResources.schedulerConfig.max_num_batched_tokens, 1024);
     ASSERT_EQ(nodeResources.schedulerConfig.cache_size, 1);
-    // We create graph with block_size set in graph config to make sure setting it does not result in error
-    // TODO: Remove below commented assertion as well as block_size from the testPbtxt when block_size is removed from options proto.
-    // ASSERT_EQ(nodeResources.schedulerConfig.block_size, 8);
     ASSERT_EQ(nodeResources.schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources.schedulerConfig.max_num_seqs, 95);
     ASSERT_EQ(nodeResources.schedulerConfig.enable_prefix_caching, true);
