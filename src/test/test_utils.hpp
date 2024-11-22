@@ -61,15 +61,20 @@
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
-const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
-const std::string dummy_fp64_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_fp64";
-const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model";
-const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
-const std::string passthrough_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough";
-const std::string passthrough_string_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough_string";
-const std::string dummy_saved_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model";
-const std::string dummy_tflite_location = std::filesystem::current_path().u8string() + "/src/test/dummy_tflite";
-const std::string scalar_model_location = std::filesystem::current_path().u8string() + "/src/test/scalar";
+const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
+
+const std::string dummy_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy", false);
+const std::string dummy_fp64_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_fp64", false);
+const std::string sum_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model", false);
+const std::string increment_1x3x4x5_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5", false);
+const std::string passthrough_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough", false);
+const std::string passthrough_string_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough_string", false);
+const std::string dummy_saved_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model", false);
+const std::string dummy_tflite_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_tflite", false);
+const std::string scalar_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/scalar", false);
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -747,7 +752,7 @@ protected:
            << "/"
            << std::string(test_info->name());
         const std::string directoryName = ss.str();
-        directoryPath = "/tmp/" + directoryName;
+        directoryPath = getGenericFullPathForTmp("/tmp/" + directoryName);
         std::filesystem::remove_all(directoryPath);
         std::filesystem::create_directories(directoryPath);
     }

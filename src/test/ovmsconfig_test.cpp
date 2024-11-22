@@ -224,13 +224,23 @@ TEST_F(OvmsConfigDeathTest, missingParams) {
 TEST_F(OvmsConfigDeathTest, negativePortMin) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "-1"};
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument ‘-1’");
+#ifdef __linux__
+    std::string error = "‘-1’";
+#elif _WIN32
+    std::string error = "";
+#endif
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument " + error);
 }
 
 TEST_F(OvmsConfigDeathTest, negativeRestPortMin) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "-1"};
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument ‘-1’ ");
+#ifdef __linux__
+    std::string error = "‘-1’";
+#elif _WIN32
+    std::string error = "";
+#endif
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument " + error);
 }
 
 TEST_F(OvmsConfigDeathTest, negativePortRange) {
@@ -339,14 +349,22 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--file_system_poll_wait_seconds", "2",
         "--sequence_cleaner_poll_wait_minutes", "7",
         "--custom_node_resources_cleaner_interval_seconds", "8",
+// TODO Windows: enable extensions and model cache
+#ifdef __linux__
         "--cpu_extension", "/ovms",
         "--cache_dir", "/tmp/model_cache",
         "--log_path", "/tmp/log_path",
+#endif
         "--log_level", "ERROR",
         "--grpc_max_threads", "100",
         "--grpc_memory_quota", "1000000",
         "--config_path", "/config.json"};
+
+#ifdef _WIN32
+    int arg_count = 29;
+#elif __linux__
     int arg_count = 35;
+#endif
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -360,9 +378,12 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
+// TODO Windows: enable extensions and model cache
+#ifdef __linux__
     EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     EXPECT_EQ(config.logPath(), "/tmp/log_path");
+#endif
     EXPECT_EQ(config.logLevel(), "ERROR");
     EXPECT_EQ(config.configPath(), "/config.json");
     EXPECT_EQ(config.grpcMaxThreads(), 100);
@@ -392,15 +413,17 @@ TEST(OvmsConfigTest, positiveSingle) {
         "7",
         "--custom_node_resources_cleaner_interval_seconds",
         "8",
+// TODO Windows: enable extensions and model cache
+#ifdef __linux__
         "--cpu_extension",
         "/ovms",
         "--cache_dir",
         "/tmp/model_cache",
         "--log_path",
         "/tmp/log_path",
+#endif
         "--log_level",
         "ERROR",
-
         "--model_name",
         "model",
         "--model_path",
@@ -428,7 +451,11 @@ TEST(OvmsConfigTest, positiveSingle) {
         "--max_sequence_number",
         "52",
     };
+#ifdef _WIN32
+    int arg_count = 49;
+#elif __linux__
     int arg_count = 55;
+#endif
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -442,9 +469,12 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
+// TODO Windows: enable extensions and model cache
+#ifdef __linux__
     EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     EXPECT_EQ(config.logPath(), "/tmp/log_path");
+#endif
     EXPECT_EQ(config.logLevel(), "ERROR");
 
     EXPECT_EQ(config.modelPath(), "/path");
