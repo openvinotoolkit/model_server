@@ -33,110 +33,12 @@ bazel_skylib_workspace()
 load("@bazel_skylib//lib:versions.bzl", "versions")
 versions.check(minimum_bazel_version = "6.0.0")
 
-# This version was used before update
-#http_archive(
-#    name = "rules_cc",
-#    sha256 = "35f2fb4ea0b3e61ad64a369de284e4fbbdcdba71836a5555abb5e194cf119509",
-#    strip_prefix = "rules_cc-624b5d59dfb45672d4239422fa1e3de1822ee110",
-#    url = "https://github.com/bazelbuild/rules_cc/archive/624b5d59dfb45672d4239422fa1e3de1822ee110.tar.gz",  #2019-08-15
-#)
-
-
-########################################################### Python support start
-
-load("@//third_party/python:python_repo.bzl", "python_repository")
-python_repository(name = "_python3-linux")
-
-new_local_repository(
-    name = "python3_linux",
-    path = "/usr",
-    build_file = "@_python3-linux//:BUILD"
-)
-
-http_archive(
-  name = "pybind11_bazel",
-  strip_prefix = "pybind11_bazel-b162c7c88a253e3f6b673df0c621aca27596ce6b",
-  urls = ["https://github.com/pybind/pybind11_bazel/archive/b162c7c88a253e3f6b673df0c621aca27596ce6b.zip"],
-)
-# We still require the pybind library.
-http_archive(
-  name = "pybind11",
-  build_file = "@pybind11_bazel//:pybind11.BUILD",
-  strip_prefix = "pybind11-2.11.1",
-  urls = ["https://github.com/pybind/pybind11/archive/v2.11.1.tar.gz"],
-)
-load("@pybind11_bazel//:python_configure.bzl", "python_configure")
-python_configure(name = "local_config_python")
-
-http_archive(
-    name = "rules_python",
-    sha256 = "29a801171f7ca190c543406f9894abf2d483c206e14d6acbd695623662320097",
-    strip_prefix = "rules_python-0.18.1",
-    url = "https://github.com/bazelbuild/rules_python/releases/download/0.18.1/rules_python-0.18.1.tar.gz",
-)
-
-load("@rules_python//python:repositories.bzl", "py_repositories")
-
-py_repositories()
-
-load("@rules_python//python:pip.bzl", "pip_parse")
-
-pip_parse(
-    name = "pip_deps",
-    requirements_lock = "//src/python/binding:tests/requirements.txt",
-)
-
-load("@pip_deps//:requirements.bzl", "install_deps")
-
-install_deps()
-
-########################################################### Python support end
-
-########################################################### Mediapipe
-
-################################### Official/forked mediapipe repository #########
-#### Will be used on feature release
-git_repository(
-    name = "mediapipe",
-    remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "104e9c6be122d2fd0a901f1eb82f00b5558ff8cd", # Update dependency (#98)
-)
-
-# DEV mediapipe 1 source - adjust local repository path for build
-#local_repository(
-#    name = "mediapipe",
-#    path = "C:\\git\\mediapipe",
-#)
-
-http_archive(
-    name = "com_google_protobuf",
-    sha256 = "540200ef1bb101cf3f86f257f7947035313e4e485eea1f7eed9bc99dd0e2cb68",
-    strip_prefix = "protobuf-3.25.0",
-    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.25.0.tar.gz"],
-    #patches = [
-    #    "@mediapipe//third_party:com_google_protobuf_fixes.diff"
-    #],
-    patch_args = [
-        "-p1",
-    ],
-)
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-protobuf_deps()
-
 http_archive(
     name = "zlib",
     build_file = "@mediapipe//third_party:zlib.BUILD",
     sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
     strip_prefix = "zlib-1.3.1",
     url = "http://zlib.net/fossils/zlib-1.3.1.tar.gz",
-)
-
-http_archive( # v1.68.0
-    name = "com_github_grpc_grpc",
-    urls = [
-        "https://github.com/grpc/grpc/archive/refs/tags/v1.68.0.tar.gz",
-    ],
-    strip_prefix = "grpc-1.68.0",
 )
 
 # RapidJSON
@@ -177,12 +79,6 @@ new_local_repository(
     build_file = "@//third_party/boringssl:BUILD",
 )
 
-load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-grpc_deps()
-
-load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
-grpc_extra_deps()
-
 # overriding GCS curl dependency to force using system provided openssl
 new_local_repository(
     name = "libcurl",
@@ -210,6 +106,34 @@ git_repository(
     #        allow all http methods                ^^^^^^^^^
     #                                        implements partial responses
 )
+
+########################################################### Mediapipe
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "87407cd28e7a9c95d9f61a098a53cf031109d451a7763e7dd1253abf8b4df422",
+    strip_prefix = "protobuf-3.19.1",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.19.1.tar.gz"],
+    patches = [
+        "@mediapipe//third_party:com_google_protobuf_fixes.diff"
+    ],
+    patch_args = [
+        "-p1",
+    ],
+)
+
+################################### Official/forked mediapipe repository #########
+#### Will be used on feature release
+git_repository(
+    name = "mediapipe",
+    remote = "https://github.com/openvinotoolkit/mediapipe",
+    commit = "104e9c6be122d2fd0a901f1eb82f00b5558ff8cd", # Update dependency (#98)
+)
+
+# DEV mediapipe 1 source - adjust local repository path for build
+#local_repository(
+#    name = "mediapipe",
+#    path = "C:\\git\\mediapipe",
+#)
 
 # Protobuf for Node dependencies
 http_archive(
@@ -314,6 +238,56 @@ new_local_repository(
 
 ########################################################### Mediapipe end
 
+########################################################### Python support start
+
+load("@//third_party/python:python_repo.bzl", "python_repository")
+python_repository(name = "_python3-linux")
+
+new_local_repository(
+    name = "python3_linux",
+    path = "/usr",
+    build_file = "@_python3-linux//:BUILD"
+)
+
+http_archive(
+  name = "pybind11_bazel",
+  strip_prefix = "pybind11_bazel-b162c7c88a253e3f6b673df0c621aca27596ce6b",
+  urls = ["https://github.com/pybind/pybind11_bazel/archive/b162c7c88a253e3f6b673df0c621aca27596ce6b.zip"],
+)
+# We still require the pybind library.
+http_archive(
+  name = "pybind11",
+  build_file = "@pybind11_bazel//:pybind11.BUILD",
+  strip_prefix = "pybind11-2.11.1",
+  urls = ["https://github.com/pybind/pybind11/archive/v2.11.1.tar.gz"],
+)
+load("@pybind11_bazel//:python_configure.bzl", "python_configure")
+python_configure(name = "local_config_python")
+
+http_archive(
+    name = "rules_python",
+    sha256 = "29a801171f7ca190c543406f9894abf2d483c206e14d6acbd695623662320097",
+    strip_prefix = "rules_python-0.18.1",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.18.1/rules_python-0.18.1.tar.gz",
+)
+
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
+
+load("@rules_python//python:pip.bzl", "pip_parse")
+
+pip_parse(
+    name = "pip_deps",
+    requirements_lock = "//src/python/binding:tests/requirements.txt",
+)
+
+load("@pip_deps//:requirements.bzl", "install_deps")
+
+install_deps()
+
+########################################################### Python support end
+
 # minitrace
 new_git_repository(
     name = "minitrace",
@@ -363,10 +337,10 @@ load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
 workspace()
 load("@org_tensorflow//tensorflow:workspace2.bzl", "workspace")
 workspace()
-#load("@org_tensorflow//tensorflow:workspace1.bzl", "workspace")
-#workspace()
-#load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
-#workspace()
+load("@org_tensorflow//tensorflow:workspace1.bzl", "workspace")
+workspace()
+load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
+workspace()
 
 # Initialize bazel package rules' external dependencies.
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
@@ -427,6 +401,16 @@ switched_rules_by_language(
 
 load("@com_github_googleapis_google_cloud_cpp_common//bazel:google_cloud_cpp_common_deps.bzl", "google_cloud_cpp_common_deps")
 google_cloud_cpp_common_deps()
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+grpc_deps()
+http_archive( # 1.60.0
+    name = "com_github_grpc_grpc",
+    urls = [
+        "https://github.com/grpc/grpc/archive/0ef13a7555dbaadd4633399242524129eef5e231.tar.gz",
+    ],
+    strip_prefix = "grpc-0ef13a7555dbaadd4633399242524129eef5e231",
+)
 
 # cxxopts
 http_archive(
