@@ -23,6 +23,8 @@
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #pragma GCC diagnostic pop
 
+#include "drogon_http_server.hpp"
+
 namespace ovms {
 class Server;
 
@@ -37,5 +39,8 @@ using http_server = tensorflow::serving::net_http::HTTPServerInterface;
  *  
  * @return std::unique_ptr<http_server> 
  */
-std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
+// std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
+
+std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
+
 }  // namespace ovms

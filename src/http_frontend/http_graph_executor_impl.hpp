@@ -35,6 +35,8 @@
 #include "../python/python_backend.hpp"
 #endif
 
+#include "../drogon_http_async_writer_interface.hpp"
+
 namespace tensorflow::serving::net_http {
 class ServerRequestInterface;
 }
@@ -43,7 +45,8 @@ namespace ovms {
 
 class PythonBackend;
 
-using HttpReaderWriter = tensorflow::serving::net_http::ServerRequestInterface;
+//using HttpReaderWriter = tensorflow::serving::net_http::ServerRequestInterface;
+using HttpReaderWriter = DrogonHttpAsyncWriter;
 
 // Deserialization of parameters inside KServe gRPC request
 // into mediapipe Packets.

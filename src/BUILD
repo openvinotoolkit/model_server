@@ -477,6 +477,7 @@ cc_library(
             "cpp_headers",
             "libovms_capi_servable_metadata",
             "libmodelconfigjsonparser",
+            "libdrogon_http_server",
             "libovmsmodelconfig",
             "libovmscapibuffer",
             "libovmscapi_utils",
@@ -618,6 +619,27 @@ cc_library(
         "libovmsclient_connection",
     ],
     visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "libdrogon_http_server",
+    srcs = [
+        "drogon_http_server.hpp",
+        "drogon_http_server.cpp",
+        "drogon_http_async_writer_interface.hpp",
+        "drogon_http_async_writer_impl.hpp",
+        "drogon_http_async_writer_impl.cpp",
+    ],
+    deps = [
+        "@mediapipe//mediapipe/framework/port:threadpool",
+        "libovmslogging",
+        "@drogon//:drogon_cmake"
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,

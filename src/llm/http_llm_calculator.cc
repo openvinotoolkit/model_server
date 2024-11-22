@@ -166,9 +166,9 @@ public:
                         finalPromptIds,
                         this->apiHandler->createGenerationConfig());
 
-                    this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
-                        genHandle->drop();
-                    });
+                    // this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
+                    //     genHandle->drop();
+                    // });
                 }
                 nodeResources->notifyExecutorThread();
                 this->streamer = std::make_shared<TextStreamer>(
@@ -179,6 +179,10 @@ public:
             RET_CHECK(this->apiHandler != nullptr);
             RET_CHECK(this->streamer != nullptr);
             RET_CHECK(this->client != nullptr);
+
+            if (this->client->isDisconnected()) {
+                return absl::CancelledError();
+            }
 
             // Unary scenario
             if (!this->apiHandler->isStream()) {

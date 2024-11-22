@@ -43,12 +43,14 @@
 #include "status.hpp"
 
 // TODO: Use the example when switching from net_http
-// #define DROGON
+#define DROGON
 #ifdef DROGON
 #include <chrono>
 #include <thread>
 
 #include <drogon/drogon.h>
+
+#include "drogon_http_async_writer_impl.hpp"
 #endif
 
 namespace ovms {
@@ -190,49 +192,167 @@ private:
     tensorflow::serving::ThreadPoolExecutor executor_;
 };
 
-class RestApiRequestDispatcher {
-public:
-    RestApiRequestDispatcher(ovms::Server& ovmsServer, int timeout_in_ms) {
-        handler_ = std::make_unique<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
-    }
+// class RestApiRequestDispatcher {
+// public:
+//     RestApiRequestDispatcher(ovms::Server& ovmsServer, int timeout_in_ms) {
+//         handler_ = std::make_unique<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
+//     }
 
-    net_http::RequestHandler dispatch(net_http::ServerRequestInterface* req) {
-        return [this](net_http::ServerRequestInterface* req) {
-            try {
-                this->processRequest(req);
-            } catch (...) {
-                SPDLOG_DEBUG("Exception caught in REST request handler");
-                req->ReplyWithStatus(net_http::HTTPStatusCode::ERROR);
-            }
-        };
-    }
+//     net_http::RequestHandler dispatch(net_http::ServerRequestInterface* req) {
+//         return [this](net_http::ServerRequestInterface* req) {
+//             try {
+//                 this->processRequest(req);
+//             } catch (...) {
+//                 SPDLOG_DEBUG("Exception caught in REST request handler");
+//                 req->ReplyWithStatus(net_http::HTTPStatusCode::ERROR);
+//             }
+//         };
+//     }
 
-private:
-    void parseHeaders(const net_http::ServerRequestInterface* req, std::vector<std::pair<std::string, std::string>>* headers) {
-        if (req->GetRequestHeader("Inference-Header-Content-Length").size() > 0) {
-            std::pair<std::string, std::string> header{"Inference-Header-Content-Length", req->GetRequestHeader("Inference-Header-Content-Length")};
-            headers->emplace_back(header);
-        }
-    }
-    void processRequest(net_http::ServerRequestInterface* req) {
-        SPDLOG_DEBUG("REST request {}", req->uri_path());
-        std::string body;
-        int64_t num_bytes = 0;
-        auto request_chunk = req->ReadRequestBytes(&num_bytes);
-        while (request_chunk != nullptr) {
-            body.append(std::string_view(request_chunk.get(), num_bytes));
-            request_chunk = req->ReadRequestBytes(&num_bytes);
-        }
+// private:
+//     void parseHeaders(const net_http::ServerRequestInterface* req, std::vector<std::pair<std::string, std::string>>* headers) {
+//         if (req->GetRequestHeader("Inference-Header-Content-Length").size() > 0) {
+//             std::pair<std::string, std::string> header{"Inference-Header-Content-Length", req->GetRequestHeader("Inference-Header-Content-Length")};
+//             headers->emplace_back(header);
+//         }
+//     }
+//     void processRequest(net_http::ServerRequestInterface* req) {
+//         SPDLOG_DEBUG("REST request {}", req->uri_path());
+//         std::string body;
+//         int64_t num_bytes = 0;
+//         auto request_chunk = req->ReadRequestBytes(&num_bytes);
+//         while (request_chunk != nullptr) {
+//             body.append(std::string_view(request_chunk.get(), num_bytes));
+//             request_chunk = req->ReadRequestBytes(&num_bytes);
+//         }
+
+//         std::vector<std::pair<std::string, std::string>> headers;
+//         parseHeaders(req, &headers);
+//         std::string output;
+//         SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
+//             req->http_method(),
+//             req->uri_path(),
+//             body.size());
+//         HttpResponseComponents responseComponents;
+//         SPDLOG_ERROR("Method: [{}] Path: [{}] Body:\n==========\n{}\n=============\n", req->http_method(), req->uri_path(), body);
+
+//         // log headers
+//         for (const auto& kv : headers) {
+//             SPDLOG_ERROR("Header: [{}] Value: [{}]", kv.first, kv.second);
+//         }
+
+//         const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, req);
+//         if (status == StatusCode::PARTIAL_END) {
+//             // No further messaging is required.
+//             // Partial responses were delivered via "req" object.
+//             return;
+//         }
+//         if (!status.ok() && output.empty()) {
+//             output.append("{\"error\": \"" + status.string() + "\"}");
+//         }
+//         const auto http_status = http(status);
+//         if (responseComponents.inferenceHeaderContentLength.has_value()) {
+//             std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
+//             headers.emplace_back(header);
+//         }
+//         for (const auto& kv : headers) {
+//             req->OverwriteResponseHeader(kv.first, kv.second);
+//         }
+//         req->WriteResponseString(output);
+//         if (http_status != net_http::HTTPStatusCode::OK && http_status != net_http::HTTPStatusCode::CREATED) {
+//             SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
+//                 req->http_method(),
+//                 req->uri_path(),
+//                 status.string());
+//         }
+//         req->ReplyWithStatus(http_status);
+//     }
+
+//     std::unique_ptr<HttpRestApiHandler> handler_;
+// };
+
+// Legacy
+// std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
+//     auto options = std::make_unique<net_http::ServerOptions>();
+//     options->AddPort(static_cast<uint32_t>(port));
+//     options->SetAddress(address);
+//     options->SetExecutor(std::make_unique<RequestExecutor>(num_threads));
+
+//     auto server = net_http::CreateEvHTTPServer(std::move(options));
+//     if (server == nullptr) {
+//         SPDLOG_ERROR("Failed to create http server");
+//         return nullptr;
+//     }
+
+//     std::shared_ptr<RestApiRequestDispatcher> dispatcher =
+//         std::make_shared<RestApiRequestDispatcher>(ovmsServer, timeout_in_ms);
+
+//     net_http::RequestHandlerOptions handler_options;
+//     server->RegisterRequestDispatcher(
+//         [dispatcher](net_http::ServerRequestInterface* req) {
+//             return dispatcher->dispatch(std::move(req));
+//         },
+//         handler_options);
+
+//     if (server->StartAcceptingRequests()) {
+//         SPDLOG_INFO("REST server listening on port {} with {} threads", port, num_threads);
+//         return server;
+//     }
+
+//     return nullptr;
+// }
+
+std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
+    auto server = std::make_unique<DrogonHttpServer>(num_threads, port, address);
+    auto drogonHandler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
+    auto& pool = server->getPool();
+    server->registerRequestDispatcher([drogonHandler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+        SPDLOG_DEBUG(" --------------- Received request: {}", req->path());
 
         std::vector<std::pair<std::string, std::string>> headers;
-        parseHeaders(req, &headers);
+
+        // TODO: filter headers, previous implementation accepted only Inference-Header-Content-Length
+        for (const std::pair<const std::string, const std::string>& header : req->headers()) {
+            auto header_key = header.first;
+            auto header_value = header.second;
+            headers.emplace_back(header_key, header_value);
+        }
+
+        SPDLOG_ERROR("Method: [{}] Path: [{}] Body:\n==========\n{}\n=============\n", drogon::to_string_view(req->getMethod()), req->getPath(),
+            req->getBody());
+
+        // log headers
+        for (const auto& kv : headers) {
+            SPDLOG_ERROR("Header: [{}] Value: [{}]", kv.first, kv.second);
+        }
+
         std::string output;
-        SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
-            req->http_method(),
-            req->uri_path(),
-            body.size());
+        (void)output;
+
         HttpResponseComponents responseComponents;
-        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, req);
+        (void)responseComponents;
+
+        net_http::ServerRequestInterface* reqInterface = nullptr;  // TODO
+        (void)reqInterface;
+        std::shared_ptr<DrogonHttpAsyncWriter> reqInterfaceNew = std::make_shared<DrogonHttpAsyncWriterImpl>(callback, pool);
+        (void)reqInterfaceNew;
+
+        /*
+
+        resp->setBody("Hello, World!");
+        callback(resp);
+        */
+
+        auto body = std::string(req->getBody());
+
+        const auto status = drogonHandler->processRequest(
+            drogon::to_string_view(req->getMethod()),
+            req->getPath(),
+            body,
+            &headers,
+            &output,
+            responseComponents,
+            reqInterfaceNew);
         if (status == StatusCode::PARTIAL_END) {
             // No further messaging is required.
             // Partial responses were delivered via "req" object.
@@ -248,83 +368,30 @@ private:
             output = buffer.GetString();
         }
         const auto http_status = http(status);
+        (void)http_status;
+        auto resp = drogon::HttpResponse::newHttpResponse();
+        resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
+
         if (responseComponents.inferenceHeaderContentLength.has_value()) {
             std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
             headers.emplace_back(header);
         }
         for (const auto& kv : headers) {
-            req->OverwriteResponseHeader(kv.first, kv.second);
+            SPDLOG_INFO("ADDING HEADER {} -> {}", kv.first, kv.second);
+            resp->addHeader(kv.first, kv.second);
         }
-        req->WriteResponseString(output);
-        if (http_status != net_http::HTTPStatusCode::OK && http_status != net_http::HTTPStatusCode::CREATED) {
-            SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
-                req->http_method(),
-                req->uri_path(),
-                status.string());
-        }
-        req->ReplyWithStatus(http_status);
-    }
-
-    std::unique_ptr<HttpRestApiHandler> handler_;
-};
-
-std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
-#ifdef DROGON
-    drogon::app().registerHandler("/stream", [](const drogon::HttpRequestPtr&, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-        SPDLOG_DEBUG("Received request for server side event");
-        auto resp = drogon::HttpResponse::newAsyncStreamResponse([](drogon::ResponseStreamPtr stream) {
-            std::thread([stream = std::shared_ptr<drogon::ResponseStream>{std::move(stream)}]() mutable {
-                for (int i = 0; i < 3; i++) {
-                    if (!stream->send("data: [hello] \n\n")) {
-                        break;
-                    }
-                    std::this_thread::sleep_for(std::chrono::seconds(2));
-                }
-                stream->close();
-            })
-                .detach();  // TODO: ?
-        });
-        resp->addHeader("Content-Type", "text/event-stream");
-        resp->addHeader("Cache-Control", "no-cache");
-        resp->addHeader("Connection", "keep-alive");
+        resp->setBody(output);
+        // if (http_status != net_http::HTTPStatusCode::OK && http_status != net_http::HTTPStatusCode::CREATED) {
+        //     SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
+        //         req->http_method(),
+        //         req->uri_path(),
+        //         status.string());
+        // }
+        //req->ReplyWithStatus(http_status);
         callback(resp);
     });
-    std::thread([address, port, num_threads]() {
-        drogon::app()
-            .setThreadNum(num_threads)
-            .setIdleConnectionTimeout(0)
-            .addListener(address, port + 1)  // TODO: replace net_http with drogon
-            .run();
-    })
-        .detach();  // TODO: ?
-#endif
-
-    auto options = std::make_unique<net_http::ServerOptions>();
-    options->AddPort(static_cast<uint32_t>(port));
-    options->SetAddress(address);
-    options->SetExecutor(std::make_unique<RequestExecutor>(num_threads));
-
-    auto server = net_http::CreateEvHTTPServer(std::move(options));
-    if (server == nullptr) {
-        SPDLOG_ERROR("Failed to create http server");
-        return nullptr;
-    }
-
-    std::shared_ptr<RestApiRequestDispatcher> dispatcher =
-        std::make_shared<RestApiRequestDispatcher>(ovmsServer, timeout_in_ms);
-
-    net_http::RequestHandlerOptions handler_options;
-    server->RegisterRequestDispatcher(
-        [dispatcher](net_http::ServerRequestInterface* req) {
-            return dispatcher->dispatch(std::move(req));
-        },
-        handler_options);
-
-    if (server->StartAcceptingRequests()) {
-        SPDLOG_INFO("REST server listening on port {} with {} threads", port, num_threads);
-        return server;
-    }
-
-    return nullptr;
+    server->startAcceptingRequests();
+    return server;
 }
+
 }  // namespace ovms

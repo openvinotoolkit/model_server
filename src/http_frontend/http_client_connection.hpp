@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
 #include <utility>
 
 #include "../client_connection.hpp"
@@ -25,13 +26,16 @@
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 #pragma GCC diagnostic pop
 
+#include "../drogon_http_async_writer_interface.hpp"
+
 namespace ovms {
 
 class HttpClientConnection : public ClientConnection {
-    tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter;
+    //tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter;
+    std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter;
 
 public:
-    HttpClientConnection(tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) :
+    HttpClientConnection(std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) :
         serverReaderWriter(serverReaderWriter) {}
 
     bool isDisconnected() const override {
