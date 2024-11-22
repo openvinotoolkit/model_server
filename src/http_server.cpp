@@ -27,14 +27,14 @@
 
 #include <spdlog/spdlog.h>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
-#include "tensorflow_serving/util/net_http/server/public/httpserver.h"
-#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-#include "tensorflow_serving/util/threadpool_executor.h"
-#pragma GCC diagnostic pop
+// #pragma GCC diagnostic push
+// #pragma GCC diagnostic ignored "-Wall"
+// #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+// #include "tensorflow_serving/util/net_http/public/response_code_enum.h"
+// #include "tensorflow_serving/util/net_http/server/public/httpserver.h"
+// #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
+// #include "tensorflow_serving/util/threadpool_executor.h"
+// #pragma GCC diagnostic pop
 
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -55,142 +55,142 @@
 
 namespace ovms {
 
-namespace net_http = tensorflow::serving::net_http;
+// namespace net_http = tensorflow::serving::net_http;
 
-static const net_http::HTTPStatusCode http(const ovms::Status& status) {
-#ifdef __linux__
-    const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap = {
-#elif _WIN32
-    const std::map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap = {
-#endif
-        {StatusCode::OK, net_http::HTTPStatusCode::OK},
-        {StatusCode::OK_RELOADED, net_http::HTTPStatusCode::CREATED},
-        {StatusCode::OK_NOT_RELOADED, net_http::HTTPStatusCode::OK},
+// static const net_http::HTTPStatusCode http(const ovms::Status& status) {
+// #ifdef __linux__
+//     const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap = {
+// #elif _WIN32
+//     const std::map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap = {
+// #endif
+//         {StatusCode::OK, net_http::HTTPStatusCode::OK},
+//         {StatusCode::OK_RELOADED, net_http::HTTPStatusCode::CREATED},
+//         {StatusCode::OK_NOT_RELOADED, net_http::HTTPStatusCode::OK},
 
-        // REST handler failure
-        {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_UNSUPPORTED_METHOD, net_http::HTTPStatusCode::NONE_ACC},
-        {StatusCode::REST_NOT_FOUND, net_http::HTTPStatusCode::NOT_FOUND},
+//         // REST handler failure
+//         {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_UNSUPPORTED_METHOD, net_http::HTTPStatusCode::NONE_ACC},
+//         {StatusCode::REST_NOT_FOUND, net_http::HTTPStatusCode::NOT_FOUND},
 
-        // REST parser failure
-        {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_PREDICT_UNKNOWN_ORDER, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_INSTANCES_NOT_AN_ARRAY, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_INPUT_NOT_PREALLOCATED, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::REST_NO_INSTANCES_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_COULD_NOT_PARSE_INSTANCE, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_INPUTS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_NO_INPUTS_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_COULD_NOT_PARSE_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_COULD_NOT_PARSE_OUTPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_COULD_NOT_PARSE_PARAMETERS, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_PROTO_TO_STRING_ERROR, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::REST_UNSUPPORTED_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::REST_BINARY_BUFFER_EXCEEDED, net_http::HTTPStatusCode::BAD_REQUEST},
+//         // REST parser failure
+//         {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_PREDICT_UNKNOWN_ORDER, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_INSTANCES_NOT_AN_ARRAY, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_INPUT_NOT_PREALLOCATED, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::REST_NO_INSTANCES_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_COULD_NOT_PARSE_INSTANCE, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_INPUTS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_NO_INPUTS_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_COULD_NOT_PARSE_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_COULD_NOT_PARSE_OUTPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_COULD_NOT_PARSE_PARAMETERS, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_PROTO_TO_STRING_ERROR, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::REST_UNSUPPORTED_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::REST_BINARY_BUFFER_EXCEEDED, net_http::HTTPStatusCode::BAD_REQUEST},
 
-        {StatusCode::PATH_INVALID, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::NO_MODEL_VERSION_AVAILABLE, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::MODEL_NOT_LOADED, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::PRECOND_FAILED},
-        {StatusCode::MODELINSTANCE_NOT_FOUND, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::SHAPE_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::RESHAPE_ERROR, net_http::HTTPStatusCode::PRECOND_FAILED},
-        {StatusCode::MODEL_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::MODEL_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::MODEL_VERSION_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::MEDIAPIPE_EXECUTION_ERROR, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::MEDIAPIPE_PRECONDITION_FAILED, net_http::HTTPStatusCode::PRECOND_FAILED},
-        {StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, net_http::HTTPStatusCode::PRECOND_FAILED},
-        {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::MODEL_VERSION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, net_http::HTTPStatusCode::NO_CONTENT},
-        {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
+//         {StatusCode::PATH_INVALID, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::NO_MODEL_VERSION_AVAILABLE, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::MODEL_NOT_LOADED, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::PRECOND_FAILED},
+//         {StatusCode::MODELINSTANCE_NOT_FOUND, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::SHAPE_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::RESHAPE_ERROR, net_http::HTTPStatusCode::PRECOND_FAILED},
+//         {StatusCode::MODEL_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+//         {StatusCode::MODEL_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+//         {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+//         {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+//         {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
+//         {StatusCode::MODEL_VERSION_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+//         {StatusCode::MEDIAPIPE_EXECUTION_ERROR, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::MEDIAPIPE_PRECONDITION_FAILED, net_http::HTTPStatusCode::PRECOND_FAILED},
+//         {StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, net_http::HTTPStatusCode::PRECOND_FAILED},
+//         {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
+//         {StatusCode::MODEL_VERSION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
+//         {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
+//         {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
+//         {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, net_http::HTTPStatusCode::NO_CONTENT},
+//         {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
 
-        // Sequence management
-        {StatusCode::SEQUENCE_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-        {StatusCode::SEQUENCE_ALREADY_EXISTS, net_http::HTTPStatusCode::CONFLICT},
-        {StatusCode::SEQUENCE_ID_NOT_PROVIDED, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::SEQUENCE_ID_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::SEQUENCE_TERMINATED, net_http::HTTPStatusCode::PRECOND_FAILED},
-        {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, net_http::HTTPStatusCode::SERVICE_UNAV},
+//         // Sequence management
+//         {StatusCode::SEQUENCE_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
+//         {StatusCode::SEQUENCE_ALREADY_EXISTS, net_http::HTTPStatusCode::CONFLICT},
+//         {StatusCode::SEQUENCE_ID_NOT_PROVIDED, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::SEQUENCE_ID_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::SEQUENCE_TERMINATED, net_http::HTTPStatusCode::PRECOND_FAILED},
+//         {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, net_http::HTTPStatusCode::SERVICE_UNAV},
 
-        // Predict request validation
-        {StatusCode::INVALID_NO_OF_INPUTS, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_MISSING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_UNEXPECTED_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_BATCH_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_BUFFER_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_DEVICE_ID, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_STRING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_INPUT_FORMAT, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_VALUE_COUNT, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_CONTENT_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::INVALID_MESSAGE_STRUCTURE, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::UNSUPPORTED_LAYOUT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         // Predict request validation
+//         {StatusCode::INVALID_NO_OF_INPUTS, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_MISSING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_UNEXPECTED_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_BATCH_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_BUFFER_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_DEVICE_ID, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_STRING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_INPUT_FORMAT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_VALUE_COUNT, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_CONTENT_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::INVALID_MESSAGE_STRUCTURE, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::UNSUPPORTED_LAYOUT, net_http::HTTPStatusCode::BAD_REQUEST},
 
-        // Deserialization
+//         // Deserialization
 
-        // Should never occur - ModelInstance::validate takes care of that
-        {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR, net_http::HTTPStatusCode::ERROR},
+//         // Should never occur - ModelInstance::validate takes care of that
+//         {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR, net_http::HTTPStatusCode::ERROR},
 
-        // Inference
-        {StatusCode::OV_INTERNAL_INFERENCE_ERROR, net_http::HTTPStatusCode::ERROR},
+//         // Inference
+//         {StatusCode::OV_INTERNAL_INFERENCE_ERROR, net_http::HTTPStatusCode::ERROR},
 
-        // Serialization
+//         // Serialization
 
-        // Should never occur - it should be validated during model loading
-        {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, net_http::HTTPStatusCode::ERROR},
-        {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, net_http::HTTPStatusCode::ERROR},
+//         // Should never occur - it should be validated during model loading
+//         {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, net_http::HTTPStatusCode::ERROR},
+//         {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, net_http::HTTPStatusCode::ERROR},
 
-        // GetModelStatus
-        {StatusCode::INTERNAL_ERROR, net_http::HTTPStatusCode::ERROR},
+//         // GetModelStatus
+//         {StatusCode::INTERNAL_ERROR, net_http::HTTPStatusCode::ERROR},
 
-        // Binary input
-        {StatusCode::INVALID_NO_OF_CHANNELS, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, net_http::HTTPStatusCode::BAD_REQUEST},
-        {StatusCode::STRING_VAL_EMPTY, net_http::HTTPStatusCode::BAD_REQUEST},
-    };
-    auto it = httpStatusMap.find(status.getCode());
-    if (it != httpStatusMap.end()) {
-        return it->second;
-    } else {
-        return net_http::HTTPStatusCode::ERROR;
-    }
-}
+//         // Binary input
+//         {StatusCode::INVALID_NO_OF_CHANNELS, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, net_http::HTTPStatusCode::BAD_REQUEST},
+//         {StatusCode::STRING_VAL_EMPTY, net_http::HTTPStatusCode::BAD_REQUEST},
+//     };
+//     auto it = httpStatusMap.find(status.getCode());
+//     if (it != httpStatusMap.end()) {
+//         return it->second;
+//     } else {
+//         return net_http::HTTPStatusCode::ERROR;
+//     }
+// }
 
-class RequestExecutor final : public net_http::EventExecutor {
-public:
-    explicit RequestExecutor(int num_threads) :
-        executor_(tensorflow::Env::Default(), "httprestserver", num_threads) {}
+// class RequestExecutor final : public net_http::EventExecutor {
+// public:
+//     explicit RequestExecutor(int num_threads) :
+//         executor_(tensorflow::Env::Default(), "httprestserver", num_threads) {}
 
-    void Schedule(std::function<void()> fn) override { executor_.Schedule(std::move(fn)); }
+//     void Schedule(std::function<void()> fn) override { executor_.Schedule(std::move(fn)); }
 
-private:
-    tensorflow::serving::ThreadPoolExecutor executor_;
-};
+// private:
+//     tensorflow::serving::ThreadPoolExecutor executor_;
+// };
 
 // class RestApiRequestDispatcher {
 // public:
@@ -332,8 +332,8 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         HttpResponseComponents responseComponents;
         (void)responseComponents;
 
-        net_http::ServerRequestInterface* reqInterface = nullptr;  // TODO
-        (void)reqInterface;
+        // net_http::ServerRequestInterface* reqInterface = nullptr;  // TODO
+        // (void)reqInterface;
         std::shared_ptr<DrogonHttpAsyncWriter> reqInterfaceNew = std::make_shared<DrogonHttpAsyncWriterImpl>(callback, pool);
         (void)reqInterfaceNew;
 
@@ -367,8 +367,8 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
             writer.EndObject();
             output = buffer.GetString();
         }
-        const auto http_status = http(status);
-        (void)http_status;
+        // const auto http_status = http(status);
+        // (void)http_status;
         auto resp = drogon::HttpResponse::newHttpResponse();
         resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
 

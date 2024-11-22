@@ -93,6 +93,8 @@ cc_library(
 )
 """,
 )
+
+# TODO: Remove?
 # Tensorflow serving
 git_repository(
     name = "tensorflow_serving",

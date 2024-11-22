@@ -625,18 +625,34 @@ cc_library(
 )
 
 cc_library(
+    name = "libdrogon_http_async_writer_interface",
+    hdrs = [
+        "drogon_http_async_writer_interface.hpp",
+    ],
+    deps = [
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+# HTTP Server implementation using Drogon
+# To use other library simply create new target and implementation of libdrogon_http_async_writer_interface
+cc_library(
     name = "libdrogon_http_server",
     srcs = [
         "drogon_http_server.hpp",
         "drogon_http_server.cpp",
-        "drogon_http_async_writer_interface.hpp",
         "drogon_http_async_writer_impl.hpp",
         "drogon_http_async_writer_impl.cpp",
     ],
     deps = [
+        "libdrogon_http_async_writer_interface",
+        "@drogon//:drogon_cmake",
         "@mediapipe//mediapipe/framework/port:threadpool",
         "libovmslogging",
-        "@drogon//:drogon_cmake"
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -661,7 +677,8 @@ cc_library(
     hdrs = ["http_frontend/http_client_connection.hpp"],
     deps = [
         "libovmsclient_connection",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "libdrogon_http_async_writer_interface",
+        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -907,6 +924,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+# Unused
 cc_library( # TODO split dependencies
     name = "libovmshttpservermodule",
     hdrs = [
@@ -923,14 +941,15 @@ cc_library( # TODO split dependencies
         "@com_github_jupp0r_prometheus_cpp//core",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "libovms_module",
         "libovmslogging",
         "libovmsprofiler",
         "libovmsstatus",
+        "libdrogon_http_server",
         "//src/kfserving_api:kfserving_api_cpp",
     ] + select({
             "//:not_disable_python": [

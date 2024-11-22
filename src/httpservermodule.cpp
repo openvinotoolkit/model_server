@@ -64,7 +64,7 @@ void HTTPServerModule::shutdown() {
     //server->Terminate();
     //server->WaitForTermination();
     drogonServer->terminate();
-    server.reset();
+    //server.reset();
     SPDLOG_INFO("Shutdown HTTP server");
     state = ModuleState::SHUTDOWN;
 }
