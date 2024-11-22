@@ -42,8 +42,8 @@ cc_library(
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "@drogon//:drogon_cmake",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
+        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        #"@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "//third_party:openvino",
         "//third_party:opencv",
@@ -85,7 +85,7 @@ cc_library(
             })
         + select({
                 "//conditions:default": [
-                    "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+                    #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
                 ],
                 "//src:windows" : [],
             }),
