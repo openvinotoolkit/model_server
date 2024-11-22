@@ -157,7 +157,7 @@ void HttpRestApiHandler::registerHandler(RequestType type, HandlerCallbackFn f) 
 }
 
 void HttpRestApiHandler::registerAll() {
-    registerHandler(Predict, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(Predict, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) -> Status {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
                 request_components.model_version_label, request_body, &response);
@@ -167,44 +167,44 @@ void HttpRestApiHandler::registerAll() {
         }
     });
 
-    registerHandler(GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) {
+    registerHandler(GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) {
         return processModelMetadataRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(GetModelStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) {
+    registerHandler(GetModelStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) {
         return processModelStatusRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(ConfigReload, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(ConfigReload, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) -> Status {
         return processConfigReloadRequest(response, this->modelManager);
     });
-    registerHandler(ConfigStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(ConfigStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) -> Status {
         return processConfigStatusRequest(response, this->modelManager);
     });
-    registerHandler(KFS_GetModelReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_GetModelReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) -> Status {
         return processModelReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) -> Status {
         return processModelMetadataKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_Infer, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_Infer, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) -> Status {
         return processInferKFSRequest(request_components, response, request_body, response_components.inferenceHeaderContentLength);
     });
-    registerHandler(KFS_GetServerReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_GetServerReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) -> Status {
         return processServerReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerLive, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_GetServerLive, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) -> Status {
         return processServerLiveKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_GetServerMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) -> Status {
         return processServerMetadataKFSRequest(request_components, response, request_body);
     });
 
-    registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) -> Status {
+    registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) -> Status {
         OVMS_PROFILE_FUNCTION();
         return processV3(uri, request_components, response, request_body, serverReaderWriter);
     });
-    registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) -> Status {
         return processMetrics(request_components, response, request_body);
     });
 }
@@ -432,7 +432,8 @@ Status HttpRestApiHandler::dispatchToProcessor(
     std::string* response,
     const HttpRequestComponents& request_components,
     HttpResponseComponents& response_components,
-    tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
+    std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) {
+    //tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
 
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
@@ -443,29 +444,29 @@ Status HttpRestApiHandler::dispatchToProcessor(
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
-Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
+Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
     HttpPayload request;
-    Document doc;
+    std::shared_ptr<Document> doc = std::make_shared<Document>();
     std::shared_ptr<MediapipeGraphExecutor> executor;
     bool streamFieldVal = false;
     {
         OVMS_PROFILE_SCOPE("rapidjson parse body");
-        doc.Parse(request_body.c_str());
+        doc->Parse(request_body.c_str());
     }
     {
         OVMS_PROFILE_SCOPE("rapidjson validate");
-        if (doc.HasParseError()) {
+        if (doc->HasParseError()) {
             return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
         }
 
-        if (!doc.IsObject()) {
+        if (!doc->IsObject()) {
             return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
         }
 
-        auto modelNameIt = doc.FindMember("model");
-        if (modelNameIt == doc.MemberEnd()) {
+        auto modelNameIt = doc->FindMember("model");
+        if (modelNameIt == doc->MemberEnd()) {
             return Status(StatusCode::JSON_INVALID, "model field is missing in JSON body");
         }
 
@@ -477,8 +478,8 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
         bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
         if (isTextGenerationEndpoint) {
-            auto streamIt = doc.FindMember("stream");
-            if (streamIt != doc.MemberEnd()) {
+            auto streamIt = doc->FindMember("stream");
+            if (streamIt != doc->MemberEnd()) {
                 if (!streamIt->value.IsBool()) {
                     return Status(StatusCode::JSON_INVALID, "stream field is not a boolean");
                 }
@@ -493,7 +494,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         // TODO: Possibly avoid making copy
         request.headers = request_components.headers;
         request.body = request_body;
-        request.parsedJson = &doc;
+        request.parsedJson = doc;
         request.uri = std::string(uri);
         request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
     }
@@ -504,18 +505,21 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
-        auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
-        if (!status.ok()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            writer.StartObject();
-            writer.String("error");
-            writer.String(status.string().c_str());
-            writer.EndObject();
-            serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
-        }
-        serverReaderWriter->PartialReplyEnd();
+        serverReaderWriter->PartialReplyBegin([executor, serverReaderWriter, request] {
+            ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
+            auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
+            if (!status.ok()) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                writer.StartObject();
+                writer.String("error");
+                writer.String(status.string().c_str());
+                writer.EndObject();
+                //serverReaderWriter->PartialReplyWithStatus("{\"error\": \"" + status.string() + "\"}", tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
+                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatus::INVALID);
+            }
+            serverReaderWriter->PartialReplyEnd();
+        });
         return StatusCode::PARTIAL_END;
     }
 #else
@@ -813,7 +817,8 @@ Status HttpRestApiHandler::processRequest(
     std::vector<std::pair<std::string, std::string>>* headers,
     std::string* response,
     HttpResponseComponents& responseComponents,
-    tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
+    std::shared_ptr<DrogonHttpAsyncWriter> serverReaderWriter) {
+    //tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
 
     std::smatch sm;
     std::string request_path_str(request_path);
