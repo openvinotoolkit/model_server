@@ -113,7 +113,7 @@ bazel-out\x64_windows-opt\bin\src\ovms.exe --help
 Open cmd.exe in c:\opt
 ```
 md test\model\1
-xcopy /r /s /e /Y C:\git\model_server\bazel-out\x64_windows-opt\bin\src\ovms.exe c:\opt\test
+xcopy /r /Y C:\git\model_server\bazel-out\x64_windows-opt\bin\src\ovms.exe c:\opt\test
 c:\opt\intel\openvino_2024\setupvars.bat
 C:\opt\opencv\build\setup_vars_opencv4.cmd
 cd c:\opt\test
