@@ -9,6 +9,7 @@ docker pull openvino/model_server:2024.5
 or if you want to include also the support for GPU execution:
 ```bash
 docker pull openvino/model_server:2024.5-gpu
+```
 
 ## Model preparation
 > **Note** Python 3.9 or higher is needed for that step
