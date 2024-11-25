@@ -22,13 +22,13 @@ def check_tests(){
 
     status = bat(returnStatus: true, script: 'grep "       OK " win_test.log')
     if (status != 0) {
-            error "Error: Windows run test failed ${status}. Check win_test.log for details."
+            error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test.log for details."
     }
 
-    // TODO Windows: Currently some tests fail change to no fail when fixed.
     status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test.log')
-    if (status != 0) {
-            error "Error: Windows run test failed ${status}. Check win_test.log for details."
+    if (status == 0) {
+            def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test.log | wc -l')
+            error "Error: Windows run test failed ${status}. ${failed} failed tests . Check win_test.log for details."
     } else {
         echo "Run test successful."
     }
