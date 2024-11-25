@@ -365,11 +365,11 @@ void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]
 }
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage("/ovms/src/test/binaryutils/rgb.jpg", filesize, image_bytes);
+    return readImage(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg"), filesize, image_bytes);
 }
 
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage("/ovms/src/test/binaryutils/rgb4x4.jpg", filesize, image_bytes);
+    return readImage(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), filesize, image_bytes);
 }
 
 void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) {
@@ -699,4 +699,91 @@ std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_
         newPrecision,
         src->getShape(),
         src->getLayout());
+}
+
+// Static map workaround for char* pointers as paths
+const std::string& getPathFromMap(std::string inputPath, std::string outputPath) {
+    static std::mutex mtx;
+    std::unique_lock<std::mutex> lock(mtx);
+    static std::unordered_map<std::string, std::string> inputMap = {};
+    auto it = inputMap.find(inputPath);
+    if (it != inputMap.end()) {
+        // element exists
+        return inputMap.at(inputPath);
+    } else {
+        // element does not exist
+        inputMap.emplace(inputPath, outputPath);
+        return inputMap.at(inputPath);
+    }
+}
+
+// Function changes linux docker container path /ovms/src/test/dummy to windows workspace "C:\git\model_server\src\test\dummy"
+// Depending on the ovms_test.exe location after build
+const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange) {
+#ifdef __linux__
+    return getPathFromMap(linuxPath, linuxPath);
+#elif _WIN32
+    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
+
+    // Example linuxPath "/ovms/src/test/dummy"
+    std::size_t postOvmsIndex = linuxPath.find("/src/test");
+    if (bazelOutIndex > 0 && postOvmsIndex > 0) {
+        // Setting winPath to "/src/test/dummy"
+        std::string winPath = linuxPath.substr(postOvmsIndex);
+        // Set basePath to "C:\git\model_server\"
+        std::string basePath = cwd.string().substr(0, bazelOutIndex);
+        // Combine "C:\git\model_server\" + "/src/test/dummy"
+        std::string finalWinPath = basePath + winPath;
+        // Change paths to linux separator for JSON parser compatyility in configs
+        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
+
+        if (logChange) {
+            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        }
+        return getPathFromMap(linuxPath, finalWinPath);
+    }
+#endif
+    return getPathFromMap(linuxPath, linuxPath);
+}
+
+const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange) {
+    return getGenericFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)), logChange);
+}
+
+// Function changes docker linux paths starting with /tmp: "/tmp/dummy" to windows C:\git\model_server\tmp\dummy
+const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange) {
+#ifdef __linux__
+    return getPathFromMap(linuxPath, linuxPath);
+#elif _WIN32
+    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
+    std::filesystem::path cwd = std::filesystem::current_path();
+    size_t bazelOutIndex = cwd.string().find("bazel-out");
+
+    // Example linuxPath "/tmp/dummy"
+    const std::string tmpString = "/tmp";
+    const size_t tmpStringSize = 4;
+
+    size_t postTmpIndex = linuxPath.find(tmpString) + tmpStringSize;
+    if (bazelOutIndex > 0 && postTmpIndex > 0) {
+        std::string winPath = linuxPath.substr(postTmpIndex);
+        // Set basePath to "C:\git\model_server\"
+        std::string basePath = cwd.string().substr(0, bazelOutIndex);
+        // Combine "C:\git\model_server\" + "tmp" "\dummy"
+        std::string finalWinPath = basePath + tmpString + winPath;
+        // Change paths to linux separator for JSON parser compatyility in configs
+        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
+
+        if (logChange) {
+            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        }
+        return getPathFromMap(linuxPath, finalWinPath);
+    }
+#endif
+    return getPathFromMap(linuxPath, linuxPath);
+}
+
+const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange) {
+    return getGenericFullPathForTmp(std::string(linuxPath, strlen(linuxPath)), logChange);
 }

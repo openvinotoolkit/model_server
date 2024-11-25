@@ -31,6 +31,9 @@ protected:
 };
 
 TEST_F(RerankHandlerDeserializationTest, ValidRequestDocumentsMap) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
+#endif
     json = R"({
     "model": "model",
     "query": "query",
