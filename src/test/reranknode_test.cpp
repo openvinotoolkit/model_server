@@ -37,7 +37,7 @@ public:
     ovms::HttpRequestComponents comp;
     const std::string endpointEmbeddings = "/v3/embeddings";
     const std::string endpointRerank = "/v3/rerank";
-    MockedServerRequestInterface writer;
+    std::shared_ptr<MockedServerRequestInterface> writer;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
 
@@ -54,6 +54,7 @@ public:
     }
 
     void SetUp() {
+        writer = std::make_shared<MockedServerRequestInterface>();
         ovms::Server& server = ovms::Server::instance();
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
@@ -101,7 +102,7 @@ TEST_F(RerankHttpTest, simplePositive) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -133,7 +134,7 @@ TEST_F(RerankHttpTest, positiveTopN) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -165,7 +166,7 @@ TEST_F(RerankHttpTest, positiveReturnDocuments) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -241,7 +242,7 @@ TEST_F(RerankWithParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
 
     std::string requestBody = buffer.GetString();
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 }
 
@@ -269,7 +270,7 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededByDocumentsBeforeChunki
     document.Accept(wr);
 
     std::string requestBody = buffer.GetString();
-    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     ASSERT_THAT(status.string(), ::testing::HasSubstr("Number of documents exceeds max_allowed_chunks"));  // 5 because we prepared 1 document more than allowed
 }
@@ -301,7 +302,7 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
     document.Accept(wr);
 
     std::string requestBody = buffer.GetString();
-    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     ASSERT_THAT(status.string(), ::testing::HasSubstr("Chunking failed: exceeding max_allowed_chunks after chunking limit: 4; actual: 8"));  // 8 because of the last document which was chunked to 5 documents, 3 + 5 = 8
 }
@@ -356,7 +357,7 @@ TEST_F(RerankWithInvalidParamsHttpTest, AnyRequestNegativeWithInvalidSetup) {
     document.Accept(wr);
 
     std::string requestBody = buffer.GetString();
-    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     ASSERT_THAT(status.string(), ::testing::HasSubstr("max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS"));
 }

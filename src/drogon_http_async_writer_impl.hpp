@@ -50,7 +50,7 @@ public:
     void PartialReply(std::string message) override;
 
     // Used by calculator via HttpClientConnection
-    bool IsDisconnected() override;
+    bool IsDisconnected() const override;
     void RegisterDisconnectionCallback(std::function<void()> callback) override;
 };
 

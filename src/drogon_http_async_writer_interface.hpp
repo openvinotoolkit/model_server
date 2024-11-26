@@ -37,7 +37,7 @@ public:
     virtual void PartialReply(std::string message) = 0;
 
     // Used by calculator via HttpClientConnection
-    virtual bool IsDisconnected() = 0;
+    virtual bool IsDisconnected() const = 0;
     virtual void RegisterDisconnectionCallback(std::function<void()> callback) = 0;
 };
 

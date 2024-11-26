@@ -69,7 +69,7 @@ void DrogonHttpAsyncWriterImpl::PartialReply(std::string message) {
         this->isDisconnected = true;
 }
 // Used by calculator via HttpClientConnection
-bool DrogonHttpAsyncWriterImpl::IsDisconnected() {
+bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {
     SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::IsDisconnected");
     return this->isDisconnected;
 }

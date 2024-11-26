@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "drogon_http_server.hpp"
 
+#include <mutex>
+#include <condition_variable>
 #include <drogon/drogon.h>
 
 #include "logging.hpp"
@@ -44,19 +46,29 @@ void DrogonHttpServer::startAcceptingRequests() {
         // //this->dispatcher_(req, std::move(callback));  // callback
     });
 
+    if (drogon::app().isRunning()) {
+        SPDLOG_DEBUG("Drogon is already running");
+        throw 42;
+    }
+
+    
     pool_->Schedule(
-        [this] {
-            SPDLOG_DEBUG("Running Drogon app");
+        [a = this->address_, p = this->port_] {
+            SPDLOG_DEBUG("Running Drogon app {} {} {}", drogon::app().isRunning(), a, p);
             drogon::app()
                 //.setThreadNum(this->pool_->num_threads())  // too many threads?
                 .setThreadNum(3)  // threads only for accepting requests, the workload is on separate thread pool anyway
                 .setIdleConnectionTimeout(0)
-                .addListener(this->address_, this->port_)
+                .addListener("0.0.0.0", 11932)
                 .run();
         });
 }
 
 void DrogonHttpServer::terminate() {
+    if (!drogon::app().isRunning()) {
+        SPDLOG_DEBUG("Drogon is not running");
+        throw 42;
+    }
     SPDLOG_DEBUG("///////////////////////////// DrogonHttpServer::terminate() start");
     drogon::app().quit();
     pool_.reset();  // waits for all worker threads to finish

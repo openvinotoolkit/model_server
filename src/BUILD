@@ -622,43 +622,6 @@ cc_library(
 )
 
 cc_library(
-    name = "libdrogon_http_async_writer_interface",
-    hdrs = [
-        "drogon_http_async_writer_interface.hpp",
-    ],
-    deps = [
-    ],
-    visibility = ["//visibility:public",],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
-)
-
-# HTTP Server implementation using Drogon
-# To use other library simply create new target and implementation of libdrogon_http_async_writer_interface
-cc_library(
-    name = "libdrogon_http_server",
-    srcs = [
-        "drogon_http_server.hpp",
-        "drogon_http_server.cpp",
-        "drogon_http_async_writer_impl.hpp",
-        "drogon_http_async_writer_impl.cpp",
-    ],
-    deps = [
-        "libdrogon_http_async_writer_interface",
-        "@drogon//:drogon_cmake",
-        "@mediapipe//mediapipe/framework/port:threadpool",
-        "libovmslogging",
-    ],
-    visibility = ["//visibility:public",],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
-)
-
-cc_library(
     name = "libovmsclient_connection",
     hdrs = ["client_connection.hpp"],
     deps = [
@@ -1691,6 +1654,43 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+cc_library(
+    name = "libdrogon_http_async_writer_interface",
+    hdrs = [
+        "drogon_http_async_writer_interface.hpp",
+    ],
+    deps = [
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+# HTTP Server implementation using Drogon
+# To use other library simply create new target and implementation of libdrogon_http_async_writer_interface
+cc_library(
+    name = "libdrogon_http_server",
+    srcs = [
+        "drogon_http_server.hpp",
+        "drogon_http_server.cpp",
+        "drogon_http_async_writer_impl.hpp",
+        "drogon_http_async_writer_impl.cpp",
+    ],
+    deps = [
+        "libdrogon_http_async_writer_interface",
+        "@drogon//:drogon_cmake",
+        "@mediapipe//mediapipe/framework/port:threadpool",
+        "libovmslogging",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
 cc_library( # TODO split further
     name = "cpp_headers",
     hdrs = [
@@ -1784,6 +1784,7 @@ cc_test(
         "test/ensemble_tests.cpp",
         "test/gather_node_test.cpp",
         "test/get_model_metadata_response_test.cpp",
+        "test/drogon_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/get_pipeline_metadata_response_test.cpp",

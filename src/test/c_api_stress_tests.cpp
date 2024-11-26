@@ -80,7 +80,7 @@ TEST_F(ConfigChangeStressTestSingleModel, ChangeToEmptyConfigInference) {
         allowedLoadResults);
 }
 
-TEST_F(ConfigChangeStressTestAsync, ChangeToEmptyConfigAsyncInference) {
+TEST_F(ConfigChangeStressTestAsync, XXChangeToEmptyConfigAsyncInference) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
         StatusCode::OK,
@@ -94,7 +94,7 @@ TEST_F(ConfigChangeStressTestAsync, ChangeToEmptyConfigAsyncInference) {
         allowedLoadResults);
 }
 
-TEST_F(ConfigChangeStressTestAsync, ChangeToWrongShapeAsyncInference) {
+TEST_F(ConfigChangeStressTestAsync, XXChangeToWrongShapeAsyncInference) {
     bool performWholeConfigReload = true;  // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {
         StatusCode::OK};  // we expect full continuity of operation
