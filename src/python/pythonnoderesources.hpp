@@ -49,7 +49,7 @@ public:
     PythonNodeResources(PythonBackend* pythonBackend);
     ~PythonNodeResources();
     static void createOutputTagNameMapping(std::shared_ptr<PythonNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig) {
-            for (auto& name : graphNodeConfig.output_stream()) {
+        for (auto& name : graphNodeConfig.output_stream()) {
             std::string delimiter = ":";
             std::string streamTag, streamName;
             size_t tagDelimiterPos = name.find(delimiter, 0);
@@ -74,7 +74,7 @@ public:
             nodeResources->outputsNameTagMapping.insert({streamName, streamTag});
         }
     }
-    
+
     static Status createPythonNodeResources(std::shared_ptr<PythonNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, PythonBackend* pythonBackend, std::string graphPath) {
         mediapipe::PythonExecutorCalculatorOptions nodeOptions;
         graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
@@ -131,7 +131,7 @@ public:
             return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
         }
         return StatusCode::OK;
-    };
+    }
 
     void finalize();
 

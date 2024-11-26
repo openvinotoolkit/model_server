@@ -86,7 +86,7 @@ def create_config_settings():
         match_any = ["//src:windows", "//:disable_mediapipe"]
     )
 
-    # is windows or python is disabled"(no llm depedency)
+    # is windows or python is disabled"(no llm dependency)
     selects.config_setting_group(
         name = "is_windows_or_python_is_disabled_no_llm",
         match_any = ["//src:windows", "//:disable_python"]
