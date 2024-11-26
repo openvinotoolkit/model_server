@@ -1582,13 +1582,8 @@ cc_library(
     deps = [
             "libovmslogging",
             "libovmsmodelversioning",
-            "libovmsstatus",]
-            + select({
-                "//conditions:default": [
-                    "@boringssl//:ssl",
-                ],
-                "//src:windows" : [],
-            }),
+            "libovmsstatus",
+            "@boringssl//:ssl"],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
