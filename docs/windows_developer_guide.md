@@ -56,6 +56,14 @@ nvm use 22.9.0
 npm cache clean --force
 ```
 
+# Building without proxy
+Please set the proxy setting for windows for in environment variables when building behind proxy
+```
+set HTTP_PROXY=
+set HTTPS_PROXY=
+```
+Also remove proxy from your .gitconfig
+
 If you want to compile without proxy, npm proxy needs to be reset:
 ```
 set http_proxy=
@@ -66,8 +74,20 @@ npm i --global yarn
 yarn
 ```
 
+## Building with proxy
+Please set the proxy setting for windows for in environment variables when building behind proxy
+```
+set HTTP_PROXY=my.proxy.com:123
+set HTTPS_PROXY=my.proxy.com:122
+```
+
 ## OPENCV install to - "C:\\opt\\opencv\\"
 https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe
+
+# OPENCV contrib for optflow
+cd c:\opt
+git clone https://github.com/opencv/opencv_contrib.git
+xcopy /s /r /Y opencv_contrib\modules\optflow\include\opencv2\* C:\opt\opencv\build\include\opencv2
 
 ## WGET
 https://eternallybored.org/misc/wget/1.21.4/64/wget.exe download to c:\opt
