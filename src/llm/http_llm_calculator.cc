@@ -127,11 +127,9 @@ public:
                     nodeResources->cbPipe->get_tokenizer());
                 this->client = payload.client;
 
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Resssssssssssssssssssssssss");
                 auto status = this->apiHandler->parseRequest(nodeResources->maxTokensLimit, nodeResources->bestOfLimit);
                 if (status != absl::OkStatus())
                     return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Resssssssssssssssssssssssss");
 
                 std::string finalPrompt = "";
                 bool encodeAddSpecialTokens = false;
@@ -152,14 +150,12 @@ public:
                 }
 
                 {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Resssssssssssssssssssssssss");
                     OVMS_PROFILE_SCOPE("pipeline->add_request()");
 
                     // Check if client disconnected while waiting in HTTP requests queue
                     if (this->client->isDisconnected()) {
                         return absl::CancelledError();
                     }
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Resssssssssssssssssssssssss");
 
                     ov::Tensor finalPromptIds = nodeResources->cbPipe->get_tokenizer().encode(finalPrompt, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
                     this->apiHandler->setPromptTokensUsage(finalPromptIds.get_size());

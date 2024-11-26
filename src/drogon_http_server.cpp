@@ -51,7 +51,6 @@ void DrogonHttpServer::startAcceptingRequests() {
         throw 42;
     }
 
-    
     pool_->Schedule(
         [a = this->address_, p = this->port_] {
             SPDLOG_DEBUG("Running Drogon app {} {} {}", drogon::app().isRunning(), a, p);
@@ -59,7 +58,7 @@ void DrogonHttpServer::startAcceptingRequests() {
                 //.setThreadNum(this->pool_->num_threads())  // too many threads?
                 .setThreadNum(3)  // threads only for accepting requests, the workload is on separate thread pool anyway
                 .setIdleConnectionTimeout(0)
-                .addListener("0.0.0.0", 11932)
+                .addListener(a, p)
                 .run();
         });
 }

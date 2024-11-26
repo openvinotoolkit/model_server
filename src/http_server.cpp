@@ -304,7 +304,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
     auto drogonHandler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
     auto& pool = server->getPool();
     server->registerRequestDispatcher([drogonHandler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-        SPDLOG_DEBUG(" --------------- Received request: {}", req->path());
+        //SPDLOG_DEBUG(" --------------- Received request: {}", req->path());
 
         std::vector<std::pair<std::string, std::string>> headers;
 
@@ -315,13 +315,13 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
             headers.emplace_back(header_key, header_value);
         }
 
-        SPDLOG_ERROR("Method: [{}] Path: [{}] Body:\n==========\n{}\n=============\n", drogon::to_string_view(req->getMethod()), req->getPath(),
-            req->getBody());
+        //SPDLOG_ERROR("Method: [{}] Path: [{}] Body:\n==========\n{}\n=============\n", drogon::to_string_view(req->getMethod()), req->getPath(),
+        //    req->getBody());
 
         // log headers
-        for (const auto& kv : headers) {
-            SPDLOG_ERROR("Header: [{}] Value: [{}]", kv.first, kv.second);
-        }
+        // for (const auto& kv : headers) {
+        //     SPDLOG_ERROR("Header: [{}] Value: [{}]", kv.first, kv.second);
+        // }
 
         std::string output;
         (void)output;
@@ -368,7 +368,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
             headers.emplace_back(header);
         }
         for (const auto& kv : headers) {
-            SPDLOG_INFO("ADDING HEADER {} -> {}", kv.first, kv.second);
+            //SPDLOG_INFO("ADDING HEADER {} -> {}", kv.first, kv.second);
             resp->addHeader(kv.first, kv.second);
         }
         resp->setBody(output);
