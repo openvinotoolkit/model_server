@@ -85,7 +85,7 @@ public:
     }
 
     static void SetUpTestSuite() {
-        std::string configPath = "/ovms/src/test/mediapipe/python/mediapipe_add_python_node.json";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/mediapipe_add_python_node.json");
         ovms::Server::instance().setShutdownRequest(0);
         std::string port = "9178";
         randomizePort(port);
