@@ -77,7 +77,7 @@ cc_library(
             })
          + select({
             "//:not_disable_python": [
-                "@python3_linux//:python3-lib",
+                "//third_party:python3",
                 "@pybind11//:pybind11_embed",
                 ],
             "//:disable_python": []

@@ -30,7 +30,7 @@ md c:\opt
 Visual Studio 2019 with C++ - https://visualstudio.microsoft.com/downloads/
 
 ## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
-Python3. (Python 3.11.9 is tested)
+Python3.9
 pip install numpy==1.23
 make sure you install numpy for the python version you pass as build argument
 make sure default "python --version" gets you 3.9
@@ -97,7 +97,7 @@ cd model_server
 
 ## COMPILE
 ```
-bazel build --config=windows --jobs=8 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 //src:ovms > compilation.log 2>&1
+bazel build --config=windows --jobs=8 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=1 //src:ovms > compilation.log 2>&1
 ```
 
 ## To run ovms in developer command line

@@ -120,7 +120,7 @@ cc_shared_library(
      + select({
         "//:not_disable_python": [
             "@pybind11//:__subpackages__",
-            "@python3_linux//:__subpackages__",
+            "//third_party:=python3//:__subpackages__",
             "@local_config_python//:__subpackages__",
             ],
         "//:disable_python": []
@@ -457,12 +457,15 @@ cc_library(
             "//:disable_mediapipe" : [],
         }),
         deps = select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
+            "//:is_windows_or_python_is_disabled_no_llm": [],
+            "//conditions:default" : [
                 # Jinja template processing is done in Python
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
-                "//src/llm:text_processor",
+                "//src/llm:text_processor",],
+            }) + select({
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
             ],
             "//:disable_python": []
         }) + select({
@@ -681,6 +684,15 @@ cc_binary(
 
 cc_binary(
     name = "lib_node_mock.so",
+    srcs = [
+	    "test/custom_nodes/node_mock.c",
+	    "custom_node_interface.h",
+    ],
+    linkshared = 1,
+)
+
+cc_binary(
+    name = "lib_node_mock.dll",
     srcs = [
 	    "test/custom_nodes/node_mock.c",
 	    "custom_node_interface.h",
@@ -1832,12 +1844,15 @@ cc_test(
             ],
             "//:disable_mediapipe" : [],
         }) + select({
+            "//:is_windows_or_python_is_disabled_no_llm": [],
+            "//conditions:default" : [
+                # LLM logic uses Python for processing Jinja templates
+                "test/llmnode_test.cpp",
+                "test/llmtemplate_test.cpp",],
+            }) + select({
             "//:not_disable_python": [
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
-                # LLM logic uses Python for processing Jinja templates
-                "test/llmnode_test.cpp",
-                "test/llmtemplate_test.cpp",
                 "test/pythonnode_test.cpp",
                 "test/text_streamer_test.cpp",
             ],

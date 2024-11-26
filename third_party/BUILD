@@ -34,6 +34,15 @@ alias(
 )
 
 alias(
+    name = "python3",
+    actual = select({
+        "//src:windows": "@python3_windows//:python3-lib",
+        "//conditions:default": "@python3_linux//:python3-lib",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+alias(
     name = "boost",
     actual = select({
         "//src:windows": "@windows_boost//:boost",
@@ -43,9 +52,9 @@ alias(
 )
 
 alias(
-    name = "libevent",
+    name = "com_github_libevent_libevent",
     actual = select({
-        "//src:windows": "@com_github_libevent_libevent//:libevent",
+        "//src:windows": "@com_github_libevent_libevent_linux//:libevent",
         "//conditions:default": "@com_github_libevent_libevent_windows//:libevent",
     }),
     visibility = ["//visibility:public"],

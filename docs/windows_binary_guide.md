@@ -32,7 +32,7 @@ md c:\opt
 Visual Studio 2019 with C++ - https://visualstudio.microsoft.com/downloads/
 
 ## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
-Python3. (Python 3.11.9 is tested)
+Python3.9
 ```
 pip install numpy==1.23
 ```
