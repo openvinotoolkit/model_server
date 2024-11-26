@@ -117,7 +117,7 @@ cd model_server
 
 ## COMPILE
 ```
-bazel build --config=windows --jobs=8 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=1 //src:ovms > compilation.log 2>&1
+bazel build --config=windows --jobs=8 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 //src:ovms > compilation.log 2>&1
 ```
 
 ## To run ovms in developer command line
