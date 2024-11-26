@@ -22,6 +22,12 @@ Here, the original Pytorch LLM model and the tokenizer will be converted to IR f
 That ensures faster initialization time, better performance and lower memory consumption.
 LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
+Clone model server repository:
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+```
+
 Install python dependencies for the conversion script:
 ```bash
 pip3 install -U -r demos/common/export_models/requirements.txt
