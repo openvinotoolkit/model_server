@@ -692,15 +692,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "lib_node_mock.dll",
-    srcs = [
-	    "test/custom_nodes/node_mock.c",
-	    "custom_node_interface.h",
-    ],
-    linkshared = 1,
-)
-
-cc_binary(
     name = "lib_node_missing_implementation.so",
     srcs = [
 	    "test/custom_nodes/node_missing_implementation.c",
@@ -1848,13 +1839,13 @@ cc_test(
             "//conditions:default" : [
                 # LLM logic uses Python for processing Jinja templates
                 "test/llmnode_test.cpp",
-                "test/llmtemplate_test.cpp",],
+                "test/llmtemplate_test.cpp",
+                "test/text_streamer_test.cpp",],
             }) + select({
             "//:not_disable_python": [
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
                 "test/pythonnode_test.cpp",
-                "test/text_streamer_test.cpp",
             ],
             "//:disable_python" : [],
         }),
@@ -2000,12 +1991,11 @@ cc_test(
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
             "//:disable_mediapipe" : [],
-        }) +select({
-            "//:not_disable_python": [
-                "//src/llm:llmnoderesources",
-            ],
-            "//:disable_python": []
-        }),
+        }) + select({
+            "//:is_windows_or_python_is_disabled_no_llm": [],
+            "//conditions:default" : [
+                "//src/llm:llmnoderesources",],
+            }),
     copts = COPTS_TESTS,
 )
 

@@ -28,7 +28,6 @@
 #include "../config.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
-#include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 // TODO: Enable on windows
@@ -1022,8 +1021,8 @@ static std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>> pre
     auto fsHandlerPath = std::filesystem::path(handlerPath);
     fsHandlerPath.replace_extension();
 
-    std::string parentPath = fsHandlerPath.parent_path();
-    std::string filename = fsHandlerPath.filename();
+    std::string parentPath = fsHandlerPath.parent_path().string();
+    std::string filename = fsHandlerPath.filename().string();
 
     py::gil_scoped_acquire acquire;
     py::module_ sys = py::module_::import("sys");
