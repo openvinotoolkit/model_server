@@ -159,6 +159,9 @@ public:
         // can be still processing those. Closing packet sources triggers Calculator::Close() on nodes that do not expect
         // new packets
         auto status = graph.WaitUntilIdle();
+        if (!status.ok()) {
+            INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
+        }
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
 
         MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
@@ -186,6 +189,9 @@ public:
             SPDLOG_TRACE("Received all: {} packets for: {}", receivedOutputs, outputStreamName);
         }
         status = graph.WaitUntilDone();
+        if (!status.ok()) {
+            INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
+        }
         MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
         if (outputPollers.size() != outputPollersWithReceivedPacket.size()) {
             SPDLOG_DEBUG("Mediapipe failed to execute. Failed to receive all output packets");
@@ -302,6 +308,7 @@ public:
                 INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, isSuccess));
 
                 if (graph.HasError()) {
+                    INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
                     SPDLOG_DEBUG("Graph {}: encountered an error, stopping the execution", this->name);
                     break;
                 }
@@ -318,6 +325,9 @@ public:
                 OVMS_PROFILE_SCOPE("MediaPipe waiting until done");
                 SPDLOG_DEBUG("Graph {}: Closed all packet sources. Waiting until done...", this->name);
                 auto status = graph.WaitUntilDone();
+                if (!status.ok()) {
+                    INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
+                }
                 MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
                 SPDLOG_DEBUG("Graph {}: Done execution", this->name);
             }
