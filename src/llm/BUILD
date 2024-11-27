@@ -50,6 +50,7 @@ cc_library(
         ":llm_engine",
         ":llmnoderesources",
         "//src:httppayload",
+        "//src:libhttpclientconnection",
         ":text_processor",
         ":openai_completions_api_handler"
     ],

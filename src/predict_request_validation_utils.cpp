@@ -74,17 +74,20 @@ Status validateCapiTensorContent(const InferenceTensor& tensor, ovms::Precision 
         std::stringstream ss;
         ss << "Servable: " << servableName
            << "; version: " << servableVersion
-           << "; is missing buffer for tensor: " << bufferId;
+           << "; is missing buffer for tensor: " << tensorName;
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
         return Status(StatusCode::NONEXISTENT_BUFFER, details);
     }
-    size_t expectedValueCount = 1;
-    for (size_t i = 0; i < tensor.getShape().size(); i++) {
-        expectedValueCount *= tensor.getShape()[i];
-    }
+
     size_t elementSize = (expectedPrecision == Precision::STRING) ? sizeof(std::string) : ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
-    size_t expectedContentSize = expectedValueCount * elementSize;
+    size_t expectedContentSize;
+
+    if (computeExpectedBufferSizeReturnFalseIfOverflow<ovms::dimension_value_t>(tensor.getShape(), elementSize, expectedContentSize) == false) {
+        SPDLOG_DEBUG("[servable name: {} version: {}] Expected content size overflow for tensor - {}", servableName, servableVersion, tensorName);
+        return StatusCode::INVALID_SHAPE;
+    }
+
     if (expectedContentSize != buffer->getByteSize()) {
         std::stringstream ss;
         ss << "Expected: " << expectedContentSize << " bytes; Actual: " << buffer->getByteSize() << " bytes;";
@@ -360,7 +363,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, InputIterator, Sha
         code = StatusCode::INVALID_MISSING_INPUT;
     }
     if (choice == ValidationChoice::OUTPUT) {
-        ss << "Required output: ";
+        ss << "Optional output: ";
         code = StatusCode::INVALID_MISSING_OUTPUT;
     }
     ss << name;
@@ -719,7 +722,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
 
     if (buffer->getBufferType() == OVMS_BUFFERTYPE_CPU && buffer->getDeviceId() != std::nullopt && buffer->getDeviceId() != 0) {
         std::stringstream ss;
-        ss << "Required input ";
+        ss << "Required input " << getCurrentlyValidatedTensorName();
         const std::string details = ss.str();
         SPDLOG_DEBUG("[servable name: {} version: {}] Has invalid device id for buffer, input with specific name - {}", servableName, servableVersion, details);
         return Status(StatusCode::INVALID_DEVICE_ID, details);

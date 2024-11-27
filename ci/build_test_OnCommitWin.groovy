@@ -6,35 +6,23 @@ pipeline {
         label 'win_ovms'
     }
     stages {
-        stage ("Clean") {
+        stage ("Build and test windows") {
             steps {
-                script{
-                    def output1 = bat(returnStdout: true, script: 'clean_windows.bat')
+                script {
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        try {
+                          windows.clean()
+                          windows.build_and_test()
+                          windows.check_tests()
+                        } finally {
+                          windows.archive_artifacts()
+                        }
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
                 }
             }
-        }
-        // Build windows
-        stage("Build windows") {
-            steps {
-                script{
-                  def status = bat(returnStatus: true, script: 'build_windows.bat')
-                  status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms.exe build.log | grep "Build completed successfully"')
-                  if (status != 0) {
-                          error "Error: Build failed ${status}"
-                      } else {
-                          echo "Build successful"
-                      }                      
-                  }
-            }
-        }
-    }
-    //Post build steps
-    post {
-        always {
-            // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
-            archiveArtifacts allowEmptyArchive: true, artifacts: "bazel-bin\\src\\ovms.exe"
-            archiveArtifacts allowEmptyArchive: true, artifacts: "environment.log"
-            archiveArtifacts allowEmptyArchive: true, artifacts: "build.log"
         }
     }
 }

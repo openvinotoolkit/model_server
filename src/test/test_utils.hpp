@@ -42,7 +42,6 @@
 #include "../config.hpp"
 #include "../dags/node_library.hpp"
 #include "../execution_context.hpp"
-#include "../http_server.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
@@ -62,15 +61,20 @@
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
-const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
-const std::string dummy_fp64_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_fp64";
-const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model";
-const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
-const std::string passthrough_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough";
-const std::string passthrough_string_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough_string";
-const std::string dummy_saved_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model";
-const std::string dummy_tflite_location = std::filesystem::current_path().u8string() + "/src/test/dummy_tflite";
-const std::string scalar_model_location = std::filesystem::current_path().u8string() + "/src/test/scalar";
+const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
+
+const std::string dummy_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy", false);
+const std::string dummy_fp64_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_fp64", false);
+const std::string sum_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model", false);
+const std::string increment_1x3x4x5_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5", false);
+const std::string passthrough_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough", false);
+const std::string passthrough_string_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough_string", false);
+const std::string dummy_saved_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model", false);
+const std::string dummy_tflite_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_tflite", false);
+const std::string scalar_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/scalar", false);
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -748,7 +752,7 @@ protected:
            << "/"
            << std::string(test_info->name());
         const std::string directoryName = ss.str();
-        directoryPath = "/tmp/" + directoryName;
+        directoryPath = getGenericFullPathForTmp("/tmp/" + directoryName);
         std::filesystem::remove_all(directoryPath);
         std::filesystem::create_directories(directoryPath);
     }
@@ -758,30 +762,6 @@ protected:
     }
 
     std::string directoryPath;
-};
-
-class MockedServerRequestInterface final : public tensorflow::serving::net_http::ServerRequestInterface {
-public:
-    MOCK_METHOD(absl::string_view, uri_path, (), (const, override));
-    MOCK_METHOD(absl::string_view, http_method, (), (const, override));
-    MOCK_METHOD(void, WriteResponseBytes, (const char*, int64_t), (override));
-    MOCK_METHOD(void, WriteResponseString, (absl::string_view), (override));
-    MOCK_METHOD((std::unique_ptr<char[], tensorflow::serving::net_http::ServerRequestInterface::BlockDeleter>), ReadRequestBytes, (int64_t*), (override));
-    MOCK_METHOD(absl::string_view, GetRequestHeader, (absl::string_view), (const, override));
-    MOCK_METHOD((std::vector<absl::string_view>), request_headers, (), (const, override));
-    MOCK_METHOD(void, OverwriteResponseHeader, (absl::string_view, absl::string_view), (override));
-    MOCK_METHOD(void, AppendResponseHeader, (absl::string_view, absl::string_view), (override));
-    MOCK_METHOD(void, PartialReplyWithStatus, (std::string, tensorflow::serving::net_http::HTTPStatusCode), (override));
-    MOCK_METHOD(void, PartialReply, (std::string), (override));
-    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::CallbackStatus, PartialReplyWithFlushCallback, ((std::function<void()>)), (override));
-    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, response_body_status, (), (override));
-    MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, request_body_status, (), (override));
-    MOCK_METHOD(void, ReplyWithStatus, (tensorflow::serving::net_http::HTTPStatusCode), (override));
-    MOCK_METHOD(void, Reply, (), (override));
-    MOCK_METHOD(void, Abort, (), (override));
-    MOCK_METHOD(void, PartialReplyEnd, (), (override));
-    MOCK_METHOD(bool, IsDisconnected, (), (const override));
-    MOCK_METHOD(void, RegisterDisconnectionCallback, (std::function<void()>), (override));
 };
 
 /**

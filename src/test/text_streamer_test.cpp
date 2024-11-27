@@ -41,8 +41,8 @@ public:
     static void SetUpTestSuite() {
         py::initialize_interpreter();
         ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-        ASSERT_EQ(ovms::LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), ovms::StatusCode::OK);
-        tokenizer = std::make_shared<ov::genai::Tokenizer>("/ovms/src/test/llm_testing/facebook/opt-125m");
+        ASSERT_EQ(ovms::LLMNodeResources::initializeLLMNodeResources(*nodeResources, config.node(0), ""), ovms::StatusCode::OK);
+        tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"));
         streamer = std::make_shared<ovms::TextStreamer>(tokenizer);
     }
     static void TearDownTestSuite() {
@@ -58,7 +58,8 @@ public:
 };
 
 TEST_F(TextStreamerTest, noValueReturnedStringWithoutNewLineOrSpace) {
-    auto tokens = tokenizer->encode("TEST").input_ids;
+    std::string testPrompt = "TEST";
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
@@ -71,7 +72,7 @@ TEST_F(TextStreamerTest, noValueReturnedStringWithoutNewLineOrSpace) {
 
 TEST_F(TextStreamerTest, putReturnsValue) {
     std::string testPrompt = "TEST\n";
-    auto tokens = tokenizer->encode(testPrompt).input_ids;
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
@@ -87,7 +88,7 @@ TEST_F(TextStreamerTest, putReturnsValue) {
 
 TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
     std::string testPrompt1 = "TEST";
-    auto tokens = tokenizer->encode(testPrompt1).input_ids;
+    auto tokens = tokenizer->encode(testPrompt1, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
@@ -95,7 +96,7 @@ TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
         EXPECT_FALSE(partialResponseText.has_value());
     }
     std::string testPrompt2 = "TEST\n";
-    tokens = tokenizer->encode(testPrompt2).input_ids;
+    tokens = tokenizer->encode(testPrompt2, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
@@ -111,7 +112,7 @@ TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
 
 TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
     std::string testPrompt = "TEST\n";
-    auto tokens = tokenizer->encode(testPrompt).input_ids;
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
@@ -123,7 +124,7 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
             EXPECT_EQ(partialResponseText.value().compare(testPrompt), 0);
         }
     }
-    tokens = tokenizer->encode(testPrompt).input_ids;
+    tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
         std::optional<std::string> partialResponseText = this->streamer->put(singleTokenVector);
@@ -138,7 +139,7 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
 
 TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
     std::string testPrompt = "TEST TEST TEST TEST";
-    auto tokens = tokenizer->encode(testPrompt).input_ids;
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> expectedTokens = {565, 4923, 41759, 41759, 41759};
     assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
@@ -160,7 +161,7 @@ TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
 
 TEST_F(TextStreamerTest, putReturnsValueTextWithNewLineInTheMiddle) {
     std::string testPrompt = "TEST\nTEST";
-    auto tokens = tokenizer->encode(testPrompt).input_ids;
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> expectedTokens = {565, 4923, 50118, 565, 4923};
     assertTokensValues(tokens, expectedTokens);
     std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[0]};
@@ -184,7 +185,8 @@ TEST_F(TextStreamerTest, putReturnsValueTextWithNewLineInTheMiddle) {
 }
 
 TEST_F(TextStreamerTest, putReturnsValueAfterEndCalled) {
-    auto tokens = tokenizer->encode("TEST").input_ids;
+    std::string testPrompt = "TEST";
+    auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};
@@ -194,8 +196,8 @@ TEST_F(TextStreamerTest, putReturnsValueAfterEndCalled) {
     std::string endOfMessage = this->streamer->end();
     ASSERT_EQ(endOfMessage.compare("TEST"), 0);
 
-    std::string testPrompt = "TEST\n";
-    tokens = tokenizer->encode(testPrompt).input_ids;
+    testPrompt = "TEST\n";
+    tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
         std::vector<int64_t> singleTokenVector = {tokens.data<int64_t>()[i]};

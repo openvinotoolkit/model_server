@@ -33,7 +33,7 @@ typedef struct OVMS_ServableMetadata_ OVMS_ServableMetadata;
 typedef struct OVMS_Metadata_ OVMS_Metadata;
 
 #define OVMS_API_VERSION_MAJOR 1
-#define OVMS_API_VERSION_MINOR 1
+#define OVMS_API_VERSION_MINOR 2
 
 // Function to retrieve OVMS API version.
 //
@@ -578,13 +578,18 @@ OVMS_Status* OVMS_InferenceAsync(OVMS_Server* server, OVMS_InferenceRequest* req
 // Type of function called when response is completed and set with OVMS_InferenceRequestSetCompletionCallback. Callback function takes ownership of OVMS_InferenceResponse object.
 // Flag specifies if the response is final coming from inference request, and if there were errors in execution
 //
-// \param response resp
-// \param flag Flag specifying if the response is final response for request
+// \param response Response
+// \param flag Flag specifying if the call was successful - 0, or not
 // \param userStruct Data provided to callback, set in OVMS_InferenceRequestSetCompletionCallback
-typedef void (* OVMS_InferenceRequestCompletionCallback_t)(OVMS_InferenceResponse*, uint32_t flag, void* userstruct);
+typedef void (* OVMS_InferenceRequestCompletionCallback_t)(OVMS_InferenceResponse* response, uint32_t flag, void* userstruct);
 
-// TODO description
-// TODO consider allocators
+// Set callback for inference request
+//
+// Setting completion callback with OVMS_InferenceRequestSetCompletionCallback is required to receive a reply.
+//
+// \param server The server object
+// \param completeCallback The callback
+// \return OVMS_Status object in case of failure to set callback
 OVMS_Status* OVMS_InferenceRequestSetCompletionCallback(OVMS_InferenceRequest*, OVMS_InferenceRequestCompletionCallback_t completeCallback, void* userStruct);
 
 // Get OVMS_ServableMetadata object
@@ -661,9 +666,9 @@ OVMS_Status* OVMS_ServableMetadataInfo(OVMS_ServableMetadata* metadata, const vo
 // This needs to be called before server start.
 // Ensure availability of VA Display during server usage.
 //
+// \param server server for which we set VA Display
 // \param vaDisplay VADisplay that will be used to compile models
-// TODO should we accept server argument as well?
-OVMS_Status* OVMS_ServerSetGlobalVADisplay(void* vaDisplay);
+OVMS_Status* OVMS_ServerSetGlobalVADisplay(OVMS_Server* server, void* vaDisplay);
 
 // Deallocates a status object.
 //

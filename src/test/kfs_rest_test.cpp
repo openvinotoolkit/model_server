@@ -70,7 +70,7 @@ public:
             (char*)"--model_name",
             (char*)"dummy",
             (char*)"--model_path",
-            (char*)"/ovms/src/test/dummy",
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
             (char*)"--log_level",
             (char*)"DEBUG",
             (char*)"--batch_size",
@@ -114,7 +114,7 @@ public:
             (char*)"--model_name",
             (char*)"scalar",
             (char*)"--model_path",
-            (char*)"/ovms/src/test/scalar",
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/scalar").c_str(),
             (char*)"--log_level",
             (char*)"DEBUG",
             (char*)"--port",
@@ -142,7 +142,7 @@ public:
             (char*)"--model_name",
             (char*)"dummy",
             (char*)"--model_path",
-            (char*)"/ovms/src/test/dummy",
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
             (char*)"--shape",
             (char*)"(-1,-1)",
             (char*)"--log_level",
@@ -172,7 +172,7 @@ public:
             (char*)"--model_name",
             (char*)"string",
             (char*)"--model_path",
-            (char*)"/ovms/src/test/passthrough_string",
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/passthrough_string").c_str(),
             (char*)"--log_level",
             (char*)"DEBUG",
             (char*)"--port",
@@ -262,7 +262,7 @@ protected:
     }
 
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_python_summator.json");
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_python_summator.json").c_str());
     }
 
     void TearDown() {
@@ -276,7 +276,7 @@ protected:
 class HttpRestApiHandlerWithMediapipePassthrough : public HttpRestApiHandlerWithMediapipe {
 protected:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mp_pytensor_passthrough.json");
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mp_pytensor_passthrough.json").c_str());
     }
 };
 
@@ -612,10 +612,9 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 2);
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
-    ASSERT_EQ(std::string(doc["rt_info"].GetObject()["MO_version"].GetString()), "2020.1.0-61-gd349c3ba4a");
+    ASSERT_EQ(doc["rt_info"].GetArray().Size(), 1);
     ASSERT_EQ(std::string(doc["rt_info"].GetObject()["model_info"].GetObject()["resolution"].GetObject()["height"].GetString()), "200");
-    ASSERT_EQ(std::string(doc["rt_info"].GetObject()["conversion_parameters"].GetObject()["data_type"].GetString()), "float");
-    ASSERT_TRUE(doc["rt_info"].GetObject()["optimization"].GetObject().ObjectEmpty());
+    ASSERT_EQ(std::string(doc["rt_info"].GetObject()["model_info"].GetObject()["precision"].GetString()), "FP16");
 }
 
 TEST_F(HttpRestApiHandlerWithScalarModelTest, modelMetadataRequest) {

@@ -664,7 +664,7 @@ public:
         modelPath = directoryPath + "/dummy/";
         mappingConfigPath = modelPath + "1/mapping_config.json";
         SetUpConfig(configContent);
-        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+        std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         createConfigFileWithContent(R"({
             "inputs": {"b":"input_tensor"},
@@ -695,7 +695,7 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnPassthrough_2D_U8ModelWithMapping
         GTEST_SKIP() << "String inputs not supported for C-API";
     this->modelPath = this->directoryPath + "/passthrough/";
     this->mappingConfigPath = this->modelPath + "1/mapping_config.json";
-    std::filesystem::copy("/ovms/src/test/passthrough", this->modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/passthrough"), this->modelPath, std::filesystem::copy_options::recursive);
     this->ovmsConfig = R"(
 {
     "model_config_list": [
@@ -1664,7 +1664,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyBatchSizeAny) {
 
     typename TypeParam::second_type response;
 
-    for (size_t i : {1, 3, 5, 7, 11, 17, 21, 57, 99}) {
+    for (int32_t i : {1, 3, 5, 7, 11, 17, 21, 57, 99}) {
         ASSERT_EQ(this->performInferenceWithShape(response, {i, 10}), ovms::StatusCode::OK);
         this->checkOutputShape(response, {i, 10}, DUMMY_MODEL_OUTPUT_NAME);
     }

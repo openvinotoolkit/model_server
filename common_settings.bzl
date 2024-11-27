@@ -58,6 +58,17 @@ def create_config_settings():
         negate = ":disable_python",
     )
     native.config_setting(
+        name = "disable_ov_trace",
+        define_values = {
+            "OV_TRACE": "0",
+        },
+        visibility = ["//visibility:public"],
+    )
+    more_selects.config_setting_negation(
+        name = "not_disable_ov_trace",
+        negate = ":disable_ov_trace",
+    )
+    native.config_setting(
         name = "fuzzer_build",
         define_values = {
             "FUZZER_BUILD": "1",
@@ -68,6 +79,13 @@ def create_config_settings():
         name = "not_fuzzer_build",
         negate = ":fuzzer_build",
     )
+
+    selects.config_setting_group(
+        name = "is_windows_or_mediapipe_is_disabled_no_http",
+        match_any = ["//src:windows", "//:disable_mediapipe"]
+    )
+
+  
 ###############################
 # compilation settings
 ###############################
@@ -82,6 +100,21 @@ COMMON_STATIC_LIBS_COPTS = select({
                 ],
                 "//src:windows" : [
                     "-Wall",
+                    ],
+                })
+
+COMMON_STATIC_TEST_COPTS = select({
+                "//conditions:default": [
+                    "-Wall",
+                    "-Wno-unknown-pragmas",
+                    "-Werror",
+                    "-Isrc",
+                    "-fconcepts", # for gmock related utils
+                    "-fvisibility=hidden",# Needed for pybind targets
+                ],
+                "//src:windows" : [
+                    "-W0",
+                    "-Isrc",
                     ],
                 })
 
@@ -110,8 +143,15 @@ COMMON_STATIC_LIBS_LINKOPTS = select({
                 "//src:windows" : [
                     "",
                     ],
-                }) 
-
+                })
+COPTS_PYTHON = select({
+    "//conditions:default": ["-DPYTHON_DISABLE=1"],
+    "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
+})
+COPTS_MEDIAPIPE = select({
+    "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
+    "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+})
 COMMON_FUZZER_COPTS = [
     "-fsanitize=address",
     "-fprofile-generate",

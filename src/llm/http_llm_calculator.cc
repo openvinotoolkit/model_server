@@ -116,9 +116,9 @@ public:
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
                 Endpoint endpoint;
-                if (payload.uri == "/v3/chat/completions") {
+                if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
                     endpoint = Endpoint::CHAT_COMPLETIONS;
-                } else if (payload.uri == "/v3/completions") {
+                } else if (payload.uri == "/v3/completions" || payload.uri == "/v3/v1/completions") {
                     endpoint = Endpoint::COMPLETIONS;
                 } else {
                     return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v3/chat/completions, /v3/completions");
@@ -189,10 +189,6 @@ public:
                     return absl::CancelledError();
                 }
                 RET_CHECK(generationOutputs.size() >= 1);
-                std::sort(generationOutputs.begin(), generationOutputs.end(), [](ov::genai::GenerationOutput& r1, ov::genai::GenerationOutput& r2) {
-                    return r1.score > r2.score;
-                });
-
                 std::string response = this->apiHandler->serializeUnaryResponse(generationOutputs);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);

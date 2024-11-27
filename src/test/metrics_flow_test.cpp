@@ -38,6 +38,7 @@
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
+#include "test_http_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -741,11 +742,13 @@ TEST_F(MetricFlowTest, RestV3Unary) {
         HttpRequestComponents comps;
         auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
         ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+        status = handler.processV3("/v3/v1/completions", comps, response, request, &stream);
+        ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     }
 
-    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests);
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests * 2);
     // checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, "dummy_gpt", "REST", "Unary", "V3", numberOfRejectedRequests);
-    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests);
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests * 2);
 }
 #endif
 
@@ -763,12 +766,14 @@ TEST_F(MetricFlowTest, RestV3Stream) {
         HttpRequestComponents comps;
         auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
+        status = handler.processV3("/v3/v1/completions", comps, response, request, &stream);
+        ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
     }
 
-    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, "dummy_gpt", "REST", "Stream", "V3", numberOfAcceptedRequests);
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, "dummy_gpt", "REST", "Stream", "V3", numberOfAcceptedRequests * 2);
     // checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, "dummy_gpt", "REST", "Stream", "V3", numberOfRejectedRequests);
     const int numberOfMockedChunksPerRequest = 9;  // Defined in openai_chat_completions_mock_calculator.cpp
-    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Stream", "V3", numberOfAcceptedRequests * numberOfMockedChunksPerRequest);
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Stream", "V3", numberOfAcceptedRequests * numberOfMockedChunksPerRequest * 2);
     SPDLOG_ERROR(server.collect());
 }
 #endif

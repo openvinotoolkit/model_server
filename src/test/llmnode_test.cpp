@@ -28,7 +28,6 @@
 #include <openvino/openvino.hpp>
 #include <pybind11/embed.h>
 
-#include "../embeddings/embeddings_api.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/llm_executor.hpp"
@@ -38,6 +37,9 @@
 #include "opencv2/opencv.hpp"
 #include "ov_utils.hpp"
 #include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"  // TODO: Move out together with rerank tests
+#include "rapidjson/writer.h"        // TODO: Move out together with rerank tests
+#include "test_http_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -67,7 +69,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, "/ovms/src/test/llm/config_llm_dummy_kfs.json");
+        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config_llm_dummy_kfs.json").c_str());
         auto start = std::chrono::high_resolution_clock::now();
         const int numberOfRetries = 5;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
@@ -80,13 +82,12 @@ public:
             ov::genai::SchedulerConfig schedulerConfig = {
                 .max_num_batched_tokens = 256,
                 .cache_size = 1,
-                .block_size = 32,
                 .dynamic_split_fuse = true,
                 .max_num_seqs = 256,
             };
             plugin_config_t pluginConfig;
-            JsonParser::parsePluginConfig("", pluginConfig);
-            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>("/ovms/src/test/llm_testing/facebook/opt-125m", schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
+            JsonParser::parsePluginConfig("{\"INFERENCE_PRECISION_HINT\":\"f32\"}", pluginConfig);
+            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
             llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(cbPipe);
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error during llm node initialization for models_path exception: {}", e.what());
@@ -874,6 +875,41 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsStopStringEmpty) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
+}
+
+TEST_F(LLMFlowHttpTest, streamBeamSearchCompletionsFail) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "best_of": 2,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_F(LLMFlowHttpTest, streamBeamSearchChatCompletionsFail) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": true,
+            "best_of": 2,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::PARTIAL_END);
 }
 
 TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
@@ -2526,16 +2562,15 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     )";
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 256);
-    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 8);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 32);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
-    ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, false);
-    ASSERT_EQ(nodeResources->device, "CPU");
-    ASSERT_EQ(nodeResources->pluginConfig.size(), 0);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_batched_tokens, 256);
+    ASSERT_EQ(nodeResources.schedulerConfig.cache_size, 8);
+    ASSERT_EQ(nodeResources.schedulerConfig.dynamic_split_fuse, true);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources.schedulerConfig.enable_prefix_caching, false);
+    ASSERT_EQ(nodeResources.device, "CPU");
+    ASSERT_EQ(nodeResources.pluginConfig.size(), 0);
 }
 
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
@@ -2560,7 +2595,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
                 models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
                 max_num_batched_tokens: 98
                 cache_size: 1
-                block_size: 16
             }
         }
         input_stream_handler {
@@ -2578,14 +2612,13 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 98);
-    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 16);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, true);
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 256);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_batched_tokens, 98);
+    ASSERT_EQ(nodeResources.schedulerConfig.cache_size, 1);
+    ASSERT_EQ(nodeResources.schedulerConfig.dynamic_split_fuse, true);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_seqs, 256);
 }
 
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
@@ -2627,8 +2660,56 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
+}
+
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                plugin_config: '{"A": "B", "C": "D"}'
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(*nodeResources, config.node(0), ""), StatusCode::OK);
+
+    ASSERT_EQ(nodeResources->pluginConfig.size(), 2);
+    ASSERT_EQ(nodeResources->pluginConfig.count("A"), 1);
+    ASSERT_EQ(nodeResources->pluginConfig.count("C"), 1);
+    ASSERT_EQ(nodeResources->pluginConfig["A"], "B");
+    ASSERT_EQ(nodeResources->pluginConfig["C"], "D");
 }
 
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
@@ -2653,10 +2734,11 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
                 models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
                 max_num_batched_tokens: 1024
                 cache_size: 1
-                block_size: 8
                 max_num_seqs: 95
                 dynamic_split_fuse: false
                 enable_prefix_caching: true
+                max_tokens_limit: 700
+                best_of_limit: 3
             }
         }
         input_stream_handler {
@@ -2674,15 +2756,16 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
 
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
+    MockedLLMNodeResources nodeResources;
     ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_batched_tokens, 1024);
-    ASSERT_EQ(nodeResources->schedulerConfig.cache_size, 1);
-    ASSERT_EQ(nodeResources->schedulerConfig.block_size, 8);
-    ASSERT_EQ(nodeResources->schedulerConfig.dynamic_split_fuse, false);
-    ASSERT_EQ(nodeResources->schedulerConfig.max_num_seqs, 95);
-    ASSERT_EQ(nodeResources->schedulerConfig.enable_prefix_caching, true);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_batched_tokens, 1024);
+    ASSERT_EQ(nodeResources.schedulerConfig.cache_size, 1);
+    ASSERT_EQ(nodeResources.schedulerConfig.dynamic_split_fuse, false);
+    ASSERT_EQ(nodeResources.schedulerConfig.max_num_seqs, 95);
+    ASSERT_EQ(nodeResources.schedulerConfig.enable_prefix_caching, true);
+    ASSERT_EQ(nodeResources.maxTokensLimit, 700);
+    ASSERT_EQ(nodeResources.bestOfLimit, 3);
 }
 
 class GetPromptTokensString : public ::testing::Test {
@@ -2790,501 +2873,4 @@ TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
         ov::Tensor tensor = createTensorWithNoDataOwnership(precision, shapes[0], tensorsDataF.data());
         ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
     }
-}
-
-class EmbeddingsHttpTest : public ::testing::Test {
-protected:
-    static std::unique_ptr<std::thread> t;
-
-public:
-    std::unique_ptr<ovms::HttpRestApiHandler> handler;
-
-    std::vector<std::pair<std::string, std::string>> headers;
-    ovms::HttpRequestComponents comp;
-    const std::string endpointEmbeddings = "/v3/embeddings";
-    MockedServerRequestInterface writer;
-    std::string response;
-    ovms::HttpResponseComponents responseComponents;
-
-    static void SetUpTestSuite() {
-        std::string port = "9173";
-        ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, "/ovms/src/test/embeddings/config_embeddings.json");
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
-    }
-
-    void SetUp() {
-        ovms::Server& server = ovms::Server::instance();
-        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
-        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
-    }
-
-    static void TearDownTestSuite() {
-        ovms::Server& server = ovms::Server::instance();
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
-    }
-
-    void TearDown() {
-        handler.reset();
-    }
-};
-std::unique_ptr<std::thread> EmbeddingsHttpTest::t;
-
-const int EMBEDDING_OUTPUT_SIZE = 384;
-
-TEST_F(EmbeddingsHttpTest, simplePositive) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(response.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    ASSERT_EQ(d["object"], "list");
-    ASSERT_TRUE(d["data"].IsArray());
-    ASSERT_EQ(d["data"].Size(), 1);
-    ASSERT_EQ(d["data"][0]["object"], "embedding");
-    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
-    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
-    double sum = 0;
-    for (auto& value : d["data"][0]["embedding"].GetArray()) {
-        sum += value.GetDouble() * value.GetDouble();
-    }
-    double norm = std::max(std::sqrt(sum), double(1e-12));
-    ASSERT_NEAR(norm, 1.0, 1e-6);
-    ASSERT_EQ(d["data"][0]["index"], 0);
-}
-
-TEST_F(EmbeddingsHttpTest, simplePositiveNoNorm) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings_no_norm",
-            "input": "dummyInput"
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(response.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    ASSERT_EQ(d["object"], "list");
-    ASSERT_TRUE(d["data"].IsArray());
-    ASSERT_EQ(d["data"].Size(), 1);
-    ASSERT_EQ(d["data"][0]["object"], "embedding");
-    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
-    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
-    double sum = 0;
-    for (auto& value : d["data"][0]["embedding"].GetArray()) {
-        sum += value.GetDouble() * value.GetDouble();
-    }
-    double norm = std::max(std::sqrt(sum), double(1e-12));
-    ASSERT_NEAR(norm, 9.5, 1);  // norm of a not normalized vector
-    ASSERT_EQ(d["data"][0]["index"], 0);
-}
-
-TEST_F(EmbeddingsHttpTest, simplePositiveBase64) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput",
-            "encoding_format": "base64"
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(response.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    ASSERT_EQ(d["object"], "list");
-    ASSERT_TRUE(d["data"].IsArray());
-    ASSERT_EQ(d["data"].Size(), 1);
-    ASSERT_EQ(d["data"][0]["object"], "embedding");
-    ASSERT_TRUE(d["data"][0]["embedding"].IsString());
-    ASSERT_EQ(d["data"][0]["embedding"].Size(), ((4 * (EMBEDDING_OUTPUT_SIZE * sizeof(float)) / 3) + 3) & ~3);  // In base64 each symbol represents 3/4 of a byte rounded up
-    ASSERT_EQ(d["data"][0]["index"], 0);
-}
-
-class EmbeddingsExtensionTest : public ::testing::Test {
-protected:
-    static std::unique_ptr<std::thread> t;
-
-public:
-    std::unique_ptr<ovms::HttpRestApiHandler> handler;
-
-    std::vector<std::pair<std::string, std::string>> headers;
-    ovms::HttpRequestComponents comp;
-    const std::string endpointEmbeddings = "/v3/embeddings";
-    MockedServerRequestInterface writer;
-    std::string response;
-    ovms::HttpResponseComponents responseComponents;
-
-    static void SetUpTestSuite() {
-        std::string port = "9173";
-        ovms::Server& server = ovms::Server::instance();
-        const char* configPath = "/ovms/src/test/embeddings/config_embeddings.json";
-        const char* extensionPath = "/ovms/src/example/SampleCpuExtension/libcustom_relu_cpu_extension.so";
-        server.setShutdownRequest(0);
-        randomizePort(port);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--config_path",
-            (char*)configPath,
-            (char*)"--cpu_extension",
-            (char*)extensionPath,
-            (char*)"--port",
-            (char*)port.c_str()};
-        int argc = 5;
-        t.reset(new std::thread([&argc, &argv, &server]() {
-            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-        }));
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
-    }
-
-    void SetUp() {
-        ovms::Server& server = ovms::Server::instance();
-        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
-        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
-    }
-
-    static void TearDownTestSuite() {
-        ovms::Server& server = ovms::Server::instance();
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
-    }
-
-    void TearDown() {
-        handler.reset();
-    }
-};
-std::unique_ptr<std::thread> EmbeddingsExtensionTest::t;
-TEST_F(EmbeddingsExtensionTest, simplePositive) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer),
-        ovms::StatusCode::OK);
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(response.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    ASSERT_EQ(d["object"], "list");
-    ASSERT_TRUE(d["data"].IsArray());
-    ASSERT_EQ(d["data"].Size(), 1);
-    ASSERT_EQ(d["data"][0]["object"], "embedding");
-    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
-    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
-    ASSERT_EQ(d["data"][0]["index"], 0);
-}
-
-TEST(EmbeddingsSerialization, singleStringInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 1);
-    ASSERT_EQ(strings->at(0), "dummyInput");
-}
-
-TEST(EmbeddingsSerialization, multipleStringInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"]
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
-}
-
-TEST(EmbeddingsSerialization, handler) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"]
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    EmbeddingsHandler handler(d);
-    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
-    ASSERT_EQ(handler.getEncodingFormat(), EncodingFormat::FLOAT);
-    auto input = handler.getInput();
-    auto strings = std::get_if<std::vector<std::string>>(&input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
-}
-
-TEST(EmbeddingsSerialization, malformedInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", 2, "three"]
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "every element in input array should be string");
-}
-
-TEST(EmbeddingsSerialization, invalidEncoding) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "three"],
-"encoding_format": "dummy"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "encoding_format should either base64 or float");
-}
-
-TEST(EmbeddingsSerialization, invalidEncodingType) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "three"],
-"encoding_format": 42
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "encoding_format should be string");
-}
-
-TEST(EmbeddingsSerialization, malformedInputType) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": 1
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "input should be string or array of strings");
-}
-
-TEST(EmbeddingsSerialization, noInput) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
-    auto error = *std::get_if<std::string>(&request);
-    ASSERT_EQ(error, "input field is required");
-}
-
-TEST(EmbeddingsSerialization, multipleStringInputBase64) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"],
-"encoding_format": "base64"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::BASE64);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
-}
-
-TEST(EmbeddingsSerialization, multipleStringInputFloat) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": ["one", "two", "three"],
-"encoding_format": "float"
-        }
-    )";
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    auto request = EmbeddingsRequest::fromJson(&d);
-    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
-    auto embeddingsRequest = std::get<EmbeddingsRequest>(request);
-    ASSERT_EQ(embeddingsRequest.encoding_format, EncodingFormat::FLOAT);
-    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);
-    ASSERT_EQ(strings->size(), 3);
-    ASSERT_EQ(strings->at(0), "one");
-    ASSERT_EQ(strings->at(1), "two");
-    ASSERT_EQ(strings->at(2), "three");
-}
-
-class EmbeddingsInvalidConfigTest : public ::testing::Test {
-protected:
-    static std::unique_ptr<std::thread> t;
-
-public:
-    std::unique_ptr<ovms::HttpRestApiHandler> handler;
-
-    std::vector<std::pair<std::string, std::string>> headers;
-    ovms::HttpRequestComponents comp;
-    const std::string endpointEmbeddings = "/v3/embeddings";
-    MockedServerRequestInterface writer;
-    std::string response;
-    ovms::HttpResponseComponents responseComponents;
-
-    static void SetUpTestSuite() {
-        std::string port = "9173";
-        ovms::Server& server = ovms::Server::instance();
-        const char* configPath = "/ovms/src/test/embeddings/invalid_config_embeddings.json";
-        server.setShutdownRequest(0);
-        randomizePort(port);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--config_path",
-            (char*)configPath,
-            (char*)"--port",
-            (char*)port.c_str()};
-        int argc = 5;
-        t.reset(new std::thread([&argc, &argv, &server]() {
-            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-        }));
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
-    }
-
-    void SetUp() {
-        ovms::Server& server = ovms::Server::instance();
-        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
-        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
-    }
-
-    static void TearDownTestSuite() {
-        ovms::Server& server = ovms::Server::instance();
-        server.setShutdownRequest(1);
-        t->join();
-        server.setShutdownRequest(0);
-    }
-
-    void TearDown() {
-        handler.reset();
-    }
-};
-std::unique_ptr<std::thread> EmbeddingsInvalidConfigTest::t;
-
-TEST_F(EmbeddingsInvalidConfigTest, simpleNegative) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
-}
-
-class EmbeddingsInvalidTokenizerConfigTest : public EmbeddingsInvalidConfigTest {
-public:
-    static void SetUpTestSuite() {
-        std::string port = "9173";
-        ovms::Server& server = ovms::Server::instance();
-        const char* configPath = "/ovms/src/test/embeddings/invalid_config_tokenizer.json";
-        server.setShutdownRequest(0);
-        randomizePort(port);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--config_path",
-            (char*)configPath,
-            (char*)"--port",
-            (char*)port.c_str()};
-        int argc = 5;
-        t.reset(new std::thread([&argc, &argv, &server]() {
-            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-        }));
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
-    }
-};
-
-TEST_F(EmbeddingsInvalidTokenizerConfigTest, simpleNegative) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }

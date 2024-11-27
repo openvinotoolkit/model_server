@@ -1,4 +1,4 @@
-# OpenAI API Clients {#ovms_docs_clients_openai}
+# Generative AI Use Cases {#ovms_docs_clients_genai}
 
 ```{toctree}
 ---
@@ -8,43 +8,32 @@ hidden:
 
 Chat completion API <ovms_docs_rest_api_chat>
 Completions API <ovms_docs_rest_api_completion>
-Demo - text generation<ovms_demos_continuous_batching>
 Embeddings API <ovms_docs_rest_api_embeddings>
-Demo - text embeddings <ovms_demos_embeddings>
+Reranking API <ovms_docs_rest_api_rerank>
 ```
 ## Introduction
-Beside Tensorflow Serving API and KServe API frontends, the model server has now option to delegate the REST input deserialization and output serialization to a MediaPipe graph. A custom calculator can implement any form of REST API including streaming based on [Server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
+Beside Tensorflow Serving API (`/v1`) and KServe API (`/v2`) frontends, the model server supports a range of endpoints for generative use cases (`v3`). They are extendible using MediaPipe graphs.
+Currently supported endpoints are:
 
-We are introducing OpenAI compatible endpoints:
+OpenAI compatible endpoints:
 - [chat/completions](./model_server_rest_api_chat.md)
-- [completions](./model_server_rest_api_completions.md).
+- [completions](./model_server_rest_api_completions.md)
 - [embeddings](./model_server_rest_api_embeddings.md)
+Cohere Compatible endpoint:
+- [rerank](./model_server_rest_api_rerank.md)
 
-
-## Python Client
+## OpenAI API Clients
 
 When creating a Python-based client application, you can use OpenAI client library - [openai](https://pypi.org/project/openai/).
 
 Alternatively, it is possible to use just a `curl` command or `requests` python library.
-
-Along with the prompt, you can send parameters described here [for chat completions endpoint](./model_server_rest_api_chat.md#Request) and here [for completions endpoint](./model_server_rest_api_completions.md#Request).
-> **NOTE**:
-OpenAI python client supports a limited list of parameters. Those native to OpenVINO Model Server, can be passed inside a generic container parameter `extra_body`. Below is an example how to encapsulated `top_k` value.
-```{code} bash
-response = client.chat.completions.create(
-    model=model,
-    messages=[{"role": "user", "content": "hello"}],
-    max_tokens=100,
-    extra_body={"top_k" : 1},
-    stream=False
-)
-```
 
 ### Install the Package
 
 ```{code} bash
 pip3 install openai
 pip3 install requests
+pip3 install cohere
 ```
 
 
@@ -85,6 +74,8 @@ curl http://localhost:8000/v3/chat/completions \
 :::
 ::::
 
+Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text generation](../demos/continuous_batching/README.md).
+
 ### Request completions with unary calls
 
 ::::{tab-set}
@@ -121,7 +112,7 @@ curl http://localhost:8000/v3/completions \
 ```
 :::
 ::::
-
+Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text generation](../demos/continuous_batching/README.md).
 
 ### Request chat completions with streaming
 
@@ -146,6 +137,7 @@ for chunk in stream:
 ```
 :::
 ::::
+Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text generation](../demos/continuous_batching/README.md).
 
 ### Request completions with streaming
 
@@ -170,6 +162,7 @@ for chunk in stream:
 ```
 :::
 ::::
+Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text generation](../demos/continuous_batching/README.md).
 
 ### Text embeddings
 
@@ -182,7 +175,7 @@ client = OpenAI(
   base_url="http://localhost:8000/v3",
   api_key="unused"
 )
-responses = client.embeddings.create(input=[hello world], model='Alibaba-NLP/gte-large-en-v1.5')
+responses = client.embeddings.create(input=['hello world'], model='Alibaba-NLP/gte-large-en-v1.5')
 for data in responses.data:
     print(data.embedding)
 ```
@@ -206,3 +199,51 @@ curl http://localhost:8000/v3/embeddings \
 ```
 :::
 ::::
+Check [text embeddings end to end demo](../demos/embeddings/README.md).
+
+## Cohere Python Client
+
+Clients can use rerank endpoint via cohere python package - [cohere](https://pypi.org/project/cohere/).
+
+Just like with openAI endpoints and alternative is in `curl` command or `requests` python library.
+
+### Install the Package
+
+```{code} bash
+pip3 install cohere
+pip3 install requests
+```
+
+### Documents reranking
+
+::::{tab-set}
+:::{tab-item} python [Cohere] 
+:sync: python-cohere
+```{code} python
+import cohere
+client = cohere.Client(base_url='http://localhost:8000/v3', api_key="not_used")
+responses = client.rerank(query="Hello",documents=["Welcome","Farewell"], model='BAAI/bge-reranker-large')
+for res in responses.results:
+    print(res.index, res.relevance_score)
+```
+:::
+:::{tab-item} python [requests]
+:sync: python-requests
+```{code} python
+import requests
+payload = {"model": "BAAI/bge-reranker-large", "query": "Hello", "documents":["Welcome","Farewell"]}
+headers = {"Content-Type": "application/json", "Authorization": "not used"}
+response = requests.post("http://localhost:8000/v3/rerank", json=payload, headers=headers)
+print(response.text)
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```{code} bash
+curl http://localhost:8000/v3/rerank \
+  -H "Content-Type: application/json" \
+  -d '{"model": "BAAI/bge-reranker-large", "query": "Hello", "documents":["Welcome","Farewell"]}'
+```
+:::
+::::
+Check [documents reranking end to end demo](../demos/rerank/README.md).

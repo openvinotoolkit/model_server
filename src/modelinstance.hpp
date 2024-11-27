@@ -279,8 +279,10 @@ private:
     /**
          * @brief Holds the information about outputs and it's parameters
          */
+protected:
     tensor_map_t outputsInfo;
 
+private:
     /**
          * @brief OpenVINO inference execution stream pool
          */

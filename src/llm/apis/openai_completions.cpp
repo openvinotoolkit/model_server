@@ -330,6 +330,8 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
             return absl::InvalidArgumentError("best_of value should be greater than 0");
         if (!(it->value.GetUint() < bestOfLimit))
             return absl::InvalidArgumentError(absl::StrCat("best_of exceeds limit provided in graph config: ", bestOfLimit));
+        if (request.stream)
+            return absl::InvalidArgumentError("best_of cannot be used in streaming mode");
         request.bestOf = it->value.GetUint();
     }
 
@@ -414,13 +416,9 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     // choices: array of size N, where N is related to n request parameter
     writer.String("choices");
     writer.StartArray();  // [
-    int i = 0;
-    int n = request.numReturnSequences.value_or(1);
+    int index = 0;
     usage.completionTokens = 0;
     for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
-        if (i >= n)
-            break;
-
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
         usage.completionTokens += generationOutput.generated_ids.size();
         if (request.echo)
@@ -443,7 +441,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         }
         // index: integer; Choice index, only n=1 supported anyway
         writer.String("index");
-        writer.Int(i++);
+        writer.Int(index++);
         // logprobs: object/null; Log probability information for the choice. TODO
         writer.String("logprobs");
         if (this->request.logprobschat || this->request.logprobs > 0) {

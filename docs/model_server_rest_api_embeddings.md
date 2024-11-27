@@ -65,17 +65,18 @@ curl http://localhost/v3/embeddings \
 | data | ✅ | ✅ | array | A list of responses for each string |
 | data.embedding | ✅ | ✅ | array of float or base64 string | Vector of embeddings for a string. |
 | data.index | ✅ | ✅ | integer | Response index |
-| model | ✅ | ✅ | string |  Model name
+| model | ✅ | ✅ | string |  Model name |
+| usage | ✅ | ✅ | dictionary |  Info about assessed tokens |
 
-#### Unsupported params from OpenAI service:
-
-- usage
+## Error handling
+Endpoint can raise an error related to incorrect request in the following conditions:
+- Incorrect format of any of the fields based on the schema
+- Any tokenized input text exceeds the maximum length of the model context. Make sure input documents are chunked to fit the model
+- The number of input documents exceeds allowed configured value - default 500
 
 
 ## References
 
 [End to end demo with embeddings endpoint](../demos/embeddings/README.md)
 
-[Code snippets](./clients_openai.md)
-
-[Developer guide for writing custom calculators with REST API extension](./mediapipe.md)
+[Code snippets](./clients_genai.md)

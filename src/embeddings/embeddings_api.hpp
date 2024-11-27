@@ -24,15 +24,19 @@
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
 
+#include <openvino/runtime/tensor.hpp>
+#include <rapidjson/stringbuffer.h>
+
 #include "rapidjson/document.h"
 
-enum class EncodingFormat {
-    FLOAT,
-    BASE64
-};
+namespace ovms {
 
 struct EmbeddingsRequest {
-    std::variant<std::vector<std::string>, std::vector<std::vector<int>>> input;
+    enum class EncodingFormat {
+        FLOAT,
+        BASE64
+    };
+    std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>> input;
     EncodingFormat encoding_format;
 
     static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request);
@@ -41,13 +45,17 @@ struct EmbeddingsRequest {
 class EmbeddingsHandler {
     rapidjson::Document& doc;
     EmbeddingsRequest request;
+    size_t promptTokens = 0;
 
 public:
     EmbeddingsHandler(rapidjson::Document& document) :
         doc(document) {}
 
-    std::variant<std::vector<std::string>, std::vector<std::vector<int>>>& getInput();
-    EncodingFormat getEncodingFormat() const;
+    std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& getInput();
+    EmbeddingsRequest::EncodingFormat getEncodingFormat() const;
 
     absl::Status parseRequest();
+    absl::Status parseResponse(rapidjson::StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings);
+    void setPromptTokensUsage(int promptTokens);
 };
+}  // namespace ovms

@@ -565,7 +565,8 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest*
     if (inputName == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "input name"));
     }
-    if (data == nullptr) {  // TODO FIXME - it is legal for VAAPI to pass 0 as it is surface id, not a pointer
+    if (data == nullptr) {  // TODO - it is legal for VAAPI to pass 0 as it is surface id, not a pointer
+        // we should eventually have more specific check & test for that
         // return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "data"));
     }
     InferenceRequest* request = reinterpret_cast<InferenceRequest*>(req);
@@ -929,6 +930,44 @@ static Status getPipelineDefinition(Server& server, const std::string& servableN
 }  // namespace
 
 DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response) {
+    struct CallbackGuard {
+        OVMS_InferenceRequestCompletionCallback_t userCallback{nullptr};
+        void* userCallbackData{nullptr};
+        bool success{false};
+        OVMS_InferenceResponse** userResponsePtr{nullptr};
+        std::unique_ptr<ovms::InferenceResponse> response{nullptr};
+        CallbackGuard(OVMS_InferenceRequestCompletionCallback_t userCallback, void* userCallbackData, OVMS_InferenceResponse** userResponse, std::unique_ptr<ovms::InferenceResponse>&& response) :
+            userCallback(userCallback),
+            userCallbackData(userCallbackData),
+            userResponsePtr(userResponse),
+            response(std::move(response)) {}
+        ~CallbackGuard() {
+            if (!success) {
+                if (!userCallback)
+                    return;
+                SPDLOG_DEBUG("Calling user provided callback with failure");
+                Timer<TIMER_END> timer;
+                timer.start(TIMER_CALLBACK);
+                userCallback(nullptr, 1, userCallbackData);
+                timer.stop(TIMER_CALLBACK);
+                double reqCallback = timer.elapsed<microseconds>(TIMER_CALLBACK);
+                SPDLOG_DEBUG("Called response complete callback time: {} ms", reqCallback / 1000);
+            } else {
+                if (userCallback) {
+                    Timer<TIMER_END> timer;
+                    *userResponsePtr = reinterpret_cast<OVMS_InferenceResponse*>(response.release());
+                    SPDLOG_DEBUG("Calling user provided callback with success");
+                    timer.start(TIMER_CALLBACK);
+                    userCallback(*userResponsePtr, 0, userCallbackData);
+                    timer.stop(TIMER_CALLBACK);
+                    double reqCallback = timer.elapsed<microseconds>(TIMER_CALLBACK);
+                    SPDLOG_DEBUG("Called response complete callback time: {} ms", reqCallback / 1000);
+                } else {
+                    *userResponsePtr = reinterpret_cast<OVMS_InferenceResponse*>(response.release());
+                }
+            }
+        }
+    };
     OVMS_PROFILE_FUNCTION();
     using std::chrono::microseconds;
     Timer<TIMER_END> timer;
@@ -944,6 +983,12 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
     }
     auto req = reinterpret_cast<ovms::InferenceRequest*>(request);
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
+    OVMS_InferenceRequestCompletionCallback_t callback = nullptr;
+    callback = req->getResponseCompleteCallback();
+    std::unique_ptr<ovms::InferenceResponse> responseTemp(new ovms::InferenceResponse(req->getServableName(), req->getServableVersion()));
+    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    CallbackGuard callbackGuard(callback, req->getResponseCompleteCallbackData(), response, std::move(responseTemp));
+    auto& res = callbackGuard.response;
 
     SPDLOG_DEBUG("Processing C-API inference request for servable: {}; version: {}",
         req->getServableName(),
@@ -952,10 +997,8 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::Pipeline> pipelinePtr;
 
-    std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     auto status = getModelInstance(server, req->getServableName(), req->getServableVersion(), modelInstance, modelInstanceUnloadGuard);
 
-    std::unique_ptr<ovms::InferenceResponse> res(new ovms::InferenceResponse(req->getServableName(), req->getServableVersion()));
     if (status == StatusCode::MODEL_NAME_MISSING) {
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", req->getServableName());
         status = getPipeline(server, req, res.get(), pipelinePtr);
@@ -981,7 +1024,6 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
     }
 
     if (!status.ok()) {
-        // TODO fixme error handling with callbacks - we may need to move callback usage here
         return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
 
@@ -993,20 +1035,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
         //   OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().reqTimeGrpc, reqTotal);
     }
     SPDLOG_DEBUG("Total C-API req processing time: {} ms", reqTotal / 1000);
-
-    *response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
-    OVMS_InferenceRequestCompletionCallback_t callback = nullptr;
-    callback = req->getResponseCompleteCallback();
-    // TODO cleanup all paths
-    if (callback) {
-        timer.start(TIMER_CALLBACK);
-        auto completeCallbackData = req->getResponseCompleteCallbackData();
-        SPDLOG_DEBUG("Calling response complete callback");
-        callback(*response, 0, completeCallbackData);
-        timer.stop(TIMER_CALLBACK);
-        double reqCallback = timer.elapsed<microseconds>(TIMER_CALLBACK);
-        SPDLOG_DEBUG("Called response complete callback time: {} ms", reqCallback / 1000);
-    }
+    callbackGuard.success = true;
     return nullptr;
 }
 
@@ -1118,7 +1147,7 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableState(OVMS_Server* serverPtr, const char
     *state = modelInstance->getStatus().isFailedLoading() ? OVMS_STATE_LOADING_FAILED : static_cast<OVMS_ServableState>(static_cast<int>(modelInstance->getStatus().getState()) / 10 - 1);
     return nullptr;
 }
-DLL_PUBLIC OVMS_Status* OVMS_GetServableContext(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, void** oclContext) {
+OVMS_Status* OVMS_GetServableContext(OVMS_Server* serverPtr, const char* servableName, int64_t servableVersion, void** oclContext) {
     if (serverPtr == nullptr) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server"));
     }
@@ -1138,7 +1167,6 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableContext(OVMS_Server* serverPtr, const ch
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
     std::shared_ptr<ovms::ModelInstance> modelInstance = modelManager->findModelInstance(servableName, servableVersion);
-    // TODO FIXME guard or dispose this from API if not needed
 
     if (!status.ok()) {
         SPDLOG_INFO("Getting modelInstance or pipeline failed. {}", status.string());
@@ -1352,10 +1380,11 @@ DLL_PUBLIC void OVMS_ServableMetadataDelete(OVMS_ServableMetadata* metadata) {
     delete reinterpret_cast<ovms::ServableMetadata*>(metadata);
 }
 
-OVMS_Status* OVMS_ServerSetGlobalVADisplay(void* vaDisplay) {
+DLL_PUBLIC OVMS_Status* OVMS_ServerSetGlobalVADisplay(OVMS_Server* server, void* vaDisplay) {
     // we accept nullptr as it is a way to reset behavior for gpu tests
     // TODO
     // * allow to initializze only if server not started, but would require passing server
+    // * keep globalVaDisplay as server not global variable
 // TODO: Windows
 #ifdef __linux__
     ovms::globalVaDisplay = vaDisplay;

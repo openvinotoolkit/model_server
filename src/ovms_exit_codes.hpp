@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,15 +14,25 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-
-#include <memory>
-#include <string>
-
-#include <openvino/openvino.hpp>
+// TODO: Write windows/linux specific status codes.
+#ifdef __linux__
+#include <sysexits.h>
+#elif _WIN32
+#include <ntstatus.h>
+#endif
 
 namespace ovms {
-class NodeOutputHandler {
-public:
-    void setInput(const std::string& inputName, ov::Tensor& tensorPtr);
-};
+
+#ifdef __linux__
+#define OVMS_EX_OK EX_OK
+#define OVMS_EX_FAILURE 1
+#define OVMS_EX_WARNING 2
+#define OVMS_EX_USAGE EX_USAGE
+#elif _WIN32
+#define OVMS_EX_OK 0
+#define OVMS_EX_FAILURE 1
+#define OVMS_EX_WARNING 2
+#define OVMS_EX_USAGE 3
+#endif
+
 }  // namespace ovms

@@ -15,32 +15,15 @@
 //*****************************************************************************
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
-#include <future>
-#include <memory>
-#include <mutex>
-#include <queue>
-#include <thread>
-#include <vector>
-
 #include <openvino/openvino.hpp>
 
-#include "logging.hpp"
 #include "queue.hpp"
 
 namespace ovms {
 
 class OVInferRequestsQueue : public Queue<ov::InferRequest> {
 public:
-    OVInferRequestsQueue(ov::CompiledModel& compiledModel, int streamsLength) :
-        Queue(streamsLength) {
-        for (int i = 0; i < streamsLength; ++i) {
-            streams[i] = i;
-            OV_LOGGER("ov::CompiledModel: {} compiledModel.create_infer_request()", reinterpret_cast<void*>(&compiledModel));
-            inferRequests.push_back(compiledModel.create_infer_request());
-        }
-    }
+    OVInferRequestsQueue(ov::CompiledModel& compiledModel, int streamsLength);
 };
 
 }  // namespace ovms

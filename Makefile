@@ -74,9 +74,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 03c9ae38292a90ecb5cbfe2c8d5472eed0ec1aa9  # master 2024-10-18
-OV_CONTRIB_BRANCH ?= 4272f47cb3ffbaf5c0fb5db569deb16856c578a1  # master 2024-10-11
-OV_TOKENIZERS_BRANCH ?=  ffff67e257c44565fbbd46f2cf76e310d7632e86 # master 2024-10-23
+OV_SOURCE_BRANCH ?= 6733cc320915ca6bfad9036940bf5ca244b41a8b  # master / 2024-11-18
+OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
+OV_TOKENIZERS_BRANCH ?= 5ccd56de5a7da65ad7ea7c5c42cec55be97df312 # master / 2024-11-14
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -127,7 +127,7 @@ else
 endif
 
 ifeq ($(OV_TRACING_ENABLE),1)
-  OV_TRACING_PARAMS = " --cxxopt=-DOV_TRACING=1"
+  OV_TRACING_PARAMS = " --define OV_TRACE=1"
 else
   OV_TRACING_PARAMS = ""
 endif
@@ -166,11 +166,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),20.04)
         OS=ubuntu20
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.5.0.17060.03c9ae38292_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2025.0.0.17377.6733cc32091_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.26.30049"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.5.0.17060.03c9ae38292_x86_64.tgz
+	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2025.0.0.17377.6733cc32091_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -185,7 +185,7 @@ ifeq ($(BASE_OS),redhat)
   endif
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.5.0.17060.03c9ae38292_x86_64.tgz
+  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2025.0.0.17377.6733cc32091_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -201,7 +201,7 @@ endif
 OVMS_PYTHON_IMAGE_TAG ?= py
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2024.5"
+PRODUCT_VERSION ?= "2025.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)

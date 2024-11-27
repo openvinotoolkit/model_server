@@ -77,7 +77,6 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `required string models_path` - location of the model directory (can be relative);
 -    `optional uint64 max_num_batched_tokens` - max number of tokens processed in a single iteration [default = 256];
 -    `optional uint64 cache_size` - memory size in GB for storing KV cache [default = 8];
--    `optional uint64 block_size` - number of tokens which KV is stored in a single block (Paged Attention related) [default = 32];
 -    `optional uint64 max_num_seqs` - max number of sequences actively processed by the engine [default = 256];
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
 -    `optional string device` - device to load models to. Supported values: "CPU", "GPU" [default = "CPU"]
@@ -96,6 +95,8 @@ Consider increasing the `cache_size` parameter in case the logs report the usage
 
 `enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case with chat applications which resend the history of the conversations. Thanks to prefix caching, there is no need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
 utilization of resource will be lower. Old cache will be cleared automatically but it is recommended to increase cache_size to take bigger performance advantage.
+
+`dynamic_split_fuse` [algorithm](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen#b-dynamic-splitfuse-) is enabled by default to boost the throughput by splitting the tokens to even chunks. In some conditions like with very low concurrency or with very short prompts, it might be beneficial to disable this algorithm. When it is disabled, there should be set also the parameter `max_num_batched_tokens` to match the model max context length.
 
 `plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size '{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}'.
 
@@ -162,9 +163,15 @@ convert_tokenizer -o {target folder name} --utf8_replace_mode replace --with-det
 
 Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models).
 
-### Chat template
+## Input preprocessing
 
-Chat template is used only on `/chat/completions` endpoint. Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`. 
+### Completions
+
+When sending a request to `/completions` endpoint, model server adds `bos_token_id` during tokenization, so **there is not need to add `bos_token` to the prompt**.
+
+### Chat Completions
+
+When sending a request to `/chat/completions` endpoint, model server will try to apply chat template to request `messages` contents.
 
 Loading chat template proceeds as follows:
 1. If `tokenizer.jinja` is present, try to load template from it.
@@ -173,14 +180,17 @@ Loading chat template proceeds as follows:
 
 **Note**: If both `template.jinja` file and `chat_completion` field from `tokenizer_config.json` are successfully loaded, `template.jinja` takes precedence over `tokenizer_config.json`.
 
-If there are errors in loading or reading files or fields (they exist but are wrong) no template is loaded and servable will not respond to `/chat/completions` calls. 
-
 If no chat template has been specified, default template is applied. The template looks as follows:
 ```
 "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
 ```
 
 When default template is loaded, servable accepts `/chat/completions` calls when `messages` list contains only single element (otherwise returns error) and treats `content` value of that single message as an input prompt for the model.
+
+**Note:** Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`.
+
+Errors during configuration files processing (access issue, corrupted file, incorrect content) result in servable loading failure.
+
 
 
 ## Limitations
@@ -190,6 +200,7 @@ There are several known limitations which are expected to be addressed in the co
 - Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. It is possible to track in the metrics the number of active generation requests using metric called `ovms_current_graphs`. Also tracking statistics for request and responses is possible. [Learn more](../metrics.md) 
 - Multi modal models are not supported yet. Images can't be sent now as the context.
 - `logprobs` parameter is not supported currently in streaming mode. It includes only a single logprob and do not include values for input tokens.
+- Server logs might sporadically include a message "PCRE2 substitution failed with error code -55" - this message can be safely ignored. It will be removed in next version.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)

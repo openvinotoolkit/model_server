@@ -84,7 +84,7 @@ protected:
     std::string port = "9178";
 
     void SetUpServer(const char* configPath) {
-        ::SetUpServer(this->t, this->server, this->port, configPath);
+        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(configPath).c_str());
     }
 
     void SetUp() override {
@@ -562,7 +562,7 @@ public:
         const std::string modelName = "mediapipeImageInput";
         request.Clear();
         response.Clear();
-        cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/grayscale.jpg", cv::IMREAD_UNCHANGED);
+        cv::Mat imageRaw = cv::imread(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/grayscale.jpg"), cv::IMREAD_UNCHANGED);
         ASSERT_TRUE(!imageRaw.empty());
         cv::Mat grayscaled;
         size_t matFormat = convertKFSDataTypeToMatFormat(datatype);
@@ -629,7 +629,7 @@ TEST_F(MediapipeFlowImageInput, InvalidShape) {
     const std::string modelName = "mediapipeImageInput";
     request.Clear();
     response.Clear();
-    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+    cv::Mat imageRaw = cv::imread(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), cv::IMREAD_UNCHANGED);
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat image;
     size_t matFormat = convertKFSDataTypeToMatFormat("UINT8");
@@ -682,7 +682,7 @@ TEST_F(MediapipeFlowImageInput, InvalidDatatype) {
     const std::string modelName = "mediapipeImageInput";
     request.Clear();
     response.Clear();
-    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+    cv::Mat imageRaw = cv::imread(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), cv::IMREAD_UNCHANGED);
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat image;
     size_t matFormat = convertKFSDataTypeToMatFormat("INT64");
@@ -712,7 +712,7 @@ TEST_F(MediapipeFlowImageInput, Float32_4Channels) {
     const std::string modelName = "mediapipeImageInput";
     request.Clear();
     response.Clear();
-    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+    cv::Mat imageRaw = cv::imread(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), cv::IMREAD_UNCHANGED);
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat imageFP32;
     imageRaw.convertTo(imageFP32, CV_32F);
@@ -1382,10 +1382,10 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
         startReloading.get_future().get();
         MediapipeGraphConfig mgc{
             this->modelName,
-            "",                                               // default base path
-            "/ovms/src/test/mediapipe/graphscalar_tf.pbtxt",  // graphPath - valid but includes missing models, will fail for new streams
-            "",                                               // default subconfig path
-            ""                                                // dummy md5
+            "",                                                                             // default base path
+            getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/graphscalar_tf.pbtxt"),  // graphPath - valid but includes missing models, will fail for new streams
+            "",                                                                             // default subconfig path
+            ""                                                                              // dummy md5
         };
         auto status = definition->reload(modelManager, mgc);
         ASSERT_EQ(status, StatusCode::OK) << status.string();
@@ -1604,11 +1604,12 @@ public:
         for (size_t i = 0; i < 5; i++) {
             mockLabels.emplace_back(std::to_string(i));
         }
-        ov::AnyMap configuration = {
+        ov::AnyMap modelInfo = {
             {"layout", "data:HWCN"},
             {"resize_type", "unnatural"},
             {"labels", mockLabels}};
-        return configuration;
+        ov::AnyMap rtInfo = {{"model_info", modelInfo}};
+        return rtInfo;
     }
 };
 
@@ -1681,7 +1682,7 @@ TEST(Mediapipe, AdapterRTInfo) {
     uint32_t portNum = ovms::stou32(port).value();
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, portNum));
     // we will use dummy model that will have mocked rt_info
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getGenericFullPathForSrcTest("/ovms/src/test/configs/config.json").c_str()));
 
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
     const std::string mockedModelName = "dummy";
@@ -1696,7 +1697,9 @@ TEST(Mediapipe, AdapterRTInfo) {
     ov::AnyMap notUsedAnyMap;
     adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
     ov::AnyMap modelConfig = adapter.getModelConfig();
+
     auto checkModelInfo = [](const ov::AnyMap& modelConfig) {
+        std::cout << "Model config size: " << modelConfig.size() << std::endl;
         ASSERT_EQ(modelConfig.size(), 3);
         auto it = modelConfig.find("resize_type");
         ASSERT_NE(modelConfig.end(), it);
@@ -1717,13 +1720,13 @@ TEST(Mediapipe, AdapterRTInfo) {
     const ov::AnyMap* servableMetadataRtInfo;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
     ASSERT_NE(nullptr, servableMetadataRtInfo);
-    checkModelInfo(*servableMetadataRtInfo);
+    checkModelInfo((*servableMetadataRtInfo).at("model_info").as<ov::AnyMap>());
     OVMS_ServableMetadataDelete(servableMetadata);
 }
 
 TEST(Mediapipe, MetadataDummy) {
     ConstructorEnabledModelManager manager;
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", "/ovms/src/test/mediapipe/graphdummy.pbtxt"};
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/graphdummy.pbtxt").c_str()};
     ovms::MediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc);
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     tensor_map_t inputs = mediapipeDummy.getInputsInfo();
@@ -3499,6 +3502,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "GraphProfileCalculator",
         "HandDetectionsFromPoseToRectsCalculator",
         "HandLandmarksToRectCalculator",
+        "HttpSerializationCalculator",
         "ImageCloneCalculator",
         "ImageCroppingCalculator",
         "ImagePropertiesCalculator",
@@ -3510,6 +3514,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "InstanceSegmentationCalculator",
         "InverseMatrixCalculator",
         "IrisToRenderDataCalculator",
+        "KeypointDetectionCalculator",
         "LandmarkLetterboxRemovalCalculator",
         "LandmarkListVectorSizeCalculator",
         "LandmarkProjectionCalculator",
@@ -3529,6 +3534,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "MergeDetectionsToVectorCalculator",
         "MergeGpuBuffersToVectorCalculator",
         "MergeImagesToVectorCalculator",
+        "ModelInferHttpRequestCalculator",
         "ModelInferRequestImageCalculator",
         "MotionAnalysisCalculator",
         "MuxCalculator",

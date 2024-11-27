@@ -32,6 +32,7 @@
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 #pragma GCC diagnostic pop
 
+#include "test_http_utils.hpp"
 #include "test_utils.hpp"
 
 class HttpOpenAIHandlerTest : public ::testing::Test {
@@ -60,7 +61,7 @@ protected:
     }
 
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock.json");
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock.json").c_str());
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
     }
 
@@ -82,10 +83,10 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/completions/", requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor("/v3/v1/completions/", requestBody, &response, comp, responseComponents, &writer),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(/v3/completions/
+    std::string expectedResponse = R"(/v3/v1/completions/
 
         {
             "model": "gpt",

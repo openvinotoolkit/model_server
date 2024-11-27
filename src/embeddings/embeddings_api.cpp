@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "embeddings_api.hpp"
 
+#include <algorithm>
 #include <string>
 #include <variant>
 
@@ -23,11 +24,25 @@
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
 
+#include <rapidjson/writer.h>
+
+#include "absl/strings/escaping.h"
 #include "rapidjson/document.h"
 
+using namespace rapidjson;
+
+namespace ovms {
+
 std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjson::Document* parsedJson) {
+    enum class InputType {
+        NONE,
+        STRING,
+        INT,
+        INT_VEC
+    };
     EmbeddingsRequest request;
     std::vector<std::string> input_strings;
+    std::vector<std::vector<int64_t>> input_tokens;
 
     if (!parsedJson->IsObject())
         return "Received json is not an object";
@@ -37,15 +52,40 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
         if (it->value.IsString()) {
             input_strings.push_back(it->value.GetString());
         } else if (it->value.IsArray()) {
+            InputType input_type = InputType::NONE;
             for (auto& input : it->value.GetArray()) {
-                // TODO: is array of ints
-                // TODO: is int
-                if (!input.IsString())
-                    return "every element in input array should be string";
-                input_strings.push_back(input.GetString());
+                if (input.IsArray()) {
+                    if (input_type != InputType::NONE && input_type != InputType::INT_VEC)
+                        return "input must be homogeneous";
+                    input_type = InputType::INT_VEC;
+                    std::vector<int64_t> ints;
+                    ints.reserve(input.GetArray().Size());
+                    for (auto& val : input.GetArray()) {
+                        if (val.IsInt())
+                            ints.push_back(val.GetInt());
+                        else
+                            return "input must be homogeneous";
+                    }
+                    input_tokens.push_back(ints);
+                } else if (input.IsString()) {
+                    if (input_type != InputType::NONE && input_type != InputType::STRING)
+                        return "input must be homogeneous";
+                    input_type = InputType::STRING;
+                    input_strings.push_back(input.GetString());
+                } else if (input.IsInt()) {
+                    if (input_type != InputType::NONE && input_type != InputType::INT)
+                        return "input must be homogeneous";
+                    input_type = InputType::INT;
+                    if (input_tokens.size() == 0) {
+                        input_tokens.push_back(std::vector<int64_t>());
+                    }
+                    input_tokens[0].push_back(input.GetInt());
+                } else {
+                    return "every element in input array should be either string or int";
+                }
             }
         } else {
-            return "input should be string or array of strings";
+            return "input should be string, array of strings or array of integers";
         }
     } else {
         return "input field is required";
@@ -69,7 +109,12 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
 
     // TODO: dimensions (optional)
     // TODO: user (optional)
-    request.input = input_strings;
+    if (input_strings.size() > 0) {
+        request.input = input_strings;
+    }
+    if (input_tokens.size() > 0) {
+        request.input = input_tokens;
+    }
     return request;
 }
 
@@ -83,9 +128,76 @@ absl::Status EmbeddingsHandler::parseRequest() {
     return absl::OkStatus();
 }
 
-std::variant<std::vector<std::string>, std::vector<std::vector<int>>>& EmbeddingsHandler::getInput() {
+std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& EmbeddingsHandler::getInput() {
     return request.input;
 }
-EncodingFormat EmbeddingsHandler::getEncodingFormat() const {
+EmbeddingsRequest::EncodingFormat EmbeddingsHandler::getEncodingFormat() const {
     return request.encoding_format;
 }
+
+void EmbeddingsHandler::setPromptTokensUsage(int promptTokens) {
+    this->promptTokens = promptTokens;
+}
+
+absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings) {
+    Writer<StringBuffer> writer(buffer);
+    writer.StartObject();
+
+    writer.String("object");
+    writer.String("list");
+
+    writer.String("data");
+    writer.StartArray();
+    // TODO: mean pooling
+
+    ov::Shape outputShape = embeddingsTensor.get_shape();
+    if (outputShape.size() != 3) {
+        return absl::InvalidArgumentError("Invalid embeddings tensor shape");
+    }
+    size_t batchSize = outputShape[0];
+    for (size_t i = 0; i < batchSize; i++) {
+        size_t stride = i * outputShape[1] * outputShape[2];
+        size_t size = outputShape[2];
+        float* dataPtr = reinterpret_cast<float*>(embeddingsTensor.data()) + stride;
+        float* dataPtrEnd = dataPtr + size;
+        writer.StartObject();
+        writer.String("object");
+        writer.String("embedding");
+        writer.String("embedding");
+        if (normalizeEmbeddings) {
+            double square_sum = std::inner_product(dataPtr, dataPtrEnd, dataPtr, double(0.0));
+            double denom = std::max(std::sqrt(square_sum), double(1e-12));
+            std::transform(dataPtr, dataPtrEnd, dataPtr,
+                [denom](auto& element) { return element / denom; });
+        }
+        if (getEncodingFormat() == EmbeddingsRequest::EncodingFormat::BASE64) {
+            std::string_view sv2(reinterpret_cast<char*>(dataPtr), outputShape[2] * sizeof(float));
+            std::string escaped;
+            absl::Base64Escape(sv2, &escaped);
+            writer.String(escaped.c_str());
+        } else {
+            writer.StartArray();
+            for (size_t i = 0; i < size; ++i) {
+                writer.Double(dataPtr[i]);
+            }
+            writer.EndArray();
+        }
+        writer.String("index");
+        writer.Int(i);
+        writer.EndObject();
+    }
+
+    writer.EndArray();
+
+    writer.String("usage");
+    writer.StartObject();
+    writer.String("prompt_tokens");
+    writer.Int(promptTokens);
+    writer.String("total_tokens");
+    writer.Int(promptTokens);
+    writer.EndObject();
+
+    writer.EndObject();
+    return absl::OkStatus();
+}
+}  // namespace ovms

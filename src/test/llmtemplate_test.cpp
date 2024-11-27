@@ -40,6 +40,7 @@
 #include "mediapipe/framework/calculator_runner.h"
 #pragma GCC diagnostic pop
 
+#include "test_http_utils.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
@@ -69,23 +70,23 @@ public:
 };
 
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = "";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
     std::string errorOutput = "Expecting value: line 1 column 1 (char 0)";
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -96,15 +97,15 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
         }
     )";
     std::string errorOutput = "This servable accepts only single message requests";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateMessageWithEmptyObject) {
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -114,15 +115,15 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMessageWithEmptyObject) {
             "messages": [{}]
         }
     )";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, "");
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -131,15 +132,15 @@ TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
         }
     )";
     std::string expectedOutput = "How can I help you?";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -148,15 +149,15 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
         }
     )";
     std::string errorOutput = "This servable accepts only single message requests";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -167,16 +168,16 @@ TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
         }
     )";
     std::string expectedOutput = "hello";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateJinjaUppercase) {
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[0]['content'] | upper }} )";
     ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -187,16 +188,16 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaUppercase) {
         }
     )";
     std::string expectedOutput = " Hi, HELLO ";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateJinjaException) {
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[3]['content'] | upper }} )";
     ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -207,7 +208,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaException) {
         }
     )";
     std::string errorOutput = "list object has no element 3";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
@@ -217,9 +218,9 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerDefault) {
     "eos_token": "</s>"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -230,7 +231,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerDefault) {
         }
     )";
     std::string expectedOutput = "hello";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -240,9 +241,9 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerBosNull) {
     "eos_token": "</s>"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -254,7 +255,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerBosNull) {
     )";
     std::string expectedOutput = "hello";
     // Expect no issues with chat template since non string bos token is ignored
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -264,9 +265,9 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerEosNull) {
     "eos_token": null
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -278,7 +279,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerEosNull) {
     )";
     std::string expectedOutput = "hello";
     // Expect no issues with chat template since non string eos token is ignored
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -288,9 +289,9 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerException) {
     "eos_token": "</s>",
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -301,7 +302,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerException) {
         }
     )";
     std::string expectedOutput = "Error: Chat template not loaded correctly, so it cannot be applied";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -312,9 +313,9 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerUpperCase) {
     "chat_template": "{{ \"Hi, \" + messages[0]['content'] | upper }}"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -325,7 +326,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerUpperCase) {
         }
     )";
     std::string expectedOutput = "Hi, HELLO";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -336,9 +337,9 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateException) {
     "chat_template": "{{ \"Hi, \" + messages[3]['content'] | upper }}"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -349,7 +350,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateException) {
         }
     )";
     std::string expectedOutput = "list object has no element 3";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -360,9 +361,9 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateBadVariable) {
     "chat_template": {}
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -373,7 +374,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateBadVariable) {
         }
     )";
     std::string expectedError = "Error: Chat template not loaded correctly, so it cannot be applied";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, expectedError);
 }
 
@@ -387,9 +388,9 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTwoConfigs) {
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[0]['content'] | upper }} )";
     ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
 
-    std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-    nodeResources->modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources->modelsPath);
+    LLMNodeResources nodeResources;
+    nodeResources.modelsPath = directoryPath;
+    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -400,7 +401,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTwoConfigs) {
         }
     )";
     std::string expectedOutput = " Hi, HELLO ";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources->textProcessor, nodeResources->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -461,7 +462,7 @@ public:
 
 const std::string GRAPH_PATTERN = "<GRAPH_PATTERN>";
 const std::string WORKSPACE_PATTERN = "<MODELS_PATTERN>";
-const std::string MODEL_PATH = "/ovms/src/test/llm_testing/facebook/opt-125m";
+const std::string MODEL_PATH = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
 
 class LLMChatTemplateHttpTest : public TestWithTempDir {
 protected:
