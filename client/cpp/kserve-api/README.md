@@ -388,7 +388,7 @@ Usage:
 
 ```Bash
 ./http_model_metadata --http_port 8000 --http_address localhost
-{"name":"dummy","versions":["1"],"platform":"OpenVINO","inputs":[{"name":"b","datatype":"FP32","shape":[1,10]}],"outputs":[{"name":"a","datatype":"FP32","shape":[1,10]}],"rt_info":{"MO_version":"2020.1.0-61-gd349c3ba4a","conversion_parameters":{"blobs_as_inputs":"True","caffe_parser_path":"DIR","data_type":"float","disable_nhwc_to_nchw":"False"},"model_info":{"precision":"FP16","resolution":{"height":"200","width":"300"}},"optimization":{},"version":"10"}}
+{"name":"dummy","versions":["1"],"platform":"OpenVINO","inputs":[{"name":"b","datatype":"FP32","shape":[1,10]}],"outputs":[{"name":"a","datatype":"FP32","shape":[1,10]}],"rt_info":{"model_info":{"precision":"FP16","resolution":{"height":"200","width":"300"}}}}
 ```
 ### Run the Client to perform inference
 
