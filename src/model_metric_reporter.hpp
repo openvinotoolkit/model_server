@@ -187,6 +187,12 @@ public:
     std::unique_ptr<MetricCounter> responseRestV3Unary;
     std::unique_ptr<MetricCounter> responseRestV3Stream;
 
+    std::unique_ptr<MetricCounter> requestErrorGrpcModelInfer;
+    std::unique_ptr<MetricCounter> requestErrorGrpcModelInferStream;
+    std::unique_ptr<MetricCounter> requestErrorRestModelInfer;
+    std::unique_ptr<MetricCounter> requestErrorRestV3Unary;
+    std::unique_ptr<MetricCounter> requestErrorRestV3Stream;
+
     inline MetricCounter* getRequestsMetric(const ExecutionContext& context, bool success = true) {
         if (context.interface == ExecutionContext::Interface::GRPC) {
             if (context.method == ExecutionContext::Method::ModelInfer)
@@ -201,6 +207,27 @@ public:
                 return success ? this->requestAcceptedRestV3Unary.get() : this->requestRejectedRestV3Unary.get();
             if (context.method == ExecutionContext::Method::V3Stream)
                 return success ? this->requestAcceptedRestV3Stream.get() : this->requestRejectedRestV3Stream.get();
+            return nullptr;
+        } else {
+            return nullptr;
+        }
+        return nullptr;
+    }
+
+    inline MetricCounter* getGraphErrorMetric(const ExecutionContext& context) {
+        if (context.interface == ExecutionContext::Interface::GRPC) {
+            if (context.method == ExecutionContext::Method::ModelInfer)
+                return this->requestErrorGrpcModelInfer.get();
+            if (context.method == ExecutionContext::Method::ModelInferStream)
+                return this->requestErrorGrpcModelInferStream.get();
+            return nullptr;
+        } else if (context.interface == ExecutionContext::Interface::REST) {
+            if (context.method == ExecutionContext::Method::ModelInfer)
+                return this->requestErrorRestModelInfer.get();
+            if (context.method == ExecutionContext::Method::V3Unary)
+                return this->requestErrorRestV3Unary.get();
+            if (context.method == ExecutionContext::Method::V3Stream)
+                return this->requestErrorRestV3Stream.get();
             return nullptr;
         } else {
             return nullptr;
