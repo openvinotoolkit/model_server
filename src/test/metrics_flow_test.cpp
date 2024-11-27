@@ -753,6 +753,28 @@ TEST_F(MetricFlowTest, RestV3Unary) {
 #endif
 
 #if (MEDIAPIPE_DISABLE == 0)
+TEST_F(MetricFlowTest, RestV3UnaryError) {
+    HttpRestApiHandler handler(server, 0);
+    MockedServerRequestInterface stream;
+
+    EXPECT_CALL(stream, IsDisconnected())
+        .WillRepeatedly(::testing::Return(false));
+
+    for (int i = 0; i < numberOfAcceptedRequests; i++) {
+        std::string request = R"({"model": "dummy_gpt", "prompt":"ReturnError"})";
+        std::string response;
+        HttpRequestComponents comps;
+        auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
+        ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+        status = handler.processV3("/v3/v1/completions", comps, response, request, &stream);
+        ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    }
+
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_GRAPH_ERROR, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests * 2);
+}
+#endif
+
+#if (MEDIAPIPE_DISABLE == 0)
 TEST_F(MetricFlowTest, RestV3Stream) {
     HttpRestApiHandler handler(server, 0);
     MockedServerRequestInterface stream;
@@ -774,6 +796,29 @@ TEST_F(MetricFlowTest, RestV3Stream) {
     // checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, "dummy_gpt", "REST", "Stream", "V3", numberOfRejectedRequests);
     const int numberOfMockedChunksPerRequest = 9;  // Defined in openai_chat_completions_mock_calculator.cpp
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Stream", "V3", numberOfAcceptedRequests * numberOfMockedChunksPerRequest * 2);
+    SPDLOG_ERROR(server.collect());
+}
+#endif
+
+#if (MEDIAPIPE_DISABLE == 0)
+TEST_F(MetricFlowTest, RestV3StreamError) {
+    HttpRestApiHandler handler(server, 0);
+    MockedServerRequestInterface stream;
+
+    EXPECT_CALL(stream, IsDisconnected())
+        .WillRepeatedly(::testing::Return(false));
+
+    for (int i = 0; i < numberOfAcceptedRequests; i++) {
+        std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "ReturnError World"})";
+        std::string response;
+        HttpRequestComponents comps;
+        auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
+        ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
+        status = handler.processV3("/v3/v1/completions", comps, response, request, &stream);
+        ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
+    }
+
+    checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_GRAPH_ERROR, "dummy_gpt", "REST", "Stream", "V3", numberOfAcceptedRequests * 2);
     SPDLOG_ERROR(server.collect());
 }
 #endif
@@ -852,6 +897,7 @@ std::string MetricFlowTest::prepareConfigContent() {
            R"(",")" + METRIC_NAME_REQUESTS_ACCEPTED +
            R"(",")" + METRIC_NAME_REQUESTS_REJECTED +
            R"(",")" + METRIC_NAME_RESPONSES +
+           R"(",")" + METRIC_NAME_GRAPH_ERROR +
            R"("]
             }
         },
