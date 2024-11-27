@@ -243,10 +243,19 @@ new_local_repository(
 load("@//third_party/python:python_repo.bzl", "python_repository")
 python_repository(name = "_python3-linux")
 
+load("@//third_party/python:python_repo_win.bzl", "python_repository")
+python_repository(name = "_python3-windows")
+
 new_local_repository(
     name = "python3_linux",
     path = "/usr",
     build_file = "@_python3-linux//:BUILD"
+)
+
+new_local_repository(
+    name = "python3_windows",
+    path = "C:\\opt\\",
+    build_file = "@_python3-windows//:BUILD"
 )
 
 http_archive(

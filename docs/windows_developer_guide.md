@@ -30,7 +30,7 @@ md c:\opt
 Visual Studio 2019 with C++ - https://visualstudio.microsoft.com/downloads/
 
 ## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
-Python3. (Python 3.11.9 is tested)
+Python3.9
 pip install numpy==1.23
 make sure you install numpy for the python version you pass as build argument
 make sure default "python --version" gets you 3.9
@@ -56,6 +56,14 @@ nvm use 22.9.0
 npm cache clean --force
 ```
 
+# Building without proxy
+Please set the proxy setting for windows for in environment variables when building behind proxy
+```
+set HTTP_PROXY=
+set HTTPS_PROXY=
+```
+Also remove proxy from your .gitconfig
+
 If you want to compile without proxy, npm proxy needs to be reset:
 ```
 set http_proxy=
@@ -66,8 +74,20 @@ npm i --global yarn
 yarn
 ```
 
+## Building with proxy
+Please set the proxy setting for windows for in environment variables when building behind proxy
+```
+set HTTP_PROXY=my.proxy.com:123
+set HTTPS_PROXY=my.proxy.com:122
+```
+
 ## OPENCV install to - "C:\\opt\\opencv\\"
 https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe
+
+# OPENCV contrib for optflow
+cd c:\opt
+git clone https://github.com/opencv/opencv_contrib.git
+xcopy /s /r /Y opencv_contrib\modules\optflow\include\opencv2\* C:\opt\opencv\build\include\opencv2
 
 ## WGET
 https://eternallybored.org/misc/wget/1.21.4/64/wget.exe download to c:\opt
@@ -97,7 +117,7 @@ cd model_server
 
 ## COMPILE
 ```
-bazel build --config=windows --jobs=8 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 //src:ovms > compilation.log 2>&1
+bazel build --config=windows --jobs=8 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 //src:ovms > compilation.log 2>&1
 ```
 
 ## To run ovms in developer command line
