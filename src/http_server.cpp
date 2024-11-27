@@ -312,6 +312,10 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         for (const std::pair<const std::string, const std::string>& header : req->headers()) {
             auto header_key = header.first;
             auto header_value = header.second;
+            if (header_key == "inference-header-content-length") {
+                headers.emplace_back("Inference-Header-Content-Length", header_value);
+                continue;
+            }
             headers.emplace_back(header_key, header_value);
         }
 
@@ -371,7 +375,10 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
             //SPDLOG_INFO("ADDING HEADER {} -> {}", kv.first, kv.second);
             resp->addHeader(kv.first, kv.second);
         }
+        //SPDLOG_INFO("Setting body: {}\nInput:[{}]", output, body);
         resp->setBody(output);
+
+        // Old code, commented
         // if (http_status != net_http::HTTPStatusCode::OK && http_status != net_http::HTTPStatusCode::CREATED) {
         //     SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
         //         req->http_method(),
@@ -379,6 +386,11 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         //         status.string());
         // }
         //req->ReplyWithStatus(http_status);
+        
+        // new code caused all requests to be 200 OK
+        if (!status.ok()) {
+            resp->setStatusCode(drogon::HttpStatusCode::k500InternalServerError); // todo
+        }
         callback(resp);
     });
     server->startAcceptingRequests();
