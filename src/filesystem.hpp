@@ -26,9 +26,7 @@
 
 #include "logging.hpp"
 #include "model_version_policy.hpp"
-#ifdef __linux__
 #include "openssl/md5.h"
-#endif
 #include "status.hpp"
 
 namespace ovms {
@@ -188,7 +186,7 @@ public:
         } else if (!FileSystem::isLocalFilesystem(givenPath)) {
             // Cloud filesystem
             path = givenPath;
-        } else if (givenPath.size() > 0 && givenPath.at(0) == '/') {
+        } else if (givenPath.size() > 0 && isFullPath(givenPath)) {
             // Full path case
             path = givenPath;
         } else {
@@ -196,6 +194,20 @@ public:
             if (rootDirectoryPath.empty())
                 throw std::logic_error("Using relative path without setting graph directory path.");
             path = rootDirectoryPath + givenPath;
+        }
+    }
+
+    static bool isFullPath(const std::string& inputPath) {
+        std::filesystem::path filePath(inputPath);
+        try {
+            std::filesystem::path absolutePath = std::filesystem::absolute(filePath);
+            return absolutePath == filePath;
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Exception during path absolute check for path:", inputPath, e.what());
+            return false;
+        } catch (...) {
+            SPDLOG_ERROR("Exception during path absolute check for path:", inputPath);
+            return false;
         }
     }
 
@@ -255,7 +267,6 @@ public:
     }
 
     static std::string getStringMD5(const std::string& str) {
-#ifdef __linux__
         unsigned char result[MD5_DIGEST_LENGTH];
 
 #pragma GCC diagnostic push
@@ -263,10 +274,6 @@ public:
         MD5((unsigned char*)str.c_str(), str.size(), result);
         std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
 #pragma GCC diagnostic pop
-#else  // Windows TODO: Check how it works - tests ?
-        std::hash<std::string> hasher;
-        std::string md5sum = std::to_string(hasher(str));
-#endif
         return (md5sum);
     }
 

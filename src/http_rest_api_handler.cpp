@@ -507,7 +507,13 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
         auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
         if (!status.ok()) {
-            serverReaderWriter->PartialReplyWithStatus("{\"error\": \"" + status.string() + "\"}", tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            writer.StartObject();
+            writer.String("error");
+            writer.String(status.string().c_str());
+            writer.EndObject();
+            serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
         }
         serverReaderWriter->PartialReplyEnd();
         return StatusCode::PARTIAL_END;

@@ -80,7 +80,7 @@ public:
         // Prepare manager
         modelPath = directoryPath + "/dummy/";
         SetUpConfig(modelDefaultConfig);
-        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+        std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     }
 };
 

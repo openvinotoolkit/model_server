@@ -42,7 +42,7 @@ public:
         py::initialize_interpreter();
         ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
         ASSERT_EQ(ovms::LLMNodeResources::initializeLLMNodeResources(*nodeResources, config.node(0), ""), ovms::StatusCode::OK);
-        tokenizer = std::make_shared<ov::genai::Tokenizer>("/ovms/src/test/llm_testing/facebook/opt-125m");
+        tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"));
         streamer = std::make_shared<ovms::TextStreamer>(tokenizer);
     }
     static void TearDownTestSuite() {

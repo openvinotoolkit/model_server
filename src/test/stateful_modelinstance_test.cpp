@@ -118,7 +118,7 @@ public:
         // Prepare manager
         modelPath = directoryPath + "/dummy/";
         SetUpConfig(modelStatefulConfig);
-        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+        std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
         modelInput = {{DUMMY_MODEL_INPUT_NAME,
             std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 10}, ovms::Precision::FP32}}};
     }

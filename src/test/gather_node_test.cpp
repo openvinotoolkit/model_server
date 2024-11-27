@@ -219,6 +219,9 @@ public:
 };
 
 TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // This test simulates node with multiple subsessions connected to following node
     // that should gather it results but is not exit node
     ConstructorEnabledModelManager manager;

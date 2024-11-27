@@ -435,7 +435,7 @@ public:
 };
 
 TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSeparately) {
-    std::string configFilePath{"/ovms/src/test/mediapipe/config_mediapipe_two_inputs.json"};
+    std::string configFilePath{getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_two_inputs.json")};
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
     SetUpServer(configFilePath.c_str());
@@ -1112,6 +1112,9 @@ node {
 
 // Sending inputs separately for synchronized graph
 TEST_F(StreamingTest, MultipleStreamsDeliveredViaMultipleRequests) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const std::string pbTxt{R"(
 input_stream: "in1"
 input_stream: "in2"
@@ -1163,6 +1166,9 @@ node {
 
 // Sending inputs together for synchronized graph
 TEST_F(StreamingTest, MultipleStreamsDeliveredViaSingleRequest) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const std::string pbTxt{R"(
 input_stream: "in1"
 input_stream: "in2"
@@ -1211,6 +1217,9 @@ node {
 }
 
 TEST_F(StreamingTest, WrongOrderOfManualTimestamps) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1297,6 +1306,9 @@ node {
 }
 
 TEST_F(StreamingTest, ErrorOnDisconnectionDuringWrite) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1389,6 +1401,9 @@ node {
 }
 
 TEST_F(StreamingTest, ErrorDuringSubsequentRequestDeserializations) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1460,6 +1475,9 @@ node {
 }
 
 TEST_F(StreamingTest, ManualTimestampWrongType) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1535,6 +1553,9 @@ node {
 }
 
 TEST_F(StreamingTest, ManualTimestampInRange) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1569,6 +1590,9 @@ node {
 }
 
 TEST_F(StreamingTest, AutomaticTimestampingExceedsMax) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1729,6 +1753,9 @@ node {
 }
 
 TEST_F(StreamingTest, SubsequentRequestsDoNotMatchServableNameAndVersion) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"

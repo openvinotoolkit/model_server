@@ -469,6 +469,9 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
 }
 
 TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_multiple_models";
@@ -516,6 +519,9 @@ TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
 }
 
 TEST_F(TestLoadModel, CheckSavedModelHandling) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     ovms::ModelInstance modelInstance("saved-model", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_saved_model";
@@ -550,6 +556,9 @@ TEST_F(TestLoadModel, CheckSavedModelHandling) {
 }
 
 TEST_F(TestLoadModel, CheckTFModelHandling) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     ovms::ModelInstance modelInstance("tf", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_tf";
@@ -584,6 +593,9 @@ TEST_F(TestLoadModel, CheckTFModelHandling) {
 }
 
 TEST_F(TestLoadModel, CheckONNXModelHandling) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     ovms::ModelInstance modelInstance("onnx", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_onnx";

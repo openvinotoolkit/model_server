@@ -36,6 +36,9 @@
 #include "tensorflow_serving/util/threadpool_executor.h"
 #pragma GCC diagnostic pop
 
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include "http_rest_api_handler.hpp"
 #include "status.hpp"
 
@@ -227,7 +230,13 @@ private:
             return;
         }
         if (!status.ok() && output.empty()) {
-            output.append("{\"error\": \"" + status.string() + "\"}");
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            writer.StartObject();
+            writer.String("error");
+            writer.String(status.string().c_str());
+            writer.EndObject();
+            output = buffer.GetString();
         }
         const auto http_status = http(status);
         if (responseComponents.inferenceHeaderContentLength.has_value()) {

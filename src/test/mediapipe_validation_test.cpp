@@ -86,7 +86,7 @@ public:
         impl = nullptr;
     }
     static void SetUpTestSuite() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_all_graphs_adapter_full.json");
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_all_graphs_adapter_full.json").c_str());
     }
     static void TearDownTestSuite() {
         ovms::Server::instance().setShutdownRequest(1);

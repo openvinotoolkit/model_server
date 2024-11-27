@@ -32,7 +32,7 @@ namespace ovms {
 class Status;
 class PythonBackend;
 
-struct PythonNodeResources {
+class PythonNodeResources {
 public:
     PythonNodeResources(const PythonNodeResources&) = delete;
     PythonNodeResources& operator=(PythonNodeResources&) = delete;
@@ -44,7 +44,9 @@ public:
 
     PythonNodeResources(PythonBackend* pythonBackend);
     ~PythonNodeResources();
-    static Status createPythonNodeResources(std::shared_ptr<PythonNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, PythonBackend* pythonBackend, std::string graphPath);
+
+    static Status createPythonNodeResources(std::shared_ptr<PythonNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, PythonBackend* pythonBackend, std::string graphPath);
+
     void finalize();
 
 private:

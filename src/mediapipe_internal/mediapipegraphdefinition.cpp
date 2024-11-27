@@ -33,8 +33,11 @@
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
 #if (PYTHON_DISABLE == 0)
+// TODO: Enable on windows
+#ifdef __linux__
 #include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
+#endif
 #include "../python/pythonnoderesources.hpp"
 #endif
 #include "../serialization.hpp"
@@ -122,10 +125,13 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
+// TODO: Enable on windows
+#ifdef __linux__
     if (!this->llmNodeResourcesMap.empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
+#endif
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
     if (manager.modelExists(this->getName()) || manager.pipelineDefinitionExists(this->getName())) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph name: {} is already occupied by model or pipeline.", this->getName());
@@ -445,6 +451,8 @@ Status MediapipeGraphDefinition::initializeNodes() {
             this->pythonNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<PythonNodeResources>>(nodeName, std::move(nodeResources)));
             pythonResourcesCleaningGuard.disableCleaning();
         }
+// TODO: Enable on windows
+#ifdef __linux__
         // Passed to both calculators that require LLM Engine (gRPC KServe & HTTP OpenAI)
         if (endsWith(config.node(i).calculator(), LLM_NODE_CALCULATOR_NAME)) {
             ResourcesCleaningGuard<LLMNodeResourcesMap> llmResourcesCleaningGuard(this->llmNodeResourcesMap);
@@ -470,6 +478,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             this->llmNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<LLMNodeResources>>(nodeName, std::move(nodeResources)));
             llmResourcesCleaningGuard.disableCleaning();
         }
+#endif
 #endif
     }
     return StatusCode::OK;

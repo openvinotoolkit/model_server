@@ -34,7 +34,6 @@
 #include "../server.hpp"
 #include "../version.hpp"
 #include "mockmodelinstancechangingstates.hpp"
-#include "test_utils.hpp"
 
 using ovms::ModelManager;
 using ovms::Module;
@@ -213,7 +212,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
+        (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
         (char*)"--log_level",
         (char*)"DEBUG",
         (char*)"--port",
@@ -294,7 +293,7 @@ TEST(Server, ServerMetadata) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
+        (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
         (char*)"--port",
         (char*)port.c_str(),
         nullptr};
@@ -354,7 +353,7 @@ TEST(Server, grpcArguments) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
+        (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
         (char*)"--port",
         (char*)port.c_str(),
         (char*)"--grpc_channel_arguments",

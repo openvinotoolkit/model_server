@@ -9,14 +9,15 @@ src/shape.cpp:438: strIn
 src/shape.cpp:488: strIn
 src/shape.cpp:507: strIn
 src/shape.hpp:121: strIn
-src/test/modelconfig_test.cpp:472: OptionA
-src/test/modelconfig_test.cpp:478: OptionA
-src/test/modelconfig_test.cpp:484: OptionA
-src/test/modelconfig_test.cpp:490: OptionA
-src/test/modelconfig_test.cpp:496: OptionA
-src/test/modelconfig_test.cpp:502: OptionA
+src/test/modelconfig_test.cpp:473: OptionA
+src/test/modelconfig_test.cpp:479: OptionA
+src/test/modelconfig_test.cpp:485: OptionA
+src/test/modelconfig_test.cpp:491: OptionA
+src/test/modelconfig_test.cpp:497: OptionA
+src/test/modelconfig_test.cpp:503: OptionA
 src/test/modelinstance_test.cpp:1093: THROUGHTPUT
 third_party/aws-sdk-cpp/aws-sdk-cpp.bz
 third_party/llm_engine/llm_engine.bzl
 WORKSPACE:39: thirdparty
+WORKSPACE:47: thirdparty
 demos/classification_using_paddlepaddle_model/python/utils/imagenet_class_index.json

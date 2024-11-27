@@ -462,7 +462,7 @@ public:
 
 const std::string GRAPH_PATTERN = "<GRAPH_PATTERN>";
 const std::string WORKSPACE_PATTERN = "<MODELS_PATTERN>";
-const std::string MODEL_PATH = "/ovms/src/test/llm_testing/facebook/opt-125m";
+const std::string MODEL_PATH = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
 
 class LLMChatTemplateHttpTest : public TestWithTempDir {
 protected:

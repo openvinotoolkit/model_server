@@ -203,6 +203,9 @@ public:
 };
 
 TEST_F(TestImplGetModelStatus, NegativeTfsGetModelStatus) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Create config file with an empty config & reload
     std::string configStr = dummy_config;
     configStr = configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
@@ -241,6 +244,9 @@ public:
 };
 
 TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     // Create config file with an empty config & reload
     std::string configStr = dummy_config;
     configStr = configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
@@ -248,7 +254,7 @@ TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
     createConfigFileWithContent(configStr, fileToReload);
 
     // Copy dummy model to temporary destination
-    std::filesystem::copy("/ovms/src/test/dummy", cl_model_1_path, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), cl_model_1_path, std::filesystem::copy_options::recursive);
 
     ASSERT_EQ(manager.loadConfig(fileToReload), ovms::StatusCode::OK);
 

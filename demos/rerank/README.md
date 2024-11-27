@@ -5,6 +5,12 @@
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 
+Clone model server repository:
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+```
+
 Install python dependencies for the conversion script:
 ```bash
 pip3 install -r demos/common/export_models/requirements.txt
@@ -46,7 +52,7 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_se
 
 Readiness of the model can be reported with a simple curl command. 
 ```bash
-curl -i http://localhost:8000/v3/models/BAAI%2Fbge-reranker-large/ready
+curl -i http://localhost:8000/v2/models/BAAI%2Fbge-reranker-large/ready
 HTTP/1.1 200 OK
 Content-Type: application/json
 Date: Sat, 09 Nov 2024 23:19:27 GMT
@@ -57,7 +63,7 @@ Content-Length: 0
 
 
 ```bash
-curl http://localhost:8000/v2/rerank  -H "Content-Type: application/json" \
+curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
 -d '{ "model": "BAAI/bge-reranker-large", "query": "welcome", "documents":["good morning","farewell"]}' | jq .
 ```
 ```json

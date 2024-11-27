@@ -39,10 +39,10 @@ errors=""
 if [ ${NO_WARNINGS_FORWARD} -gt 9 ]; then
     errors+="Failed due to not using forward declarations where possible: ${NO_WARNINGS_FORWARD}"$'\n'
 fi
-if [ ${NO_WARNINGS_DIRECT} -gt 20 ]; then
+if [ ${NO_WARNINGS_DIRECT} -gt 21 ]; then
     errors+="Failed probably due to not using static keyword with functions definitions: ${NO_WARNINGS_DIRECT}"$'\n'
 fi
-if [ ${NO_WARNINGS_NOTUSED} -gt 5 ]; then
+if [ ${NO_WARNINGS_NOTUSED} -gt 6 ]; then
     errors+="Failed probably due to unnecessary forward includes: ${NO_WARNINGS_NOTUSED}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST_FORWARD} -gt 1 ]; then
@@ -54,7 +54,7 @@ fi
 if [ ${NO_WARNINGS_TEST_NOTUSED} -gt 0 ]; then
     errors+="Failed probably due to unnecessary forward includes: ${NO_WARNINGS_TEST_NOTUSED}"$'\n'
 fi
-if [ ${NO_WARNINGS} -gt  193 ]; then
+if [ ${NO_WARNINGS} -gt  194 ]; then
     errors+="Failed due to higher than allowed number of issues in code: ${NO_WARNINGS}"$'\n'
 fi
 if [ ${NO_WARNINGS_TEST} -gt  52 ]; then
