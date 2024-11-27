@@ -61,15 +61,15 @@ In-case of problems, see [Debugging](#debugging).
 	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest
 	```
 
-4. In the docker container context compile the source code via :
+4. In the docker container context compile the source code via (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
-	bazel build --config=mp_on_py_on //src:ovms
+	bazel build --//:distro=ubuntu --config=mp_on_py_on //src:ovms
 > **NOTE**: There are several options that would disable specific parts of OVMS. For details check ovms bazel build files.
 	```
 
-5. From the container, run a single unit test :
+5. From the container, run a single unit test (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
-	bazel test --config=mp_on_py_on --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --//:distro=ubuntu --config=mp_on_py_on --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |

@@ -158,7 +158,7 @@ TYPED_TEST(NativeFileInputConversionTest, positive_grayscale) {
     uint8_t grayscale_expected_tensor[] = {0x00};
 
     std::ifstream DataFile;
-    DataFile.open("/ovms/src/test/binaryutils/grayscale.jpg", std::ios::binary);
+    DataFile.open(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/grayscale.jpg"), std::ios::binary);
     DataFile.seekg(0, std::ios::end);
     size_t grayscale_filesize = DataFile.tellg();
     DataFile.seekg(0);

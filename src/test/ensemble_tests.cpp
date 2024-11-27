@@ -59,6 +59,9 @@ template <typename Pair,
 class EnsembleFlowBothApiTest : public TestWithTempDir {
 public:
     void SetUp() override {
+#ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows";
+#endif
         TestWithTempDir::SetUp();
         // Prepare manager
         config = DUMMY_MODEL_CONFIG;
@@ -134,6 +137,9 @@ TYPED_TEST_SUITE(EnsembleFlowBothApiTest, MyTypes);
 class EnsembleFlowTest : public TestWithTempDir {
 protected:
     void SetUp() override {
+#ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows";
+#endif
         TestWithTempDir::SetUp();
         // Prepare manager
         config = DUMMY_MODEL_CONFIG;

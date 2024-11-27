@@ -25,9 +25,13 @@ RUN apt-get remove --yes cmake && apt-get update && apt-get install -y rapidjson
 #RUN bazel build @org_tensorflow//tensorflow/core:framework
 
 WORKDIR /ovms/
+
+# Disable remote cache
+RUN rm -rf /ovms/.user.bazelrc
+
 RUN /cov/bin/cov-configure --gcc --config coverity_config.xml && \
     /cov/bin/cov-configure --comptype gcc --compiler /usr/bin/gcc && \
-    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown; bazel clean; bazel build --spawn_strategy=standalone //src:static_analysis'
+    /cov/bin/cov-build --dir cov-int bash -c 'bazel shutdown && bazel clean && bazel build --config=coverity --spawn_strategy=standalone //src:static_analysis'
 #    cd /example_cpp_client/cpp && \
 #    bazel build --spawn_strategy=standalone //src:all'
 

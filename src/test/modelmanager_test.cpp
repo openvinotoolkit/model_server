@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <condition_variable>
+#include <iostream>
 #include <mutex>
 
 #include <gmock/gmock.h>
@@ -244,7 +245,7 @@ static const char* modelMetricsBadEndpoint = R"(
 
 TEST_F(ModelManagerMetricsTest, DISABLED_WrongConfigFileEndpoint) {
     SetUpConfig(modelMetricsBadEndpoint);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
     ConstructorEnabledModelManager manager;
@@ -278,7 +279,7 @@ static const char* modelMetricsInvalidMetricName = R"(
 
 TEST_F(ModelManagerMetricsTest, WrongConfigFileMetricName) {
     SetUpConfig(modelMetricsBadEndpoint);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(modelMetricsInvalidMetricName, configFilePath);
 
     ConstructorEnabledModelManager manager;
@@ -330,7 +331,7 @@ public:
 };
 
 TEST_F(ModelManagerMappingTest, MappingConfig) {
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     SetUpConfig(modelDummyNireq100);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     createConfigFileWithContent(mappingConfigContent, modelPath + "/1/mapping_config.json");
@@ -424,7 +425,7 @@ static const char* modelMetricsMissingPortWithDisabledMetricsV2 = R"(
 })";
 TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
     SetUpConfig(modelMetricsMissingPort);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
 
     ConstructorEnabledModelManager manager;
@@ -434,7 +435,7 @@ TEST_F(ModelManagerMetricsTestNoPort, RestPortMissingWithMetrics) {
 
 TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetricsV2) {
     SetUpConfig(modelMetricsMissingPortWithDisabledMetricsV2);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--metrics_enable", (char*)"--rest_port", (char*)"8000"};
     int arg_count = 8;
@@ -446,7 +447,7 @@ TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetricsV2) {
 
 TEST_F(ModelManagerMetricsTestNoPort, ConfigDisabledMetrics) {
     SetUpConfig(modelMetricsMissingPortWithDisabledMetrics);
-    std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
     createConfigFileWithContent(ovmsConfig, configFilePath);
     char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--metrics_enable", (char*)"--rest_port", (char*)"8000", (char*)"--metrics_list", (char*)"ovms_streams"};
     int arg_count = 10;
@@ -617,7 +618,7 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(ModelManagerWatcher2Models, configRelodNotNeededManyThreads) {
-    std::string configFile = "/tmp/config.json";
+    std::string configFile = getGenericFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -646,7 +647,7 @@ TEST_P(ModelManagerWatcher2Models, configRelodNotNeededManyThreads) {
 }
 
 TEST_P(ModelManagerWatcher2Models, configReloadNeededManyThreads) {
-    std::string configFile = "/tmp/config.json";
+    std::string configFile = getGenericFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -681,7 +682,7 @@ TEST_P(ModelManagerWatcher2Models, configReloadNeededManyThreads) {
 }
 
 TEST_P(ModelManagerWatcher2Models, configReloadNeededChange) {
-    std::string configFile = "/tmp/config.json";
+    std::string configFile = getGenericFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -703,7 +704,10 @@ TEST_P(ModelManagerWatcher2Models, configReloadNeededChange) {
 }
 
 TEST_P(ModelManagerWatcher2Models, loadConfigManyThreads) {
-    std::string configFile = "/tmp/config.json";
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+    std::string configFile = getGenericFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -732,7 +736,7 @@ TEST_P(ModelManagerWatcher2Models, loadConfigManyThreads) {
 }
 
 TEST_P(ModelManagerWatcher2Models, configReloadNeededBeforeConfigLoad) {
-    std::string configFile = "/tmp/config.json";
+    std::string configFile = getGenericFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
@@ -805,7 +809,7 @@ TEST_F(ModelManagerWatcher, parseConfigWhenOnlyPipelineDefinitionProvided) {
 }
 
 TEST_F(ModelManager, ReadsVersionsFromDisk) {
-    const std::string path = "/tmp/test_model/";
+    const std::string path = getGenericFullPathForTmp("/tmp/test_model/");
 
     try {
         for (auto i : {1, 5, 8, 10}) {
@@ -867,7 +871,7 @@ TEST_F(ModelManager, ReadsVersionsFromDiskRelativePath) {
 }
 
 TEST_F(ModelManager, PathEscapeError1) {
-    const std::string path = "/tmp/../test_model/";
+    const std::string path = getGenericFullPathForTmp("/tmp/../test_model/");
 
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
@@ -889,7 +893,10 @@ TEST_F(ModelManager, PathEscapeError1RelativePath) {
 }
 
 TEST_F(ModelManager, PathEscapeError2) {
-    const std::string path = "../tmp/test_model/";
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+    const std::string path = getGenericFullPathForTmp("../tmp/test_model/");
 
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
@@ -900,7 +907,7 @@ TEST_F(ModelManager, PathEscapeError2) {
 }
 
 TEST_F(ModelManager, ReadVersionsInvalidPath) {
-    const std::string path = "/tmp/inexisting_path/8bt4kv";
+    const std::string path = getGenericFullPathForTmp("/tmp/inexisting_path/8bt4kv");
 
     try {
         std::filesystem::remove(path);
@@ -1059,6 +1066,9 @@ public:
         mockedFunctorSequenceCleaner(globalSequencesViewer),
         mockedFunctorResourcesCleaner(modelManager) {}
     void SetUp() {
+#ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
+#endif
         exitSignal = cleanerExitTrigger.get_future();
     }
 
@@ -1264,7 +1274,7 @@ TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenIn
 TEST_F(ModelManager, ConfigReloadingWithWrongInputName) {
     ovms::ModelConfig config;
     config.parseShapeParameter("{\"wrong_input_name\": \"(1,3,224,224)\"}");
-    config.setBasePath("/ovms/src/test/dummy");
+    config.setBasePath(getGenericFullPathForSrcTest("/ovms/src/test/dummy"));
     auto status = fixtureManager.reloadModelWithVersions(config);
     ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL);
 }
@@ -1317,20 +1327,20 @@ private:
 
 public:
     DummyModelDirectoryStructure(std::string modelName) :
-        modelSourcePath("/ovms/src/test/dummy/1/") {
+        modelSourcePath(getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/")) {
         name = modelName;
-        std::string modelPath = "/tmp/" + name;
+        std::string modelPath = getGenericFullPathForTmp("/tmp/" + name);
         std::filesystem::remove_all(modelPath);
     }
     ~DummyModelDirectoryStructure() {
-        std::string modelPath = "/tmp/" + name;
+        std::string modelPath = getGenericFullPathForTmp("/tmp/" + name);
         std::filesystem::remove_all(modelPath);
     }
 
     std::string name;
 
     void addVersion(int number, bool valid) {
-        std::string versionPath = "/tmp/" + name + "/" + std::to_string(number);
+        std::string versionPath = getGenericFullPathForTmp("/tmp/" + name + "/" + std::to_string(number));
         std::filesystem::create_directories(versionPath);
         std::filesystem::copy(modelSourcePath, versionPath, std::filesystem::copy_options::recursive);
         if (!valid) {
@@ -1338,8 +1348,17 @@ public:
         }
     }
     void removeVersion(int number) {
-        std::string versionPath = "/tmp/" + name + "/" + std::to_string(number);
-        std::filesystem::remove_all(versionPath);
+        std::string versionPath = getGenericFullPathForTmp("/tmp/" + name + "/" + std::to_string(number));
+        try {
+            std::filesystem::remove_all(versionPath);
+        } catch (std::filesystem::filesystem_error& e) {
+            spdlog::error("Couldn't access path {}", e.what());
+            std::filesystem::path dir_path = versionPath;
+            for (const auto& entry : std::filesystem::directory_iterator(dir_path)) {
+                std::cout << entry.path().string() << std::endl;
+            }
+            ASSERT_EQ(0, 1) << "Remove files error.";
+        }
     }
 };
 
@@ -1352,7 +1371,7 @@ TEST_F(ModelManager, HandlingInvalidLastVersion) {
     modelDirectory.addVersion(2, validVersion);
     modelDirectory.addVersion(3, !validVersion);
     ovms::ModelConfig config;
-    config.setBasePath("/tmp/" + modelDirectory.name);
+    config.setBasePath(getGenericFullPathForTmp("/tmp/" + modelDirectory.name));
     config.setName(modelDirectory.name);
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
@@ -1370,6 +1389,10 @@ TEST_F(ModelManager, HandlingInvalidLastVersion) {
     modelInstanceUnloadGuard.reset();
     ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
 
+#ifdef _WIN32
+    // FIXME: TODO: Manual unload required because OVCORE keeps the file handle opened after modelLoad, preventing the test to remove the directory.
+    modelInstance2->unloadModelComponents();
+#endif
     // dropped versions 2 and 3
     // expected version 1 as available, 2 as ended
     modelDirectory.removeVersion(3);
@@ -1404,7 +1427,7 @@ TEST_F(ModelManager, InitialFailedLoadingVersionSavesModelVersionWithProperStatu
     bool validVersion = true;
     modelDirectory.addVersion(1, !validVersion);
     ovms::ModelConfig config;
-    config.setBasePath("/tmp/" + modelDirectory.name);
+    config.setBasePath(getGenericFullPathForTmp("/tmp/" + modelDirectory.name));
     config.setName(modelDirectory.name);
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
@@ -1423,7 +1446,7 @@ TEST_F(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
     bool validVersion = true;
     modelDirectory.addVersion(1, validVersion);
     ovms::ModelConfig config;
-    config.setBasePath("/tmp/" + modelDirectory.name);
+    config.setBasePath(getGenericFullPathForTmp("/tmp/" + modelDirectory.name));
     config.setName(modelDirectory.name);
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
@@ -1434,20 +1457,22 @@ TEST_F(ModelManager, ModelVersionFailedReloadReportsFailedStatus) {
 }
 
 TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
-    const char* configWithTwoSameNames = R"({
+    std::string basePath = getGenericFullPathForTmp("/tmp/");
+    std::string configWithTwoSameNames = R"({
    "model_config_list": [
     {
       "config": {
         "name": "same_name",
-        "base_path": "/tmp/ModelManager/ConfigReloadingWithTwoModelsWithTheSameName/models/dummy1"
+        "base_path": ")" + basePath + R"(ModelManager/ConfigReloadingWithTwoModelsWithTheSameName/models/dummy1"
       }
     },
     {
       "config": {
         "name": "same_name",
-        "base_path": "/tmp/ModelManager/ConfigReloadingWithTwoModelsWithTheSameName/models/dummy2"
+        "base_path": ")" + basePath + R"(ModelManager/ConfigReloadingWithTwoModelsWithTheSameName/models/dummy2"
       }
     }]})";
+
     std::filesystem::create_directories(this->getFilePath("/models/dummy1/1"));
     std::filesystem::create_directories(this->getFilePath("/models/dummy2/1"));
     std::string fileToReload = this->getFilePath("/ovms_config_file2.json");
@@ -1943,7 +1968,7 @@ TEST_F(ReloadAvailableModelDueToConfigChange, SameConfig_ExpectNoReloads) {
 
 TEST_F(ReloadAvailableModelDueToConfigChange, ExpectReloadDueToBasePathChange) {
     mockModelVersionInstances = getMockedModelVersionInstances(initialVersions, *ieCore, config);
-    config.setBasePath("/new/custom/path");
+    config.setBasePath(getGenericFullPathForTmp("/tmp/new/custom/path"));
     ovms::ModelManager::getVersionsToChange(config, mockModelVersionInstances, requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
     EXPECT_THAT(*versionsToReload, UnorderedElementsAre(3));
 }

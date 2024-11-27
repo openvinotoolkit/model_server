@@ -79,12 +79,15 @@ Status validateCapiTensorContent(const InferenceTensor& tensor, ovms::Precision 
         SPDLOG_DEBUG(details);
         return Status(StatusCode::NONEXISTENT_BUFFER, details);
     }
-    size_t expectedValueCount = 1;
-    for (size_t i = 0; i < tensor.getShape().size(); i++) {
-        expectedValueCount *= tensor.getShape()[i];
-    }
+
     size_t elementSize = (expectedPrecision == Precision::STRING) ? sizeof(std::string) : ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
-    size_t expectedContentSize = expectedValueCount * elementSize;
+    size_t expectedContentSize;
+
+    if (computeExpectedBufferSizeReturnFalseIfOverflow<ovms::dimension_value_t>(tensor.getShape(), elementSize, expectedContentSize) == false) {
+        SPDLOG_DEBUG("[servable name: {} version: {}] Expected content size overflow for tensor - {}", servableName, servableVersion, tensorName);
+        return StatusCode::INVALID_SHAPE;
+    }
+
     if (expectedContentSize != buffer->getByteSize()) {
         std::stringstream ss;
         ss << "Expected: " << expectedContentSize << " bytes; Actual: " << buffer->getByteSize() << " bytes;";

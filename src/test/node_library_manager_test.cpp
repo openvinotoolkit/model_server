@@ -36,6 +36,9 @@ TEST(NodeLibraryManagerTest, UnSuccessfullLibraryLoading) {
 }
 
 TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     CustomNodeLibraryManager manager;
     NodeLibrary library;
     auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
@@ -57,6 +60,9 @@ TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingDuplicateNameAndBasePath) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     CustomNodeLibraryManager manager;
     auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
     ASSERT_EQ(status, StatusCode::OK);
@@ -65,6 +71,9 @@ TEST(NodeLibraryManagerTest, LibraryLoadingDuplicateNameAndBasePath) {
 }
 
 TEST(NodeLibraryManagerTest, LibraryReloadingDuplicateNameAndDifferentBasePath) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     CustomNodeLibraryManager manager;
     auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
     ASSERT_EQ(status, StatusCode::OK);
@@ -73,6 +82,9 @@ TEST(NodeLibraryManagerTest, LibraryReloadingDuplicateNameAndDifferentBasePath) 
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingDuplicatePath) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     CustomNodeLibraryManager manager;
     auto status = manager.loadLibrary("library_A", "/ovms/bazel-bin/src/lib_node_mock.so");
     ASSERT_EQ(status, StatusCode::OK);
@@ -81,12 +93,18 @@ TEST(NodeLibraryManagerTest, LibraryLoadingDuplicatePath) {
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingMissingImplementation) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     CustomNodeLibraryManager manager;
     auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_missing_implementation.so");
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM);
 }
 
 TEST(NodeLibraryManagerTest, TryLoadingCorruptedLibraryNextLoadCorrectLibrary) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     CustomNodeLibraryManager manager;
     auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_missing_implementation.so");
     ASSERT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM);
@@ -109,6 +127,9 @@ TEST(NodeLibraryManagerTest, ErrorWhenLibraryPathNotEscaped) {
 class ModelManagerNodeLibraryTest : public TestWithTempDir {};
 
 TEST_F(ModelManagerNodeLibraryTest, LoadCustomNodeLibrary) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const char* config = R"({
         "model_config_list": [],
         "custom_node_library_config_list": [
@@ -159,6 +180,9 @@ TEST_F(ModelManagerNodeLibraryTest, FailLoadingCorruptedCustomNodeLibrary) {
 }
 
 TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const char* configBefore = R"({
         "model_config_list": [],
         "custom_node_library_config_list": [
@@ -241,6 +265,9 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
 }
 
 TEST_F(ModelManagerNodeLibraryTest, AddRemoveAndAddLibraryInConfigReload) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     const char* configBefore = R"({
         "model_config_list": [],
         "custom_node_library_config_list": [

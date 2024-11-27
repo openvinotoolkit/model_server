@@ -189,10 +189,6 @@ public:
                     return absl::CancelledError();
                 }
                 RET_CHECK(generationOutputs.size() >= 1);
-                std::sort(generationOutputs.begin(), generationOutputs.end(), [](ov::genai::GenerationOutput& r1, ov::genai::GenerationOutput& r2) {
-                    return r1.score > r2.score;
-                });
-
                 std::string response = this->apiHandler->serializeUnaryResponse(generationOutputs);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);

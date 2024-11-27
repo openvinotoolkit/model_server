@@ -301,7 +301,7 @@ public:
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
         const char* configPath = "/ovms/src/test/embeddings/config_embeddings.json";
-        const char* extensionPath = "/ovms/src/example/SampleCpuExtension/libcustom_relu_cpu_extension.so";
+        const char* extensionPath = std::filesystem::exists("/opt/libcustom_relu_cpu_extension.so") ? "/opt/libcustom_relu_cpu_extension.so" : "/ovms/src/example/SampleCpuExtension/libcustom_relu_cpu_extension.so";
         server.setShutdownRequest(0);
         randomizePort(port);
         char* argv[] = {(char*)"ovms",

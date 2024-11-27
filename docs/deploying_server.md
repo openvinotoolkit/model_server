@@ -273,3 +273,9 @@ For operators mentioned in 2. and 3. see the [description of the deployment proc
 - [Using Cloud Storage](using_cloud_storage.md)
 - [Troubleshooting](troubleshooting.md)
 - [Model server parameters](parameters.md)
+
+## Deploying ovms.exe on Windows
+
+Once you have built the ovms.exe following the [Developer Guide for Windows](windows_developer_guide.md) 
+Follow the experimental/alpha windows deployment instructions to start the ovms server as a standalone binary on a Windows 11 system.
+[Deployment Guide for Windows](windows_binary_guide.md)

@@ -122,7 +122,6 @@ build:windows --define=use_fast_cpp_protos=true
 build:windows --define=allow_oversize_protos=true
 
 build:windows --spawn_strategy=standalone
-build:windows -c opt
 
 # Make Bazel print out all options from rc files.
 build:windows --announce_rc
@@ -279,10 +278,14 @@ build:mp_off_py_off --define=PYTHON_DISABLE=1
 build:mp_off_py_off --disk_cache=/root/.cache/bazel_mp_off_py_off
 #build --remote_header=x-build-event-log=DEBUG
 
+# Coverity needs remote and disk cache disabled
+build:coverity --config=mp_on_py_on
+build:coverity --disk_cache=
+
 #Add this parameter for windows local builds, its added on jenkins via build_windows.bat. Must be short path on C:\ for mediapipe to compile
 #startup --output_user_root=C:/b_tmp
 
 # Windows config default flags
 build:windows --define=CLOUD_DISABLE=1
-build:windows --define=PYTHON_DISABLE=1
+build:windows --define=PYTHON_DISABLE=0
 build:windows --define=MEDIAPIPE_DISABLE=0

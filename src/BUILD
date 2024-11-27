@@ -120,7 +120,7 @@ cc_shared_library(
      + select({
         "//:not_disable_python": [
             "@pybind11//:__subpackages__",
-            "@python3_linux//:__subpackages__",
+            "//third_party:=python3//:__subpackages__",
             "@local_config_python//:__subpackages__",
             ],
         "//:disable_python": []
@@ -457,12 +457,15 @@ cc_library(
             "//:disable_mediapipe" : [],
         }),
         deps = select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
+            "//:is_windows_or_python_is_disabled_no_llm": [],
+            "//conditions:default" : [
                 # Jinja template processing is done in Python
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
-                "//src/llm:text_processor",
+                "//src/llm:text_processor",],
+            }) + select({
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
             ],
             "//:disable_python": []
         }) + select({
@@ -1579,13 +1582,8 @@ cc_library(
     deps = [
             "libovmslogging",
             "libovmsmodelversioning",
-            "libovmsstatus",]
-            + select({
-                "//conditions:default": [
-                    "@boringssl//:ssl",
-                ],
-                "//src:windows" : [],
-            }),
+            "libovmsstatus",
+            "@boringssl//:ssl"],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
@@ -1796,16 +1794,20 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
+                "//conditions:default": [
+                    "test/kfs_rest_test.cpp",
+                    "test/metrics_flow_test.cpp",
+                    "test/http_rest_api_handler_test.cpp",
+                    "test/http_openai_handler_test.cpp",
+                    "test/test_http_utils.hpp",
+                ],
+                "//src:windows" : [],
+        }) + select({
             "//:is_windows_or_mediapipe_is_disabled_no_http": [],
             # Tests that require MediaPipe and HTTP (windows does not have HTTP yet)
             "//conditions:default" : [
-                "test/metrics_flow_test.cpp",
-                "test/mediapipeflow_test.cpp", # Mediapipe enabled
-                "test/mediapipe_framework_test.cpp", # Mediapipe enabled
-                "test/kfs_rest_test.cpp",
-                "test/http_rest_api_handler_test.cpp",
-                "test/http_openai_handler_test.cpp", # Mediapipe enabled
-                "test/test_http_utils.hpp",
+                "test/mediapipeflow_test.cpp",
+                "test/mediapipe_framework_test.cpp",
                 "test/reranknode_test.cpp",
                 "test/embeddingsnode_test.cpp",
             ],
@@ -1828,14 +1830,17 @@ cc_test(
             ],
             "//:disable_mediapipe" : [],
         }) + select({
-            "//:not_disable_python": [
-                # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
-                # "test/python/ovms_py_tensor_test.cpp",
+            "//:is_windows_or_python_is_disabled_no_llm": [],
+            "//conditions:default" : [
                 # LLM logic uses Python for processing Jinja templates
                 "test/llmnode_test.cpp",
                 "test/llmtemplate_test.cpp",
+                "test/text_streamer_test.cpp",],
+            }) + select({
+            "//:not_disable_python": [
+                # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
+                # "test/python/ovms_py_tensor_test.cpp",
                 "test/pythonnode_test.cpp",
-                "test/text_streamer_test.cpp",
             ],
             "//:disable_python" : [],
         }),
@@ -1981,12 +1986,11 @@ cc_test(
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
             "//:disable_mediapipe" : [],
-        }) +select({
-            "//:not_disable_python": [
-                "//src/llm:llmnoderesources",
-            ],
-            "//:disable_python": []
-        }),
+        }) + select({
+            "//:is_windows_or_python_is_disabled_no_llm": [],
+            "//conditions:default" : [
+                "//src/llm:llmnoderesources",],
+            }),
     copts = COPTS_TESTS,
 )
 

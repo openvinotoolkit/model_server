@@ -64,14 +64,25 @@ Note that the `models_path` parameter in the graph file can be an absolute path 
 Check the [LLM calculator documentation](../../docs/llm/reference.md) to learn about configuration options.
 
 ## Start-up
+
+### CPU
+
+Running this command starts the container with CPU only target device:
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
+### GPU
+
 In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
-to `docker run` command, use the image with GPU support and make sure you copy the graph.pbtxt tuned for GPU device. 
-They can be applied using the export command like below:
-`python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --block_size 16 --cache_size 2 --config_file_path models/config.json --model_repository_path models`
-Make sure the export model quantization level and cache size fit to the GPU memory.
+to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
+It can be applied using the commands below:
+```
+python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --cache_size 2 --config_file_path models/config.json --model_repository_path models --overwrite_models
+
+docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
+```
+
+### Check readiness
 
 Wait for the model to load. You can check the status with a simple command:
 ```bash
@@ -283,3 +294,10 @@ Check this simple [text generation scaling demo](https://github.com/openvinotool
 ## Testing the model accuracy over serving API
 
 Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
+
+
+## References
+- [Chat Completions API](../../docs/model_server_rest_api_chat.md)
+- [Completions API](../../docs/model_server_rest_api_completions.md)
+- [Writing client code](../../docs/clients_genai.md)
+- [LLM calculator reference](../../docs/llm/reference.md)

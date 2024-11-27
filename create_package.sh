@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-# This script should be used inside the build image to create a binary package based on the compiled artefacts
+# This script should be used inside the build image to create a binary package based on the compiled artifacts
 
 env
 mkdir -vp /ovms_release/bin
@@ -28,7 +28,7 @@ find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -
 mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/
 cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
-if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2450 ; ln -s libopenvino_genai.so.2024.5.0.0 libopenvino_genai.so.2450 ; fi
+if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2500 ; ln -s libopenvino_genai.so.2025.0.0.0 libopenvino_genai.so.2500 ; fi
 rm -f /ovms_release/lib/libssl.so
 rm -f /ovms_release/lib/libsampleloader*
 

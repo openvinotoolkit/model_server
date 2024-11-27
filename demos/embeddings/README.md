@@ -2,23 +2,17 @@
 This demo shows how to deploy embeddings models in the OpenVINO Model Server for text feature extractions.
 Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
-## Get the docker image
-
-Build the image from source to try this new feature. It will be included in the public image in the coming version 2024.5.
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make release_image GPU=1
-```
-It will create an image called `openvino/model_server:latest`.
-> **Note:** This operation might take 40min or more depending on your build host.
-> **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
-
 ## Model preparation
 > **Note** Python 3.9 or higher is needed for that step
 > 
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
+
+Clone model server repository:
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+```
 
 Install python dependencies for the conversion script:
 ```bash
@@ -73,13 +67,23 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 ```
 
 ## Start-up
+
+### CPU
+
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
-In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
-to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU or export it with `task_parmaters='{"target_device":"GPU"}'`. 
-Also make sure the export model quantization level and cache size fit to the GPU memory.
+### GPU
 
+In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
+to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU. Also make sure the export model quantization level and cache size fit to the GPU memory. All of that can be applied with the commands:
+
+```
+python demos/common/export_models/export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+
+docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
+```
+### Check readiness
 
 Wait for the model to load. You can check the status with a simple command below. Note that the slash `/` in the model name needs to be escaped with `%2F`:
 ```bash
@@ -190,7 +194,7 @@ Success rate: 100.0%. (1000/1000)
 Throughput - Tokens per second: 5433.913083411673
 Mean latency: 1424 ms
 Median latency: 1451 ms
-Average document length: 83.208 token
+Average document length: 83.208 tokens
 ```
 
 ## RAG with Model Server

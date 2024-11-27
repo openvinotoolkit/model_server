@@ -1,4 +1,5 @@
 def image_build_needed = "false"
+def win_image_build_needed = "false"
 def client_test_needed = "false"
 def shortCommit = ""
 
@@ -32,6 +33,10 @@ pipeline {
                 if (matched){
                   client_test_needed = "true"
               }
+              def win_matched = (git_diff =~ /src|third_party|external|ci|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|\.bat|\.groovy/)
+              if (win_matched){
+                  win_image_build_needed = "true"
+              }
             }
           }
         }
@@ -64,9 +69,26 @@ pipeline {
                       sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                     }
             }
-            stage('Build windows') {
+            stage('Build and test windows') {
+              agent {
+                label 'win_ovms'
+              }
+              when { expression { win_image_build_needed == "true" } }
               steps {
-                  build job: 'ovms/ovms-windows/'+ env.JOB_BASE_NAME
+                  script {
+                      def windows = load 'ci/loadWin.groovy'
+                      if (windows != null) {
+                        try {
+                          windows.clean()
+                          windows.build_and_test()
+                          windows.check_tests()
+                        } finally {
+                          windows.archive_artifacts()
+                        }
+                      } else {
+                          error "Cannot load ci/loadWin.groovy file."
+                      }
+                  }
               }
             }
           }

@@ -69,7 +69,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, "/ovms/src/test/llm/config_llm_dummy_kfs.json");
+        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config_llm_dummy_kfs.json").c_str());
         auto start = std::chrono::high_resolution_clock::now();
         const int numberOfRetries = 5;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
@@ -87,7 +87,7 @@ public:
             };
             plugin_config_t pluginConfig;
             JsonParser::parsePluginConfig("{\"INFERENCE_PRECISION_HINT\":\"f32\"}", pluginConfig);
-            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>("/ovms/src/test/llm_testing/facebook/opt-125m", schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
+            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
             llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(cbPipe);
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error during llm node initialization for models_path exception: {}", e.what());
@@ -2770,7 +2770,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
                 models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
                 max_num_batched_tokens: 1024
                 cache_size: 1
-                block_size: 8
                 max_num_seqs: 95
                 dynamic_split_fuse: false
                 enable_prefix_caching: true
@@ -2798,9 +2797,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
 
     ASSERT_EQ(nodeResources.schedulerConfig.max_num_batched_tokens, 1024);
     ASSERT_EQ(nodeResources.schedulerConfig.cache_size, 1);
-    // We create graph with block_size set in graph config to make sure setting it does not result in error
-    // TODO: Remove below commented assertion as well as block_size from the testPbtxt when block_size is removed from options proto.
-    // ASSERT_EQ(nodeResources.schedulerConfig.block_size, 8);
     ASSERT_EQ(nodeResources.schedulerConfig.dynamic_split_fuse, false);
     ASSERT_EQ(nodeResources.schedulerConfig.max_num_seqs, 95);
     ASSERT_EQ(nodeResources.schedulerConfig.enable_prefix_caching, true);

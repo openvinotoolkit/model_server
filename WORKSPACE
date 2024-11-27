@@ -33,6 +33,14 @@ bazel_skylib_workspace()
 load("@bazel_skylib//lib:versions.bzl", "versions")
 versions.check(minimum_bazel_version = "6.0.0")
 
+http_archive(
+    name = "zlib",
+    build_file = "@mediapipe//third_party:zlib.BUILD",
+    sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
+    strip_prefix = "zlib-1.3.1",
+    url = "http://zlib.net/fossils/zlib-1.3.1.tar.gz",
+)
+
 # RapidJSON
 # Must be defined earlier than tensorflow_serving because TFS is using older rapidjson
 # Version must match openvino.genai -> jinja2cpp -> rapidjson
@@ -118,7 +126,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "cfb127e552aa66696f49c87b61f611e2a2b1b2a1", # update Geti calculators to latest
+    commit = "104e9c6be122d2fd0a901f1eb82f00b5558ff8cd", # Update dependency (#98)
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -235,10 +243,19 @@ new_local_repository(
 load("@//third_party/python:python_repo.bzl", "python_repository")
 python_repository(name = "_python3-linux")
 
+load("@//third_party/python:python_repo_win.bzl", "python_repository")
+python_repository(name = "_python3-windows")
+
 new_local_repository(
     name = "python3_linux",
     path = "/usr",
     build_file = "@_python3-linux//:BUILD"
+)
+
+new_local_repository(
+    name = "python3_windows",
+    path = "C:\\opt\\",
+    build_file = "@_python3-windows//:BUILD"
 )
 
 http_archive(
