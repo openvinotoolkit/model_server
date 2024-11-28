@@ -1,9 +1,17 @@
+def check_dependencies() {
+
+}
+
+def install_dependencies() {
+
+}
+
 def clean() {
-    def output1 = bat(returnStdout: true, script: 'clean_windows.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def output1 = bat(returnStdout: true, script: 'windows_clean.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
 }
 
 def build_and_test(){
-    def status = bat(returnStatus: true, script: 'build_windows.bat ' + env.JOB_BASE_NAME)
+    def status = bat(returnStatus: true, script: 'windows_build.bat ' + env.JOB_BASE_NAME)
     status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms.exe win_build.log | grep "Build completed successfully"')
     if (status != 0) {
         error "Error: Windows build failed ${status}. Check win_build.log for details."

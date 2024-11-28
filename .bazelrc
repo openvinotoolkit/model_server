@@ -282,7 +282,7 @@ build:mp_off_py_off --disk_cache=/root/.cache/bazel_mp_off_py_off
 build:coverity --config=mp_on_py_on
 build:coverity --disk_cache=
 
-#Add this parameter for windows local builds, its added on jenkins via build_windows.bat. Must be short path on C:\ for mediapipe to compile
+#Add this parameter for windows local builds, its added on jenkins via windows_build.bat. Must be short path on C:\ for mediapipe to compile
 #startup --output_user_root=C:/b_tmp
 
 # Windows config default flags

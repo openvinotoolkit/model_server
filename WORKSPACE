@@ -209,7 +209,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_openvino",
     build_file = "@//third_party/openvino:openvino_windows.BUILD",
-    path = "C:\\opt\\intel\\openvino_2024\\runtime",
+    path = "C:\\opt\\intel\\openvino\\runtime",
 )
 
 new_local_repository(
