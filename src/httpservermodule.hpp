@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "drogon_http_server.hpp"
+#include "cpphttplib_http_server.hpp"
 #include "http_server.hpp"
 #include "module.hpp"
 
@@ -27,7 +28,8 @@ class Config;
 class Server;
 class HTTPServerModule : public Module {
     //std::unique_ptr<ovms::http_server> server;
-    std::unique_ptr<DrogonHttpServer> drogonServer;
+    std::unique_ptr<CppHttpLibHttpServer> cppHttpLibServer;
+    //std::unique_ptr<DrogonHttpServer> drogonServer;
     Server& ovmsServer;
 
 public:

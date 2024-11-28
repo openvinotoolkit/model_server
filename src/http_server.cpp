@@ -397,4 +397,57 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
     return server;
 }
 
+std::unique_ptr<CppHttpLibHttpServer> createAndStartCppHttpLibHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
+    auto server = std::make_unique<CppHttpLibHttpServer>(num_threads, port, address);
+    auto cpphttplibHandler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
+    server->registerRequestDispatcher([cpphttplibHandler](const httplib::Request& req, httplib::Response& resp) {
+        std::vector<std::pair<std::string, std::string>> headers;
+
+        for (const std::pair<const std::string, const std::string>& header : req.headers) {
+            if (header.first == "inference-header-content-length") {
+                headers.emplace_back("Inference-Header-Content-Length", header.second);
+                continue;
+            }
+            headers.emplace_back(header.first, header.second);
+        }
+        std::string output;
+
+        HttpResponseComponents responseComponents;
+
+        const auto status = cpphttplibHandler->processRequest(
+            req.method,
+            req.path,
+            req.body,
+            &headers,
+            &output,
+            responseComponents,
+            nullptr);//reqInterfaceNew);
+        if (status == StatusCode::PARTIAL_END) {
+            // No further messaging is required.
+            // Partial responses were delivered via "req" object.
+            return;
+        }
+        if (!status.ok() && output.empty()) {
+            output.append("{\"error\": \"" + status.string() + "\"}");
+        }
+
+        if (responseComponents.inferenceHeaderContentLength.has_value()) {
+            std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
+            headers.emplace_back(header);
+        }
+        for (const auto& kv : headers) {
+            resp.set_header(kv.first, kv.second);
+        }
+        resp.set_content(output, "application/json");
+
+        // new code caused all requests to be 200 OK
+        if (!status.ok()) {
+            resp.status = 500; // todo
+        }
+    });
+
+    server->startAcceptingRequests();
+    return server;
+}
+
 }  // namespace ovms

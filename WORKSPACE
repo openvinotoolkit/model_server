@@ -455,6 +455,12 @@ new_local_repository(
     path = "third_party/mediapipe_calculators",
 )
 
+new_local_repository(
+    name = "cpphttplib",
+    build_file = "@//third_party/cpphttplib:BUILD",
+    path = "third_party/cpphttplib",
+)
+
 git_repository(
     name = "nlohmann_json",
     remote = "https://github.com/nlohmann/json/",

@@ -24,6 +24,7 @@
 // #pragma GCC diagnostic pop
 
 #include "drogon_http_server.hpp"
+#include "cpphttplib_http_server.hpp"
 
 namespace ovms {
 class Server;
@@ -42,5 +43,6 @@ class Server;
 // std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
 
 std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
+std::unique_ptr<CppHttpLibHttpServer> createAndStartCppHttpLibHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
 
 }  // namespace ovms

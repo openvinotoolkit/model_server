@@ -475,6 +475,7 @@ cc_library(
             "libovms_capi_servable_metadata",
             "libmodelconfigjsonparser",
             "libdrogon_http_server",
+            "libcpphttplib_http_server",
             "libovmsmodelconfig",
             "libovmscapibuffer",
             "libovmscapi_utils",
@@ -1681,6 +1682,29 @@ cc_library(
     deps = [
         "libdrogon_http_async_writer_interface",
         "@drogon//:drogon_cmake",
+        "@mediapipe//mediapipe/framework/port:threadpool",
+        "libovmslogging",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+# HTTP Server implementation using cpphttplib
+# To use other library simply create new target and implementation of libdrogon_http_async_writer_interface
+cc_library(
+    name = "libcpphttplib_http_server",
+    srcs = [
+        "cpphttplib_http_server.hpp",
+        "cpphttplib_http_server.cpp",
+        #"drogon_http_async_writer_impl.hpp", TODO
+        #"drogon_http_async_writer_impl.cpp",
+    ],
+    deps = [
+        "libdrogon_http_async_writer_interface",
+        "@cpphttplib//:cpphttplib",
         "@mediapipe//mediapipe/framework/port:threadpool",
         "libovmslogging",
     ],

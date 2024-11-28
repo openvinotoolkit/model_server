@@ -43,7 +43,8 @@ Status HTTPServerModule::start(const ovms::Config& config) {
     //     SPDLOG_ERROR(status.string());
     //     return status;
     // }
-    drogonServer = ovms::createAndStartDrogonHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
+    //drogonServer = ovms::createAndStartDrogonHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
+    cppHttpLibServer = ovms::createAndStartCppHttpLibHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
     // if (server == nullptr) {
     //     std::stringstream ss;
     //     ss << "at " << server_address;
@@ -63,7 +64,8 @@ void HTTPServerModule::shutdown() {
     state = ModuleState::STARTED_SHUTDOWN;
     //server->Terminate();
     //server->WaitForTermination();
-    drogonServer->terminate();
+    cppHttpLibServer->terminate();
+    //drogonServer->terminate();
     //server.reset();
     SPDLOG_INFO("Shutdown HTTP server");
     state = ModuleState::SHUTDOWN;
