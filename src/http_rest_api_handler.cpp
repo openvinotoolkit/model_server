@@ -25,7 +25,9 @@
 #include <utility>
 #include <vector>
 
+#ifdef __linux__
 #include <curl/curl.h>
+#endif
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
@@ -1141,6 +1143,8 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
     return StatusCode::OK;
 }
 
+// TODO: Windows
+#ifdef __linux__
 std::string urlDecode(const std::string& encoded) {
     int output_length;
     CURL* curl = curl_easy_init();
@@ -1156,5 +1160,11 @@ std::string urlDecode(const std::string& encoded) {
     }
     return encoded;
 }
+#elif _WIN32
+// TODO: Windows
+std::string urlDecode(const std::string& encoded) {
+    return encoded;
+}
+#endif
 
 }  // namespace ovms

@@ -380,22 +380,22 @@ cc_library(
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
         "global_sequences_viewer.hpp",
-        "global_sequences_viewer.cpp",]
+        "global_sequences_viewer.cpp",
+        "http_server.hpp",
+        "http_server.cpp",
+        "httpservermodule.hpp",
+        "httpservermodule.cpp",
+        "http_rest_api_handler.hpp",
+        "http_rest_api_handler.cpp",
+        "http_frontend/http_graph_executor_impl.cpp",
+        "http_frontend/http_graph_executor_impl.hpp",]
         + select({
             "//:is_windows_or_mediapipe_is_disabled_no_http": [],
-            "//conditions:default" : [
-                "http_frontend/http_graph_executor_impl.cpp",
-                "http_frontend/http_graph_executor_impl.hpp",],
+            "//conditions:default" : [],
             })
         #TODO : add to server lib and cleanup headers too many includes
          + select({
                 "//conditions:default": [
-                    "http_server.hpp",
-                    "http_server.cpp",
-                    "http_rest_api_handler.hpp",
-                    "httpservermodule.hpp",
-                    "http_rest_api_handler.cpp",
-                    "httpservermodule.cpp",
                 ],
                 "//src:windows" : [],
                 }) + [      
@@ -467,10 +467,10 @@ cc_library(
             "//:disable_python": []
         }) + select({
             "//:is_windows_or_mediapipe_is_disabled_no_http": [],
-            "//conditions:default" : [
-                "//src/embeddings:embeddingscalculator",
-                "//src/rerank:rerankcalculator",],
+            "//conditions:default" : [],
         }) + [
+            "//src/embeddings:embeddingscalculator",
+            "//src/rerank:rerankcalculator",
             "cpp_headers",
             "libovms_capi_servable_metadata",
             "libmodelconfigjsonparser",
@@ -1680,7 +1680,7 @@ cc_library(
     ],
     deps = [
         "libdrogon_http_async_writer_interface",
-        "@drogon//:drogon_cmake",
+        "@drogon//:drogon",
         "@mediapipe//mediapipe/framework/port:threadpool",
         "libovmslogging",
     ],
