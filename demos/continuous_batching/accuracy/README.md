@@ -10,12 +10,13 @@ It reports end to end quality of served model from the client application point 
 Install the framework via:
 ```bash
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-pip3 install lm_eval[api]
+pip3 install lm_eval[api] langdetect immutabledict
 ```
 
 ## Exporting the models and starting the model server
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
 pip3 install -U -r demos/common/export_models/requirements.txt
 mkdir models 
 python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models

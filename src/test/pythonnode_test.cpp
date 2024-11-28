@@ -28,11 +28,13 @@
 #include "../config.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
-#include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+// TODO: Enable on windows
+#ifdef __linux__
 #include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
+#endif
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
@@ -83,7 +85,7 @@ public:
     }
 
     static void SetUpTestSuite() {
-        std::string configPath = "/ovms/src/test/mediapipe/python/mediapipe_add_python_node.json";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/mediapipe_add_python_node.json");
         ovms::Server::instance().setShutdownRequest(0);
         std::string port = "9178";
         randomizePort(port);
@@ -1019,8 +1021,8 @@ static std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>> pre
     auto fsHandlerPath = std::filesystem::path(handlerPath);
     fsHandlerPath.replace_extension();
 
-    std::string parentPath = fsHandlerPath.parent_path();
-    std::string filename = fsHandlerPath.filename();
+    std::string parentPath = fsHandlerPath.parent_path().string();
+    std::string filename = fsHandlerPath.filename().string();
 
     py::gil_scoped_acquire acquire;
     py::module_ sys = py::module_::import("sys");

@@ -32,7 +32,7 @@ md c:\opt
 Visual Studio 2019 with C++ - https://visualstudio.microsoft.com/downloads/
 
 ## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
-Python3. (Python 3.11.9 is tested)
+Python3.9
 ```
 pip install numpy==1.23
 ```
@@ -56,7 +56,7 @@ Open cmd.exe in c:\opt
 md test\model\1
 C:\opt\intel\openvino_2024\setupvars.bat
 C:\opt\opencv\build\setup_vars_opencv4.cmd
-xcopy /r /s /e /Y ovms.exe c:\opt\test
+xcopy /r /Y ovms.exe c:\opt\test
 cd c:\opt\test
 wget https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -O 1.tar.gz
 tar xzf 1.tar.gz -C model\1

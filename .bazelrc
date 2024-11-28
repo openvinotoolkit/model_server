@@ -122,7 +122,6 @@ build:windows --define=use_fast_cpp_protos=true
 build:windows --define=allow_oversize_protos=true
 
 build:windows --spawn_strategy=standalone
-build:windows -c opt
 
 # Make Bazel print out all options from rc files.
 build:windows --announce_rc
@@ -288,5 +287,5 @@ build:coverity --disk_cache=
 
 # Windows config default flags
 build:windows --define=CLOUD_DISABLE=1
-build:windows --define=PYTHON_DISABLE=1
+build:windows --define=PYTHON_DISABLE=0
 build:windows --define=MEDIAPIPE_DISABLE=0
