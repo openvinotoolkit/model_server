@@ -87,7 +87,7 @@ import cohere
 client = cohere.Client(base_url="http://localhost:8000/v3", api_key="not_used")
 responses = client.rerank(query="hello",documents=["welcome","farewell"], model="BAAI/bge-reranker-large")
 for response in responses.results:
-    print("index {}, relevance_score {}".format(response.index, response.relevance_score)) > rerank_client.py
+    print(f"index {response.index}, relevance_score {response.relevance_score}")' > rerank_client.py
 
 python3 rerank_client.py 
 ```

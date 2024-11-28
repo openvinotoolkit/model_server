@@ -55,8 +55,8 @@ if args["dataset"] == 'synthetic':
     for i in range(args["limit"]):
         docs = docs.add_item({"text":dummy_text})
 else:
-    filter = "train[:{}]".format(args["limit"])
-    docs = load_dataset(args["dataset"],split=filter)
+    filter = f"train[:{args["limit"]}]"
+    docs = load_dataset(args["dataset"], split=filter)
 
 print("Number of documents:",len(docs))
 
@@ -163,7 +163,7 @@ async def async_request_rerank(
                 else:
                     output.error = response.reason or ""
                     output.success = False
-                    print("ERROR",response.reason)
+                    print("ERROR", response.reason)
 
         except Exception:
             output.success = False
@@ -272,11 +272,14 @@ elif args["backend"] == "tei-embed":
 elif args["backend"] == "infinity-embeddings":
     backend_function = async_request_embeddings
     default_api_url = "http://localhost:7997/embeddings"
+else:
+    print("invalid backend")
+    exit()
 
 if args["api_url"] is None:
     args["api_url"] = default_api_url
 
-benchmark_results = asyncio.run(benchmark(docs=docs, model=args["model"], api_url=args["api_url"],request_rate=float(args["request_rate"]),backend_function=backend_function))
+benchmark_results = asyncio.run(benchmark(docs=docs, model=args["model"], api_url=args["api_url"], request_rate=float(args["request_rate"]), backend_function=backend_function))
 
 num_tokens = count_tokens(docs=docs,model=args["model"])
 #print(benchmark_results)
