@@ -16,70 +16,31 @@
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "patch")
 
-def drogon_cpp():
-    drogon_cpp_repository(name="_drogon_cpp")
-    http_archive(
-        name = "jsoncpp",
-        sha256 = "f93b6dd7ce796b13d02c108bc9f79812245a82e577581c4c9aabe57075c90ea2",
-        strip_prefix = "jsoncpp-1.9.6",
-        urls = [
-            "https://github.com/open-source-parsers/jsoncpp/archive/1.9.6.tar.gz",
-        ],
-        build_file_content = """
-cc_library(
-    name = "jsoncpp",
-    srcs = glob(["src/lib_json/*.cpp"]),
-    hdrs = glob(["include/json/*.h", "src/lib_json/*.h"]),
-    includes = [
-        "include",  # Add the top-level include directory
-        "src/lib_json",  # Add the source-level include directory
-    ],
-    visibility = ["//visibility:public"],
-    linkstatic = True,
-)
-        """,
-    )
-    new_git_repository(
-        name = "drogon",
-        remote = "https://github.com/drogonframework/drogon",
-        tag = "v1.9.7",  # Sep 10 2024
-        build_file = "@_drogon_cpp//:BUILD",
-        init_submodules = True,
-        recursive_init_submodules = True,
-        patch_cmds = ["find . -name '中文.txt' -delete"],
-    )
+def _is_windows(ctx):
+    return ctx.os.name.lower().find("windows") != -1
 
-def _impl(repository_ctx):
-    http_proxy = repository_ctx.os.environ.get("http_proxy", "")
-    https_proxy = repository_ctx.os.environ.get("https_proxy", "")
-
-    # Note we need to escape '{/}' by doubling them due to call to format
+def _get_linux_build_file():
     build_file_content = """
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-
 visibility = ["//visibility:public"]
-
 config_setting(
     name = "dbg",
     values = {{"compilation_mode": "dbg"}},
 )
-
 config_setting(
     name = "opt",
     values = {{"compilation_mode": "opt"}},
 )
-
 filegroup(
     name = "all_srcs",
     srcs = glob(["**"]),
     visibility = ["//visibility:public"],
 )
-
 build_release = {{"CMAKE_BUILD_TYPE": "Release"}}
 build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
-
 cmake(
     name = "drogon_cmake",
     build_args = [
@@ -111,6 +72,8 @@ cmake(
     env = {{
         "HTTP_PROXY": "{http_proxy}",
         "HTTPS_PROXY": "{https_proxy}",
+        "http_proxy": "{http_proxy}",
+        "https_proxy": "{https_proxy}",
     }},
     deps = ["@jsoncpp//:jsoncpp",],
     lib_source = ":all_srcs",
@@ -123,10 +86,148 @@ cmake(
     tags = ["requires-network"],
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "drogon",
+    deps = [
+        ":drogon_cmake",
+    ],
+    visibility = ["//visibility:public"],
+)
 """
+    return build_file_content
+
+def _get_windows_build_file():
+    build_file_content = """
+load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+
+visibility = ["//visibility:public"]
+
+config_setting(
+    name = "dbg",
+    values = {{"compilation_mode": "dbg"}},
+)
+
+config_setting(
+    name = "opt",
+    values = {{"compilation_mode": "opt"}},
+)
+
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
+build_release = {{"CMAKE_BUILD_TYPE": "Release"}}
+build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
+
+cmake(
+    name = "drogon_cmake",
+    build_args = [
+        "-j 6",
+    ],
+    cache_entries = {{
+        "ZLIB_INCLUDE_DIR": "C:/baze_tmp/tpoq5oxa/execroot/ovms/external/zlib",
+        "ZLIB_LIBRARY": "@zlib//:zlib",
+        "BUILD_CTL": "OFF",
+        "BUILD_EXAMPLES": "OFF",
+        "BUILD_ORM": "OFF",
+        "BUILD_BROTLI": "OFF",
+        "BUILD_YAML_CONFIG": "OFF",
+        "CMAKE_INSTALL_LIBDIR": "lib",
+        "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
+        "CMAKE_CXX_STANDARD": "17",
+        "CXX_FILESYSTEM_HAVE_FS": "1",
+    }} | select({{
+           "//conditions:default": dict(
+               build_release
+            ),
+            ":dbg":  dict(
+               build_debug
+            ),
+        }}),
+    env = {{
+        "HTTP_PROXY": "{http_proxy}",
+        "HTTPS_PROXY": "{https_proxy}",
+        "http_proxy": "{http_proxy}",
+        "https_proxy": "{https_proxy}",
+    }},
+    deps = ["@jsoncpp//:jsoncpp",],
+    lib_source = ":all_srcs",
+    out_lib_dir = "lib",
+    # linking order
+    out_static_libs = [
+            "drogon.lib",
+            "trantor.lib",
+        ],
+    tags = ["requires-network"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "drogon",
+    deps = [
+        ":drogon_cmake",
+    ],
+    visibility = ["//visibility:public"],
+)
+"""
+    return build_file_content
+
+def drogon_cpp():
+    drogon_cpp_repository(name="_drogon_cpp")
+    http_archive(
+        name = "jsoncpp",
+        sha256 = "f93b6dd7ce796b13d02c108bc9f79812245a82e577581c4c9aabe57075c90ea2",
+        strip_prefix = "jsoncpp-1.9.6",
+        urls = [
+            "https://github.com/open-source-parsers/jsoncpp/archive/1.9.6.tar.gz",
+        ],
+        build_file_content = """
+cc_library(
+    name = "jsoncpp",
+    srcs = glob(["src/lib_json/*.cpp"]),
+    hdrs = glob(["include/json/*.h", "src/lib_json/*.h"]),
+    includes = [
+        "include",  # Add the top-level include directory
+        "src/lib_json",  # Add the source-level include directory
+    ],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+)
+        """,
+    )
+    new_git_repository(
+        name = "drogon",
+        remote = "https://github.com/drogonframework/drogon",
+        tag = "v1.9.7",  # Sep 10 2024
+        build_file = "@_drogon_cpp//:BUILD",
+        init_submodules = True,
+        recursive_init_submodules = True,
+        patches = ["@//third_party/drogon:ovms_drogon.patch"],
+        patch_args = ["-p1"],
+        #patch_cmds = ["patch -p0 < %s" % patch_file]
+    )
+
+def _impl(repository_ctx):
+    http_proxy = repository_ctx.os.environ.get("HTTP_PROXY", "")
+    https_proxy = repository_ctx.os.environ.get("HTTPS_PROXY", "")
+    if not http_proxy:
+        http_proxy = repository_ctx.os.environ.get("http_proxy", "")
+    if not https_proxy:
+        https_proxy = repository_ctx.os.environ.get("https_proxy", "")
+
+    # Note we need to escape '{/}' by doubling them due to call to format
+    if _is_windows(repository_ctx):
+        build_file_content = _get_windows_build_file()
+    else:
+        build_file_content = _get_linux_build_file()
+
     repository_ctx.file("BUILD", build_file_content.format(http_proxy=http_proxy, https_proxy=https_proxy))
 
 drogon_cpp_repository = repository_rule(
     implementation = _impl,
-    local=False,
+    local=True,
 )
