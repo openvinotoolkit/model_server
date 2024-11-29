@@ -422,7 +422,7 @@ WORKDIR /
 
 COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-ARG INSTALL_DRIVER_VERSION="23.22.26516"
+ARG INSTALL_DRIVER_VERSION="24.39.31294"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 # hadolint ignore=DL3003,SC2164
 RUN apt-get update ; \
@@ -433,10 +433,10 @@ RUN apt-get update ; \
     if [ "$NPU" == "1" ] ; then \
         mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
         apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
-        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-driver-compiler-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
-        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-fw-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
-        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.6.0/intel-level-zero-npu_1.6.0.20240814-10390978568_ubuntu22.04_amd64.deb ; \
-        curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.6/level-zero_1.17.6+u22.04_amd64.deb ; \
+        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-driver-compiler-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
+        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-fw-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
+        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-level-zero-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
+        curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.44/level-zero_1.17.44+u22.04_amd64.deb ; \
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
     fi ; \
     apt-get clean ; \
