@@ -110,7 +110,7 @@ public:
         ovms::Server::instance().setShutdownRequest(1);
         serverThread->join();
         ovms::Server::instance().setShutdownRequest(0);
-        std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
+        std::string path = getGenericFullPathForTmp("/tmp/pythonNodeTestRemoveFile.txt");
         ASSERT_TRUE(!std::filesystem::exists(path));
     }
 };
@@ -131,7 +131,7 @@ TEST_F(PythonFlowTest, InitializationPass) {
 
 TEST_F(PythonFlowTest, FinalizationPass) {
     ModelManager* manager;
-    std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
+    std::string path = getGenericFullPathForTmp("/tmp/pythonNodeTestRemoveFile.txt");
     manager = &(dynamic_cast<const ovms::ServableManagerModule*>(ovms::Server::instance().getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager());
     auto graphDefinition = manager->getMediapipeFactory().findDefinitionByName("mediapipePythonBackend");
     ASSERT_NE(graphDefinition, nullptr);
@@ -181,7 +181,9 @@ TEST_F(PythonFlowTest, PythonNodeFileDoesNotExist) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -206,7 +208,9 @@ TEST_F(PythonFlowTest, PythonNodeClassDoesNotExist) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -231,7 +235,9 @@ TEST_F(PythonFlowTest, PythonNodeExecuteNotImplemented) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -268,7 +274,9 @@ TEST_F(PythonFlowTest, PythonNodeNameAlreadyExist) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -293,7 +301,9 @@ TEST_F(PythonFlowTest, PythonNodeInitFailed) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -318,7 +328,9 @@ TEST_F(PythonFlowTest, PythonNodeInitFailedImportOutsideTheClassError) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -343,7 +355,9 @@ TEST_F(PythonFlowTest, PythonNodeInitException) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -363,7 +377,9 @@ TEST_F(PythonFlowTest, PythonNodeOptionsMissing) {
             output_stream: "out2"
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -387,7 +403,9 @@ TEST_F(PythonFlowTest, PythonNodeNameMissing) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -412,7 +430,9 @@ TEST_F(PythonFlowTest, PythonNodeNameDoesNotExist) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -438,7 +458,9 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -455,7 +477,7 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
         std::string expectedName = py::str("testModel").cast<std::string>();
 
         ASSERT_EQ(modelName, expectedName);
-        py::int_ executionTime = nodeRes->ovmsPythonModel.get()->attr("execution_time");
+        int executionTime = nodeRes->ovmsPythonModel.get()->attr("execution_time").cast<int>();
         ASSERT_EQ(executionTime, 300);
         py::list modelInputs = nodeRes->ovmsPythonModel.get()->attr("model_inputs");
 
@@ -496,7 +518,9 @@ TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -557,7 +581,9 @@ TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -599,6 +625,9 @@ TEST_F(PythonFlowTest, PythonNodeLoopbackDefinedOnlyOnInput) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -624,7 +653,9 @@ TEST_F(PythonFlowTest, PythonNodeLoopbackDefinedOnlyOnOutput) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -669,7 +700,9 @@ TEST_F(PythonFlowTest, DISABLED_PythonNodeLoopback_SyncSet_WrongIndex) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -714,7 +747,9 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_WrongIndex) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -755,7 +790,9 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_BackEdgeFalse) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -794,7 +831,9 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_Missing) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -828,7 +867,9 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_SyncSet_Missing) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -884,7 +925,9 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_Correct) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1056,6 +1099,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1099,6 +1145,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleThreeOut) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1149,6 +1198,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestReturnCustomDatatype) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1190,6 +1242,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestReturnNotListOrIteratorObject) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1227,6 +1282,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestReturnListWithNonTensorObject) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1276,6 +1334,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiNodeNoTags) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1339,6 +1400,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiNodeOnlyTags) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1402,6 +1466,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiNodeTagsAndInde
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1461,6 +1528,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOu
             output_stream: "OVTENSOR:out"
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1520,6 +1590,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestConvertersUnsupportedTypeInPythonTens
             output_stream: "OVTENSOR:out"
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1589,6 +1662,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersInTheMi
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1641,6 +1717,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInTwoOutTwoParallelExecutors) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1720,6 +1799,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInTwoOutTwoParallelExecutorsWit
             output_stream: "OVTENSOR:out2"
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1941,6 +2023,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -1985,6 +2070,9 @@ static void setupTestPipeline(std::shared_ptr<MediapipeGraphExecutor>& pipeline,
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     mediapipeDummy = std::make_unique<DummyMediapipeGraphDefinition>("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy->inputConfig = testPbtxt;
@@ -2067,6 +2155,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
                 }
             }
         )";
+#ifdef _WIN32
+        replaceHandlerPath(testPbtxt);
+#endif
 
         const std::string handlerPathToReplace{"<FILENAME>"};
         testPbtxt.replace(testPbtxt.find(handlerPathToReplace), handlerPathToReplace.size(), handlerPath);
@@ -2249,7 +2340,9 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(firstTestPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = firstTestPbtxt;
@@ -2284,7 +2377,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
 }
 
 TEST_F(PythonFlowTest, FinalizePassTest) {
-    const std::string pbTxt{R"(
+    std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
         node {
@@ -2300,6 +2393,9 @@ TEST_F(PythonFlowTest, FinalizePassTest) {
             }
         }
     )"};
+#ifdef _WIN32
+    replaceHandlerPath(pbTxt);
+#endif
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
@@ -2309,7 +2405,7 @@ TEST_F(PythonFlowTest, FinalizePassTest) {
 }
 
 TEST_F(PythonFlowTest, RelativeBasePath) {
-    const std::string pbTxt{R"(
+    std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
         node {
@@ -2329,12 +2425,14 @@ TEST_F(PythonFlowTest, RelativeBasePath) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "/ovms/src/test/mediapipe/python/scripts"), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(),
+                  getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/scripts")),
+        StatusCode::OK);
     nodeResources->finalize();
 }
 
 TEST_F(PythonFlowTest, RelativeBasePath2) {
-    const std::string pbTxt{R"(
+    std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
         node {
@@ -2354,12 +2452,14 @@ TEST_F(PythonFlowTest, RelativeBasePath2) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "/ovms/src/test/mediapipe"), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(),
+                  getGenericFullPathForSrcTest("/ovms/src/test/mediapipe")),
+        StatusCode::OK);
     nodeResources->finalize();
 }
 
 TEST_F(PythonFlowTest, RelativeBasePath3) {
-    const std::string pbTxt{R"(
+    std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
         node {
@@ -2379,12 +2479,14 @@ TEST_F(PythonFlowTest, RelativeBasePath3) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "/ovms/src/test/mediapipe/"), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(),
+                  getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/")),
+        StatusCode::OK);
     nodeResources->finalize();
 }
 
 TEST_F(PythonFlowTest, RelativeHandlerPath) {
-    const std::string pbTxt{R"(
+    std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
         node {
@@ -2404,14 +2506,17 @@ TEST_F(PythonFlowTest, RelativeHandlerPath) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "/ovms/src/test/mediapipe/python/scripts"), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(),
+                  getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/scripts")),
+        StatusCode::OK);
 
-    ASSERT_EQ(nodeResources->handlerPath, "/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py");
+    ASSERT_EQ(nodeResources->handlerPath, getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py"));
+
     nodeResources->finalize();
 }
 
 TEST_F(PythonFlowTest, AbsoluteHandlerPath) {
-    const std::string pbTxt{R"(
+    std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
         node {
@@ -2427,18 +2532,22 @@ TEST_F(PythonFlowTest, AbsoluteHandlerPath) {
             }
         }
     )"};
+#ifdef _WIN32
+    replaceHandlerPath(pbTxt);
+#endif
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
     ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "this_string_doesnt_matter_since_handler_path_is_absolute"), StatusCode::OK);
 
-    ASSERT_EQ(nodeResources->handlerPath, "/ovms/src/test/mediapipe/python/scripts/relative_base_path.py");
+    // Can't use getGenericFullPathForSrcTest due to mixed separators in the final path
+    ASSERT_EQ(nodeResources->handlerPath, getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/scripts/relative_base_path.py"));
     nodeResources->finalize();
 }
 
 TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
-    const std::string pbTxt{R"(
+    std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
         node {
@@ -2454,6 +2563,9 @@ TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
             }
         }
     )"};
+#ifdef _WIN32
+    replaceHandlerPath(pbTxt);
+#endif
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
@@ -2463,7 +2575,7 @@ TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
 }
 
 TEST_F(PythonFlowTest, FinalizeDestructorRemoveFileTest) {
-    const std::string pbTxt{R"(
+    std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
         node {
@@ -2479,10 +2591,13 @@ TEST_F(PythonFlowTest, FinalizeDestructorRemoveFileTest) {
             }
         }
     )"};
+#ifdef _WIN32
+    replaceHandlerPath(pbTxt);
+#endif
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::string path = std::string("/tmp/pythonNodeTestRemoveFile.txt");
+    std::string path = getGenericFullPathForTmp("/tmp/pythonNodeTestRemoveFile.txt");
     {
         std::shared_ptr<PythonNodeResources> nodeResouce = nullptr;
         ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResouce, config.node(0), getPythonBackend(), ""), StatusCode::OK);
@@ -2495,7 +2610,7 @@ TEST_F(PythonFlowTest, FinalizeDestructorRemoveFileTest) {
 }
 
 TEST_F(PythonFlowTest, FinalizeException) {
-    const std::string pbTxt{R"(
+    std::string pbTxt{R"(
     input_stream: "in"
     output_stream: "out"
         node {
@@ -2511,6 +2626,9 @@ TEST_F(PythonFlowTest, FinalizeException) {
             }
         }
     )"};
+#ifdef _WIN32
+    replaceHandlerPath(pbTxt);
+#endif
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
@@ -2537,6 +2655,9 @@ TEST_F(PythonFlowTest, ReloadWithDifferentScriptName) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(firstTestPbtxt);
+#endif
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt, getPythonBackend());
@@ -2576,7 +2697,9 @@ TEST_F(PythonFlowTest, ReloadWithDifferentScriptName) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(reloadedTestPbtxt);
+#endif
     mediapipeDummy.inputConfig = reloadedTestPbtxt;
     ASSERT_EQ(mediapipeDummy.reload(manager, mgc), StatusCode::OK);
 
@@ -2624,7 +2747,9 @@ TEST_F(PythonFlowTest, FailingToInitializeOneNodeDestructsAllResources) {
             }
         }
     )";
-
+#ifdef _WIN32
+    replaceHandlerPath(firstTestPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = firstTestPbtxt;
@@ -2664,6 +2789,9 @@ public:
                 }
             }
         )";
+#ifdef _WIN32
+        replaceHandlerPath(firstTestPbtxt);
+#endif
 
         const std::string replPhrase = "<REPLACE>";
         std::size_t pos = firstTestPbtxt.find(replPhrase);
@@ -2899,6 +3027,9 @@ TEST_F(PythonFlowTest, Negative_NodeProducesUnexpectedTensor) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -2952,6 +3083,9 @@ TEST_F(PythonFlowTest, Negative_NodeFiresProcessWithoutAllInputs) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -3004,6 +3138,9 @@ TEST_F(PythonFlowTest, Positive_NodeFiresProcessWithoutAllInputs) {
             }
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = testPbtxt;
@@ -3062,6 +3199,9 @@ void setUpConverterPrecisionTest(std::shared_ptr<MediapipeGraphExecutor>& pipeli
             output_stream: "OVTENSOR:out"
         }
     )";
+#ifdef _WIN32
+    replaceHandlerPath(testPbtxt);
+#endif
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     mediapipeDummy = std::make_unique<DummyMediapipeGraphDefinition>("mediaDummy", mgc, testPbtxt, getPythonBackend());
     mediapipeDummy->inputConfig = testPbtxt;
