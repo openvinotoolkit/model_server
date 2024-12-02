@@ -3,7 +3,12 @@ def check_dependencies() {
 }
 
 def install_dependencies() {
-
+    def status = bat(returnStatus: true, script: 'windows_install_dependencies.bat ' + env.JOB_BASE_NAME)
+    if (status != 0) {
+        error "Error: Windows install dependencies failed: ${status}. Check piepeline.log for details."
+    } else {
+        echo "Install dependencies successful."
+    }
 }
 
 def clean() {
