@@ -26,9 +26,7 @@
 
 #include "logging.hpp"
 #include "model_version_policy.hpp"
-#ifdef __linux__
 #include "openssl/md5.h"
-#endif
 #include "status.hpp"
 
 namespace ovms {
@@ -269,7 +267,6 @@ public:
     }
 
     static std::string getStringMD5(const std::string& str) {
-#ifdef __linux__
         unsigned char result[MD5_DIGEST_LENGTH];
 
 #pragma GCC diagnostic push
@@ -277,10 +274,6 @@ public:
         MD5((unsigned char*)str.c_str(), str.size(), result);
         std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
 #pragma GCC diagnostic pop
-#else  // Windows TODO: Check how it works - tests ?
-        std::hash<std::string> hasher;
-        std::string md5sum = std::to_string(hasher(str));
-#endif
         return (md5sum);
     }
 

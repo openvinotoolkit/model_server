@@ -10,7 +10,7 @@ It reports end to end quality of served model from the client application point 
 Install the framework via:
 ```bash
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-pip3 install lm_eval[api]
+pip3 install lm_eval[api] langdetect immutabledict
 ```
 
 ## Exporting the models and starting the model server
