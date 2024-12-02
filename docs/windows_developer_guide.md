@@ -131,7 +131,7 @@ set BAZEL_VC_FULL_VERSION=14.29.30133
 
 # Run bazel build command
 ```
-bazel --output_user_root=c:\b_tmp build build --config=windows --jobs=%NUMBER_OF_PROCESSORS% //src:ovms 2>&1 | tee compilation.log
+bazel --output_user_root=c:\b_tmp build --config=windows --jobs=%NUMBER_OF_PROCESSORS% //src:ovms 2>&1 | tee compilation.log
 ```
 
 ## To run ovms in developer command line
