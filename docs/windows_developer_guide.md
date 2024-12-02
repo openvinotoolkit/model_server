@@ -26,8 +26,12 @@ md c:\git
 md c:\opt
 ```
 
-## VISUAL STUDIO
-Visual Studio 2019 with C++ - https://visualstudio.microsoft.com/downloads/
+## VISUAL BUILD TOOLS
+Install build tools for VS:
+
+https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
+Mark c++ Desktop app and v142 CPP platform toolset.
 
 ## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
 Python3.9
@@ -116,8 +120,18 @@ cd model_server
 ```
 
 ## COMPILE
+
+# Export BAZEL env variables:
+
 ```
-bazel build --config=windows --jobs=8 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 //src:ovms > compilation.log 2>&1
+set BAZEL_VS=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools
+set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC
+set BAZEL_VC_FULL_VERSION=14.29.30133
+```
+
+# Run bazel build command
+```
+bazel --output_user_root=c:\b_tmp build build --config=windows --jobs=%NUMBER_OF_PROCESSORS% //src:ovms 2>&1 | tee compilation.log
 ```
 
 ## To run ovms in developer command line
