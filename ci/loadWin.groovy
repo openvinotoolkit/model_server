@@ -36,6 +36,9 @@ def check_tests(){
     status = bat(returnStatus: true, script: 'grep "       OK " win_test.log')
     if (status != 0) {
             error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test.log for details."
+    } else {
+        def passed = bat(returnStatus: false, returnStdout: true, script: 'grep "       OK " win_test.log | wc -l')
+        echo "Error: Windows run test passed ${status}. ${passed} passed tests . Check win_test.log for details."
     }
 
     status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test.log')
@@ -43,7 +46,16 @@ def check_tests(){
             def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test.log | wc -l')
             error "Error: Windows run test failed ${status}. ${failed} failed tests . Check win_test.log for details."
     } else {
-        echo "Run test successful."
+        echo "Run test no FAILED detected."
+    }
+
+    // Check for exception or segfault - need end tests report [  PASSED  ] 2744 tests.
+    status = bat(returnStatus: true, script: 'grep "  PASSED  " win_test.log | grep "tests."')
+    if (status == 0) {
+        def log = bat(returnStatus: false, returnStdout: true, script: 'tail -200 win_full_test.log')
+        error "Error: Run test summary not found. Log tail: ${log}"
+    } else {
+        echo "Run test summary found."
     }
 }
 
