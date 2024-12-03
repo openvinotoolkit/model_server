@@ -872,7 +872,8 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
 #ifdef _WIN32
 class FileHandle {
 public:
-    FileHandle(const std::string& filename) : filename_(filename) {
+    FileHandle(const std::string& filename) :
+        filename_(filename) {
         hFile_ = CreateFileA(
             filename.c_str(),
             GENERIC_READ,
@@ -885,7 +886,7 @@ public:
     ~FileHandle() {
         if (hFile_ != INVALID_HANDLE_VALUE) {
             if (!CloseHandle(hFile_)) {
-                SPDLOG_ERROR("Failed to close file: ",filename_ );
+                SPDLOG_ERROR("Failed to close file: ", filename_);
             }
         }
     }
