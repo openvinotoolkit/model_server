@@ -1448,7 +1448,7 @@ TEST_F(CAPIStateIntegration, LiveReadyFromMalformedConfig) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&server));
     OVMS_ServerSettings* serverSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
+    // ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));  // http server is not needed
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
     bool isReady;
@@ -1474,7 +1474,7 @@ TEST_F(CAPIStateIntegration, LiveReadyFromConfig) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&server));
     OVMS_ServerSettings* serverSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
+    // ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));  // this test does not need rest http server
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
     bool isReady;
@@ -1485,7 +1485,8 @@ TEST_F(CAPIStateIntegration, LiveReadyFromConfig) {
     ASSERT_TRUE(!isLive);
     OVMS_ServerReady(server, &isReady);
     ASSERT_TRUE(!isReady);
-    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfigWithMetrics.json"), configFilePath, std::filesystem::copy_options::recursive);
+    // std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfigWithMetrics.json"), configFilePath, std::filesystem::copy_options::recursive);  // metrics unavailable because drogon cannot be restarted
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfig.json"), configFilePath, std::filesystem::copy_options::recursive);
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(server, serverSettings, modelsSettings));
     OVMS_ServerLive(server, &isLive);
@@ -1509,14 +1510,15 @@ TEST_F(CAPIStateIntegration, Config) {
     OVMS_ServerSettings* serverSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(
         OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(
-        OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
+    // ASSERT_CAPI_STATUS_NULL(
+    //     OVMS_ServerSettingsSetRestPort(serverSettings, 9000));  // this test does not need rest http server
     ovms::ServerSettingsImpl* directPtrServerSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(serverSettings);
     directPtrServerSettings->filesystemPollWaitMilliseconds = 20;  // mock 20ms config.json polling to make the test shorter
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(
         OVMS_ModelsSettingsNew(&modelsSettings));
-    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfigWithMetrics.json"), configFilePath, std::filesystem::copy_options::recursive);
+    // std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfigWithMetrics.json"), configFilePath, std::filesystem::copy_options::recursive);  // metrics unavailable because drogon cannot be restarted
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfig.json"), configFilePath, std::filesystem::copy_options::recursive);
     ASSERT_CAPI_STATUS_NULL(
         OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
     ASSERT_CAPI_STATUS_NULL(

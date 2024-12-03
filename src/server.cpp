@@ -49,10 +49,10 @@
 #include "config.hpp"
 #include "grpcservermodule.hpp"
 // TODO windows
-#ifdef __linux__
+//#ifdef __linux__
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
-#endif
+//#endif
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "metric_module.hpp"
@@ -235,10 +235,10 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
     if (name == GRPC_SERVER_MODULE_NAME)
         return std::make_unique<GRPCServerModule>(*this);
 // TODO windows
-#ifdef __linux__
+//#ifdef __linux__
     if (name == HTTP_SERVER_MODULE_NAME)
         return std::make_unique<HTTPServerModule>(*this);
-#endif
+//#endif
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
 #if (PYTHON_DISABLE == 0)
@@ -308,12 +308,12 @@ Status Server::startModules(ovms::Config& config) {
     START_MODULE(it);
     // if we ever decide not to start GRPC module then we need to implement HTTP responses without using grpc implementations
     // TODO windows
-#ifdef __linux__
+//#ifdef __linux__
     if (config.restPort() != 0) {
         INSERT_MODULE(HTTP_SERVER_MODULE_NAME, it);
         START_MODULE(it);
     }
-#endif
+//#endif
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
 #if (PYTHON_DISABLE == 0)
@@ -349,9 +349,9 @@ void Server::shutdownModules() {
     // first we should stop incoming new requests
     ensureModuleShutdown(GRPC_SERVER_MODULE_NAME);
     // TODO windows
-#ifdef __linux__
+//#ifdef __linux__
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
-#endif
+//#endif
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
 #if (PYTHON_DISABLE == 0)

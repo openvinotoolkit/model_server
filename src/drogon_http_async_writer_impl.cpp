@@ -41,7 +41,7 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> cb) {
         [this, cb = std::move(cb)](drogon::ResponseStreamPtr stream) {
             this->stream = std::move(stream);
             this->pool.Schedule([cb = std::move(cb)] {
-                SPDLOG_INFO("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule");
+                SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule");
                 cb();
             });
         });
@@ -69,7 +69,7 @@ void DrogonHttpAsyncWriterImpl::PartialReply(std::string message) {
         this->isDisconnected = true;
 }
 // Used by calculator via HttpClientConnection
-bool DrogonHttpAsyncWriterImpl::IsDisconnected() {
+bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {
     SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::IsDisconnected");
     return this->isDisconnected;
 }

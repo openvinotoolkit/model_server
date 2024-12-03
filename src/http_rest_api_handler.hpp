@@ -28,7 +28,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
-#include "drogon_http_async_writer_interface.hpp"
+#include "http_async_writer_interface.hpp"
 #include "rest_parser.hpp"
 #include "status.hpp"
 

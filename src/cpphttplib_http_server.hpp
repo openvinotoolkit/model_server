@@ -16,29 +16,37 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <string>
+
+#include "http_async_writer_interface.hpp"
+#include "mediapipe/framework/port/threadpool.h"
+
+#include "httplib.h"  // TODO: only include in .cpp files
 
 namespace ovms {
 
-enum class HTTPStatus : int {
-    OK = 200,
-    INVALID = 403,
-};
+class CppHttpLibHttpServer {
+    std::unique_ptr<mediapipe::ThreadPool> pool_;
+    int port_;
+    std::string address_;
+    std::unique_ptr<httplib::Server> server_;
+    std::function<void(
+        const httplib::Request& req, httplib::Response& res)>
+        dispatcher_;
 
-class DrogonHttpAsyncWriter {
 public:
-    // Used by V3 handler
-    virtual void OverwriteResponseHeader(const std::string& key, const std::string& value) = 0;
-    virtual void PartialReplyWithStatus(std::string message, HTTPStatus status) = 0;
-    virtual void PartialReplyBegin(std::function<void()> callback) = 0;
-    virtual void PartialReplyEnd() = 0;
+    CppHttpLibHttpServer(size_t num_workers, int port, const std::string& address);
 
-    // Used by graph executor impl
-    virtual void PartialReply(std::string message) = 0;
+    void startAcceptingRequests();
+    void terminate();
 
-    // Used by calculator via HttpClientConnection
-    virtual bool IsDisconnected() = 0;
-    virtual void RegisterDisconnectionCallback(std::function<void()> callback) = 0;
+    mediapipe::ThreadPool& getPool();
+
+    void registerRequestDispatcher(
+        std::function<void(
+            const httplib::Request& req, httplib::Response& res)>
+            dispatcher);
 };
 
 }  // namespace ovms

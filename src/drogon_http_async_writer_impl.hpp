@@ -21,7 +21,7 @@
 
 #include <drogon/drogon.h>
 
-#include "drogon_http_async_writer_interface.hpp"
+#include "http_async_writer_interface.hpp"
 #include "mediapipe/framework/port/threadpool.h"
 
 namespace ovms {
@@ -50,7 +50,7 @@ public:
     void PartialReply(std::string message) override;
 
     // Used by calculator via HttpClientConnection
-    bool IsDisconnected() override;
+    bool IsDisconnected() const override;
     void RegisterDisconnectionCallback(std::function<void()> callback) override;
 };
 

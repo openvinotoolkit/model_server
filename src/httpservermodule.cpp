@@ -43,7 +43,25 @@ Status HTTPServerModule::start(const ovms::Config& config) {
     //     SPDLOG_ERROR(status.string());
     //     return status;
     // }
+#if (USE_DROGON == 0)
+    cppHttpLibServer = ovms::createAndStartCppHttpLibHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
+    if (cppHttpLibServer == nullptr) {
+        std::stringstream ss;
+        ss << "at " << server_address;
+        auto status = Status(StatusCode::FAILED_TO_START_REST_SERVER, ss.str());
+        SPDLOG_ERROR(status.string());
+        return status;
+    }
+#else
     drogonServer = ovms::createAndStartDrogonHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
+    if (drogonServer == nullptr) {
+        std::stringstream ss;
+        ss << "at " << server_address;
+        auto status = Status(StatusCode::FAILED_TO_START_REST_SERVER, ss.str());
+        SPDLOG_ERROR(status.string());
+        return status;
+    }
+#endif
     // if (server == nullptr) {
     //     std::stringstream ss;
     //     ss << "at " << server_address;
@@ -59,11 +77,23 @@ Status HTTPServerModule::start(const ovms::Config& config) {
 void HTTPServerModule::shutdown() {
     //if (server == nullptr)
     //    return;
+#if (USE_DROGON == 0)
+    if (cppHttpLibServer == nullptr)
+        return;
+#else
+    if (drogonServer == nullptr)
+        return;
+#endif
     SPDLOG_INFO("{} shutting down", HTTP_SERVER_MODULE_NAME);
     state = ModuleState::STARTED_SHUTDOWN;
     //server->Terminate();
     //server->WaitForTermination();
+    //cppHttpLibServer->terminate();
+#if (USE_DROGON == 0)
+    cppHttpLibServer->terminate();
+#else
     drogonServer->terminate();
+#endif
     //server.reset();
     SPDLOG_INFO("Shutdown HTTP server");
     state = ModuleState::SHUTDOWN;

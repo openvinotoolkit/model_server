@@ -16,7 +16,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
-     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS_VISIBLE", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_PYTHON", "COPTS_MEDIAPIPE",
+     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS_VISIBLE", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_PYTHON", "COPTS_MEDIAPIPE", "COPTS_DROGON",
      "create_config_settings")
 
 COPTS_OV_TRACE = select({
@@ -36,7 +36,7 @@ COPTS_CLOUD = select({
     "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
 })
 
-COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_CLOUD
+COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_CLOUD
 
 config_setting(
     name = "windows",
@@ -478,6 +478,7 @@ cc_library(
             "libovms_capi_servable_metadata",
             "libmodelconfigjsonparser",
             "libdrogon_http_server",
+            "libcpphttplib_http_server",
             "libovmsmodelconfig",
             "libovmscapibuffer",
             "libovmscapi_utils",
@@ -560,7 +561,7 @@ cc_library(
         }),
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_OV_TRACE,
+    copts = COPTS_ADJUSTED + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_OV_TRACE,
     linkopts = LINKOPTS_ADJUSTED + select({
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : [],}),
@@ -625,43 +626,6 @@ cc_library(
 )
 
 cc_library(
-    name = "libdrogon_http_async_writer_interface",
-    hdrs = [
-        "drogon_http_async_writer_interface.hpp",
-    ],
-    deps = [
-    ],
-    visibility = ["//visibility:public",],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
-)
-
-# HTTP Server implementation using Drogon
-# To use other library simply create new target and implementation of libdrogon_http_async_writer_interface
-cc_library(
-    name = "libdrogon_http_server",
-    srcs = [
-        "drogon_http_server.hpp",
-        "drogon_http_server.cpp",
-        "drogon_http_async_writer_impl.hpp",
-        "drogon_http_async_writer_impl.cpp",
-    ],
-    deps = [
-        "libdrogon_http_async_writer_interface",
-        "@drogon//:drogon_cmake",
-        "@mediapipe//mediapipe/framework/port:threadpool",
-        "libovmslogging",
-    ],
-    visibility = ["//visibility:public",],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
-)
-
-cc_library(
     name = "libovmsclient_connection",
     hdrs = ["client_connection.hpp"],
     deps = [
@@ -677,8 +641,7 @@ cc_library(
     hdrs = ["http_frontend/http_client_connection.hpp"],
     deps = [
         "libovmsclient_connection",
-        "libdrogon_http_async_writer_interface",
-        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "libhttp_async_writer_interface",  # interface for http output streaming
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -941,8 +904,6 @@ cc_library( # TODO split dependencies
         "@com_github_jupp0r_prometheus_cpp//core",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
-        #"@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "libovms_module",
@@ -974,7 +935,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED + COPTS_MEDIAPIPE,
+    copts = COPTS_ADJUSTED + COPTS_MEDIAPIPE + COPTS_DROGON,
     linkopts = LINKOPTS_ADJUSTED,
 )
 
@@ -1694,6 +1655,68 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+  # interface for http output streaming
+cc_library(
+    name = "libhttp_async_writer_interface",
+    hdrs = [
+        "http_async_writer_interface.hpp",
+    ],
+    deps = [
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+# HTTP Server implementation using Drogon
+# To use other library simply create new target and implementation of libhttp_async_writer_interface
+cc_library(
+    name = "libdrogon_http_server",
+    srcs = [
+        "drogon_http_server.hpp",
+        "drogon_http_server.cpp",
+        "drogon_http_async_writer_impl.hpp",
+        "drogon_http_async_writer_impl.cpp",
+    ],
+    deps = [
+        "libhttp_async_writer_interface",
+        "@drogon//:drogon_cmake",
+        "@mediapipe//mediapipe/framework/port:threadpool",
+        "libovmslogging",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+# HTTP Server implementation using cpphttplib
+# To use other library simply create new target and implementation of libhttp_async_writer_interface
+cc_library(
+    name = "libcpphttplib_http_server",
+    srcs = [
+        "cpphttplib_http_server.hpp",
+        "cpphttplib_http_server.cpp",
+        #"drogon_http_async_writer_impl.hpp", TODO
+        #"drogon_http_async_writer_impl.cpp",
+    ],
+    deps = [
+        "libhttp_async_writer_interface",
+        "@cpphttplib//:cpphttplib",
+        "@mediapipe//mediapipe/framework/port:threadpool",
+        "libovmslogging",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
 cc_library( # TODO split further
     name = "cpp_headers",
     hdrs = [
@@ -1787,6 +1810,7 @@ cc_test(
         "test/ensemble_tests.cpp",
         "test/gather_node_test.cpp",
         "test/get_model_metadata_response_test.cpp",
+        "test/drogon_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/get_pipeline_metadata_response_test.cpp",
