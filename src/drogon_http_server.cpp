@@ -15,7 +15,10 @@
 //*****************************************************************************
 #include "drogon_http_server.hpp"
 
+#include <mutex>
+#include <condition_variable>
 #include <drogon/drogon.h>
+#include <chrono>
 
 #include "logging.hpp"
 #include "mediapipe/framework/port/threadpool.h"
@@ -31,7 +34,7 @@ DrogonHttpServer::DrogonHttpServer(size_t num_workers, int port, const std::stri
     SPDLOG_DEBUG("ThreadPool started");
 }
 
-void DrogonHttpServer::startAcceptingRequests() {
+Status DrogonHttpServer::startAcceptingRequests() {
     SPDLOG_DEBUG("///////////////////////////// DrogonHttpServer::startAcceptingRequests()");
 
     drogon::app().disableSigtermHandling();
@@ -44,19 +47,49 @@ void DrogonHttpServer::startAcceptingRequests() {
         // //this->dispatcher_(req, std::move(callback));  // callback
     });
 
+    if (drogon::app().isRunning()) {
+        SPDLOG_DEBUG("Drogon is already running");
+        throw 42;
+    }
+
     pool_->Schedule(
-        [this] {
-            SPDLOG_DEBUG("Running Drogon app");
+        [a = this->address_, p = this->port_] {
+            static int x = 0;
+            x++;
+            if (x > 1) {
+                // TODO
+                SPDLOG_DEBUG("Drogon was already started, cannot start it again");
+                return;
+            }
+            SPDLOG_DEBUG("Running Drogon app for the {} time {} {} {}", x, drogon::app().isRunning(), a, p);
             drogon::app()
                 //.setThreadNum(this->pool_->num_threads())  // too many threads?
                 .setThreadNum(3)  // threads only for accepting requests, the workload is on separate thread pool anyway
                 .setIdleConnectionTimeout(0)
-                .addListener(this->address_, this->port_)
+                .addListener(a, p)
                 .run();
         });
+    // wait until drogon becomes ready drogon::app().isRunning()
+    SPDLOG_DEBUG("Waiting until drogon becomes ready...");
+    int i = 0;
+    while (!drogon::app().isRunning()) {
+        i++;
+        SPDLOG_DEBUG("Waiting until drogon becomes ready...");
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));  // TODO
+        if (i > 10) {
+            SPDLOG_DEBUG("Waiting for drogon timed out");
+            return StatusCode::INTERNAL_ERROR;
+        }
+    }
+    SPDLOG_DEBUG("Drogon is ready");
+    return StatusCode::OK;
 }
 
 void DrogonHttpServer::terminate() {
+    if (!drogon::app().isRunning()) {
+        SPDLOG_DEBUG("Drogon is not running");
+        throw 42;
+    }
     SPDLOG_DEBUG("///////////////////////////// DrogonHttpServer::terminate() start");
     drogon::app().quit();
     pool_.reset();  // waits for all worker threads to finish

@@ -26,7 +26,7 @@
 // #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 // #pragma GCC diagnostic pop
 
-#include "../drogon_http_async_writer_interface.hpp"
+#include "../http_async_writer_interface.hpp"
 
 namespace ovms {
 

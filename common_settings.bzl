@@ -35,6 +35,17 @@ def create_config_settings():
         negate = ":disable_mediapipe",
     )
     native.config_setting(
+        name = "enable_drogon",
+        define_values = {
+            "USE_DROGON": "1",
+        },
+        visibility = ["//visibility:public"],
+    )
+    more_selects.config_setting_negation(
+        name = "enable_cpphttplib",
+        negate = ":enable_drogon",
+    )
+    native.config_setting(
         name = "disable_cloud",
         define_values = {
             "CLOUD_DISABLE": "1",
@@ -92,7 +103,6 @@ def create_config_settings():
         match_any = ["//src:windows", "//:disable_python"]
     )
 
-  
 ###############################
 # compilation settings
 ###############################
@@ -158,6 +168,10 @@ COPTS_PYTHON = select({
 COPTS_MEDIAPIPE = select({
     "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
     "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
+})
+COPTS_DROGON = select({
+    "//conditions:default": ["-DUSE_DROGON=0"],
+    "//:enable_drogon" : ["-DUSE_DROGON=1"],
 })
 COMMON_FUZZER_COPTS = [
     "-fsanitize=address",

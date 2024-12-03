@@ -25,6 +25,10 @@
 
 #include "drogon_http_server.hpp"
 
+#if (USE_DROGON == 0)
+#include "cpphttplib_http_server.hpp"
+#endif
+
 namespace ovms {
 class Server;
 
@@ -43,4 +47,7 @@ class Server;
 
 std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
 
+#if (USE_DROGON == 0)
+std::unique_ptr<CppHttpLibHttpServer> createAndStartCppHttpLibHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
+#endif
 }  // namespace ovms
