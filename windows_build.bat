@@ -34,7 +34,7 @@ set "envPath=win_environment.log"
 set "PATH=%setPath%"
 
 :: Set paths with libs for execution - affects PATH
-set "openvinoBatch=call C:\opt\intel\openvino_2024\setupvars.bat"
+set "openvinoBatch=call %BAZEL_SHORT_PATH%\openvino\setupvars.bat"
 set "opencvBatch=call C:\opt\opencv\build\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths

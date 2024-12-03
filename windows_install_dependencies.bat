@@ -26,7 +26,7 @@ set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/pac
 set "openvino_wget=wget -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%"
 set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
 set "openvino_workspace=C:\\\\opt\\\\intel\\\\openvino\\\\runtime"
-set "openvino_new_worksapce=C:\\\\%1\\\\openvino\\\\runtime"
+set "openvino_new_worksapce=C:\\%1\\openvino\\runtime"
 
 :: Download OpenVINO
 IF /I EXIST %openvino_zip% (
@@ -47,6 +47,6 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
 )
 
-sed -i "s/%openvino_workspace%/%openvino_new_worksapce%/g" WORKSPACE
+powershell -Command "(gc -Path WORKSPACE -Raw) -replace '%openvino_workspace%', '%openvino_new_worksapce%' | Set-Content -Path WORKSPACE"
 
 endlocal
