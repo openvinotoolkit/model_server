@@ -48,8 +48,12 @@ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-
 https://bazel.build/install/windows -> copy and rename in c:\opt\bazel.exe and add to PATH
 
 ## MSYS
-Please make sure bash is installed and add its directory in PATH, or --repo_env BAZEL_SH='/path/to/bash'.
+Please make sure bash is installed and add its directory in PATH, and --repo_env BAZEL_SH='/path/to/bash'.
 Install in c:\opt\msys64 https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe
+```
+set PATH=%PATH%;C:\opt\msys64\usr\bin
+set BAZEL_SH=C:\opt\msys64\usr\bin
+```
 
 ## NPM YARN
 https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.exe
@@ -85,7 +89,7 @@ set HTTP_PROXY=my.proxy.com:123
 set HTTPS_PROXY=my.proxy.com:122
 ```
 
-## OPENCV install to - "C:\\opt\\opencv\\"
+## OPENCV install to - "C:\\opt\\"
 https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe
 
 # OPENCV contrib for optflow
@@ -131,7 +135,7 @@ set BAZEL_VC_FULL_VERSION=14.29.30133
 
 # Run bazel build command
 ```
-bazel --output_user_root=c:\b_tmp build --config=windows --jobs=%NUMBER_OF_PROCESSORS% //src:ovms 2>&1 | tee compilation.log
+bazel build --config=windows --jobs=8 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 //src:ovms > compilation.log 2>&1
 ```
 
 ## To run ovms in developer command line
@@ -235,7 +239,7 @@ Copy vscode/launch.json, vscode/tasks.json to .vscode directory.
         {
             "label": "Build (Debug)",
             "type": "shell",
-            "command": "bazel build -c dbg --config=windows --jobs=24 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 //src:ovms",
+            "command": "bazel build -c dbg --config=windows --jobs=24 --subcommands --verbose_failures //src:ovms",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -244,7 +248,7 @@ Copy vscode/launch.json, vscode/tasks.json to .vscode directory.
         {
             "label": "Build (Release)",
             "type": "shell",
-            "command": "bazel build -c opt --config=windows --jobs=24 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 //src:ovms",
+            "command": "bazel build -c opt --config=windows --jobs=24 --subcommands --verbose_failures //src:ovms",
             "group": {
                 "kind": "build",
                 "isDefault": true
