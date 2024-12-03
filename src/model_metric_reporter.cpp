@@ -434,22 +434,22 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
             {"api", "KServe"},
             {"method", "ModelInferStream"},
             {"interface", "gRPC"}});
-        THROW_IF_NULL(this->requestErrorGrpcModelInfer, "cannot create metric");
+        THROW_IF_NULL(this->requestErrorGrpcModelInferStream, "cannot create metric");
         this->requestErrorRestModelInfer = family->addMetric({{"name", graphName},
             {"api", "KServe"},
             {"method", "ModelInfer"},
             {"interface", "REST"}});
-        THROW_IF_NULL(this->requestErrorGrpcModelInfer, "cannot create metric");
+        THROW_IF_NULL(this->requestErrorRestModelInfer, "cannot create metric");
         this->requestErrorRestV3Unary = family->addMetric({{"name", graphName},
             {"api", "V3"},
             {"method", "Unary"},
             {"interface", "REST"}});
-        THROW_IF_NULL(this->requestErrorGrpcModelInfer, "cannot create metric");
+        THROW_IF_NULL(this->requestErrorRestV3Unary, "cannot create metric");
         this->requestErrorRestV3Stream = family->addMetric({{"name", graphName},
             {"api", "V3"},
             {"method", "Stream"},
             {"interface", "REST"}});
-        THROW_IF_NULL(this->requestErrorGrpcModelInfer, "cannot create metric");
+        THROW_IF_NULL(this->requestErrorRestV3Stream, "cannot create metric");
     }
 
     familyName = METRIC_NAME_RESPONSES;

@@ -159,7 +159,7 @@ public:
         // can be still processing those. Closing packet sources triggers Calculator::Close() on nodes that do not expect
         // new packets
         auto status = graph.WaitUntilIdle();
-        if (!status.ok()) {
+        if (!status.ok()) {  // Collect error metric after Open()
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
         }
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
@@ -189,7 +189,7 @@ public:
             SPDLOG_TRACE("Received all: {} packets for: {}", receivedOutputs, outputStreamName);
         }
         status = graph.WaitUntilDone();
-        if (!status.ok()) {
+        if (!status.ok()) {  // Collect error metric after Process()
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
         }
         MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
