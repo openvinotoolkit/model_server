@@ -287,5 +287,5 @@ build:coverity --disk_cache=
 
 # Windows config default flags
 build:windows --define=CLOUD_DISABLE=1
-build:windows --define=PYTHON_DISABLE=1
+build:windows --define=PYTHON_DISABLE=0
 build:windows --define=MEDIAPIPE_DISABLE=0
