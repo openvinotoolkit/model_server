@@ -872,7 +872,7 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
 #ifdef _WIN32
 class FileHandle {
 public:
-    FileHandle(const std::string& filename = "") : filename_(filename) {
+    FileHandle(const std::string& filename) : filename_(filename) {
         hFile_ = CreateFileA(
             filename.c_str(),
             GENERIC_READ,
