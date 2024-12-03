@@ -307,7 +307,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
     auto drogonHandler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
     auto& pool = server->getPool();
     server->registerRequestDispatcher([drogonHandler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-        SPDLOG_DEBUG(" --------------- Received request: {}", req->path());
+        //SPDLOG_DEBUG(" --------------- Received request: {}", req->path());
 
         std::vector<std::pair<std::string, std::string>> headers;
 
@@ -315,16 +315,20 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         for (const std::pair<const std::string, const std::string>& header : req->headers()) {
             auto header_key = header.first;
             auto header_value = header.second;
+            if (header_key == "inference-header-content-length") {
+                headers.emplace_back("Inference-Header-Content-Length", header_value);
+                continue;
+            }
             headers.emplace_back(header_key, header_value);
         }
 
-        SPDLOG_ERROR("Method: [{}] Path: [{}] Body:\n==========\n{}\n=============\n", drogon::to_string_view(req->getMethod()), req->getPath(),
-            req->getBody());
+        //SPDLOG_ERROR("Method: [{}] Path: [{}] Body:\n==========\n{}\n=============\n", drogon::to_string_view(req->getMethod()), req->getPath(),
+        //    req->getBody());
 
         // log headers
-        for (const auto& kv : headers) {
-            SPDLOG_ERROR("Header: [{}] Value: [{}]", kv.first, kv.second);
-        }
+        // for (const auto& kv : headers) {
+        //     SPDLOG_ERROR("Header: [{}] Value: [{}]", kv.first, kv.second);
+        // }
 
         std::string output;
         (void)output;
@@ -377,10 +381,13 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
             headers.emplace_back(header);
         }
         for (const auto& kv : headers) {
-            SPDLOG_INFO("ADDING HEADER {} -> {}", kv.first, kv.second);
+            //SPDLOG_INFO("ADDING HEADER {} -> {}", kv.first, kv.second);
             resp->addHeader(kv.first, kv.second);
         }
+        //SPDLOG_INFO("Setting body: {}\nInput:[{}]", output, body);
         resp->setBody(output);
+
+        // Old code, commented
         // if (http_status != net_http::HTTPStatusCode::OK && http_status != net_http::HTTPStatusCode::CREATED) {
         //     SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
         //         req->http_method(),
@@ -388,10 +395,73 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         //         status.string());
         // }
         //req->ReplyWithStatus(http_status);
+        
+        // new code caused all requests to be 200 OK
+        if (!status.ok()) {
+            resp->setStatusCode(drogon::HttpStatusCode::k500InternalServerError); // todo
+        }
         callback(resp);
     });
+    if (!server->startAcceptingRequests().ok()) {
+        SPDLOG_ERROR("Failed to start Drogon server");
+        return nullptr;
+    }
+    return server;
+}
+
+#if (USE_DROGON == 0)
+std::unique_ptr<CppHttpLibHttpServer> createAndStartCppHttpLibHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
+    auto server = std::make_unique<CppHttpLibHttpServer>(num_threads, port, address);
+    auto cpphttplibHandler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
+    server->registerRequestDispatcher([cpphttplibHandler](const httplib::Request& req, httplib::Response& resp) {
+        std::vector<std::pair<std::string, std::string>> headers;
+
+        for (const std::pair<const std::string, const std::string>& header : req.headers) {
+            if (header.first == "inference-header-content-length") {
+                headers.emplace_back("Inference-Header-Content-Length", header.second);
+                continue;
+            }
+            headers.emplace_back(header.first, header.second);
+        }
+        std::string output;
+
+        HttpResponseComponents responseComponents;
+
+        const auto status = cpphttplibHandler->processRequest(
+            req.method,
+            req.path,
+            req.body,
+            &headers,
+            &output,
+            responseComponents,
+            nullptr);//reqInterfaceNew);
+        if (status == StatusCode::PARTIAL_END) {
+            // No further messaging is required.
+            // Partial responses were delivered via "req" object.
+            return;
+        }
+        if (!status.ok() && output.empty()) {
+            output.append("{\"error\": \"" + status.string() + "\"}");
+        }
+
+        if (responseComponents.inferenceHeaderContentLength.has_value()) {
+            std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
+            headers.emplace_back(header);
+        }
+        for (const auto& kv : headers) {
+            resp.set_header(kv.first, kv.second);
+        }
+        resp.set_content(output, "application/json");
+
+        // new code caused all requests to be 200 OK
+        if (!status.ok()) {
+            resp.status = 500; // todo
+        }
+    });
+
     server->startAcceptingRequests();
     return server;
 }
+#endif
 
 }  // namespace ovms

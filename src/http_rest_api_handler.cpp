@@ -481,6 +481,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             auto streamIt = doc->FindMember("stream");
             if (streamIt != doc->MemberEnd()) {
                 if (!streamIt->value.IsBool()) {
+                    SPDLOG_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
                     return Status(StatusCode::JSON_INVALID, "stream field is not a boolean");
                 }
                 streamFieldVal = streamIt->value.GetBool();

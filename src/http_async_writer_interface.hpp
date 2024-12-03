@@ -16,39 +16,29 @@
 #pragma once
 
 #include <functional>
-#include <memory>
 #include <string>
-
-#include <drogon/drogon.h>
-
-#include "status.hpp"
-#include "http_async_writer_interface.hpp"
-#include "mediapipe/framework/port/threadpool.h"
 
 namespace ovms {
 
-class DrogonHttpServer {
-    std::unique_ptr<mediapipe::ThreadPool> pool_;
-    int port_;
-    std::string address_;
-    std::function<void(
-        const drogon::HttpRequestPtr&,
-        std::function<void(const drogon::HttpResponsePtr&)>&&)>
-        dispatcher_;
+enum class HTTPStatus : int {
+    OK = 200,
+    INVALID = 403,
+};
 
+class DrogonHttpAsyncWriter {
 public:
-    DrogonHttpServer(size_t num_workers, int port, const std::string& address);
+    // Used by V3 handler
+    virtual void OverwriteResponseHeader(const std::string& key, const std::string& value) = 0;
+    virtual void PartialReplyWithStatus(std::string message, HTTPStatus status) = 0;
+    virtual void PartialReplyBegin(std::function<void()> callback) = 0;
+    virtual void PartialReplyEnd() = 0;
 
-    Status startAcceptingRequests();
-    void terminate();
+    // Used by graph executor impl
+    virtual void PartialReply(std::string message) = 0;
 
-    mediapipe::ThreadPool& getPool();
-
-    void registerRequestDispatcher(
-        std::function<void(
-            const drogon::HttpRequestPtr&,
-            std::function<void(const drogon::HttpResponsePtr&)>&&)>
-            dispatcher);
+    // Used by calculator via HttpClientConnection
+    virtual bool IsDisconnected() const = 0;
+    virtual void RegisterDisconnectionCallback(std::function<void()> callback) = 0;
 };
 
 }  // namespace ovms

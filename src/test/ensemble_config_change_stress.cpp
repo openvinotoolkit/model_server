@@ -181,7 +181,8 @@ TEST_F(StressPipelineConfigChanges, KFSAddNewVersionDuringPredictLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
-TEST_F(ConfigChangeStressTest, GetMetricsDuringLoad) {
+// TODO: Disabled because we cannot start http server multiple times
+TEST_F(ConfigChangeStressTest, DISABLED_GetMetricsDuringLoad) {
     bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};

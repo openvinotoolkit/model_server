@@ -35,7 +35,7 @@
 #include "../python/python_backend.hpp"
 #endif
 
-#include "../drogon_http_async_writer_interface.hpp"
+#include "../http_async_writer_interface.hpp"
 
 // namespace tensorflow::serving::net_http {
 // class ServerRequestInterface;
