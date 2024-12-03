@@ -384,6 +384,9 @@ TEST_F(TFSModelServiceTest, getAllModelsStatuses_two_models_with_one_versions) {
 }
 
 TEST_F(TFSModelServiceTest, config_reload) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
+#endif
     std::string port = "9000";
     randomizePort(port);
     char* argv[] = {

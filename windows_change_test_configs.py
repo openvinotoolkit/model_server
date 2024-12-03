@@ -66,6 +66,13 @@ def main():
             if file.endswith(extension):
                 files_with_extension.append(os.path.join(root, file))
 
+    extension = '.pbtxt'  # replace with your desired extension
+    # Use glob to find files with specific extensions
+    for root, dirs, files in os.walk(start_dir):
+        for file in files:
+            if file.endswith(extension):
+                files_with_extension.append(os.path.join(root, file))
+
     print("List of files to parse:")
     print("\n".join(map(str, files_with_extension)))
 
