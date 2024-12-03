@@ -177,7 +177,6 @@ Average document length: 5.0 tokens
 python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model Alibaba-NLP/gte-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 50/50 [00:21<00:00,  2.32it/s]
-32it [00:18,  1.76it/s]
 Tokens: 510000
 Success rate: 100.0%. (32/32)
 Throughput - Tokens per second: 27995.652060806977
