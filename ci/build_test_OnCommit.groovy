@@ -71,7 +71,7 @@ pipeline {
             }
             stage('Build and test windows') {
               agent {
-                label 'win_ovms'
+                label 'hostname=mclx-63'
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
