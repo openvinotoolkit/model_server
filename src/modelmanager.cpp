@@ -903,10 +903,10 @@ public:
         FILETIME creationTime, lastAccessTime, lastWriteTime;
         if (!GetFileTime(hFile, &creationTime, &lastAccessTime, &lastWriteTime)) {
             SPDLOG_ERROR("Failed to get file time on Windows");
-            CloseHandle(hFile);
             return;
         }
 
+        CloseHandle(hFile);
         SYSTEMTIME stUTC;
         FileTimeToSystemTime(&lastWriteTime, &stUTC);
 
