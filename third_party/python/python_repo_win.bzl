@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,27 +15,15 @@
 #
 
 def _python_repository_impl(repository_ctx):
-    result = repository_ctx.execute(["cat","/etc/os-release"],quiet=False)
-    ubuntu20_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 20")
-    ubuntu22_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 22")
-    ubuntu24_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 24")
-
-    if ubuntu22_count == 1 or ubuntu24_count == 1:
-        lib_path = "lib/x86_64-linux-gnu"
-        if ubuntu22_count == 1:
-            version = "3.10"
-        else:
-            version = 3.12
-    else: # for redhat
-        lib_path = "lib64"
-        version = "3.9"
+    lib_path = "Python39"
+    version = "python39"
 
     build_file_content = """
 cc_library(
     name = "python3-lib",
-    srcs = ["{lib_path}/libpython{version}.so"],
-    hdrs = glob(["include/python{version}/*.h"]),
-    includes = ["include/python{version}"],
+    srcs = ["{lib_path}/{version}.dll"],
+    hdrs = glob(["{lib_path}/include/*.h"]),
+    includes = ["{lib_path}/include"],
     visibility = ["//visibility:public"]
 )"""
     repository_ctx.file("BUILD", build_file_content.format(version=version, lib_path=lib_path))
