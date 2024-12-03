@@ -153,8 +153,8 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS),ubuntu22)
 	BASE_OS_TAG=22.04
   endif
-  ifeq ($(BASE_OS),ubuntu20)
-	BASE_OS_TAG=20.04
+  ifeq ($(BASE_OS),ubuntu24)
+	BASE_OS_TAG=24.04
   endif
   ifeq ($(NVIDIA),1)
 	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu$(BASE_OS_TAG)
@@ -163,10 +163,10 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   endif
-  ifeq ($(BASE_OS_TAG),20.04)
-        OS=ubuntu20
-	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2025.0.0.17377.6733cc32091_x86_64.tgz
+  ifeq ($(BASE_OS_TAG),24.04)
+        OS=ubuntu24
+	INSTALL_DRIVER_VERSION ?= "24.26.300495"
+	DLDT_PACKAGE_URL ?= http://ov-share-03.sclab.intel.com/openvino_ci/closed_builds/dldt/master/commit/6733cc320915ca6bfad9036940bf5ca244b41a8b/swf_drop/packages/releases/l_openvino_toolkit_ubuntu24_2025.0.0.17377.6733cc32091_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.26.30049"
