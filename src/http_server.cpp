@@ -18,31 +18,29 @@
 #ifdef _WIN32
 #include <map>
 #endif
+#include <chrono>
 #include <memory>
 #include <regex>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include <spdlog/spdlog.h>
-
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include <spdlog/spdlog.h>
 
 #include "http_rest_api_handler.hpp"
 #include "http_status_code.hpp"
 #include "status.hpp"
 
-#include <chrono>
-#include <thread>
-
-
 #if (USE_DROGON == 0)
-#include "httplib.h"
 #include "cpphttplib_http_async_writer_impl.hpp"
+#include "httplib.h"  // NOLINT
 #else
 #include <drogon/drogon.h>
+
 #include "drogon_http_async_writer_impl.hpp"
 #endif
 
@@ -238,7 +236,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
                 req->getPath(),
                 status.string());
         }
-        
+
         if (!status.ok()) {
             resp->setStatusCode(drogon::HttpStatusCode(http_status));
         }

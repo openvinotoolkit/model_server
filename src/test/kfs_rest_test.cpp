@@ -22,12 +22,12 @@
 
 #include "../config.hpp"
 #include "../grpcservermodule.hpp"
+#include "../http_async_writer_interface.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../status.hpp"
 #include "../version.hpp"
-#include "../http_async_writer_interface.hpp"
 #include "test_utils.hpp"
 
 using ovms::Config;
