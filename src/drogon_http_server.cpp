@@ -15,85 +15,97 @@
 //*****************************************************************************
 #include "drogon_http_server.hpp"
 
-#include <mutex>
-#include <condition_variable>
 #include <drogon/drogon.h>
 #include <chrono>
+#include <thread>
 
 #include "logging.hpp"
 #include "mediapipe/framework/port/threadpool.h"
 
 namespace ovms {
 
+static const int THREAD_COUNT_FOR_DROGON_LISTENER = 3;  // TODO: how many is best perf?
+
 DrogonHttpServer::DrogonHttpServer(size_t num_workers, int port, const std::string& address) :
+    num_workers(num_workers),
     pool_(std::make_unique<mediapipe::ThreadPool>("DrogonThreadPool", num_workers)),
     port_(port),
     address_(address) {
-    SPDLOG_DEBUG("Starting ThreadPool with {} workers", num_workers);
-    pool_->StartWorkers();  // this is for listener and also for streaming outputs
-    SPDLOG_DEBUG("ThreadPool started");
+    SPDLOG_DEBUG("Starting http thread pool ({} threads)", num_workers);
+    pool_->StartWorkers();  // this is for actual workload which is scheduled to other threads than drogon's internal listener threads
+    SPDLOG_DEBUG("Thread pool started");
 }
 
 Status DrogonHttpServer::startAcceptingRequests() {
-    SPDLOG_DEBUG("///////////////////////////// DrogonHttpServer::startAcceptingRequests()");
+    SPDLOG_DEBUG("DrogonHttpServer::startAcceptingRequests()");
 
+    // OVMS has its own sigterm handling
     drogon::app().disableSigtermHandling();
 
     drogon::app().setDefaultHandler([this](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
         this->pool_->Schedule([this, req, callback = std::move(callback)]() mutable {
-            this->dispatcher_(req, std::move(callback));
+            try {
+                this->dispatcher_(req, std::move(callback));
+            } catch (...) {
+                SPDLOG_DEBUG("Exception caught in REST request handler");
+                auto resp = drogon::HttpResponse::newHttpResponse();
+                resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
+                resp->setStatusCode(drogon::HttpStatusCode::k500InternalServerError);
+                callback(resp);
+            }
         });
-
-        // //this->dispatcher_(req, std::move(callback));  // callback
     });
 
+    // Should never happen
     if (drogon::app().isRunning()) {
-        SPDLOG_DEBUG("Drogon is already running");
+        SPDLOG_ERROR("Drogon is already running");
         throw 42;
     }
 
     pool_->Schedule(
-        [a = this->address_, p = this->port_] {
-            static int x = 0;
-            x++;
-            if (x > 1) {
-                // TODO
-                SPDLOG_DEBUG("Drogon was already started, cannot start it again");
+        [address = this->address_, port = this->port_] {
+            static int numberOfLaunchesInApplication = 0;
+            numberOfLaunchesInApplication++;
+            if (numberOfLaunchesInApplication > 1) {
+                SPDLOG_ERROR("Drogon was already started, cannot start it again");
                 return;
             }
-            SPDLOG_DEBUG("Running Drogon app for the {} time {} {} {}", x, drogon::app().isRunning(), a, p);
+            SPDLOG_DEBUG("Starting to listen on port {}", port);
             drogon::app()
-                //.setThreadNum(this->pool_->num_threads())  // too many threads?
-                .setThreadNum(3)  // threads only for accepting requests, the workload is on separate thread pool anyway
+                .setThreadNum(THREAD_COUNT_FOR_DROGON_LISTENER)  // threads only for accepting requests, the workload is on separate thread pool
                 .setIdleConnectionTimeout(0)
-                .addListener(a, p)
+                .addListener(address, port)
                 .run();
         });
-    // wait until drogon becomes ready drogon::app().isRunning()
-    SPDLOG_DEBUG("Waiting until drogon becomes ready...");
-    int i = 0;
+
+    // wait until drogon becomes ready
+    size_t runningCheckIntervalMillisec = 50;
+    size_t maxTotalRunningCheckTimeMillisec = 1000;
+    size_t maxChecks = maxTotalRunningCheckTimeMillisec / runningCheckIntervalMillisec;
     while (!drogon::app().isRunning()) {
-        i++;
-        SPDLOG_DEBUG("Waiting until drogon becomes ready...");
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));  // TODO
-        if (i > 10) {
-            SPDLOG_DEBUG("Waiting for drogon timed out");
+        SPDLOG_DEBUG("Waiting for drogon to become ready on port {}...", port_);
+        if (maxChecks == 0) {
+            SPDLOG_DEBUG("Waiting for drogon server launch timed out");
             return StatusCode::INTERNAL_ERROR;
         }
+        maxChecks--;
+        std::this_thread::sleep_for(std::chrono::milliseconds(runningCheckIntervalMillisec));
     }
-    SPDLOG_DEBUG("Drogon is ready");
+    SPDLOG_INFO("REST server listening on port {} with {} threads", port_, num_workers);
     return StatusCode::OK;
 }
 
 void DrogonHttpServer::terminate() {
+    SPDLOG_DEBUG("DrogonHttpServer::terminate()");
+
+    // Should never happen
     if (!drogon::app().isRunning()) {
         SPDLOG_DEBUG("Drogon is not running");
         throw 42;
     }
-    SPDLOG_DEBUG("///////////////////////////// DrogonHttpServer::terminate() start");
+
     drogon::app().quit();
     pool_.reset();  // waits for all worker threads to finish
-    SPDLOG_DEBUG("///////////////////////////// DrogonHttpServer::terminate() stop");
 }
 
 void DrogonHttpServer::registerRequestDispatcher(
@@ -101,7 +113,6 @@ void DrogonHttpServer::registerRequestDispatcher(
         const drogon::HttpRequestPtr&,
         std::function<void(const drogon::HttpResponsePtr&)>&&)>
         dispatcher) {
-    SPDLOG_DEBUG("///////////////////////////// DrogonHttpServer::registerRequestDispatcher()");
     dispatcher_ = std::move(dispatcher);
 }
 

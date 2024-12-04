@@ -25,6 +25,10 @@
 #include "server.hpp"
 #include "status.hpp"
 
+#if (USE_DROGON == 0)
+#include "httplib.h"
+#endif
+
 namespace ovms {
 HTTPServerModule::HTTPServerModule(ovms::Server& ovmsServer) :
     ovmsServer(ovmsServer) {}
@@ -35,14 +39,6 @@ Status HTTPServerModule::start(const ovms::Config& config) {
     int workers = config.restWorkers() ? config.restWorkers() : 10;
 
     SPDLOG_INFO("Will start {} REST workers", workers);
-    // server = ovms::createAndStartHttpServer(config.restBindAddress(), config.restPort(), 2/*workers*/, this->ovmsServer);
-    // if (server == nullptr) {
-    //     std::stringstream ss;
-    //     ss << "at " << server_address;
-    //     auto status = Status(StatusCode::FAILED_TO_START_REST_SERVER, ss.str());
-    //     SPDLOG_ERROR(status.string());
-    //     return status;
-    // }
 #if (USE_DROGON == 0)
     cppHttpLibServer = ovms::createAndStartCppHttpLibHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
     if (cppHttpLibServer == nullptr) {
@@ -62,21 +58,12 @@ Status HTTPServerModule::start(const ovms::Config& config) {
         return status;
     }
 #endif
-    // if (server == nullptr) {
-    //     std::stringstream ss;
-    //     ss << "at " << server_address;
-    //     auto status = Status(StatusCode::FAILED_TO_START_REST_SERVER, ss.str());
-    //     SPDLOG_ERROR(status.string());
-    //     return status;
-    // }
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", HTTP_SERVER_MODULE_NAME);
     SPDLOG_INFO("Started REST server at {}", server_address);
     return StatusCode::OK;
 }
 void HTTPServerModule::shutdown() {
-    //if (server == nullptr)
-    //    return;
 #if (USE_DROGON == 0)
     if (cppHttpLibServer == nullptr)
         return;
@@ -86,15 +73,13 @@ void HTTPServerModule::shutdown() {
 #endif
     SPDLOG_INFO("{} shutting down", HTTP_SERVER_MODULE_NAME);
     state = ModuleState::STARTED_SHUTDOWN;
-    //server->Terminate();
-    //server->WaitForTermination();
-    //cppHttpLibServer->terminate();
 #if (USE_DROGON == 0)
     cppHttpLibServer->terminate();
+    cppHttpLibServer.reset();
 #else
     drogonServer->terminate();
+    drogonServer.reset();
 #endif
-    //server.reset();
     SPDLOG_INFO("Shutdown HTTP server");
     state = ModuleState::SHUTDOWN;
 }

@@ -22,15 +22,20 @@
 #include "http_async_writer_interface.hpp"
 #include "mediapipe/framework/port/threadpool.h"
 
-#include "httplib.h"  // TODO: only include in .cpp files
+namespace httplib {
+    class Server;
+    class Request;
+    class Response;
+}
 
 namespace ovms {
 
 class CppHttpLibHttpServer {
+    size_t num_workers{0};
     std::unique_ptr<mediapipe::ThreadPool> pool_;
     int port_;
     std::string address_;
-    std::unique_ptr<httplib::Server> server_;
+    std::unique_ptr<httplib::Server> server_{nullptr};
     std::function<void(
         const httplib::Request& req, httplib::Response& res)>
         dispatcher_;
@@ -38,7 +43,7 @@ class CppHttpLibHttpServer {
 public:
     CppHttpLibHttpServer(size_t num_workers, int port, const std::string& address);
 
-    void startAcceptingRequests();
+    bool startAcceptingRequests();
     void terminate();
 
     mediapipe::ThreadPool& getPool();

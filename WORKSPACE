@@ -94,7 +94,7 @@ cc_library(
 """,
 )
 
-# TODO: Remove?
+# Used for gRPC API protos only
 # Tensorflow serving
 git_repository(
     name = "tensorflow_serving",

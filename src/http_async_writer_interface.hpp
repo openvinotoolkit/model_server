@@ -18,18 +18,15 @@
 #include <functional>
 #include <string>
 
+#include "http_status_code.hpp"
+
 namespace ovms {
 
-enum class HTTPStatus : int {
-    OK = 200,
-    INVALID = 403,
-};
-
-class DrogonHttpAsyncWriter {
+class HttpAsyncWriter {
 public:
     // Used by V3 handler
     virtual void OverwriteResponseHeader(const std::string& key, const std::string& value) = 0;
-    virtual void PartialReplyWithStatus(std::string message, HTTPStatus status) = 0;
+    virtual void PartialReplyWithStatus(std::string message, HTTPStatusCode status) = 0;
     virtual void PartialReplyBegin(std::function<void()> callback) = 0;
     virtual void PartialReplyEnd() = 0;
 

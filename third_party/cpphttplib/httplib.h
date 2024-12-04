@@ -934,8 +934,8 @@ public:
   using Expect100ContinueHandler =
       std::function<int(const Request &, Response &)>;
 
-  //Server();
-  Server(int num_workers);
+  Server();
+  //Server(int num_workers);
 
   virtual ~Server();
 
@@ -6081,11 +6081,11 @@ inline bool RegexMatcher::match(Request &request) const {
 } // namespace detail
 
 // HTTP server implementation
-//inline Server::Server()
-inline Server::Server(int num_workers)
+inline Server::Server()
+//inline Server::Server(int num_workers)
     : new_task_queue(
-//          [] { return new ThreadPool(CPPHTTPLIB_THREAD_POOL_COUNT); }) {
-          [num_workers] { return new ThreadPool(num_workers); }) {
+          [] { return new ThreadPool(CPPHTTPLIB_THREAD_POOL_COUNT); }) {
+//          [num_workers] { return new ThreadPool(num_workers); }) {
 #ifndef _WIN32
   signal(SIGPIPE, SIG_IGN);
 #endif

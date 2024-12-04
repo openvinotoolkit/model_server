@@ -27,336 +27,183 @@
 
 #include <spdlog/spdlog.h>
 
-// #pragma GCC diagnostic push
-// #pragma GCC diagnostic ignored "-Wall"
-// #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-// #include "tensorflow_serving/util/net_http/public/response_code_enum.h"
-// #include "tensorflow_serving/util/net_http/server/public/httpserver.h"
-// #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-// #include "tensorflow_serving/util/threadpool_executor.h"
-// #pragma GCC diagnostic pop
-
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
 #include "http_rest_api_handler.hpp"
+#include "http_status_code.hpp"
 #include "status.hpp"
 
-// TODO: Use the example when switching from net_http
-#define DROGON
-#ifdef DROGON
 #include <chrono>
 #include <thread>
 
-#include <drogon/drogon.h>
 
+#if (USE_DROGON == 0)
+#include "httplib.h"
+#include "cpphttplib_http_async_writer_impl.hpp"
+#else
+#include <drogon/drogon.h>
 #include "drogon_http_async_writer_impl.hpp"
 #endif
 
 namespace ovms {
 
-// namespace net_http = tensorflow::serving::net_http;
+static const ovms::HTTPStatusCode http(const ovms::Status& status) {
+#ifdef __linux__
+    const std::unordered_map<const StatusCode, ovms::HTTPStatusCode> httpStatusMap = {
+#elif _WIN32
+    const std::map<const StatusCode, ovms::HTTPStatusCode> httpStatusMap = {
+#endif
+        {StatusCode::OK, ovms::HTTPStatusCode::OK},
+        {StatusCode::OK_RELOADED, ovms::HTTPStatusCode::CREATED},
+        {StatusCode::OK_NOT_RELOADED, ovms::HTTPStatusCode::OK},
 
-// static const net_http::HTTPStatusCode http(const ovms::Status& status) {
-// #ifdef __linux__
-//     const std::unordered_map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap = {
-// #elif _WIN32
-//     const std::map<const StatusCode, net_http::HTTPStatusCode> httpStatusMap = {
-// #endif
-//         {StatusCode::OK, net_http::HTTPStatusCode::OK},
-//         {StatusCode::OK_RELOADED, net_http::HTTPStatusCode::CREATED},
-//         {StatusCode::OK_NOT_RELOADED, net_http::HTTPStatusCode::OK},
+        // REST handler failure
+        {StatusCode::REST_INVALID_URL, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_UNSUPPORTED_METHOD, ovms::HTTPStatusCode::NONE_ACC},
+        {StatusCode::REST_NOT_FOUND, ovms::HTTPStatusCode::NOT_FOUND},
 
-//         // REST handler failure
-//         {StatusCode::REST_INVALID_URL, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_UNSUPPORTED_METHOD, net_http::HTTPStatusCode::NONE_ACC},
-//         {StatusCode::REST_NOT_FOUND, net_http::HTTPStatusCode::NOT_FOUND},
+        // REST parser failure
+        {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_PREDICT_UNKNOWN_ORDER, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_INSTANCES_NOT_AN_ARRAY, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_INPUT_NOT_PREALLOCATED, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::REST_NO_INSTANCES_FOUND, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_COULD_NOT_PARSE_INSTANCE, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_INPUTS_NOT_AN_OBJECT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_NO_INPUTS_FOUND, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_COULD_NOT_PARSE_INPUT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_COULD_NOT_PARSE_OUTPUT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_COULD_NOT_PARSE_PARAMETERS, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_PROTO_TO_STRING_ERROR, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::REST_UNSUPPORTED_PRECISION, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::REST_BINARY_BUFFER_EXCEEDED, ovms::HTTPStatusCode::BAD_REQUEST},
 
-//         // REST parser failure
-//         {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_PREDICT_UNKNOWN_ORDER, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_INSTANCES_NOT_AN_ARRAY, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_NAMED_INSTANCE_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_INPUT_NOT_PREALLOCATED, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::REST_NO_INSTANCES_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_INSTANCES_NOT_NAMED_OR_NONAMED, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_COULD_NOT_PARSE_INSTANCE, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_INSTANCES_BATCH_SIZE_DIFFER, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_INPUTS_NOT_AN_OBJECT, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_NO_INPUTS_FOUND, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_COULD_NOT_PARSE_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_COULD_NOT_PARSE_OUTPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_COULD_NOT_PARSE_PARAMETERS, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_PROTO_TO_STRING_ERROR, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::REST_UNSUPPORTED_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::REST_BINARY_BUFFER_EXCEEDED, net_http::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::PATH_INVALID, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::FILE_INVALID, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::NO_MODEL_VERSION_AVAILABLE, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::MODEL_NOT_LOADED, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::JSON_INVALID, ovms::HTTPStatusCode::PRECOND_FAILED},
+        {StatusCode::MODELINSTANCE_NOT_FOUND, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::SHAPE_WRONG_FORMAT, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::RESHAPE_ERROR, ovms::HTTPStatusCode::PRECOND_FAILED},
+        {StatusCode::MODEL_MISSING, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::MODEL_NAME_MISSING, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::MODEL_VERSION_MISSING, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::MEDIAPIPE_EXECUTION_ERROR, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::MEDIAPIPE_PRECONDITION_FAILED, ovms::HTTPStatusCode::PRECOND_FAILED},
+        {StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, ovms::HTTPStatusCode::PRECOND_FAILED},
+        {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::MODEL_VERSION_NOT_LOADED_YET, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::MODEL_SPEC_MISSING, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_SIGNATURE_DEF, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, ovms::HTTPStatusCode::NO_CONTENT},
+        {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, ovms::HTTPStatusCode::PRECOND_FAILED},
 
-//         {StatusCode::PATH_INVALID, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::FILE_INVALID, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::NO_MODEL_VERSION_AVAILABLE, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::MODEL_NOT_LOADED, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::JSON_INVALID, net_http::HTTPStatusCode::PRECOND_FAILED},
-//         {StatusCode::MODELINSTANCE_NOT_FOUND, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::SHAPE_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::MODEL_VERSION_POLICY_UNSUPPORTED_KEY, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::RESHAPE_ERROR, net_http::HTTPStatusCode::PRECOND_FAILED},
-//         {StatusCode::MODEL_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-//         {StatusCode::MODEL_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-//         {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-//         {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-//         {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
-//         {StatusCode::MODEL_VERSION_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-//         {StatusCode::MEDIAPIPE_EXECUTION_ERROR, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::MEDIAPIPE_PRECONDITION_FAILED, net_http::HTTPStatusCode::PRECOND_FAILED},
-//         {StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, net_http::HTTPStatusCode::PRECOND_FAILED},
-//         {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
-//         {StatusCode::MODEL_VERSION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
-//         {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, net_http::HTTPStatusCode::NOT_FOUND},
-//         {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE, net_http::HTTPStatusCode::NOT_FOUND},
-//         {StatusCode::MODEL_SPEC_MISSING, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_SIGNATURE_DEF, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::PIPELINE_DEMULTIPLEXER_NO_RESULTS, net_http::HTTPStatusCode::NO_CONTENT},
-//         {StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE, net_http::HTTPStatusCode::PRECOND_FAILED},
+        // Sequence management
+        {StatusCode::SEQUENCE_MISSING, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::SEQUENCE_ALREADY_EXISTS, ovms::HTTPStatusCode::CONFLICT},
+        {StatusCode::SEQUENCE_ID_NOT_PROVIDED, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::SEQUENCE_ID_BAD_TYPE, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::SEQUENCE_TERMINATED, ovms::HTTPStatusCode::PRECOND_FAILED},
+        {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, ovms::HTTPStatusCode::SERVICE_UNAV},
 
-//         // Sequence management
-//         {StatusCode::SEQUENCE_MISSING, net_http::HTTPStatusCode::NOT_FOUND},
-//         {StatusCode::SEQUENCE_ALREADY_EXISTS, net_http::HTTPStatusCode::CONFLICT},
-//         {StatusCode::SEQUENCE_ID_NOT_PROVIDED, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_SEQUENCE_CONTROL_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::SEQUENCE_ID_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::SEQUENCE_TERMINATED, net_http::HTTPStatusCode::PRECOND_FAILED},
-//         {StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::MAX_SEQUENCE_NUMBER_REACHED, net_http::HTTPStatusCode::SERVICE_UNAV},
+        // Predict request validation
+        {StatusCode::INVALID_NO_OF_INPUTS, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_MISSING_INPUT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_UNEXPECTED_INPUT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_BATCH_SIZE, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_SHAPE, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_BUFFER_TYPE, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_DEVICE_ID, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_STRING_INPUT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_INPUT_FORMAT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_PRECISION, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_VALUE_COUNT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_CONTENT_SIZE, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_MESSAGE_STRUCTURE, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::UNSUPPORTED_LAYOUT, ovms::HTTPStatusCode::BAD_REQUEST},
 
-//         // Predict request validation
-//         {StatusCode::INVALID_NO_OF_INPUTS, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_MISSING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_UNEXPECTED_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_BATCH_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_SHAPE, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_BUFFER_TYPE, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_DEVICE_ID, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_STRING_INPUT, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_INPUT_FORMAT, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_PRECISION, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_VALUE_COUNT, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_CONTENT_SIZE, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::INVALID_MESSAGE_STRUCTURE, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::UNSUPPORTED_LAYOUT, net_http::HTTPStatusCode::BAD_REQUEST},
+        // Deserialization
 
-//         // Deserialization
+        // Should never occur - ModelInstance::validate takes care of that
+        {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR, ovms::HTTPStatusCode::ERROR},
 
-//         // Should never occur - ModelInstance::validate takes care of that
-//         {StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::OV_INTERNAL_DESERIALIZATION_ERROR, net_http::HTTPStatusCode::ERROR},
+        // Inference
+        {StatusCode::OV_INTERNAL_INFERENCE_ERROR, ovms::HTTPStatusCode::ERROR},
 
-//         // Inference
-//         {StatusCode::OV_INTERNAL_INFERENCE_ERROR, net_http::HTTPStatusCode::ERROR},
+        // Serialization
 
-//         // Serialization
+        // Should never occur - it should be validated during model loading
+        {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, ovms::HTTPStatusCode::ERROR},
+        {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, ovms::HTTPStatusCode::ERROR},
 
-//         // Should never occur - it should be validated during model loading
-//         {StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION, net_http::HTTPStatusCode::ERROR},
-//         {StatusCode::OV_INTERNAL_SERIALIZATION_ERROR, net_http::HTTPStatusCode::ERROR},
+        // GetModelStatus
+        {StatusCode::INTERNAL_ERROR, ovms::HTTPStatusCode::ERROR},
 
-//         // GetModelStatus
-//         {StatusCode::INTERNAL_ERROR, net_http::HTTPStatusCode::ERROR},
+        // Binary input
+        {StatusCode::INVALID_NO_OF_CHANNELS, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::STRING_VAL_EMPTY, ovms::HTTPStatusCode::BAD_REQUEST},
+    };
+    auto it = httpStatusMap.find(status.getCode());
+    if (it != httpStatusMap.end()) {
+        return it->second;
+    } else {
+        return ovms::HTTPStatusCode::ERROR;
+    }
+}
 
-//         // Binary input
-//         {StatusCode::INVALID_NO_OF_CHANNELS, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH, net_http::HTTPStatusCode::BAD_REQUEST},
-//         {StatusCode::STRING_VAL_EMPTY, net_http::HTTPStatusCode::BAD_REQUEST},
-//     };
-//     auto it = httpStatusMap.find(status.getCode());
-//     if (it != httpStatusMap.end()) {
-//         return it->second;
-//     } else {
-//         return net_http::HTTPStatusCode::ERROR;
-//     }
-// }
-
-// class RequestExecutor final : public net_http::EventExecutor {
-// public:
-//     explicit RequestExecutor(int num_threads) :
-//         executor_(tensorflow::Env::Default(), "httprestserver", num_threads) {}
-
-//     void Schedule(std::function<void()> fn) override { executor_.Schedule(std::move(fn)); }
-
-// private:
-//     tensorflow::serving::ThreadPoolExecutor executor_;
-// };
-
-// class RestApiRequestDispatcher {
-// public:
-//     RestApiRequestDispatcher(ovms::Server& ovmsServer, int timeout_in_ms) {
-//         handler_ = std::make_unique<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
-//     }
-
-//     net_http::RequestHandler dispatch(net_http::ServerRequestInterface* req) {
-//         return [this](net_http::ServerRequestInterface* req) {
-//             try {
-//                 this->processRequest(req);
-//             } catch (...) {
-//                 SPDLOG_DEBUG("Exception caught in REST request handler");
-//                 req->ReplyWithStatus(net_http::HTTPStatusCode::ERROR);
-//             }
-//         };
-//     }
-
-// private:
-//     void parseHeaders(const net_http::ServerRequestInterface* req, std::vector<std::pair<std::string, std::string>>* headers) {
-//         if (req->GetRequestHeader("Inference-Header-Content-Length").size() > 0) {
-//             std::pair<std::string, std::string> header{"Inference-Header-Content-Length", req->GetRequestHeader("Inference-Header-Content-Length")};
-//             headers->emplace_back(header);
-//         }
-//     }
-//     void processRequest(net_http::ServerRequestInterface* req) {
-//         SPDLOG_DEBUG("REST request {}", req->uri_path());
-//         std::string body;
-//         int64_t num_bytes = 0;
-//         auto request_chunk = req->ReadRequestBytes(&num_bytes);
-//         while (request_chunk != nullptr) {
-//             body.append(std::string_view(request_chunk.get(), num_bytes));
-//             request_chunk = req->ReadRequestBytes(&num_bytes);
-//         }
-
-//         std::vector<std::pair<std::string, std::string>> headers;
-//         parseHeaders(req, &headers);
-//         std::string output;
-//         SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
-//             req->http_method(),
-//             req->uri_path(),
-//             body.size());
-//         HttpResponseComponents responseComponents;
-//         SPDLOG_ERROR("Method: [{}] Path: [{}] Body:\n==========\n{}\n=============\n", req->http_method(), req->uri_path(), body);
-
-//         // log headers
-//         for (const auto& kv : headers) {
-//             SPDLOG_ERROR("Header: [{}] Value: [{}]", kv.first, kv.second);
-//         }
-
-//         const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, req);
-//         if (status == StatusCode::PARTIAL_END) {
-//             // No further messaging is required.
-//             // Partial responses were delivered via "req" object.
-//             return;
-//         }
-//         if (!status.ok() && output.empty()) {
-//             output.append("{\"error\": \"" + status.string() + "\"}");
-//         }
-//         const auto http_status = http(status);
-//         if (responseComponents.inferenceHeaderContentLength.has_value()) {
-//             std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
-//             headers.emplace_back(header);
-//         }
-//         for (const auto& kv : headers) {
-//             req->OverwriteResponseHeader(kv.first, kv.second);
-//         }
-//         req->WriteResponseString(output);
-//         if (http_status != net_http::HTTPStatusCode::OK && http_status != net_http::HTTPStatusCode::CREATED) {
-//             SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
-//                 req->http_method(),
-//                 req->uri_path(),
-//                 status.string());
-//         }
-//         req->ReplyWithStatus(http_status);
-//     }
-
-//     std::unique_ptr<HttpRestApiHandler> handler_;
-// };
-
-// Legacy
-// std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
-//     auto options = std::make_unique<net_http::ServerOptions>();
-//     options->AddPort(static_cast<uint32_t>(port));
-//     options->SetAddress(address);
-//     options->SetExecutor(std::make_unique<RequestExecutor>(num_threads));
-
-//     auto server = net_http::CreateEvHTTPServer(std::move(options));
-//     if (server == nullptr) {
-//         SPDLOG_ERROR("Failed to create http server");
-//         return nullptr;
-//     }
-
-//     std::shared_ptr<RestApiRequestDispatcher> dispatcher =
-//         std::make_shared<RestApiRequestDispatcher>(ovmsServer, timeout_in_ms);
-
-//     net_http::RequestHandlerOptions handler_options;
-//     server->RegisterRequestDispatcher(
-//         [dispatcher](net_http::ServerRequestInterface* req) {
-//             return dispatcher->dispatch(std::move(req));
-//         },
-//         handler_options);
-
-//     if (server->StartAcceptingRequests()) {
-//         SPDLOG_INFO("REST server listening on port {} with {} threads", port, num_threads);
-//         return server;
-//     }
-
-//     return nullptr;
-// }
-
+#if (USE_DROGON == 1)
 std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
     auto server = std::make_unique<DrogonHttpServer>(num_threads, port, address);
-    auto drogonHandler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
+    auto handler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
     auto& pool = server->getPool();
-    server->registerRequestDispatcher([drogonHandler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-        //SPDLOG_DEBUG(" --------------- Received request: {}", req->path());
+    server->registerRequestDispatcher([handler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+        SPDLOG_DEBUG("REST request {}", req->getPath());
 
         std::vector<std::pair<std::string, std::string>> headers;
 
-        // TODO: filter headers, previous implementation accepted only Inference-Header-Content-Length
         for (const std::pair<const std::string, const std::string>& header : req->headers()) {
-            auto header_key = header.first;
-            auto header_value = header.second;
-            if (header_key == "inference-header-content-length") {
-                headers.emplace_back("Inference-Header-Content-Length", header_value);
-                continue;
-            }
-            headers.emplace_back(header_key, header_value);
+            headers.emplace_back(header.first, header.second);
         }
 
-        //SPDLOG_ERROR("Method: [{}] Path: [{}] Body:\n==========\n{}\n=============\n", drogon::to_string_view(req->getMethod()), req->getPath(),
-        //    req->getBody());
-
-        // log headers
-        // for (const auto& kv : headers) {
-        //     SPDLOG_ERROR("Header: [{}] Value: [{}]", kv.first, kv.second);
-        // }
-
-        std::string output;
-        (void)output;
-
-        HttpResponseComponents responseComponents;
-        (void)responseComponents;
-
-        // net_http::ServerRequestInterface* reqInterface = nullptr;  // TODO
-        // (void)reqInterface;
-        std::shared_ptr<DrogonHttpAsyncWriter> reqInterfaceNew = std::make_shared<DrogonHttpAsyncWriterImpl>(callback, pool);
-        (void)reqInterfaceNew;
-
-        /*
-
-        resp->setBody("Hello, World!");
-        callback(resp);
-        */
+        SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
+            req->getMethodString(),
+            req->getPath(),
+            req->getBody().size());
 
         auto body = std::string(req->getBody());
+        std::string output;
+        HttpResponseComponents responseComponents;
+        std::shared_ptr<HttpAsyncWriter> writer = std::make_shared<DrogonHttpAsyncWriterImpl>(callback, pool);
 
-        const auto status = drogonHandler->processRequest(
+        const auto status = handler->processRequest(
             drogon::to_string_view(req->getMethod()),
             req->getPath(),
             body,
             &headers,
             &output,
             responseComponents,
-            reqInterfaceNew);
+            writer);
         if (status == StatusCode::PARTIAL_END) {
             // No further messaging is required.
             // Partial responses were delivered via "req" object.
@@ -371,8 +218,6 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
             writer.EndObject();
             output = buffer.GetString();
         }
-        // const auto http_status = http(status);
-        // (void)http_status;
         auto resp = drogon::HttpResponse::newHttpResponse();
         resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
 
@@ -380,25 +225,22 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
             std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
             headers.emplace_back(header);
         }
-        for (const auto& kv : headers) {
-            //SPDLOG_INFO("ADDING HEADER {} -> {}", kv.first, kv.second);
-            resp->addHeader(kv.first, kv.second);
+        for (const auto& [key, value] : headers) {
+            resp->addHeader(key, value);
         }
-        //SPDLOG_INFO("Setting body: {}\nInput:[{}]", output, body);
         resp->setBody(output);
 
-        // Old code, commented
-        // if (http_status != net_http::HTTPStatusCode::OK && http_status != net_http::HTTPStatusCode::CREATED) {
-        //     SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
-        //         req->http_method(),
-        //         req->uri_path(),
-        //         status.string());
-        // }
-        //req->ReplyWithStatus(http_status);
+        const auto http_status = http(status);
+
+        if (http_status != ovms::HTTPStatusCode::OK && http_status != ovms::HTTPStatusCode::CREATED) {
+            SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
+                req->getMethodString(),
+                req->getPath(),
+                status.string());
+        }
         
-        // new code caused all requests to be 200 OK
         if (!status.ok()) {
-            resp->setStatusCode(drogon::HttpStatusCode::k500InternalServerError); // todo
+            resp->setStatusCode(drogon::HttpStatusCode(http_status));
         }
         callback(resp);
     });
@@ -409,39 +251,51 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
     return server;
 }
 
-#if (USE_DROGON == 0)
+#else
+
 std::unique_ptr<CppHttpLibHttpServer> createAndStartCppHttpLibHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
     auto server = std::make_unique<CppHttpLibHttpServer>(num_threads, port, address);
-    auto cpphttplibHandler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
-    server->registerRequestDispatcher([cpphttplibHandler](const httplib::Request& req, httplib::Response& resp) {
+    auto& pool = server->getPool();
+    auto handler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
+    server->registerRequestDispatcher([handler, &pool](const httplib::Request& req, httplib::Response& resp) {
+        SPDLOG_DEBUG("REST request {}", req.path);
+
         std::vector<std::pair<std::string, std::string>> headers;
 
         for (const std::pair<const std::string, const std::string>& header : req.headers) {
-            if (header.first == "inference-header-content-length") {
-                headers.emplace_back("Inference-Header-Content-Length", header.second);
-                continue;
-            }
             headers.emplace_back(header.first, header.second);
         }
+
+        SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
+            req.method,
+            req.path,
+            req.body.size());
+
         std::string output;
-
         HttpResponseComponents responseComponents;
+        std::shared_ptr<HttpAsyncWriter> writer = std::make_shared<CppHttpLibHttpAsyncWriterImpl>(resp, pool);
 
-        const auto status = cpphttplibHandler->processRequest(
+        const auto status = handler->processRequest(
             req.method,
             req.path,
             req.body,
             &headers,
             &output,
             responseComponents,
-            nullptr);//reqInterfaceNew);
+            writer);
         if (status == StatusCode::PARTIAL_END) {
             // No further messaging is required.
             // Partial responses were delivered via "req" object.
             return;
         }
         if (!status.ok() && output.empty()) {
-            output.append("{\"error\": \"" + status.string() + "\"}");
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            writer.StartObject();
+            writer.String("error");
+            writer.String(status.string().c_str());
+            writer.EndObject();
+            output = buffer.GetString();
         }
 
         if (responseComponents.inferenceHeaderContentLength.has_value()) {
@@ -453,15 +307,24 @@ std::unique_ptr<CppHttpLibHttpServer> createAndStartCppHttpLibHttpServer(const s
         }
         resp.set_content(output, "application/json");
 
-        // new code caused all requests to be 200 OK
+        const auto http_status = http(status);
+
+        if (http_status != ovms::HTTPStatusCode::OK && http_status != ovms::HTTPStatusCode::CREATED) {
+            SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
+                req.method,
+                req.path,
+                status.string());
+        }
+
         if (!status.ok()) {
-            resp.status = 500; // todo
+            resp.status = int(http_status);
         }
     });
 
     server->startAcceptingRequests();
     return server;
 }
+
 #endif
 
 }  // namespace ovms

@@ -19,26 +19,29 @@
 #include <string>
 #include <unordered_map>
 
-#include <drogon/drogon.h>
+#include <queue>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
+#include "httplib.h"
 
 #include "http_async_writer_interface.hpp"
 #include "mediapipe/framework/port/threadpool.h"
 
 namespace ovms {
 
-class DrogonHttpAsyncWriterImpl : public HttpAsyncWriter {
-    std::function<void(const drogon::HttpResponsePtr&)>& callback;
+class CppHttpLibHttpAsyncWriterImpl : public HttpAsyncWriter {
+    httplib::Response& resp;
     mediapipe::ThreadPool& pool;
-    drogon::ResponseStreamPtr stream;
-    bool isDisconnected = false;
-    std::unordered_map<std::string, std::string> additionalHeaders;
 
+    httplib::DataSink* sink{nullptr};
+
+    std::condition_variable cv;
+    std::mutex mtx;
 public:
-    DrogonHttpAsyncWriterImpl(
-        std::function<void(const drogon::HttpResponsePtr&)>& callback,
-        mediapipe::ThreadPool& pool) :
-        callback(callback),
-        pool(pool) {}
+    CppHttpLibHttpAsyncWriterImpl(
+        httplib::Response& resp, mediapipe::ThreadPool& pool) : resp(resp), pool(pool) {}
 
     // Used by V3 handler
     void OverwriteResponseHeader(const std::string& key, const std::string& value) override;
