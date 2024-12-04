@@ -17,6 +17,7 @@
 
 #include <functional>
 #include <string>
+#include <utility>
 
 #include "logging.hpp"
 
@@ -34,7 +35,7 @@ void CppHttpLibHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, 
 void CppHttpLibHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> cb) {
     SPDLOG_DEBUG("CppHttpLibHttpAsyncWriterImpl::PartialReplyBegin start");
 
-    auto chunked_content_provider = [this, cb = std::move(cb)] (size_t, httplib::DataSink & sink) {
+    auto chunked_content_provider = [this, cb = std::move(cb)](size_t, httplib::DataSink& sink) {
         SPDLOG_DEBUG("CppHttpLibHttpAsyncWriterImpl::chunked_content_provider");
 
         // Save the sink for later use by PartialReply
@@ -59,11 +60,11 @@ void CppHttpLibHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> cb) 
         return false;
     };
 
-    auto on_complete = [this] (bool) {
+    auto on_complete = [this](bool) {
         SPDLOG_DEBUG("CppHttpLibHttpAsyncWriterImpl::on_complete");
     };
 
-    this->resp.set_chunked_content_provider("text/event-stream", chunked_content_provider , on_complete);
+    this->resp.set_chunked_content_provider("text/event-stream", chunked_content_provider, on_complete);
 
     SPDLOG_DEBUG("CppHttpLibHttpAsyncWriterImpl::PartialReplyBegin end");
 }
@@ -77,7 +78,7 @@ void CppHttpLibHttpAsyncWriterImpl::PartialReplyEnd() {
 // Used by graph executor impl
 void CppHttpLibHttpAsyncWriterImpl::PartialReply(std::string message) {
     SPDLOG_DEBUG("CppHttpLibHttpAsyncWriterImpl::PartialReply {}", message);
-    
+
     this->sink->write(message.data(), message.size());
 }
 // Used by calculator via HttpClientConnection
