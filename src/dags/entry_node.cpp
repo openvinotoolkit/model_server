@@ -23,7 +23,10 @@
 #include <utility>
 
 #include "../capi_frontend/capi_utils.hpp"
-#include "../deserialization.hpp"
+#include "../capi_frontend/deserialization.hpp"
+#include "../tfs_frontend/deserialization.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
+#include "../kfs_frontend/deserialization.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
@@ -32,7 +35,6 @@
 #include "../regularovtensorfactory.hpp"
 #include "../tensor_conversion.hpp"
 #include "../tensorinfo.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
 #include "nodesession.hpp"
 
 #pragma GCC diagnostic push
@@ -131,7 +133,7 @@ template Status EntryNode<tensorflow::serving::PredictRequest>::execute(session_
 template Status EntryNode<::KFSRequest>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue);
 template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
 template Status EntryNode<::KFSRequest>::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessionOutputs);
-template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(TensorWithSourceMap& outputs);
+// TODO @atobisze FIXME template Status EntryNode<tensorflow::serving::PredictRequest>::fetchResults(TensorWithSourceMap& outputs);
 template Status EntryNode<::KFSRequest>::fetchResults(TensorWithSourceMap& outputs);
 template Status EntryNode<tensorflow::serving::PredictRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);
 template Status EntryNode<::KFSRequest>::createShardedTensor(ov::Tensor& dividedTensor, Precision precision, const shape_t& shape, const ov::Tensor& tensor, size_t i, size_t step, const NodeSessionMetadata& metadata, const std::string tensorName);

@@ -178,27 +178,6 @@ void setBatchSize(KFSTensorOutputProto& proto, int64_t batch) {
 void setStringPrecision(KFSTensorOutputProto& proto) {
     proto.set_datatype("BYTES");
 }
-Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width) {
-    size_t offset = 0;
-    size_t tmpBatchSize = 0;
-    size_t tmpMaxStringLength = 0;
-    while (offset + sizeof(uint32_t) <= buffer.size()) {
-        size_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer.data() + offset));
-        tmpMaxStringLength = std::max(tmpMaxStringLength, inputSize);
-        offset += (sizeof(uint32_t) + inputSize);
-        tmpBatchSize++;
-    }
-    if (offset > buffer.size()) {
-        SPDLOG_DEBUG("Raw input contents invalid format. Every input need to be preceded by four bytes of its size. Buffer exceeded by {} bytes", offset - buffer.size());
-        return StatusCode::INVALID_INPUT_FORMAT;
-    } else if (offset < buffer.size()) {
-        SPDLOG_DEBUG("Raw input contents invalid format. Every input need to be preceded by four bytes of its size. Unprocessed {} bytes", buffer.size() - offset);
-        return StatusCode::INVALID_INPUT_FORMAT;
-    }
-    batchSize = tmpBatchSize;
-    width = tmpMaxStringLength + 1;
-    return StatusCode::OK;
-}
 
 Status validateRequestCoherencyKFS(const KFSRequest& request, const std::string servableName, model_version_t servableVersion) {
     if (!request.raw_input_contents().empty()) {
@@ -213,5 +192,53 @@ Status validateRequestCoherencyKFS(const KFSRequest& request, const std::string 
         }
     }
     return StatusCode::OK;
+}
+size_t getElementsCount(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision) {
+    switch (expectedPrecision) {
+    case ovms::Precision::BOOL: {
+        return proto.contents().bool_contents().size();
+    }
+        /// int_contents
+    case ovms::Precision::I8:
+    case ovms::Precision::I16:
+    case ovms::Precision::I32: {
+        return proto.contents().int_contents().size();
+    }
+        /// int64_contents
+    case ovms::Precision::I64: {
+        return proto.contents().int64_contents().size();
+    }
+        // uint_contents
+    case ovms::Precision::U8:
+    case ovms::Precision::U16:
+    case ovms::Precision::U32: {
+        return proto.contents().uint_contents().size();
+    }
+        // uint64_contents
+    case ovms::Precision::U64: {
+        return proto.contents().uint64_contents().size();
+    }
+        // fp32_contents
+    case ovms::Precision::FP32: {
+        return proto.contents().fp32_contents().size();
+    }
+        // fp64_contentes
+    case ovms::Precision::FP64: {
+        return proto.contents().fp64_contents().size();
+    }
+    case ovms::Precision::STRING: {
+        return proto.contents().bytes_contents().size();
+    }
+    case ovms::Precision::FP16:
+    case ovms::Precision::U1:
+    case ovms::Precision::CUSTOM:
+    case ovms::Precision::UNDEFINED:
+    case ovms::Precision::DYNAMIC:
+    case ovms::Precision::MIXED:
+    case ovms::Precision::Q78:
+    case ovms::Precision::BIN:
+    default:
+        return 0;
+    }
 }
 }  // namespace ovms

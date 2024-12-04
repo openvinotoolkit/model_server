@@ -67,57 +67,10 @@ std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request) {
     return requestShapes;
 }
 
-// Assuming the request is already validated, therefore no need to check for negative values or zeros
-std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictRequest* request, const size_t batchSizeIndex) {
-    auto requestInputItr = request->inputs().begin();
-    if (requestInputItr == request->inputs().end()) {
-        SPDLOG_DEBUG("Failed to get batch size of a request. Validation of request failed");
-        return std::nullopt;
-    }
-    auto& requestInput = requestInputItr->second;  // assuming same batch size for all inputs
 
-    if (requestInput.tensor_shape().dim_size() < 0) {
-        SPDLOG_DEBUG("Failed to get batch size of a request. Input shape size cannot be a negative number. Validation of request failed");
-        return std::nullopt;
-    }
-
-    if (static_cast<size_t>(requestInput.tensor_shape().dim_size()) < batchSizeIndex + 1) {
-        SPDLOG_DEBUG("Failed to get batch size of a request. Batch size index out of shape range. Validation of request failed");
-        return std::nullopt;
-    }
-    return Dimension(requestInput.tensor_shape().dim(batchSizeIndex).size());
-}
-
-// Assuming the request is already validated, therefore no need to check for negative values or zeros
-std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request) {
-    std::map<std::string, shape_t> requestShapes;
-    for (auto& it : request->inputs()) {
-        shape_t requestShape;
-        std::string name = it.first;
-        auto& requestInput = it.second;
-        for (int i = 0; i < requestInput.tensor_shape().dim_size(); i++) {
-            requestShape.push_back(requestInput.tensor_shape().dim(i).size());
-        }
-        requestShapes[name] = std::move(requestShape);
-    }
-    return requestShapes;
-}
-std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex) {
-    size_t bs = 0;
-    auto status = request->getBatchSize(bs, batchSizeIndex);
-    if (!status.ok()) {
-        return std::nullopt;
-    }
-    return bs;
-}
 
 std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request) {
     return request->getRequestShapes();
-}
-
-bool useSharedOutputContentFn(const tensorflow::serving::PredictRequest* request) {
-    // does not apply for TFS frontend
-    return false;
 }
 
 bool useSharedOutputContentFn(const ::KFSRequest* request) {

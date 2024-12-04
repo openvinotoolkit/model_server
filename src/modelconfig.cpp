@@ -68,7 +68,6 @@ ModelConfig::ModelConfig(const std::string& name,
     setBatchingParams(configBatchSize);
 }
 
-const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
 const std::string MAPPING_CONFIG_JSON = "mapping_config.json";
 
 bool ModelConfig::isDeviceUsed(const std::string& device) const {

@@ -41,6 +41,7 @@
 #endif
 #include "../metric.hpp"
 #include "../modelinstance.hpp"
+#include "../inference_executor.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../ovinferrequestsqueue.hpp"
@@ -324,7 +325,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         status = pipelinePtr->execute(executionContext);
     } else if (modelInstance) {
         reporterOut = &modelInstance->getMetricReporter();
-        status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
+        status = infer(*modelInstance, request, response, modelInstanceUnloadGuard);
     }
     INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, status.ok()));
     if (!status.ok()) {

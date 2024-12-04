@@ -24,7 +24,7 @@
 //#include "model.hpp"
 #include "modelversion.hpp"
 #include "sequence_manager.hpp"
-#include "statefulmodelinstance.hpp"
+//#include "statefulmodelinstance.hpp"
 #include "status.hpp"
 
 namespace ovms {

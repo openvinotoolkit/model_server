@@ -36,11 +36,10 @@
 #include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
 #endif
 #include <openvino/runtime/remote_tensor.hpp>
-#include <spdlog/spdlog.h>
 #include <sys/types.h>
 
-#include "capi_frontend/inferencerequest.hpp"
-#include "capi_frontend/inferenceresponse.hpp"
+//#include "capi_frontend/inferencerequest.hpp"
+//#include "capi_frontend/inferenceresponse.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
@@ -54,9 +53,7 @@
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "ov_utils.hpp"
-#include "predict_request_validation_utils.hpp"
 #include "prediction_service_utils.hpp"
-#include "profiler.hpp"
 #include "regularovtensorfactory.hpp"
 #include "serialization.hpp"
 #include "shape.hpp"
@@ -98,20 +95,19 @@ const uint32_t UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
 ModelInstance::~ModelInstance() = default;
 ModelInstance::ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig) :
+    Servable(name, version),
     ieCore(ieCore),
-    name(name),
-    version(version),
     subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)),
     status(name, version),
     reporter(std::make_unique<ModelMetricReporter>(metricConfig, registry, name, version)) {
     isCustomLoaderConfigChanged = false;
 }
 
-void ModelInstance::subscribe(PipelineDefinition& pd) {
+void ModelInstance::subscribe(NotifyReceiver& pd) {
     subscriptionManager.subscribe(pd);
 }
 
-void ModelInstance::unsubscribe(PipelineDefinition& pd) {
+void ModelInstance::unsubscribe(NotifyReceiver& pd) {
     subscriptionManager.unsubscribe(pd);
 }
 
@@ -1326,21 +1322,6 @@ const std::set<std::string>& ModelInstance::getOptionalInputNames() {
     return optionalInputNames;
 }
 
-template <typename RequestType>
-const Status ModelInstance::validate(const RequestType* request) {
-    OVMS_PROFILE_FUNCTION();
-    return request_validation_utils::validate(
-        *request,
-        getInputsInfo(),
-        getOutputsInfo(),
-        getName(),
-        getVersion(),
-        this->getOptionalInputNames(),
-        getModelConfig().getBatchingMode(),
-        getModelConfig().getShapes());
-}
-
-template const Status ModelInstance::validate(const InferenceRequest* request);
 template const Status ModelInstance::validate(const ::KFSRequest* request);
 template const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request);
 
@@ -1371,7 +1352,7 @@ Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
     }
     return StatusCode::OK;
 }
-
+/*
 template <typename RequestType>
 static OVMS_InferenceRequestCompletionCallback_t getCallback(RequestType request) {
     return nullptr;
@@ -1382,15 +1363,11 @@ static void* getCallbackData(RequestType request) {
 }
 
 template <>
-OVMS_InferenceRequestCompletionCallback_t getCallback(const InferenceRequest* request) {
-    return request->getResponseCompleteCallback();
-}
-template <>
 void* getCallbackData(const InferenceRequest* request) {
     return request->getResponseCompleteCallbackData();
-}
+}*/
 
-template <typename RequestType, typename ResponseType>
+/*template <typename RequestType, typename ResponseType>
 void handleCallback(RequestType request, ResponseType response) {
     return;
 }
@@ -1403,128 +1380,10 @@ void handleCallback(const InferenceRequest* request, InferenceResponse* response
         OVMS_InferenceResponse* responseC = reinterpret_cast<OVMS_InferenceResponse*>(response);
         userCallback(responseC, 1, userCallbackData);
     }
-}
+}*/
 
-struct OutputKeeper {
-    std::unordered_map<std::string, ov::Tensor> outputs;
-    ov::InferRequest& request;
-    OutputKeeper(ov::InferRequest& request, const tensor_map_t& outputsInfo) :
-        request(request) {
-        for (auto [name, _] : outputsInfo) {
-            OV_LOGGER("ov::InferRequest: {}, request.get_tensor({})", reinterpret_cast<void*>(&request), name);
-            try {
-                ov::Tensor tensor = request.get_tensor(name);
-                OV_LOGGER("ov::Tensor(): {}", reinterpret_cast<void*>(&tensor));
-                outputs.emplace(std::make_pair(name, std::move(tensor)));
-                OV_LOGGER("ov::Tensor(ov::Tensor&&): {}", reinterpret_cast<void*>(&outputs.at(name)));
-            } catch (std::exception& e) {
-                SPDLOG_DEBUG("Resetting output:{}; for this model  is not supported. Check C-API documentation for OVMS_InferenceRequestOutputSetData. Error:", name, e.what());
-            }
-        }
-    }
-    ~OutputKeeper() {
-        for (auto [name, v] : outputs) {
-            OV_LOGGER("ov::InferRequest: {}, request.set_tensor({}, {})", reinterpret_cast<void*>(&request), name, reinterpret_cast<void*>(&v));
-            request.set_tensor(name, v);
-        }
-    }
-};
 
-template <typename RequestType, typename ResponseType>
-Status ModelInstance::infer(const RequestType* requestProto,
-    ResponseType* responseProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
-    OVMS_PROFILE_FUNCTION();
-    Timer<TIMER_END> timer;
-    using std::chrono::microseconds;
 
-    auto requestProcessor = createRequestProcessor(requestProto, responseProto);  // request, response passed only to deduce type
-    auto status = requestProcessor->extractRequestParameters(requestProto);
-    if (!status.ok())
-        return status;
-    status = validate(requestProto);
-    if (status.batchSizeChangeRequired() || status.reshapeRequired()) {
-        // We are ensured that request shape is valid and convertible to model shape (non negative, non zero)
-        // We can use it to perform reshape via shape=auto
-        auto requestBatchSize = getRequestBatchSize(requestProto, this->getBatchSizeIndex());
-        auto requestShapes = getRequestShapes(requestProto);
-        status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
-    }
-    if (!status.ok())
-        return status;
-    status = requestProcessor->prepare();
-    if (!status.ok())
-        return status;
-
-    timer.start(GET_INFER_REQUEST);
-    OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
-    ExecutingStreamIdGuard executingStreamIdGuard(getInferRequestsQueue(), this->getMetricReporter());
-    int executingInferId = executingStreamIdGuard.getId();
-    ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
-    OVMS_PROFILE_SYNC_END("getInferRequest");
-    timer.stop(GET_INFER_REQUEST);
-    double getInferRequestTime = timer.elapsed<microseconds>(GET_INFER_REQUEST);
-    OBSERVE_IF_ENABLED(this->getMetricReporter().waitForInferReqTime, getInferRequestTime);
-    SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, getInferRequestTime / 1000);
-
-    timer.start(PREPROCESS);
-    status = requestProcessor->preInferenceProcessing(inferRequest);
-    timer.stop(PREPROCESS);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Preprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREPROCESS) / 1000);
-
-    timer.start(DESERIALIZE);
-    InputSink<ov::InferRequest&> inputSink(inferRequest);
-    bool isPipeline = false;
-
-    std::unique_ptr<OutputKeeper> outKeeper;
-    if (this->doesSupportOutputReset()) {
-        outKeeper = std::make_unique<OutputKeeper>(executingStreamIdGuard.getInferRequest(), getOutputsInfo());
-    }
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
-    timer.stop(DESERIALIZE);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Deserialization of outputs failed for model {}, version {}", getName(), getVersion());
-        return status;
-    }
-    SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
-
-    timer.start(PREDICTION);
-    status = performInference(inferRequest);
-    timer.stop(PREDICTION);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Prediction duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
-
-    timer.start(SERIALIZE);
-    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), requestProto, responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));
-    timer.stop(SERIALIZE);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Serialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(SERIALIZE) / 1000);
-
-    timer.start(POSTPROCESS);
-    status = requestProcessor->postInferenceProcessing(responseProto, inferRequest);
-    timer.stop(POSTPROCESS);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(POSTPROCESS) / 1000);
-    if (this->targetDevice == "AUTO")
-        for (std::string device : compiledModel->get_property(ov::execution_devices))
-            SPDLOG_DEBUG("Used device: {}", device);
-
-    status = requestProcessor->release();
-    // handleCallback(requestProto, responseProto); to be enabled when callbacks are implemented in network API's
-    return status;
-}
 void ModelInstance::checkForOutputTensorResetAbility() {
     // for resetting output we need copy constructor of compiled model infer request ov::Tensor to be implemented.
     StreamIdGuard guard(getInferRequestsQueue());
@@ -1548,158 +1407,6 @@ bool ModelInstance::doesSupportOutputReset() const {
 }
 
 #pragma GCC diagnostic pop
-template <typename RequestType, typename ResponseType>
-Status ModelInstance::inferAsync(const RequestType* request,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
-    OVMS_PROFILE_FUNCTION();
-    Timer<TIMER_END> timer;
-    using std::chrono::microseconds;
-    // we don't have response yet
-    // auto requestProcessor = createRequestProcessor(request, responseProto);  // request, response passed only to deduce type
-    // auto status = requestProcessor->extractRequestParameters(request);
-    // if (!status.ok())
-    //    return status;
-    auto status = validate(request);
-    if (status.batchSizeChangeRequired() || status.reshapeRequired()) {
-        // We are ensured that request shape is valid and convertible to model shape (non negative, non zero)
-        // We can use it to perform reshape via shape=auto
-        auto requestBatchSize = getRequestBatchSize(request, this->getBatchSizeIndex());
-        auto requestShapes = getRequestShapes(request);
-        status = reloadModelIfRequired(status, requestBatchSize, requestShapes, modelUnloadGuardPtr);
-    }
-    if (!status.ok())
-        return status;
-    /* status = requestProcessor->prepare();
-    if (!status.ok())
-        return status;
-*/
-    timer.start(GET_INFER_REQUEST);
-    OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
-    auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(getInferRequestsQueue(), this->getMetricReporter());
-    int executingInferId = executingStreamIdGuard->getId();
-    ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
-    OVMS_PROFILE_SYNC_END("getInferRequest");
-    timer.stop(GET_INFER_REQUEST);
-    double getInferRequestTime = timer.elapsed<microseconds>(GET_INFER_REQUEST);
-    OBSERVE_IF_ENABLED(this->getMetricReporter().waitForInferReqTime, getInferRequestTime);
-    SPDLOG_DEBUG("Getting infer req duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, getInferRequestTime / 1000);
-
-    /*
-    timer.start(PREPROCESS);
-    status = requestProcessor->preInferenceProcessing(inferRequest);
-    timer.stop(PREPROCESS);
-    if (!status.ok())
-        return status;
-    SPDLOG_DEBUG("Preprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(PREPROCESS) / 1000);
-*/
-    timer.start(DESERIALIZE);
-    InputSink<ov::InferRequest&> inputSink(inferRequest);
-    bool isPipeline = false;
-    std::shared_ptr<OutputKeeper> outKeeper;
-    if (this->doesSupportOutputReset()) {
-        outKeeper = std::make_shared<OutputKeeper>(executingStreamIdGuard->getInferRequest(), getOutputsInfo());
-    }
-    status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*request, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, this->tensorFactories);
-    timer.stop(DESERIALIZE);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Deserialization of outputs failed for model {}, version {}", getName(), getVersion());
-        return status;
-    }
-    SPDLOG_DEBUG("Deserialization duration in model {}, version {}, nireq {}: {:.3f} ms",
-        getName(), getVersion(), executingInferId, timer.elapsed<microseconds>(DESERIALIZE) / 1000);
-    // set callback
-    // TODO check if there is callback in async
-    OVMS_InferenceRequestCompletionCallback_t userCallback = request->getResponseCompleteCallback();
-    if (userCallback == nullptr) {
-        SPDLOG_DEBUG("User callback not set for async inference.");
-        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
-    }
-
-    void* userCallbackData = request->getResponseCompleteCallbackData();
-    // here pass by copy into callback
-    {
-        // order is important here - destructors are called in order from right to left
-        inferRequest.set_callback(
-            [this, request, &inferRequest, userCallback, userCallbackData, modelUnloadGuardPtrMoved = std::shared_ptr<ModelInstanceUnloadGuard>(std::move(modelUnloadGuardPtr)), streamIdGuardMoved = std::move(executingStreamIdGuard), movedOutputKeeper = std::move(outKeeper)](std::exception_ptr exception) mutable {
-                struct CallbackGuard {
-                    OVMS_InferenceRequestCompletionCallback_t userCallback{nullptr};
-                    void* userCallbackData{nullptr};
-                    bool success{false};
-                    ov::InferRequest& request;
-                    OVMS_InferenceResponse* response{nullptr};
-                    CallbackGuard(OVMS_InferenceRequestCompletionCallback_t userCallback, void* userCallbackData, ov::InferRequest& request) :
-                        userCallback(userCallback),
-                        userCallbackData(userCallbackData),
-                        request(request) {}
-                    ~CallbackGuard() {
-                        SPDLOG_DEBUG("Calling user provided callback with success: {}", success);
-                        if (!success) {
-                            userCallback(nullptr, 1, userCallbackData);
-                        } else {
-                            userCallback(response, 0, userCallbackData);
-                        }
-                        SPDLOG_DEBUG("Called user provided callback");
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wterminate"
-                        try {
-                            OV_LOGGER("ov::InferRequest: {} set_callback() with empty lambda", (void*)&request);
-                            request.set_callback([](std::exception_ptr exception_ptr) {});
-                        } catch (std::exception& e) {
-                            SPDLOG_ERROR("Caught critical exception from OpenVINO InferRequest", e.what());
-                            throw e;
-                        } catch (...) {
-                            SPDLOG_ERROR("Caught critical exception from OpenVINO InferRequest");
-                            throw;
-                        }
-#pragma GCC diagnostic pop
-                    }
-                };
-                SPDLOG_DEBUG("Entry of ov::InferRequest callback call");
-                CallbackGuard callbackGuard(userCallback, userCallbackData, inferRequest);
-                if (exception) {
-                    try {
-                        SPDLOG_DEBUG("rethrow_exception");
-                        std::rethrow_exception(exception);
-                    } catch (const std::exception& e) {
-                        SPDLOG_DEBUG("got exception in ov::InferRequest callback: {}", e.what());
-                    } catch (...) {
-                        SPDLOG_DEBUG("got exception in ov::InferRequest callback");
-                        return;
-                    }
-                }
-                std::unique_ptr<ResponseType> res(new ResponseType(this->getName(), this->getVersion()));
-                OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-                try {
-                    // TODO created filter based on what is in request, then perform casual serialization for what was NOT in request, and rewrite tensors from request to response for those that were
-                    auto status = serializePredictResponse(outputGetter, getName(), getVersion(), getOutputsInfo(), request, res.get(), getTensorInfoName, useSharedOutputContentFn(request));
-                    if (!status.ok()) {
-                        SPDLOG_DEBUG("Encountered issue during response serialization:{}", status.string());
-                        return;
-                    }
-                } catch (std::exception& e) {
-                    SPDLOG_DEBUG("caught exception in ov::InferRequest callback: {}", e.what());
-                } catch (...) {
-                    SPDLOG_DEBUG("caught exception in ov::InferRequest callback");
-                }
-                callbackGuard.response = reinterpret_cast<OVMS_InferenceResponse*>(res.release());
-                callbackGuard.success = true;
-            });
-    }
-
-    try {
-        SPDLOG_DEBUG("ov::InferRequest: {}, inferRequest.start_async()", reinterpret_cast<void*>(&inferRequest));
-        inferRequest.start_async();
-    } catch (std::exception& e) {
-        SPDLOG_DEBUG("caught exception in ov::InferRequest.start_async: {}", e.what());
-        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
-    } catch (...) {
-        SPDLOG_DEBUG("caught exception in ov::InferRequest.start_async");
-        return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
-    }
-    return StatusCode::OK;
-}
 
 template Status ModelInstance::infer<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(const tensorflow::serving::PredictRequest* requestProto,
     tensorflow::serving::PredictResponse* responseProto,
@@ -1778,4 +1485,6 @@ Status RequestProcessor<RequestType, ResponseType>::release() { return StatusCod
 
 template class RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>;
 template class RequestProcessor<KFSRequest, KFSResponse>;
+
+
 }  // namespace ovms

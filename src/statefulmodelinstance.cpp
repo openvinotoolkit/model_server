@@ -26,6 +26,7 @@
 #include "predict_request_validation_utils.hpp"
 #include "profiler.hpp"
 #include "sequence_processing_spec.hpp"
+#include "statefulrequestprocessor.hpp"
 #include "serialization.hpp"
 #include "timer.hpp"
 
@@ -180,88 +181,6 @@ const Status StatefulModelInstance::extractSpecialKeys(const tensorflow::serving
 
 const std::set<std::string>& StatefulModelInstance::getOptionalInputNames() {
     return SPECIAL_INPUT_NAMES;
-}
-template <>
-StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::StatefulRequestProcessor(SequenceManager& sequenceManager) :
-    sequenceManager(sequenceManager) {
-}
-template <>
-Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::extractRequestParameters(const tensorflow::serving::PredictRequest* request) {
-    OVMS_PROFILE_FUNCTION();
-    auto status = StatefulModelInstance::extractSpecialKeys(request, sequenceProcessingSpec);
-    return status;
-}
-template <>
-Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::prepare() {
-    sequenceManagerLock = std::make_unique<std::unique_lock<std::mutex>>(sequenceManager.getMutex());
-    auto status = sequenceManager.processRequestedSpec(sequenceProcessingSpec);
-    if (!status.ok())
-        return status;
-    this->sequenceId = sequenceProcessingSpec.getSequenceId();
-    if (!sequenceManager.sequenceExists(this->sequenceId.value()))
-        return StatusCode::INTERNAL_ERROR;
-    sequence = &sequenceManager.getSequence(this->sequenceId.value());
-
-    sequenceLock = std::make_unique<std::unique_lock<std::mutex>>(sequence->getMutex());
-    sequenceManagerLock->unlock();
-    return StatusCode::OK;
-}
-template <>
-Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::preInferenceProcessing(ov::InferRequest& inferRequest) {
-    if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_START) {
-        // On SEQUENCE_START reset memory state of infer request to default
-        for (auto&& state : inferRequest.query_state()) {
-            state.reset();
-        }
-    } else {
-        // For next requests in the sequence set infer request memory state to the last state saved by the sequence
-        const sequence_memory_state_t& sequenceMemoryState = sequence->getMemoryState();
-        for (auto&& state : inferRequest.query_state()) {
-            auto stateName = state.get_name();
-            if (!sequenceMemoryState.count(stateName))
-                return StatusCode::INTERNAL_ERROR;
-            state.set_state(sequenceMemoryState.at(stateName));
-        }
-    }
-    return StatusCode::OK;
-}
-template <>
-Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::postInferenceProcessing(tensorflow::serving::PredictResponse* response, ov::InferRequest& inferRequest) {
-    // Reset inferRequest states on SEQUENCE_END
-    if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
-        SPDLOG_DEBUG("Received SEQUENCE_END signal. Resetting model state");
-        for (auto&& state : inferRequest.query_state()) {
-            state.reset();
-        }
-    } else {
-        auto modelState = inferRequest.query_state();
-        if (!sequence) {
-            SPDLOG_DEBUG("sequence is not set");
-            return StatusCode::INTERNAL_ERROR;
-        }
-        sequence->updateMemoryState(modelState);
-    }
-    // Include sequence_id in server response
-    auto& tensorProto = (*response->mutable_outputs())["sequence_id"];
-    tensorProto.mutable_tensor_shape()->add_dim()->set_size(1);
-    tensorProto.set_dtype(tensorflow::DataType::DT_UINT64);
-    tensorProto.add_uint64_val(sequenceProcessingSpec.getSequenceId());
-    return StatusCode::OK;
-}
-template <>
-Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::release() {
-    SPDLOG_DEBUG("Received SEQUENCE_END signal. Removing sequence");
-    sequenceLock->unlock();
-    Status status;
-    if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
-        sequenceManagerLock->lock();
-        if (!this->sequenceId.has_value()) {
-            SPDLOG_DEBUG("sequenceId is not set");
-            return StatusCode::INTERNAL_ERROR;
-        }
-        status = sequenceManager.removeSequence(this->sequenceId.value());
-    }
-    return status;
 }
 
 const Status StatefulModelInstance::preInferenceProcessing(ov::InferRequest& inferRequest, Sequence& sequence,

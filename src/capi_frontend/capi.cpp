@@ -36,6 +36,10 @@
 #endif
 #include "../model_service.hpp"
 #include "../modelinstance.hpp"
+#include "capi_request_utils.hpp" // TODO @atobisze must be before executor
+#include "capi_utils.hpp"
+#include "deserialization.hpp"
+#include "../inference_executor.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../ovms.h"  // NOLINT
@@ -46,7 +50,7 @@
 #include "../status.hpp"
 #include "../timer.hpp"
 #include "buffer.hpp"
-#include "capi_utils.hpp"
+#include "capi_dag_utils.hpp"
 #include "inferenceparameter.hpp"
 #include "inferencerequest.hpp"
 #include "inferenceresponse.hpp"
@@ -1018,7 +1022,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
         status = pipelinePtr->execute(executionContext);
         // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     } else {
-        status = modelInstance->infer(req, res.get(), modelInstanceUnloadGuard);
+        status = ovms::infer(*modelInstance, req, res.get(), modelInstanceUnloadGuard);
         //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     }
 
@@ -1082,7 +1086,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceAsync(OVMS_Server* serverPtr, OVMS_Inferen
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NOT_IMPLEMENTED));
         // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     } else {
-        status = modelInstance->inferAsync<InferenceRequest, InferenceResponse>(req, modelInstanceUnloadGuard);
+        status = ovms::modelInferAsync<InferenceRequest, InferenceResponse>(*modelInstance, req, modelInstanceUnloadGuard);
         //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     }
 

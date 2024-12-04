@@ -26,12 +26,10 @@
 #include <utility>
 #include <vector>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
 #include "../modelversion.hpp"
+#include "../notifyreceiver.hpp"
 #include "../tensorinfo.hpp"
 #include "aliases.hpp"
 #include "nodeinfo.hpp"
@@ -48,7 +46,7 @@ class Pipeline;
 class PipelineDefinitionUnloadGuard;
 class Status;
 
-class PipelineDefinition {
+class PipelineDefinition : public NotifyReceiver {
     friend NodeValidator;
     friend PipelineDefinitionUnloadGuard;
     struct ValidationResultNotifier {

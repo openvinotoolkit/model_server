@@ -27,6 +27,7 @@
 
 #include <rapidjson/document.h>
 
+#include "anonymous_input_name.hpp"
 #include "layout_configuration.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
@@ -39,7 +40,6 @@ using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, ov::Any>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
 
-extern const std::string ANONYMOUS_INPUT_NAME;
 extern const std::string MAPPING_CONFIG_JSON;
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 

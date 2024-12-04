@@ -21,7 +21,9 @@
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
-#include "../serialization.hpp"
+#include "../capi_frontend/serialization.hpp"
+#include "../kfs_frontend/serialization.hpp"
+#include "../tfs_frontend/serialization.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"

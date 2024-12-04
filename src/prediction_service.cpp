@@ -27,10 +27,13 @@
 #include "tensorflow/core/framework/tensor.h"
 #pragma GCC diagnostic pop
 
+#include "tfs_frontend/tfs_utils.hpp"
+
 #include "dags/pipeline.hpp"
 #include "execution_context.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpc_utils.hpp"
+#include "inference_executor.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
