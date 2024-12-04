@@ -29,7 +29,7 @@ set "openvino_ver=w_openvino_toolkit_windows_2025.0.0.dev20241203_x86_64.zip"
 set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17513-963b1be951b/"
 set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
 set "openvino_workspace=C:\\\\opt\\\\intel\\\\openvino\\\\runtime"
-set "openvino_new_worksapce=C:\\%1\\openvino\\runtime"
+set "openvino_new_workspace=C:\\%1\\openvino\\runtime"
 
 :: Download OpenVINO
 IF /I EXIST %openvino_zip% (
@@ -49,6 +49,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
 )
 mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
 
-powershell -Command "(gc -Path WORKSPACE -Raw) -replace '%openvino_workspace%', '%openvino_new_worksapce%' | Set-Content -Path WORKSPACE"
+:: Replace path to openvino in ovms WORKSPACE file
+powershell -Command "(gc -Path WORKSPACE -Raw) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
 
 endlocal

@@ -29,7 +29,7 @@ md c:\opt
 ## VISUAL BUILD TOOLS
 Install build tools for VS:
 
-https://visualstudio.microsoft.com/visual-cpp-build-tools/
+https://aka.ms/vs/17/release/vs_BuildTools.exe
 
 Mark c++ Desktop app and v142 CPP platform toolset.
 
@@ -48,8 +48,8 @@ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-
 https://bazel.build/install/windows -> copy and rename in c:\opt\bazel.exe and add to PATH
 
 ## MSYS
-Please make sure bash is installed and add its directory in PATH, and --repo_env BAZEL_SH='/path/to/bash'.
-Install in c:\opt\msys64 https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe
+Download and install in c:\opt\msys64 https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe
+Making sure bash is installed and add its directory in PATH, and --repo_env BAZEL_SH='/path/to/bash':
 ```
 set PATH=%PATH%;C:\opt\msys64\usr\bin
 set BAZEL_SH=C:\opt\msys64\usr\bin
@@ -59,7 +59,7 @@ set BAZEL_SH=C:\opt\msys64\usr\bin
 https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.exe
 Open command line cmd.exe and run:
 ```
-nvm install latest
+nvm install 22.9.0
 nvm use 22.9.0
 npm cache clean --force
 ```
@@ -93,9 +93,11 @@ set HTTPS_PROXY=my.proxy.com:122
 https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe
 
 # OPENCV contrib for optflow
+```
 cd c:\opt
 git clone https://github.com/opencv/opencv_contrib.git
 xcopy /s /r /Y opencv_contrib\modules\optflow\include\opencv2\* C:\opt\opencv\build\include\opencv2
+```
 
 ## WGET
 https://eternallybored.org/misc/wget/1.21.4/64/wget.exe download to c:\opt
@@ -135,16 +137,7 @@ set BAZEL_VC_FULL_VERSION=14.29.30133
 
 # Run bazel build command
 ```
-bazel build --config=windows --jobs=8 --subcommands --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe --verbose_failures --define CLOUD_DISABLE=1 --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 //src:ovms > compilation.log 2>&1
-```
-
-## To run ovms in developer command line
-cwd=C:\git\model_server>bazel-out
-
-```
-set PATH=%PATH%;C:\opt\intel\openvino_2024\runtime\bin\intel64\Release;C:\Windows\SysWOW64\;C:\opt\intel\openvino_2024\runtime\3rdparty\tbb\bin\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Redist\MSVC\14.29.30133\debug_nonredist\x64\Microsoft.VC142.DebugCRT\
-
-bazel-out\x64_windows-opt\bin\src\ovms.exe --help
+bazel --output_user_root=C:/b_tmp build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --subcommands --verbose_failures //src:ovms 2>&1 | tee compilation.log
 ```
 
 ## DEPLOY
