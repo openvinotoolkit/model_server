@@ -28,6 +28,7 @@
 namespace ovms {
 
 class DrogonHttpServer {
+    size_t num_workers;
     std::unique_ptr<mediapipe::ThreadPool> pool_;
     int port_;
     std::string address_;

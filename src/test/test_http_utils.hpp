@@ -22,10 +22,11 @@
 #include <gtest/gtest.h>
 
 #include "../http_server.hpp"
+#include "../http_status_code.hpp"
 #include "../http_async_writer_interface.hpp"
 
 //class MockedServerRequestInterface final : public tensorflow::serving::net_http::ServerRequestInterface {
-class MockedServerRequestInterface final : public ovms::DrogonHttpAsyncWriter {
+class MockedServerRequestInterface final : public ovms::HttpAsyncWriter {
 public:
     //MOCK_METHOD(absl::string_view, uri_path, (), (const, override));
     //MOCK_METHOD(absl::string_view, http_method, (), (const, override));
@@ -38,7 +39,7 @@ public:
     MOCK_METHOD(void, OverwriteResponseHeader, (const std::string&, const std::string&), (override));
     //MOCK_METHOD(void, AppendResponseHeader, (absl::string_view, absl::string_view), (override));
     //MOCK_METHOD(void, PartialReplyWithStatus, (std::string, tensorflow::serving::net_http::HTTPStatusCode), (override));
-    MOCK_METHOD(void, PartialReplyWithStatus, (std::string, ovms::HTTPStatus), (override));
+    MOCK_METHOD(void, PartialReplyWithStatus, (std::string, ovms::HTTPStatusCode), (override));
     MOCK_METHOD(void, PartialReply, (std::string), (override));
     //MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::CallbackStatus, PartialReplyWithFlushCallback, ((std::function<void()>)), (override));
     //MOCK_METHOD(tensorflow::serving::net_http::ServerRequestInterface::BodyStatus, response_body_status, (), (override));

@@ -473,12 +473,13 @@ cc_library(
             "//conditions:default" : [
                 "//src/embeddings:embeddingscalculator",
                 "//src/rerank:rerankcalculator",],
+        }) + select({
+            "//:enable_drogon": ["libdrogon_http_server"],
+            "//conditions:default" : ["libcpphttplib_http_server"],
         }) + [
             "cpp_headers",
             "libovms_capi_servable_metadata",
             "libmodelconfigjsonparser",
-            "libdrogon_http_server",
-            "libcpphttplib_http_server",
             "libovmsmodelconfig",
             "libovmscapibuffer",
             "libovmscapi_utils",
@@ -1662,6 +1663,21 @@ cc_library(
         "http_async_writer_interface.hpp",
     ],
     deps = [
+        "libhttp_status_code"
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "libhttp_status_code",
+    srcs = [
+        "http_status_code.hpp",
+    ],
+    deps = [
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1686,6 +1702,7 @@ cc_library(
         "@mediapipe//mediapipe/framework/port:threadpool",
         "libovmslogging",
         "libovmsstatus",
+        "libhttp_status_code"
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1701,14 +1718,16 @@ cc_library(
     srcs = [
         "cpphttplib_http_server.hpp",
         "cpphttplib_http_server.cpp",
-        #"drogon_http_async_writer_impl.hpp", TODO
-        #"drogon_http_async_writer_impl.cpp",
+        "cpphttplib_http_async_writer_impl.hpp",
+        "cpphttplib_http_async_writer_impl.cpp",
     ],
     deps = [
         "libhttp_async_writer_interface",
         "@cpphttplib//:cpphttplib",
         "@mediapipe//mediapipe/framework/port:threadpool",
         "libovmslogging",
+        "libovmsstatus",
+        "libhttp_status_code"
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1810,7 +1829,7 @@ cc_test(
         "test/ensemble_tests.cpp",
         "test/gather_node_test.cpp",
         "test/get_model_metadata_response_test.cpp",
-        "test/drogon_test.cpp",
+        "test/standalone_http_server_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/get_pipeline_metadata_response_test.cpp",

@@ -18,9 +18,10 @@
 #include <memory>
 #include <utility>
 
-#include "drogon_http_server.hpp"
 #if (USE_DROGON == 0)
 #include "cpphttplib_http_server.hpp"
+#else
+#include "drogon_http_server.hpp"
 #endif
 #include "http_server.hpp"
 #include "module.hpp"
@@ -29,11 +30,11 @@ namespace ovms {
 class Config;
 class Server;
 class HTTPServerModule : public Module {
-    //std::unique_ptr<ovms::http_server> server;
 #if (USE_DROGON == 0)
     std::unique_ptr<CppHttpLibHttpServer> cppHttpLibServer;
-#endif
+#else
     std::unique_ptr<DrogonHttpServer> drogonServer;
+#endif
     Server& ovmsServer;
 
 public:
