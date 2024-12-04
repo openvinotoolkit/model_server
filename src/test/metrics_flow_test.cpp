@@ -500,9 +500,16 @@ TEST_F(MetricFlowTest, GrpcModelMetadata) {
         request.mutable_name()->assign(dagName);
         ASSERT_EQ(impl.ModelMetadata(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
+    for (int i = 0; i < numberOfSuccessRequests; i++) {
+        request.Clear();
+        response.Clear();
+        request.mutable_name()->assign(mpName);
+        ASSERT_EQ(impl.ModelMetadata(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    }
 
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);    // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);    // ran by real request
 }
 
 TEST_F(MetricFlowTest, GrpcModelReady) {
@@ -524,8 +531,16 @@ TEST_F(MetricFlowTest, GrpcModelReady) {
         ASSERT_EQ(impl.ModelReady(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
 
+    for (int i = 0; i < numberOfSuccessRequests; i++) {
+        request.Clear();
+        response.Clear();
+        request.mutable_name()->assign(mpName);
+        ASSERT_EQ(impl.ModelReady(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    }
+
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, 1, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
 }
 
 TEST_F(MetricFlowTest, RestPredict) {
@@ -735,8 +750,15 @@ TEST_F(MetricFlowTest, RestModelMetadata) {
         ASSERT_EQ(handler.processModelMetadataKFSRequest(components, response, request), ovms::StatusCode::OK);
     }
 
+    for (int i = 0; i < numberOfSuccessRequests; i++) {
+        components.model_name = mpName;
+        std::string request, response;
+        ASSERT_EQ(handler.processModelMetadataKFSRequest(components, response, request), ovms::StatusCode::OK);
+    }
+
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);    // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);    // ran by real request
 }
 
 TEST_F(MetricFlowTest, ModelReady) {
@@ -755,8 +777,15 @@ TEST_F(MetricFlowTest, ModelReady) {
         ASSERT_EQ(handler.processModelReadyKFSRequest(components, response, request), ovms::StatusCode::OK);
     }
 
+    for (int i = 0; i < numberOfSuccessRequests; i++) {
+        components.model_name = mpName;
+        std::string request, response;
+        ASSERT_EQ(handler.processModelReadyKFSRequest(components, response, request), ovms::StatusCode::OK);
+    }
+
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
     checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
