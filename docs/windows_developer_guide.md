@@ -49,10 +49,10 @@ https://bazel.build/install/windows -> copy and rename in c:\opt\bazel.exe and a
 
 ## MSYS
 Download and install in c:\opt\msys64 https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe
-Making sure bash is installed and add its directory in PATH, and --repo_env BAZEL_SH='/path/to/bash':
+Set the variables to make sure bash is visible and add its directory in PATH - C:\opt\msys64\usr\bin, and --repo_env BAZEL_SH='/path/to/bash.exe':
 ```
 set PATH=%PATH%;C:\opt\msys64\usr\bin
-set BAZEL_SH=C:\opt\msys64\usr\bin
+set BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe
 ```
 
 ## NPM YARN
