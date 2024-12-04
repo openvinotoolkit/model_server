@@ -24,10 +24,9 @@ set "setPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC
 set "PATH=%setPath%"
 
 :: OpenVINO
-set "openvino_dir=w_openvino_toolkit_windows_2024.5.0.17288.7975fa5da0c_x86_64"
-set "openvino_ver=w_openvino_toolkit_windows_2024.5.0.17288.7975fa5da0c_x86_64.zip"
-set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/2024.5/windows/"
-set "openvino_wget=wget -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%"
+set "openvino_dir=w_openvino_toolkit_windows_2025.0.0.dev20241203_x86_64"
+set "openvino_ver=w_openvino_toolkit_windows_2025.0.0.dev20241203_x86_64.zip"
+set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17513-963b1be951b/"
 set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
 set "openvino_workspace=C:\\\\opt\\\\intel\\\\openvino\\\\runtime"
 set "openvino_new_worksapce=C:\\%1\\openvino\\runtime"
@@ -36,7 +35,7 @@ set "openvino_new_worksapce=C:\\%1\\openvino\\runtime"
 IF /I EXIST %openvino_zip% (
     echo [INFO] file exists %openvino_zip%
 ) ELSE (
-    %openvino_wget%
+    wget -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
 )
 :: Extract OpenVINO
 IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
@@ -44,12 +43,11 @@ IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
 ) ELSE (
     tar -xf %openvino_zip% -C %BAZEL_SHORT_PATH%
 )
-:: Create OpenVINO link
+:: Create OpenVINO link - always to make sure it points to latest version
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
-    echo [INFO] link exists %BAZEL_SHORT_PATH%\openvino
-) ELSE (
-    mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
+    rm %BAZEL_SHORT_PATH%\openvino
 )
+mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
 
 powershell -Command "(gc -Path WORKSPACE -Raw) -replace '%openvino_workspace%', '%openvino_new_worksapce%' | Set-Content -Path WORKSPACE"
 
