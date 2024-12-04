@@ -38,9 +38,12 @@
 #include <sys/socket.h>
 #include <sysexits.h>
 #elif _WIN32
+#include <csignal>
+
 #include <ntstatus.h>
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
+#include <windows.h>
 #endif
 #include <unistd.h>
 
@@ -151,6 +154,28 @@ static void installSignalHandlers() {
     sigemptyset(&sigIllHandler.sa_mask);
     sigIllHandler.sa_flags = 0;
     sigaction(SIGILL, &sigIllHandler, NULL);
+}
+#elif _WIN32
+
+static BOOL WINAPI onConsoleEvent(DWORD event) {
+    switch (event) {
+    case CTRL_C_EVENT:
+        onInterrupt(SIGINT);
+        return TRUE;
+    case CTRL_CLOSE_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
+        onTerminate(SIGTERM);
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+static void installSignalHandlers() {
+    SetConsoleCtrlHandler(onConsoleEvent, TRUE);
+    signal(SIGINT, onInterrupt);
+    signal(SIGTERM, onTerminate);
+    signal(SIGILL, onIllegal);
 }
 
 #endif
