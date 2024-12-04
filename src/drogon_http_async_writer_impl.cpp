@@ -27,8 +27,8 @@ void DrogonHttpAsyncWriterImpl::OverwriteResponseHeader(const std::string& key, 
     SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::OverwriteResponseHeader {} {}", key, value);
     this->additionalHeaders[key] = value;
 }
-void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTPStatus status) {
-    SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyWithStatus {} {}", message, status);
+void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTPStatusCode status) {
+    SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyWithStatus {} {}", message, int(status));
     if (this->isDisconnected) {
         return;
     }
@@ -41,11 +41,17 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> cb) {
         [this, cb = std::move(cb)](drogon::ResponseStreamPtr stream) {
             this->stream = std::move(stream);
             this->pool.Schedule([cb = std::move(cb)] {
-                SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule");
-                cb();
+                SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule begin");
+                try {
+                    cb();  // run actual workload (mediapipe executor inferStream) which uses PartialReply
+                } catch (...) {
+                    SPDLOG_ERROR("Exception caught in REST request streaming handler");
+                }
+                SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule end");
             });
         });
 
+    // Convert headers to drogon format
     for (const auto& [key, value] : this->additionalHeaders) {
         if (key == "Content-Type") {
             resp->setContentTypeString(value);
@@ -76,7 +82,7 @@ bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {
 
 void DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback(std::function<void()> callback) {
     SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback");
-    // TODO
+    // TODO: Implement once https://github.com/drogonframework/drogon/pull/2204 is merged
 }
 
 }  // namespace ovms

@@ -15,8 +15,6 @@
 //*****************************************************************************
 #include "cpphttplib_http_server.hpp"
 
-#include <mutex>
-#include <condition_variable>
 #include <chrono>
 
 #include "httplib.h"
@@ -26,29 +24,38 @@
 
 namespace ovms {
 
+class CustomHttpPool : public httplib::TaskQueue {
+    mediapipe::ThreadPool& pool;
+public:
+  CustomHttpPool(mediapipe::ThreadPool& pool) : pool(pool) {}
+
+  virtual bool enqueue(std::function<void()> fn) override {
+    pool.Schedule(fn);
+    return true;
+  }
+
+  virtual void shutdown() override {}
+};
+
 CppHttpLibHttpServer::CppHttpLibHttpServer(size_t num_workers, int port, const std::string& address) :
-    pool_(std::make_unique<mediapipe::ThreadPool>("CppHttpLibThreadPool", 3/*only for listener*//*num_workers*/)),
+    num_workers(num_workers),
+    pool_(std::make_unique<mediapipe::ThreadPool>("CppHttpLibThreadPool", num_workers)),
     port_(port),
     address_(address),
-    //server_(std::make_unique<httplib::Server>()) {
-    server_(std::make_unique<httplib::Server>(num_workers)) {
-    SPDLOG_DEBUG("Starting ThreadPool with {} workers", 3);
+    server_(std::make_unique<httplib::Server>()) {
+    SPDLOG_DEBUG("Starting thread pool ({} threads)", num_workers);
     pool_->StartWorkers();  // this is for listener and also for streaming outputs
-    SPDLOG_DEBUG("ThreadPool started");
-    SPDLOG_DEBUG("CPPHTTPLIB Number of Workers: {}", num_workers);
+    server_->new_task_queue = [this] {
+        return new CustomHttpPool(*this->pool_);
+    };
+    SPDLOG_DEBUG("Thread pool started");
 }
 
-void CppHttpLibHttpServer::startAcceptingRequests() {
-    SPDLOG_DEBUG("///////////////////////////// CppHttpLibHttpServer::startAcceptingRequests()");
+bool CppHttpLibHttpServer::startAcceptingRequests() {
+    SPDLOG_DEBUG("CppHttpLibHttpServer::startAcceptingRequests()");
 
     // Any Get or Post
     server_->Get(R"(/.*)", [this](const httplib::Request& req, httplib::Response& res) {
-        // this->pool_->Schedule([this, req, res]() mutable {
-        //     // this->dispatcher_(req, std::move(callback));
-        //     SPDLOG_DEBUG("Request: {}; Body: {};", req.path, req.body);
-        //     res.set_content("Hello, World!", "text/plain");
-        // });
-
         // measure time
         auto start = std::chrono::high_resolution_clock::now();
 
@@ -56,16 +63,10 @@ void CppHttpLibHttpServer::startAcceptingRequests() {
 
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        SPDLOG_DEBUG("Request took {} milliseconds", duration.count() / 1000.f);
+        SPDLOG_DEBUG("CppHttpLibHttpServer request handling took {} milliseconds", duration.count() / 1000.f);
     });
 
     server_->Post(R"(/.*)", [this](const httplib::Request& req, httplib::Response& res) {
-        // this->pool_->Schedule([this, req, res]() mutable {
-        //     // this->dispatcher_(req, std::move(callback));
-        //     SPDLOG_DEBUG("Request: {}; Body: {};", req.path, req.body);
-        //     res.set_content("Hello, World!", "text/plain");
-        // });
-
         // measure time
         auto start = std::chrono::high_resolution_clock::now();
 
@@ -73,29 +74,37 @@ void CppHttpLibHttpServer::startAcceptingRequests() {
 
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        SPDLOG_DEBUG("Request took {} milliseconds", duration.count() / 1000.f);
+        SPDLOG_DEBUG("CppHttpLibHttpServer request handling took {} milliseconds", duration.count() / 1000.f);
     });
 
     pool_->Schedule(
         [this] {
-            SPDLOG_DEBUG("Running httplib server {} {}", address_, port_);
+            SPDLOG_DEBUG("Starting to listen on port {}", port_);
             server_->listen(address_, port_);
-            SPDLOG_DEBUG("Stopped httplib", address_, port_);
+            SPDLOG_DEBUG("Stopped listening");
         });
 
     server_->wait_until_ready();
+    if (!server_->is_running()) {
+        SPDLOG_ERROR("Failed to start cpp-httplib server on port {}", port_);
+        return false;
+    }
+
+    SPDLOG_DEBUG("Server launched on port {}", port_);
+    SPDLOG_INFO("REST server listening on port {} with {} threads", port_, num_workers);
+    return true;
 }
 
 void CppHttpLibHttpServer::terminate() {
-    SPDLOG_DEBUG("///////////////////////////// CppHttpLibHttpServer::terminate()");
+    SPDLOG_DEBUG("CppHttpLibHttpServer::terminate()");
     server_->stop();
+    pool_.reset();  // waits for all worker threads to finish
 }
 
 void CppHttpLibHttpServer::registerRequestDispatcher(
     std::function<void(
         const httplib::Request& req, httplib::Response& res)>
         dispatcher) {
-    SPDLOG_DEBUG("///////////////////////////// CppHttpLibHttpServer::registerRequestDispatcher()");
     dispatcher_ = std::move(dispatcher);
 }
 
