@@ -23,10 +23,10 @@
 #include "mediapipe/framework/port/threadpool.h"
 
 namespace httplib {
-    class Server;
-    class Request;
-    class Response;
-}
+class Server;
+class Request;
+class Response;
+}  // namespace httplib
 
 namespace ovms {
 

@@ -15,18 +15,16 @@
 //*****************************************************************************
 #pragma once
 
+#include <condition_variable>
 #include <functional>
+#include <mutex>
+#include <queue>
 #include <string>
+#include <thread>
 #include <unordered_map>
 
-#include <queue>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-
-#include "httplib.h"
-
 #include "http_async_writer_interface.hpp"
+#include "httplib.h"  // NOLINT
 #include "mediapipe/framework/port/threadpool.h"
 
 namespace ovms {
@@ -39,9 +37,12 @@ class CppHttpLibHttpAsyncWriterImpl : public HttpAsyncWriter {
 
     std::condition_variable cv;
     std::mutex mtx;
+
 public:
     CppHttpLibHttpAsyncWriterImpl(
-        httplib::Response& resp, mediapipe::ThreadPool& pool) : resp(resp), pool(pool) {}
+        httplib::Response& resp, mediapipe::ThreadPool& pool) :
+        resp(resp),
+        pool(pool) {}
 
     // Used by V3 handler
     void OverwriteResponseHeader(const std::string& key, const std::string& value) override;

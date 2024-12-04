@@ -19,7 +19,6 @@
 #include <utility>
 
 #include "../client_connection.hpp"
-
 #include "../http_async_writer_interface.hpp"
 
 namespace ovms {

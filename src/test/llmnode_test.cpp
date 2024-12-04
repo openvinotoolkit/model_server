@@ -28,8 +28,8 @@
 #include <openvino/openvino.hpp>
 #include <pybind11/embed.h>
 
-#include "../http_status_code.hpp"
 #include "../http_rest_api_handler.hpp"
+#include "../http_status_code.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"

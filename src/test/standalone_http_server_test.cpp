@@ -18,13 +18,13 @@
 #include <gtest/gtest.h>
 
 #if (USE_DROGON == 0)
-#include "httplib.h"
+#include "httplib.h"  // NOLINT
 #else
 #include <drogon/drogon.h>
 #endif
 
-#include <thread>
 #include <chrono>
+#include <thread>
 
 #if (USE_DROGON == 0)
 TEST(CppHttpLib, basic) {
@@ -49,10 +49,10 @@ TEST(Drogon, DISABLED_basic) {
             drogon::app().quit();
         });
         drogon::app()
-                    .setThreadNum(3)
-                    .setIdleConnectionTimeout(0)
-                    .addListener("0.0.0.0", 11933)
-                    .run();
+            .setThreadNum(3)
+            .setIdleConnectionTimeout(0)
+            .addListener("0.0.0.0", 11933)
+            .run();
         k.join();
     }
 }

@@ -26,7 +26,7 @@
 #include "status.hpp"
 
 #if (USE_DROGON == 0)
-#include "httplib.h"
+#include "httplib.h"  // NOLINT
 #endif
 
 namespace ovms {

@@ -16,9 +16,9 @@
 #include "cpphttplib_http_server.hpp"
 
 #include <chrono>
+#include <utility>
 
-#include "httplib.h"
-
+#include "httplib.h"  // NOLINT
 #include "logging.hpp"
 #include "mediapipe/framework/port/threadpool.h"
 
@@ -26,15 +26,17 @@ namespace ovms {
 
 class CustomHttpPool : public httplib::TaskQueue {
     mediapipe::ThreadPool& pool;
+
 public:
-  CustomHttpPool(mediapipe::ThreadPool& pool) : pool(pool) {}
+    CustomHttpPool(mediapipe::ThreadPool& pool) :
+        pool(pool) {}
 
-  virtual bool enqueue(std::function<void()> fn) override {
-    pool.Schedule(fn);
-    return true;
-  }
+    bool enqueue(std::function<void()> fn) override {
+        pool.Schedule(fn);
+        return true;
+    }
 
-  virtual void shutdown() override {}
+    void shutdown() override {}
 };
 
 CppHttpLibHttpServer::CppHttpLibHttpServer(size_t num_workers, int port, const std::string& address) :
