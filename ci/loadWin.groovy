@@ -1,7 +1,3 @@
-def check_dependencies() {
-
-}
-
 def install_dependencies() {
     def status = bat(returnStatus: true, script: 'windows_install_dependencies.bat ' + env.JOB_BASE_NAME)
     if (status != 0) {
@@ -47,15 +43,6 @@ def check_tests(){
             error "Error: Windows run test failed ${status}. ${failed} failed tests . Check win_test.log for details."
     } else {
         echo "Run test no FAILED detected."
-    }
-
-    // Check for exception or segfault - need end tests report [  PASSED  ] 2744 tests.
-    status = bat(returnStatus: true, script: 'grep "  PASSED  " win_test.log | grep "tests."')
-    if (status == 0) {
-        def log = bat(returnStatus: false, returnStdout: true, script: 'tail -200 win_full_test.log')
-        error "Error: Run test summary not found. Log tail: ${log}"
-    } else {
-        echo "Run test summary found."
     }
 }
 

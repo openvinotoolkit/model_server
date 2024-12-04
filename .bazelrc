@@ -287,7 +287,7 @@ build:coverity --disk_cache=
 
 # Windows config default flags
 build:windows --define=CLOUD_DISABLE=1
-build:windows --define=PYTHON_DISABLE=1
+build:windows --define=PYTHON_DISABLE=0
 build:windows --define=MEDIAPIPE_DISABLE=0
 # Change this path alongside WORKSPACE:"windows_openvino" path for model_api cmake compilation.
 build:windows --action_env OpenVINO_DIR="c:/opt/intel/openvino/runtime/cmake"

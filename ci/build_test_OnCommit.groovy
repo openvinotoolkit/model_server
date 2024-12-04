@@ -71,7 +71,7 @@ pipeline {
             }
             stage('Build and test windows') {
               agent {
-                label 'hostname=ovspr42'
+                label 'win_ovms'
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
