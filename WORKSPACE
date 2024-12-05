@@ -209,7 +209,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_openvino",
     build_file = "@//third_party/openvino:openvino_windows.BUILD",
-    path = "C:\\opt\\intel\\openvino\\runtime",
+    path = "C:\\opt\\openvino\\runtime",
 )
 
 new_local_repository(
@@ -472,5 +472,6 @@ git_repository(
     remote = "https://github.com/nlohmann/json/",
     tag = "v3.11.3",
 )
+
 
 

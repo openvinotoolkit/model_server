@@ -31,6 +31,7 @@ set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
 set "openvino_workspace=C:\\\\opt\\\\intel\\\\openvino\\\\runtime"
 set "openvino_new_workspace=C:\\%1\\openvino\\runtime"
 
+echo "[INFO] OpenVino: "%openvino_dir%
 :: Download OpenVINO
 IF /I EXIST %openvino_zip% (
     echo [INFO] file exists %openvino_zip%
@@ -51,5 +52,30 @@ mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
 
 :: Replace path to openvino in ovms WORKSPACE file
 powershell -Command "(gc -Path WORKSPACE -Raw) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
+
+:: BoringSSL defined in .bazelrc build:windows --override_repository="boringssl=C:\\opt\\boringSSL-SwiftPM"
+set "bringssl_git=https://github.com/firebase/boringSSL-SwiftPM/"
+set "bringssl_ver=0.32.1"
+set "boringssl_dir=%BAZEL_SHORT_PATH%\boringSSL-SwiftPM"
+
+echo "[INFO] BoringSSL: "%bringssl_ver%
+:: Clone BoringSSL
+IF /I EXIST %boringssl_dir% (
+    rm -rf %boringssl_dir%
+)
+git clone --depth 1 --branch %bringssl_ver% %bringssl_git% %boringssl_dir%
+
+:: OpenCL headers
+
+set "opencl_git=https://github.com/KhronosGroup/OpenCL-SDK"
+set "opencl_ver=v2024.10.24"
+set "opencl_dir=%BAZEL_SHORT_PATH%\opencl"
+
+echo "[INFO] OpenCL: "%opencl_ver%
+:: Clone OpenCL
+IF /I EXIST %opencl_dir% (
+    rm -rf %opencl_dir%
+)
+git clone --depth 1 --branch %opencl_ver% %opencl_git% %opencl_dir%
 
 endlocal
