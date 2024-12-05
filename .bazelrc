@@ -282,10 +282,12 @@ build:mp_off_py_off --disk_cache=/root/.cache/bazel_mp_off_py_off
 build:coverity --config=mp_on_py_on
 build:coverity --disk_cache=
 
-#Add this parameter for windows local builds, its added on jenkins via build_windows.bat. Must be short path on C:\ for mediapipe to compile
+#Add this parameter for windows local builds, its added on jenkins via windows_build.bat. Must be short path on C:\ for mediapipe to compile
 #startup --output_user_root=C:/b_tmp
 
 # Windows config default flags
 build:windows --define=CLOUD_DISABLE=1
 build:windows --define=PYTHON_DISABLE=0
 build:windows --define=MEDIAPIPE_DISABLE=0
+# Change this path alongside WORKSPACE:"windows_openvino" path for model_api cmake compilation.
+build:windows --action_env OpenVINO_DIR="c:/opt/intel/openvino/runtime/cmake"
