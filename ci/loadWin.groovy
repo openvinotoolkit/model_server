@@ -12,8 +12,8 @@ def cleanup_directories() {
     // Compare workspace with c:\pr-xxxx
     for (int i = 0; i < existing_pr.size(); i++) {
         def found = false
-        for (int i = 0; i < existing_wr.size(); i++) {
-            if (existing_pr[i] == existing_wr[i]) {
+        for (int j = 0; j < existing_wr.size(); j++) {
+            if (existing_pr[i] == existing_wr[j]) {
                 found = true
                 break
             }
