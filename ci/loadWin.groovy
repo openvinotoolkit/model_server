@@ -1,9 +1,18 @@
+def install_dependencies() {
+    def status = bat(returnStatus: true, script: 'windows_install_dependencies.bat ' + env.JOB_BASE_NAME)
+    if (status != 0) {
+        error "Error: Windows install dependencies failed: ${status}. Check piepeline.log for details."
+    } else {
+        echo "Install dependencies successful."
+    }
+}
+
 def clean() {
-    def output1 = bat(returnStdout: true, script: 'clean_windows.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def output1 = bat(returnStdout: true, script: 'windows_clean.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
 }
 
 def build_and_test(){
-    def status = bat(returnStatus: true, script: 'build_windows.bat ' + env.JOB_BASE_NAME)
+    def status = bat(returnStatus: true, script: 'windows_build.bat ' + env.JOB_BASE_NAME)
     status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms.exe win_build.log | grep "Build completed successfully"')
     if (status != 0) {
         error "Error: Windows build failed ${status}. Check win_build.log for details."
@@ -23,6 +32,9 @@ def check_tests(){
     status = bat(returnStatus: true, script: 'grep "       OK " win_test.log')
     if (status != 0) {
             error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test.log for details."
+    } else {
+        def passed = bat(returnStatus: false, returnStdout: true, script: 'grep "       OK " win_test.log | wc -l')
+        echo "Error: Windows run test passed ${status}. ${passed} passed tests . Check win_test.log for details."
     }
 
     status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test.log')
@@ -30,7 +42,7 @@ def check_tests(){
             def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test.log | wc -l')
             error "Error: Windows run test failed ${status}. ${failed} failed tests . Check win_test.log for details."
     } else {
-        echo "Run test successful."
+        echo "Run test no FAILED detected."
     }
 }
 
