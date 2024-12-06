@@ -28,8 +28,8 @@ md c:\git
 md c:\opt
 ```
 
-## VISUAL STUDIO
-Visual Studio 2019 with C++ - https://visualstudio.microsoft.com/downloads/
+## Microsoft Visual C++ Redistributable
+Install C++ package - https://aka.ms/vs/17/release/VC_redist.x64.exe
 
 ## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
 Python3.9
@@ -43,7 +43,7 @@ make sure default "python --version" gets you 3.9
 OpenVINO Runtime: Download 2024.4 https://storage.openvinotoolkit.org/repositories/openvino/packages/2024.4/windows/w_openvino_toolkit_windows_2024.4.0.16579.c3152d32c9c_x86_64.zip
 unzipped in /opt/intel/openvino_2024
 
-## OPENCV install to - "C:\\opt\\opencv\\"
+## OPENCV install to - "C:\\opt\\"
 https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe
 
 ## WGET
