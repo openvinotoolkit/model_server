@@ -103,6 +103,7 @@ public:
             return absl::OkStatus();
         }
         try {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "PROCESS");
             // First iteration of Process()
             if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
                 OVMS_PROFILE_SCOPE("Deserialization of first request");
@@ -141,6 +142,7 @@ public:
                     if (finalPrompt.size() == 0) {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
                     }
+                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, "FINAL PROMPT {}", finalPrompt);
                     break;
                 }
                 case Endpoint::COMPLETIONS: {
