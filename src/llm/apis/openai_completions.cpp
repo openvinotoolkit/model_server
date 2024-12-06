@@ -18,11 +18,13 @@
 
 #include <cmath>
 
+#include <opencv2/opencv.hpp>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
+#include "absl/strings/escaping.h"
 
 using namespace rapidjson;
 
@@ -65,7 +67,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
             return absl::InvalidArgumentError("echo accepts values true or false");
         request.echo = it->value.GetBool();
     }
-
     // specific part of max_tokens validation due to echo dependency
     if (request.maxTokens == 0) {
         if (!request.echo)
@@ -75,8 +76,30 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     return absl::OkStatus();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart() {
-    // messages: [{role: content}, {role: content}, ...]; required
+static ov::element::Type_t getOvTypeFromMatType(int matType) {
+    switch (matType) {
+    case CV_32F:
+        return ov::element::f32;
+    case CV_64F:
+        return ov::element::f64;
+    case CV_16F:
+        return ov::element::f64;
+    case CV_16S:
+        return ov::element::f16;
+    case CV_8U:
+        return ov::element::u8;
+    case CV_8S:
+        return ov::element::i8;
+    case CV_16U:
+        return ov::element::u16;
+    case CV_32S:
+        return ov::element::i32;
+    default:
+        return ov::element::undefined;
+    }
+}
+
+absl::Status OpenAIChatCompletionsHandler::parseMessages() {
     auto it = doc.FindMember("messages");
     if (it == doc.MemberEnd())
         return absl::InvalidArgumentError("Messages missing in request");
@@ -84,23 +107,108 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart() {
         return absl::InvalidArgumentError("Messages are not an array");
     if (it->value.GetArray().Size() == 0)
         return absl::InvalidArgumentError("Messages array cannot be empty");
-    request.messages.clear();
-    request.messages.reserve(it->value.GetArray().Size());
+    bool jsonChanged = false;
     for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
-        const auto& obj = it->value.GetArray()[i];
+        auto& obj = it->value.GetArray()[i];
         if (!obj.IsObject())
             return absl::InvalidArgumentError("Message is not a JSON object");
-        auto& chat = request.messages.emplace_back(chat_entry_t{});
         for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
             if (!member->name.IsString())
                 return absl::InvalidArgumentError("Invalid message structure");
-            if (!member->value.IsString())
-                return absl::InvalidArgumentError("Invalid message structure");
-            chat[member->name.GetString()] = member->value.GetString();
+            if (member->value.IsString()) {
+                continue;
+            } else {
+                if (member->name.GetString() == std::string("content") && member->value.IsArray()) {
+                    jsonChanged = true;
+                    Value contentText;
+                    for (auto& v : member->value.GetArray()) {
+                        if (!v.IsObject()) {
+                            return absl::InvalidArgumentError("Invalid message structure - content array should contains objects");
+                        }
+                        auto entry = v.GetObject();
+                        if (!entry.HasMember("type") || !entry["type"].IsString()) {
+                            return absl::InvalidArgumentError("Invalid message structure - content object type missing");
+                        }
+                        auto type = entry["type"].GetString();
+                        if (type == std::string("text")) {
+                            if (!entry.HasMember("text") || !entry["text"].IsString()) {
+                                return absl::InvalidArgumentError("Invalid message structure - content text missing");
+                            }
+                            contentText = entry["text"];
+                            continue;
+                        } else if (type == std::string("image_url")) {
+                            if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
+                                return absl::InvalidArgumentError("Invalid message structure - content image_url missing");
+                            }
+                            auto imageUrl = entry["image_url"].GetObject();
+                            if (!imageUrl.HasMember("url") || !imageUrl["url"].IsString()) {
+                                return absl::InvalidArgumentError("Invalid message structure - image_url does not have url field");
+                            }
+                            std::string url = imageUrl["url"].GetString();
+                            std::string pattern = ";base64,";
+                            std::size_t found = url.find(pattern);
+                            size_t offset = found + pattern.length();
+                            if (found == std::string::npos) {
+                                offset = 0;
+                            }
+                            url.erase(0, offset);
+                            std::string decoded;
+                            if (!absl::Base64Unescape(url, &decoded)) {
+                                return absl::InvalidArgumentError("Invalid base64 string in request");
+                            }
+                            std::vector<unsigned char> data(decoded.begin(), decoded.end());
+                            cv::Mat dataMat(data, true);
+                            cv::Mat image;
+                            try {
+                                image = cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
+                            } catch (const cv::Exception& e) {
+                                return absl::InvalidArgumentError("Error during string to mat conversion");
+                            }
+                            std::vector<size_t> shape;
+                            shape.push_back(image.rows);
+                            shape.push_back(image.cols);
+                            shape.push_back(image.channels());
+                            ov::Tensor tensor(getOvTypeFromMatType(image.depth()), shape);
+                            if (image.total() * image.elemSize() != tensor.get_size()) {
+                                return absl::InvalidArgumentError("Image size invalid");
+                            }
+                            memcpy((char*)tensor.data(), (char*)image.data, image.total() * image.elemSize());
+                            request.images.push_back(tensor);
+                        } else {
+                            return absl::InvalidArgumentError("Unsupported content type");
+                        }
+                    }
+                    member->value = contentText;
+                } else {
+                    return absl::InvalidArgumentError("Invalid message structure - content should be string or array");
+                }
+            }
         }
     }
+    if (jsonChanged) {
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        doc.Accept(writer);
+        request.processedJson = buffer.GetString();
+    }
+    return absl::OkStatus();
+}
+
+std::string& OpenAIChatCompletionsHandler::getProcessedJson() {
+    return request.processedJson;
+}
+std::vector<ov::Tensor> OpenAIChatCompletionsHandler::getImages() const {
+    return request.images;
+}
+
+absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(uint32_t maxTokensLimit) {
+    // messages: [{role: content}, {role: content}, ...]; required
+    auto status = parseMessages();
+    if (status != absl::OkStatus()) {
+        return status;
+    }
     // logprobs: bool; optional - defaults to false
-    it = doc.FindMember("logprobs");
+    auto it = doc.FindMember("logprobs");
     if (it != doc.MemberEnd()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("logprobs accepts values true or false");
@@ -109,15 +217,27 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart() {
     if (request.logprobschat && request.stream) {
         return absl::InvalidArgumentError("logprobs are not supported in streaming mode.");
     }
-
+    // max_completion_tokens: uint; optional
+    it = doc.FindMember("max_completion_tokens");
+    if (it != doc.MemberEnd()) {
+        if (!it->value.IsUint()) {
+            if (it->value.IsUint64())
+                return absl::InvalidArgumentError("max_completion_tokens value can't be greater than 4294967295");
+            return absl::InvalidArgumentError("max_completion_tokens is not an unsigned integer");
+        }
+        if (!(it->value.GetUint() < maxTokensLimit))
+            return absl::InvalidArgumentError(absl::StrCat("max_completion_tokens exceeds limit provided in graph config: ", maxTokensLimit));
+        if (request.ignoreEOS.value_or(false)) {
+            if (it->value.GetUint() > IGNORE_EOS_MAX_TOKENS_LIMIT)
+                return absl::InvalidArgumentError("when ignore_eos is true max_completion_tokens can not be greater than 4000");
+        }
+        request.maxTokens = it->value.GetUint();
+    }
     // specific part of max_tokens validation due to echo dependency
     if (request.maxTokens == 0) {
         return absl::InvalidArgumentError("max_tokens value should be greater than 0");
     }
 
-    if (request.messages.size() <= 0) {
-        return absl::Status(absl::StatusCode::kInvalidArgument, "messages are missing");
-    }
     return absl::OkStatus();
 }
 
@@ -176,6 +296,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
 
     // max_tokens: uint; optional
     // Common part checked here, specific parts are checked in parseCompletionsPart and parseChatCompletionsPart
+    // Deprecated for chat completions TODO move to parseCompletionsPart
     it = doc.FindMember("max_tokens");
     if (it != doc.MemberEnd()) {
         if (!it->value.IsUint()) {
@@ -189,7 +310,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
     }
     if (request.ignoreEOS.value_or(false)) {
         if (request.maxTokens.has_value()) {
-            if (it->value.GetUint() > IGNORE_EOS_MAX_TOKENS_LIMIT)
+            if (request.maxTokens.value() > IGNORE_EOS_MAX_TOKENS_LIMIT)
                 return absl::InvalidArgumentError("when ignore_eos is true max_tokens can not be greater than 4000");
         } else {
             request.maxTokens = IGNORE_EOS_MAX_TOKENS_LIMIT;
@@ -401,7 +522,7 @@ absl::Status OpenAIChatCompletionsHandler::parseRequest(uint32_t maxTokensLimit,
     if (endpoint == Endpoint::COMPLETIONS)
         status = parseCompletionsPart();
     else
-        status = parseChatCompletionsPart();
+        status = parseChatCompletionsPart(maxTokensLimit);
 
     return status;
 }
