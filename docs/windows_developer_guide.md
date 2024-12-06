@@ -78,10 +78,10 @@ set HTTPS_PROXY=my.proxy.com:122
 ```
 
 ## Run Developer Command Prompt for VS 2019
-Enable Developer mode on in windows system settings
+Enable Developer mode in windows system settings
 
 ## Install dependencies
-open cmd.exe and run windows_install_dependencies.bat with target directory (default drive c:\\opt) and force reinstall flag 0/1
+open cmd.exe and run windows_install_dependencies.bat with target directory (default drive c:\\opt) and force reinstall flag 0/1 - default 0
 ```
 windows_install_dependencies.bat
 ```

@@ -19,29 +19,29 @@
 @echo on
 setlocal EnableExtensions DisableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
-:: We expect a first script argument to be "PR-1234" number passed here from jenkins so that a tmp directory will be created
-if "%1"=="" (
+:: We expect a first script argument to be "PR-XXXX" number passed here from jenkins so that a tmp directory will be created
+if "%1"=="" or "%1"=="null" (
   echo No argument provided. Using default opt path
-  set "in_path=opt"
+  set "output_user_root=opt"
 ) else (
   echo Argument provided: Using install path %1
-  set "in_path=%1"
+  set "output_user_root=%1"
 )
-if "%2"=="" (
-  echo No argument provided. Using default force = 0
-  set "force=0"
+if "%2"=="" or "%2"=="null" (
+  echo No argument provided. Using default expunge = 0
+  set "expunge=0"
 ) else (
-  echo Argument provided: Using force = %2
-  set "force=1"
+  echo Argument provided: Using expunge = %2
+  set "expunge=1"
 )
-set "BAZEL_SHORT_PATH=C:\%in_path%"
+set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "setPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Tools\MSVC\14.29.30133\bin\HostX86\x86;c:\opt;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\VC\VCPackages;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TeamFoundation\Team Explorer;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\MSBuild\Current\bin\Roslyn;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Team Tools\Performance Tools;C:\Program Files (x86)\Microsoft Visual Studio\Shared\Common\VSPerfCollectionTools\vs2019\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\devinit;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x86;C:\Program Files (x86)\Windows Kits\10\bin\x86;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\\MSBuild\Current\Bin;C:\Windows\Microsoft.NET\Framework\v4.0.30319;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Utils\;C:\Program Files\Git\cmd;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Ninja;C:\Program Files\CMake\bin;C:\Program Files\7-zip;C:\opt\Python39\Scripts\;C:\opt\Python39\;C:\opencl\install\;C:\opencl\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Install in c:\PR-1234\ section started - once per build, reinstalled only with expunge clean ::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean ::::::::::::::::::::::::::::::::::
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
@@ -52,7 +52,7 @@ set "openvino_ver=w_openvino_toolkit_windows_2025.0.0.dev20241203_x86_64.zip"
 set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17513-963b1be951b/"
 set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
 set "openvino_workspace=C:\\\\opt\\\\intel\\\\openvino\\\\runtime"
-set "openvino_new_workspace=C:\\%in_path%\\openvino\\runtime"
+set "openvino_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
 
 IF /I EXIST %BAZEL_SHORT_PATH% (
     echo [INFO] directory exists %BAZEL_SHORT_PATH%
@@ -90,7 +90,7 @@ set "opencl_dir=%BAZEL_SHORT_PATH%\opencl"
 
 :: Clone OpenCL
 IF /I EXIST %opencl_dir% (
-    if %force% EQU 1 (
+    if %expunge% EQU 1 (
         rm -rf %opencl_dir%
         git clone --depth 1 --branch %opencl_ver% %opencl_git% %opencl_dir%
     ) else (
@@ -115,7 +115,7 @@ set "boringssl_dir=%opt_install_dir%\boringSSL-SwiftPM"
 echo "[INFO] BoringSSL: "%bringssl_ver%
 :: Clone BoringSSL
 IF /I EXIST %boringssl_dir% (
-    if %force% EQU 1 (
+    if %expunge% EQU 1 (
         rm -rf %boringssl_dir%
         git clone --depth 1 --branch %bringssl_ver% %bringssl_git% %boringssl_dir%
     ) else ( echo [INFO] ::::::::::::::::::::::: BoringSSL already installed in %boringssl_dir% )
@@ -125,13 +125,13 @@ IF /I EXIST %boringssl_dir% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCV
-call windows_opencv.bat opt %force%
+call windows_opencv.bat opt %expunge%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install wget
 set "wget_path=%opt_install_dir%\wget.exe"
 IF /I EXIST %wget_path% (
-    if %force% EQU 1 (
+    if %expunge% EQU 1 (
         rm -rf %wget_path%
         curl https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
     ) else ( echo [INFO] ::::::::::::::::::::::: wget installed already in %wget_path% )
@@ -143,7 +143,7 @@ IF /I EXIST %wget_path% (
 ::::::::::::::::::::::: Install bazel
 set "bazel_path=%opt_install_dir%\bazel.exe"
 IF /I EXIST %bazel_path% (
-    if %force% EQU 1 (
+    if %expunge% EQU 1 (
         rm -rf %bazel_path%
         wget -O %bazel_path% https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
     ) else (
