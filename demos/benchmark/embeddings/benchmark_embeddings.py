@@ -34,10 +34,16 @@ import aiohttp
 
 AIOHTTP_TIMEOUT = aiohttp.ClientTimeout(total=6 * 60 * 60)
 
+default_url_description = "Default value depends on the backend: \
+    ovms-embeddings: http://localhost:8000/v3/embeddings ;\
+    ovms_rerank: http://localhost:8000/v3/rerank ;\
+    tei_embed: http://localhost:8080/embed ;\
+    infinity-embeddings: http://localhost:7997/embeddings"
+
 parser = argparse.ArgumentParser(description='Run benchmark for embeddings endpoints', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--dataset', required=False, default='Cohere/wikipedia-22-12-simple-embeddings', help='Dataset for load generation from HF or a keyword "synthetic"', dest='dataset')
 parser.add_argument('--synthetic_length', required=False, default=510, type=int, help='Length of the synthetic dataset', dest='length')
-parser.add_argument('--api_url', required=False, help='API URL for embeddings endpoint', dest='api_url')
+parser.add_argument('--api_url', required=False, help='API URL for embeddings endpoint. ' + default_url_description, dest='api_url')
 parser.add_argument('--model', required=False, default='Alibaba-NLP/gte-large-en-v1.5', help='HF model name', dest='model')
 parser.add_argument('--request_rate', required=False, default='inf', help='Average amount of requests per seconds in random distribution', dest='request_rate')
 parser.add_argument('--batch_size', required=False, type=int, default=16, help='Number of strings in every requests', dest='batch_size')
