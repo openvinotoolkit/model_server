@@ -76,7 +76,7 @@ static bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision) 
     return false;
 }
 
-static cv::Mat convertStringToMat(const std::string& image) {
+cv::Mat convertStringToMat(const std::string& image) {
     OVMS_PROFILE_FUNCTION();
     std::vector<unsigned char> data(image.begin(), image.end());
     cv::Mat dataMat(data, true);
@@ -84,7 +84,7 @@ static cv::Mat convertStringToMat(const std::string& image) {
     try {
         return cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
     } catch (const cv::Exception& e) {
-        SPDLOG_DEBUG("Error during string_val to mat conversion: {}", e.what());
+        SPDLOG_DEBUG("Error during string to mat conversion: {}", e.what());
         return cv::Mat{};
     }
 }

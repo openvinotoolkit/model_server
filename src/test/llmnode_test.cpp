@@ -587,6 +587,57 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
+TEST_F(LLMFlowHttpTest, image) {
+    config.max_new_tokens = 5;
+    config.rng_seed = 1;
+    config.num_beams = 16;
+    config.num_return_sequences = 8;
+    config.echo = false;
+    ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
+    ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "best_of" : 16,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": [ {"type": "text", "text": "What is OpenVINO?"}, {"type": "image_url", "image_url" : {"url": "What is OpenVINO?"}} ]
+            }
+            ]
+        }
+    )";
+    auto status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer);
+    SPDLOG_ERROR("{}", status.string());
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 8);
+    int i = 0;
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[i]);
+        ASSERT_EQ(choice["index"], i++);
+        EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+}
+
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
     std::string requestBody = R"(
         {
@@ -1670,6 +1721,88 @@ TEST_F(LLMHttpParametersValidationTest, maxTokensExceedsUint32Size) {
             "model": "llmDummyKFS",
             "stream": false,
             "max_tokens": 4294967296,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, maxTokensExceeds4000WhenIgnoreEosTrue) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "ignore_eos": true,
+            "max_tokens": 4001,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensInvalid) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_completions_tokens": "INVALID",
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceedsUint32Size) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_completions_tokens": 4294967296,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceeds4000WhenIgnoreEosTrue) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "ignore_eos": true,
+            "max_completions_tokens": 4001,
             "messages": [
             {
                 "role": "user",
