@@ -34,6 +34,7 @@
 #ifdef __linux__
 #include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
+#endif
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
