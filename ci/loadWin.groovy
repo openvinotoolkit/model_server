@@ -1,16 +1,26 @@
+// Check if we can delete c:\PR-XXXX only if jenkins workspace does not exists for the PR, thus commit was merged or removed.
 def cleanup_directories() {
-    def existing_wr_string = bat(returnStatus: false, returnStdout: true, script: 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n "s/ovms_oncommit_//p"')
+    def existing_wr_string = bat(returnStatus: false, returnStdout: true, script: 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n -E "s/(ovms_oncommit_|ovms_ovms-windows_)//p')
     println existing_wr_string
     def existing_wr = existing_wr_string.split(/\n/)
-    for (int i = 0; i < existing_wr.size(); i++) {
-        println existing_wr[i]
-    }
+    
 
-    def existing_pr_string = bat(returnStatus: false, returnStdout: true, script: 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n "s/ovms_oncommit_//p"')
+    def existing_pr_string = bat(returnStatus: false, returnStdout: true, script: 'ls c:\\ | grep -oE "(PR-[0-9]*)$"')
     println existing_pr_string
     def existing_pr = existing_pr_string.split(/\n/)
+    
+    // Compare workspace with c:\pr-xxxx
     for (int i = 0; i < existing_pr.size(); i++) {
-        println existing_pr[i]
+        def found = false
+        for (int i = 0; i < existing_wr.size(); i++) {
+            if (existing_pr[i] == existing_wr[i]) {
+                found = true
+                break
+            }
+        }
+        if (!found) {
+            println "Delete: " + existing_pr[i]
+        } 
     }
 }
 
