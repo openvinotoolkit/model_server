@@ -29,7 +29,7 @@
 
 namespace ovms {
 
-bool TextProcessor::applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output) {
+bool TextProcessor::applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, const std::string& requestBody, std::string& output) {
     if (textProcessor.chatTemplate == nullptr) {
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
         return false;
