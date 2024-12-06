@@ -21,10 +21,6 @@ It is recommended to use the top of main repository branch for more feature enab
 ### DAG pipelines
 
 # Install prerequisites
-```
-md c:\git
-md c:\opt
-```
 
 ## VISUAL BUILD TOOLS
 Install build tools for VS:
@@ -38,14 +34,6 @@ Python3.9
 pip install numpy==1.23
 make sure you install numpy for the python version you pass as build argument
 make sure default "python --version" gets you 3.9
-
-## OpenVINO
-OpenVINO Runtime: Download 2024.4 https://storage.openvinotoolkit.org/repositories/openvino/packages/2024.4/windows/w_openvino_toolkit_windows_2024.4.0.16579.c3152d32c9c_x86_64.zip
-unzipped in c:\opt\intel\openvino_2024
-
-## BAZEL
-https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
-https://bazel.build/install/windows -> copy and rename in c:\opt\bazel.exe and add to PATH
 
 ## MSYS
 Download and install in c:\opt\msys64 https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe
@@ -89,37 +77,18 @@ set HTTP_PROXY=my.proxy.com:123
 set HTTPS_PROXY=my.proxy.com:122
 ```
 
-## OPENCV install to - "C:\\opt\\"
-https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe
-
-# OPENCV contrib for optflow
-```
-cd c:\opt
-git clone https://github.com/opencv/opencv_contrib.git
-xcopy /s /r /Y opencv_contrib\modules\optflow\include\opencv2\* C:\opt\opencv\build\include\opencv2
-```
-
-## WGET
-https://eternallybored.org/misc/wget/1.21.4/64/wget.exe download to c:\opt
-Add c:\opt to system env PATH
-
 ## Run Developer Command Prompt for VS 2019
-## Enable Developer mode on in windows system settings
+Enable Developer mode on in windows system settings
 
-#### Boring SSL - not needed until md5 hash is needed.
-Clone in in c:\opt\
+## Install dependencies
+open cmd.exe and run windows_install_dependencies.bat with target directory (default drive c:\\opt) and force reinstall flag 0/1
 ```
-git clone https://github.com/firebase/boringSSL-SwiftPM.git
-```
-
-# Opencl headers
-```
-cd c:\opt
-git clone https://github.com/KhronosGroup/OpenCL-SDK.git opencl
+windows_install_dependencies.bat
 ```
 
 ## GET CODE
 ```
+md C:\git
 cd C:\git\
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server

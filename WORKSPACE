@@ -221,7 +221,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
-    path = "C:\\opt\\opencv\\build",
+    path = "C:\\opt\\opencv",
 )
 
 new_local_repository(
@@ -472,6 +472,15 @@ git_repository(
     remote = "https://github.com/nlohmann/json/",
     tag = "v3.11.3",
 )
+
+
+
+
+
+
+
+
+
 
 
 

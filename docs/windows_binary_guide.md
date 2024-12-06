@@ -39,16 +39,11 @@ pip install numpy==1.23
 make sure you install numpy for the python version you pass as build argument
 make sure default "python --version" gets you 3.9
 
-## OpenVINO
-OpenVINO Runtime: Download 2024.4 https://storage.openvinotoolkit.org/repositories/openvino/packages/2024.4/windows/w_openvino_toolkit_windows_2024.4.0.16579.c3152d32c9c_x86_64.zip
-unzipped in /opt/intel/openvino_2024
-
-## OPENCV install to - "C:\\opt\\"
-https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe
-
-## WGET
-https://eternallybored.org/misc/wget/1.21.4/64/wget.exe download to c:\opt
-Add c:\opt to system env PATH
+## Install dependencies
+open cmd.exe and run windows_install_dependencies.bat with target directory (default drive c:\\opt) and force reinstall flag 0/1
+```
+windows_install_dependencies.bat
+```
 
 ## DEPLOY
 Open cmd.exe in c:\opt
