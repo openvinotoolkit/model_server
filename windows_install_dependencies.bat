@@ -20,17 +20,17 @@
 setlocal EnableExtensions DisableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-XXXX" number passed here from jenkins so that a tmp directory will be created
-if "%1"=="" or "%1"=="null" (
+IF "%1"=="" or "%1"=="null" (
   echo No argument provided. Using default opt path
   set "output_user_root=opt"
-) else (
+) ELSE (
   echo Argument provided: Using install path %1
   set "output_user_root=%1"
 )
-if "%2"=="" or "%2"=="null" (
+IF "%2"=="" or "%2"=="null" (
   echo No argument provided. Using default expunge = 0
   set "expunge=0"
-) else (
+) ELSE (
   echo Argument provided: Using expunge = %2
   set "expunge=1"
 )

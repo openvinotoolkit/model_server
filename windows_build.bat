@@ -36,7 +36,7 @@ set "PATH=%setPath%"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call %BAZEL_SHORT_PATH%\openvino\setupvars.bat"
-set "opencvBatch=call C:\opt\opencv\build\setup_vars_opencv4.cmd"
+set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%
