@@ -1,21 +1,21 @@
 // Check if we can delete c:\PR-XXXX only if jenkins workspace does not exists for the PR, thus commit was merged or removed.
 def cleanup_directories() {
     def result = bat(returnStatus: true, returnStdout: true, script: 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n -E "s/(ovms_oncommit_|ovms_ovms-windows_)//p')
-    if (result.status != 0) {
+    if (result.exitCode != 0) {
         echo "No workspaces detected."
         return
     }
-    def existing_wr_string = result.stdout
+    def existing_wr_string = result.stdOut
     println existing_wr_string
     def existing_wr = existing_wr_string.split(/\n/)
     
 
     result = bat(returnStatus: true, returnStdout: true, script: 'ls c:\\ | grep -oE "(PR-[0-9]*)$"')
     def existing_pr_string = ""
-    if (result.status != 0) {
+    if (result.exitCode != 0) {
         echo "No PR-XXXX detected."
     } else {
-        existing_pr_string = result.stdout
+        existing_pr_string = result.stdOut
     }
     println existing_pr_string
     def existing_pr = existing_pr_string.split(/\n/)
