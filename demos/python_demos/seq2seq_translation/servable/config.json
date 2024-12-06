@@ -3,7 +3,7 @@
     "mediapipe_config_list": [
     {
         "name":"python_model",
-        "graph_path":"/workspace/graph.pbtxt"
+        "base_path": "."
     }
     ]
 }
