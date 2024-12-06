@@ -25,7 +25,9 @@
 #include <utility>
 #include <vector>
 
+#ifndef _WIN32
 #include <curl/curl.h>
+#endif
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
@@ -1138,6 +1140,8 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
 }
 
 std::string urlDecode(const std::string& encoded) {
+// TODO
+#ifndef _WIN32
     int output_length;
     CURL* curl = curl_easy_init();
     if (curl) {
@@ -1150,6 +1154,7 @@ std::string urlDecode(const std::string& encoded) {
         }
         curl_easy_cleanup(curl);
     }
+#endif
     return encoded;
 }
 
