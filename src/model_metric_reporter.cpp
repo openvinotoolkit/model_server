@@ -324,7 +324,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
 }
 
 MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& graphName) :
-    registry(registry) {
+    ServableMetricReporter(metricConfig, registry, graphName, 1) {
     if (!registry) {
         return;
     }
