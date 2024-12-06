@@ -1,3 +1,10 @@
+def cleanup_directories() {
+    def existing = bat(returnStatus: false, returnStdout: true, script: 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n "s/ovms_oncommit_//p"')
+    existing.eachLine {
+        line -> println "Found: $line"
+    }
+}
+
 def install_dependencies() {
     def status = bat(returnStatus: true, script: 'windows_install_dependencies.bat ' + env.JOB_BASE_NAME)
     if (status != 0) {
