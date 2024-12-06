@@ -93,6 +93,8 @@ cc_library(
 )
 """,
 )
+
+# Used for gRPC API protos only
 # Tensorflow serving
 git_repository(
     name = "tensorflow_serving",
@@ -361,6 +363,9 @@ aws_sdk_cpp()
 load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
 
+load("@//third_party/drogon:drogon.bzl", "drogon_cpp")
+drogon_cpp()
+
 # Azure Storage SDK
 new_local_repository(
     name = "azure",
@@ -465,6 +470,12 @@ new_local_repository(
     name = "mediapipe_calculators",
     build_file = "@//third_party/mediapipe_calculators:BUILD",
     path = "third_party/mediapipe_calculators",
+)
+
+new_local_repository(
+    name = "cpphttplib",
+    build_file = "@//third_party/cpphttplib:BUILD",
+    path = "third_party/cpphttplib",
 )
 
 git_repository(

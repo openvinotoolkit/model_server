@@ -47,12 +47,8 @@ cc_library(
         "ovms_kfs_calculator.cc",
         "streaming_test_calculator.cpp",
         "two_input_calculator.cpp",
-    ] +  select({
-            "//conditions:default": [
-                "openai_chat_completions_mock_calculator.cpp",
-            ],
-            "//src:windows" : [],
-    }),
+        "openai_chat_completions_mock_calculator.cpp",
+    ],
     copts = select({
             "//conditions:default": [
                 "-Wall",

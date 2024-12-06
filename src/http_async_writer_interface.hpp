@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,22 +15,27 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
+#include <functional>
 #include <string>
 
-#if (USE_DROGON == 0)
-#include "cpphttplib_http_server.hpp"
-#else
-#include "drogon_http_server.hpp"
-#endif
+#include "http_status_code.hpp"
 
 namespace ovms {
-class Server;
 
-#if (USE_DROGON == 0)
-std::unique_ptr<CppHttpLibHttpServer> createAndStartCppHttpLibHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
-#else
-std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
-#endif
+class HttpAsyncWriter {
+public:
+    // Used by V3 handler
+    virtual void OverwriteResponseHeader(const std::string& key, const std::string& value) = 0;
+    virtual void PartialReplyWithStatus(std::string message, HTTPStatusCode status) = 0;
+    virtual void PartialReplyBegin(std::function<void()> callback) = 0;
+    virtual void PartialReplyEnd() = 0;
+
+    // Used by graph executor impl
+    virtual void PartialReply(std::string message) = 0;
+
+    // Used by calculator via HttpClientConnection
+    virtual bool IsDisconnected() const = 0;
+    virtual void RegisterDisconnectionCallback(std::function<void()> callback) = 0;
+};
 
 }  // namespace ovms
