@@ -318,8 +318,10 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             }
         }
         auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs_buffer, *input, grpc_request.add_raw_input_contents());
-        if (!status.ok())
+        if (!status.ok()) {
+            SPDLOG_DEBUG("error handling binary input");
             return status;
+        }
     }
     return StatusCode::OK;
 }
@@ -340,6 +342,7 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     grpc_request = requestParser.getProto();
     status = handleBinaryInputs(grpc_request, request_body, endOfJson);
     if (!status.ok()) {
+        SPDLOG_DEBUG("Error handling binary inputs");
         return status;
     }
     grpc_request.set_model_name(modelName);
