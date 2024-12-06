@@ -55,7 +55,7 @@ if args["dataset"] == 'synthetic':
     for i in range(args["limit"]):
         docs = docs.add_item({"text":dummy_text})
 else:
-    filter = f"train[:{args["limit"]}]"
+    filter = f"train[:{args['limit']}]"
     docs = load_dataset(args["dataset"], split=filter)
 
 print("Number of documents:",len(docs))
@@ -118,7 +118,7 @@ async def async_request_embeddings(
                 else:
                     output.error = response.reason or ""
                     output.success = False
-                    print("ERROR",response.reason)
+                    print("ERROR", response.reason)
 
         except Exception:
             output.success = False
@@ -206,7 +206,7 @@ async def async_request_embeddings_tei(
                 else:
                     output.error = response.reason or ""
                     output.success = False
-                    print("ERROR",response.reason)
+                    print("ERROR", response.reason)
 
         except Exception:
             output.success = False
@@ -234,7 +234,7 @@ async def get_request(
 
 async def benchmark(docs, model, api_url, request_rate, backend_function):
     request_func = backend_function
-    pbar = tqdm(total=len(docs)//batch_size)
+    pbar = tqdm(total=len(docs)//batch_size + (len(docs) % batch_size > 0))
     semaphore = asyncio.Semaphore(100)
     async def limited_request_func(request_func_input, pbar):
         if semaphore is None:
@@ -284,8 +284,8 @@ benchmark_results = asyncio.run(benchmark(docs=docs, model=args["model"], api_ur
 num_tokens = count_tokens(docs=docs,model=args["model"])
 #print(benchmark_results)
 print("Tokens:",num_tokens)
-print("Success rate: {}%. ({}/{})".format(sum(benchmark_results["successes"])/len(benchmark_results["successes"])*100, sum(benchmark_results["successes"]), len(benchmark_results["successes"])))
-print("Throughput - Tokens per second:",num_tokens / benchmark_results["duration"])
-print("Mean latency: {} ms".format(round(np.mean(benchmark_results["latencies"])*1000),3))
-print("Median latency: {} ms".format(round(np.median(benchmark_results["latencies"])*1000),3))
-print("Average document length: {} tokens".format(num_tokens / len(docs)))
+print(f"Success rate: {sum(benchmark_results['successes'])/len(benchmark_results['successes'])*100}%. ({sum(benchmark_results['successes'])}/{len(benchmark_results['successes'])})")
+print(f"Throughput - Tokens per second: {num_tokens / benchmark_results['duration']:^,.1f}")
+print(f"Mean latency: {np.mean(benchmark_results['latencies'])*1000:.2f} ms")
+print(f"Median latency: {np.median(benchmark_results['latencies'])*1000:.2f} ms")
+print(f"Average document length: {num_tokens / len(docs)} tokens")
