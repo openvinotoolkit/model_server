@@ -19,9 +19,10 @@ setlocal EnableExtensions DisableDelayedExpansion
 :: We expect a first script argument to be "PR-1234" number passed here from jenkins so that a tmp directory will be created
 set "BAZEL_SHORT_PATH=C:\%1"
 set "bazelStartupCmd=--output_user_root=%BAZEL_SHORT_PATH%"
+set "openvino_dir=C:/%1/openvino/runtime/cmake"
 
-set "buildCommand=bazel %bazelStartupCmd% build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms 2>&1 | tee win_build.log"
-set "buildTestCommand=bazel %bazelStartupCmd% build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
+set "buildCommand=bazel %bazelStartupCmd% build --config=windows --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms 2>&1 | tee win_build.log"
+set "buildTestCommand=bazel %bazelStartupCmd% build --config=windows --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
 set "changeConfigsCmd=windows_change_test_configs.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log"
 
@@ -34,7 +35,7 @@ set "envPath=win_environment.log"
 set "PATH=%setPath%"
 
 :: Set paths with libs for execution - affects PATH
-set "openvinoBatch=call C:\opt\intel\openvino_2024\setupvars.bat"
+set "openvinoBatch=call %BAZEL_SHORT_PATH%\openvino\setupvars.bat"
 set "opencvBatch=call C:\opt\opencv\build\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths

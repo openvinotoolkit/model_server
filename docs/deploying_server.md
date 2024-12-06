@@ -89,7 +89,7 @@ To deploy Model Server on baremetal, use compiled binaries for Ubuntu22, Ubuntu2
 :sync: ubuntu-22-04
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.4/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
 or build it yourself:
@@ -120,7 +120,7 @@ sudo apt -y install libpython3.10
 :sync: ubuntu-24-04
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.4/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
 or build it yourself:
@@ -151,7 +151,7 @@ sudo apt -y install libpython3.12
 :sync: rhel-8-10
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.4/ovms_redhat.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
 or build it yourself:
@@ -178,7 +178,7 @@ sudo yum install -y python39-libs
 :sync: rhel-9.4
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.4/ovms_redhat.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
 or build it yourself:
