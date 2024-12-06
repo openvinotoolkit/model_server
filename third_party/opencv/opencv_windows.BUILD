@@ -39,11 +39,11 @@ cc_library(
     name = "opencv",
     srcs = select({
         ":opt_build": [
-            "x64/vc16/lib/opencv_world" + OPENCV_VERSION + ".lib",
+            "opencv_world" + OPENCV_VERSION + ".lib",
             "x64/vc16/bin/opencv_world" + OPENCV_VERSION + ".dll",
         ],
         ":dbg_build": [
-            "x64/vc16/lib/opencv_world" + OPENCV_VERSION + "d.lib",
+            "opencv_world" + OPENCV_VERSION + "d.lib",
             "x64/vc16/bin/opencv_world" + OPENCV_VERSION + "d.dll",
         ],
     }),
