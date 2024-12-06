@@ -380,25 +380,15 @@ cc_library(
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
         "global_sequences_viewer.hpp",
-        "global_sequences_viewer.cpp",]
-        + select({
-            "//:is_windows_or_mediapipe_is_disabled_no_http": [],
-            "//conditions:default" : [
-                "http_frontend/http_graph_executor_impl.cpp",
-                "http_frontend/http_graph_executor_impl.hpp",],
-            })
-        #TODO : add to server lib and cleanup headers too many includes
-         + select({
-                "//conditions:default": [
-                    "http_server.hpp",
-                    "http_server.cpp",
-                    "http_rest_api_handler.hpp",
-                    "httpservermodule.hpp",
-                    "http_rest_api_handler.cpp",
-                    "httpservermodule.cpp",
-                ],
-                "//src:windows" : [],
-                }) + [      
+        "global_sequences_viewer.cpp",
+        "http_server.hpp",
+        "http_server.cpp",
+        "http_rest_api_handler.hpp",
+        "httpservermodule.hpp",
+        "http_rest_api_handler.cpp",
+        "httpservermodule.cpp",
+        "http_frontend/http_graph_executor_impl.cpp",
+        "http_frontend/http_graph_executor_impl.hpp",
         "grpc_utils.cpp",
         "grpc_utils.hpp",
         "grpcservermodule.cpp",
@@ -469,8 +459,8 @@ cc_library(
             ],
             "//:disable_python": []
         }) + select({
-            "//:is_windows_or_mediapipe_is_disabled_no_http": [],
-            "//conditions:default" : [
+            "//conditions:default": [],
+            "//:not_disable_mediapipe" : [
                 "//src/embeddings:embeddingscalculator",
                 "//src/rerank:rerankcalculator",],
         }) + select({
@@ -527,6 +517,8 @@ cc_library(
             "libovms_dags_tensormap",
             "libovmsstring_utils",
             "libovmsmodelversioning",
+            "httppayload",
+            "libhttpclientconnection",
 	    #"libovmsoclutils", # TODO decide if will need
             "libovmstensorfactory",
             "libovms_threadsafequeue",
@@ -565,7 +557,7 @@ cc_library(
     copts = COPTS_ADJUSTED + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_OV_TRACE,
     linkopts = LINKOPTS_ADJUSTED + select({
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
-                "//src:windows" : [],}),
+                "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
     data = select({
         "//:not_disable_python": [
             "//src/python/binding:pyovms.so",

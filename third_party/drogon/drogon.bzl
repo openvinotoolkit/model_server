@@ -17,6 +17,9 @@
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+def _is_windows(ctx):
+    return ctx.os.name.lower().find("windows") != -1
+
 def drogon_cpp():
     drogon_cpp_repository(name="_drogon_cpp")
     http_archive(
@@ -47,50 +50,37 @@ cc_library(
         build_file = "@_drogon_cpp//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
-        patch_cmds = ["find . -name '中文.txt' -delete"],
+        patches = ["@//third_party/drogon:ovms_drogon.patch"],
+        patch_args = ["-p1"],
+        patch_cmds = ["bash -c \"find . -name '中文.txt' -delete\""],
     )
 
 def _impl(repository_ctx):
     http_proxy = repository_ctx.os.environ.get("http_proxy", "")
     https_proxy = repository_ctx.os.environ.get("https_proxy", "")
 
-    # Note we need to escape '{/}' by doubling them due to call to format
-    build_file_content = """
-load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+    if _is_windows(repository_ctx):
+        platform_cache_entries = {
+            "CMAKE_CXX_STANDARD": "17",
+            "CXX_FILESYSTEM_HAVE_FS": "1",
+            "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1"
+        }
+        out_static_libs = [
+            "drogon.lib",
+            "trantor.lib"
+        ]
+    else:
+        platform_cache_entries  = {
+            "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized "
+        }
+        out_static_libs = [
+            "libdrogon.a",
+            "libtrantor.a"
+        ]
 
-visibility = ["//visibility:public"]
-
-config_setting(
-    name = "dbg",
-    values = {{"compilation_mode": "dbg"}},
-)
-
-config_setting(
-    name = "opt",
-    values = {{"compilation_mode": "opt"}},
-)
-
-filegroup(
-    name = "all_srcs",
-    srcs = glob(["**"]),
-    visibility = ["//visibility:public"],
-)
-
-build_release = {{"CMAKE_BUILD_TYPE": "Release"}}
-build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
-
-cmake(
-    name = "drogon_cmake",
-    build_args = [
-        "--verbose",
-        "--",  # <- Pass remaining options to the native tool.
-        # https://github.com/bazelbuild/rules_foreign_cc/issues/329
-        # there is no elegant parallel compilation support
-        "VERBOSE=1",
-        "-j 6",
-    ],
-    cache_entries = {{
+    base_cache_entries = {
+        "ZLIB_INCLUDE_DIR": "../drogon_cmake.ext_build_deps/include",  # This is a hack because drogon does not allow absolute path
+        "ZLIB_LIBRARY": "@zlib//:zlib",
         "JSONCPP_INCLUDE_DIR": "@jsoncpp//:jsoncpp",
         "BUILD_CTL": "OFF",
         "BUILD_EXAMPLES": "OFF",
@@ -99,32 +89,50 @@ cmake(
         "BUILD_YAML_CONFIG": "OFF",
         "CMAKE_INSTALL_LIBDIR": "lib",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-        "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\"
-    }} | select({{
-           "//conditions:default": dict(
-               build_release
-            ),
-            ":dbg":  dict(
-               build_debug
-            ),
-        }}),
+        "CMAKE_BUILD_TYPE": "Release",
+    }
+
+    base_cache_entries.update(platform_cache_entries)
+
+    # Note we need to escape '{/}' by doubling them due to call to format
+    build_file_content = """
+load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+
+visibility = ["//visibility:public"]
+
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
+cmake(
+    name = "drogon_cmake",
+    build_args = [
+        "--verbose",
+        "--",  # <- Pass remaining options to the native tool.
+        # https://github.com/bazelbuild/rules_foreign_cc/issues/329
+        # there is no elegant parallel compilation support
+        "-j 6",
+    ],
+    cache_entries = {cache_entries},
     env = {{
         "HTTP_PROXY": "{http_proxy}",
         "HTTPS_PROXY": "{https_proxy}",
     }},
-    deps = ["@jsoncpp//:jsoncpp",],
+    deps = ["@jsoncpp//:jsoncpp", "@zlib//:zlib"],
     lib_source = ":all_srcs",
     out_lib_dir = "lib",
     # linking order
-    out_static_libs = [
-            "libdrogon.a",
-            "libtrantor.a",
-        ],
+    out_static_libs = {out_static_libs},
     tags = ["requires-network"],
     visibility = ["//visibility:public"],
 )
 """
-    repository_ctx.file("BUILD", build_file_content.format(http_proxy=http_proxy, https_proxy=https_proxy))
+    repository_ctx.file("BUILD", build_file_content.format(
+        http_proxy=http_proxy, https_proxy=https_proxy, is_windows=_is_windows(repository_ctx),
+        cache_entries=base_cache_entries, out_static_libs=out_static_libs))
 
 drogon_cpp_repository = repository_rule(
     implementation = _impl,
