@@ -40,7 +40,7 @@ make sure you install numpy for the python version you pass as build argument
 make sure default "python --version" gets you 3.9
 
 ## Install dependencies
-open cmd.exe and run windows_install_dependencies.bat with target directory (default drive c:\\opt) and force reinstall flag 0/1 - default 0
+Open cmd.exe and run windows_install_dependencies.bat
 ```
 windows_install_dependencies.bat
 ```

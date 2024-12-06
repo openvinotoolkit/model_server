@@ -81,7 +81,7 @@ set HTTPS_PROXY=my.proxy.com:122
 Enable Developer mode in windows system settings
 
 ## Install dependencies
-open cmd.exe and run windows_install_dependencies.bat with target directory (default drive c:\\opt) and force reinstall flag 0/1 - default 0
+Open cmd.exe and run windows_install_dependencies.bat
 ```
 windows_install_dependencies.bat
 ```
