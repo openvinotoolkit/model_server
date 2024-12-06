@@ -44,7 +44,7 @@ JOBS ?= $(CORES_TOTAL)
 
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
-# Currently supported BASE_OS values are: ubuntu20 ubuntu22 redhat
+# Currently supported BASE_OS values are: ubuntu24 ubuntu22 redhat
 BASE_OS ?= ubuntu22
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
@@ -352,11 +352,6 @@ ifeq ($(FUZZER_BUILD),1)
   endif
   ifeq ($(BASE_OS),redhat)
 	@echo "Cannot run fuzzer with redhat"; exit 1 ;
-  endif
-endif
-ifeq ($(BASE_OS_TAG),20.04)
-  ifeq ($(RUN_TESTS),1)
-	@echo "On ubuntu20 run tests via make run_unit_tests"; exit 1 ;
   endif
 endif
 ifeq ($(NVIDIA),1)
@@ -705,7 +700,6 @@ else
 		tail -200 test.log ; \
 		exit $$exit_status
 endif
-
 
 run_lib_files_test:
 	docker run --entrypoint bash -v $(realpath tests/file_lists):/test $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./test/test_release_files.sh ${BAZEL_DEBUG_FLAGS} > file_test.log 2>&1 ; exit_status=$$? ; tail -200 file_test.log ; exit $$exit_status

@@ -82,36 +82,9 @@ If everything is set up correctly, you will see 'zebra' prediction in the output
 
 ## Deploying Model Server on Baremetal (without container)
 It is possible to deploy Model Server outside of container.
-To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubuntu22 or RHEL8.
+To deploy Model Server on baremetal, use compiled binaries for Ubuntu22, Ubuntu24 or RHEL8.
 
 ::::{tab-set}
-:::{tab-item} Ubuntu 20.04
-:sync: ubuntu-20-04
-Build the binary:
-
-```{code} sh
-# Clone the model server repository
-git clone https://github.com/openvinotoolkit/model_server
-cd model_server
-# Build docker images (the binary is one of the artifacts)
-make docker_build BASE_OS=ubuntu20 PYTHON_DISABLE=1 RUN_TESTS=0
-# Unpack the package
-tar -xzvf dist/ubuntu20/ovms.tar.gz
-```
-Install required libraries:
-```{code} sh
-sudo apt update -y && apt install -y liblibxml2 curl
-```
-Set path to the libraries
-```{code} sh
-export LD_LIBRARY_PATH=${pwd}/ovms/lib
-```
-In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
-```{code} sh
-export PYTHONPATH=${pwd}/ovms/lib/python
-sudo apt -y install libpython3.8
-```
-:::
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
 Download precompiled package:
@@ -125,7 +98,7 @@ or build it yourself:
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build PYTHON_DISABLE=1 RUN_TESTS=0
+make docker_build PYTHON_DISABLE=1
 # Unpack the package
 tar -xzvf dist/ubuntu22/ovms.tar.gz
 ```
@@ -156,9 +129,9 @@ or build it yourself:
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build PYTHON_DISABLE=1 RUN_TESTS=0
+make docker_build PYTHON_DISABLE=1 BASE_OS=ubuntu24
 # Unpack the package
-tar -xzvf dist/ubuntu22/ovms.tar.gz
+tar -xzvf dist/ubuntu24/ovms.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -171,7 +144,7 @@ export LD_LIBRARY_PATH=${pwd}/ovms/lib
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
 export PYTHONPATH=${pwd}/ovms/lib/python
-sudo apt -y install libpython3.10
+sudo apt -y install libpython3.12
 ```
 :::
 :::{tab-item} RHEL 8.10
