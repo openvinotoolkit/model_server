@@ -1,0 +1,201 @@
+diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
+index 75bf2f38..4a0771e2 100644
+--- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
++++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
+@@ -121,18 +121,44 @@ bool ParsedEvRequest::decode() {
+   return true;
+ }
+ 
++static void connection_close_callback(struct evhttp_connection *conn, void *arg) {
++  EvHTTPRequest* req = (EvHTTPRequest*)arg;
++  req->ExecuteDisconnectionCallback();
++}
++
+ EvHTTPRequest::EvHTTPRequest(std::unique_ptr<ParsedEvRequest> request,
+                              ServerSupport* server)
+     : server_(server),
+       parsed_request_(std::move(request)),
+-      output_buf(nullptr) {}
++      output_buf(nullptr) {
++  struct evhttp_connection *conn = evhttp_request_get_connection(parsed_request_->request);
++  evhttp_connection_set_closecb(conn, connection_close_callback, (void*)this);
++}
+ 
+ EvHTTPRequest::~EvHTTPRequest() {
++  struct evhttp_connection *conn = evhttp_request_get_connection(parsed_request_->request);
++  if (conn != NULL) {
++    evhttp_connection_set_closecb(conn, NULL, NULL);
++  }
++
+   if (output_buf != nullptr) {
+     evbuffer_free(output_buf);
+   }
+ }
+ 
++void EvHTTPRequest::RegisterDisconnectionCallback(std::function<void()> callback) {
++  std::unique_lock<std::mutex> lk(this->disconnection_mx_);
++  this->disconnected_callback_ = std::move(callback);
++}
++
++void EvHTTPRequest::ExecuteDisconnectionCallback() {
++  std::unique_lock<std::mutex> lk(this->disconnection_mx_);
++  this->is_disconnected_ = true;
++  if (this->disconnected_callback_)
++    this->disconnected_callback_();
++}
++
++
+ absl::string_view EvHTTPRequest::uri_path() const {
+   return parsed_request_->path_and_query;
+ }
+@@ -341,12 +367,18 @@ void EvHTTPRequest::AppendResponseHeader(absl::string_view header,
+   }
+ }
+ 
+-void EvHTTPRequest::PartialReplyWithStatus(HTTPStatusCode status) {
+-  NET_LOG(FATAL, "PartialReplyWithStatus not implemented.");
++void EvHTTPRequest::PartialReplyWithStatus(std::string data, HTTPStatusCode status) {
++  bool result =
++      server_->EventLoopSchedule([this, data = std::move(data), status]() mutable { EvPartialSendReply(std::move(data), status); });
++
++  if (!result) {
++    NET_LOG(ERROR, "Failed to EventLoopSchedule PartialReply()");
++    Abort();
++  }
+ }
+ 
+-void EvHTTPRequest::PartialReply() {
+-  NET_LOG(FATAL, "PartialReplyWithStatus not implemented.");
++void EvHTTPRequest::PartialReply(std::string data) {
++  return PartialReplyWithStatus(std::move(data), HTTPStatusCode::OK);
+ }
+ 
+ ServerRequestInterface::CallbackStatus
+@@ -374,6 +406,33 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
+   delete this;
+ }
+ 
++void EvHTTPRequest::EvPartialSendReply(std::string data, HTTPStatusCode status) {
++  std::unique_lock<std::mutex> lk(this->disconnection_mx_);
++  if (this->is_disconnected_)
++    return;
++  if (!this->is_reply_started_) {
++    evhttp_send_reply_start(parsed_request_->request, static_cast<int>(status), "reply start");
++    this->is_reply_started_ = true;
++  }
++  evbuffer_add(output_buf, data.data(), static_cast<int64_t>(data.size()));
++  evhttp_send_reply_chunk(parsed_request_->request, output_buf);
++}
++
++void EvHTTPRequest::EvPartialReplyEnd() {
++  std::unique_lock<std::mutex> lk(this->disconnection_mx_);
++  if (!this->is_disconnected_) {
++    if (!this->is_reply_started_) {
++      // Start before we end can end the reply
++      evhttp_send_reply_start(parsed_request_->request, HTTP_OK, "no messages");
++    }
++
++    evhttp_send_reply_end(parsed_request_->request);
++  }
++
++  server_->DecOps();
++  delete this;
++}
++
+ void EvHTTPRequest::Reply() { ReplyWithStatus(HTTPStatusCode::OK); }
+ 
+ // Treats this as 500 for now and let libevent decide what to do
+@@ -384,6 +443,15 @@ void EvHTTPRequest::Abort() {
+   delete this;
+ }
+ 
++void EvHTTPRequest::PartialReplyEnd() {
++  bool result =
++      server_->EventLoopSchedule([this]() { EvPartialReplyEnd(); });
++
++  if (!result) {
++    NET_LOG(ERROR, "Failed to EventLoopSchedule PartialReplyEnd()");
++    Abort();
++  }
++}
+ }  // namespace net_http
+ }  // namespace serving
+ }  // namespace tensorflow
+diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
+index 2f8e601d..54dc17b0 100644
+--- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
++++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
+@@ -19,7 +19,9 @@ limitations under the License.
+ #define TENSORFLOW_SERVING_UTIL_NET_HTTP_SERVER_INTERNAL_EVHTTP_REQUEST_H_
+ 
+ #include <cstdint>
++#include <functional>
+ #include <memory>
++#include <mutex>
+ #include <string>
+ 
+ #include "tensorflow_serving/util/net_http/server/internal/server_support.h"
+@@ -93,8 +95,13 @@ class EvHTTPRequest final : public ServerRequestInterface {
+   void AppendResponseHeader(absl::string_view header,
+                             absl::string_view value) override;
+ 
+-  void PartialReplyWithStatus(HTTPStatusCode status) override;
+-  void PartialReply() override;
++  void PartialReplyWithStatus(std::string data, HTTPStatusCode status) override;
++  void PartialReply(std::string data) override;
++  void PartialReplyEnd() override;
++
++  bool IsDisconnected() const override { return this->is_disconnected_; }
++  void RegisterDisconnectionCallback(std::function<void()> callback) override;
++  void ExecuteDisconnectionCallback();
+ 
+   CallbackStatus PartialReplyWithFlushCallback(
+       std::function<void()> callback) override;
+@@ -114,6 +121,8 @@ class EvHTTPRequest final : public ServerRequestInterface {
+ 
+  private:
+   void EvSendReply(HTTPStatusCode status);
++  void EvPartialSendReply(std::string data, HTTPStatusCode status);
++  void EvPartialReplyEnd();
+ 
+   // Returns true if the data needs be uncompressed
+   bool NeedUncompressGzipContent();
+@@ -133,6 +142,11 @@ class EvHTTPRequest final : public ServerRequestInterface {
+   std::unique_ptr<ParsedEvRequest> parsed_request_;
+ 
+   evbuffer* output_buf;  // owned by this
++  bool is_reply_started_{false};
++  bool is_disconnected_{false};
++
++  std::function<void()> disconnected_callback_;
++  std::mutex disconnection_mx_;
+ };
+ 
+ }  // namespace net_http
+diff --git a/tensorflow_serving/util/net_http/server/public/server_request_interface.h b/tensorflow_serving/util/net_http/server/public/server_request_interface.h
+index e5f4b05f..47554412 100644
+--- a/tensorflow_serving/util/net_http/server/public/server_request_interface.h
++++ b/tensorflow_serving/util/net_http/server/public/server_request_interface.h
+@@ -143,8 +143,9 @@ class ServerRequestInterface {
+   // Trying to modify headers or specifying a status after the first
+   // PartialReply() is called is considered a programming error and
+   // the underlying behavior is undefined.
+-  virtual void PartialReplyWithStatus(HTTPStatusCode status) = 0;
+-  virtual void PartialReply() = 0;
++  virtual void PartialReplyWithStatus(std::string data, HTTPStatusCode status) = 0;
++  virtual void PartialReply(std::string data) = 0;
++  virtual void PartialReplyEnd() = 0;
+ 
+   // Similar to PartialReply() but with an on_flush callback which will be
+   // invoked when the response data has been completely flushed by the
+@@ -182,6 +183,10 @@ class ServerRequestInterface {
+   // by the server runtime.
+   virtual void Abort() = 0;
+ 
++  // Helpers for handling disconnection states
++  virtual bool IsDisconnected() const = 0;
++  virtual void RegisterDisconnectionCallback(std::function<void()> callback) = 0;
++
+  protected:
+   ServerRequestInterface() = default;
+ 
