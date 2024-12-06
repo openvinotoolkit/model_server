@@ -796,8 +796,11 @@ const std::string getWindowsRepoRootPath() {
     std::replace(rootPath.begin(), rootPath.end(), '\\', '/');
     return rootPath;
 }
-
-void replaceHandlerPath(std::string& input) {
+#endif
+// Apply necessary changes so the graph config will comply with the platform
+// that tests are run on
+void adjustGraphConfigForTargetPlatform(std::string& input) {
+#ifdef _WIN32
     std::string repoTestPath = getWindowsRepoRootPath() + "/src/test";
     const std::string searchString = "handler_path: \"/ovms/src/test";
     const std::string replaceString = "handler_path: \"" + repoTestPath;
@@ -806,5 +809,7 @@ void replaceHandlerPath(std::string& input) {
         input.replace(pos, searchString.length(), replaceString);
         pos += replaceString.length();
     }
-}
+#elif __linux__
+    // No changes needed for linux now, but keeping it as a placeholder
 #endif
+}

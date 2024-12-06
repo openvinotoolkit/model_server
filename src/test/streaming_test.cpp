@@ -568,9 +568,7 @@ node {
     }
 }
 )"};
-#ifdef _WIN32
-    replaceHandlerPath(testPbtxt);
-#endif
+    adjustGraphConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -631,9 +629,7 @@ node {
     output_stream: "OVTENSOR:out"
 }
 )"};
-#ifdef _WIN32
-    replaceHandlerPath(testPbtxt);
-#endif
+    adjustGraphConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -674,9 +670,7 @@ node {
     }
 }
 )"};
-#ifdef _WIN32
-    replaceHandlerPath(testPbtxt);
-#endif
+    adjustGraphConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -740,9 +734,7 @@ node {
     output_stream: "OVTENSOR:out"
 }
 )"};
-#ifdef _WIN32
-    replaceHandlerPath(testPbtxt);
-#endif
+    adjustGraphConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -800,9 +792,7 @@ node {
     }
 }
 )"};
-#ifdef _WIN32
-    replaceHandlerPath(testPbtxt);
-#endif
+    adjustGraphConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -863,9 +853,7 @@ node {
     }
 }
 )"};
-#ifdef _WIN32
-    replaceHandlerPath(testPbtxt);
-#endif
+    adjustGraphConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -931,9 +919,7 @@ node {
     }
 }
 )"};
-#ifdef _WIN32
-    replaceHandlerPath(testPbtxt);
-#endif
+    adjustGraphConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -1002,9 +988,7 @@ node_options: {
 }
 }
 )"};
-#ifdef _WIN32
-    replaceHandlerPath(testPbtxt);
-#endif
+    adjustGraphConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -1057,9 +1041,7 @@ node_options: {
 }
 }
 )"};
-#ifdef _WIN32
-    replaceHandlerPath(testPbtxt);
-#endif
+    adjustGraphConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -1096,9 +1078,7 @@ node {
     }
 }
 )"};
-#ifdef _WIN32
-    replaceHandlerPath(testPbtxt);
-#endif
+    adjustGraphConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -1131,9 +1111,7 @@ node {
     }
 }
 )"};
-#ifdef _WIN32
-    replaceHandlerPath(testPbtxt);
-#endif
+    adjustGraphConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);

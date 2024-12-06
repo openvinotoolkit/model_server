@@ -49,7 +49,14 @@ Once you have OVMS executable, there are three more steps for the Python servabl
 
 2. Set `PYTHONPATH` environment variable for `pyovms` and `openvino` bindings:
 
-    `set PYTHONPATH=C:\git\model_server\bazel-out\x64_windows-opt\bin\src\python\binding;C:\opt\intel\openvino_2024\python`
+    *Windows Command Prompt:*
+
+    `set PYTHONPATH=C:\git\model_server\bazel-out\x64_windows-opt\bin\src\python\binding;C:\opt\intel\openvino\python;%PYTHONPATH%`
+
+    *Windows PowerShell:*
+
+    `$env:PYTHONPATH="C:\git\model_server\bazel-out\x64_windows-opt\bin\src\python\binding;C:\opt\intel\openvino\python;$env:PYTHONPATH"`
+
 
 3. Switch working directory to python demos and install demo specific Python modules used by the servable:
 
