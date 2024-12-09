@@ -132,8 +132,11 @@ Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNode
         basePath = fsHandlerPath.parent_path().string();
     }
     auto hpath = std::filesystem::path(basePath) / std::filesystem::path(filename + extension);
-    nodeResources->handlerPath = hpath.string();
-    if (!std::filesystem::exists(hpath)) {
+    // Make final handler path uniform with forward slashes as separators
+    std::string hpathStr = hpath.string();
+    std::replace(hpathStr.begin(), hpathStr.end(), '\\', '/');  // Replace backslashes with forward slashes
+    nodeResources->handlerPath = hpathStr;
+    if (!std::filesystem::exists(hpathStr)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node handler_path: {} does not exist. ", hpath.string());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
     }

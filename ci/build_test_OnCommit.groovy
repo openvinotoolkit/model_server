@@ -80,6 +80,7 @@ pipeline {
                       if (windows != null) {
                         try {
                           windows.clean()
+                          windows.install_dependencies()
                           windows.build_and_test()
                           windows.check_tests()
                         } finally {
