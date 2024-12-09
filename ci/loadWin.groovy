@@ -34,7 +34,7 @@ def cleanup_directories() {
 }
 
 def install_dependencies() {
-    def status = bat(returnStatus: true, script: 'windows_install_dependencies.bat ' + env.JOB_BASE_NAME)
+    def status = bat(returnStatus: true, script: 'windows_install_dependencies.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
     if (status != 0) {
         error "Error: Windows install dependencies failed: ${status}. Check piepeline.log for details."
     } else {
@@ -69,7 +69,7 @@ def check_tests(){
             error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test.log for details."
     } else {
         def passed = bat(returnStatus: false, returnStdout: true, script: 'grep "       OK " win_test.log | wc -l')
-        echo "Error: Windows run test passed ${status}. ${passed} passed tests . Check win_test.log for details."
+        echo "Success: Windows run test passed ${status}. ${passed} passed tests . Check win_test.log for details."
     }
 
     status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test.log')
@@ -81,7 +81,7 @@ def check_tests(){
     }
 }
 
-//Post build steps
+// Post build steps
 def archive_artifacts(){
     // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
     archiveArtifacts allowEmptyArchive: true, artifacts: "bazel-bin\\src\\ovms.exe"
