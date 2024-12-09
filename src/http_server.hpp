@@ -18,24 +18,26 @@
 #include <memory>
 #include <string>
 
+#if (USE_DROGON == 0)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
+#include "tensorflow_serving/util/net_http/server/public/httpserver.h"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
+#include "tensorflow_serving/util/threadpool_executor.h"
 #pragma GCC diagnostic pop
+#else
+#include "drogon_http_server.hpp"
+#endif
 
 namespace ovms {
 class Server;
 
-using http_server = tensorflow::serving::net_http::HTTPServerInterface;
+#if (USE_DROGON == 0)
+std::unique_ptr<tensorflow::serving::net_http::HTTPServerInterface> createAndStartNetHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
+#else
+std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
+#endif
 
-/**
- * @brief Creates a and starts Http Server
- * 
- * @param port 
- * @param num_threads 
- * @param timeout_in_m not implemented
- *  
- * @return std::unique_ptr<http_server> 
- */
-std::unique_ptr<http_server> createAndStartHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
 }  // namespace ovms
