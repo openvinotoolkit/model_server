@@ -1661,7 +1661,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 
 cc_library(
@@ -1675,7 +1674,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 
 # HTTP Server implementation using Drogon
@@ -1700,7 +1698,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 
 # HTTP Server implementation using cpphttplib
@@ -1725,7 +1722,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 
 cc_library( # TODO split further
