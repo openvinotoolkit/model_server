@@ -41,7 +41,6 @@ cc_library(
         "@org_tensorflow//tensorflow/core:framework",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
-        "@drogon//:drogon_cmake",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "//third_party:openvino",
         "//third_party:opencv",
