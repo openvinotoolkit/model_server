@@ -114,7 +114,7 @@ Open cmd.exe in c:\opt
 ```
 md test\model\1
 xcopy /r /Y C:\git\model_server\bazel-out\x64_windows-opt\bin\src\ovms.exe c:\opt\test
-c:\opt\intel\openvino_2024\setupvars.bat
+c:\opt\openvino\setupvars.bat
 C:\opt\opencv\setup_vars_opencv4.cmd
 cd c:\opt\test
 wget https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -O 1.tar.gz
