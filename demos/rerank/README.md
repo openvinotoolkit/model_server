@@ -126,7 +126,7 @@ popd
 pushd .
 cd demos/benchmark/embeddings/
 pip install -r requirements.txt
-python benchmark_embeddings.py --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large 
+python benchmark_embeddings.py --api_url http://localhost:8000/v3/rerank --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large 
 Number of documents: 1000
 100%|██████████████████████████████████████| 50/50 [00:19<00:00,  2.53it/s]
 Tokens: 501000
@@ -136,7 +136,7 @@ Mean latency: 10268 ms
 Median latency: 10249 ms
 Average document length: 501.0 tokens
 
-python benchmark_embeddings.py --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large 
+python benchmark_embeddings.py --api_url http://localhost:8000/v3/rerank --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large 
 Number of documents: 1000
 100%|██████████████████████████████████████| 50/50 [00:19<00:00,  2.53it/s]
 Tokens: 501000
@@ -146,7 +146,7 @@ Mean latency: 10268 ms
 Median latency: 10249 ms
 Average document length: 501.0 tokens
 
-python benchmark_embeddings.py --backend ovms_rerank --dataset Cohere/wikipedia-22-12-simple-embeddings --request_rate inf 
+python benchmark_embeddings.py --api_url http://localhost:8000/v3/rerank --backend ovms_rerank --dataset Cohere/wikipedia-22-12-simple-embeddings --request_rate inf 
 --batch_size 20 --model BAAI/bge-reranker-large 
 Number of documents: 1000
 100%|██████████████████████████████████████| 50/50 [00:09<00:00,  5.55it/s]
