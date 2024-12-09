@@ -465,7 +465,7 @@ cc_library(
                 "//src/rerank:rerankcalculator",],
         }) + select({
             "//:enable_drogon": ["libdrogon_http_server"],
-            "//conditions:default" : ["libcpphttplib_http_server"],
+            "//conditions:default" : ["libnet_http_server"],
         }) + [
             "cpp_headers",
             "libovms_capi_servable_metadata",
@@ -1700,20 +1700,19 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
-# HTTP Server implementation using cpphttplib
+# HTTP Server implementation using net_http of tensorflow
 # To use other library simply create new target and implementation of libhttp_async_writer_interface
 cc_library(
-    name = "libcpphttplib_http_server",
+    name = "libnet_http_server",
     srcs = [
-        "cpphttplib_http_server.hpp",
-        "cpphttplib_http_server.cpp",
-        "cpphttplib_http_async_writer_impl.hpp",
-        "cpphttplib_http_async_writer_impl.cpp",
+        "net_http_async_writer_impl.hpp",
+        "net_http_async_writer_impl.cpp",
     ],
     deps = [
         "libhttp_async_writer_interface",
-        "@cpphttplib//:cpphttplib",
-        "@mediapipe//mediapipe/framework/port:threadpool",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "libovmslogging",
         "libovmsstatus",
         "libhttp_status_code"

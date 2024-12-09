@@ -25,11 +25,9 @@ namespace ovms {
 
 // Used by V3 handler
 void DrogonHttpAsyncWriterImpl::OverwriteResponseHeader(const std::string& key, const std::string& value) {
-    SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::OverwriteResponseHeader {} {}", key, value);
     this->additionalHeaders[key] = value;
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTPStatusCode status) {
-    SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyWithStatus {} {}", message, int(status));
     if (this->isDisconnected) {
         return;
     }
@@ -37,7 +35,6 @@ void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTP
         this->isDisconnected = true;
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> cb) {
-    SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin");
     auto resp = drogon::HttpResponse::newAsyncStreamResponse(
         [this, cb = std::move(cb)](drogon::ResponseStreamPtr stream) {
             this->stream = std::move(stream);
@@ -63,12 +60,10 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> cb) {
     this->callback(resp);
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyEnd() {
-    SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyEnd");
     this->stream->close();
 }
 // Used by graph executor impl
 void DrogonHttpAsyncWriterImpl::PartialReply(std::string message) {
-    SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReply {}", message);
     if (this->isDisconnected) {
         return;
     }
@@ -77,12 +72,10 @@ void DrogonHttpAsyncWriterImpl::PartialReply(std::string message) {
 }
 // Used by calculator via HttpClientConnection
 bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {
-    SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::IsDisconnected");
     return this->isDisconnected;
 }
 
 void DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback(std::function<void()> callback) {
-    SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback");
     // TODO: Implement once https://github.com/drogonframework/drogon/pull/2204 is merged
 }
 
