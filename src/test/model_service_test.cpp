@@ -163,6 +163,9 @@ static const char* pipelineOneDummyConfig = R"(
 })";
 
 TYPED_TEST(ModelServiceTest, pipeline) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     std::string fileToReload = "/tmp/ovms_single_version_pipeline.json";
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ASSERT_EQ(this->manager.startFromFile(fileToReload), StatusCode::OK);
