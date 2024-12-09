@@ -1821,11 +1821,13 @@ cc_test(
         "test/ensemble_tests.cpp",
         "test/gather_node_test.cpp",
         "test/get_model_metadata_response_test.cpp",
+        "test/http_openai_handler_test.cpp",
         "test/standalone_http_server_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/get_pipeline_metadata_response_test.cpp",
         "test/kfs_metadata_test.cpp",
+        "test/kfs_rest_test.cpp",
         "test/kfs_rest_parser_test.cpp",
         "test/layout_test.cpp",
         "test/metric_config_test.cpp",
@@ -1863,6 +1865,7 @@ cc_test(
         "test/tensor_conversion_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
+        "test/test_http_utils.hpp",
         "test/tfs_rest_parser_binary_inputs_test.cpp",
         "test/tfs_rest_parser_column_test.cpp",
         "test/tfs_rest_parser_nonamed_test.cpp",
@@ -1871,21 +1874,18 @@ cc_test(
         "test/unit_tests.cpp",
         ] + select({
                 "//conditions:default": [
-                    "test/kfs_rest_test.cpp",
-                    "test/metrics_flow_test.cpp",
-                    "test/http_rest_api_handler_test.cpp",
-                    "test/http_openai_handler_test.cpp",
-                    "test/test_http_utils.hpp",
+                    "test/metrics_flow_test.cpp",  # TODO: Enable on windows
+                    "test/http_rest_api_handler_test.cpp",  # TODO: Enable on windows
                 ],
-                "//src:windows" : [],
+                "//src:windows" : [
+                ],
         }) + select({
             "//:is_windows_or_mediapipe_is_disabled_no_http": [],
             # Tests that require MediaPipe and HTTP (windows does not have HTTP yet)
             "//conditions:default" : [
-                "test/mediapipeflow_test.cpp",
-                "test/mediapipe_framework_test.cpp",
-                "test/reranknode_test.cpp",
-                "test/embeddingsnode_test.cpp",
+                "test/mediapipeflow_test.cpp",  # TODO: Enable on windows
+                "test/reranknode_test.cpp",  # TODO: Enable on windows
+                "test/embeddingsnode_test.cpp",  # TODO: Enable on windows
             ],
         }) + select({
             "//:not_disable_cloud": [
@@ -1903,6 +1903,7 @@ cc_test(
                 "test/streaming_test.cpp", # Mediapipe enabled
                 "test/mediapipe_validation_test.cpp", # Mediapipe enabled
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
+                "test/mediapipe_framework_test.cpp",
             ],
             "//:disable_mediapipe" : [],
         }) + select({

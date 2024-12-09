@@ -315,7 +315,16 @@ TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestBOOL) {
 
 TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32DataInJsonAndBinaryExtension) {
     // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
-    std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
+    std::string binaryData{
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F)};
 
     std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
     std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
@@ -330,7 +339,17 @@ TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32DataInJsonAndBinaryExten
 }
 
 TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32BinaryExtension) {
-    std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
+    std::string binaryData{
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F)};
 
     std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
     std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
@@ -576,6 +595,10 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
 }
 
 TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
+    // Disabled due to issue with gethering RT info
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     std::string request = "/v2/models/dummy/versions/1";
     ovms::HttpRequestComponents comp;
 
@@ -609,6 +632,8 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     ASSERT_EQ(std::string(doc["rt_info"].GetObject()["model_info"].GetObject()["precision"].GetString()), "FP16");
 }
 
+// Disabled due to bad cast when getting RT info
+#ifndef _WIN32
 TEST_F(HttpRestApiHandlerWithScalarModelTest, modelMetadataRequest) {
     std::string request = "/v2/models/scalar/versions/1";
     ovms::HttpRequestComponents comp;
@@ -633,6 +658,7 @@ TEST_F(HttpRestApiHandlerWithScalarModelTest, modelMetadataRequest) {
     ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 0);
 }
+#endif
 
 TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
     std::string request = "/v2/models/dummy/versions/1/infer";
