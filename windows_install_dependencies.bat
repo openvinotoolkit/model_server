@@ -20,19 +20,19 @@
 setlocal EnableExtensions DisableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-XXXX" number passed here from jenkins so that a tmp directory will be created
-IF "%1"=="" or "%1"=="null" (
-  echo No argument provided. Using default opt path
-  set "output_user_root=opt"
+IF "%1"=="1" (
+    echo Argument provided: Using install path %1
+    set "output_user_root=%1"
 ) ELSE (
-  echo Argument provided: Using install path %1
-  set "output_user_root=%1"
+    echo No argument provided. Using default opt path
+    set "output_user_root=opt"
 )
-IF "%2"=="" or "%2"=="null" (
-  echo No argument provided. Using default expunge = 0
-  set "expunge=0"
+IF "%2"=="1" (
+    echo Argument provided: Using expunge = %2
+    set "expunge=1"
 ) ELSE (
-  echo Argument provided: Using expunge = %2
-  set "expunge=1"
+    echo No argument provided. Using default expunge = 0
+    set "expunge=0"
 )
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "setPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Tools\MSVC\14.29.30133\bin\HostX86\x86;c:\opt;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\VC\VCPackages;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TeamFoundation\Team Explorer;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\MSBuild\Current\bin\Roslyn;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Team Tools\Performance Tools;C:\Program Files (x86)\Microsoft Visual Studio\Shared\Common\VSPerfCollectionTools\vs2019\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\devinit;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x86;C:\Program Files (x86)\Windows Kits\10\bin\x86;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\\MSBuild\Current\Bin;C:\Windows\Microsoft.NET\Framework\v4.0.30319;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Utils\;C:\Program Files\Git\cmd;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Ninja;C:\Program Files\CMake\bin;C:\Program Files\7-zip;C:\opt\Python39\Scripts\;C:\opt\Python39\;C:\opencl\install\;C:\opencl\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja"
