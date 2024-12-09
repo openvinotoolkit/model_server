@@ -112,9 +112,11 @@ public:
     TextProcessor textProcessor;
     int maxTokensLimit;
     int bestOfLimit;
+    std::optional<uint> maxModelLength;
 
     static Status initializeLLMNodeResources(LLMNodeResources& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
     static void loadTextProcessor(LLMNodeResources& nodeResources, const std::string& chatTemplateDirectory);
+    static std::optional<uint> parseMaxModelLength(std::string& modelsPath);
 
     LLMNodeResources(const LLMNodeResources&) = delete;
     LLMNodeResources& operator=(LLMNodeResources&) = delete;
