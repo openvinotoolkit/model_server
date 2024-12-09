@@ -787,3 +787,29 @@ const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool l
 const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange) {
     return getGenericFullPathForTmp(std::string(linuxPath, strlen(linuxPath)), logChange);
 }
+
+#ifdef _WIN32
+const std::string getWindowsRepoRootPath() {
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
+    std::string rootPath = cwd.string().substr(0, bazelOutIndex);
+    std::replace(rootPath.begin(), rootPath.end(), '\\', '/');
+    return rootPath;
+}
+#endif
+// Apply necessary changes so the graph config will comply with the platform
+// that tests are run on
+void adjustGraphConfigForTargetPlatform(std::string& input) {
+#ifdef _WIN32
+    std::string repoTestPath = getWindowsRepoRootPath() + "/src/test";
+    const std::string searchString = "handler_path: \"/ovms/src/test";
+    const std::string replaceString = "handler_path: \"" + repoTestPath;
+    size_t pos = 0;
+    while ((pos = input.find(searchString, pos)) != std::string::npos) {
+        input.replace(pos, searchString.length(), replaceString);
+        pos += replaceString.length();
+    }
+#elif __linux__
+    // No changes needed for linux now, but keeping it as a placeholder
+#endif
+}

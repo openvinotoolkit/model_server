@@ -16,9 +16,17 @@
 
 import os
 
+filepath = "/tmp/pythonNodeTestRemoveFile.txt"
+if os.name == "nt":
+    win_repo_path = os.path.dirname(os.path.realpath(__file__))
+    win_repo_path = os.path.normpath(win_repo_path.replace("\\src\\test\\mediapipe\\python\\scripts", ""))
+    filepath = f"{win_repo_path}\\tmp\\pythonNodeTestRemoveFile.txt"
+
+
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
-        with open("/tmp/pythonNodeTestRemoveFile.txt", 'wt') as file:
+        print("Creating file: " + filepath)
+        with open(filepath, 'wt') as file:
             file.write("1111")
         return
 
@@ -26,5 +34,5 @@ class OvmsPythonModel:
         return None
 
     def finalize(self):
-        os.remove("/tmp/pythonNodeTestRemoveFile.txt")
+        os.remove(filepath)
         return
