@@ -17,29 +17,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#if (USE_DROGON == 0)
-#include "httplib.h"  // NOLINT
-#else
+#if (USE_DROGON == 1)
 #include <drogon/drogon.h>
 #endif
 
 #include <chrono>
 #include <thread>
 
-#if (USE_DROGON == 0)
-TEST(CppHttpLib, basic) {
-    for (int i = 0; i < 2; i++) {
-        httplib::Server srv;
-        std::thread k([&srv] {
-            srv.wait_until_ready();
-            srv.stop();
-        });
-        srv.listen("0.0.0.0", 11933);
-        k.join();
-    }
-}
-
-#else
+#if (USE_DROGON == 1)
 
 // Disabled due to drogon issue https://github.com/drogonframework/drogon/issues/2210
 TEST(Drogon, DISABLED_basic) {

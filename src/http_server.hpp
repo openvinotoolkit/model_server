@@ -19,7 +19,14 @@
 #include <string>
 
 #if (USE_DROGON == 0)
-#include "cpphttplib_http_server.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
+#include "tensorflow_serving/util/net_http/server/public/httpserver.h"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
+#include "tensorflow_serving/util/threadpool_executor.h"
+#pragma GCC diagnostic pop
 #else
 #include "drogon_http_server.hpp"
 #endif
@@ -28,7 +35,7 @@ namespace ovms {
 class Server;
 
 #if (USE_DROGON == 0)
-std::unique_ptr<CppHttpLibHttpServer> createAndStartCppHttpLibHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
+std::unique_ptr<tensorflow::serving::net_http::HTTPServerInterface> createAndStartNetHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
 #else
 std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
 #endif

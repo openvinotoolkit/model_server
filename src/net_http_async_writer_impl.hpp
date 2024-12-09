@@ -15,34 +15,31 @@
 //*****************************************************************************
 #pragma once
 
-#include <condition_variable>
 #include <functional>
-#include <mutex>
-#include <queue>
 #include <string>
-#include <thread>
-#include <unordered_map>
 
 #include "http_async_writer_interface.hpp"
-#include "httplib.h"  // NOLINT
-#include "mediapipe/framework/port/threadpool.h"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
+#include "tensorflow_serving/util/net_http/server/public/httpserver.h"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
+#include "tensorflow_serving/util/threadpool_executor.h"
+#pragma GCC diagnostic pop
+
+#include "http_status_code.hpp"
 
 namespace ovms {
 
-class CppHttpLibHttpAsyncWriterImpl : public HttpAsyncWriter {
-    httplib::Response& resp;
-    mediapipe::ThreadPool& pool;
-
-    httplib::DataSink* sink{nullptr};
-
-    std::condition_variable cv;
-    std::mutex mtx;
+class NetHttpAsyncWriterImpl : public HttpAsyncWriter {
+    tensorflow::serving::net_http::ServerRequestInterface* req;
 
 public:
-    CppHttpLibHttpAsyncWriterImpl(
-        httplib::Response& resp, mediapipe::ThreadPool& pool) :
-        resp(resp),
-        pool(pool) {}
+    NetHttpAsyncWriterImpl(
+        tensorflow::serving::net_http::ServerRequestInterface* req) :
+        req(req) {}
 
     // Used by V3 handler
     void OverwriteResponseHeader(const std::string& key, const std::string& value) override;

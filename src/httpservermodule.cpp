@@ -25,10 +25,6 @@
 #include "server.hpp"
 #include "status.hpp"
 
-#if (USE_DROGON == 0)
-#include "httplib.h"  // NOLINT
-#endif
-
 namespace ovms {
 HTTPServerModule::HTTPServerModule(ovms::Server& ovmsServer) :
     ovmsServer(ovmsServer) {}
@@ -40,8 +36,8 @@ Status HTTPServerModule::start(const ovms::Config& config) {
 
     SPDLOG_INFO("Will start {} REST workers", workers);
 #if (USE_DROGON == 0)
-    cppHttpLibServer = ovms::createAndStartCppHttpLibHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
-    if (cppHttpLibServer == nullptr) {
+    netHttpServer = ovms::createAndStartNetHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
+    if (netHttpServer == nullptr) {
         std::stringstream ss;
         ss << "at " << server_address;
         auto status = Status(StatusCode::FAILED_TO_START_REST_SERVER, ss.str());
@@ -65,7 +61,7 @@ Status HTTPServerModule::start(const ovms::Config& config) {
 }
 void HTTPServerModule::shutdown() {
 #if (USE_DROGON == 0)
-    if (cppHttpLibServer == nullptr)
+    if (netHttpServer == nullptr)
         return;
 #else
     if (drogonServer == nullptr)
@@ -74,8 +70,9 @@ void HTTPServerModule::shutdown() {
     SPDLOG_INFO("{} shutting down", HTTP_SERVER_MODULE_NAME);
     state = ModuleState::STARTED_SHUTDOWN;
 #if (USE_DROGON == 0)
-    cppHttpLibServer->terminate();
-    cppHttpLibServer.reset();
+    netHttpServer->Terminate();
+    netHttpServer->WaitForTermination();
+    netHttpServer.reset();
 #else
     drogonServer->terminate();
     drogonServer.reset();
