@@ -185,7 +185,7 @@ protected:
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
         std::string fileToReload = this->directoryPath + "/config.json";
-        createConfigFileWithContent(this->prepareConfigContent(), fileToReload);
+        ASSERT_TRUE(createConfigFileWithContent(this->prepareConfigContent(), fileToReload));
         ASSERT_EQ(server.getManager().loadConfig(fileToReload), StatusCode::OK);
     }
 };
