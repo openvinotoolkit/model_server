@@ -29,10 +29,10 @@
 
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include <spdlog/spdlog.h>
 
 #include "http_rest_api_handler.hpp"
 #include "http_status_code.hpp"
+#include "logging.hpp"
 #include "status.hpp"
 
 #if (USE_DROGON == 0)
