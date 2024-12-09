@@ -59,3 +59,12 @@ alias(
     }),
     visibility = ["//visibility:public"],
 )
+
+alias(
+    name = "llm_engine",
+    actual = select({
+        "//src:windows": "@llm_engine_windows//:llm_engine",
+        "//conditions:default": "@llm_engine_linux//:llm_engine",
+    }),
+    visibility = ["//visibility:public"],
+)

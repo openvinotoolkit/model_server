@@ -457,10 +457,10 @@ cc_library(
             "//:disable_mediapipe" : [],
         }),
         deps = select({
-            "//:is_windows_or_python_is_disabled_no_llm": [],
+            #"//:is_windows_or_python_is_disabled_no_llm": [],
             "//conditions:default" : [
                 # Jinja template processing is done in Python
-                "//src/llm:llmcalculator",
+                # "//src/llm:llmcalculator", depends on http 
                 "//src/llm:llmnoderesources",
                 "//src/llm:text_processor",],
             }) + select({
@@ -1987,7 +1987,7 @@ cc_test(
             ],
             "//:disable_mediapipe" : [],
         }) + select({
-            "//:is_windows_or_python_is_disabled_no_llm": [],
+            #"//:is_windows_or_python_is_disabled_no_llm": [],
             "//conditions:default" : [
                 "//src/llm:llmnoderesources",],
             }),
