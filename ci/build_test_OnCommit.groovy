@@ -12,7 +12,7 @@ pipeline {
           parallel {
             stage('Build and test windows') {
               agent {
-                label 'win_ovms'
+                label 'hostname=mclx-63'
               }
               steps {
                   script {

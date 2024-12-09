@@ -12,7 +12,7 @@ def cleanup_directories() {
 
     def existing_pr_string = bat(returnStatus: true, returnStdout: true, script: 'ls c:\\ | grep -oE "(PR-[0-9]*)$"')
     if (existing_pr_string == 1) {
-        echo "No PR-XXXX detected."
+        echo "No PR-XXXX detected for cleanup."
         return
     }
     println existing_pr_string
