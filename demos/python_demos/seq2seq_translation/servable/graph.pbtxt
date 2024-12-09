@@ -24,7 +24,7 @@ node {
   output_stream: "OUTPUT:translation"
   node_options: {
     [type.googleapis.com / mediapipe.PythonExecutorCalculatorOptions]: {
-      handler_path: "/workspace/model.py"
+      handler_path: "model.py"
     }
   }
 }

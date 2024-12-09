@@ -869,6 +869,36 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
     return firstErrorStatus;
 }
 
+#ifdef _WIN32
+class FileHandle {
+public:
+    FileHandle(const std::string& filename) :
+        filename_(filename) {
+        hFile_ = CreateFileA(
+            filename.c_str(),
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL);
+    }
+    ~FileHandle() {
+        if (hFile_ != INVALID_HANDLE_VALUE) {
+            if (!CloseHandle(hFile_)) {
+                SPDLOG_ERROR("Failed to close file: ", filename_);
+            }
+        }
+    }
+
+    HANDLE getHandle() const { return hFile_; }
+
+private:
+    HANDLE hFile_;
+    std::string filename_;
+};
+#endif
+
 class LoudFileInfoReporter {
     std::stringstream ss;
 
@@ -887,23 +917,15 @@ public:
            << " [ns]: " << statTime.st_ctim.tv_nsec << std::endl;
 #elif _WIN32
         // Windows implementation
-        HANDLE hFile = CreateFileA(
-            filename.c_str(),
-            GENERIC_READ,
-            FILE_SHARE_READ,
-            NULL,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL);
-        if (hFile == INVALID_HANDLE_VALUE) {
+        FileHandle fileHandle(filename);
+        if (fileHandle.getHandle() == INVALID_HANDLE_VALUE) {
             SPDLOG_ERROR("Failed to open file for debug-read on Windows");
             return;
         }
 
         FILETIME creationTime, lastAccessTime, lastWriteTime;
-        if (!GetFileTime(hFile, &creationTime, &lastAccessTime, &lastWriteTime)) {
+        if (!GetFileTime(fileHandle.getHandle(), &creationTime, &lastAccessTime, &lastWriteTime)) {
             SPDLOG_ERROR("Failed to get file time on Windows");
-            CloseHandle(hFile);
             return;
         }
 
