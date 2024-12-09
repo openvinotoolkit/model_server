@@ -18,7 +18,9 @@ import os
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):
         base_path = kwargs['base_path']
-        assert os.path.normpath(base_path) == '/ovms/src/test/mediapipe/python/scripts'
+        print("Base path: " + os.path.normpath(base_path) + "; Expected: " + os.path.normpath(os.path.dirname(os.path.realpath(__file__))), flush=True)
+        # On Windows, paths might slightly differ in terms of letter case, so we make comparison case-insensitive
+        assert os.path.normpath(base_path).lower() == os.path.normpath(os.path.dirname(os.path.realpath(__file__))).lower()
         return
 
     def execute(self, inputs: dict) -> bool:
