@@ -66,6 +66,8 @@ const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logC
 const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
 
+void adjustGraphConfigForTargetPlatform(std::string& input);
+
 const std::string dummy_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy", false);
 const std::string dummy_fp64_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_fp64", false);
 const std::string sum_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model", false);

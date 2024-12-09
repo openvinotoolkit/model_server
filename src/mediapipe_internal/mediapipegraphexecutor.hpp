@@ -229,6 +229,7 @@ public:
                             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getResponsesMetric(executionContext));
                             return absl::OkStatus();
                         } catch (...) {
+                            SPDLOG_DEBUG("Error occurred during packet serialization in mediapipe graph: {}", this->name);
                             return absl::Status(absl::StatusCode::kCancelled, "error in serialization");
                         }
                     }),
@@ -322,6 +323,7 @@ public:
             }
             return StatusCode::OK;
         } catch (...) {
+            SPDLOG_DEBUG("Graph {}: Exception while processing MediaPipe graph", this->name);
             return Status(StatusCode::UNKNOWN_ERROR, "Exception while processing MediaPipe graph");  // To be displayed in method level above
         }
     }
