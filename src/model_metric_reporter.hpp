@@ -153,7 +153,7 @@ public:
     ModelMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
 };
 
-class MediapipeServableMetricReporter {
+class MediapipeServableMetricReporter : public ServableMetricReporter {
     MetricRegistry* registry;
 
 public:
