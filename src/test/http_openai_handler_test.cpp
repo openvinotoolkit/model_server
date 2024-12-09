@@ -20,8 +20,10 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <openvino/genai/tokenizer.hpp>
 
 #include "../http_rest_api_handler.hpp"
+#include "../llm/apis/openai_completions.hpp"
 #include "../module_names.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -242,4 +244,168 @@ TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
 
     auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
+}
+
+class HttpOpenAIHandlerParsingTest : public ::testing::Test {
+protected:
+    rapidjson::Document doc;
+    std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"));
+};
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessages) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "What is in this image?"
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="
+            }
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    ovms::chat_t messages = apiHandler->getMessages();
+    ASSERT_EQ(messages.size(), 1);
+    ASSERT_EQ(messages[0].contentText.size(), 2);
+    ASSERT_EQ(messages[0].contentText.count("role"), 1);
+    EXPECT_EQ(messages[0].contentText["role"], "user");
+    ASSERT_EQ(messages[0].contentText.count("text"), 1);
+    EXPECT_EQ(messages[0].contentText["text"], "What is in this image?");
+    ASSERT_EQ(messages[0].contentImages.size(), 1);
+    ov::Tensor image = messages[0].contentImages[0];
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+    std::vector<uint8_t> expectedBytes = {160, 181, 110};
+    for (size_t i = 0; i < image.get_size(); i++) {
+        EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
+    }
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpeg) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg=="
+            }
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    ovms::chat_t messages = apiHandler->getMessages();
+    ASSERT_EQ(messages.size(), 1);
+    ASSERT_EQ(messages[0].contentText.size(), 1);
+    ASSERT_EQ(messages[0].contentText.count("role"), 1);
+    EXPECT_EQ(messages[0].contentText["role"], "user");
+    ASSERT_EQ(messages[0].contentImages.size(), 1);
+    ov::Tensor image = messages[0].contentImages[0];
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+    std::vector<uint8_t> expectedBytes = {241, 245, 54};
+    for (size_t i = 0; i < image.get_size(); i++) {
+        EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
+    }
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageStringWithNoPrefix) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="
+            }
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    ovms::chat_t messages = apiHandler->getMessages();
+    ASSERT_EQ(messages.size(), 1);
+    ASSERT_EQ(messages[0].contentText.size(), 1);
+    ASSERT_EQ(messages[0].contentImages.size(), 1);
+    ov::Tensor image = messages[0].contentImages[0];
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+    std::vector<uint8_t> expectedBytes = {160, 181, 110};
+    for (size_t i = 0; i < image.get_size(); i++) {
+        EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
+    }
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyImageUrl) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  ""
+            }
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Error during string to mat conversion"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageUrlNotBase64) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "NOTBASE64"
+            }
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid base64 string in request"));
 }

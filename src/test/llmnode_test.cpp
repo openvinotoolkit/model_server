@@ -1684,6 +1684,88 @@ TEST_F(LLMHttpParametersValidationTest, maxTokensExceedsUint32Size) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_F(LLMHttpParametersValidationTest, maxTokensExceeds4000WhenIgnoreEosTrue) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "ignore_eos": true,
+            "max_tokens": 4001,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensInvalid) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_completion_tokens": "INVALID",
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceedsUint32Size) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_completion_tokens": 4294967296,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceeds4000WhenIgnoreEosTrue) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "ignore_eos": true,
+            "max_completion_tokens": 4001,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_F(LLMHttpParametersValidationTest, streamInvalid) {
     std::string requestBody = validRequestBodyWithParameter("stream", "\"INVALID\"");
 
