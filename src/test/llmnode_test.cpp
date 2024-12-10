@@ -1581,8 +1581,7 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedImmediately)
         rapidjson::Document d;
         rapidjson::ParseResult ok = d.Parse(partialResponse.c_str());
         ASSERT_EQ(ok.Code(), 0);
-        // TODO
-        // ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
+        ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
     });  // no results
 
     ASSERT_EQ(
@@ -1617,8 +1616,7 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedImmediately) {
         rapidjson::Document d;
         rapidjson::ParseResult ok = d.Parse(partialResponse.c_str());
         ASSERT_EQ(ok.Code(), 0);
-        // TODO
-        // ASSERT_EQ(code, tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
+        ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
     });  // no results
 
     ASSERT_EQ(

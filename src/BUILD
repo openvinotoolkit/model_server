@@ -1816,7 +1816,6 @@ cc_test(
         "test/ensemble_tests.cpp",
         "test/gather_node_test.cpp",
         "test/get_model_metadata_response_test.cpp",
-        "test/http_openai_handler_test.cpp",
         "test/standalone_http_server_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
@@ -1899,6 +1898,7 @@ cc_test(
                 "test/mediapipe_validation_test.cpp", # Mediapipe enabled
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe_framework_test.cpp",
+                "test/http_openai_handler_test.cpp",
             ],
             "//:disable_mediapipe" : [],
         }) + select({

@@ -740,9 +740,10 @@ TEST_F(MetricFlowTest, RestV3Unary) {
         std::string request = R"({"model": "dummy_gpt", "prompt": "Hello World"})";
         std::string response;
         HttpRequestComponents comps;
-        auto status = handler.processV3("/v3/completions", comps, response, request, stream);
+        auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
+        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
-        status = handler.processV3("/v3/v1/completions", comps, response, request, stream);
+        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     }
 
@@ -765,9 +766,10 @@ TEST_F(MetricFlowTest, RestV3Stream) {
         std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "Hello World"})";
         std::string response;
         HttpRequestComponents comps;
-        auto status = handler.processV3("/v3/completions", comps, response, request, stream);
+        auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
+        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
-        status = handler.processV3("/v3/v1/completions", comps, response, request, stream);
+        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
     }
 
