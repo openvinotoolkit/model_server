@@ -134,7 +134,6 @@ cc_library(
         ":llm_engine_cmake",
     ],
     visibility = ["//visibility:public"],
-    linkstatic=True,
 )
 """
     repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy,
