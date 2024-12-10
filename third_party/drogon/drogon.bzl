@@ -52,12 +52,49 @@ cc_library(
         recursive_init_submodules = True,
         patches = ["@//third_party/drogon:ovms_drogon.patch"],
         patch_args = ["-p1"],
-        patch_cmds = ["bash -c \"find . -name '中文.txt' -delete\""],
     )
 
 def _impl(repository_ctx):
     http_proxy = repository_ctx.os.environ.get("http_proxy", "")
     https_proxy = repository_ctx.os.environ.get("https_proxy", "")
+
+    # Create the Python script dynamically
+    repository_ctx.file("remove_japanese_txt.py", """
+import os
+import fnmatch
+import sys
+
+def remove_japanese_txt(directory):
+    for root, dirs, files in os.walk(directory):
+        for file in fnmatch.filter(files, '*.txt'):
+            file_path = os.path.join(root, file)
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"Removed: {file_path}")
+            except Exception as e:
+                print(f"Failed to remove {file_path}: {e}", file=sys.stderr)
+
+if __name__ == "__main__":
+    directory = f"{os.getcwd()}/../drogon/lib/tests/integration_test/server/"
+    print(f"Working in {directory}")
+    remove_japanese_txt(directory)
+""")
+
+    # Locate the Python binary
+    python_binary = repository_ctx.which("python3") or repository_ctx.which("python")
+    if not python_binary:
+        fail("Python interpreter not found in PATH")
+
+    # Execute the Python script
+    result = repository_ctx.execute([python_binary, "remove_japanese_txt.py"], environment=repository_ctx.os.environ)
+
+    # Log the script's stdout and stderr
+    if result.return_code == 0:
+        print("Script executed successfully!")
+        print("Output:", result.stdout)  # Log the standard output
+    else:
+        fail("Script execution failed: " + result.stderr)  # Log the error output
 
     if _is_windows(repository_ctx):
         platform_cache_entries = {
@@ -103,7 +140,7 @@ visibility = ["//visibility:public"]
 
 filegroup(
     name = "all_srcs",
-    srcs = glob(["**"]),
+    srcs = glob(["**"], exclude = ["**/*.txt"]),
     visibility = ["//visibility:public"],
 )
 
