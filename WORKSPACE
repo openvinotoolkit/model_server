@@ -359,11 +359,8 @@ load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
 
 ### OpenVINO GenAI
-load("@//third_party/llm_engine:llm_engine_win.bzl", "llm_engine")
+load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
-
-#load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
-#llm_engine()
 
 # Azure Storage SDK
 new_local_repository(
