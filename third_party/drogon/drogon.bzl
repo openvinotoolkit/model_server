@@ -87,6 +87,7 @@ if __name__ == "__main__":
         fail("Python interpreter not found in PATH")
 
     # Execute the Python script
+    # This patches drogon repo to remove txt files which break building, such as 中文.txt
     result = repository_ctx.execute([python_binary, "remove_japanese_txt.py"], environment=repository_ctx.os.environ)
 
     # Log the script's stdout and stderr
