@@ -32,6 +32,7 @@ set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_fu
 set "setPath=%PATH%;c:\opt"
 set "envPath=win_environment.log"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Bazel compilation settings
 set "VS_2019_PRO=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"

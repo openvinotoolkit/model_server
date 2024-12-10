@@ -218,6 +218,18 @@ cmake .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%
 cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
 cmake --install .
 
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Msys bash
+set "bash_path=C:\opt\msys64\usr\bin\bash.exe"
+
+IF /I EXIST %bash_path% (
+    echo [INFO] ::::::::::::::::::::::: Msys bash installed in: %bash_path%
+) ELSE (
+    echo [ERROR] :::::::::::::::::::::: Msys bash not found
+    goto :exit_dependencies_error
+)
+
+
 :exit_dependencies
 echo [INFO] Dependencies installed
 exit /b 0
