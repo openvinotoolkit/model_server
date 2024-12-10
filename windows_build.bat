@@ -17,7 +17,14 @@
 setlocal EnableExtensions DisableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-1234" number passed here from jenkins so that a tmp directory will be created
-set "BAZEL_SHORT_PATH=C:\%1"
+IF "%~1"=="" (
+    echo No argument provided. Using default opt path
+    set "BAZEL_SHORT_PATH=C:\opt"
+) ELSE (
+    echo Argument provided: Using install path %1
+    set "BAZEL_SHORT_PATH=C:\%1"
+)
+
 set "bazelStartupCmd=--output_user_root=%BAZEL_SHORT_PATH%"
 set "openvino_dir=C:/%1/openvino/runtime/cmake"
 
@@ -35,27 +42,31 @@ set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Bazel compilation settings
-set "VS_2019_PRO=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"
-set "VS_2022_BT=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-IF /I EXIST %VS_2019_PRO% (
-    echo [INFO] Using MSVC %VS_2019_PRO%
-    set "BAZEL_VS=%VS_2019_PRO%"
-) ELSE (
-    IF /I EXIST %VS_2022_BT% (
-        echo [INFO] Using MSVC %VS_2022_BT%
-        set "BAZEL_VS=%VS_2022_BT%"
-    ) ELSE (
-        echo [ERROR] Required MSVC compiler not installed
-        goto exit
-    )
-)
+set VS_2019_PRO="C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"
+set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+IF /I EXIST "%VS_2019_PRO%" DO CALL :msvc_pro
+IF /I EXIST "%VS_2022_BT%" DO CALL :msvc_bt
+ELSE DO CALL :mscv_error
 
+:mscv_error
+echo [ERROR] Required MSVC compiler not installed
+DO CALL :exit_build_error
+:msvc_pro
+echo [INFO] Using MSVC %VS_2019_PRO%
+set BAZEL_VS=%VS_2019_PRO%
+DO CALL :msvc_end
+:msvc_bt
+echo [INFO] Using MSVC %VS_2022_BT%
+set BAZEL_VS=%VS_2022_BT%
+
+:: Bazel compilation settings end
+:msvc_end
 set "BAZEL_VC=%BAZEL_VS%\VC"
 set "BAZEL_VC_FULL_VERSION=14.29.30133"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
-set "PYTHONPATH=%setPythonPath%"
+set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call %BAZEL_SHORT_PATH%\openvino\setupvars.bat"
@@ -87,5 +98,10 @@ set > %envPath%
 set regex="\[  .* ms"
 set sed_clean="s/ (.* ms)//g"
 grep -a %regex% win_full_test.log | sed %sed_clean% | tee win_test.log
-:exit
+:exit_build
+echo [INFO] Build finished
+exit /b 0
+:exit_build_error
+echo [ERROR] Build finished with error
+exit /b 1
 endlocal

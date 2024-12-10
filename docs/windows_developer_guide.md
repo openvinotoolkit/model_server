@@ -44,9 +44,9 @@ make sure default "python --version" gets you 3.9
 
 ## MSYS
 Download and install in c:\opt\msys64 https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe
-Set the variables to make sure bash is visible and add its directory in PATH - C:\opt\msys64\usr\bin, and --repo_env BAZEL_SH='/path/to/bash.exe':
+Set the variables to make sure bash is visible and add its directory in PATH - C:\opt\msys64\usr\bin:
 ```
-set PATH=%PATH%;C:\opt\msys64\usr\bin
+set PATH=%PATH%;C:\opt\msys64\usr\bin;c:\opt
 set BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe
 ```
 
@@ -87,18 +87,18 @@ set HTTPS_PROXY=my.proxy.com:122
 ## Run Developer Command Prompt for VS 2019
 Enable Developer mode in windows system settings
 
-## Install dependencies
-Open cmd.exe and run windows_install_dependencies.bat
-```
-windows_install_dependencies.bat
-```
-
 ## GET CODE
 ```
 md C:\git
 cd C:\git\
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
+```
+
+## Install dependencies
+Open cmd.exe and run windows_install_dependencies.bat
+```
+windows_install_dependencies.bat
 ```
 
 ## COMPILE
