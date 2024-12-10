@@ -1830,7 +1830,7 @@ cc_test(
             ],
             "//:disable_mediapipe" : [],
         }) + select({
-            "//:is_windows_or_python_is_disabled_no_llm": [],
+            "//:is_windows_or_python_is_disabled_no_llm": [], # LLM tests depend on HTTP
             "//conditions:default" : [
                 # LLM logic uses Python for processing Jinja templates
                 "test/llmnode_test.cpp",
@@ -1987,7 +1987,7 @@ cc_test(
             ],
             "//:disable_mediapipe" : [],
         }) + select({
-            #"//:is_windows_or_python_is_disabled_no_llm": [],
+            "//:is_windows_or_python_is_disabled_no_llm": [], # LLM tests depend on HTTP
             "//conditions:default" : [
                 "//src/llm:llmnoderesources",],
             }),
