@@ -29,6 +29,13 @@ https://aka.ms/vs/17/release/vs_BuildTools.exe
 
 Mark c++ Desktop app and v142 CPP platform toolset.
 
+## Power shell settings
+Set Execution Policy to RemoteSigned
+Open PowerShell as an administrator: Right-click on the Start button and select “Windows PowerShell (Admin)”.
+Run the command:
+```Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force```
+Confirm the change by typing “A” and pressing Enter.
+
 ## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
 Python3.9
 pip install numpy==1.23
@@ -230,3 +237,12 @@ or
 Press "OVMS RELEASE(model_server)" at the bottom left task bar in visual code.
 
 Breakpoints are available after building the Debug solution and choosing OVMS Debug task.
+
+## Running unit tests
+```
+bazel --output_user_root=C:/b_tmp build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --subcommands --verbose_failures //src:ovms_test 2>&1 | tee compilation.log
+c:\opt\openvino\setupvars.bat
+C:\opt\opencv\setup_vars_opencv4.cmd
+windows_change_test_configs.py
+bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log
+```

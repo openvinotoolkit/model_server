@@ -20,12 +20,12 @@
 setlocal EnableExtensions DisableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-XXXX" number passed here from jenkins so that a tmp directory will be created
-IF "%1"=="1" (
-    echo Argument provided: Using install path %1
-    set "output_user_root=%1"
-) ELSE (
+IF "%~1"=="" (
     echo No argument provided. Using default opt path
     set "output_user_root=opt"
+) ELSE (
+    echo Argument provided: Using install path %1
+    set "output_user_root=%1"
 )
 IF "%2"=="1" (
     echo Argument provided: Using expunge = %2
@@ -81,7 +81,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
 mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
 
 :: Replace path to openvino in ovms WORKSPACE file
-powershell -Command "(gc -Path WORKSPACE -Raw) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
+powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
@@ -181,6 +181,25 @@ IF /I EXIST %python39_path% (
 python --version
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Msys bash
+set "bash_path=C:\opt\msys64\usr\bin\bash.exe"
+set "msys_url=https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe"
+set "msys_install=%BAZEL_SHORT_PATH%\msys2-x86_64-20240727.exe"
+IF /I EXIST %bash_path% (
+    echo [INFO] ::::::::::::::::::::::: Msys already bash installed in: %bash_path%
+) ELSE (
+    IF /I NOT EXIST %msys_install% (
+        wget -P %BAZEL_SHORT_PATH%\ %msys_url%
+    )
+    
+    start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %BAZEL_SHORT_PATH%/msys64
+    timeout 30
+    :: Install msys hang workaround
+    taskkill /f /t /fi "windowtitle eq Installing_msys"
+    echo [INFO] ::::::::::::::::::::::: Msys installed in: %bash_path%
+)
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCV
 
 set "opencv_git=https://github.com/opencv/opencv.git"
@@ -217,18 +236,6 @@ cd build
 cmake .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags%
 cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
 cmake --install .
-
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Msys bash
-set "bash_path=C:\opt\msys64\usr\bin\bash.exe"
-
-IF /I EXIST %bash_path% (
-    echo [INFO] ::::::::::::::::::::::: Msys bash installed in: %bash_path%
-) ELSE (
-    echo [ERROR] :::::::::::::::::::::: Msys bash not found
-    goto :exit_dependencies_error
-)
-
 
 :exit_dependencies
 echo [INFO] Dependencies installed
