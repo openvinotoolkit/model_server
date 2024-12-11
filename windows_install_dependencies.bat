@@ -36,7 +36,8 @@ IF "%2"=="1" (
 )
 
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
-set "setPath=%PATH%;c:\opt"
+:: Python 39 needs to be first in the windows path
+set "setPath=C:\opt\Python39\;C:\opt\Python39\Scripts\;%PATH%;c:\opt"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
@@ -158,8 +159,8 @@ IF /I EXIST %python39_path% (
     IF %expunge% EQU 1 (
         rm -rf %python39_path%
         IF /I EXIST "%python39_system%" (
-            :: Link system path
-            mklink /d %python39_path% "%python39_system%"
+            :: Copy system Python
+            xcopy /s /e %python39_path% "%python39_system%"
             pip install numpy==1.23
         ) ELSE (
             echo [ERROR] ::::::::::::::::::::::: Python39 not found
@@ -170,8 +171,8 @@ IF /I EXIST %python39_path% (
     )
 ) ELSE (
     IF /I EXIST "%python39_system%" (
-        :: Link system path
-        mklink /d %python39_path% "%python39_system%"
+        :: Copy system Python
+        xcopy /s /e %python39_path% "%python39_system%"
         pip install numpy==1.23
     ) ELSE (
         echo [ERROR] ::::::::::::::::::::::: Python39 not found
@@ -186,7 +187,7 @@ set "bash_path=C:\opt\msys64\usr\bin\bash.exe"
 set "msys_url=https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe"
 set "msys_install=%BAZEL_SHORT_PATH%\msys2-x86_64-20240727.exe"
 IF /I EXIST %bash_path% (
-    echo [INFO] ::::::::::::::::::::::: Msys already bash installed in: %bash_path%
+    echo [INFO] ::::::::::::::::::::::: Msys bash already installed in: %bash_path%
 ) ELSE (
     IF /I NOT EXIST %msys_install% (
         wget -P %BAZEL_SHORT_PATH%\ %msys_url%
