@@ -28,6 +28,8 @@ def llm_engine():
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
+        patch_args = ["-p1"],
+        patches = ["cb.patch"],
     )
     # when using local repository manually run: git submodule update --recursive 
     #native.new_local_repository(
