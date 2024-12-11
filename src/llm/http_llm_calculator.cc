@@ -214,9 +214,7 @@ public:
                 if (this->generationHandle->get_status() == ov::genai::GenerationStatus::RUNNING || this->generationHandle->can_read()) {
                     // Subsequent iteration
                     OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
-                    //SPDLOG_LOGGER_INFO(llm_calculator_logger, "Start read() ...");
                     ov::genai::GenerationOutputs generationOutputs = this->generationHandle->read();
-                    //SPDLOG_LOGGER_INFO(llm_calculator_logger, "End read() ...");
                     RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
                     this->apiHandler->incrementProcessedTokens(generationOutputs.begin()->second.generated_ids.size());
 

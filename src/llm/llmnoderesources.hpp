@@ -36,8 +36,8 @@
 
 #include "../logging.hpp"
 #include "../stringutils.hpp"
-#include "src/python/utils.hpp"
 #include "src/llm/llm_calculator.pb.h"
+#include "src/python/utils.hpp"
 #include "text_processor.hpp"
 
 namespace ovms {

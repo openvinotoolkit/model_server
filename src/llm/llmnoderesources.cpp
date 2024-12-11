@@ -154,8 +154,8 @@ Status LLMNodeResources::initializeLLMNodeResources(LLMNodeResources& nodeResour
 
     if (!nodeOptions.draft_models_path().empty()) {
         auto draftSchedulerConfig = prepareDraftModelSchedulerConfig(nodeOptions);
-        auto draftModelConfig = ov::genai::draft_model(nodeOptions.draft_models_path(), nodeOptions.draft_device(), 
-                                                       ov::genai::scheduler_config(draftSchedulerConfig));
+        auto draftModelConfig = ov::genai::draft_model(nodeOptions.draft_models_path(), nodeOptions.draft_device(),
+            ov::genai::scheduler_config(draftSchedulerConfig));
         nodeResources->pluginConfig.insert(draftModelConfig);
         nodeResources->isSpeculativePipeline = true;
     }

@@ -71,14 +71,14 @@ struct OpenAIChatCompletionsRequest {
     std::optional<bool> ignoreEOS{std::nullopt};
     std::optional<std::set<std::string>> stop{std::nullopt};
     std::optional<bool> includeStopStrInOutput{std::nullopt};
-    std::optional<int> numReturnSequences{std::nullopt}; // effective for beam search and multinomial decoding
+    std::optional<int> numReturnSequences{std::nullopt};  // effective for beam search and multinomial decoding
     // Multinomial decoding specific
     std::optional<float> temperature{std::nullopt};
     std::optional<float> topP{std::nullopt};
     std::optional<int> topK{std::nullopt};
     std::optional<int> seed{std::nullopt};
     std::optional<float> frequencyPenalty{std::nullopt};
-    std::optional<float> presencePenalty{std::nullopt};;
+    std::optional<float> presencePenalty{std::nullopt};
     std::optional<float> repetitionPenalty{std::nullopt};
     // Beam search specific
     std::optional<int> bestOf{std::nullopt};

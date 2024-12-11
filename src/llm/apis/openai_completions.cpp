@@ -485,15 +485,15 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
     auto assistantConfidenceThresholdIt = doc.FindMember("assistant_confidence_threshold");
 
     if (isSpeculativePipeline) {
-        if (numAssistantTokensIt == doc.MemberEnd() && assistantConfidenceThresholdIt == doc.MemberEnd()) 
+        if (numAssistantTokensIt == doc.MemberEnd() && assistantConfidenceThresholdIt == doc.MemberEnd())
             return absl::InvalidArgumentError("Speculative decoding requires either num_assistant_tokens or assistant_confidence_threshold to be set.");
-        
+
         if (numAssistantTokensIt != doc.MemberEnd() && assistantConfidenceThresholdIt != doc.MemberEnd())
             return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are mutually exclusive and cannot both be set.");
     } else if (numAssistantTokensIt != doc.MemberEnd() || assistantConfidenceThresholdIt != doc.MemberEnd()) {
         return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are only supported when speculative decoding is enabled.");
     }
-    // num_assistant_tokens: uint; 
+    // num_assistant_tokens: uint;
     if (numAssistantTokensIt != doc.MemberEnd()) {
         if (!numAssistantTokensIt->value.IsUint() || numAssistantTokensIt->value.GetUint() == 0) {
             return absl::InvalidArgumentError("num_assistant_tokens must be an unsigned integer greater than 0");
