@@ -145,13 +145,11 @@ Status LLMNodeResources::initializeLLMNodeResources(LLMNodeResources& nodeResour
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
 
-    nodeResources.schedulerConfig = {
-        .max_num_batched_tokens = nodeOptions.max_num_batched_tokens(),
-        .cache_size = nodeOptions.cache_size(),
-        .dynamic_split_fuse = nodeOptions.dynamic_split_fuse(),
-        .max_num_seqs = nodeOptions.max_num_seqs(),
-        .enable_prefix_caching = nodeOptions.enable_prefix_caching(),
-    };
+    nodeResources.schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
+    nodeResources.schedulerConfig.cache_size = nodeOptions.cache_size();
+    nodeResources.schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();
+    nodeResources.schedulerConfig.max_num_seqs = nodeOptions.max_num_seqs();
+    nodeResources.schedulerConfig.enable_prefix_caching = nodeOptions.enable_prefix_caching();
 
     nodeResources.device = nodeOptions.device();
 

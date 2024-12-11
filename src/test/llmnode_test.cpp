@@ -80,12 +80,11 @@ public:
         try {
             plugin_config_t tokenizerPluginConfig = {};
             std::string device = "CPU";
-            ov::genai::SchedulerConfig schedulerConfig = {
-                .max_num_batched_tokens = 256,
-                .cache_size = 1,
-                .dynamic_split_fuse = true,
-                .max_num_seqs = 256,
-            };
+            ov::genai::SchedulerConfig schedulerConfig;
+            schedulerConfig.max_num_batched_tokens = 256;
+            schedulerConfig.cache_size = 1;
+            schedulerConfig.dynamic_split_fuse = true;
+            schedulerConfig.max_num_seqs = 256;
             plugin_config_t pluginConfig;
             JsonParser::parsePluginConfig("{\"INFERENCE_PRECISION_HINT\":\"f32\"}", pluginConfig);
             cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
