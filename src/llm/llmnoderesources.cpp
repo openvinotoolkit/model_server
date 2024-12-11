@@ -216,14 +216,13 @@ std::unordered_map<std::string, std::string> LLMNodeResources::prepareLLMNodeIni
 }
 
 ov::genai::SchedulerConfig LLMNodeResources::prepareDraftModelSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
-    return {
-        .max_num_batched_tokens = nodeOptions.has_draft_max_num_batched_tokens() ? nodeOptions.draft_max_num_batched_tokens() : nodeOptions.max_num_batched_tokens(),
-        .cache_size = nodeOptions.has_draft_cache_size() ? nodeOptions.draft_cache_size() : nodeOptions.cache_size(),
-        .block_size = nodeOptions.has_draft_block_size() ? nodeOptions.draft_block_size() : nodeOptions.block_size(),
-        .dynamic_split_fuse = nodeOptions.has_draft_dynamic_split_fuse() ? nodeOptions.draft_dynamic_split_fuse() : nodeOptions.dynamic_split_fuse(),
-        .max_num_seqs = nodeOptions.has_draft_max_num_seqs() ? nodeOptions.draft_max_num_seqs() : nodeOptions.max_num_seqs(),
-        .enable_prefix_caching = nodeOptions.enable_prefix_caching(),
-    };
+    ov::genai::SchedulerConfig config;
+    config.max_num_batched_tokens = nodeOptions.has_draft_max_num_batched_tokens() ? nodeOptions.draft_max_num_batched_tokens() : nodeOptions.max_num_batched_tokens();
+    config.cache_size = nodeOptions.has_draft_cache_size() ? nodeOptions.draft_cache_size() : nodeOptions.cache_size();
+    config.dynamic_split_fuse = nodeOptions.has_draft_dynamic_split_fuse() ? nodeOptions.draft_dynamic_split_fuse() : nodeOptions.dynamic_split_fuse();
+    config.max_num_seqs = nodeOptions.has_draft_max_num_seqs() ? nodeOptions.draft_max_num_seqs() : nodeOptions.max_num_seqs();
+    config.enable_prefix_caching = nodeOptions.enable_prefix_caching();
+    return config;
 }
 
 }  // namespace ovms
