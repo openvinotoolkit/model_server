@@ -1906,6 +1906,7 @@ cc_test(
             "//conditions:default" : [
                 # LLM logic uses Python for processing Jinja templates
                 "test/llmnode_test.cpp",
+                "test/max_model_length_test.cpp",
                 "test/llmtemplate_test.cpp",
                 "test/text_streamer_test.cpp",],
             }) + select({

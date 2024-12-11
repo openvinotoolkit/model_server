@@ -160,11 +160,10 @@ public:
                     ov::Tensor finalPromptIds = nodeResources->cbPipe->get_tokenizer().encode(finalPrompt, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
                     this->apiHandler->setPromptTokensUsage(finalPromptIds.get_size());
                     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(finalPromptIds));
-
                     this->generationHandle = nodeResources->cbPipe->add_request(
                         currentRequestId++, /*to be removed from API?*/
                         finalPromptIds,
-                        this->apiHandler->createGenerationConfig());
+                        this->apiHandler->createGenerationConfig(this->nodeResources->maxModelLength));
 
                     // TODO: Revert when drogon adds disconnection callbacks: https://github.com/drogonframework/drogon/pull/2204
                     // this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
