@@ -6,10 +6,10 @@ def cleanup_directories() {
     if ( status != 0) {
         error "Error: trying to list jenkins workspaces."
     }
-    def existing_wr_string = bat(returnStatus: false, returnStdout: true, script: command)
+    def existing_workspace_string = bat(returnStatus: false, returnStdout: true, script: command)
 
-    println existing_wr_string
-    def existing_wr = existing_wr_string.split(/\n/)
+    println existing_workspace_string
+    def existing_workspace = existing_workspace_string.split(/\n/)
 
     command = 'ls c:\\ | grep -oE "(pr-[0-9]*)$"'
     status = bat(returnStatus: true, script: command)
@@ -18,27 +18,27 @@ def cleanup_directories() {
         return
     }
 
-    def existing_pr_string = bat(returnStatus: false, returnStdout: true, script: command)
+    def existing_prs_string = bat(returnStatus: false, returnStdout: true, script: command)
 
-    println existing_pr_string
-    def existing_pr = existing_pr_string.split(/\n/)
+    println existing_prs_string
+    def existing_prs = existing_prs_string.split(/\n/)
     
     // Compare workspace with c:\pr-xxxx
-    for (int i = 0; i < existing_pr.size(); i++) {
+    for (int i = 0; i < existing_prs.size(); i++) {
         def found = false
-        for (int j = 0; j < existing_wr.size(); j++) {
-            if (existing_pr[i].toLowerCase() == existing_wr[j].toLowerCase()) {
+        for (int j = 0; j < existing_workspace.size(); j++) {
+            if (existing_prs[i].toLowerCase() == existing_workspace[j].toLowerCase()) {
                 found = true
                 break
             }
             // Part of output contains the command that was run
-            if (existing_pr[i].toLowerCase().contains("grep")) {
+            if (existing_prs[i].toLowerCase().contains("grep")) {
                 found = true
                 break
             }
         }
         if (!found) {
-            def pathToDelete = "c:\\" + existing_pr[i]
+            def pathToDelete = "c:\\" + existing_prs[i]
             // Sanity check not to delete anything else
             if (!pathToDelete.contains("c:\\pr-")) {
                 error "Error: trying to delete a directory that is not expected: " + pathToDelete
