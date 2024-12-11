@@ -126,7 +126,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "71e4adb31872dc9bc262e65d5243d756a8a7115d", # Openvino from ENV (#100) Dec 4 2024
+    commit = "8d91559c1e900d3c043cc7aafb1b55df25d586ac", # Opencv from ENV (#101) Dec 9 2024
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -209,7 +209,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_openvino",
     build_file = "@//third_party/openvino:openvino_windows.BUILD",
-    path = "C:\\opt\\intel\\openvino\\runtime",
+    path = "C:\\opt\\openvino\\runtime",
 )
 
 new_local_repository(
@@ -221,7 +221,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
-    path = "C:\\opt\\opencv\\build",
+    path = "C:\\opt\\opencv",
 )
 
 new_local_repository(
@@ -473,5 +473,6 @@ git_repository(
     remote = "https://github.com/nlohmann/json/",
     tag = "v3.11.3",
 )
+
 
 
