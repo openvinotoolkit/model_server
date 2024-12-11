@@ -130,18 +130,21 @@ public:
         std::set<std::string> outputPollersWithReceivedPacket;
 
         size_t numberOfPacketsCreated = 0;
-        OVMS_RETURN_ON_FAIL(
-            createAndPushPacketsImpl(
-                std::shared_ptr<const RequestType>(request,
-                    // Custom deleter to avoid deallocation by custom holder
-                    // Conversion to shared_ptr is required for unified deserialization method
-                    // for first and subsequent requests
-                    [](const RequestType*) {}),
-                this->inputTypes,
-                this->pythonBackend,
-                graph,
-                this->currentStreamTimestamp,
-                numberOfPacketsCreated));
+        auto ovms_status = createAndPushPacketsImpl(
+            std::shared_ptr<const RequestType>(request,
+                // Custom deleter to avoid deallocation by custom holder
+                // Conversion to shared_ptr is required for unified deserialization method
+                // for first and subsequent requests
+                [](const RequestType*) {}),
+            this->inputTypes,
+            this->pythonBackend,
+            graph,
+            this->currentStreamTimestamp,
+            numberOfPacketsCreated);
+        if (!ovms_status.ok()) {
+            INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
+            return ovms_status;
+        }
 
         // This differs from inferStream - we require user to feed all streams
         if (this->inputNames.size() > numberOfPacketsCreated) {
