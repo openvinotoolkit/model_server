@@ -234,7 +234,8 @@ cd %opencv_dir%
 mkdir build
 cd build
 :: -D CMAKE_INSTALL_PREFIX=C:\opt\opencv - Add if installation needed
-cmake -G "Visual Studio 17 2022" -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags%
+:: CI - -G "Visual Studio 16 2019", local -G "Visual Studio 17 2022" as default
+cmake -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags%
 cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
 cmake --install .
 
