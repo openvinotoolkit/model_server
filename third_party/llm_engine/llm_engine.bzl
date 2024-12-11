@@ -40,7 +40,13 @@ def llm_engine():
 
 def _impl(repository_ctx):
     http_proxy = repository_ctx.os.environ.get("http_proxy", "")
+    if http_proxy == "":
+        http_proxy = repository_ctx.os.environ.get("HTTP_PROXY", "")
+    
     https_proxy = repository_ctx.os.environ.get("https_proxy", "")
+    if https_proxy == "":
+        https_proxy = repository_ctx.os.environ.get("HTTPS_PROXY", "")
+    
     OpenVINO_DIR = repository_ctx.os.environ.get("OpenVINO_DIR", "")
 
     if _is_windows(repository_ctx):
