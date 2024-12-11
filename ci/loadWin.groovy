@@ -17,7 +17,7 @@ def cleanup_directories() {
         return
     }
 
-    def existing_pr_string = bat(returnStatus: false, returnStdout: true, script: )
+    def existing_pr_string = bat(returnStatus: false, returnStdout: true, script: command)
 
     println existing_pr_string
     def existing_pr = existing_pr_string.split(/\n/)
