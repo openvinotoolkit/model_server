@@ -185,7 +185,7 @@ protected:
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
         std::string fileToReload = this->directoryPath + "/config.json";
-        createConfigFileWithContent(this->prepareConfigContent(), fileToReload);
+        ASSERT_TRUE(createConfigFileWithContent(this->prepareConfigContent(), fileToReload));
         ASSERT_EQ(server.getManager().loadConfig(fileToReload), StatusCode::OK);
     }
 };
@@ -731,18 +731,19 @@ TEST_F(MetricFlowTest, ModelReady) {
 #if (MEDIAPIPE_DISABLE == 0)
 TEST_F(MetricFlowTest, RestV3Unary) {
     HttpRestApiHandler handler(server, 0);
-    MockedServerRequestInterface stream;
+    std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
 
-    EXPECT_CALL(stream, IsDisconnected())
+    EXPECT_CALL(*stream, IsDisconnected())
         .WillRepeatedly(::testing::Return(false));
 
     for (int i = 0; i < numberOfAcceptedRequests; i++) {
         std::string request = R"({"model": "dummy_gpt", "prompt": "Hello World"})";
         std::string response;
         HttpRequestComponents comps;
-        auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
+        auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
+        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
-        status = handler.processV3("/v3/v1/completions", comps, response, request, &stream);
+        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     }
 
@@ -755,18 +756,20 @@ TEST_F(MetricFlowTest, RestV3Unary) {
 #if (MEDIAPIPE_DISABLE == 0)
 TEST_F(MetricFlowTest, RestV3Stream) {
     HttpRestApiHandler handler(server, 0);
-    MockedServerRequestInterface stream;
+    std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
+    ON_CALL(*stream, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));  // make the streaming flow sequential
 
-    EXPECT_CALL(stream, IsDisconnected())
+    EXPECT_CALL(*stream, IsDisconnected())
         .WillRepeatedly(::testing::Return(false));
 
     for (int i = 0; i < numberOfAcceptedRequests; i++) {
         std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "Hello World"})";
         std::string response;
         HttpRequestComponents comps;
-        auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
+        auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
+        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
-        status = handler.processV3("/v3/v1/completions", comps, response, request, &stream);
+        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
     }
 
