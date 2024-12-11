@@ -22,6 +22,13 @@ It is recommended to use the top of main repository branch for more feature enab
 
 # Install prerequisites
 
+## Power shell settings
+Set Execution Policy to RemoteSigned
+Open PowerShell as an administrator: Right-click on the Start button and select “Windows PowerShell (Admin)”.
+Run the command: 
+```Set-ExecutionPolicy RemoteSigned```
+Confirm the change by typing “A” and pressing Enter.
+
 ## VISUAL BUILD TOOLS
 Install build tools for VS:
 
@@ -107,6 +114,14 @@ set BAZEL_VC_FULL_VERSION=14.29.30133
 # Run bazel build command
 ```
 bazel --output_user_root=C:/b_tmp build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --subcommands --verbose_failures //src:ovms 2>&1 | tee compilation.log
+```
+
+# Set python paths
+```
+set "copyPyovms=cp %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.so %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd"
+%copyPyovms%
+set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+set "PYTHONPATH=%setPythonPath%"
 ```
 
 ## DEPLOY
@@ -230,3 +245,9 @@ or
 Press "OVMS RELEASE(model_server)" at the bottom left task bar in visual code.
 
 Breakpoints are available after building the Debug solution and choosing OVMS Debug task.
+
+## Running unit tests
+```
+bazel --output_user_root=C:/b_tmp build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --subcommands --verbose_failures //src:ovms_test 2>&1 | tee compilation.log
+bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log
+```
