@@ -58,8 +58,8 @@ def _impl(repository_ctx):
         """
     else:
         out_lib_dir = '"runtime/lib/intel64"'
-        lib_name = '"libopenvino_genai.so"'
-        out_libs = 'out_shared_libs = ["libopenvino_genai.so"]'
+        lib_name = '"libopenvino_genai.so.2500"'
+        out_libs = 'out_shared_libs = ["libopenvino_genai.so.2500"]'
         cache_entries = """
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
