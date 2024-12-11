@@ -49,8 +49,8 @@ Enable Developer mode in windows system settings
 make sure you install numpy for the python version you pass as build argument
 make sure default "python --version" gets you 3.9 by setting:
 ```
-python --version
 set PATH=C:\opt\Python39\;C:\opt\Python39\Scripts\;%PATH%
+python --version
 pip install numpy==1.23
 ```
 
