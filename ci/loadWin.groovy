@@ -22,7 +22,7 @@ def cleanup_directories() {
     for (int i = 0; i < existing_pr.size(); i++) {
         def found = false
         for (int j = 0; j < existing_wr.size(); j++) {
-            if (existing_pr[i] == existing_wr[j]) {
+            if (existing_pr[i].toLowerCase() == existing_wr[j].toLowerCase()) {
                 found = true
                 break
             }
