@@ -1,19 +1,24 @@
 // Check if we can delete c:\PR-XXXX only if jenkins workspace does not exists for the PR, thus commit was merged or removed.
 def cleanup_directories() {
-    def existing_wr_string = bat(returnStatus: false, returnStdout: true, script: 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n -E "s/(ovms_oncommit_|ovms_ovms-windows_)//p')
-    if (existing_wr_string == 1) {
-        echo "No workspaces detected."
-        existing_wr_string = ""
+    def command = 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n -E "s/(ovms_oncommit_|ovms_ovms-windows_)//p'
+    def status = bat(returnStatus: true, script: command)
+    if ( status != 0) {
+        error "Error: trying to list jenkins workspaces."
     }
+    def existing_wr_string = bat(returnStatus: false, returnStdout: true, script: command)
 
     println existing_wr_string
     def existing_wr = existing_wr_string.split(/\n/)
 
-    def existing_pr_string = bat(returnStatus: false, returnStdout: true, script: 'ls c:\\ | grep -oE "(pr-[0-9]*)$"')
-    if (existing_pr_string == 1) {
+    command = 'ls c:\\ | grep -oE "(pr-[0-9]*)$"'
+    status = bat(returnStatus: true, script: command)
+    if ( status != 0) {
         echo "No PR-XXXX detected for cleanup."
         return
     }
+
+    def existing_pr_string = bat(returnStatus: false, returnStdout: true, script: )
+
     println existing_pr_string
     def existing_pr = existing_pr_string.split(/\n/)
     
@@ -38,7 +43,7 @@ def cleanup_directories() {
                 error "Error: trying to delete a directory that is not expected: " + pathToDelete
             } else {
                 println "Deleting: " + pathToDelete
-                def status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
+                status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
                 if (status != 0) {
                     error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check piepeline.log for details."
                 } else {
