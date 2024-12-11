@@ -34,14 +34,14 @@ void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTP
     if (!this->stream->send(message))
         this->isDisconnected = true;
 }
-void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> cb) {
+void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> callback) {
     auto resp = drogon::HttpResponse::newAsyncStreamResponse(
-        [this, cb = std::move(cb)](drogon::ResponseStreamPtr stream) {
+        [this, callback = std::move(callback)](drogon::ResponseStreamPtr stream) {
             this->stream = std::move(stream);
-            this->pool.Schedule([cb = std::move(cb)] {
+            this->pool.Schedule([callback = std::move(callback)] {
                 SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule begin");
                 try {
-                    cb();  // run actual workload (mediapipe executor inferStream) which uses PartialReply
+                    callback();  // run actual workload (mediapipe executor inferStream) which uses PartialReply
                 } catch (...) {
                     SPDLOG_ERROR("Exception caught in REST request streaming handler");
                 }

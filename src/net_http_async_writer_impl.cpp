@@ -30,8 +30,8 @@ void NetHttpAsyncWriterImpl::OverwriteResponseHeader(const std::string& key, con
 void NetHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTPStatusCode status) {
     this->req->PartialReplyWithStatus(message, tensorflow::serving::net_http::HTTPStatusCode(int(status)));
 }
-void NetHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> cb) {
-    cb();  // net_http can simply run the callback sequentially
+void NetHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> callback) {
+    callback();  // net_http can simply run the callback sequentially
 }
 void NetHttpAsyncWriterImpl::PartialReplyEnd() {
     this->req->PartialReplyEnd();

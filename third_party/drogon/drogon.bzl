@@ -56,7 +56,12 @@ cc_library(
 
 def _impl(repository_ctx):
     http_proxy = repository_ctx.os.environ.get("http_proxy", "")
+    if http_proxy == "":
+        http_proxy = repository_ctx.os.environ.get("HTTP_PROXY", "")
+
     https_proxy = repository_ctx.os.environ.get("https_proxy", "")
+    if https_proxy == "":
+        https_proxy = repository_ctx.os.environ.get("HTTPS_PROXY", "")
 
     # Create the Python script dynamically
     repository_ctx.file("remove_japanese_txt.py", """

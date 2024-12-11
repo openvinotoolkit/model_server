@@ -29,13 +29,13 @@ namespace ovms {
 
 class DrogonHttpServer {
     size_t num_workers;
-    std::unique_ptr<mediapipe::ThreadPool> pool_;
-    int port_;
-    std::string address_;
+    std::unique_ptr<mediapipe::ThreadPool> pool;
+    int port;
+    std::string address;
     std::function<void(
         const drogon::HttpRequestPtr&,
         std::function<void(const drogon::HttpResponsePtr&)>&&)>
-        dispatcher_;
+        dispatcher;
 
 public:
     DrogonHttpServer(size_t num_workers, int port, const std::string& address);

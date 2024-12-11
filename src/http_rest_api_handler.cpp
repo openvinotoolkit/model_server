@@ -319,7 +319,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
         }
         auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs_buffer, *input, grpc_request.add_raw_input_contents());
         if (!status.ok()) {
-            SPDLOG_DEBUG("error handling binary input");
+            SPDLOG_DEBUG("Error handling binary input");
             return status;
         }
     }
@@ -492,7 +492,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         // TODO: Possibly avoid making copy
         request.headers = request_components.headers;
         request.body = request_body;
-        request.parsedJson = doc;
+        request.parsedJson = std::move(doc);
         request.uri = std::string(uri);
         request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
     }
