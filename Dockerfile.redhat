@@ -427,6 +427,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
         $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0 --nodocs; \
     fi ; \
+    $DNF_TOOL install -y shadow-utils; \
     $DNF_TOOL clean all ; \
     cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
