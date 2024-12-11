@@ -28,8 +28,9 @@ def cleanup_directories() {
             }
         }
         if (!found) {
-            println "Delete: " + existing_pr[i]
-        } 
+            println "Deleting: " + existing_pr[i]
+            println "rmdir /s /q c:\\" + existing_pr[i]
+        }
     }
 }
 
