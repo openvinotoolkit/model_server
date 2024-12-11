@@ -97,7 +97,7 @@ TEST(NodeLibraryManagerTest, LibraryLoadingMissingImplementation) {
     GTEST_SKIP() << "Test disabled on windows";
 #endif
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", "c:/git/model_server/bazel-bin/src/lib_node_missing_implementation.so");
+    auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_missing_implementation.so");
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM);
 }
 

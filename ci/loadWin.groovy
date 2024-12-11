@@ -8,7 +8,6 @@ def cleanup_directories() {
 
     println existing_wr_string
     def existing_wr = existing_wr_string.split(/\n/)
-    
 
     def existing_pr_string = bat(returnStatus: false, returnStdout: true, script: 'ls c:\\ | grep -oE "(pr-[0-9]*)$"')
     if (existing_pr_string == 1) {
@@ -33,8 +32,19 @@ def cleanup_directories() {
             }
         }
         if (!found) {
-            println "Deleting: " + existing_pr[i]
-            println "rmdir /s /q c:\\" + existing_pr[i]
+            def pathToDelete = "c:\\" + existing_pr[i]
+            // Sanity check not to delete anything else
+            if (!pathToDelete.contains("c:\\pr-")) {
+                error "Error: trying to delete a directory that is not expected: " + pathToDelete
+            } else {
+                println "Deleting: " + pathToDelete
+                def status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
+                if (status != 0) {
+                    error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check piepeline.log for details."
+                } else {
+                    echo "Deleting directory ${pathToDelete} successful."
+                }
+            }
         }
     }
 }
