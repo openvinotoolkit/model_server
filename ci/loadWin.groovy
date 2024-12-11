@@ -26,6 +26,11 @@ def cleanup_directories() {
                 found = true
                 break
             }
+            // Part of output contains the command that was run
+            if (existing_pr[i].toLowerCase().contains("grep")) {
+                found = true
+                break
+            }
         }
         if (!found) {
             println "Deleting: " + existing_pr[i]
