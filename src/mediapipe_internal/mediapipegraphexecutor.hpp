@@ -130,18 +130,21 @@ public:
         std::set<std::string> outputPollersWithReceivedPacket;
 
         size_t numberOfPacketsCreated = 0;
-        OVMS_RETURN_ON_FAIL(
-            createAndPushPacketsImpl(
-                std::shared_ptr<const RequestType>(request,
-                    // Custom deleter to avoid deallocation by custom holder
-                    // Conversion to shared_ptr is required for unified deserialization method
-                    // for first and subsequent requests
-                    [](const RequestType*) {}),
-                this->inputTypes,
-                this->pythonBackend,
-                graph,
-                this->currentStreamTimestamp,
-                numberOfPacketsCreated));
+        auto ovms_status = createAndPushPacketsImpl(
+            std::shared_ptr<const RequestType>(request,
+                // Custom deleter to avoid deallocation by custom holder
+                // Conversion to shared_ptr is required for unified deserialization method
+                // for first and subsequent requests
+                [](const RequestType*) {}),
+            this->inputTypes,
+            this->pythonBackend,
+            graph,
+            this->currentStreamTimestamp,
+            numberOfPacketsCreated);
+        if (!ovms_status.ok()) {
+            INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
+            return ovms_status;
+        }
 
         // This differs from inferStream - we require user to feed all streams
         if (this->inputNames.size() > numberOfPacketsCreated) {
@@ -159,6 +162,9 @@ public:
         // can be still processing those. Closing packet sources triggers Calculator::Close() on nodes that do not expect
         // new packets
         auto status = graph.WaitUntilIdle();
+        if (!status.ok()) {  // Collect error metric after Open()
+            INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
+        }
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
 
         MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
@@ -186,6 +192,9 @@ public:
             SPDLOG_TRACE("Received all: {} packets for: {}", receivedOutputs, outputStreamName);
         }
         status = graph.WaitUntilDone();
+        if (!status.ok()) {  // Collect error metric after Process()
+            INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
+        }
         MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
         if (outputPollers.size() != outputPollersWithReceivedPacket.size()) {
             SPDLOG_DEBUG("Mediapipe failed to execute. Failed to receive all output packets");
@@ -302,6 +311,7 @@ public:
                 INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, isSuccess));
 
                 if (graph.HasError()) {
+                    INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
                     SPDLOG_DEBUG("Graph {}: encountered an error, stopping the execution", this->name);
                     break;
                 }
@@ -318,6 +328,9 @@ public:
                 OVMS_PROFILE_SCOPE("MediaPipe waiting until done");
                 SPDLOG_DEBUG("Graph {}: Closed all packet sources. Waiting until done...", this->name);
                 auto status = graph.WaitUntilDone();
+                if (!status.ok()) {
+                    INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
+                }
                 MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
                 SPDLOG_DEBUG("Graph {}: Done execution", this->name);
             }
