@@ -157,7 +157,7 @@ It will report results like `Similarity score as cos_sim 0.97654650115054`.
 
 ## Benchmarking feature extraction
 
-An asynchronous benchmarking client can be use to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Xeon(R) CPU Max 9480.
+An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on dual Intel(R) Xeon(R) CPU Max 9480.
 ```bash
 popd
 pushd .
