@@ -181,23 +181,28 @@ IF /I EXIST %python39_path% (
 )
 python --version
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Msys bash
 set "bash_path=C:\opt\msys64\usr\bin\bash.exe"
+set "msys_path=C:\opt\msys64\"
 set "msys_url=https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe"
 set "msys_install=%BAZEL_SHORT_PATH%\msys2-x86_64-20240727.exe"
 IF /I EXIST %bash_path% (
-    echo [INFO] ::::::::::::::::::::::: Msys bash already installed in: %bash_path%
+    if %expunge% EQU 1 (goto :install_msys) else (
+        echo [INFO] ::::::::::::::::::::::: Msys bash already installed in: %bash_path%
+    )
 ) ELSE (
+    :install_msys
+    rm -rf %msys_path%
     IF /I NOT EXIST %msys_install% (
         wget -P %BAZEL_SHORT_PATH%\ %msys_url%
     )
     
     start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %BAZEL_SHORT_PATH%/msys64
-    timeout 30
+    timeout 120
     :: Install msys hang workaround
-    taskkill /f /t /fi "windowtitle eq Installing_msys"
-    echo [INFO] ::::::::::::::::::::::: Msys installed in: %bash_path%
+    taskkill /f /t /im msys2-x86_64-20240727.exe
+    echo [INFO] ::::::::::::::::::::::: Msys installed in: %msys_path%
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
