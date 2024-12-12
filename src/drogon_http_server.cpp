@@ -123,7 +123,7 @@ void DrogonHttpServer::registerRequestDispatcher(
         const drogon::HttpRequestPtr&,
         std::function<void(const drogon::HttpResponsePtr&)>&&)>
         dispatcher) {
-    dispatcher = std::move(dispatcher);
+    this->dispatcher = std::move(dispatcher);
 }
 
 mediapipe::ThreadPool& DrogonHttpServer::getPool() {
