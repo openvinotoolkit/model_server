@@ -98,7 +98,7 @@ public:
             if (configJson)
                 configApi.SetUpConfig(configJson);
             else
-                configApi.SetUpSingleModel("/ovms/src/test/dummy", "dummy");
+                configApi.SetUpSingleModel(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), "dummy");
 
             auto& config = ovms::Config::instance();
             auto retCode = ovmsServer.startModules(config);

@@ -35,15 +35,13 @@
 #include "../python/python_backend.hpp"
 #endif
 
-namespace tensorflow::serving::net_http {
-class ServerRequestInterface;
-}
+#include "../http_async_writer_interface.hpp"
 
 namespace ovms {
 
 class PythonBackend;
 
-using HttpReaderWriter = tensorflow::serving::net_http::ServerRequestInterface;
+using HttpReaderWriter = HttpAsyncWriter;
 
 // Deserialization of parameters inside KServe gRPC request
 // into mediapipe Packets.
