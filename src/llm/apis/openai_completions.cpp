@@ -21,6 +21,8 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
+#include "absl/strings/str_cat.h"
+
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
 

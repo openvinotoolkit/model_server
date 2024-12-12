@@ -277,6 +277,8 @@ python_repository(name = "_python3-linux")
 load("@//third_party/python:python_repo_win.bzl", "python_repository")
 python_repository(name = "_python3-windows")
 
+#load("@//:ovms_python.bzl", "ovms_workspace_python")
+#ovms_workspace_python()
 new_local_repository(
     name = "python3_linux",
     path = "/usr",
@@ -304,18 +306,16 @@ http_archive(
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 python_configure(name = "local_config_python")
 
-http_archive(
-    name = "rules_python",
-    sha256 = "29a801171f7ca190c543406f9894abf2d483c206e14d6acbd695623662320097",
-    strip_prefix = "rules_python-0.18.1",
-    url = "https://github.com/bazelbuild/rules_python/releases/download/0.18.1/rules_python-0.18.1.tar.gz",
-)
+#http_archive(
+#    name = "rules_python",
+#    sha256 = "29a801171f7ca190c543406f9894abf2d483c206e14d6acbd695623662320097",
+#    strip_prefix = "rules_python-0.18.1",
+#    url = "https://github.com/bazelbuild/rules_python/releases/download/0.18.1/rules_python-0.18.1.tar.gz",
+#)
 
 load("@rules_python//python:repositories.bzl", "py_repositories")
 py_repositories()
 # TODO @atobisze to comment out aboce?
-
-
 
 load("@rules_python//python:pip.bzl", "pip_parse")
 
