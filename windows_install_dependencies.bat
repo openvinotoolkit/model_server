@@ -153,14 +153,14 @@ IF /I EXIST %bazel_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python39
-set "python39_path=%opt_install_dir%\Python39"
-set "python39_system=C:\Program Files\Python39"
+set "python39_path=%opt_install_dir%\Python39\"
+set "python39_system=C:\Program Files\Python39\"
 IF /I EXIST %python39_path% (
     IF %expunge% EQU 1 (
         rm -rf %python39_path%
         IF /I EXIST "%python39_system%" (
             :: Copy system Python
-            xcopy /s /e %python39_path% "%python39_system%"
+            xcopy /s /e /q /y "%python39_system%" %python39_path% 
             pip install numpy==1.23
         ) ELSE (
             echo [ERROR] ::::::::::::::::::::::: Python39 not found
@@ -172,7 +172,7 @@ IF /I EXIST %python39_path% (
 ) ELSE (
     IF /I EXIST "%python39_system%" (
         :: Copy system Python
-        xcopy /s /e %python39_path% "%python39_system%"
+        xcopy /s /e /q /y "%python39_system%" %python39_path%
         pip install numpy==1.23
     ) ELSE (
         echo [ERROR] ::::::::::::::::::::::: Python39 not found
@@ -233,8 +233,7 @@ git clone --depth 1 --branch %opencv_ver% %opencv_contrib% %opencv_contrib_dir%
 cd %opencv_dir%
 mkdir build
 cd build
-:: -D CMAKE_INSTALL_PREFIX=C:\opt\opencv - Add if installation needed
-:: CI - -G "Visual Studio 16 2019", local -G "Visual Studio 17 2022" as default
+:: Expected compilers in CI - -G "Visual Studio 16 2019", local -G "Visual Studio 17 2022" as default
 cmake -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags%
 cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
 cmake --install .
