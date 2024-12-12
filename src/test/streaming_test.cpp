@@ -20,8 +20,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "mediapipe/framework/port/integral_types.h"
-
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
@@ -30,6 +28,7 @@
 #include "../server.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
+#include "mediapipe/framework/port/integral_types.h"
 #include "test_utils.hpp"
 
 #if (PYTHON_DISABLE == 0)

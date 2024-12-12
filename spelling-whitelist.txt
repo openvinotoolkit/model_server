@@ -20,4 +20,5 @@ third_party/aws-sdk-cpp/aws-sdk-cpp.bz
 third_party/llm_engine/llm_engine.bzl
 WORKSPACE:39: thirdparty
 WORKSPACE:47: thirdparty
+WORKSPACE:64: thirdparty
 demos/classification_using_paddlepaddle_model/python/utils/imagenet_class_index.json
