@@ -51,9 +51,9 @@ def _impl(repository_ctx):
 
     if _is_windows(repository_ctx):
         OpenVINO_DIR = OpenVINO_DIR.replace("/", "\\\\").replace("\\", "\\\\")
-        out_lib_dir = '"runtime/lib/Release"'
-        lib_name = '"openvino_genai.lib"'
-        out_libs = 'out_static_libs = ["openvino_genai.lib"]'
+        out_lib_dir = "runtime/lib/Release"
+        lib_name = "openvino_genai.lib"
+        out_libs = f"out_static_libs = [\"{lib_name}\"]]"
         cache_entries = """
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
@@ -63,9 +63,9 @@ def _impl(repository_ctx):
         "X86_64": "True"
         """
     else:
-        out_lib_dir = '"runtime/lib/intel64"'
-        lib_name = '"libopenvino_genai.so.2500"'
-        out_libs = 'out_shared_libs = ["libopenvino_genai.so.2500"]'
+        out_lib_dir = "runtime/lib/intel64"
+        lib_name = "libopenvino_genai.so.2500"
+        out_libs = f"out_shared_libs = [\"{lib_name}\"]'"
         cache_entries = """
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
@@ -118,11 +118,11 @@ cmake(
             ),
         }}),
     env = {{
-        "OpenVINO_DIR": "{OpenVINO_DIR}",
-        "HTTP_PROXY": "{http_proxy}",
-        "HTTPS_PROXY": "{https_proxy}",
-        "http_proxy": "{http_proxy}",
-        "https_proxy": "{https_proxy}",
+        "OpenVINO_DIR": {OpenVINO_DIR},
+        "HTTP_PROXY": {http_proxy},
+        "HTTPS_PROXY": {https_proxy},
+        "http_proxy": {http_proxy},
+        "https_proxy": {https_proxy},
     }},
     lib_source = ":all_srcs",
     out_lib_dir = {out_lib_dir},
@@ -142,8 +142,8 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 """
-    repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy,
-                                                            out_lib_dir=out_lib_dir, lib_name=lib_name, out_libs=out_libs, cache_entries=cache_entries))
+    repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=str(OpenVINO_DIR), http_proxy=str(http_proxy), https_proxy=str(https_proxy),
+                                                            out_lib_dir=str(out_lib_dir), lib_name=str(lib_name), out_libs=out_libs, cache_entries=cache_entries))
 
 llm_engine_repository = repository_rule(
     implementation = _impl,
