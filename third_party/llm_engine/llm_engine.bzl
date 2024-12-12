@@ -52,8 +52,8 @@ def _impl(repository_ctx):
     if _is_windows(repository_ctx):
         OpenVINO_DIR = OpenVINO_DIR.replace("/", "\\\\").replace("\\", "\\\\")
         out_lib_dir = "runtime/lib/Release"
-        lib_name = "openvino_genai.lib"
-        out_libs = "out_static_libs = [\"{lib_name}\"]".format(lib_name=lib_name)
+        lib_name = "openvino_genai"
+        out_libs =  "out_static_libs = [\"{lib_name}.lib\"]".format(lib_name=lib_name)
         cache_entries = """
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
@@ -64,8 +64,8 @@ def _impl(repository_ctx):
         """
     else:
         out_lib_dir = "runtime/lib/intel64"
-        lib_name = "libopenvino_genai.so.2500"
-        out_libs = "out_shared_libs = [\"{lib_name}\"]".format(lib_name=lib_name)
+        lib_name = "libopenvino_genai"
+        out_libs = "out_shared_libs = [\"{lib_name}.so.2500\"]".format(lib_name=lib_name)
         cache_entries = """
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
@@ -127,7 +127,6 @@ cmake(
     lib_source = ":all_srcs",
     out_lib_dir = "{out_lib_dir}",
     out_include_dir = "runtime/include",
-    # linking order
     {out_libs},
     tags = ["requires-network"],
     visibility = ["//visibility:public"],

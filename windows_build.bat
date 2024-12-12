@@ -94,6 +94,11 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 %changeConfigsCmd%
 if %errorlevel% neq 0 exit /b %errorlevel%
 
+:: Copy OpenVINO GenAI and tokenizers libs
+copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
+
+ls %cd%\bazel-bin\src
+
 :: Start unit test
 %runTest%
 
