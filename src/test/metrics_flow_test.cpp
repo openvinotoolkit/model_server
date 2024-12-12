@@ -787,9 +787,10 @@ TEST_F(MetricFlowTest, RestV3Unary) {
 #if (MEDIAPIPE_DISABLE == 0)
 TEST_F(MetricFlowTest, RestV3UnaryError) {
     HttpRestApiHandler handler(server, 0);
-    MockedServerRequestInterface stream;
+    std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
+    auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
 
-    EXPECT_CALL(stream, IsDisconnected())
+    EXPECT_CALL(*stream, IsDisconnected())
         .WillRepeatedly(::testing::Return(false));
 
     size_t numberOfRequests = 3;
@@ -798,9 +799,9 @@ TEST_F(MetricFlowTest, RestV3UnaryError) {
         std::string request = R"({"model": "dummy_gpt", "prompt":"ReturnError"})";
         std::string response;
         HttpRequestComponents comps;
-        auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
+        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
-        status = handler.processV3("/v3/v1/completions", comps, response, request, &stream);
+        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
     }
 
@@ -839,20 +840,22 @@ TEST_F(MetricFlowTest, RestV3Stream) {
 #if (MEDIAPIPE_DISABLE == 0)
 TEST_F(MetricFlowTest, RestV3StreamError) {
     HttpRestApiHandler handler(server, 0);
-    MockedServerRequestInterface stream;
+    std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
+    auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
 
-    EXPECT_CALL(stream, IsDisconnected())
+    ON_CALL(*stream, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
+    EXPECT_CALL(*stream, IsDisconnected())
         .WillRepeatedly(::testing::Return(false));
 
     size_t numberOfRequests = 3;
 
     for (size_t i = 0; i < numberOfRequests; i++) {
-        std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "ReturnError World"})";
+        std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "ReturnError"})";
         std::string response;
         HttpRequestComponents comps;
-        auto status = handler.processV3("/v3/completions", comps, response, request, &stream);
+        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
-        status = handler.processV3("/v3/v1/completions", comps, response, request, &stream);
+        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
     }
 
