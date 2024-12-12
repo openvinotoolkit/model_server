@@ -1,5 +1,5 @@
-//****************************************************************************
-// Copyright 2022 Intel Corporation
+//*****************************************************************************
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,10 +15,11 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
-#include <utility>
+#include <functional>
+#include <string>
 
-#if (USE_DROGON == 0)
+#include "http_async_writer_interface.hpp"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -27,28 +28,31 @@
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 #include "tensorflow_serving/util/threadpool_executor.h"
 #pragma GCC diagnostic pop
-#else
-#include "drogon_http_server.hpp"
-#endif
-#include "http_server.hpp"
-#include "module.hpp"
+
+#include "http_status_code.hpp"
 
 namespace ovms {
-class Config;
-class Server;
-class HTTPServerModule : public Module {
-#if (USE_DROGON == 0)
-    std::unique_ptr<tensorflow::serving::net_http::HTTPServerInterface> netHttpServer;
-#else
-    std::unique_ptr<DrogonHttpServer> drogonServer;
-#endif
-    Server& ovmsServer;
+
+class NetHttpAsyncWriterImpl : public HttpAsyncWriter {
+    tensorflow::serving::net_http::ServerRequestInterface* req;
 
 public:
-    HTTPServerModule(Server& ovmsServer);
-    ~HTTPServerModule();
-    Status start(const ovms::Config& config) override;
+    NetHttpAsyncWriterImpl(
+        tensorflow::serving::net_http::ServerRequestInterface* req) :
+        req(req) {}
 
-    void shutdown() override;
+    // Used by V3 handler
+    void OverwriteResponseHeader(const std::string& key, const std::string& value) override;
+    void PartialReplyWithStatus(std::string message, HTTPStatusCode status) override;
+    void PartialReplyBegin(std::function<void()> callback) override;
+    void PartialReplyEnd() override;
+
+    // Used by graph executor impl
+    void PartialReply(std::string message) override;
+
+    // Used by calculator via HttpClientConnection
+    bool IsDisconnected() const override;
+    void RegisterDisconnectionCallback(std::function<void()> callback) override;
 };
+
 }  // namespace ovms

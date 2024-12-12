@@ -13,25 +13,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
-#include <rapidjson/document.h>
+#if (USE_DROGON == 1)
+#include <drogon/drogon.h>
+#endif
 
-#include "client_connection.hpp"
+#include <chrono>
+#include <thread>
 
-namespace ovms {
+#if (USE_DROGON == 1)
 
-struct HttpPayload {
-    std::string uri;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::string body;                                 // always
-    std::shared_ptr<rapidjson::Document> parsedJson;  // pre-parsed body             = null
-    std::shared_ptr<ClientConnection> client;
-};
+// Disabled due to drogon issue https://github.com/drogonframework/drogon/issues/2210
+TEST(Drogon, DISABLED_basic) {
+    for (int i = 0; i < 2; i++) {
+        std::thread k([] {
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            drogon::app().quit();
+        });
+        drogon::app()
+            .setThreadNum(3)
+            .setIdleConnectionTimeout(0)
+            .addListener("0.0.0.0", 11933)
+            .run();
+        k.join();
+    }
+}
 
-}  // namespace ovms
+#endif
