@@ -73,22 +73,29 @@ set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%
+if %errorlevel% neq 0 exit /b %errorlevel%
 %opencvBatch%
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 :: Log all environment variables
 set > %envPath%
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 :: Start bazel build
 %buildCommand%
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 :: Copy pyovms.so -> pyovms.pyd
 %copyPyovms%
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 :: Start bazel build test
 %buildTestCommand%
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 :: Change tests configs to windows paths
 %changeConfigsCmd%
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 :: Start unit test
 %runTest%
