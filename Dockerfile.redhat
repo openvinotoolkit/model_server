@@ -157,8 +157,8 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
         cuda-cudart-devel-11-8 && \
     # ignore errors on hosts with older nvidia drivers
     dnf install -y cuda-11-8 || true && \
-    num_cuda=$(rpm -qa | grep -E 'cuda-nvcc|libcublas|libcudnn8|libcutensor|cuda-cudart-devel' | wc -l); echo -e "\n$num_cuda CUDA packages downloaded" && \
-    if [ $num_cuda -lt 8 ]; then echo -e "CUDA environment is incomplete\n" ; exit 1 ; fi && \
+    num_cuda=$(rpm -qa | grep -c -E 'cuda-nvcc|libcublas|libcudnn8|libcutensor|cuda-cudart-devel'); echo -e "\n$num_cuda CUDA packages downloaded" && \
+    if [ "$num_cuda" -lt 8 ]; then echo -e "CUDA environment is incomplete\n" ; exit 1 ; fi && \
     dnf install -y python38-Cython && \
     curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xz --strip-components=1 -C /usr/local/bin && \
     curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
