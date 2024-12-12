@@ -42,6 +42,7 @@ cc_library(
         "exceptionduringopencalculator.cpp",
         "exceptionduringclosecalculator.cpp",
         "exceptionduringgetcontractcalculator.cpp",
+        "negative_calculator.cc",
         "ovms_calculator.cc",
         "ovms_image_input_calculator.cc",
         "ovms_kfs_calculator.cc",
