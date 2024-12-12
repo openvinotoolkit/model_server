@@ -1,3 +1,32 @@
+diff --git a/lib/src/HttpAppFrameworkImpl.cc b/lib/src/HttpAppFrameworkImpl.cc
+index 623d906a..bd61837d 100644
+--- a/lib/src/HttpAppFrameworkImpl.cc
++++ b/lib/src/HttpAppFrameworkImpl.cc
+@@ -525,15 +525,15 @@ void HttpAppFrameworkImpl::run()
+     }
+     LOG_TRACE << "Start to run...";
+     // Create dirs for cache files
+-    for (int i = 0; i < 256; ++i)
+-    {
+-        char dirName[4];
+-        snprintf(dirName, sizeof(dirName), "%02x", i);
+-        std::transform(dirName, dirName + 2, dirName, [](unsigned char c) {
+-            return toupper(c);
+-        });
+-        utils::createPath(getUploadPath() + "/tmp/" + dirName);
+-    }
++    // for (int i = 0; i < 256; ++i)
++    // {
++    //     char dirName[4];
++    //     snprintf(dirName, sizeof(dirName), "%02x", i);
++    //     std::transform(dirName, dirName + 2, dirName, [](unsigned char c) {
++    //         return toupper(c);
++    //     });
++    //     utils::createPath(getUploadPath() + "/tmp/" + dirName);
++    // }
+     if (runAsDaemon_)
+     {
+         // go daemon!
 diff --git a/orm_lib/inc/drogon/orm/SqlBinder.h b/orm_lib/inc/drogon/orm/SqlBinder.h
 index 3335e6ff..7874f18b 100644
 --- a/orm_lib/inc/drogon/orm/SqlBinder.h
