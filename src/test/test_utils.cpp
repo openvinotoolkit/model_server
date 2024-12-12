@@ -129,6 +129,11 @@ void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
 
 bool createConfigFileWithContent(const std::string& content, std::string filename) {
     std::ofstream configFile{filename};
+    // Check if the file was successfully opened
+    if (!configFile.is_open()) {
+        SPDLOG_ERROR("Failed to open file: {}", filename);
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
     SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filename, content);
     configFile << content << std::endl;
     configFile.close();
