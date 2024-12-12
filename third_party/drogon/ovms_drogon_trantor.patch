@@ -57,3 +57,37 @@ index 3335e6ff..7874f18b 100644
  
  namespace drogon
  {
+Submodule trantor contains modified content
+diff --git a/trantor/trantor/net/inner/Socket.cc b/trantor/trantor/net/inner/Socket.cc
+index 2aff5a0..145f9eb 100755
+--- a/trantor/trantor/net/inner/Socket.cc
++++ b/trantor/trantor/net/inner/Socket.cc
+@@ -23,6 +23,8 @@
+ #include <netinet/tcp.h>
+ #endif
+ 
++#include <stdexcept>
++
+ using namespace trantor;
+ 
+ bool Socket::isSelfConnect(int sockfd)
+@@ -65,7 +67,8 @@ void Socket::bindAddress(const InetAddress &localaddr)
+     else
+     {
+         LOG_SYSERR << ", Bind address failed at " << localaddr.toIpPort();
+-        exit(1);
++        throw std::runtime_error("bind address failed");
++        // exit(1);
+     }
+ }
+ void Socket::listen()
+@@ -75,7 +78,8 @@ void Socket::listen()
+     if (ret < 0)
+     {
+         LOG_SYSERR << "listen failed";
+-        exit(1);
++        throw std::runtime_error("listen failed");
++        // exit(1);
+     }
+ }
+ int Socket::accept(InetAddress *peeraddr)

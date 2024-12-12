@@ -74,18 +74,23 @@ Status DrogonHttpServer::startAcceptingRequests() {
                 return;
             }
             SPDLOG_DEBUG("Starting to listen on port {}", port);
-            drogon::app()
-                .setThreadNum(THREAD_COUNT_FOR_DROGON_LISTENER)  // threads only for accepting requests, the workload is on separate thread pool
-                .setIdleConnectionTimeout(0)
-                .setClientMaxBodySize(1024 * 1024 * 1024)  // 1GB
-                .setClientMaxMemoryBodySize(std::numeric_limits<size_t>::max())
-                // .setMaxConnectionNum(100000)  // default is 100000
-                // .setMaxConnectionNumPerIP(0)  // default is 0=unlimited
-                // .setServerHeaderField("OpenVINO Model Server")
-                .enableServerHeader(false)
-                .enableDateHeader(false)
-                .addListener(address, port)
-                .run();
+            try {
+                drogon::app()
+                    .setThreadNum(THREAD_COUNT_FOR_DROGON_LISTENER)  // threads only for accepting requests, the workload is on separate thread pool
+                    .setIdleConnectionTimeout(0)
+                    .setClientMaxBodySize(1024 * 1024 * 1024)  // 1GB
+                    .setClientMaxMemoryBodySize(std::numeric_limits<size_t>::max())
+                    // .setMaxConnectionNum(100000)  // default is 100000
+                    // .setMaxConnectionNumPerIP(0)  // default is 0=unlimited
+                    // .setServerHeaderField("OpenVINO Model Server")
+                    .enableServerHeader(false)
+                    .enableDateHeader(false)
+                    .addListener(address, port)
+                    .run();
+            } catch (...) {
+                SPDLOG_ERROR("Exception occurred during drogon::run()");
+            }
+            SPDLOG_DEBUG("drogon::run() exits normally");
         });
 
     // wait until drogon becomes ready
