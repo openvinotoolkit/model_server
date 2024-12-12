@@ -1,0 +1,315 @@
+diff --git a/third_party/xla/third_party/tsl/tsl/platform/default/BUILD b/third_party/xla/third_party/tsl/tsl/platform/default/BUILD
+index 785a44cfff0..d98afb28d11 100644
+--- a/third_party/xla/third_party/tsl/tsl/platform/default/BUILD
++++ b/third_party/xla/third_party/tsl/tsl/platform/default/BUILD
+@@ -262,6 +262,18 @@ cc_library(
+     ],
+ )
+ 
++cc_library(
++    name = "glog",
++    #hdrs = ["@com_github_glog_glog//:glog/logging.h",]
++    visibility = ["//visibility:public"],
++    deps = ["@com_github_glog_glog//:glog",],
++)
++
++cc_library(
++    name = "log_macros",
++    hdrs = ["log_macros.h"],
++)
++
+ cc_library(
+     name = "logging",
+     srcs = ["logging.cc"],
+@@ -281,6 +293,8 @@ cc_library(
+         "@com_google_absl//absl/base",
+         "@com_google_absl//absl/base:log_severity",
+         "@com_google_absl//absl/strings",
++        ":glog",
++        ":log_macros",
+     ],
+ )
+ 
+diff --git a/third_party/xla/third_party/tsl/tsl/platform/default/log_macros.h b/third_party/xla/third_party/tsl/tsl/platform/default/log_macros.h
+new file mode 100644
+index 00000000000..221d42c9e77
+--- /dev/null
++++ b/third_party/xla/third_party/tsl/tsl/platform/default/log_macros.h
+@@ -0,0 +1,102 @@
++#pragma once
++#define LOG(severity) _TF_LOG_##severity
++
++// An instance of `LOG_EVERY_N` increments a hidden zero-initialized counter
++// every time execution passes through it and logs the specified message when
++// the counter's value is a multiple of `n`, doing nothing otherwise.  Each
++// instance has its own counter.  The counter's value can be logged by streaming
++// the symbol `COUNTER`.  `LOG_EVERY_N` is thread-safe.
++// Example:
++//
++//   for (const auto& user : all_users) {
++//     LOG_EVERY_N(INFO, 1000) << "Processing user #" << COUNTER;
++//     ProcessUser(user);
++//   }
++
++// CHECK dies with a fatal error if condition is not true.  It is *not*
++// controlled by NDEBUG, so the check will be executed regardless of
++// compilation mode.  Therefore, it is safe to do things like:
++//    CHECK(fp->Write(x) == 4)
++#define CHECK(condition)              \
++  if (TF_PREDICT_FALSE(!(condition))) \
++  LOG(FATAL) << "Check failed: " #condition " "
++// `LOG_FIRST_N` behaves like `LOG_EVERY_N` except that the specified message is
++// logged when the counter's value is less than `n`.  `LOG_FIRST_N` is
++// thread-safe.
++
++#define VLOG(level)                                              \
++  TF_PREDICT_TRUE(!VLOG_IS_ON(level))                            \
++  ? (void)0                                                      \
++  : ::tsl::internal::Voidifier() &                        \
++          ::tsl::internal::LogMessage(__FILE__, __LINE__, \
++                                             absl::LogSeverity::kInfo)
++
++// `DVLOG` behaves like `VLOG` in debug mode (i.e. `#ifndef NDEBUG`).
++// Otherwise, it compiles away and does nothing.
++#ifndef NDEBUG
++#ifndef DVLOG
++#define DVLOG VLOG
++#endif
++#else
++#ifndef DVLOG
++#define DVLOG(verbose_level) \
++  while (false && (verbose_level) > 0) ::tsl::internal::LogMessageNull()
++#endif
++#endif
++
++
++// In optimized mode, use CheckOpString to hint to compiler that
++// the while condition is unlikely.
++#ifndef CHECK_OP_LOG
++#define CHECK_OP_LOG(name, op, val1, val2)                     \
++  while (::tsl::internal::CheckOpString _result{        \
++      ::tsl::internal::name##Impl(                      \
++          ::tsl::internal::GetReferenceableValue(val1), \
++          ::tsl::internal::GetReferenceableValue(val2), \
++          #val1 " " #op " " #val2)})                           \
++  ::tsl::internal::LogMessageFatal(__FILE__, __LINE__) << *(_result.str_)
++#endif
++#ifndef CHECK_OP
++#define CHECK_OP(name, op, val1, val2) CHECK_OP_LOG(name, op, val1, val2)
++#endif
++
++// CHECK_EQ/NE/...
++#define CHECK_EQ(val1, val2) CHECK_OP(_EQ, ==, val1, val2)
++#define CHECK_NE(val1, val2) CHECK_OP(_NE, !=, val1, val2)
++#define CHECK_LE(val1, val2) CHECK_OP(_LE, <=, val1, val2)
++#define CHECK_LT(val1, val2) CHECK_OP(_LT, < , val1, val2)
++#define CHECK_GE(val1, val2) CHECK_OP(_GE, >=, val1, val2)
++#define CHECK_GT(val1, val2) CHECK_OP(_GT, > , val1, val2)
++
++
++#ifndef NDEBUG
++// DCHECK_EQ/NE/...
++#define DCHECK(condition) CHECK(condition)
++#define DCHECK_EQ(val1, val2) CHECK_EQ(val1, val2)
++#define DCHECK_NE(val1, val2) CHECK_NE(val1, val2)
++#define DCHECK_LE(val1, val2) CHECK_LE(val1, val2)
++#define DCHECK_LT(val1, val2) CHECK_LT(val1, val2)
++#define DCHECK_GE(val1, val2) CHECK_GE(val1, val2)
++#define DCHECK_GT(val1, val2) CHECK_GT(val1, val2)
++
++#else
++
++#define DCHECK(condition) \
++  while (false && (condition)) LOG(FATAL)
++
++// NDEBUG is defined, so DCHECK_EQ(x, y) and so on do nothing.
++// However, we still want the compiler to parse x and y, because
++// we don't want to lose potentially useful errors and warnings.
++// _DCHECK_NOP is a helper, and should not be used outside of this file.
++#define _TF_DCHECK_NOP(x, y) \
++  while (false && ((void)(x), (void)(y), 0)) LOG(FATAL)
++
++#define DCHECK_EQ(x, y) _TF_DCHECK_NOP(x, y)
++#define DCHECK_NE(x, y) _TF_DCHECK_NOP(x, y)
++#define DCHECK_LE(x, y) _TF_DCHECK_NOP(x, y)
++#define DCHECK_LT(x, y) _TF_DCHECK_NOP(x, y)
++#define DCHECK_GE(x, y) _TF_DCHECK_NOP(x, y)
++#define DCHECK_GT(x, y) _TF_DCHECK_NOP(x, y)
++
++#endif
++
+diff --git a/third_party/xla/third_party/tsl/tsl/platform/default/logging.h b/third_party/xla/third_party/tsl/tsl/platform/default/logging.h
+index bc94f79c060..bc6a2eb858c 100644
+--- a/third_party/xla/third_party/tsl/tsl/platform/default/logging.h
++++ b/third_party/xla/third_party/tsl/tsl/platform/default/logging.h
+@@ -44,6 +44,7 @@ limitations under the License.
+ // which already defined them itself.  Presumably all Google libraries will
+ // support the same syntax for these so it should not be a big deal if they
+ // end up using our definitions instead.
++#define COMPACT_GOOGLE_LOG_QFATAL COMPACT_GOOGLE_LOG_ERROR
+ #undef LOG
+ #undef LOG_EVERY_N
+ #undef LOG_FIRST_N
+@@ -77,6 +78,17 @@ limitations under the License.
+ 
+ #undef PCHECK
+ 
++
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wsign-compare"
++#include "glog/logging.h"
++#pragma GCC diagnostic pop
++
++#ifndef LOG
++#include "log_macros.h"
++#endif
++
++
+ namespace tsl {
+ 
+ namespace internal {
+@@ -157,43 +169,6 @@ class LogMessageNull : public std::basic_ostringstream<char> {
+ #define _TF_LOG_DFATAL _TF_LOG_FATAL
+ #endif
+ 
+-#define LOG(severity) _TF_LOG_##severity
+-
+-#ifdef IS_MOBILE_PLATFORM
+-
+-// Turn VLOG off when under mobile devices for considerations of binary size.
+-#define VLOG_IS_ON(lvl) ((lvl) <= 0)
+-
+-#else
+-
+-// Otherwise, set TF_CPP_MAX_VLOG_LEVEL environment to update minimum log level
+-// of VLOG, or TF_CPP_VMODULE to set the minimum log level for individual
+-// translation units.
+-#define VLOG_IS_ON(lvl)                                              \
+-  (([](int level, const char* fname) {                               \
+-    static const bool vmodule_activated =                            \
+-        ::tsl::internal::LogMessage::VmoduleActivated(fname, level); \
+-    return vmodule_activated;                                        \
+-  })(lvl, __FILE__))
+-
+-#endif
+-
+-#define VLOG(level)                                       \
+-  TF_PREDICT_TRUE(!VLOG_IS_ON(level))                     \
+-  ? (void)0                                               \
+-  : ::tsl::internal::Voidifier() &                        \
+-          ::tsl::internal::LogMessage(__FILE__, __LINE__, \
+-                                      absl::LogSeverity::kInfo)
+-
+-// `DVLOG` behaves like `VLOG` in debug mode (i.e. `#ifndef NDEBUG`).
+-// Otherwise, it compiles away and does nothing.
+-#ifndef NDEBUG
+-#define DVLOG VLOG
+-#else
+-#define DVLOG(verbose_level) \
+-  while (false && (verbose_level) > 0) ::tsl::internal::LogMessageNull()
+-#endif
+-
+ class LogEveryNState {
+  public:
+   bool ShouldLog(int n);
+@@ -260,26 +235,6 @@ class LogEveryNSecState {
+            logging_internal_stateful_condition_do_log;              \
+            logging_internal_stateful_condition_do_log = false)
+ 
+-// An instance of `LOG_EVERY_N` increments a hidden zero-initialized counter
+-// every time execution passes through it and logs the specified message when
+-// the counter's value is a multiple of `n`, doing nothing otherwise.  Each
+-// instance has its own counter.  The counter's value can be logged by streaming
+-// the symbol `COUNTER`.  `LOG_EVERY_N` is thread-safe.
+-// Example:
+-//
+-//   for (const auto& user : all_users) {
+-//     LOG_EVERY_N(INFO, 1000) << "Processing user #" << COUNTER;
+-//     ProcessUser(user);
+-//   }
+-#define LOG_EVERY_N(severity, n)                       \
+-  LOGGING_INTERNAL_STATEFUL_CONDITION(EveryN, true, n) \
+-  LOG(severity)
+-// `LOG_FIRST_N` behaves like `LOG_EVERY_N` except that the specified message is
+-// logged when the counter's value is less than `n`.  `LOG_FIRST_N` is
+-// thread-safe.
+-#define LOG_FIRST_N(severity, n)                       \
+-  LOGGING_INTERNAL_STATEFUL_CONDITION(FirstN, true, n) \
+-  LOG(severity)
+ // `LOG_EVERY_POW_2` behaves like `LOG_EVERY_N` except that the specified
+ // message is logged when the counter's value is a power of 2.
+ // `LOG_EVERY_POW_2` is thread-safe.
+@@ -297,14 +252,6 @@ class LogEveryNSecState {
+   LOGGING_INTERNAL_STATEFUL_CONDITION(EveryNSec, true, n_seconds) \
+   LOG(severity)
+ 
+-// CHECK dies with a fatal error if condition is not true.  It is *not*
+-// controlled by NDEBUG, so the check will be executed regardless of
+-// compilation mode.  Therefore, it is safe to do things like:
+-//    CHECK(fp->Write(x) == 4)
+-#define CHECK(condition)              \
+-  if (TF_PREDICT_FALSE(!(condition))) \
+-  LOG(FATAL) << "Check failed: " #condition " "
+-
+ // Function is overloaded for integral types to allow static const
+ // integrals declared in classes and not defined to be used as arguments to
+ // CHECK* macros. It's not encouraged though.
+@@ -481,58 +428,6 @@ inline string* Check_GTImpl(const T1& v1, const T2& v2, const char* exprtext) {
+ 
+ #undef TF_DEFINE_CHECK_OP_IMPL
+ 
+-// In optimized mode, use CheckOpString to hint to compiler that
+-// the while condition is unlikely.
+-#define CHECK_OP_LOG(name, op, val1, val2)                                     \
+-  while (::tsl::internal::CheckOpString _result{::tsl::internal::name##Impl(   \
+-      ::tsl::internal::GetReferenceableValue(val1),                            \
+-      ::tsl::internal::GetReferenceableValue(val2), #val1 " " #op " " #val2)}) \
+-  ::tsl::internal::LogMessageFatal(__FILE__, __LINE__) << *(_result.str_)
+-
+-#define CHECK_OP(name, op, val1, val2) CHECK_OP_LOG(name, op, val1, val2)
+-
+-// CHECK_EQ/NE/...
+-#define CHECK_EQ(val1, val2) CHECK_OP(Check_EQ, ==, val1, val2)
+-#define CHECK_NE(val1, val2) CHECK_OP(Check_NE, !=, val1, val2)
+-#define CHECK_LE(val1, val2) CHECK_OP(Check_LE, <=, val1, val2)
+-#define CHECK_LT(val1, val2) CHECK_OP(Check_LT, <, val1, val2)
+-#define CHECK_GE(val1, val2) CHECK_OP(Check_GE, >=, val1, val2)
+-#define CHECK_GT(val1, val2) CHECK_OP(Check_GT, >, val1, val2)
+-#define CHECK_NOTNULL(val)                          \
+-  ::tsl::internal::CheckNotNull(__FILE__, __LINE__, \
+-                                "'" #val "' Must be non NULL", (val))
+-
+-#ifndef NDEBUG
+-// DCHECK_EQ/NE/...
+-#define DCHECK(condition) CHECK(condition)
+-#define DCHECK_EQ(val1, val2) CHECK_EQ(val1, val2)
+-#define DCHECK_NE(val1, val2) CHECK_NE(val1, val2)
+-#define DCHECK_LE(val1, val2) CHECK_LE(val1, val2)
+-#define DCHECK_LT(val1, val2) CHECK_LT(val1, val2)
+-#define DCHECK_GE(val1, val2) CHECK_GE(val1, val2)
+-#define DCHECK_GT(val1, val2) CHECK_GT(val1, val2)
+-
+-#else
+-
+-#define DCHECK(condition) \
+-  while (false && (condition)) LOG(FATAL)
+-
+-// NDEBUG is defined, so DCHECK_EQ(x, y) and so on do nothing.
+-// However, we still want the compiler to parse x and y, because
+-// we don't want to lose potentially useful errors and warnings.
+-// _DCHECK_NOP is a helper, and should not be used outside of this file.
+-#define _TF_DCHECK_NOP(x, y) \
+-  while (false && ((void)(x), (void)(y), 0)) LOG(FATAL)
+-
+-#define DCHECK_EQ(x, y) _TF_DCHECK_NOP(x, y)
+-#define DCHECK_NE(x, y) _TF_DCHECK_NOP(x, y)
+-#define DCHECK_LE(x, y) _TF_DCHECK_NOP(x, y)
+-#define DCHECK_LT(x, y) _TF_DCHECK_NOP(x, y)
+-#define DCHECK_GE(x, y) _TF_DCHECK_NOP(x, y)
+-#define DCHECK_GT(x, y) _TF_DCHECK_NOP(x, y)
+-
+-#endif
+-
+ // These are for when you don't want a CHECK failure to print a verbose
+ // stack trace.  The implementation of CHECK* in this file already doesn't.
+ #define QCHECK(condition) CHECK(condition)
