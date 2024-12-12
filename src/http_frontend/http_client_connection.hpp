@@ -15,23 +15,19 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
 #include <utility>
 
 #include "../client_connection.hpp"
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-#pragma GCC diagnostic pop
+#include "../http_async_writer_interface.hpp"
 
 namespace ovms {
 
 class HttpClientConnection : public ClientConnection {
-    tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter;
+    std::shared_ptr<HttpAsyncWriter> serverReaderWriter;
 
 public:
-    HttpClientConnection(tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) :
+    HttpClientConnection(std::shared_ptr<HttpAsyncWriter> serverReaderWriter) :
         serverReaderWriter(serverReaderWriter) {}
 
     bool isDisconnected() const override {
