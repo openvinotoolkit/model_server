@@ -37,7 +37,7 @@ IF "%2"=="1" (
 
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 :: Python 39 needs to be first in the windows path
-set "setPath=C:\opt\Python39\;C:\opt\Python39\Scripts\;%PATH%;c:\opt"
+set "setPath=C:\opt\Python39\;C:\opt\Python39\Scripts\;%PATH%;C:\opt"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
