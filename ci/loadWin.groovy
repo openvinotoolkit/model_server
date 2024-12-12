@@ -56,6 +56,7 @@ def cleanup_directories() {
 }
 
 def install_dependencies() {
+    println "Install dependencies on node: NODE_NAME = ${env.NODE_NAME}"
     def status = bat(returnStatus: true, script: 'windows_install_dependencies.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
     if (status != 0) {
         error "Error: Windows install dependencies failed: ${status}. Check piepeline.log for details."
