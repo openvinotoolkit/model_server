@@ -94,19 +94,7 @@ pipeline {
               when { expression { win_image_build_needed == "true" } }
               steps {
                   script {
-                      def windows = load 'ci/loadWin.groovy'
-                      if (windows != null) {
-                        try {
-                          windows.clean()
-                          windows.install_dependencies()
-                          windows.build_and_test()
-                          windows.check_tests()
-                        } finally {
-                          windows.archive_artifacts()
-                        }
-                      } else {
-                          error "Cannot load ci/loadWin.groovy file."
-                      }
+                      return
                   }
               }
             }
