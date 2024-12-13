@@ -568,7 +568,7 @@ node {
     }
 }
 )"};
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -629,7 +629,7 @@ node {
     output_stream: "OVTENSOR:out"
 }
 )"};
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -670,7 +670,7 @@ node {
     }
 }
 )"};
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -734,7 +734,7 @@ node {
     output_stream: "OVTENSOR:out"
 }
 )"};
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -792,7 +792,7 @@ node {
     }
 }
 )"};
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -853,7 +853,7 @@ node {
     }
 }
 )"};
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -919,7 +919,7 @@ node {
     }
 }
 )"};
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -988,7 +988,7 @@ node_options: {
 }
 }
 )"};
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -1041,7 +1041,7 @@ node_options: {
 }
 }
 )"};
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -1078,7 +1078,7 @@ node {
     }
 }
 )"};
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -1111,7 +1111,7 @@ node {
     }
 }
 )"};
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
