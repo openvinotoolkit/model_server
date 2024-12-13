@@ -33,7 +33,6 @@ bazel_skylib_workspace()
 load("@bazel_skylib//lib:versions.bzl", "versions")
 versions.check(minimum_bazel_version = "6.0.0")
 
-
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
@@ -47,8 +46,23 @@ load("@rules_python//python:repositories.bzl", "py_repositories")
 
 py_repositories()
 
-
-
+# ABSL on 2023-10-18
+# Needed for MP: @atobisze
+# https://github.com/google-ai-edge/mediapipe/commit/743cdb747332efdfb43338d92aa6349acc40a06a
+# patch for static_assert(ValidateAsciiCasefold() == 0, "error in case conversion");
+# needs to be before MP & TF
+git_repository(
+    name = "com_google_absl",
+    remote = "https://github.com/abseil/abseil-cpp",
+    commit = "9687a8ea750bfcddf790372093245a1d041b21a3", # MP image buildable original MP
+    patches = [
+        "@mediapipe//third_party:com_google_absl_windows_patch.diff",
+        "abseil_gcc_8.5_constant_expression.patch",
+    ],
+    patch_args = [
+        "-p1",
+    ],
+)
 
 http_archive(
     name = "zlib",
@@ -345,23 +359,6 @@ cc_library(
     ],
 )
 """,
-)
-
-# Needed for MP: @atobisze
-# https://github.com/google-ai-edge/mediapipe/commit/743cdb747332efdfb43338d92aa6349acc40a06a
-# Should be before TF/TFS
-# ABSL on 2023-10-18
-http_archive(
-    name = "com_google_absl",
-    urls = ["https://github.com/abseil/abseil-cpp/archive//9687a8ea750bfcddf790372093245a1d041b21a3.tar.gz"],
-    patches = [
-        "@mediapipe//third_party:com_google_absl_windows_patch.diff"
-    ],
-    patch_args = [
-        "-p1",
-    ],
-    strip_prefix = "abseil-cpp-9687a8ea750bfcddf790372093245a1d041b21a3",
-    sha256 = "f841f78243f179326f2a80b719f2887c38fe226d288ecdc46e2aa091e6aa43bc",
 )
 
 
