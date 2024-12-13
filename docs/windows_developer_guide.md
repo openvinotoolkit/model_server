@@ -61,14 +61,6 @@ python --version
 pip install numpy==1.23
 ```
 
-## MSYS
-Download and install in c:\opt\msys64 https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe
-Set the variables to make sure bash is visible and add its directory in PATH - C:\opt\msys64\usr\bin:
-```
-set PATH=%PATH%;C:\opt\msys64\usr\bin;c:\opt
-set BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe
-```
-
 ## NPM YARN
 https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.exe
 Open command line cmd.exe and run:
@@ -120,7 +112,13 @@ windows_install_dependencies.bat
 ## COMPILE
 
 # Export BAZEL env variables:
+Set the variables to make sure bash is visible and add its directory in PATH - C:\opt\msys64\usr\bin:
+```
+set PATH=%PATH%;C:\opt\msys64\usr\bin;c:\opt
+set BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe
+```
 
+# MSVC compiler settings
 ```
 set BAZEL_VS=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools
 set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC
