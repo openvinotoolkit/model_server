@@ -170,7 +170,7 @@ The docker image of OpenVINO Model Server including support for NVIDIA can be bu
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make docker_build NVIDIA=1
+make docker_build NVIDIA=1 OV_USE_BINARY=0
 cd ..
 ```
 Check also [building from sources](https://github.com/openvinotoolkit/model_server/blob/main/docs/build_from_source.md).
@@ -205,7 +205,7 @@ cd ..
 
 Example command to run container with NPU:
 ```bash
-docker run --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g)
+docker run --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest --model_path /opt/model --model_name resnet --port 9000 --target_device NPU
 ```
 Check more info about the [NPU driver for Linux](https://github.com/intel/linux-npu-driver).

@@ -49,7 +49,7 @@ windows_install_dependencies.bat
 Open cmd.exe in c:\opt
 ```
 md test\model\1
-C:\opt\intel\openvino_2024\setupvars.bat
+C:\opt\openvino\setupvars.bat
 C:\opt\opencv\setup_vars_opencv4.cmd
 xcopy /r /Y ovms.exe c:\opt\test
 cd c:\opt\test

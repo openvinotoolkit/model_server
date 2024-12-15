@@ -1145,10 +1145,16 @@ public:
         ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
         randomizePorts(port, restPort);
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, std::stoi(restPort)));  // required for metrics
+#if (USE_DROGON == 0)                                                                                  // when jusing drogon we cannot start rest server multiple times within the same process
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, std::stoi(restPort)));  // required for metrics  - but disabled because drogon http server cannot be restarted
+#endif
         // ideally we would want to have emptyConfigWithMetrics
+#if (USE_DROGON == 0)
         ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfigWithMetrics.json").c_str()));  // the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
-        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(serverSettings, 0));                                                                            // set to 0 to reload only through test and avoid races
+#else
+        ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfig.json").c_str()));  // the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
+#endif
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(serverSettings, 0));  // set to 0 to reload only through test and avoid races
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
         OVMS_ModelsSettingsDelete(modelsSettings);
