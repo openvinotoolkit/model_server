@@ -93,6 +93,8 @@ cc_library(
 )
 """,
 )
+
+# Used for gRPC API protos only
 # Tensorflow serving
 git_repository(
     name = "tensorflow_serving",
@@ -126,7 +128,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "a9e62f2cd0d1657ee28acd6eba72fbe9119077b5", # Opencv from ENV (#101) Dec 9 2024
+    commit = "8d91559c1e900d3c043cc7aafb1b55df25d586ac", # Opencv from ENV (#101) Dec 9 2024
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -358,8 +360,12 @@ rules_pkg_dependencies()
 load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
 
+### OpenVINO GenAI
 load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
+
+load("@//third_party/drogon:drogon.bzl", "drogon_cpp")
+drogon_cpp()
 
 # Azure Storage SDK
 new_local_repository(
@@ -472,6 +478,3 @@ git_repository(
     remote = "https://github.com/nlohmann/json/",
     tag = "v3.11.3",
 )
-
-
-
