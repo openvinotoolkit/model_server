@@ -101,4 +101,6 @@ std::optional<int64_t> stoi64(const std::string& str);
 
 bool isValidUtf8(const std::string& text);
 
+std::string toLower(const std::string& input);
+
 }  // namespace ovms
