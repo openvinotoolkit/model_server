@@ -145,6 +145,12 @@ set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "PYTHONPATH=%setPythonPath%"
 ```
 
+## You can setup environment variables for fresh start of Developer command line
+For buildigng and running ovms.exe after the windows_install_dependencies.bat was successful run the batch script in new "Developer Command Prompt for VS 2022":
+```
+windows_setupvars.bat
+```
+
 ## DEPLOY
 Open cmd.exe in c:\opt
 ```
