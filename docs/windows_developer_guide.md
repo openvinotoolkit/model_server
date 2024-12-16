@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server Developer Guide for Windows (Experimental/Alpha)
+# OpenVINO&trade; Model Server Developer Guide for Windows (Experimental/Alpha) {#ovms_docs_windows_developer_guide}
 This document describes experimental/alpha windows development and compilation guide for ovms.exe binary.
 
 OpenVINO&trade; Model Server is in experimental/alpha stage of windows enabling with limited functionality and quality.
@@ -25,7 +25,7 @@ It is recommended to use the top of main repository branch for more feature enab
 ## Power shell settings
 Set Execution Policy to RemoteSigned
 Open PowerShell as an administrator: Right-click on the Start button and select “Windows PowerShell (Admin)”.
-Run the command: 
+Run the command:
 ```Set-ExecutionPolicy RemoteSigned```
 Confirm the change by typing “A” and pressing Enter.
 
