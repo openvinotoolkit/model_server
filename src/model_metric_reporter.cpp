@@ -324,7 +324,7 @@ ModelMetricReporter::ModelMetricReporter(const MetricConfig* metricConfig, Metri
 }
 
 MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& graphName) :
-    ServableMetricReporter(metricConfig, registry, graphName, 1) {
+    registry(registry) {
     if (!registry) {
         return;
     }
@@ -489,6 +489,68 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
             {"method", "Stream"},
             {"interface", "REST"}});
         THROW_IF_NULL(this->responseRestV3Stream, "cannot create metric");
+    }
+
+    familyName = METRIC_NAME_REQUESTS_FAIL;
+    if (metricConfig->isFamilyEnabled(familyName)) {
+        auto family = registry->createFamily<MetricCounter>(familyName,
+            "Number of failed requests to a mediapipe.");
+        THROW_IF_NULL(family, "cannot create family");
+
+        this->requestFailGrpcModelMetadata = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelMetadata"},
+            {"interface", "gRPC"}});
+        THROW_IF_NULL(this->requestFailGrpcModelMetadata, "cannot create metric");
+
+        this->requestFailGrpcModelReady = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelReady"},
+            {"interface", "gRPC"}});
+        THROW_IF_NULL(this->requestFailGrpcModelReady, "cannot create metric");
+
+        this->requestFailRestModelMetadata = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelMetadata"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->requestFailRestModelMetadata, "cannot create metric");
+
+        this->requestFailRestModelReady = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelReady"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->requestFailRestModelReady, "cannot create metric");
+    }
+
+    familyName = METRIC_NAME_REQUESTS_SUCCESS;
+    if (metricConfig->isFamilyEnabled(familyName)) {
+        auto family = registry->createFamily<MetricCounter>(familyName,
+            "Number of successful requests to a mediapipe.");
+        THROW_IF_NULL(family, "cannot create family");
+
+        this->requestSuccessGrpcModelMetadata = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelMetadata"},
+            {"interface", "gRPC"}});
+        THROW_IF_NULL(this->requestSuccessGrpcModelMetadata, "cannot create metric");
+
+        this->requestSuccessGrpcModelReady = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelReady"},
+            {"interface", "gRPC"}});
+        THROW_IF_NULL(this->requestSuccessGrpcModelReady, "cannot create metric");
+
+        this->requestSuccessRestModelMetadata = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelMetadata"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->requestSuccessRestModelMetadata, "cannot create metric");
+
+        this->requestSuccessRestModelReady = family->addMetric({{"name", graphName},
+            {"api", "KServe"},
+            {"method", "ModelReady"},
+            {"interface", "REST"}});
+        THROW_IF_NULL(this->requestSuccessRestModelReady, "cannot create metric");
     }
 }
 
