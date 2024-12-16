@@ -18,7 +18,6 @@
 #include <openvino/openvino.hpp>
 #include <openvino/pass/low_latency.hpp>
 
-#include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "logging.hpp"
 #include "model_metric_reporter.hpp"
@@ -26,15 +25,14 @@
 #include "predict_request_validation_utils.hpp"
 #include "profiler.hpp"
 #include "sequence_processing_spec.hpp"
-#include "statefulrequestprocessor.hpp"
-#include "serialization.hpp"
+//#include "statefulrequestprocessor.hpp"
 #include "timer.hpp"
 
 namespace ovms {
 
 const std::set<std::string> StatefulModelInstance::SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
 
-const Status StatefulModelInstance::extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId) {
+/*const Status StatefulModelInstance::extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId) {
     if (!proto.tensor_shape().dim_size()) {
         SPDLOG_DEBUG("Sequence id tensor proto does not contain tensor shape information");
         return StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE;
@@ -74,7 +72,7 @@ const Status StatefulModelInstance::extractSequenceControlInput(const tensorflow
         return StatusCode::OK;
     }
     return StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE;
-}
+}*/ // TODO @atobisze
 
 Status StatefulModelInstance::loadModel(const ModelConfig& config) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
@@ -148,37 +146,6 @@ Status StatefulModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     return ModelInstance::loadOVCompiledModel(config);
 }
 
-template <>
-const Status StatefulModelInstance::extractSpecialKeys(const tensorflow::serving::PredictRequest* request, SequenceProcessingSpec& sequenceProcessingSpec) {
-    uint64_t sequenceId = 0;
-    uint32_t sequenceControlInput = 0;
-    Status status;
-    auto it = request->inputs().find("sequence_id");
-    if (it != request->inputs().end()) {
-        status = extractSequenceId(it->second, sequenceId);
-        if (!status.ok())
-            return status;
-    }
-    it = request->inputs().find("sequence_control_input");
-    if (it != request->inputs().end()) {
-        status = extractSequenceControlInput(it->second, sequenceControlInput);
-        if (!status.ok())
-            return status;
-    }
-
-    if (sequenceControlInput != SEQUENCE_END && sequenceControlInput != NO_CONTROL_INPUT && sequenceControlInput != SEQUENCE_START) {
-        return StatusCode::INVALID_SEQUENCE_CONTROL_INPUT;
-    }
-    if ((sequenceControlInput == SEQUENCE_END || sequenceControlInput == NO_CONTROL_INPUT) && sequenceId == 0) {
-        return StatusCode::SEQUENCE_ID_NOT_PROVIDED;
-    }
-
-    sequenceProcessingSpec.setSequenceId(sequenceId);
-    sequenceProcessingSpec.setSequenceControlInput(sequenceControlInput);
-
-    return StatusCode::OK;
-}
-
 const std::set<std::string>& StatefulModelInstance::getOptionalInputNames() {
     return SPECIAL_INPUT_NAMES;
 }
@@ -201,31 +168,5 @@ const Status StatefulModelInstance::preInferenceProcessing(ov::InferRequest& inf
         }
     }
     return StatusCode::OK;
-}
-
-const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-    ov::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec) {
-    // Reset inferRequest states on SEQUENCE_END
-    if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
-        spdlog::debug("Received SEQUENCE_END signal. Resetting model state and removing sequence");
-        for (auto&& state : inferRequest.query_state()) {
-            state.reset();
-        }
-    } else {
-        auto modelState = inferRequest.query_state();
-        sequence.updateMemoryState(modelState);
-    }
-
-    // Include sequence_id in server response
-    auto& tensorProto = (*response->mutable_outputs())["sequence_id"];
-    tensorProto.mutable_tensor_shape()->add_dim()->set_size(1);
-    tensorProto.set_dtype(tensorflow::DataType::DT_UINT64);
-    tensorProto.add_uint64_val(sequenceProcessingSpec.getSequenceId());
-
-    return StatusCode::OK;
-}
-
-std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> StatefulModelInstance::createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {
-    return std::make_unique<StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>>(*this->getSequenceManager());
 }
 }  // namespace ovms

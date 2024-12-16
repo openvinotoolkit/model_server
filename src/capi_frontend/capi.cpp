@@ -39,6 +39,7 @@
 #include "capi_request_utils.hpp" // TODO @atobisze must be before executor
 #include "capi_utils.hpp"
 #include "deserialization.hpp"
+#include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"

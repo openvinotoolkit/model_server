@@ -28,6 +28,7 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "../kfs_frontend/deserialization.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#include "../deserialization_main.hpp"
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
 #include "../predict_request_validation_utils.hpp"

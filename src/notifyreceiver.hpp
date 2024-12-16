@@ -18,7 +18,7 @@
 
 namespace ovms {
 struct NotifyReceiver {
-virtual const std::string& getName() = 0;
-virtual void receiveNotification(const std::string sourceName) = 0;
+virtual const std::string& getName() const = 0;
+virtual void receiveNotification(const std::string& sourceName) = 0;
 };
 }  // namespace ovms

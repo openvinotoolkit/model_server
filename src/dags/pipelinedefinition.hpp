@@ -129,11 +129,14 @@ public:
     std::vector<NodeInfo> calculateNodeInfosDiff(const std::vector<NodeInfo>& nodeInfos);
     void deinitializeNodeResources(const std::vector<NodeInfo>& nodeInfosDiff);
 
-    const std::string& getName() const { return pipelineName; }
+    const std::string& getName() const override { return pipelineName; }
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     const model_version_t getVersion() const { return VERSION; }
 
     void notifyUsedModelChanged(const std::string& ownerDetails) {
+        this->status.handle(UsedModelChangedEvent(ownerDetails));
+    } // TODO @atobisze dispose
+    void receiveNotification(const std::string& ownerDetails) override {
         this->status.handle(UsedModelChangedEvent(ownerDetails));
     }
 

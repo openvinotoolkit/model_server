@@ -1,4 +1,5 @@
 //*****************************************************************************
+
 // Copyright 2021 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,9 +45,9 @@ public:
         return this->sequenceManager;
     }
 
-    static const Status extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId);
+//    static const Status extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId);
 
-    static const Status extractSequenceControlInput(const tensorflow::TensorProto& proto, uint32_t& sequenceControlInput);
+//    static const Status extractSequenceControlInput(const tensorflow::TensorProto& proto, uint32_t& sequenceControlInput);
     /*
     Performs pre inference operations:
         - for SEQUENCE_START control input - reset InferRequest memory state
@@ -56,21 +57,8 @@ public:
     */
     const Status preInferenceProcessing(ov::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
 
-    /*
-    Performs pre inference operations:
-        - for SEQUENCE_START or for no control input - save InferRequest memory state in sequence memory state
-        - for SEQUENCE_END control input - reset InferRequest memory state
-        - for all requests - append sequence id to the response
-
-        Always returns StatusCode::OK
-    */
-    const Status postInferenceProcessing(tensorflow::serving::PredictResponse* response,
-        ov::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec);
-
     Status loadModel(const ModelConfig& config) override;
-
     Status reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter()) override;
-
     void retireModel(bool isPermanent = true) override;
 
     void cleanupFailedLoad() override;

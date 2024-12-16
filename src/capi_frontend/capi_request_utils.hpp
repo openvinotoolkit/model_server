@@ -30,9 +30,10 @@ class InferenceRequest;
 class InferenceResponse;
 class InferenceTensor;
 class Status;
-std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex);
 
+std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex);
 std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request);
+bool useSharedOutputContentFn(const InferenceRequest* request);
 
 template <>
 class RequestTensorExtractor<InferenceRequest, InferenceTensor, ExtractChoice::EXTRACT_OUTPUT> {
@@ -51,6 +52,5 @@ public:
         return request.getInput(name.c_str(), tensor);
     }
 };
-
 
 }  // namespace ovms

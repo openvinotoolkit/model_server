@@ -90,29 +90,6 @@ static Status serializeShape(
     return StatusCode::OK;
 }
 
-static void serializeContent(std::string* content, ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    // We only fill if the content is not already filled.
-    // It can be filled in gather exit node handler.
-    if (content->size() == 0) {
-        content->assign((char*)tensor.data(), tensor.get_byte_size());
-    }
-}
-
-static void serializeStringContent(std::string* content, ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    if (content->size()) {
-        return;
-    }
-
-    std::string* strings = tensor.data<std::string>();
-    for (size_t i = 0; i < tensor.get_shape()[0]; i++) {
-        uint32_t strLen = strings[i].size();
-        content->append(reinterpret_cast<const char*>(&strLen), sizeof(strLen));
-        content->append((char*)strings[i].data(), strLen);
-    }
-}
-
 static void serializeOvTensorStringToTfProtoContent(tensorflow::TensorProto& proto, ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     std::string* strings = tensor.data<std::string>();
@@ -121,22 +98,6 @@ static void serializeOvTensorStringToTfProtoContent(tensorflow::TensorProto& pro
     }
 }
 
-static void serializeStringContentFrom2DU8(std::string* content, ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    // We only fill if the content is not already filled.
-    // It can be filled in gather exit node handler.
-    if (!content->empty()) {
-        return;
-    }
-
-    size_t batchSize = tensor.get_shape()[0];
-    size_t maxStringLen = tensor.get_shape()[1];
-    for (size_t i = 0; i < batchSize; i++) {
-        uint32_t strLen = strnlen((char*)tensor.data() + i * maxStringLen, maxStringLen);
-        content->append(reinterpret_cast<const char*>(&strLen), sizeof(strLen));
-        content->append((char*)tensor.data() + i * maxStringLen, strLen);
-    }
-}
 #define SERIALIZE_BY_DATATYPE(contents, datatype)                                  \
     for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(datatype)) {        \
         auto value = responseOutput.mutable_contents()->contents()->Add();         \

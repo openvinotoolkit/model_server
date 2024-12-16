@@ -39,50 +39,6 @@
 #include "serialization_common.hpp"
 #include "status.hpp"
 #include "timer.hpp"
-/*
-// TODO windows
-#ifdef __linux__
-#include <dirent.h>
-#endif
-#include <malloc.h>
-#include <openvino/runtime/compiled_model.hpp>
-// TODO windows
-#ifdef __linux__
-#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
-#endif
-#include <openvino/runtime/remote_tensor.hpp>
-#include <spdlog/spdlog.h>
-#include <sys/types.h>
-
-//#include "capi_frontend/inferencerequest.hpp"
-//#include "capi_frontend/inferenceresponse.hpp"
-#include "config.hpp"
-#include "customloaderinterface.hpp"
-#include "customloaders.hpp"
-#include "deserialization.hpp"
-#include "executingstreamidguard.hpp"
-#include "filesystem.hpp"
-#include "layout.hpp"
-#include "layout_configuration.hpp"
-#include "logging.hpp"
-#include "model_metric_reporter.hpp"
-#include "modelconfig.hpp"
-#include "modelinstanceunloadguard.hpp"
-#include "ov_utils.hpp"
-#include "prediction_service_utils.hpp"
-#include "regularovtensorfactory.hpp"
-#include "serialization.hpp"
-#include "shape.hpp"
-#include "status.hpp"
-#include "stringutils.hpp"
-#include "tensorinfo.hpp"
-#include "timer.hpp"
-// TODO windows
-#ifdef __linux__
-#include "opencltensorfactory.hpp"
-#include "vaapitensorfactory.hpp"
-#endif
-*/
 
 namespace ovms {
 enum : unsigned int {

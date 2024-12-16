@@ -19,27 +19,14 @@
 #include <string>
 
 #include <openvino/openvino.hpp>
-#include <spdlog/spdlog.h>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-
+#include "logging.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "serialization_common.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
-
-Status serializeTensorToTensorProto(
-    tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<const TensorInfo>& servableOutput,
-    ov::Tensor& tensor);
-
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,

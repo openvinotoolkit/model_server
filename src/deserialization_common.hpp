@@ -104,7 +104,8 @@ public:
 template <typename RequestType>
 static std::tuple<ovms::Status, const typename RequestTraits<RequestType>::TensorType*, const std::string*> getRequestTensorPtr(const RequestType& request, const std::string& name, ExtractChoice extractChoice) {
     static_assert(!std::is_same<typename RequestTraits<RequestType>::TensorType, void>::value,
-        "RequestType is not supported. Please provide a specialization for RequestTraits with getRequestTensorPtr.");
+        "RequestType is not supported. Please provide a specialization for RequestTraits with getRequestTensorPtr."
+        "Make sure that type specialization trait is visible in your code as you may get void type deduction otherwise");
     return std::make_tuple(Status(StatusCode::NOT_IMPLEMENTED, "Failed to deserialize request"),
         nullptr, nullptr);
 }

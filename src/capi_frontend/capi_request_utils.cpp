@@ -41,4 +41,8 @@ std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, co
 std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request) {
     return request->getRequestShapes();
 }
+bool useSharedOutputContentFn(const InferenceRequest* request) {
+    // does not apply for C-API frontend
+    return false;
+}
 }  // namespace ovms

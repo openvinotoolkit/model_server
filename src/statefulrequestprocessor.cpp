@@ -28,4 +28,25 @@
 #include "timer.hpp"
 
 namespace ovms {
+const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving::PredictResponse* response,
+    ov::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec) {
+    // Reset inferRequest states on SEQUENCE_END
+    if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
+        spdlog::debug("Received SEQUENCE_END signal. Resetting model state and removing sequence");
+        for (auto&& state : inferRequest.query_state()) {
+            state.reset();
+        }
+    } else {
+        auto modelState = inferRequest.query_state();
+        sequence.updateMemoryState(modelState);
+    }
+
+    // Include sequence_id in server response
+    auto& tensorProto = (*response->mutable_outputs())["sequence_id"];
+    tensorProto.mutable_tensor_shape()->add_dim()->set_size(1);
+    tensorProto.set_dtype(tensorflow::DataType::DT_UINT64);
+    tensorProto.add_uint64_val(sequenceProcessingSpec.getSequenceId());
+
+    return StatusCode::OK;
+}
 }  // namespace ovms

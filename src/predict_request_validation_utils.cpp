@@ -36,7 +36,7 @@
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "modelconfig.hpp"
-#include "prediction_service_utils.hpp"
+//#include "prediction_service_utils.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
@@ -142,53 +142,5 @@ static int64_t getStringBatchSize(const InferenceTensor& src) {
     return 0;
 }*/
 
-// To be called only for already validated proto against models with two dimensions.
-template <typename RequestType, typename InputTensorType, ValidationChoice choice, typename IteratorType, typename ShapeType>
-Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, ShapeType>::checkStringShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& tensorInfo, Status& finalStatus, Mode batchingMode, Mode shapeMode, int32_t inputBatchSize, size_t inputWidth) const {
-    const auto& shape = tensorInfo.getShape();
-    bool mismatch = false;
-    if (batchingMode == AUTO) {  // Skip batch dimension
-        if (!shape[1].match(static_cast<dimension_value_t>(inputWidth))) {
-            mismatch = true;
-        }
-    } else {  // Do not skip batch dimension
-        if (!shape.match(ov::Shape{static_cast<uint64_t>(inputBatchSize), inputWidth})) {
-            mismatch = true;
-        }
-    }
-    if (!mismatch) {
-        return StatusCode::OK;
-    }
-    if (shapeMode == AUTO) {
-        finalStatus = StatusCode::RESHAPE_REQUIRED;
-        return StatusCode::OK;
-    } else {
-        auto stringInputShape = Shape({static_cast<int64_t>(inputBatchSize), static_cast<int64_t>(inputWidth)});
-        std::stringstream ss;
-        ss << "Expected batch size: " << shape[0].toString()
-           << "; got: " << inputBatchSize
-           << "; Expected max null terminated string length: " << shape[1].toString()
-           << "; got: " << inputWidth
-           << "; input name: " << getCurrentlyValidatedTensorName();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", servableName, servableVersion, details);
-        return Status(StatusCode::INVALID_SHAPE, details);
-    }
-    return StatusCode::OK;
-}
-
-static Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name) {
-    if (shapeInfo.size() == 0) {
-        return Mode::FIXED;
-    }
-    auto it = shapeInfo.find(name);
-    if (it == shapeInfo.end()) {
-        it = shapeInfo.find(ANONYMOUS_INPUT_NAME);
-    }
-    if (it == shapeInfo.end()) {
-        return Mode::FIXED;
-    }
-    return it->second.shapeMode;
-}
 }  // namespace request_validation_utils
 }  // namespace ovms

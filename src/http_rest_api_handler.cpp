@@ -50,7 +50,6 @@
 #include "model_metric_reporter.hpp"
 #include "model_service.hpp"
 #include "modelinstance.hpp"
-#include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "prediction_service_utils.hpp"
@@ -73,6 +72,7 @@
 #include "tfs_frontend/tfs_utils.hpp"
 #include "kfs_frontend/deserialization.hpp"
 #include "tfs_frontend/deserialization.hpp"
+#include "deserialization_main.hpp"
 #include "inference_executor.hpp"
 
 using tensorflow::serving::PredictRequest;

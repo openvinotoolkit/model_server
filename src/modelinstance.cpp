@@ -43,7 +43,7 @@
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
-#include "deserialization.hpp"
+//#include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "filesystem.hpp"
 #include "layout.hpp"
@@ -53,9 +53,10 @@
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "ov_utils.hpp"
-#include "prediction_service_utils.hpp"
+//#include "prediction_service_utils.hpp"
+#include "profiler.hpp"
 #include "regularovtensorfactory.hpp"
-#include "serialization.hpp"
+//#include "serialization.hpp"
 #include "shape.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
@@ -1322,9 +1323,6 @@ const std::set<std::string>& ModelInstance::getOptionalInputNames() {
     return optionalInputNames;
 }
 
-template const Status ModelInstance::validate(const ::KFSRequest* request);
-template const Status ModelInstance::validate(const tensorflow::serving::PredictRequest* request);
-
 Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
     OVMS_PROFILE_FUNCTION();
     try {
@@ -1408,17 +1406,6 @@ bool ModelInstance::doesSupportOutputReset() const {
 
 #pragma GCC diagnostic pop
 
-template Status ModelInstance::infer<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(const tensorflow::serving::PredictRequest* requestProto,
-    tensorflow::serving::PredictResponse* responseProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-
-template Status ModelInstance::inferAsync<InferenceRequest, InferenceResponse>(const InferenceRequest* requestProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-
-template Status ModelInstance::infer(const ::KFSRequest* requestProto,
-    ::KFSResponse* responseProto,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
-
 const size_t ModelInstance::getBatchSizeIndex() const {
     const auto& inputItr = this->inputsInfo.cbegin();
     if (inputItr == this->inputsInfo.cend()) {
@@ -1455,36 +1442,4 @@ uint32_t ModelInstance::getNumOfStreams() const {
     }
     return getOptimalNumberOfInferRequests();
 }
-
-std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> ModelInstance::createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) {
-    return std::make_unique<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>>();
-}
-std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> ModelInstance::createRequestProcessor(const KFSRequest*, KFSResponse*) {
-    return std::make_unique<RequestProcessor<KFSRequest, KFSResponse>>();
-}
-std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> ModelInstance::createRequestProcessor(const InferenceRequest*, InferenceResponse*) {
-    return std::make_unique<RequestProcessor<InferenceRequest, InferenceResponse>>();
-}
-
-template Status ModelInstance::infer<InferenceRequest, InferenceResponse>(InferenceRequest const*, InferenceResponse*, std::unique_ptr<ModelInstanceUnloadGuard>&);
-
-template <typename RequestType, typename ResponseType>
-RequestProcessor<RequestType, ResponseType>::RequestProcessor() = default;
-template <typename RequestType, typename ResponseType>
-RequestProcessor<RequestType, ResponseType>::~RequestProcessor() = default;
-template <typename RequestType, typename ResponseType>
-Status RequestProcessor<RequestType, ResponseType>::extractRequestParameters(const RequestType* request) { return StatusCode::OK; }
-template <typename RequestType, typename ResponseType>
-Status RequestProcessor<RequestType, ResponseType>::prepare() { return StatusCode::OK; }
-template <typename RequestType, typename ResponseType>
-Status RequestProcessor<RequestType, ResponseType>::preInferenceProcessing(ov::InferRequest& inferRequest) { return StatusCode::OK; }
-template <typename RequestType, typename ResponseType>
-Status RequestProcessor<RequestType, ResponseType>::postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) { return StatusCode::OK; }
-template <typename RequestType, typename ResponseType>
-Status RequestProcessor<RequestType, ResponseType>::release() { return StatusCode::OK; }
-
-template class RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>;
-template class RequestProcessor<KFSRequest, KFSResponse>;
-
-
 }  // namespace ovms
