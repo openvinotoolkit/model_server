@@ -134,8 +134,6 @@ bazel --output_user_root=C:/b_tmp build --config=windows --jobs=%NUMBER_OF_PROCE
 
 # Set python paths
 ```
-set "copyPyovms=cp %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.so %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd"
-%copyPyovms%
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "PYTHONPATH=%setPythonPath%"
 ```
