@@ -186,13 +186,16 @@ void LLMNodeResources::initializeContinuousBatchingPipeline(
     const std::string& device,
     const plugin_config_t& pluginConfig,
     const plugin_config_t& tokenizerPluginConfig) {
+    SPDLOG_INFO("Initializing adapter");
+    this->adapters["my_adapter"] = ov::genai::Adapter("/ovms/demos/common/export_models/models/adapter_model.safetensors");
+    SPDLOG_INFO("Adapter loaded");
     this->cbPipe = std::make_unique<ov::genai::ContinuousBatchingPipeline>(basePath, schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
 }
 
 void LLMNodeResources::initiateGeneration() {
     if (!cbPipe) {
         throw std::logic_error("Cannot initiate generation with uninitialized pipeline");
-    }
+    }   
     llmExecutorWrapper = std::make_unique<LLMExecutorWrapper>(cbPipe);
 }
 
