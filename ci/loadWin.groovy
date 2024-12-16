@@ -77,7 +77,7 @@ def build_and_test(){
     } else {
         echo "Build successful."
     }
-    def status_pkg = bat(returnStatus: true, script: 'create_package.bat')
+    def status_pkg = bat(returnStatus: true, script: 'create_package.bat ' + env.JOB_BASE_NAME)
     if (status_pkg != 0) {
         error "Error: Windows package failed ${status_pkg}."
     } else {
