@@ -61,15 +61,6 @@ python --version
 pip install numpy==1.23
 ```
 
-## NPM YARN
-https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.exe
-Open command line cmd.exe and run:
-```
-nvm install 22.9.0
-nvm use 22.9.0
-npm cache clean --force
-```
-
 # Building without proxy
 Please set the proxy setting for windows for in environment variables when building behind proxy
 ```
@@ -77,6 +68,24 @@ set HTTP_PROXY=
 set HTTPS_PROXY=
 ```
 Also remove proxy from your .gitconfig
+
+## Building with proxy
+Please set the proxy setting for windows for in environment variables when building behind proxy
+```
+set HTTP_PROXY=my.proxy.com:123
+set HTTPS_PROXY=my.proxy.com:122
+```
+
+## NPM YARN
+Download and run the nvm installer.
+https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.exe
+After installation run below commands,
+open command line cmd.exe and run:
+```
+nvm install 22.9.0
+nvm use 22.9.0
+npm cache clean --force
+```
 
 If you want to compile without proxy, npm proxy needs to be reset:
 ```
@@ -86,13 +95,6 @@ npm config rm https-proxy
 npm config rm proxy
 npm i --global yarn
 yarn
-```
-
-## Building with proxy
-Please set the proxy setting for windows for in environment variables when building behind proxy
-```
-set HTTP_PROXY=my.proxy.com:123
-set HTTPS_PROXY=my.proxy.com:122
 ```
 
 ## GET CODE
