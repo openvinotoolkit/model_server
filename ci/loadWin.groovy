@@ -77,9 +77,9 @@ def build_and_test(){
     } else {
         echo "Build successful."
     }
-    def status = bat(returnStatus: true, script: 'create_package.bat')
-    if (status != 0) {
-        error "Error: Windows package failed ${status}."
+    def status_pkg = bat(returnStatus: true, script: 'create_package.bat')
+    if (status_pkg != 0) {
+        error "Error: Windows package failed ${status_pkg}."
     } else {
         echo "Windows package created successfully."
     }
