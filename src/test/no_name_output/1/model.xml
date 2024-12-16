@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<net name="no_name_output" version="10">
+	<layers>
+		<layer id="1" name="INPUT1" type="Parameter" version="opset1">
+			<data shape="1,10" element_type="i32" />
+			<output>
+				<port id="0" precision="I32" names="INPUT1">
+					<dim>1</dim>
+					<dim>10</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="0" name="INPUT2" type="Parameter" version="opset1">
+			<data shape="1,10" element_type="i32" />
+			<output>
+				<port id="0" precision="I32" names="INPUT2">
+					<dim>1</dim>
+					<dim>10</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="2" name="ADD" type="Add" version="opset1">
+			<data auto_broadcast="numpy" />
+			<input>
+				<port id="0" precision="I32">
+					<dim>1</dim>
+					<dim>10</dim>
+				</port>
+				<port id="1" precision="I32">
+					<dim>1</dim>
+					<dim>10</dim>
+				</port>
+			</input>
+			<output>
+				<port id="2" precision="I32">
+					<dim>1</dim>
+					<dim>10</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="4" name="MULTIPLY" type="Multiply" version="opset1">
+			<data auto_broadcast="numpy" />
+			<input>
+				<port id="0" precision="I32">
+					<dim>1</dim>
+					<dim>10</dim>
+				</port>
+				<port id="1" precision="I32">
+					<dim>1</dim>
+					<dim>10</dim>
+				</port>
+			</input>
+			<output>
+				<port id="2" precision="I32">
+					<dim>1</dim>
+					<dim>10</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="5" name="Result_5" type="Result" version="opset1">
+			<input>
+				<port id="0" precision="I32">
+					<dim>1</dim>
+					<dim>10</dim>
+				</port>
+			</input>
+		</layer>
+		<layer id="3" name="Result_6" type="Result" version="opset1">
+			<input>
+				<port id="0" precision="I32">
+					<dim>1</dim>
+					<dim>10</dim>
+				</port>
+			</input>
+		</layer>
+	</layers>
+	<edges>
+		<edge from-layer="0" from-port="0" to-layer="2" to-port="0" />
+		<edge from-layer="0" from-port="0" to-layer="4" to-port="0" />
+		<edge from-layer="1" from-port="0" to-layer="2" to-port="1" />
+		<edge from-layer="1" from-port="0" to-layer="4" to-port="1" />
+		<edge from-layer="2" from-port="2" to-layer="3" to-port="0" />
+		<edge from-layer="4" from-port="2" to-layer="5" to-port="0" />
+	</edges>
+	<rt_info />
+</net>
