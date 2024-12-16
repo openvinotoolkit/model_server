@@ -82,6 +82,7 @@ https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.ex
 After installation run below commands,
 open command line cmd.exe and run:
 ```
+nvm proxy=my.proxy.com:123
 nvm install 22.9.0
 nvm use 22.9.0
 npm cache clean --force
