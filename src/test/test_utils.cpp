@@ -807,9 +807,18 @@ const std::string getWindowsRepoRootPath() {
 void adjustConfigForTargetPlatform(std::string& input) {
 #ifdef _WIN32
     std::string repoTestPath = getWindowsRepoRootPath() + "/src/test";
-    const std::string searchString = "\"/ovms/src/test";
-    const std::string replaceString = "\"" + repoTestPath;
+    std::string searchString = "\"/ovms/src/test";
+    std::string replaceString = "\"" + repoTestPath;
     size_t pos = 0;
+    while ((pos = input.find(searchString, pos)) != std::string::npos) {
+        input.replace(pos, searchString.length(), replaceString);
+        pos += replaceString.length();
+    }
+
+    repoTestPath = getWindowsRepoRootPath() + "/tmp";
+    searchString = "\"/tmp";
+    replaceString = "\"" + repoTestPath;
+    pos = 0;
     while ((pos = input.find(searchString, pos)) != std::string::npos) {
         input.replace(pos, searchString.length(), replaceString);
         pos += replaceString.length();
