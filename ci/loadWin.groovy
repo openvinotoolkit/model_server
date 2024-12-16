@@ -77,6 +77,12 @@ def build_and_test(){
     } else {
         echo "Build successful."
     }
+    def status = bat(returnStatus: true, script: 'create_package.bat')
+    if (status != 0) {
+        error "Error: Windows package failed ${status}."
+    } else {
+        echo "Windows package created successfully."
+    }
 }
 
 def check_tests(){
@@ -107,7 +113,7 @@ def check_tests(){
 // Post build steps
 def archive_artifacts(){
     // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
-    archiveArtifacts allowEmptyArchive: true, artifacts: "bazel-bin\\src\\ovms.exe"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\ovms.zip"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_environment.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build_test.log"
