@@ -49,8 +49,12 @@ Run the command:
 ```Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force```
 Confirm the change by typing “A” and pressing Enter.
 
+## Enable Developer mode in windows system settings
+Follow instructions in the linke below:
+https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
+
 ## Run Developer Command Prompt for VS 2022
-Enable Developer mode in windows system settings
+Press Start and paste "Developer Command Prompt for VS 2022" to run cmd.exe for VS C++ developers
 
 ## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
 make sure you install numpy for the python version you pass as build argument
@@ -80,9 +84,8 @@ set HTTPS_PROXY=my.proxy.com:122
 Download and run the nvm installer.
 https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.exe
 After installation run below commands,
-open command line cmd.exe and run:
+Run in command line:
 ```
-nvm proxy=my.proxy.com:123
 nvm install 22.9.0
 nvm use 22.9.0
 npm cache clean --force
@@ -107,7 +110,7 @@ cd model_server
 ```
 
 ## Install dependencies
-Open cmd.exe and run windows_install_dependencies.bat
+Run windows_install_dependencies.bat
 ```
 windows_install_dependencies.bat
 ```
