@@ -47,7 +47,7 @@ Parameter used to control which GPU driver version will be installed. Supported 
 | Ubuntu20 | 22.43.24595 (default), <br />22.35.24055, <br />22.10.22597, <br />21.48.21782 |
 | RedHat | 22.43.24595 (default), <br />22.28.23726, <br />22.10.22597, <br />21.38.21026 |
 
-Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.  
+Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.
 Warning: _Maintained only for Ubuntu base OS._
 
 Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2`. Expected structure is like below:
@@ -92,14 +92,14 @@ Example:
 make release_image NVIDIA=1 OV_USE_BINARY=0
 ```
 
- > **Note**: In order to build the image with redhat UBI8.8 as the base os, it is required to use a host with RedHat subscription and entitlements in `/etc/pki/entitlement` and `/etc/rhsm`. 
+ > **Note**: In order to build the image with redhat UBI8.8 as the base os, it is required to use a host with RedHat subscription and entitlements in `/etc/pki/entitlement` and `/etc/rhsm`.
 That is required to install several building dependencies.
 
 <hr />
 
 ### `OV_USE_BINARY`
 
-By default set to `0`. With that setting, OpenVINO backend will be built from sources and `DLDT_PACKAGE_URL` will be omitted.  
+By default set to `0`. With that setting, OpenVINO backend will be built from sources and `DLDT_PACKAGE_URL` will be omitted.
 Use `OV_SOURCE_BRANCH` and `OV_SOURCE_ORG` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch and fork. By default the latest tested commit from `master` branch will be used and org `openvinotoolkit`.
 When `OV_USE_BINARY=1`, the OpenVINO backend will be installed from the binary archive set in `DLDT_PACKAGE_URL`.
 
@@ -141,7 +141,7 @@ make release_image MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
 
 ### `GPU`
 
-When set to `1`, OpenVINO&trade Model Server will be built with the drivers required by [GPU plugin](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) support. Default value: `0`.
+When set to `1`, OpenVINO&trade Model Server will be built with the drivers required by [GPU plugin](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) support. Default value: `0`.
 
 Example:
 ```bash

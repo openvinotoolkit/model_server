@@ -54,7 +54,7 @@ Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/ma
 
 ## PyTensorOvTensorConverterCalculator
 
-`PyTensorOvTensorConverterCalculator` enables conversion between nodes that are run by `PythonExecutorCalculator` and nodes that receive and/or produce [OV Tensors](https://docs.openvino.ai/2024/api/c_cpp_api/classov_1_1_tensor.html)
+`PyTensorOvTensorConverterCalculator` enables conversion between nodes that are run by `PythonExecutorCalculator` and nodes that receive and/or produce [OV Tensors](https://docs.openvino.ai/2025/api/c_cpp_api/classov_1_1_tensor.html)
 
 ## How to create the graph for deployment in OpenVINO Model Server
 
@@ -92,7 +92,7 @@ For example when the graph has the input type IMAGE, the gRPC/REST client could 
 
 When the input graph would be set as `OVTENSOR`, any shape and precisions of the input would be allowed. It will be converted to `ov::Tensor` object and passed to the graph. For example input can have shape `(1,3,300,300)` and precision `FP32`. If passed tensor would not be accepted by model, calculator and graph will return error.
 
-Check the code snippets for [gRPC unary](https://docs.openvino.ai/2024/ovms_docs_clients_kfs.html#request-prediction-on-a-numpy-array) calls and [gRPC streaming](https://docs.openvino.ai/2024/ovms_docs_clients_kfs.html#request-streaming-prediction).
+Check the code snippets for [gRPC unary](clients_kfs.md#request-prediction-on-a-numpy-array) calls and [gRPC streaming](clients_kfs.md#request-streaming-prediction).
 
 There is also an option to avoid any data conversions in the serialization and deserialization by the OpenVINO Model Server. When the input stream is of type REQUEST, it will be passed-through to the calculator. The receiving calculator will be in charge of deserializing it and interpreting all the content. Likewise, the output format RESPONSE delegate to the calculator creating a complete KServe response message to the client. That gives extra flexibility in the data format as arbitrary data can be stored in [raw_input_content](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202) and later decoded in custom calculator.
 
@@ -215,7 +215,7 @@ It can generate the load to gRPC stream and the mediapipe graph based on the con
 
 MediaPipe graphs can use the same gRPC/REST KServe Inference API both for the unary calls and the streaming.
 The same client libraries with KServe API support can be used in both cases. The client code for the unary and streaming is different.
-Check the [code snippets](https://docs.openvino.ai/2024/ovms_docs_clients_kfs.html)
+Check the [code snippets](clients_kfs.md)
 
 Review also the information about the [gRPC streaming feature](./streaming_endpoints.md)
 
