@@ -63,4 +63,3 @@ exit /b 0
 :exit_build_error
 echo [ERROR] Setup finished with error
 exit /b 1
-endlocal
