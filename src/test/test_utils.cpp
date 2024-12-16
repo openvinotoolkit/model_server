@@ -129,6 +129,11 @@ void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
 
 bool createConfigFileWithContent(const std::string& content, std::string filename) {
     std::ofstream configFile{filename};
+    // Check if the file was successfully opened
+    if (!configFile.is_open()) {
+        SPDLOG_ERROR("Failed to open file: {}", filename);
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
     SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filename, content);
     configFile << content << std::endl;
     configFile.close();
@@ -799,11 +804,11 @@ const std::string getWindowsRepoRootPath() {
 #endif
 // Apply necessary changes so the graph config will comply with the platform
 // that tests are run on
-void adjustGraphConfigForTargetPlatform(std::string& input) {
+void adjustConfigForTargetPlatform(std::string& input) {
 #ifdef _WIN32
     std::string repoTestPath = getWindowsRepoRootPath() + "/src/test";
-    const std::string searchString = "handler_path: \"/ovms/src/test";
-    const std::string replaceString = "handler_path: \"" + repoTestPath;
+    const std::string searchString = "\"/ovms/src/test";
+    const std::string replaceString = "\"" + repoTestPath;
     size_t pos = 0;
     while ((pos = input.find(searchString, pos)) != std::string::npos) {
         input.replace(pos, searchString.length(), replaceString);

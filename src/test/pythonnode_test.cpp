@@ -182,7 +182,7 @@ TEST_F(PythonFlowTest, PythonNodeFileDoesNotExist) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -209,7 +209,7 @@ TEST_F(PythonFlowTest, PythonNodeClassDoesNotExist) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -236,7 +236,7 @@ TEST_F(PythonFlowTest, PythonNodeExecuteNotImplemented) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -275,7 +275,7 @@ TEST_F(PythonFlowTest, PythonNodeNameAlreadyExist) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -302,7 +302,7 @@ TEST_F(PythonFlowTest, PythonNodeInitFailed) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -329,7 +329,7 @@ TEST_F(PythonFlowTest, PythonNodeInitFailedImportOutsideTheClassError) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -356,7 +356,7 @@ TEST_F(PythonFlowTest, PythonNodeInitException) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -378,7 +378,7 @@ TEST_F(PythonFlowTest, PythonNodeOptionsMissing) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -404,7 +404,7 @@ TEST_F(PythonFlowTest, PythonNodeNameMissing) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -431,7 +431,7 @@ TEST_F(PythonFlowTest, PythonNodeNameDoesNotExist) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -459,7 +459,7 @@ TEST_F(PythonFlowTest, PythonNodeInitMembers) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -519,7 +519,7 @@ TEST_F(PythonFlowTest, PythonNodePassInitArguments) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -582,7 +582,7 @@ TEST_F(PythonFlowTest, PythonNodePassArgumentsToConstructor) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -626,7 +626,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopbackDefinedOnlyOnInput) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -654,7 +654,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopbackDefinedOnlyOnOutput) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -701,7 +701,7 @@ TEST_F(PythonFlowTest, DISABLED_PythonNodeLoopback_SyncSet_WrongIndex) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -748,7 +748,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_WrongIndex) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -791,7 +791,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_BackEdgeFalse) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -832,7 +832,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_StreamInfo_Missing) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -868,7 +868,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_SyncSet_Missing) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -926,7 +926,7 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_Correct) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1100,7 +1100,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOut) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1146,7 +1146,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleThreeOut) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1199,7 +1199,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestReturnCustomDatatype) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1243,7 +1243,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestReturnNotListOrIteratorObject) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1283,7 +1283,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestReturnListWithNonTensorObject) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1335,7 +1335,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiNodeNoTags) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1401,7 +1401,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiNodeOnlyTags) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1467,7 +1467,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiNodeTagsAndInde
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1529,7 +1529,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersOnTheOu
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1591,7 +1591,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestConvertersUnsupportedTypeInPythonTens
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1663,7 +1663,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutTwoConvertersInTheMi
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1718,7 +1718,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInTwoOutTwoParallelExecutors) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -1800,7 +1800,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInTwoOutTwoParallelExecutorsWit
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -2024,7 +2024,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestMultiInMultiOut) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -2071,7 +2071,7 @@ static void setupTestPipeline(std::shared_ptr<MediapipeGraphExecutor>& pipeline,
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     mediapipeDummy = std::make_unique<DummyMediapipeGraphDefinition>("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -2156,7 +2156,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestBadExecute) {
             }
         )";
 
-        adjustGraphConfigForTargetPlatform(testPbtxt);
+        adjustConfigForTargetPlatform(testPbtxt);
 
         const std::string handlerPathToReplace{"<FILENAME>"};
         testPbtxt.replace(testPbtxt.find(handlerPathToReplace), handlerPathToReplace.size(), handlerPath);
@@ -2339,7 +2339,7 @@ TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) 
             }
         }
     )";
-    adjustGraphConfigForTargetPlatform(firstTestPbtxt);
+    adjustConfigForTargetPlatform(firstTestPbtxt);
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = firstTestPbtxt;
@@ -2390,7 +2390,7 @@ TEST_F(PythonFlowTest, FinalizePassTest) {
             }
         }
     )"};
-    adjustGraphConfigForTargetPlatform(pbTxt);
+    adjustConfigForTargetPlatform(pbTxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
@@ -2527,7 +2527,7 @@ TEST_F(PythonFlowTest, AbsoluteHandlerPath) {
             }
         }
     )"};
-    adjustGraphConfigForTargetPlatform(pbTxt);
+    adjustConfigForTargetPlatform(pbTxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
@@ -2556,7 +2556,7 @@ TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
             }
         }
     )"};
-    adjustGraphConfigForTargetPlatform(pbTxt);
+    adjustConfigForTargetPlatform(pbTxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
@@ -2582,7 +2582,7 @@ TEST_F(PythonFlowTest, FinalizeDestructorRemoveFileTest) {
             }
         }
     )"};
-    adjustGraphConfigForTargetPlatform(pbTxt);
+    adjustConfigForTargetPlatform(pbTxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
@@ -2615,7 +2615,7 @@ TEST_F(PythonFlowTest, FinalizeException) {
             }
         }
     )"};
-    adjustGraphConfigForTargetPlatform(pbTxt);
+    adjustConfigForTargetPlatform(pbTxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
@@ -2642,7 +2642,7 @@ TEST_F(PythonFlowTest, ReloadWithDifferentScriptName) {
             }
         }
     )";
-    adjustGraphConfigForTargetPlatform(firstTestPbtxt);
+    adjustConfigForTargetPlatform(firstTestPbtxt);
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = firstTestPbtxt;
@@ -2681,7 +2681,7 @@ TEST_F(PythonFlowTest, ReloadWithDifferentScriptName) {
             }
         }
     )";
-    adjustGraphConfigForTargetPlatform(reloadedTestPbtxt);
+    adjustConfigForTargetPlatform(reloadedTestPbtxt);
     mediapipeDummy.inputConfig = reloadedTestPbtxt;
     ASSERT_EQ(mediapipeDummy.reload(manager, mgc), StatusCode::OK);
 
@@ -2729,7 +2729,7 @@ TEST_F(PythonFlowTest, FailingToInitializeOneNodeDestructsAllResources) {
             }
         }
     )";
-    adjustGraphConfigForTargetPlatform(firstTestPbtxt);
+    adjustConfigForTargetPlatform(firstTestPbtxt);
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt, getPythonBackend());
     mediapipeDummy.inputConfig = firstTestPbtxt;
@@ -2769,7 +2769,7 @@ public:
                 }
             }
         )";
-        adjustGraphConfigForTargetPlatform(firstTestPbtxt);
+        adjustConfigForTargetPlatform(firstTestPbtxt);
         const std::string replPhrase = "<REPLACE>";
         std::size_t pos = firstTestPbtxt.find(replPhrase);
         ASSERT_NE(pos, std::string::npos);
@@ -3005,7 +3005,7 @@ TEST_F(PythonFlowTest, Negative_NodeProducesUnexpectedTensor) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -3061,7 +3061,7 @@ TEST_F(PythonFlowTest, Negative_NodeFiresProcessWithoutAllInputs) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -3116,7 +3116,7 @@ TEST_F(PythonFlowTest, Positive_NodeFiresProcessWithoutAllInputs) {
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, getPythonBackend());
@@ -3177,7 +3177,7 @@ void setUpConverterPrecisionTest(std::shared_ptr<MediapipeGraphExecutor>& pipeli
         }
     )";
 
-    adjustGraphConfigForTargetPlatform(testPbtxt);
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     mediapipeDummy = std::make_unique<DummyMediapipeGraphDefinition>("mediaDummy", mgc, testPbtxt, getPythonBackend());

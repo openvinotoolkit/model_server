@@ -93,6 +93,8 @@ cc_library(
 )
 """,
 )
+
+# Used for gRPC API protos only
 # Tensorflow serving
 git_repository(
     name = "tensorflow_serving",
@@ -358,8 +360,12 @@ rules_pkg_dependencies()
 load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
 
+### OpenVINO GenAI
 load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
+
+load("@//third_party/drogon:drogon.bzl", "drogon_cpp")
+drogon_cpp()
 
 # Azure Storage SDK
 new_local_repository(
@@ -472,6 +478,3 @@ git_repository(
     remote = "https://github.com/nlohmann/json/",
     tag = "v3.11.3",
 )
-
-
-

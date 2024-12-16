@@ -29,6 +29,8 @@
 #ifdef __linux__
 #include <dlfcn.h>
 #include <sysexits.h>
+#elif _WIN32
+#include <io.h>
 #endif
 
 #ifdef _WIN32
@@ -105,9 +107,9 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         }
         // TODO: check on windows
 #ifdef __linux__
-        int result = access(this->modelCacheDirectory.c_str(), EX_OK);
+        int result = access(this->modelCacheDirectory.c_str(), W_OK);
 #elif _WIN32
-        int result = access(this->modelCacheDirectory.c_str(), 0);
+        int result = _access(this->modelCacheDirectory.c_str(), 6);
 #endif
         if (result != 0) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);

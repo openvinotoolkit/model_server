@@ -1,0 +1,93 @@
+diff --git a/lib/src/HttpAppFrameworkImpl.cc b/lib/src/HttpAppFrameworkImpl.cc
+index 623d906a..bd61837d 100644
+--- a/lib/src/HttpAppFrameworkImpl.cc
++++ b/lib/src/HttpAppFrameworkImpl.cc
+@@ -525,15 +525,15 @@ void HttpAppFrameworkImpl::run()
+     }
+     LOG_TRACE << "Start to run...";
+     // Create dirs for cache files
+-    for (int i = 0; i < 256; ++i)
+-    {
+-        char dirName[4];
+-        snprintf(dirName, sizeof(dirName), "%02x", i);
+-        std::transform(dirName, dirName + 2, dirName, [](unsigned char c) {
+-            return toupper(c);
+-        });
+-        utils::createPath(getUploadPath() + "/tmp/" + dirName);
+-    }
++    // for (int i = 0; i < 256; ++i)
++    // {
++    //     char dirName[4];
++    //     snprintf(dirName, sizeof(dirName), "%02x", i);
++    //     std::transform(dirName, dirName + 2, dirName, [](unsigned char c) {
++    //         return toupper(c);
++    //     });
++    //     utils::createPath(getUploadPath() + "/tmp/" + dirName);
++    // }
+     if (runAsDaemon_)
+     {
+         // go daemon!
+diff --git a/orm_lib/inc/drogon/orm/SqlBinder.h b/orm_lib/inc/drogon/orm/SqlBinder.h
+index 3335e6ff..7874f18b 100644
+--- a/orm_lib/inc/drogon/orm/SqlBinder.h
++++ b/orm_lib/inc/drogon/orm/SqlBinder.h
+@@ -57,6 +57,8 @@
+ #define __LITTLE_ENDIAN LITTLE_ENDIAN
+ #endif
+ 
++#endif
++
+ #include <algorithm>  // std::reverse()
+ 
+ template <typename T>
+@@ -71,7 +73,6 @@ constexpr T htonT(T value) noexcept
+ #endif
+ }
+ 
+-#if (!defined _WIN32) || (defined _WIN32 && _WIN32_WINNT < _WIN32_WINNT_WIN8)
+ inline uint64_t htonll(uint64_t value)
+ {
+     return htonT<uint64_t>(value);
+@@ -81,8 +82,6 @@ inline uint64_t ntohll(uint64_t value)
+ {
+     return htonll(value);
+ }
+-#endif
+-#endif
+ 
+ namespace drogon
+ {
+Submodule trantor contains modified content
+diff --git a/trantor/trantor/net/inner/Socket.cc b/trantor/trantor/net/inner/Socket.cc
+index 2aff5a0..145f9eb 100755
+--- a/trantor/trantor/net/inner/Socket.cc
++++ b/trantor/trantor/net/inner/Socket.cc
+@@ -23,6 +23,8 @@
+ #include <netinet/tcp.h>
+ #endif
+ 
++#include <stdexcept>
++
+ using namespace trantor;
+ 
+ bool Socket::isSelfConnect(int sockfd)
+@@ -65,7 +67,8 @@ void Socket::bindAddress(const InetAddress &localaddr)
+     else
+     {
+         LOG_SYSERR << ", Bind address failed at " << localaddr.toIpPort();
+-        exit(1);
++        throw std::runtime_error("bind address failed");
++        // exit(1);
+     }
+ }
+ void Socket::listen()
+@@ -75,7 +78,8 @@ void Socket::listen()
+     if (ret < 0)
+     {
+         LOG_SYSERR << "listen failed";
+-        exit(1);
++        throw std::runtime_error("listen failed");
++        // exit(1);
+     }
+ }
+ int Socket::accept(InetAddress *peeraddr)
