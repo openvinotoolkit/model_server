@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<net name="no_name_output" version="10">
+<net name="no_name_output" version="11">
 	<layers>
 		<layer id="1" name="INPUT1" type="Parameter" version="opset1">
 			<data shape="1,10" element_type="i32" />
