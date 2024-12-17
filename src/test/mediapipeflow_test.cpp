@@ -2022,6 +2022,7 @@ node {
     configJson.replace(it, pathToReplace.size(), pbtxtPath);
 
     const std::string configJsonPath = this->directoryPath + "/subconfig.json";
+    adjustConfigForTargetPlatform(configJson);
     createConfigFileWithContent(configJson, configJsonPath);
     this->SetUpServer(configJsonPath.c_str());
     // INFER
@@ -2383,6 +2384,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenChangeInputNameInDefinition) {
     const std::string modelPathToReplace{"XYZ"};
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
 
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     createConfigFileWithContent(graphPbtxtFileContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
@@ -2422,6 +2424,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
 
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     std::string defaultGraphDirectoryPath = directoryPath + "/" + graphName;
     std::filesystem::create_directories(defaultGraphDirectoryPath);
@@ -2572,6 +2575,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
 
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     std::string defaultGraphDirectoryPath = directoryPath + "/" + graphName;
     std::filesystem::create_directories(defaultGraphDirectoryPath);
@@ -2682,6 +2686,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     std::string graphFilePath = directoryPath + "/graph.pbtxt";
     const std::string modelPathToReplace{"XYZ"};
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
@@ -2830,7 +2835,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     // 1st thread starts to load OVMS with C-API but we make it stuck on 2nd graph
     // 2nd thread as soon as sees that 1st MP graph is ready executest inference
     std::string configFilePath = directoryPath + "/config.json";
-    const std::string configContent = R"(
+    std::string configContent = R"(
 {
     "model_config_list": [
         {"config": {
@@ -2852,6 +2857,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
 }
 )";
 
+    adjustConfigForTargetPlatform(configContent);
     createConfigFileWithContent(configContent, configFilePath);
     ovms::Server& server = ovms::Server::instance();
     server.setShutdownRequest(0);
