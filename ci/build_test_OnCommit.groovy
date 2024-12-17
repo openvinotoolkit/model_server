@@ -97,8 +97,8 @@ pipeline {
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
                         try {
-                          windows.clean()
                           windows.install_dependencies()
+                          windows.clean()
                           windows.build_and_test()
                           windows.check_tests()
                         } finally {
