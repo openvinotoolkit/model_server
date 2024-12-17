@@ -33,5 +33,9 @@ copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\wind
 if %errorlevel% neq 0 exit /b %errorlevel%
 copy  %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows
 if %errorlevel% neq 0 exit /b %errorlevel%
+dist\windows\ovms.exe --version
+if %errorlevel% neq 0 exit /b %errorlevel%
+dist\windows\ovms.exe --help
+if %errorlevel% neq 0 exit /b %errorlevel%
 tar -czf dist\ovms.zip dist\windows
 if %errorlevel% neq 0 exit /b %errorlevel%
