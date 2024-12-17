@@ -95,8 +95,7 @@ IF /I EXIST %bash_path% (
         wget -P %opt_install_dir%\ %msys_url%
         if %errorlevel% neq 0 exit /b %errorlevel%
     )
-    
-    echo START INSTALL
+
     start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %msys_path%
     if %errorlevel% neq 0 exit /b %errorlevel%
     timeout 120
@@ -132,7 +131,7 @@ IF /I EXIST %openvino_zip% (
 IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
     echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir%
 ) ELSE (
-    tar --force-local -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
+    tar -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
     if %errorlevel% neq 0 exit /b %errorlevel%
 )
 :: Create OpenVINO link - always to make sure it points to latest version
