@@ -96,8 +96,10 @@ IF /I EXIST %bash_path% (
 
     echo check WGET
     IF /I NOT EXIST %msys_install% (
+        echo test WGET
+        wget
         echo start WGET
-        wget -P %opt_install_dir%\ %msys_url%
+        wget -P --timeout=20 %opt_install_dir%\ %msys_url%
         if %errorlevel% neq 0 exit /b %errorlevel%
     )
     
