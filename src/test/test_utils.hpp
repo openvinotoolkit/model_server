@@ -70,6 +70,7 @@ const std::string passthrough_string_model_location = std::filesystem::current_p
 const std::string dummy_saved_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model";
 const std::string dummy_tflite_location = std::filesystem::current_path().u8string() + "/src/test/dummy_tflite";
 const std::string scalar_model_location = std::filesystem::current_path().u8string() + "/src/test/scalar";
+const std::string no_name_output_model_location = std::filesystem::current_path().u8string() + "/src/test/no_name_output";
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -204,6 +205,21 @@ const ovms::ModelConfig SCALAR_MODEL_CONFIG{
     "",                     // cache directory
     1,                      // model_version unused since version are read from path
     scalar_model_location,  // local path
+};
+
+const ovms::ModelConfig NO_NAME_MODEL_CONFIG{
+    "no_name_output",
+    no_name_output_model_location,  // base path
+    "CPU",                          // target device
+    "1",                            // batchsize
+    1,                              // NIREQ
+    false,                          // is stateful
+    true,                           // idle sequence cleanup enabled
+    false,                          // low latency transformation enabled
+    500,                            // stateful sequence max number
+    "",                             // cache directory
+    1,                              // model_version unused since version are read from path
+    no_name_output_model_location,  // local path
 };
 
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
