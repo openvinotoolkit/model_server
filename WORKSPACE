@@ -242,6 +242,16 @@ new_local_repository(
 
 ########################################################### Python support start
 
+http_archive(
+    name = "aspect_bazel_lib",
+    sha256 = "7b39d9f38b82260a8151b18dd4a6219d2d7fc4a0ac313d4f5a630ae6907d205d",
+    strip_prefix = "bazel-lib-2.10.0",
+    url = "https://github.com/bazel-contrib/bazel-lib/releases/download/v2.10.0/bazel-lib-v2.10.0.tar.gz",
+)
+
+load("@aspect_bazel_lib//lib:repositories.bzl", "register_coreutils_toolchains")
+register_coreutils_toolchains()
+
 load("@//third_party/python:python_repo.bzl", "python_repository")
 python_repository(name = "_python3-linux")
 
@@ -360,6 +370,7 @@ rules_pkg_dependencies()
 load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
 
+### OpenVINO GenAI
 load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
 
@@ -477,6 +488,3 @@ git_repository(
     remote = "https://github.com/nlohmann/json/",
     tag = "v3.11.3",
 )
-
-
-

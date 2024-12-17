@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server Deployment Guide for Windows 11 (Experimental/Alpha)
+# OpenVINO&trade; Model Server Deployment Guide for Windows 11 (Experimental/Alpha) {#ovms_docs_windows_binary_guide}
 This document describes experimental/alpha windows deployment for ovms.exe binary.
 Follow the instructions once you have compiled ovms.exe and you want to deploy the binary on a Windows 11 system.
 [Developer Guide for Windows](windows_developer_guide.md)
@@ -49,7 +49,7 @@ windows_install_dependencies.bat
 Open cmd.exe in c:\opt
 ```
 md test\model\1
-C:\opt\intel\openvino_2024\setupvars.bat
+C:\opt\openvino\setupvars.bat
 C:\opt\opencv\setup_vars_opencv4.cmd
 xcopy /r /Y ovms.exe c:\opt\test
 cd c:\opt\test

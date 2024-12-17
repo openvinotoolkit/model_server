@@ -50,7 +50,11 @@ cc_library(
         build_file = "@_drogon_cpp//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
-        patches = ["@//third_party/drogon:ovms_drogon.patch"],
+        patches = [
+            # Contains submodule (trantor) patches generated using:
+            # git --no-pager diff --no-color --submodule=diff
+            "@//third_party/drogon:ovms_drogon_trantor.patch",
+        ],
         patch_args = ["-p1"],
     )
 

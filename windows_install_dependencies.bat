@@ -34,11 +34,58 @@ IF "%2"=="1" (
     echo No argument provided. Using default expunge = 0
     set "expunge=0"
 )
+
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
-set "setPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Tools\MSVC\14.29.30133\bin\HostX86\x86;c:\opt;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\VC\VCPackages;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TeamFoundation\Team Explorer;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\MSBuild\Current\bin\Roslyn;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Team Tools\Performance Tools;C:\Program Files (x86)\Microsoft Visual Studio\Shared\Common\VSPerfCollectionTools\vs2019\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\devinit;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x86;C:\Program Files (x86)\Windows Kits\10\bin\x86;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\\MSBuild\Current\Bin;C:\Windows\Microsoft.NET\Framework\v4.0.30319;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Utils\;C:\Program Files\Git\cmd;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Ninja;C:\Program Files\CMake\bin;C:\Program Files\7-zip;C:\opt\Python39\Scripts\;C:\opt\Python39\;C:\opencl\install\;C:\opencl\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja"
+set "opt_install_dir=c:\opt"
+
+:: Python 39 needs to be first in the windows path, as well as MSYS tools
+set "setPath=C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;C:\opt;%PATH%;"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Install wget
+set "wget_path=%opt_install_dir%\wget.exe"
+IF /I EXIST %wget_path% (
+    if %expunge% EQU 1 (
+        rmdir /S /Q %wget_path%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+        curl https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+    ) else ( echo [INFO] ::::::::::::::::::::::: wget installed already in %wget_path% )
+) ELSE (
+    curl https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
+    if %errorlevel% neq 0 exit /b %errorlevel%
+)
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Msys bash
+set "bash_path=%opt_install_dir%\msys64\usr\bin\bash.exe"
+set "msys_path=%opt_install_dir%\msys64\"
+set "msys_url=https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe"
+set "msys_install=%BAZEL_SHORT_PATH%\msys2-x86_64-20240727.exe"
+IF /I EXIST %bash_path% (
+    if %expunge% EQU 1 (goto :install_msys) else (
+        echo [INFO] ::::::::::::::::::::::: Msys bash already installed in: %bash_path%
+    )
+) ELSE (
+    :install_msys
+    rmdir /S /Q %msys_path%
+    if %errorlevel% neq 0 exit /b %errorlevel%
+    IF /I NOT EXIST %msys_install% (
+        wget -P %BAZEL_SHORT_PATH%\ %msys_url%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+    )
+    
+    start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %BAZEL_SHORT_PATH%/msys64
+    if %errorlevel% neq 0 exit /b %errorlevel%
+    timeout 120
+    :: Install msys hang workaround
+    taskkill /f /t /im msys2-x86_64-20240727.exe
+    if %errorlevel% neq 0 exit /b %errorlevel%
+    echo [INFO] ::::::::::::::::::::::: Msys installed in: %msys_path%
+)
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean ::::::::::::::::::::::::::::::::::
@@ -58,6 +105,7 @@ IF /I EXIST %BAZEL_SHORT_PATH% (
     echo [INFO] directory exists %BAZEL_SHORT_PATH%
 ) ELSE (
     mkdir %BAZEL_SHORT_PATH%
+    if %errorlevel% neq 0 exit /b %errorlevel%
 )
 
 echo [INFO] ::::::::::::::::::::::: OpenVino: %openvino_dir%
@@ -65,22 +113,27 @@ echo [INFO] ::::::::::::::::::::::: OpenVino: %openvino_dir%
 IF /I EXIST %openvino_zip% (
     echo [INFO] file exists %openvino_zip%
 ) ELSE (
-    wget -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
+    curl %openvino_http%%openvino_ver% >%BAZEL_SHORT_PATH%\%openvino_ver%
+    if %errorlevel% neq 0 exit /b %errorlevel%
 )
 :: Extract OpenVINO
 IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
     echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir%
 ) ELSE (
     tar -xf %openvino_zip% -C %BAZEL_SHORT_PATH%
+    if %errorlevel% neq 0 exit /b %errorlevel%
 )
 :: Create OpenVINO link - always to make sure it points to latest version
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
-    rm %BAZEL_SHORT_PATH%\openvino
+    rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
+    if %errorlevel% neq 0 exit /b %errorlevel%
 )
 mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 :: Replace path to openvino in ovms WORKSPACE file
-powershell -Command "(gc -Path WORKSPACE -Raw) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
+powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
+if %errorlevel% neq 0 exit /b %errorlevel%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
@@ -91,19 +144,21 @@ set "opencl_dir=%BAZEL_SHORT_PATH%\opencl"
 :: Clone OpenCL
 IF /I EXIST %opencl_dir% (
     if %expunge% EQU 1 (
-        rm -rf %opencl_dir%
+        rmdir /S /Q %opencl_dir%
+        if %errorlevel% neq 0 exit /b %errorlevel%
         git clone --depth 1 --branch %opencl_ver% %opencl_git% %opencl_dir%
+        if %errorlevel% neq 0 exit /b %errorlevel%
     ) else (
         echo [INFO] ::::::::::::::::::::::: OpenCL is already installed in: %opencl_dir%
     )
 ) ELSE (
     git clone --depth 1 --branch %opencl_ver% %opencl_git% %opencl_dir%
+    if %errorlevel% neq 0 exit /b %errorlevel%
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\opt\ section started - ONE per system, not per BUILD, reinstalled only with expunge clean :::::::::::::::::::::::
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-set "opt_install_dir=c:\opt"
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: BoringSSL 
@@ -116,27 +171,14 @@ echo "[INFO] BoringSSL: "%bringssl_ver%
 :: Clone BoringSSL
 IF /I EXIST %boringssl_dir% (
     if %expunge% EQU 1 (
-        rm -rf %boringssl_dir%
+        rmdir /S /Q %boringssl_dir%
+        if %errorlevel% neq 0 exit /b %errorlevel%
         git clone --depth 1 --branch %bringssl_ver% %bringssl_git% %boringssl_dir%
+        if %errorlevel% neq 0 exit /b %errorlevel%
     ) else ( echo [INFO] ::::::::::::::::::::::: BoringSSL already installed in %boringssl_dir% )
 ) ELSE (
     git clone --depth 1 --branch %bringssl_ver% %bringssl_git% %boringssl_dir%
-)
-
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: OpenCV
-call windows_opencv.bat opt %expunge%
-
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Install wget
-set "wget_path=%opt_install_dir%\wget.exe"
-IF /I EXIST %wget_path% (
-    if %expunge% EQU 1 (
-        rm -rf %wget_path%
-        curl https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
-    ) else ( echo [INFO] ::::::::::::::::::::::: wget installed already in %wget_path% )
-) ELSE (
-    curl https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
+    if %errorlevel% neq 0 exit /b %errorlevel%
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -144,13 +186,106 @@ IF /I EXIST %wget_path% (
 set "bazel_path=%opt_install_dir%\bazel.exe"
 IF /I EXIST %bazel_path% (
     if %expunge% EQU 1 (
-        rm -rf %bazel_path%
+        rmdir /S /Q %bazel_path%
+        if %errorlevel% neq 0 exit /b %errorlevel%
         wget -O %bazel_path% https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
+        if %errorlevel% neq 0 exit /b %errorlevel%
     ) else (
         echo [INFO] ::::::::::::::::::::::: bazel already installed
     )
 ) ELSE (
     wget -O %bazel_path% https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
+    if %errorlevel% neq 0 exit /b %errorlevel%
 )
 
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Python39
+set "python39_path=%opt_install_dir%\Python39\"
+set "python39_system=C:\Program Files\Python39\"
+IF /I EXIST %python39_path% (
+    IF %expunge% EQU 1 (
+        rmdir /S /Q %python39_path%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+        IF /I EXIST "%python39_system%" (
+            :: Copy system Python
+            xcopy /s /e /q /y "%python39_system%" %python39_path%
+            if %errorlevel% neq 0 exit /b %errorlevel%
+            pip install numpy==1.23
+            if %errorlevel% neq 0 exit /b %errorlevel%
+        ) ELSE (
+            echo [ERROR] ::::::::::::::::::::::: Python39 not found
+            goto :exit_dependencies_error
+        )
+    ) ELSE (
+        echo [INFO] ::::::::::::::::::::::: Python39 already installed
+    )
+) ELSE (
+    IF /I EXIST "%python39_system%" (
+        :: Copy system Python
+        xcopy /s /e /q /y "%python39_system%" %python39_path%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+        %python39_path%\python.exe -m pip install numpy==1.23
+        if %errorlevel% neq 0 exit /b %errorlevel%
+    ) ELSE (
+        echo [ERROR] ::::::::::::::::::::::: Python39 not found
+        goto :exit_dependencies_error
+    )
+)
+python --version
+if %errorlevel% neq 0 exit /b %errorlevel%
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: OpenCV
+
+set "opencv_git=https://github.com/opencv/opencv.git"
+set "opencv_contrib=https://github.com/opencv/opencv_contrib.git"
+set "opencv_ver=4.10.0"
+set "opencv_dir=%opt_install_dir%\opencv_git"
+set "opencv_contrib_dir=%opt_install_dir%\opencv_contrib_git"
+set "opencv_install=%opt_install_dir%\opencv"
+set "opencv_flags=-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_aruco=OFF -D BUILD_opencv_bgsegm=OFF -D BUILD_opencv_bioinspired=OFF -D BUILD_opencv_ccalib=OFF -D BUILD_opencv_datasets=OFF -D BUILD_opencv_dnn=OFF -D BUILD_opencv_dnn_objdetect=OFF -D BUILD_opencv_dpm=OFF -D BUILD_opencv_face=OFF -D BUILD_opencv_fuzzy=OFF -D BUILD_opencv_hfs=OFF -D BUILD_opencv_img_hash=OFF -D BUILD_opencv_js=OFF -D BUILD_opencv_line_descriptor=OFF -D BUILD_opencv_phase_unwrapping=OFF -D BUILD_opencv_plot=OFF -D BUILD_opencv_quality=OFF -D BUILD_opencv_reg=OFF -D BUILD_opencv_rgbd=OFF -D BUILD_opencv_saliency=OFF -D BUILD_opencv_shape=OFF -D BUILD_opencv_structured_light=OFF -D BUILD_opencv_surface_matching=OFF -D BUILD_opencv_world=ON -D BUILD_opencv_xobjdetect=OFF -D BUILD_opencv_xphoto=OFF -D CV_ENABLE_INTRINSICS=ON -D WITH_EIGEN=ON -D WITH_PTHREADS=ON -D WITH_PTHREADS_PF=ON -D WITH_JPEG=ON -D WITH_PNG=ON -D WITH_TIFF=ON "
+
+IF /I EXIST %opencv_install% (
+    if %expunge% EQU 1 (rmdir /S /Q %opencv_install%) else (
+        echo "[INFO] OpenCV installed in: "%opencv_install%
+        goto :exit_dependencies
+    )
+)
+
+echo [INFO] Installing OpenCV: %opencv_ver%
+:: Clone OpenCL
+IF /I EXIST %opencv_dir% (
+    rmdir /S /Q %opencv_dir%
+    if %errorlevel% neq 0 exit /b %errorlevel%
+)
+IF /I EXIST %opencv_contrib_dir% (
+    rmdir /S /Q %opencv_contrib_dir%
+    if %errorlevel% neq 0 exit /b %errorlevel%
+)
+
+git clone --depth 1 --branch %opencv_ver% %opencv_git% %opencv_dir%
+if %errorlevel% neq 0 exit /b %errorlevel%
+git clone --depth 1 --branch %opencv_ver% %opencv_contrib% %opencv_contrib_dir%
+if %errorlevel% neq 0 exit /b %errorlevel%
+
+cd %opencv_dir%
+if %errorlevel% neq 0 exit /b %errorlevel%
+mkdir build
+if %errorlevel% neq 0 exit /b %errorlevel%
+cd build
+if %errorlevel% neq 0 exit /b %errorlevel%
+:: Expected compilers in CI - -G "Visual Studio 16 2019", local -G "Visual Studio 17 2022" as default
+cmake -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags%
+if %errorlevel% neq 0 exit /b %errorlevel%
+cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
+if %errorlevel% neq 0 exit /b %errorlevel%
+cmake --install .
+if %errorlevel% neq 0 exit /b %errorlevel%
+
+:exit_dependencies
+echo [INFO] Dependencies installed
+exit /b 0
+:exit_dependencies_error
+echo [ERROR] Some dependencies not installed
+exit /b 1
 endlocal

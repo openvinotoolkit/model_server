@@ -447,7 +447,9 @@ cc_library(
             "//:disable_mediapipe" : [],
         }),
         deps = select({
-            "//:is_windows_or_python_is_disabled_no_llm": [],
+            "//:is_windows_or_python_is_disabled_no_llm": [ # Temporary, until HTTP works for Windows
+                "//src/llm:llmnoderesources", 
+                "//src/llm:text_processor",],
             "//conditions:default" : [
                 # Jinja template processing is done in Python
                 "//src/llm:llmcalculator",
@@ -563,7 +565,12 @@ cc_library(
             "//src/python/binding:pyovms.so",
         ],
         "//:disable_python": []
-    }),
+        }) + select({
+            "//:is_windows_and_python_is_enabled": [
+                "//src/python/binding:copy_pyovms",
+            ],
+            "//conditions:default": [],
+        }),
     alwayslink = 1,
 )
 
@@ -1902,7 +1909,7 @@ cc_test(
             ],
             "//:disable_mediapipe" : [],
         }) + select({
-            "//:is_windows_or_python_is_disabled_no_llm": [],
+            "//:is_windows_or_python_is_disabled_no_llm": [], # LLM tests depend on HTTP
             "//conditions:default" : [
                 # LLM logic uses Python for processing Jinja templates
                 "test/llmnode_test.cpp",
@@ -2059,7 +2066,7 @@ cc_test(
             ],
             "//:disable_mediapipe" : [],
         }) + select({
-            "//:is_windows_or_python_is_disabled_no_llm": [],
+            "//:is_windows_or_python_is_disabled_no_llm": [], # LLM tests depend on HTTP
             "//conditions:default" : [
                 "//src/llm:llmnoderesources",],
             }),

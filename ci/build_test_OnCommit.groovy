@@ -40,11 +40,29 @@ pipeline {
             }
           }
         }
-
-        stage('Style check') {
-            steps {
-                sh 'make style'
+        stage('Style and clean') {
+          parallel {
+            stage('Style check') {
+                steps {
+                  sh 'make style'
+                }
             }
+            stage('Cleanup node') {
+              agent {
+                label 'win_ovms'
+              }
+              steps {
+                script {
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        windows.cleanup_directories()
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
+                }
+              }
+            }
+          }
         }
 
         stage('Sdl check') {
