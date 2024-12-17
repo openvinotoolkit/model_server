@@ -13,7 +13,7 @@
 :: See the License for the specific language governing permissions and
 :: limitations under the License.
 ::
-
+setlocal
 IF "%~1"=="" (
     echo No argument provided. Using default opt path
     set "output_user_root=opt"
