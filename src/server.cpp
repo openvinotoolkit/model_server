@@ -372,10 +372,8 @@ static int statusToExitCode(const Status& status) {
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
-// TODO windows
-#ifdef __linux__
     installSignalHandlers();
-#endif
+
     CLIParser parser;
     ServerSettingsImpl serverSettings;
     ModelsSettingsImpl modelsSettings;

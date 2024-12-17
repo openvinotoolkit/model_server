@@ -565,7 +565,12 @@ cc_library(
             "//src/python/binding:pyovms.so",
         ],
         "//:disable_python": []
-    }),
+        }) + select({
+            "//:is_windows_and_python_is_enabled": [
+                "//src/python/binding:copy_pyovms",
+            ],
+            "//conditions:default": [],
+        }),
     alwayslink = 1,
 )
 
