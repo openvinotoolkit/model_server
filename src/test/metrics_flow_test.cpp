@@ -972,21 +972,21 @@ std::string MetricFlowTest::prepareConfigContent() {
             "metrics": {
                 "enable": true,
                 "metrics_list": [)"} +
-           R"(")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE +
-           R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
-           R"(",")" + METRIC_NAME_CURRENT_REQUESTS +
-           R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
-           R"(",")" + METRIC_NAME_REQUESTS_FAIL +
-           R"(",")" + METRIC_NAME_REQUEST_TIME +
-           R"(",")" + METRIC_NAME_STREAMS +
-           R"(",")" + METRIC_NAME_INFERENCE_TIME +
-           R"(",")" + METRIC_NAME_WAIT_FOR_INFER_REQ_TIME +
-           R"(",")" + METRIC_NAME_CURRENT_GRAPHS +
-           R"(",")" + METRIC_NAME_REQUESTS_ACCEPTED +
-           R"(",")" + METRIC_NAME_REQUESTS_REJECTED +
-           R"(",")" + METRIC_NAME_RESPONSES +
-           R"(",")" + METRIC_NAME_GRAPH_ERROR +
-           R"("]
+                         R"(")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE +
+                         R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
+                         R"(",")" + METRIC_NAME_CURRENT_REQUESTS +
+                         R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
+                         R"(",")" + METRIC_NAME_REQUESTS_FAIL +
+                         R"(",")" + METRIC_NAME_REQUEST_TIME +
+                         R"(",")" + METRIC_NAME_STREAMS +
+                         R"(",")" + METRIC_NAME_INFERENCE_TIME +
+                         R"(",")" + METRIC_NAME_WAIT_FOR_INFER_REQ_TIME +
+                         R"(",")" + METRIC_NAME_CURRENT_GRAPHS +
+                         R"(",")" + METRIC_NAME_REQUESTS_ACCEPTED +
+                         R"(",")" + METRIC_NAME_REQUESTS_REJECTED +
+                         R"(",")" + METRIC_NAME_RESPONSES +
+                         R"(",")" + METRIC_NAME_GRAPH_ERROR +
+                         R"("]
             }
         },
         "model_config_list": [

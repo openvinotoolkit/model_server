@@ -13,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <gtest/gtest.h>
-
-#include <thread>
 #include <chrono>
+#include <thread>
+
+#include <gtest/gtest.h>
 
 #include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
