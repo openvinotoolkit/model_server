@@ -64,6 +64,7 @@ IF /I EXIST %opt_install_dir% (
 ::::::::::::::::::::::: Install wget
 set "wget_path=%opt_install_dir%\wget.exe"
 IF /I EXIST %wget_path% (
+    ls -lah %wget_path%
     if %expunge% EQU 1 (
         rmdir /S /Q %wget_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
