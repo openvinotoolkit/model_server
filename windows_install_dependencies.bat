@@ -88,19 +88,12 @@ IF /I EXIST %bash_path% (
         echo [INFO] ::::::::::::::::::::::: Msys bash already installed in: %bash_path%
     )
 ) ELSE (
-    echo doesnt exist
-
     IF /I EXIST %msys_path% (
         rmdir /S /Q %msys_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
     )
-
-    echo check WGET
     IF /I NOT EXIST %msys_install% (
-        echo test WGET
-        wget
-        echo start WGET
-        wget -P --timeout=20 %opt_install_dir%\ %msys_url%
+        wget -P %opt_install_dir%\ %msys_url%
         if %errorlevel% neq 0 exit /b %errorlevel%
     )
     
@@ -140,7 +133,7 @@ IF /I EXIST %openvino_zip% (
 IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
     echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir%
 ) ELSE (
-    tar -xf %openvino_zip% -C %BAZEL_SHORT_PATH%
+    tar --force-local -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
     if %errorlevel% neq 0 exit /b %errorlevel%
 )
 :: Create OpenVINO link - always to make sure it points to latest version
