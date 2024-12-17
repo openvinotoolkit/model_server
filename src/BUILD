@@ -1876,9 +1876,9 @@ cc_test(
         ] + select({
                 "//conditions:default": [
                     "test/metrics_flow_test.cpp",  # TODO: Enable on windows
-                    "test/http_rest_api_handler_test.cpp",  # TODO: Enable on windows
                 ],
                 "//src:windows" : [
+                    "test/http_rest_api_handler_test.cpp",  # TODO: Enable on windows
                 ],
         }) + select({
             "//:is_windows_or_mediapipe_is_disabled_no_http": [],
