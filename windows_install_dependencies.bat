@@ -36,7 +36,7 @@ IF "%2"=="1" (
 )
 
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
-set "opt_install_dir=c:\opt"
+set "opt_install_dir=C:\opt"
 
 :: Python 39 needs to be first in the windows path, as well as MSYS tools
 set "setPath=C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;C:\opt;%PATH%;"
@@ -89,8 +89,11 @@ IF /I EXIST %bash_path% (
     :install_msys
     :: Sanity taskkill if previous installation hang
     taskkill /f /t /im msys2-x86_64-20240727.exe
-    rmdir /S /Q %msys_path%
-    if %errorlevel% neq 0 exit /b %errorlevel%
+
+    IF /I EXIST %msys_path% (
+        rmdir /S /Q %msys_path%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+    )
     IF /I NOT EXIST %msys_install% (
         wget -P %opt_install_dir%\ %msys_url%
         if %errorlevel% neq 0 exit /b %errorlevel%
