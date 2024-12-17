@@ -1,5 +1,63 @@
+// Check if we can delete c:\PR-XXXX only if jenkins workspace does not exists for the PR, thus commit was merged or removed.
+def cleanup_directories() {
+    println "Cleaning pr-xxxx directories from node: NODE_NAME = ${env.NODE_NAME}"
+    def command = 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n -E "s/(ovms_oncommit_|ovms_ovms-windows_)//p'
+    def status = bat(returnStatus: true, script: command)
+    if ( status != 0) {
+        error "Error: trying to list jenkins workspaces."
+    }
+    def existing_workspace_string = bat(returnStatus: false, returnStdout: true, script: command)
+
+    println existing_workspace_string
+    def existing_workspace = existing_workspace_string.split(/\n/)
+
+    command = 'ls c:\\ | grep -oE "(pr-[0-9]*)$"'
+    status = bat(returnStatus: true, script: command)
+    if ( status != 0) {
+        println "No PR-XXXX detected for cleanup."
+        return
+    }
+
+    def existing_prs_string = bat(returnStatus: false, returnStdout: true, script: command)
+
+    println existing_prs_string
+    def existing_prs = existing_prs_string.split(/\n/)
+    
+    // Compare workspace with c:\pr-xxxx
+    for (int i = 0; i < existing_prs.size(); i++) {
+        def found = false
+        for (int j = 0; j < existing_workspace.size(); j++) {
+            if (existing_prs[i].toLowerCase() == existing_workspace[j].toLowerCase()) {
+                found = true
+                break
+            }
+            // Part of output contains the command that was run
+            if (existing_prs[i].toLowerCase().contains("grep")) {
+                found = true
+                break
+            }
+        }
+        if (!found) {
+            def pathToDelete = "c:\\" + existing_prs[i]
+            // Sanity check not to delete anything else
+            if (!pathToDelete.contains("c:\\pr-")) {
+                error "Error: trying to delete a directory that is not expected: " + pathToDelete
+            } else {
+                println "Deleting: " + pathToDelete
+                status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
+                if (status != 0) {
+                    error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check piepeline.log for details."
+                } else {
+                    echo "Deleting directory ${pathToDelete} successful."
+                }
+            }
+        }
+    }
+}
+
 def install_dependencies() {
-    def status = bat(returnStatus: true, script: 'windows_install_dependencies.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    println "Install dependencies on node: NODE_NAME = ${env.NODE_NAME}"
+    def status = bat(returnStatus: true, script: 'windows_install_build_dependencies.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
     if (status != 0) {
         error "Error: Windows install dependencies failed: ${status}. Check piepeline.log for details."
     } else {
@@ -8,7 +66,7 @@ def install_dependencies() {
 }
 
 def clean() {
-    def output1 = bat(returnStdout: true, script: 'windows_clean.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def output1 = bat(returnStdout: true, script: 'windows_clean_build.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
 }
 
 def build_and_test(){
@@ -18,6 +76,12 @@ def build_and_test(){
         error "Error: Windows build failed ${status}. Check win_build.log for details."
     } else {
         echo "Build successful."
+    }
+    def status_pkg = bat(returnStatus: true, script: 'windows_create_package.bat ' + env.JOB_BASE_NAME)
+    if (status_pkg != 0) {
+        error "Error: Windows package failed ${status_pkg}."
+    } else {
+        echo "Windows package created successfully."
     }
 }
 
@@ -49,7 +113,7 @@ def check_tests(){
 // Post build steps
 def archive_artifacts(){
     // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
-    archiveArtifacts allowEmptyArchive: true, artifacts: "bazel-bin\\src\\ovms.exe"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms.zip"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_environment.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build_test.log"
