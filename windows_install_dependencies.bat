@@ -131,7 +131,7 @@ IF /I EXIST %openvino_zip% (
 IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
     echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir%
 ) ELSE (
-    tar -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
+    unzip -o %openvino_zip% -d %BAZEL_SHORT_PATH%
     if %errorlevel% neq 0 exit /b %errorlevel%
 )
 :: Create OpenVINO link - always to make sure it points to latest version
