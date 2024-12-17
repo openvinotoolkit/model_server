@@ -82,23 +82,26 @@ set "msys_path=%opt_install_dir%\msys64\"
 set "msys_url=https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe"
 set "msys_install=%opt_install_dir%\msys2-x86_64-20240727.exe"
 IF /I EXIST %bash_path% (
+    echo exists
     if %expunge% EQU 1 (goto :install_msys) else (
         echo [INFO] ::::::::::::::::::::::: Msys bash already installed in: %bash_path%
     )
 ) ELSE (
-    :install_msys
-    :: Sanity taskkill if previous installation hang
-    taskkill /f /t /im msys2-x86_64-20240727.exe
+    echo doesnt exist
 
     IF /I EXIST %msys_path% (
         rmdir /S /Q %msys_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
     )
+
+    echo check WGET
     IF /I NOT EXIST %msys_install% (
+        echo start WGET
         wget -P %opt_install_dir%\ %msys_url%
         if %errorlevel% neq 0 exit /b %errorlevel%
     )
     
+    echo START INSTALL
     start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %msys_path%
     if %errorlevel% neq 0 exit /b %errorlevel%
     timeout 120
