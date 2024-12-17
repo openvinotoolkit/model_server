@@ -35,7 +35,8 @@ Install build tools for VS:
 https://aka.ms/vs/17/release/vs_BuildTools.exe
 
 Mark required options for installation:
-- c++ Desktop development with C++
+- C++ Desktop development with C++
+- Windows 11 SDK
 - MSVC v143 CPP - VS 2022 C++ platform toolset.
 - C++ CMake tools for Windows platform toolset.
 - MSVC v142 CPP - VS 2022 C++ platform toolset.
