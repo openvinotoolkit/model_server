@@ -45,6 +45,22 @@ set "setPath=C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;C:
 set "PATH=%setPath%"
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Check directories
+IF /I EXIST %BAZEL_SHORT_PATH% (
+    echo [INFO] directory exists %BAZEL_SHORT_PATH%
+) ELSE (
+    mkdir %BAZEL_SHORT_PATH%
+    if %errorlevel% neq 0 exit /b %errorlevel%
+)
+
+IF /I EXIST %opt_install_dir% (
+    echo [INFO] directory exists %opt_install_dir%
+) ELSE (
+    mkdir %opt_install_dir%
+    if %errorlevel% neq 0 exit /b %errorlevel%
+)
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install wget
 set "wget_path=%opt_install_dir%\wget.exe"
 IF /I EXIST %wget_path% (
@@ -102,13 +118,6 @@ set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/pac
 set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
 set "openvino_workspace=C:\\\\opt\\\\openvino\\\\runtime"
 set "openvino_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
-
-IF /I EXIST %BAZEL_SHORT_PATH% (
-    echo [INFO] directory exists %BAZEL_SHORT_PATH%
-) ELSE (
-    mkdir %BAZEL_SHORT_PATH%
-    if %errorlevel% neq 0 exit /b %errorlevel%
-)
 
 echo [INFO] ::::::::::::::::::::::: OpenVino: %openvino_dir%
 :: Download OpenVINO
