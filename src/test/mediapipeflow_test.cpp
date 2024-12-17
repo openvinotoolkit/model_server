@@ -914,6 +914,9 @@ public:
 };
 
 TEST_F(MediapipeFlowTwoOutputsDagTest, Infer) {
+    #ifdef _WIN32
+        GTEST_SKIP() << "Test disabled on windows - Custom Nodes for windows are unsupported"; 
+    #endif
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};
 
@@ -2702,6 +2705,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     // now we retire the model
     configFileContent = configFileWithGraphPathToReplaceWithoutModel;
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     modelManager.loadConfig(configFilePath);
     model = modelManager.findModelByName("dummy");
@@ -2714,11 +2718,13 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     std::string subconfigFilePath = directoryPath + "/subconfig.json";
     SPDLOG_ERROR("{}", subconfigFilePath);
     configFileContent = configFileWithoutGraph;
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, subconfigFilePath);
     configFileContent = configFileWithGraphPathToReplaceAndSubconfig;
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
     const std::string subconfigPathToReplace{"SUBCONFIG_PATH"};
     configFileContent.replace(configFileContent.find(subconfigPathToReplace), subconfigPathToReplace.size(), subconfigFilePath);
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     modelManager.loadConfig(configFilePath);
     model = modelManager.findModelByName("dummy");
@@ -3385,7 +3391,9 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "CalculatorRunnerSourceCalculator",
         "PyTensorOvTensorConverterCalculator",   // integral OVMS calculator
         "PythonExecutorCalculator",  // integral OVMS calculator
+#ifndef _WIN32  // TODO(mzegla): enable when LLMs are enabled on windows
         "HttpLLMCalculator",  // integral OVMS calculator
+#endif
 #endif
         "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
         "AddHeaderCalculator",
@@ -3565,7 +3573,9 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "OpenVINOModelServerSessionCalculator",
         "OpenVINOTensorsToClassificationCalculator",
         "OpenVINOTensorsToDetectionsCalculator",
+#ifndef _WIN32  // TODO windows: stdc++20 required
         "PacketClonerCalculator",
+#endif
         "PacketGeneratorWrapperCalculator",
         "PacketInnerJoinCalculator",
         "PacketPresenceCalculator",
@@ -3629,7 +3639,9 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "ThresholdingCalculator",
         "ToImageCalculator",
         "TrackedDetectionManagerCalculator",
+#ifndef _WIN32  // TODO windows: 'opencv2/optflow.hpp': No such file - will be available with opencv cmake on windows
         "Tvl1OpticalFlowCalculator",
+#endif
         "TwoInputCalculator",
         "UpdateFaceLandmarksCalculator",
         "VideoPreStreamCalculator",
