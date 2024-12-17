@@ -13,9 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <chrono>
-#include <thread>
-
 #include <gtest/gtest.h>
 
 #include "../config.hpp"
