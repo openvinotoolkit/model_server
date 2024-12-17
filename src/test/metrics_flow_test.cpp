@@ -750,6 +750,9 @@ TEST_F(MetricFlowTest, RestModelInferOnUnloadedModel) {
 }
 
 TEST_F(MetricFlowTest, RestModelMetadata) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows CVS-159404";
+#endif
     HttpRestApiHandler handler(server, 0);
     HttpRequestComponents components;
 
@@ -964,7 +967,7 @@ TEST_F(MetricFlowTest, CurrentGraphs) {
 // Test MP metrics when mediapipe is enabled at build time
 #if (MEDIAPIPE_DISABLE == 0)
 std::string MetricFlowTest::prepareConfigContent() {
-    return std::string{R"({
+    auto configContent = std::string{R"({
         "monitoring": {
             "metrics": {
                 "enable": true,
@@ -1041,6 +1044,8 @@ std::string MetricFlowTest::prepareConfigContent() {
         ]
     }
     )";
+    adjustConfigForTargetPlatform(configContent);
+    return configContent;
 }
 #else
 // Do not test MP metrics when mediapipe is disabled at build time

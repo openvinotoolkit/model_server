@@ -1875,9 +1875,9 @@ cc_test(
         "test/unit_tests.cpp",
         ] + select({
                 "//conditions:default": [
-                    "test/metrics_flow_test.cpp",  # TODO: Enable on windows
                 ],
                 "//src:windows" : [
+                    "test/metrics_flow_test.cpp",  # TODO: Enable on windows
                     "test/http_rest_api_handler_test.cpp",  # TODO: Enable on windows
                 ],
         }) + select({
