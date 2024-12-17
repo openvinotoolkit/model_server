@@ -22,20 +22,23 @@ IF "%~1"=="" (
     set "output_user_root=%1"
 )
 
-md dist\windows
-copy bazel-bin\src\ovms.exe dist\windows
+md dist\windows\ovms
+copy bazel-bin\src\ovms.exe dist\windows\ovms
 if %errorlevel% neq 0 exit /b %errorlevel%
-copy  %cd%\bazel-out\x64_windows-opt\bin\src\python39.dll dist\windows
+copy  %cd%\bazel-out\x64_windows-opt\bin\src\python39.dll dist\windows\ovms
 if %errorlevel% neq 0 exit /b %errorlevel%
-copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows
+copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if %errorlevel% neq 0 exit /b %errorlevel%
-copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows
+copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
 if %errorlevel% neq 0 exit /b %errorlevel%
-copy  %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows
+copy  %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows\ovms
 if %errorlevel% neq 0 exit /b %errorlevel%
-dist\windows\ovms.exe --version
+dist\windows\ovms\ovms.exe --version
 if %errorlevel% neq 0 exit /b %errorlevel%
-dist\windows\ovms.exe --help
+dist\windows\ovms\ovms.exe --help
 if %errorlevel% neq 0 exit /b %errorlevel%
-tar -czf dist\ovms.zip dist\windows
+cd dist\windows
+tar -a -c -f ovms.zip ovms
 if %errorlevel% neq 0 exit /b %errorlevel%
+cd ..\..
+dir dist\windows\ovms.zip
