@@ -523,7 +523,7 @@ public:
         const std::string modelName = "mediapipeImageInput";
         request.Clear();
         response.Clear();
-        cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+        cv::Mat imageRaw = cv::imread(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), cv::IMREAD_UNCHANGED);
         ASSERT_TRUE(!imageRaw.empty());
         cv::Mat image;
         size_t matFormat = convertKFSDataTypeToMatFormat(datatype);
@@ -914,9 +914,9 @@ public:
 };
 
 TEST_F(MediapipeFlowTwoOutputsDagTest, Infer) {
-    #ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows - Custom Nodes for windows are unsupported"; 
-    #endif
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows - Custom Nodes for windows are unsupported";
+#endif
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};
 
@@ -2063,7 +2063,8 @@ TEST_P(MediapipeConfig, MediapipeAdd) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/config_mediapipe_add_adapter_full.json");
+    basePath = basePath + "test/mediapipe/config_mediapipe_add_adapter_full.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     for (auto& graphName : mediaGraphsAdd) {
@@ -2079,7 +2080,8 @@ TEST_P(MediapipeConfig, MediapipeDummyWithDag) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json");
+    basePath = basePath + "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     for (auto& graphName : mediaGraphsDummy) {
@@ -2103,7 +2105,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePaths) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy.json");
+    basePath = basePath + "test/mediapipe/relative_paths/config_relative_dummy.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("graph1");
@@ -2121,7 +2124,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfig) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_add_subconfig.json");
+    basePath = basePath + "test/mediapipe/relative_paths/config_relative_add_subconfig.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("graph1");
@@ -2145,7 +2149,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfigBasePath) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy_subconfig_base_path.json");
+    basePath = basePath + "test/mediapipe/relative_paths/config_relative_dummy_subconfig_base_path.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("graphaddadapterfull");
@@ -2169,7 +2174,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsNegative) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy_negative.json");
+    basePath = basePath + std::string("test/mediapipe/relative_paths/config_relative_dummy_negative.json");
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
