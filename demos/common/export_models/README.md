@@ -24,15 +24,15 @@ For every use case subcommand there is adjusted list of parameters:
 ```bash
 python export_model.py text_generation --help 
 usage: export_model.py text_generation [-h] [--model_repository_path MODEL_REPOSITORY_PATH] --source_model SOURCE_MODEL [--model_name MODEL_NAME] [--weight-format PRECISION] [--config_file_path CONFIG_FILE_PATH]
-                                       [--overwrite_models] [--kv_cache_precision {u8}] [--enable_prefix_caching] [--disable_dynamic_split_fuse]
-                                       [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS] [--max_num_seqs MAX_NUM_SEQS] [--cache_size CACHE_SIZE] [--target_device DEVICE]
+                                       [--overwrite_models] [--target_device TARGET_DEVICE] [--kv_cache_precision {u8}] [--enable_prefix_caching] [--disable_dynamic_split_fuse]
+                                       [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS] [--max_num_seqs MAX_NUM_SEQS] [--cache_size CACHE_SIZE]
 
 options:
   -h, --help            show this help message and exit
   --model_repository_path MODEL_REPOSITORY_PATH
                         Where the model should be exported to
   --source_model SOURCE_MODEL
-                        HF model name or path to the local folder with pytorch or OpenVINO model
+                        HF model name or path to the local folder with PyTorch or OpenVINO model
   --model_name MODEL_NAME
                         Model name that should be used in the deployment. Equal to source_name if HF model name is used
   --weight-format PRECISION
@@ -40,6 +40,8 @@ options:
   --config_file_path CONFIG_FILE_PATH
                         path to the config file
   --overwrite_models    Overwrite the model if it already exists in the models repository
+  --target_device TARGET_DEVICE
+                        CPU or GPU, default is CPU
   --kv_cache_precision {u8}
                         u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.
   --enable_prefix_caching
@@ -52,8 +54,6 @@ options:
                         256 by default. The maximum number of sequences that can be processed together.
   --cache_size CACHE_SIZE
                         cache size in GB
-  --target_device DEVICE
-                        CPU or GPU, default is CPU
 ```
 
 ## Examples how models can be exported
@@ -64,10 +64,16 @@ mkdir -p models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config_all.json --model_repository_path models 
 ```
 
-Text generation for GPU target device with limited memory:
+Text generation for GPU target device with limited memory without dynamic split fuse algorithm (recommended for usage in low concurrency):
 ```bash
 mkdir -p models
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --block_size 16 --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192 --cache_size 2
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192 --cache_size 2
+```
+
+Text generation for GPU target device with limited memory with enabled dynamic split fuse algorithm (recommended for usage in high concurrency):
+```bash
+mkdir -p models
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2
 ```
 
 Embeddings with deployment on a single CPU host:

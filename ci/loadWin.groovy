@@ -1,9 +1,76 @@
+// Check if we can delete c:\PR-XXXX only if jenkins workspace does not exists for the PR, thus commit was merged or removed.
+def cleanup_directories() {
+    println "Cleaning pr-xxxx directories from node: NODE_NAME = ${env.NODE_NAME}"
+    def command = 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n -E "s/(ovms_oncommit_|ovms_ovms-windows_)//p'
+    def status = bat(returnStatus: true, script: command)
+    if ( status != 0) {
+        error "Error: trying to list jenkins workspaces."
+    }
+    def existing_workspace_string = bat(returnStatus: false, returnStdout: true, script: command)
+
+    println existing_workspace_string
+    def existing_workspace = existing_workspace_string.split(/\n/)
+
+    command = 'ls c:\\ | grep -oE "(pr-[0-9]*)$"'
+    status = bat(returnStatus: true, script: command)
+    if ( status != 0) {
+        println "No PR-XXXX detected for cleanup."
+        return
+    }
+
+    def existing_prs_string = bat(returnStatus: false, returnStdout: true, script: command)
+
+    println existing_prs_string
+    def existing_prs = existing_prs_string.split(/\n/)
+    
+    // Compare workspace with c:\pr-xxxx
+    for (int i = 0; i < existing_prs.size(); i++) {
+        def found = false
+        for (int j = 0; j < existing_workspace.size(); j++) {
+            if (existing_prs[i].toLowerCase() == existing_workspace[j].toLowerCase()) {
+                found = true
+                break
+            }
+            // Part of output contains the command that was run
+            if (existing_prs[i].toLowerCase().contains("grep")) {
+                found = true
+                break
+            }
+        }
+        if (!found) {
+            def pathToDelete = "c:\\" + existing_prs[i]
+            // Sanity check not to delete anything else
+            if (!pathToDelete.contains("c:\\pr-")) {
+                error "Error: trying to delete a directory that is not expected: " + pathToDelete
+            } else {
+                println "Deleting: " + pathToDelete
+                status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
+                if (status != 0) {
+                    error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check piepeline.log for details."
+                } else {
+                    echo "Deleting directory ${pathToDelete} successful."
+                }
+            }
+        }
+    }
+}
+
+def install_dependencies() {
+    println "Install dependencies on node: NODE_NAME = ${env.NODE_NAME}"
+    def status = bat(returnStatus: true, script: 'windows_install_dependencies.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    if (status != 0) {
+        error "Error: Windows install dependencies failed: ${status}. Check piepeline.log for details."
+    } else {
+        echo "Install dependencies successful."
+    }
+}
+
 def clean() {
-    def output1 = bat(returnStdout: true, script: 'clean_windows.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def output1 = bat(returnStdout: true, script: 'windows_clean.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
 }
 
 def build_and_test(){
-    def status = bat(returnStatus: true, script: 'build_windows.bat ' + env.JOB_BASE_NAME)
+    def status = bat(returnStatus: true, script: 'windows_build.bat ' + env.JOB_BASE_NAME)
     status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms.exe win_build.log | grep "Build completed successfully"')
     if (status != 0) {
         error "Error: Windows build failed ${status}. Check win_build.log for details."
@@ -22,19 +89,22 @@ def check_tests(){
 
     status = bat(returnStatus: true, script: 'grep "       OK " win_test.log')
     if (status != 0) {
-            error "Error: Windows run test failed ${status}. Check win_test.log for details."
+            error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test.log for details."
+    } else {
+        def passed = bat(returnStatus: false, returnStdout: true, script: 'grep "       OK " win_test.log | wc -l')
+        echo "Success: Windows run test passed ${status}. ${passed} passed tests . Check win_test.log for details."
     }
 
-    // TODO Windows: Currently some tests fail change to no fail when fixed.
     status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test.log')
-    if (status != 0) {
-            error "Error: Windows run test failed ${status}. Check win_test.log for details."
+    if (status == 0) {
+            def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test.log | wc -l')
+            error "Error: Windows run test failed ${status}. ${failed} failed tests . Check win_test.log for details."
     } else {
-        echo "Run test successful."
+        echo "Run test no FAILED detected."
     }
 }
 
-//Post build steps
+// Post build steps
 def archive_artifacts(){
     // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
     archiveArtifacts allowEmptyArchive: true, artifacts: "bazel-bin\\src\\ovms.exe"

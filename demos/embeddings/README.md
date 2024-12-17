@@ -2,23 +2,17 @@
 This demo shows how to deploy embeddings models in the OpenVINO Model Server for text feature extractions.
 Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
-## Get the docker image
-
-Build the image from source to try this new feature. It will be included in the public image in the coming version 2024.5.
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make release_image GPU=1
-```
-It will create an image called `openvino/model_server:latest`.
-> **Note:** This operation might take 40min or more depending on your build host.
-> **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
-
 ## Model preparation
 > **Note** Python 3.9 or higher is needed for that step
 > 
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
+
+Clone model server repository:
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+```
 
 Install python dependencies for the conversion script:
 ```bash
@@ -34,7 +28,7 @@ python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 -
 ```
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
 You should have a model folder like below:
-```bash
+```
 tree models
 models
 ├── Alibaba-NLP
@@ -84,8 +78,8 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_se
 In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU. Also make sure the export model quantization level and cache size fit to the GPU memory. All of that can be applied with the commands:
 
-```
-python demos/common/export_models/export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```bash
+python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
@@ -183,7 +177,6 @@ Average document length: 5.0 tokens
 python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model Alibaba-NLP/gte-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 50/50 [00:21<00:00,  2.32it/s]
-32it [00:18,  1.76it/s]
 Tokens: 510000
 Success rate: 100.0%. (32/32)
 Throughput - Tokens per second: 27995.652060806977
@@ -200,7 +193,7 @@ Success rate: 100.0%. (1000/1000)
 Throughput - Tokens per second: 5433.913083411673
 Mean latency: 1424 ms
 Median latency: 1451 ms
-Average document length: 83.208 token
+Average document length: 83.208 tokens
 ```
 
 ## RAG with Model Server

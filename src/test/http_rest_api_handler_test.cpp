@@ -98,7 +98,7 @@ public:
             if (configJson)
                 configApi.SetUpConfig(configJson);
             else
-                configApi.SetUpSingleModel("/ovms/src/test/dummy", "dummy");
+                configApi.SetUpSingleModel(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), "dummy");
 
             auto& config = ovms::Config::instance();
             auto retCode = ovmsServer.startModules(config);
@@ -277,7 +277,7 @@ static const char* configWith1DummyInTmp = R"(
 TEST_F(ConfigReload, startWith1DummyThenAddVersion) {
     ovms::Server& ovmsServer = ovms::Server::instance();
     std::filesystem::remove_all("/tmp/dummy");
-    std::filesystem::copy("/ovms/src/test/dummy", "/tmp/dummy", std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), "/tmp/dummy", std::filesystem::copy_options::recursive);
     TestHelper1 t(*this, configWith1DummyInTmp);
     auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
 
@@ -305,7 +305,7 @@ TEST_F(ConfigReload, startWith1DummyThenAddVersion) {
     EXPECT_EQ(expectedJson1, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
 
-    std::filesystem::copy("/ovms/src/test/dummy/1", "/tmp/dummy/2", std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy/1"), getGenericFullPathForTmp("/tmp/dummy/2"), std::filesystem::copy_options::recursive);
 
     const char* expectedJson2 = R"({
 "dummy" : 
@@ -334,15 +334,15 @@ TEST_F(ConfigReload, startWith1DummyThenAddVersion) {
 
     EXPECT_EQ(expectedJson2, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
-    std::filesystem::remove_all("/tmp/dummy");
+    std::filesystem::remove_all(getGenericFullPathForTmp("/tmp/dummy"));
 }
 
 TEST_F(ConfigReload, startWithMissingXmlThenAddAndReload) {
     ovms::Server& ovmsServer = ovms::Server::instance();
-    std::filesystem::remove_all("/tmp/dummy");
-    std::filesystem::create_directory("/tmp/dummy");
-    std::filesystem::create_directory("/tmp/dummy/1");
-    std::filesystem::copy("/ovms/src/test/dummy/1/dummy.bin", "/tmp/dummy/1/dummy.bin", std::filesystem::copy_options::recursive);
+    std::filesystem::remove_all(getGenericFullPathForTmp("/tmp/dummy"));
+    std::filesystem::create_directory(getGenericFullPathForTmp("/tmp/dummy"));
+    std::filesystem::create_directory(getGenericFullPathForTmp("/tmp/dummy/1"));
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/dummy.bin"), getGenericFullPathForTmp("/tmp/dummy/1/dummy.bin"), std::filesystem::copy_options::recursive);
     TestHelper1 t(*this, configWith1DummyInTmp);
     auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
 
@@ -353,7 +353,7 @@ TEST_F(ConfigReload, startWithMissingXmlThenAddAndReload) {
     EXPECT_EQ(expectedJson1, response);
     EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
 
-    std::filesystem::copy("/ovms/src/test/dummy/1/dummy.xml", "/tmp/dummy/1/dummy.xml", std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/dummy.xml"), getGenericFullPathForTmp("/tmp/dummy/1/dummy.xml"), std::filesystem::copy_options::recursive);
 
     const char* expectedJson2 = R"({
 "dummy" : 

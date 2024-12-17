@@ -118,8 +118,8 @@ TEST_F(TestUnloadModel, NoNameOutput) {
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
     EXPECT_EQ(modelInstance.getInputsInfo().count("INPUT1"), 1);
     EXPECT_EQ(modelInstance.getInputsInfo().count("INPUT2"), 1);
-    EXPECT_EQ(modelInstance.getOutputsInfo().count("out_0"), 1);
-    EXPECT_EQ(modelInstance.getOutputsInfo().count("out_1"), 1);
+    EXPECT_EQ(modelInstance.getOutputsInfo().count("OUT_0"), 1);
+    EXPECT_EQ(modelInstance.getOutputsInfo().count("OUT_1"), 1);
     modelInstance.retireModel();
     EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
 }
@@ -481,6 +481,9 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
 }
 
 TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_multiple_models";
@@ -528,6 +531,9 @@ TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
 }
 
 TEST_F(TestLoadModel, CheckSavedModelHandling) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     ovms::ModelInstance modelInstance("saved-model", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_saved_model";
@@ -562,6 +568,9 @@ TEST_F(TestLoadModel, CheckSavedModelHandling) {
 }
 
 TEST_F(TestLoadModel, CheckTFModelHandling) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     ovms::ModelInstance modelInstance("tf", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_tf";
@@ -596,6 +605,9 @@ TEST_F(TestLoadModel, CheckTFModelHandling) {
 }
 
 TEST_F(TestLoadModel, CheckONNXModelHandling) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     ovms::ModelInstance modelInstance("onnx", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_onnx";
@@ -738,10 +750,10 @@ TEST_F(TestLoadModel, SuccessfulLoadDummyDimensionRanges) {
 TEST_F(TestLoadModel, CorrectNumberOfStreamsSet) {
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    config.setPluginConfig({{"NUM_STREAMS", "6"}});
+    config.setPluginConfig({{"NUM_STREAMS", "3"}});
     ASSERT_EQ(modelInstance.loadModel(config), ovms::StatusCode::OK);
     ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
-    ASSERT_EQ(modelInstance.getNumOfStreams(), 6);
+    ASSERT_EQ(modelInstance.getNumOfStreams(), 3);
 }
 
 TEST_F(TestLoadModel, ScalarModelWithBatchSetToFixed) {

@@ -23,7 +23,6 @@ from typing import Any
 import numpy as np
 import mteb
 from mteb.model_meta import ModelMeta
-from mteb.models.text_formatting_utils import corpus_to_texts
 logger = logging.getLogger(__name__)
 import argparse
 
@@ -46,7 +45,7 @@ class OVMSModel:
     def encode(
         self, sentences: list[str], **kwargs: Any
     ) -> torch.Tensor | np.ndarray:
-        max_batch_size = 16
+        max_batch_size = 32
         sublists = [
             sentences[i : i + max_batch_size]
             for i in range(0, len(sentences), max_batch_size)
@@ -65,11 +64,6 @@ class OVMSModel:
     def encode_queries(self, queries: list[str], **kwargs: Any) -> np.ndarray:
         return self.encode(queries, **kwargs)
 
-    def encode_corpus(
-        self, corpus: list[dict[str, str]] | dict[str, list[str]], **kwargs: Any
-    ) -> np.ndarray:
-        sentences = corpus_to_texts(corpus)
-        return self.encode(sentences, **kwargs)
 
     def _to_numpy(self, embedding_response) -> np.ndarray:
         return np.array([e.embedding for e in embedding_response.data])

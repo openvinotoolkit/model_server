@@ -155,7 +155,8 @@ If successful:
   "versions" : [ $string, ... ] #optional,
   "platform" : $string,
   "inputs" : [ $metadata_tensor, ... ],
-  "outputs" : [ $metadata_tensor, ... ]
+  "outputs" : [ $metadata_tensor, ... ],
+  "rt_info" : { $model_info}
 }
 ```
 
@@ -168,6 +169,26 @@ $metadata_tensor =
   "shape" : [ $number, ... ]
 }
 ```
+`rt_info` is an optional response returned for the models in IR format which got an auxiliary metadata added during the export commands. For example the following code can include info about classification model labels:
+```python
+import openvino as ov
+core = ov.Core()
+model = core.read_model(model="model.xml")
+
+model.set_rt_info(["cat", "dog"],["model_info","labels"])
+ov.save_model(model,"new_model.xml")
+```
+Such deployed models will report:
+```json
+{
+"rt_info": {
+    "model_info": {
+      "labels": "cat dog"
+    }
+  }
+}
+```
+
 
 Else:
 ```JSON

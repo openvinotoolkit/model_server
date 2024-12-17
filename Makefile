@@ -74,9 +74,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= db64e5c66a9fdede7ecb8473b399ac94210f5136  # releases/2024/5 2024-11-09
-OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # releases/2024/5 2024-10-31
-OV_TOKENIZERS_BRANCH ?= 92bec551bdb1eed94aa375415c82b4068520c7b9 # releases/2024/5 2024-11-04
+OV_SOURCE_BRANCH ?= 2b7f48e8a8ef30f467760bd98ee6b909c8d89874  # master / 2024-11-26
+OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
+OV_TOKENIZERS_BRANCH ?= 5cc27fb7132f51b18f4f870286ae704cdaa5fc78 # master / 2024-11-25
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -84,7 +84,7 @@ OV_CONTRIB_ORG ?= openvinotoolkit
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
 
-OV_USE_BINARY ?= 0
+OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
@@ -166,11 +166,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),20.04)
         OS=ubuntu20
 	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu20_2024.5.0.17288.7975fa5da0c_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17449-2b7f48e8a8e/l_openvino_toolkit_ubuntu20_2025.0.0.dev20241126_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
-	INSTALL_DRIVER_VERSION ?= "24.26.30049"
-	DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_ubuntu22_2024.5.0.17288.7975fa5da0c_x86_64.tgz
+	INSTALL_DRIVER_VERSION ?= "24.39.31294"
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17449-2b7f48e8a8e/l_openvino_toolkit_ubuntu22_2025.0.0.dev20241126_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -185,7 +185,7 @@ ifeq ($(BASE_OS),redhat)
   endif
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= http://s3.toolbox.iotg.sclab.intel.com/ov-packages/l_openvino_toolkit_rhel8_2024.5.0.17288.7975fa5da0c_x86_64.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17449-2b7f48e8a8e/l_openvino_toolkit_rhel8_2025.0.0.dev20241126_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -201,7 +201,7 @@ endif
 OVMS_PYTHON_IMAGE_TAG ?= py
 
 PRODUCT_NAME = "OpenVINO Model Server"
-PRODUCT_VERSION ?= "2024.5"
+PRODUCT_VERSION ?= "2025.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)

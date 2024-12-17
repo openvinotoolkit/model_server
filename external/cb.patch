@@ -1,17 +1,29 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index b08debb..4171092 100644
+index da39b5c..d3fa72b 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -62,9 +62,9 @@ endif()
+@@ -81,15 +81,15 @@ endif()
 
  add_subdirectory(thirdparty)
  add_subdirectory(src)
--add_subdirectory(samples)
--add_subdirectory(tools/continuous_batching)
--add_subdirectory(tests/cpp)
-+#add_subdirectory(samples)
-+#add_subdirectory(tools/continuous_batching)
-+#add_subdirectory(tests/cpp)
+-if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/samples")
+-    add_subdirectory(samples)
+-endif()
+-if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/tools/continuous_batching")
+-    add_subdirectory(tools/continuous_batching)
+-endif()
+-if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/tests/cpp")
+-    add_subdirectory(tests/cpp)
+-endif()
++#if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/samples")
++#    add_subdirectory(samples)
++#endif()
++#if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/tools/continuous_batching")
++#    add_subdirectory(tools/continuous_batching)
++#endif()
++#if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/tests/cpp")
++#    add_subdirectory(tests/cpp)
++#endif()
 
  install(FILES LICENSE DESTINATION docs/licensing COMPONENT licensing_genai RENAME LICENSE-GENAI)
  install(FILES third-party-programs.txt DESTINATION docs/licensing COMPONENT licensing_genai RENAME third-party-programs-genai.txt)

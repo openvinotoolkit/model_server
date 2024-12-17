@@ -22,19 +22,21 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_se
 Wait for the model to load. You can check the status with a simple command:
 ```bash
 curl http://localhost:8000/v1/config
+```
+```json
 {
-"TinyLlama/TinyLlama-1.1B-Chat-v1.0" : 
-{
- "model_version_status": [
-  {
-   "version": "1",
-   "state": "AVAILABLE",
-   "status": {
-    "error_code": "OK",
-    "error_message": "OK"
-   }
+  "TinyLlama/TinyLlama-1.1B-Chat-v1.0": {
+    "model_version_status": [
+      {
+        "version": "1",
+        "state": "AVAILABLE",
+        "status": {
+          "error_code": "OK",
+          "error_message": "OK"
+        }
+      }
+    ]
   }
- ]
 }
 ```
 6. Run generation
@@ -72,7 +74,12 @@ curl -s http://localhost:8000/v3/chat/completions \
   ],
   "created": 1718607923,
   "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-  "object": "chat.completion"
+  "object": "chat.completion",
+  "usage": {
+    "prompt_tokens": 23,
+    "completion_tokens": 30,
+    "total_tokens": 53
+  }
 }
 ```
 **Note:** If you want to get the response chunks streamed back as they are generated change `stream` parameter in the request to `true`.

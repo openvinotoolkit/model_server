@@ -12,7 +12,9 @@ pipeline {
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         try {
+                          windows.cleanup_directories()
                           windows.clean()
+                          windows.install_dependencies()
                           windows.build_and_test()
                           windows.check_tests()
                         } finally {

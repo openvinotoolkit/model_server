@@ -41,8 +41,6 @@ cc_library(
         "@org_tensorflow//tensorflow/core:framework",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "//third_party:openvino",
         "//third_party:opencv",
@@ -77,16 +75,10 @@ cc_library(
             })
          + select({
             "//:not_disable_python": [
-                "@python3_linux//:python3-lib",
+                "//third_party:python3",
                 "@pybind11//:pybind11_embed",
                 ],
             "//:disable_python": []
-            })
-        + select({
-                "//conditions:default": [
-                    "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
-                ],
-                "//src:windows" : [],
             }),
     visibility = ["//visibility:public"],
 )

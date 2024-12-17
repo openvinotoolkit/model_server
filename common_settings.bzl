@@ -35,6 +35,17 @@ def create_config_settings():
         negate = ":disable_mediapipe",
     )
     native.config_setting(
+        name = "enable_drogon",
+        define_values = {
+            "USE_DROGON": "1",
+        },
+        visibility = ["//visibility:public"],
+    )
+    more_selects.config_setting_negation(
+        name = "enable_net_http",
+        negate = ":enable_drogon",
+    )
+    native.config_setting(
         name = "disable_cloud",
         define_values = {
             "CLOUD_DISABLE": "1",
@@ -80,12 +91,24 @@ def create_config_settings():
         negate = ":fuzzer_build",
     )
 
+    # is windows or mediapipe is disabled (no_http dependency)
     selects.config_setting_group(
         name = "is_windows_or_mediapipe_is_disabled_no_http",
         match_any = ["//src:windows", "//:disable_mediapipe"]
     )
 
-  
+    # is windows or python is disabled"(no llm dependency)
+    selects.config_setting_group(
+        name = "is_windows_or_python_is_disabled_no_llm",
+        match_any = ["//src:windows", "//:disable_python"]
+    )
+
+    # is windows and python is enabled"
+    selects.config_setting_group(
+        name = "is_windows_and_python_is_enabled",
+        match_all = ["//src:windows", "//:not_disable_python"]
+    )
+
 ###############################
 # compilation settings
 ###############################
@@ -152,6 +175,10 @@ COPTS_MEDIAPIPE = select({
     "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
     "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
 })
+COPTS_DROGON = select({
+    "//conditions:default": ["-DUSE_DROGON=0"],
+    "//:enable_drogon" : ["-DUSE_DROGON=1"],
+})
 COMMON_FUZZER_COPTS = [
     "-fsanitize=address",
     "-fprofile-generate",
@@ -165,6 +192,6 @@ COMMON_FUZZER_LINKOPTS = [
 ]
 COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"]
 PYBIND_DEPS = [
-    "@python3_linux//:python3-lib",
+    "//third_party:python3",
     "@pybind11//:pybind11_embed",
 ]

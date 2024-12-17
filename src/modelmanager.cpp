@@ -29,7 +29,16 @@
 #ifdef __linux__
 #include <dlfcn.h>
 #include <sysexits.h>
+#elif _WIN32
+#include <io.h>
 #endif
+
+#ifdef _WIN32
+#include <iomanip>
+
+#include <windows.h>
+#endif
+
 #include <errno.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -98,9 +107,9 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         }
         // TODO: check on windows
 #ifdef __linux__
-        int result = access(this->modelCacheDirectory.c_str(), EX_OK);
+        int result = access(this->modelCacheDirectory.c_str(), W_OK);
 #elif _WIN32
-        int result = access(this->modelCacheDirectory.c_str(), 0);
+        int result = _access(this->modelCacheDirectory.c_str(), 6);
 #endif
         if (result != 0) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);
@@ -862,6 +871,36 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
     return firstErrorStatus;
 }
 
+#ifdef _WIN32
+class FileHandle {
+public:
+    FileHandle(const std::string& filename) :
+        filename_(filename) {
+        hFile_ = CreateFileA(
+            filename.c_str(),
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL);
+    }
+    ~FileHandle() {
+        if (hFile_ != INVALID_HANDLE_VALUE) {
+            if (!CloseHandle(hFile_)) {
+                SPDLOG_ERROR("Failed to close file: ", filename_);
+            }
+        }
+    }
+
+    HANDLE getHandle() const { return hFile_; }
+
+private:
+    HANDLE hFile_;
+    std::string filename_;
+};
+#endif
+
 class LoudFileInfoReporter {
     std::stringstream ss;
 
@@ -878,6 +917,32 @@ public:
         ss << "FileInfoReporter: " << filename
            << " time modification [s]: " << statTime.st_ctim.tv_sec
            << " [ns]: " << statTime.st_ctim.tv_nsec << std::endl;
+#elif _WIN32
+        // Windows implementation
+        FileHandle fileHandle(filename);
+        if (fileHandle.getHandle() == INVALID_HANDLE_VALUE) {
+            SPDLOG_ERROR("Failed to open file for debug-read on Windows");
+            return;
+        }
+
+        FILETIME creationTime, lastAccessTime, lastWriteTime;
+        if (!GetFileTime(fileHandle.getHandle(), &creationTime, &lastAccessTime, &lastWriteTime)) {
+            SPDLOG_ERROR("Failed to get file time on Windows");
+            return;
+        }
+
+        SYSTEMTIME stUTC;
+        FileTimeToSystemTime(&lastWriteTime, &stUTC);
+
+        ULARGE_INTEGER fileTimeAsUint;  // FILETIME units are 100 nanoseconds
+        fileTimeAsUint.LowPart = lastAccessTime.dwLowDateTime;
+        fileTimeAsUint.HighPart = lastAccessTime.dwHighDateTime;
+        uint64_t timeInNanoseconds = fileTimeAsUint.QuadPart * 100;
+
+        ss << "FileInfoReporter: " << filename
+           << " time modification [s]: " << std::setfill('0') << std::setw(2) << stUTC.wSecond
+           << " [ns]: " << timeInNanoseconds << std::endl;
+#endif
         std::string some;
         file.clear();
         file.seekg(0);
@@ -887,7 +952,6 @@ public:
         }
         file.clear();
         file.seekg(0);
-#endif
     }
     void log() {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, ss.str());

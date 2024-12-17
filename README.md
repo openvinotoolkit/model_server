@@ -22,7 +22,7 @@ Read [release notes](https://github.com/openvinotoolkit/model_server/releases) t
 
 ### Key features:
 - **[NEW]** [Text Embeddings compatible with OpenAI API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demos_embeddings.html)
-- **[NEW]** [Reranking compatible with Cohere API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demo_rerank.html)
+- **[NEW]** [Reranking compatible with Cohere API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demos_rerank.html)
 - **[NEW]** [Efficient Text Generation via OpenAI API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demos_continuous_batching.html)
 - [Python code execution](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_python_support_reference.html)
 - [gRPC streaming](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_streaming_endpoints.html)

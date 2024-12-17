@@ -166,9 +166,10 @@ public:
                         finalPromptIds,
                         this->apiHandler->createGenerationConfig());
 
-                    this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
-                        genHandle->drop();
-                    });
+                    // TODO: Revert when drogon adds disconnection callbacks: https://github.com/drogonframework/drogon/pull/2204
+                    // this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
+                    //     genHandle->drop();
+                    // });
                 }
                 nodeResources->notifyExecutorThread();
                 this->streamer = std::make_shared<TextStreamer>(
@@ -180,6 +181,10 @@ public:
             RET_CHECK(this->streamer != nullptr);
             RET_CHECK(this->client != nullptr);
 
+            if (this->client->isDisconnected()) {
+                return absl::CancelledError();
+            }
+
             // Unary scenario
             if (!this->apiHandler->isStream()) {
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
@@ -189,10 +194,6 @@ public:
                     return absl::CancelledError();
                 }
                 RET_CHECK(generationOutputs.size() >= 1);
-                std::sort(generationOutputs.begin(), generationOutputs.end(), [](ov::genai::GenerationOutput& r1, ov::genai::GenerationOutput& r2) {
-                    return r1.score > r2.score;
-                });
-
                 std::string response = this->apiHandler->serializeUnaryResponse(generationOutputs);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);

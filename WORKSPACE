@@ -33,6 +33,14 @@ bazel_skylib_workspace()
 load("@bazel_skylib//lib:versions.bzl", "versions")
 versions.check(minimum_bazel_version = "6.0.0")
 
+http_archive(
+    name = "zlib",
+    build_file = "@mediapipe//third_party:zlib.BUILD",
+    sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
+    strip_prefix = "zlib-1.3.1",
+    url = "http://zlib.net/fossils/zlib-1.3.1.tar.gz",
+)
+
 # RapidJSON
 # Must be defined earlier than tensorflow_serving because TFS is using older rapidjson
 # Version must match openvino.genai -> jinja2cpp -> rapidjson
@@ -85,6 +93,8 @@ cc_library(
 )
 """,
 )
+
+# Used for gRPC API protos only
 # Tensorflow serving
 git_repository(
     name = "tensorflow_serving",
@@ -118,7 +128,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "cfb127e552aa66696f49c87b61f611e2a2b1b2a1", # update Geti calculators to latest
+    commit = "8d91559c1e900d3c043cc7aafb1b55df25d586ac", # Opencv from ENV (#101) Dec 9 2024
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -201,7 +211,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_openvino",
     build_file = "@//third_party/openvino:openvino_windows.BUILD",
-    path = "C:\\opt\\intel\\openvino_2024\\runtime",
+    path = "C:\\opt\\openvino\\runtime",
 )
 
 new_local_repository(
@@ -213,7 +223,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
-    path = "C:\\opt\\opencv\\build",
+    path = "C:\\opt\\opencv",
 )
 
 new_local_repository(
@@ -232,13 +242,32 @@ new_local_repository(
 
 ########################################################### Python support start
 
+http_archive(
+    name = "aspect_bazel_lib",
+    sha256 = "7b39d9f38b82260a8151b18dd4a6219d2d7fc4a0ac313d4f5a630ae6907d205d",
+    strip_prefix = "bazel-lib-2.10.0",
+    url = "https://github.com/bazel-contrib/bazel-lib/releases/download/v2.10.0/bazel-lib-v2.10.0.tar.gz",
+)
+
+load("@aspect_bazel_lib//lib:repositories.bzl", "register_coreutils_toolchains")
+register_coreutils_toolchains()
+
 load("@//third_party/python:python_repo.bzl", "python_repository")
 python_repository(name = "_python3-linux")
+
+load("@//third_party/python:python_repo_win.bzl", "python_repository")
+python_repository(name = "_python3-windows")
 
 new_local_repository(
     name = "python3_linux",
     path = "/usr",
     build_file = "@_python3-linux//:BUILD"
+)
+
+new_local_repository(
+    name = "python3_windows",
+    path = "C:\\opt\\",
+    build_file = "@_python3-windows//:BUILD"
 )
 
 http_archive(
@@ -341,8 +370,12 @@ rules_pkg_dependencies()
 load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
 
+### OpenVINO GenAI
 load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
+
+load("@//third_party/drogon:drogon.bzl", "drogon_cpp")
+drogon_cpp()
 
 # Azure Storage SDK
 new_local_repository(

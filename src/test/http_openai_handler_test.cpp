@@ -25,13 +25,6 @@
 #include "../module_names.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-#pragma GCC diagnostic pop
-
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"
 
@@ -46,7 +39,7 @@ protected:
     std::vector<std::pair<std::string, std::string>> headers;
     ovms::HttpRequestComponents comp;
     const std::string endpoint = "/v3/chat/completions";
-    MockedServerRequestInterface writer;
+    std::shared_ptr<MockedServerRequestInterface> writer;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
 
@@ -61,7 +54,8 @@ protected:
     }
 
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock.json");
+        writer = std::make_shared<MockedServerRequestInterface>();
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock.json").c_str());
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
     }
 
@@ -83,7 +77,7 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/v1/completions/", requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor("/v3/v1/completions/", requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 
     std::string expectedResponse = R"(/v3/v1/completions/
@@ -109,7 +103,7 @@ TEST_F(HttpOpenAIHandlerTest, UnaryWithHeaders) {
     comp.headers.push_back(std::pair<std::string, std::string>("test2", "header"));
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/completions/", requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor("/v3/completions/", requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 
     std::string expectedResponse = R"(/v3/completions/
@@ -132,13 +126,13 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReplyEnd()).Times(1);
-    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(9);
-    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
-    EXPECT_CALL(writer, IsDisconnected()).Times(9);
+    EXPECT_CALL(*writer, PartialReplyBegin(::testing::_)).WillOnce(testing::Invoke([](std::function<void()> fn) { fn(); }));
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(9);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(9);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::PARTIAL_END);
 
     ASSERT_EQ(response, "");
@@ -147,12 +141,11 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
 TEST_F(HttpOpenAIHandlerTest, BodyNotAJson) {
     std::string requestBody = "not a json";
 
-    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
-    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
-    EXPECT_CALL(writer, IsDisconnected()).Times(0);
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - Cannot parse JSON body");
 }
@@ -160,12 +153,11 @@ TEST_F(HttpOpenAIHandlerTest, BodyNotAJson) {
 TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
     std::string requestBody = "[1, 2, 3]";
 
-    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
-    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
-    EXPECT_CALL(writer, IsDisconnected()).Times(0);
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body must be an object");
 }
@@ -178,12 +170,11 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldMissing) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
-    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
-    EXPECT_CALL(writer, IsDisconnected()).Times(0);
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - model field is missing in JSON body");
 }
@@ -197,12 +188,11 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldNotAString) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
-    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
-    EXPECT_CALL(writer, IsDisconnected()).Times(0);
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - model field is not a string");
 }
@@ -216,12 +206,12 @@ TEST_F(HttpOpenAIHandlerTest, StreamFieldNotABoolean) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
-    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
-    EXPECT_CALL(writer, IsDisconnected()).Times(0);
+    EXPECT_CALL(*writer, PartialReplyBegin(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - stream field is not a boolean");
 }
@@ -235,11 +225,10 @@ TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
         }
     )";
 
-    EXPECT_CALL(writer, PartialReplyEnd()).Times(0);
-    EXPECT_CALL(writer, PartialReply(::testing::_)).Times(0);
-    EXPECT_CALL(writer, WriteResponseString(::testing::_)).Times(0);
-    EXPECT_CALL(writer, IsDisconnected()).Times(0);
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, &writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
 }
