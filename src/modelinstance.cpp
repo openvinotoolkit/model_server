@@ -309,7 +309,7 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
     size_t outputIndex = 0;
     for (ov::Output<ov::Node>& output : model->outputs()) {
         try {
-            OV_LOGGER("ov::Output<ov::Node> output: {}, output.get_any_name()", reinterpret_cast<const void*>(&output));         
+            OV_LOGGER("ov::Output<ov::Node> output: {}, output.get_any_name()", reinterpret_cast<const void*>(&output));
             if (output.get_names().size() == 0) {
                 std::unordered_set<std::string> dummy_name{"OUT_" + std::to_string(outputIndex)};
                 output.add_names(dummy_name);
