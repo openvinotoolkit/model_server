@@ -113,7 +113,7 @@ def check_tests(){
 // Post build steps
 def archive_artifacts(){
     // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
-    archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\ovms.zip"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms.zip"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_environment.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build_test.log"
