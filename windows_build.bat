@@ -99,6 +99,11 @@ copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll
 
 ls %cd%\bazel-bin\src
 
+
+:: Download LLMs
+
+call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
+
 :: Start unit test
 %runTest%
 
