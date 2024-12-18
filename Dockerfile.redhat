@@ -67,7 +67,7 @@ RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
     cd pugixml && \
     patch -p1 < /ovms/third_party/pugixml/pugixml_v1.13_flags.patch && \
     cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=${VERBOSE_LOGS} && \
-    make all && \
+    make all -j ${JOBS} && \
     cp -P libpugixml.so* /usr/lib64/
 
 ####### Azure SDK
@@ -103,7 +103,7 @@ ARG JOBS=40
 # hadolint ignore=DL3041
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
                    http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && \
-    dnf clean all && dnf update -d6 -y && dnf install -d6 -y \
+    dnf update -d6 -y && dnf install -d6 -y \
             gdb \
             java-11-openjdk-devel \
             tzdata-java \
@@ -146,7 +146,6 @@ ARG NVIDIA=0
 # Add Nvidia dev tool if needed
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    dnf config-manager --save --set-enabled codeready-builder-for-rhel-8-x86_64-rpms ; \
     dnf -y module disable python36 && \
     dnf -y install libzstd-devel ; \
     dnf install -y  \
@@ -158,11 +157,12 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
         cuda-cudart-devel-11-8 && \
     # ignore errors on hosts with older nvidia drivers
     dnf install -y cuda-11-8 || true && \
+    num_cuda=$(rpm -qa | grep -c -E 'cuda-nvcc|libcublas|libcudnn8|libcutensor|cuda-cudart-devel'); echo -e "\n$num_cuda CUDA packages downloaded" && \
+    if [ "$num_cuda" -lt 8 ]; then echo -e "CUDA environment is incomplete\n" ; exit 1 ; fi && \
     dnf install -y python38-Cython && \
-    curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin && \
-    curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
+    curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xz --strip-components=1 -C /usr/local/bin && \
+    curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' && \
     chmod a+x /usr/local/bin/sccache && \
-    curl https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz -L | tar xzvC /usr/local --exclude={doc,man} --strip-components=1 && \
     dnf clean all
 
 ENV TF_SYSTEM_LIBS="curl"
@@ -414,24 +414,25 @@ ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
+COPY ./install_redhat_gpu_drivers.sh /install_gpu_drivers.sh
 # hadolint ignore=DL3003,DL3041,SC2164,SC1091
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; \
     $DNF_TOOL upgrade --setopt=install_weak_deps=0 --nodocs -y ; \
     if [ "$GPU" == "1" ] ; then \
-    	source install_gpu_drivers.sh && rm -rf ./install_gpu_drivers.sh; \
+        source /install_gpu_drivers.sh && rm -rf /install_gpu_drivers.sh; \
     fi ; \
     # For image with Python enabled install Python library
     if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
         $DNF_TOOL install -y python39-libs --setopt=install_weak_deps=0 --nodocs; \
     fi ; \
     $DNF_TOOL install -y shadow-utils; \
+    $DNF_TOOL clean all ; \
     cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 # for NVIDIA
-RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda rpm package"; \
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda rpm packages"; \
     dnf install --nodocs -y  \
         libcudnn8-8.6.0.163-1.cuda11.8 \
         libcutensor1-1.6.1.5-1 && \
