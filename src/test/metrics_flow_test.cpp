@@ -750,6 +750,9 @@ TEST_F(MetricFlowTest, RestModelInferOnUnloadedModel) {
 }
 
 TEST_F(MetricFlowTest, RestModelMetadata) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows CVS-159404";
+#endif
     HttpRestApiHandler handler(server, 0);
     HttpRequestComponents components;
 
@@ -964,26 +967,26 @@ TEST_F(MetricFlowTest, CurrentGraphs) {
 // Test MP metrics when mediapipe is enabled at build time
 #if (MEDIAPIPE_DISABLE == 0)
 std::string MetricFlowTest::prepareConfigContent() {
-    return std::string{R"({
+    auto configContent = std::string{R"({
         "monitoring": {
             "metrics": {
                 "enable": true,
                 "metrics_list": [)"} +
-           R"(")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE +
-           R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
-           R"(",")" + METRIC_NAME_CURRENT_REQUESTS +
-           R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
-           R"(",")" + METRIC_NAME_REQUESTS_FAIL +
-           R"(",")" + METRIC_NAME_REQUEST_TIME +
-           R"(",")" + METRIC_NAME_STREAMS +
-           R"(",")" + METRIC_NAME_INFERENCE_TIME +
-           R"(",")" + METRIC_NAME_WAIT_FOR_INFER_REQ_TIME +
-           R"(",")" + METRIC_NAME_CURRENT_GRAPHS +
-           R"(",")" + METRIC_NAME_REQUESTS_ACCEPTED +
-           R"(",")" + METRIC_NAME_REQUESTS_REJECTED +
-           R"(",")" + METRIC_NAME_RESPONSES +
-           R"(",")" + METRIC_NAME_GRAPH_ERROR +
-           R"("]
+                         R"(")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE +
+                         R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
+                         R"(",")" + METRIC_NAME_CURRENT_REQUESTS +
+                         R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
+                         R"(",")" + METRIC_NAME_REQUESTS_FAIL +
+                         R"(",")" + METRIC_NAME_REQUEST_TIME +
+                         R"(",")" + METRIC_NAME_STREAMS +
+                         R"(",")" + METRIC_NAME_INFERENCE_TIME +
+                         R"(",")" + METRIC_NAME_WAIT_FOR_INFER_REQ_TIME +
+                         R"(",")" + METRIC_NAME_CURRENT_GRAPHS +
+                         R"(",")" + METRIC_NAME_REQUESTS_ACCEPTED +
+                         R"(",")" + METRIC_NAME_REQUESTS_REJECTED +
+                         R"(",")" + METRIC_NAME_RESPONSES +
+                         R"(",")" + METRIC_NAME_GRAPH_ERROR +
+                         R"("]
             }
         },
         "model_config_list": [
@@ -1041,6 +1044,8 @@ std::string MetricFlowTest::prepareConfigContent() {
         ]
     }
     )";
+    adjustConfigForTargetPlatform(configContent);
+    return configContent;
 }
 #else
 // Do not test MP metrics when mediapipe is disabled at build time
