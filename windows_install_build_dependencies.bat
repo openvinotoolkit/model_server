@@ -67,11 +67,11 @@ IF /I EXIST %wget_path% (
     if %expunge% EQU 1 (
         rmdir /S /Q %wget_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
-        curl https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
+        curl --ca-native https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
     ) else ( echo [INFO] ::::::::::::::::::::::: wget installed already in %wget_path% )
 ) ELSE (
-    curl https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
+    curl --ca-native https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
     if %errorlevel% neq 0 exit /b %errorlevel%
 )
 
