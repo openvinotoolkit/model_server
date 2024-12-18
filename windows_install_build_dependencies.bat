@@ -98,6 +98,7 @@ IF /I EXIST %bash_path% (
 
     start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %msys_path%
     if %errorlevel% neq 0 exit /b %errorlevel%
+    echo Timeout for installer set to 120 seconds with ping command
     ping 1.1.1.1 -n 120 > nul
     :: Install msys hang workaround
     taskkill /f /t /im msys2-x86_64-20240727.exe
@@ -123,7 +124,7 @@ echo [INFO] ::::::::::::::::::::::: OpenVino: %openvino_dir%
 :: Download OpenVINO
 IF /I EXIST %openvino_zip% (
     if %expunge% EQU 1 (
-        rmdir /S /Q %openvino_zip%
+        del /S /Q %openvino_zip%
         if %errorlevel% neq 0 exit /b %errorlevel%
         wget -O %BAZEL_SHORT_PATH%\%openvino_ver% %openvino_http%%openvino_ver%
         if %errorlevel% neq 0 exit /b %errorlevel%
@@ -209,7 +210,7 @@ IF /I EXIST %boringssl_dir% (
 set "bazel_path=%opt_install_dir%\bazel.exe"
 IF /I EXIST %bazel_path% (
     if %expunge% EQU 1 (
-        rmdir /S /Q %bazel_path%
+        del /S /Q %bazel_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
         wget -O %bazel_path% https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
         if %errorlevel% neq 0 exit /b %errorlevel%
