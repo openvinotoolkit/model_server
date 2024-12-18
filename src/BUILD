@@ -1873,11 +1873,11 @@ cc_test(
         "test/unit_tests.cpp",
         ] + select({
             "//:is_windows_or_mediapipe_is_disabled_no_http": [
+                "test/embeddingsnode_test.cpp",  # TODO: Enable on windows
             ],
             # Tests that require MediaPipe and HTTP (windows does not have HTTP yet)
             "//conditions:default" : [
                 "test/reranknode_test.cpp",  # TODO: Enable on windows
-                "test/embeddingsnode_test.cpp",  # TODO: Enable on windows
             ],
         }) + select({
             "//:not_disable_cloud": [
