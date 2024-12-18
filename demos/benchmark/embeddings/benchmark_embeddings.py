@@ -90,6 +90,11 @@ class RequestFuncOutput:
     tokens_len: int = 0
     error: str = ""
 
+application_json_headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}",
+        }
+
 async def async_request_embeddings(
     request_func_input: RequestFuncInput,
     pbar: Optional[tqdm] = None,
@@ -102,10 +107,7 @@ async def async_request_embeddings(
             "input": request_func_input.documents,
             "encoding_format": "base64",
         }
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}",
-        }
+        headers = application_json_headers
 
         output = RequestFuncOutput()
         st = time.perf_counter()
@@ -116,8 +118,10 @@ async def async_request_embeddings(
                     async for chunk_bytes in response.content:
                         if not chunk_bytes:
                             continue
-                        #chunk_bytes = chunk_bytes.decode("utf-8")
+                        # uncomment for response debugging
+                        # chunk_bytes = chunk_bytes.decode("utf-8")
                         # data = json.loads(chunk_bytes)
+                        # TBD: saving response to file
                         timestamp = time.perf_counter()
                         output.success = True
                         output.latency =  timestamp - st
@@ -147,10 +151,7 @@ async def async_request_rerank(
             "documents": request_func_input.documents,
             "query": "Hello"
         }
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}",
-        }
+        headers = application_json_headers
 
         output = RequestFuncOutput()
         st = time.perf_counter()
@@ -161,8 +162,10 @@ async def async_request_rerank(
                     async for chunk_bytes in response.content:
                         if not chunk_bytes:
                             continue
-                        #chunk_bytes = chunk_bytes.decode("utf-8")
+                        # uncomment for response debugging
+                        # chunk_bytes = chunk_bytes.decode("utf-8")
                         # data = json.loads(chunk_bytes)
+                        # TBD: saving response to file
                         timestamp = time.perf_counter()
                         output.success = True
                         output.latency =  timestamp - st
@@ -190,10 +193,7 @@ async def async_request_embeddings_tei(
         payload = {
             "inputs": request_func_input.documents,
         }
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}",
-        }
+        headers = application_json_headers
 
         output = RequestFuncOutput()
         st = time.perf_counter()
@@ -204,8 +204,10 @@ async def async_request_embeddings_tei(
                     async for chunk_bytes in response.content:
                         if not chunk_bytes:
                             continue
-                        #chunk_bytes = chunk_bytes.decode("utf-8")
+                        # uncomment for response debugging
+                        # chunk_bytes = chunk_bytes.decode("utf-8")
                         # data = json.loads(chunk_bytes)
+                        # TBD: saving response to file
                         timestamp = time.perf_counter()
                         output.success = True
                         output.latency =  timestamp - st
