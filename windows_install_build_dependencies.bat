@@ -98,7 +98,7 @@ IF /I EXIST %bash_path% (
 
     start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %msys_path%
     if %errorlevel% neq 0 exit /b %errorlevel%
-    timeout 120
+    ping 1.1.1.1 -n 120 > nul
     :: Install msys hang workaround
     taskkill /f /t /im msys2-x86_64-20240727.exe
     if %errorlevel% neq 0 exit /b %errorlevel%
@@ -124,7 +124,7 @@ echo [INFO] ::::::::::::::::::::::: OpenVino: %openvino_dir%
 IF /I EXIST %openvino_zip% (
     echo [INFO] file exists %openvino_zip%
 ) ELSE (
-    curl %openvino_http%%openvino_ver% >%BAZEL_SHORT_PATH%\%openvino_ver%
+    wget -P %BAZEL_SHORT_PATH%\%openvino_ver% %openvino_http%%openvino_ver%
     if %errorlevel% neq 0 exit /b %errorlevel%
 )
 :: Extract OpenVINO
