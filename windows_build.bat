@@ -100,6 +100,7 @@ copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll
 ls %cd%\bazel-bin\src
 
 :: Install Jinja in Python for chat templates to works
+set PYTHONHOME=C:\opt\Python39
 call C:\opt\Python39\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
 
 :: Download LLMs

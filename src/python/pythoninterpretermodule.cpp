@@ -37,8 +37,9 @@ Status PythonInterpreterModule::start(const ovms::Config& config) {
     py::initialize_interpreter();
     py::exec(R"(
         import sys
-        print("Python version")
+        print("Python version:")
         print(sys.version)
+        print("Python executable:")
         print(sys.executable)
     )");
     if (!PythonBackend::createPythonBackend(&pythonBackend))
