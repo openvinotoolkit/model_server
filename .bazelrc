@@ -293,6 +293,8 @@ build:windows --define=MEDIAPIPE_DISABLE=0
 build:windows --action_env OpenVINO_DIR="c:/opt/openvino/runtime/cmake"
 build:windows --action_env OpenCV_DIR="c:/opt/opencv"
 
+build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.9
+
 build:windows --define=USE_DROGON=1
 build:linux --define=USE_DROGON=1  # 0=legacy net_http, available only on linux
 # those below are required for XNNPACK build with gcc <12 (ubuntu 22 default is 11)
