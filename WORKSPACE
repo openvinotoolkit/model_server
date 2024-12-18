@@ -47,7 +47,7 @@ load("@rules_python//python:repositories.bzl", "py_repositories")
 py_repositories()
 
 # ABSL on 2023-10-18
-# Needed for MP: @atobisze
+# Needed for MP
 # https://github.com/google-ai-edge/mediapipe/commit/743cdb747332efdfb43338d92aa6349acc40a06a
 # patch for static_assert(ValidateAsciiCasefold() == 0, "error in case conversion");
 # needs to be before MP & TF
@@ -274,7 +274,6 @@ new_local_repository(
 
 ########################################################### Python support start
 
-# TODO @atobisze to comment out below?
 http_archive(
     name = "aspect_bazel_lib",
     sha256 = "7b39d9f38b82260a8151b18dd4a6219d2d7fc4a0ac313d4f5a630ae6907d205d",
@@ -291,8 +290,6 @@ python_repository(name = "_python3-linux")
 load("@//third_party/python:python_repo_win.bzl", "python_repository")
 python_repository(name = "_python3-windows")
 
-#load("@//:ovms_python.bzl", "ovms_workspace_python")
-#ovms_workspace_python()
 new_local_repository(
     name = "python3_linux",
     path = "/usr",
@@ -320,16 +317,8 @@ http_archive(
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 python_configure(name = "local_config_python")
 
-#http_archive(
-#    name = "rules_python",
-#    sha256 = "29a801171f7ca190c543406f9894abf2d483c206e14d6acbd695623662320097",
-#    strip_prefix = "rules_python-0.18.1",
-#    url = "https://github.com/bazelbuild/rules_python/releases/download/0.18.1/rules_python-0.18.1.tar.gz",
-#)
-
 load("@rules_python//python:repositories.bzl", "py_repositories")
 py_repositories()
-# TODO @atobisze to comment out aboce?
 
 load("@rules_python//python:pip.bzl", "pip_parse")
 
@@ -361,11 +350,8 @@ cc_library(
 """,
 )
 
-
-
 # TensorFlow repo should always go after the other external dependencies.
-# TODO @atobisze update date & where it comes from
-
+# TF on 2024-09-24 same as in Mediapipe
 _TENSORFLOW_GIT_COMMIT = "5329ec8dd396487982ef3e743f98c0195af39a6b"
 _TENSORFLOW_SHA256 = "eb1f8d740d59ea3dee91108ab1fc19d91c4e9ac2fd17d9ab86d865c3c43d81c9"
 http_archive(
@@ -379,7 +365,6 @@ http_archive(
         #"@mediapipe//third_party:org_tensorflow_custom_ops.diff",
         #"tf.patch",
         #"tf_graph_info_multilinecomment.patch",
-
         "@mediapipe//third_party:org_tensorflow_c_api_experimental.diff",
         # Diff is generated with a script, don't update it manually.
         "@mediapipe//third_party:org_tensorflow_custom_ops.diff",
@@ -387,7 +372,7 @@ http_archive(
         # See https://github.com/bazelbuild/bazel/issues/19912
         "@mediapipe//third_party:org_tensorflow_objc_build_fixes.diff",
         "tf_2.18_logging.patch",
-        #"tf_graph_info_multilinecomment.patch",
+        #"tf_graph_info_multilinecomment.patch", # TODO @atobisze remove unneeded patches after CI pass & rev
     ],
     patch_args = [
         "-p1",
@@ -398,12 +383,6 @@ http_archive(
 )
 
 load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
-
-
-
-
-
-
 
 # Initialize TensorFlow's external dependencies.
 load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
