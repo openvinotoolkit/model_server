@@ -347,8 +347,9 @@ TEST_F(ConfigReload, startWith1DummyThenAddVersion) {
 
     // Workaround to unload before removing the model,
     // because on windows does not close the handle (uses mmap)
+#ifdef _WIN32
     this->UnloadConfig(t.getManager());
-
+#endif
     std::filesystem::remove_all(getGenericFullPathForTmp("/tmp/dummy"));
 }
 
@@ -392,8 +393,9 @@ TEST_F(ConfigReload, startWithMissingXmlThenAddAndReload) {
 
     // Workaround to unload before removing the model,
     // because on windows does not close the handle (uses mmap)
+#ifdef _WIN32
     this->UnloadConfig(t.getManager());
-
+#endif
     std::filesystem::remove_all(getGenericFullPathForTmp("/tmp/dummy"));
 }
 
@@ -418,8 +420,9 @@ TEST_F(ConfigReload, startWithEmptyModelDir) {
 
     // Workaround to unload before removing the model,
     // because on windows does not close the handle (uses mmap)
+#ifdef _WIN32
     this->UnloadConfig(t.getManager());
-
+#endif
     std::filesystem::remove_all("/tmp/dummy");
 }
 
