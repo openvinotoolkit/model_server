@@ -218,6 +218,7 @@ def set_rt_info(model_folder_path, model_filename, config_filename):
               model.set_rt_info(str(value), ['model_info', key])
     temp_model_name = model_filename.replace('.xml', '_temp.xml')
     ov.save_model(model, os.path.join(model_folder_path, temp_model_name))
+    model = None
     shutil.move(os.path.join(model_folder_path, temp_model_name), os.path.join(model_folder_path, model_filename))
     shutil.move(os.path.join(model_folder_path, temp_model_name.replace('.xml','.bin')), os.path.join(model_folder_path, model_filename.replace('.xml','.bin')))
 
