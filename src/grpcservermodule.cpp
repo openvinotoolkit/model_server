@@ -32,10 +32,11 @@
 #ifdef __linux__
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #elif _WIN32
 #include <winsock2.h>
 #endif
-#include <unistd.h>
+
 
 #include "config.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"

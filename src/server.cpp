@@ -42,7 +42,9 @@
 #include <ntstatus.h>
 #include <windows.h>
 #endif
+#ifdef __linux__
 #include <unistd.h>
+#endif
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"

@@ -20,6 +20,26 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# 2023-06-05
+# This version of Glog is required for Windows support, but currently causes
+# crashes on some Android devices.
+# OVMS - must be before MP
+http_archive(
+    name = "com_github_glog_glog_windows",
+    strip_prefix = "glog-3a0d4d22c5ae0b9a2216988411cfa6bf860cc372",
+    sha256 = "170d08f80210b82d95563f4723a15095eff1aad1863000e8eeb569c96a98fefb",
+    urls = [
+      "https://github.com/google/glog/archive/3a0d4d22c5ae0b9a2216988411cfa6bf860cc372.zip",
+    ],
+    patches = [
+        "@mediapipe//third_party:com_github_glog_glog.diff",
+        "@mediapipe//third_party:com_github_glog_glog_windows_patch.diff",
+    ],
+    patch_args = [
+        "-p1",
+    ],
+)
+
 http_archive(
     name = "bazel_skylib",
     sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
@@ -556,3 +576,4 @@ git_repository(
     remote = "https://github.com/nlohmann/json/",
     tag = "v3.11.3",
 )
+
