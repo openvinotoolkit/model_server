@@ -247,7 +247,7 @@ IF /I EXIST %python39_path% (
         :: Copy system Python
         xcopy /s /e /q /y "%python39_system%" %python39_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
-        %python39_path%\python.exe -m pip install numpy==1.23
+        %python39_path%python.exe -m pip install numpy==1.23
         if %errorlevel% neq 0 exit /b %errorlevel%
     ) ELSE (
         echo [ERROR] ::::::::::::::::::::::: Python39 not found
