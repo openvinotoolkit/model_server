@@ -37,7 +37,6 @@
 #include <winsock2.h>
 #endif
 
-
 #include "config.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"

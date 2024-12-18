@@ -49,7 +49,6 @@
 #include <unistd.h>
 #endif
 
-
 #include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderconfig.hpp"
