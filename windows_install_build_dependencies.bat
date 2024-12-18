@@ -122,14 +122,26 @@ set "openvino_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
 echo [INFO] ::::::::::::::::::::::: OpenVino: %openvino_dir%
 :: Download OpenVINO
 IF /I EXIST %openvino_zip% (
-    echo [INFO] file exists %openvino_zip%
+    if %expunge% EQU 1 (
+        rmdir /S /Q %openvino_zip%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+        wget -O %BAZEL_SHORT_PATH%\%openvino_ver% %openvino_http%%openvino_ver%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+    ) else ( echo [INFO] file exists %openvino_zip% )
+    
 ) ELSE (
-    wget -P %BAZEL_SHORT_PATH%\%openvino_ver% %openvino_http%%openvino_ver%
+    wget -O %BAZEL_SHORT_PATH%\%openvino_ver% %openvino_http%%openvino_ver%
     if %errorlevel% neq 0 exit /b %errorlevel%
 )
 :: Extract OpenVINO
 IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
-    echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir%
+     if %expunge% EQU 1 (
+        rmdir /S /Q %BAZEL_SHORT_PATH%\%openvino_dir%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+        unzip -o %openvino_zip% -d %BAZEL_SHORT_PATH%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+    ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir% )
+    
 ) ELSE (
     unzip -o %openvino_zip% -d %BAZEL_SHORT_PATH%
     if %errorlevel% neq 0 exit /b %errorlevel%
