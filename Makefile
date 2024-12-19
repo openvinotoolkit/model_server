@@ -44,7 +44,7 @@ JOBS ?= $(CORES_TOTAL)
 
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
-# Currently supported BASE_OS values are: ubuntu20 ubuntu22 redhat
+# Currently supported BASE_OS values are: ubuntu24 ubuntu22 redhat
 BASE_OS ?= ubuntu22
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
@@ -140,7 +140,10 @@ else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
 CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+ifeq ($(BASE_OS),ubuntu24)
+	REPO_ENV=" --repo_env PYTHON_BIN_PATH=/usr/bin/python3.12"
+endif
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(REPO_ENV)
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
@@ -153,8 +156,8 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS),ubuntu22)
 	BASE_OS_TAG=22.04
   endif
-  ifeq ($(BASE_OS),ubuntu20)
-	BASE_OS_TAG=20.04
+  ifeq ($(BASE_OS),ubuntu24)
+	BASE_OS_TAG=24.04
   endif
   ifeq ($(NVIDIA),1)
 	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu$(BASE_OS_TAG)
@@ -163,10 +166,10 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
 	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   endif
-  ifeq ($(BASE_OS_TAG),20.04)
-        OS=ubuntu20
-	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17449-2b7f48e8a8e/l_openvino_toolkit_ubuntu20_2025.0.0.dev20241126_x86_64.tgz
+  ifeq ($(BASE_OS_TAG),24.04)
+        OS=ubuntu24
+	INSTALL_DRIVER_VERSION ?= "24.39.31294"
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17449-2b7f48e8a8e/l_openvino_toolkit_ubuntu24_2025.0.0.dev20241126_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
@@ -352,11 +355,6 @@ ifeq ($(FUZZER_BUILD),1)
   endif
   ifeq ($(BASE_OS),redhat)
 	@echo "Cannot run fuzzer with redhat"; exit 1 ;
-  endif
-endif
-ifeq ($(BASE_OS_TAG),20.04)
-  ifeq ($(RUN_TESTS),1)
-	@echo "On ubuntu20 run tests via make run_unit_tests"; exit 1 ;
   endif
 endif
 ifeq ($(NVIDIA),1)
@@ -705,7 +703,6 @@ else
 		tail -200 test.log ; \
 		exit $$exit_status
 endif
-
 
 run_lib_files_test:
 	docker run --entrypoint bash -v $(realpath tests/file_lists):/test $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./test/test_release_files.sh ${BAZEL_DEBUG_FLAGS} > file_test.log 2>&1 ; exit_status=$$? ; tail -200 file_test.log ; exit $$exit_status
