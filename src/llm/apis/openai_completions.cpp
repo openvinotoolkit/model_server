@@ -18,6 +18,7 @@
 
 #include <cmath>
 
+#include <opencv2/opencv.hpp>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
@@ -126,8 +127,22 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             std::string url = imageUrl["url"].GetString();
                             std::string pattern = "base64,";
                             std::size_t pos = url.find(pattern);
+                            size_t offset = pos + pattern.length();
                             if (pos == std::string::npos) {
                                 return absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix");
+                            }
+                            std::string decoded;
+                            if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
+                                return absl::InvalidArgumentError("Invalid base64 string in request");
+                            }
+                            size_t rows = 1;
+                            size_t cols = decoded.size();
+                            cv::Mat rawData(rows, cols, CV_8UC1, (void*)decoded.data());
+                            cv::Mat image;
+                            try {
+                                image = cv::imdecode(rawData, cv::IMREAD_UNCHANGED);
+                            } catch (const cv::Exception& e) {
+                                return absl::InvalidArgumentError("Error during string to mat conversion");
                             }
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");
