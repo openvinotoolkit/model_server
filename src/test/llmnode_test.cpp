@@ -2363,6 +2363,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeNameExists) {
         }
         }
     )";
+    adjustConfigForTargetPlatform(testPbtxt);
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
@@ -2492,7 +2493,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
         }
         }
     )";
-
+    adjustConfigForTargetPlatform(testPbtxt);
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
@@ -2598,6 +2599,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
         }
         }
     )";
+    adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     MockedLLMNodeResources nodeResources;
@@ -2647,7 +2649,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
         }
         }
     )";
-
+    adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     MockedLLMNodeResources nodeResources;
@@ -2695,7 +2697,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
         }
         }
     )";
-
+    adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     MockedLLMNodeResources nodeResources;
@@ -2737,7 +2739,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
         }
         }
     )";
-
+    adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
@@ -2791,7 +2793,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
         }
         }
     )";
-
+    adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     MockedLLMNodeResources nodeResources;
