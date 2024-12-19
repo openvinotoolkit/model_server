@@ -183,6 +183,7 @@ public:
                 try {
                     int64_t pad_token = modelConfig.at("pad_token_id").as<int64_t>();
                     for (size_t i = 0; i < received_batch_size; i++) {
+                        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Batch no: {}", i);
                         int64_t* input_ids_start = reinterpret_cast<int64_t*>(embeddingsInputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].data()) + i * token_count_of_longest_document;
                         std::fill(input_ids_start, input_ids_start + token_count_of_longest_document, pad_token);
                         std::copy(tokenized_documents->at(i).data(), tokenized_documents->at(i).data() + tokenized_documents->at(i).size(), input_ids_start);
