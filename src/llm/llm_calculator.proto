@@ -45,4 +45,21 @@ message LLMCalculatorOptions {
     optional uint32 max_tokens_limit = 9 [default = 4096];
 
     optional bool enable_prefix_caching = 10 [default = false];
+
+    // speculative decoding - draft model config (ignore below fields if you don't want to use speculative decoding)
+    // when draft_models_path is set, the pipeline will use speculative decoding
+    // other values are by default inherited from the main model when speculative decoding is enabled, but can be overridden
+    optional string draft_models_path = 11;
+
+    optional string draft_device = 12;
+    
+    optional uint64 draft_max_num_batched_tokens = 13;
+
+    optional uint64 draft_cache_size  = 14;
+
+    optional uint64 draft_block_size = 15;
+
+    optional uint64 draft_max_num_seqs = 16;
+
+    optional bool draft_dynamic_split_fuse = 17;
 }
