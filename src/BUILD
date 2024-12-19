@@ -1825,12 +1825,15 @@ cc_test(
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/get_pipeline_metadata_response_test.cpp",
+        "test/http_rest_api_handler_test.cpp",
         "test/kfs_metadata_test.cpp",
         "test/kfs_rest_test.cpp",
         "test/kfs_rest_parser_test.cpp",
         "test/layout_test.cpp",
+        "test/mediapipeflow_test.cpp",
         "test/metric_config_test.cpp",
         "test/metrics_test.cpp",
+        "test/metrics_flow_test.cpp",
         "test/mockmodelinstancechangingstates.hpp",
         "test/model_cache_test.cpp",
         "test/model_service_test.cpp",
@@ -1872,17 +1875,10 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
-                "//conditions:default": [
-                    "test/metrics_flow_test.cpp",  # TODO: Enable on windows
-                    "test/http_rest_api_handler_test.cpp",  # TODO: Enable on windows
-                ],
-                "//src:windows" : [
-                ],
-        }) + select({
-            "//:is_windows_or_mediapipe_is_disabled_no_http": [],
+            "//:is_windows_or_mediapipe_is_disabled_no_http": [
+            ],
             # Tests that require MediaPipe and HTTP (windows does not have HTTP yet)
             "//conditions:default" : [
-                "test/mediapipeflow_test.cpp",  # TODO: Enable on windows
                 "test/reranknode_test.cpp",  # TODO: Enable on windows
                 "test/embeddingsnode_test.cpp",  # TODO: Enable on windows
             ],

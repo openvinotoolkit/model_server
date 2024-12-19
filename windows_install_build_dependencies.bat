@@ -36,13 +36,29 @@ IF "%2"=="1" (
 )
 
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
-set "opt_install_dir=c:\opt"
+set "opt_install_dir=C:\opt"
 
 :: Python 39 needs to be first in the windows path, as well as MSYS tools
 set "setPath=C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;C:\opt;%PATH%;"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Check directories
+IF /I EXIST %BAZEL_SHORT_PATH% (
+    echo [INFO] directory exists %BAZEL_SHORT_PATH%
+) ELSE (
+    mkdir %BAZEL_SHORT_PATH%
+    if %errorlevel% neq 0 exit /b %errorlevel%
+)
+
+IF /I EXIST %opt_install_dir% (
+    echo [INFO] directory exists %opt_install_dir%
+) ELSE (
+    mkdir %opt_install_dir%
+    if %errorlevel% neq 0 exit /b %errorlevel%
+)
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install wget
@@ -64,21 +80,23 @@ IF /I EXIST %wget_path% (
 set "bash_path=%opt_install_dir%\msys64\usr\bin\bash.exe"
 set "msys_path=%opt_install_dir%\msys64\"
 set "msys_url=https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe"
-set "msys_install=%BAZEL_SHORT_PATH%\msys2-x86_64-20240727.exe"
+set "msys_install=%opt_install_dir%\msys2-x86_64-20240727.exe"
 IF /I EXIST %bash_path% (
     if %expunge% EQU 1 (goto :install_msys) else (
         echo [INFO] ::::::::::::::::::::::: Msys bash already installed in: %bash_path%
     )
 ) ELSE (
     :install_msys
-    rmdir /S /Q %msys_path%
-    if %errorlevel% neq 0 exit /b %errorlevel%
-    IF /I NOT EXIST %msys_install% (
-        wget -P %BAZEL_SHORT_PATH%\ %msys_url%
+    IF /I EXIST %msys_path% (
+        rmdir /S /Q %msys_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
     )
-    
-    start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %BAZEL_SHORT_PATH%/msys64
+    IF /I NOT EXIST %msys_install% (
+        wget -P %opt_install_dir%\ %msys_url%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+    )
+
+    start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %msys_path%
     if %errorlevel% neq 0 exit /b %errorlevel%
     timeout 120
     :: Install msys hang workaround
@@ -94,19 +112,12 @@ IF /I EXIST %bash_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenVINO - reinstalled per build trigger
-set "openvino_dir=w_openvino_toolkit_windows_2025.0.0.dev20241203_x86_64"
-set "openvino_ver=w_openvino_toolkit_windows_2025.0.0.dev20241203_x86_64.zip"
-set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17513-963b1be951b/"
+set "openvino_dir=w_openvino_toolkit_windows_2025.0.0.dev20241217_x86_64"
+set "openvino_ver=w_openvino_toolkit_windows_2025.0.0.dev20241217_x86_64.zip"
+set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17638-c5137ff870d/"
 set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
 set "openvino_workspace=C:\\\\opt\\\\openvino\\\\runtime"
 set "openvino_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
-
-IF /I EXIST %BAZEL_SHORT_PATH% (
-    echo [INFO] directory exists %BAZEL_SHORT_PATH%
-) ELSE (
-    mkdir %BAZEL_SHORT_PATH%
-    if %errorlevel% neq 0 exit /b %errorlevel%
-)
 
 echo [INFO] ::::::::::::::::::::::: OpenVino: %openvino_dir%
 :: Download OpenVINO
@@ -120,7 +131,7 @@ IF /I EXIST %openvino_zip% (
 IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
     echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir%
 ) ELSE (
-    tar -xf %openvino_zip% -C %BAZEL_SHORT_PATH%
+    unzip -o %openvino_zip% -d %BAZEL_SHORT_PATH%
     if %errorlevel% neq 0 exit /b %errorlevel%
 )
 :: Create OpenVINO link - always to make sure it points to latest version
