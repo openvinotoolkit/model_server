@@ -132,16 +132,17 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
             throw;
         }
     }
-    try {
-#ifndef _WIN32
-        const std::string TOKENIZERS_PATH = "libopenvino_tokenizers.so";
-#else
-        const std::string TOKENIZERS_PATH = "openvino_tokenizers.dll";
+    const std::string DEFAULT_TOKENIZERS_PATH =
+#ifdef __linux__
+        "libopenvino_tokenizers.so";
+#elif _WIN32
+        "openvino_tokenizers.dll";
 #endif
-        ieCore->add_extension(TOKENIZERS_PATH);
-        OV_LOGGER("ov::Core: {}, registered default extension from {}", reinterpret_cast<const void*>(this->ieCore.get()), TOKENIZERS_PATH);
+    try {
+        ieCore->add_extension(DEFAULT_TOKENIZERS_PATH);
+        OV_LOGGER("ov::Core: {}, registered default extension from {}", reinterpret_cast<const void*>(this->ieCore.get()), DEFAULT_TOKENIZERS_PATH);
     } catch (std::exception& ex) {
-        SPDLOG_INFO("{} was not enabled. Probably missing in the default location", TOKENIZERS_PATH);
+        SPDLOG_WARN("openvino_tokenizers extension was not enabled. Probably missing in the default location: {}", DEFAULT_TOKENIZERS_PATH);
     } catch (...) {
         SPDLOG_CRITICAL("Loading of libopenvino_tokenizers has failed with an unknown error!");
         throw;
