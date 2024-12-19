@@ -17,7 +17,7 @@
 :: %1 First parameter is the --output_user_root value on c:\ drive - bazel uses this, we want to install dependencies per build there
 :: %2 Second parameter is the --expunge flag - when set to 1 we will force reinstall c:\opt dependencies - default 0
 @echo on
-setlocal EnableExtensions DisableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-XXXX" number passed here from jenkins so that a tmp directory will be created
 IF "%~1"=="" (
@@ -67,11 +67,11 @@ IF /I EXIST %wget_path% (
     if %expunge% EQU 1 (
         rmdir /S /Q %wget_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
-        curl https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
+        curl --ca-native https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
     ) else ( echo [INFO] ::::::::::::::::::::::: wget installed already in %wget_path% )
 ) ELSE (
-    curl https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
+    curl --ca-native https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
     if %errorlevel% neq 0 exit /b %errorlevel%
 )
 
@@ -98,7 +98,8 @@ IF /I EXIST %bash_path% (
 
     start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %msys_path%
     if %errorlevel% neq 0 exit /b %errorlevel%
-    timeout 120
+    echo Timeout for installer set to 120 seconds with ping command
+    ping 1.1.1.1 -n 120 > nul
     :: Install msys hang workaround
     taskkill /f /t /im msys2-x86_64-20240727.exe
     if %errorlevel% neq 0 exit /b %errorlevel%
@@ -122,16 +123,28 @@ set "openvino_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
 echo [INFO] ::::::::::::::::::::::: OpenVino: %openvino_dir%
 :: Download OpenVINO
 IF /I EXIST %openvino_zip% (
-    echo [INFO] file exists %openvino_zip%
+    if %expunge% EQU 1 (
+        del /S /Q %openvino_zip%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+        wget -O %BAZEL_SHORT_PATH%\%openvino_ver% %openvino_http%%openvino_ver%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+    ) else ( echo [INFO] file exists %openvino_zip% )
+    
 ) ELSE (
-    curl %openvino_http%%openvino_ver% >%BAZEL_SHORT_PATH%\%openvino_ver%
+    wget -O %BAZEL_SHORT_PATH%\%openvino_ver% %openvino_http%%openvino_ver%
     if %errorlevel% neq 0 exit /b %errorlevel%
 )
 :: Extract OpenVINO
 IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
-    echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir%
+     if %expunge% EQU 1 (
+        rmdir /S /Q %BAZEL_SHORT_PATH%\%openvino_dir%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+        C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
+        if %errorlevel% neq 0 exit /b %errorlevel%
+    ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir% )
+    
 ) ELSE (
-    unzip -o %openvino_zip% -d %BAZEL_SHORT_PATH%
+    C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
     if %errorlevel% neq 0 exit /b %errorlevel%
 )
 :: Create OpenVINO link - always to make sure it points to latest version
@@ -197,7 +210,7 @@ IF /I EXIST %boringssl_dir% (
 set "bazel_path=%opt_install_dir%\bazel.exe"
 IF /I EXIST %bazel_path% (
     if %expunge% EQU 1 (
-        rmdir /S /Q %bazel_path%
+        del /S /Q %bazel_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
         wget -O %bazel_path% https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
         if %errorlevel% neq 0 exit /b %errorlevel%
@@ -235,7 +248,7 @@ IF /I EXIST %python39_path% (
         :: Copy system Python
         xcopy /s /e /q /y "%python39_system%" %python39_path%
         if %errorlevel% neq 0 exit /b %errorlevel%
-        %python39_path%\python.exe -m pip install numpy==1.23
+        %python39_path%python.exe -m pip install numpy==1.23
         if %errorlevel% neq 0 exit /b %errorlevel%
     ) ELSE (
         echo [ERROR] ::::::::::::::::::::::: Python39 not found
