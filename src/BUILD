@@ -447,14 +447,12 @@ cc_library(
             "//:disable_mediapipe" : [],
         }),
         deps = select({
-            "//conditions:default" : [
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
                 # Jinja template processing is done in Python
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
-                "//src/llm:text_processor",],
-            }) + select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
+                "//src/llm:text_processor",
             ],
             "//:disable_python": []
         }) + select({
@@ -1902,16 +1900,14 @@ cc_test(
             ],
             "//:disable_mediapipe" : [],
         }) + select({
-            "//conditions:default" : [
-                # LLM logic uses Python for processing Jinja templates
-                "test/llmnode_test.cpp",
-                "test/llmtemplate_test.cpp",
-                "test/text_streamer_test.cpp",],
-            }) + select({
             "//:not_disable_python": [
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
                 "test/pythonnode_test.cpp",
+                # LLM logic uses Python for processing Jinja templates
+                "test/llmnode_test.cpp",
+                "test/llmtemplate_test.cpp",
+                "test/text_streamer_test.cpp",
             ],
             "//:disable_python" : [],
         }),
@@ -2052,15 +2048,13 @@ cc_test(
                     ],
             })  + select({
             "//conditions:default": [
+                "//src/llm:llmnoderesources",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
             "//:disable_mediapipe" : [],
-        }) + select({
-            "//conditions:default" : [
-                "//src/llm:llmnoderesources",],
-            }),
+        }),
     copts = COPTS_TESTS,
 )
 
