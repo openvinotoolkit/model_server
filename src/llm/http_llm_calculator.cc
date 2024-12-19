@@ -127,7 +127,7 @@ public:
                     nodeResources->cbPipe->get_tokenizer());
                 this->client = payload.client;
 
-                auto status = this->apiHandler->parseRequest(nodeResources->maxTokensLimit, nodeResources->bestOfLimit);
+                auto status = this->apiHandler->parseRequest(nodeResources->maxTokensLimit, nodeResources->bestOfLimit, nodeResources->isSpeculativePipeline);
                 if (status != absl::OkStatus())
                     return status;
 
