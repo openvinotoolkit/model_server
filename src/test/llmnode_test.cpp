@@ -650,7 +650,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonContentArray) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
@@ -693,7 +693,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonContentArrayWithImage) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
@@ -1789,7 +1789,7 @@ TEST_F(LLMHttpParametersValidationTest, maxTokensExceeds4000WhenIgnoreEosTrue) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -1809,7 +1809,7 @@ TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensInvalid) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -1829,7 +1829,7 @@ TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceedsUint32Size) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -1850,7 +1850,7 @@ TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceeds4000WhenIgnor
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
