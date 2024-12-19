@@ -128,7 +128,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             std::size_t pos = url.find(pattern);
                             if (pos == std::string::npos) {
                                 return absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix");
-                            }        
+                            }
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");
                         }
