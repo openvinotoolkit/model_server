@@ -1,4 +1,4 @@
-# OpenVINO&trade; Model Server Developer Guide for Windows (Experimental/Alpha)
+# OpenVINO&trade; Model Server Developer Guide for Windows (Experimental/Alpha) {#ovms_docs_windows_developer_guide}
 This document describes experimental/alpha windows development and compilation guide for ovms.exe binary.
 
 OpenVINO&trade; Model Server is in experimental/alpha stage of windows enabling with limited functionality and quality.
@@ -25,7 +25,7 @@ It is recommended to use the top of main repository branch for more feature enab
 ## Power shell settings
 Set Execution Policy to RemoteSigned
 Open PowerShell as an administrator: Right-click on the Start button and select “Windows PowerShell (Admin)”.
-Run the command: 
+Run the command:
 ```Set-ExecutionPolicy RemoteSigned```
 Confirm the change by typing “A” and pressing Enter.
 
@@ -35,7 +35,8 @@ Install build tools for VS:
 https://aka.ms/vs/17/release/vs_BuildTools.exe
 
 Mark required options for installation:
-- c++ Desktop development with C++
+- C++ Desktop development with C++
+- Windows 11 SDK
 - MSVC v143 CPP - VS 2022 C++ platform toolset.
 - C++ CMake tools for Windows platform toolset.
 - MSVC v142 CPP - VS 2022 C++ platform toolset.
@@ -49,8 +50,13 @@ Run the command:
 ```Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force```
 Confirm the change by typing “A” and pressing Enter.
 
+## Enable Developer mode in windows system settings
+Follow instructions in the link below:
+https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
+
 ## Run Developer Command Prompt for VS 2022
-Enable Developer mode in windows system settings
+Press Start and paste "Developer Command Prompt for VS 2022" to run cmd.exe for VS C++ developers
+Run commands in this prompt is not stated otherwise.
 
 ## PYTHON: https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe in C:\opt\Python39
 make sure you install numpy for the python version you pass as build argument
@@ -61,23 +67,6 @@ python --version
 pip install numpy==1.23
 ```
 
-## MSYS
-Download and install in c:\opt\msys64 https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe
-Set the variables to make sure bash is visible and add its directory in PATH - C:\opt\msys64\usr\bin:
-```
-set PATH=%PATH%;C:\opt\msys64\usr\bin;c:\opt
-set BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe
-```
-
-## NPM YARN
-https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.exe
-Open command line cmd.exe and run:
-```
-nvm install 22.9.0
-nvm use 22.9.0
-npm cache clean --force
-```
-
 # Building without proxy
 Please set the proxy setting for windows for in environment variables when building behind proxy
 ```
@@ -85,6 +74,24 @@ set HTTP_PROXY=
 set HTTPS_PROXY=
 ```
 Also remove proxy from your .gitconfig
+
+## Building with proxy
+Please set the proxy setting for windows for in environment variables when building behind proxy
+```
+set HTTP_PROXY=my.proxy.com:123
+set HTTPS_PROXY=my.proxy.com:122
+```
+
+## NPM YARN
+Download and run the nvm installer.
+https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.exe
+After installation run below commands,
+Run in command line:
+```
+nvm install 22.9.0
+nvm use 22.9.0
+npm cache clean --force
+```
 
 If you want to compile without proxy, npm proxy needs to be reset:
 ```
@@ -96,13 +103,6 @@ npm i --global yarn
 yarn
 ```
 
-## Building with proxy
-Please set the proxy setting for windows for in environment variables when building behind proxy
-```
-set HTTP_PROXY=my.proxy.com:123
-set HTTPS_PROXY=my.proxy.com:122
-```
-
 ## GET CODE
 ```
 md C:\git
@@ -112,7 +112,7 @@ cd model_server
 ```
 
 ## Install dependencies
-Open cmd.exe and run windows_install_dependencies.bat
+Run windows_install_dependencies.bat
 ```
 windows_install_dependencies.bat
 ```
@@ -120,7 +120,13 @@ windows_install_dependencies.bat
 ## COMPILE
 
 # Export BAZEL env variables:
+Set the variables to make sure bash is visible and add its directory in PATH - C:\opt\msys64\usr\bin:
+```
+set PATH=%PATH%;C:\opt\msys64\usr\bin;c:\opt
+set BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe
+```
 
+# MSVC compiler settings
 ```
 set BAZEL_VS=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools
 set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC
@@ -134,10 +140,14 @@ bazel --output_user_root=C:/b_tmp build --config=windows --jobs=%NUMBER_OF_PROCE
 
 # Set python paths
 ```
-set "copyPyovms=cp %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.so %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd"
-%copyPyovms%
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "PYTHONPATH=%setPythonPath%"
+```
+
+## You can setup environment variables for fresh start of Developer command line
+For buildigng and running ovms.exe after the windows_install_dependencies.bat was successful run the batch script in new "Developer Command Prompt for VS 2022":
+```
+windows_setupvars.bat
 ```
 
 ## DEPLOY

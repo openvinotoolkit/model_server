@@ -31,7 +31,6 @@
 #include <signal.h>
 #include <stdlib.h>
 
-// TODO: Write windows/linux specific status codes.
 #include "ovms_exit_codes.hpp"
 #ifdef __linux__
 #include <netinet/in.h>
@@ -367,17 +366,8 @@ static int statusToExitCode(const Status& status) {
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
-// TODO windows
 #ifdef __linux__
     installSignalHandlers();
-#endif
-
-#ifdef _WIN32
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        SPDLOG_ERROR("Failed to initialize Winsock");
-        return OVMS_EX_FAILURE;
-    }
 #endif
     int result = OVMS_EX_OK;
 
@@ -398,7 +388,6 @@ int Server::start(int argc, char** argv) {
         if (shutdown_request == 2) {
             SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
         }
-        SPDLOG_INFO("Shutting down");
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Exception; {}", e.what());
         result = OVMS_EX_FAILURE;

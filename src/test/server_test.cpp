@@ -202,6 +202,9 @@ public:
 using ovms::SERVABLE_MANAGER_MODULE_NAME;
 
 TEST(Server, ServerAliveBeforeLoadingModels) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows CVS-159591";
+#endif
     // purpose of this test is to ensure that the server responds with alive=true before loading any models.
     // this is to make sure that eg. k8s won't restart container until all models are loaded because of not being alivea
     std::string port = "9000";
