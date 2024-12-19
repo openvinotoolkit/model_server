@@ -142,7 +142,8 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         ieCore->add_extension(DEFAULT_TOKENIZERS_PATH);
         OV_LOGGER("ov::Core: {}, registered default extension from {}", reinterpret_cast<const void*>(this->ieCore.get()), DEFAULT_TOKENIZERS_PATH);
     } catch (std::exception& ex) {
-        SPDLOG_WARN("openvino_tokenizers extension was not enabled. Probably missing in the default location: {}", DEFAULT_TOKENIZERS_PATH);
+        SPDLOG_WARN("{} extension was not enabled. Probably missing in the default location.", DEFAULT_TOKENIZERS_PATH);
+        SPDLOG_DEBUG("Fail reason: {}", ex.what());
     } catch (...) {
         SPDLOG_CRITICAL("Loading of libopenvino_tokenizers has failed with an unknown error!");
         throw;
