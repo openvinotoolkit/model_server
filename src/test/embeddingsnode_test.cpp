@@ -301,16 +301,16 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        const char* configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json");
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json");
         const char* extensionPath = std::filesystem::exists("/opt/libcustom_relu_cpu_extension.so") ? "/opt/libcustom_relu_cpu_extension.so" : "/ovms/src/example/SampleCpuExtension/libcustom_relu_cpu_extension.so";
         server.setShutdownRequest(0);
         randomizePort(port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
-            (char*)configPath,
+            (char*)configPath.c_str(),
             (char*)"--cpu_extension",
             (char*)extensionPath,
-            (char*)"--port",
+            (char*)"--port ",
             (char*)port.c_str()};
         int argc = 5;
         t.reset(new std::thread([&argc, &argv, &server]() {
