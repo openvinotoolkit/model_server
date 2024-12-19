@@ -39,9 +39,6 @@ struct StreamOptions {
     bool includeUsage = false;
 };
 
-using chat_entry_t = std::unordered_map<std::string, std::string>;
-using chat_t = std::vector<chat_entry_t>;
-
 #define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
 
 enum class Endpoint {
@@ -60,7 +57,7 @@ struct CompletionUsageStatistics {
 
 // Class that maps OpenAI request content and provides methods to create GenerationConfig from it.
 struct OpenAIChatCompletionsRequest {
-    chat_t messages;
+    std::string processedJson;
     std::optional<std::string> prompt{std::nullopt};
     bool stream{false};
     StreamOptions streamOptions;
@@ -158,7 +155,7 @@ class OpenAIChatCompletionsHandler {
     size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
 
     absl::Status parseCompletionsPart();
-    absl::Status parseChatCompletionsPart();
+    absl::Status parseChatCompletionsPart(uint32_t maxTokensLimit);
     absl::Status parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit);
 
 public:
@@ -172,6 +169,7 @@ public:
     std::optional<std::string> getPrompt() const;
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
+    const std::string& getProcessedJson() const;
 
     bool isStream() const;
     std::string getModel() const;
@@ -183,6 +181,7 @@ public:
     ov::genai::GenerationConfig createGenerationConfig() const;
 
     absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit);
+    absl::Status parseMessages();
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
