@@ -135,13 +135,7 @@ public:
                 bool encodeAddSpecialTokens = false;
                 switch (endpoint) {
                 case Endpoint::CHAT_COMPLETIONS: {
-                    bool success;
-                    if (this->apiHandler->getProcessedJson().size() > 0) {
-                        success = TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, this->apiHandler->getProcessedJson(), finalPrompt);
-                    } else {
-                        success = TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt);
-                    }
-                    if (!success) {
+                    if (!TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
                         return absl::Status(absl::StatusCode::kInvalidArgument, finalPrompt);
                     }
                     if (finalPrompt.size() == 0) {
