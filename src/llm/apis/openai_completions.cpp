@@ -23,6 +23,7 @@
 
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
+#include "absl/strings/escaping.h"
 
 using namespace rapidjson;
 
@@ -114,6 +115,20 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             }
                             contentText = entry["text"];
                             continue;
+                        } else if (type == std::string("image_url")) {
+                            if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
+                                return absl::InvalidArgumentError("Invalid message structure - content image_url missing");
+                            }
+                            auto imageUrl = entry["image_url"].GetObject();
+                            if (!imageUrl.HasMember("url") || !imageUrl["url"].IsString()) {
+                                return absl::InvalidArgumentError("Invalid message structure - image_url does not have url field");
+                            }
+                            std::string url = imageUrl["url"].GetString();
+                            std::string pattern = "base64,";
+                            std::size_t pos = url.find(pattern);
+                            if (pos == std::string::npos) {
+                                return absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix");
+                            }        
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");
                         }
