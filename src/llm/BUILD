@@ -80,7 +80,7 @@ cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
         ":llm_engine",
         "//src:libovmsprofiler",
-        "//third_party:opencv",
+        # "//third_party:opencv",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,

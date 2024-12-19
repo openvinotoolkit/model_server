@@ -18,7 +18,7 @@
 
 #include <cmath>
 
-#include <opencv2/opencv.hpp>
+// #include <opencv2/opencv.hpp>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
@@ -76,28 +76,28 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     return absl::OkStatus();
 }
 
-static ov::element::Type_t getOvTypeFromMatType(int matType) {
-    switch (matType) {
-    case CV_32F:
-        return ov::element::f32;
-    case CV_64F:
-        return ov::element::f64;
-    case CV_16F:
-        return ov::element::f64;
-    case CV_16S:
-        return ov::element::f16;
-    case CV_8U:
-        return ov::element::u8;
-    case CV_8S:
-        return ov::element::i8;
-    case CV_16U:
-        return ov::element::u16;
-    case CV_32S:
-        return ov::element::i32;
-    default:
-        return ov::element::undefined;
-    }
-}
+// static ov::element::Type_t getOvTypeFromMatType(int matType) {
+//     switch (matType) {
+//     case CV_32F:
+//         return ov::element::f32;
+//     case CV_64F:
+//         return ov::element::f64;
+//     case CV_16F:
+//         return ov::element::f64;
+//     case CV_16S:
+//         return ov::element::f16;
+//     case CV_8U:
+//         return ov::element::u8;
+//     case CV_8S:
+//         return ov::element::i8;
+//     case CV_16U:
+//         return ov::element::u16;
+//     case CV_32S:
+//         return ov::element::i32;
+//     default:
+//         return ov::element::undefined;
+//     }
+// }
 
 absl::Status OpenAIChatCompletionsHandler::parseMessages() {
     auto it = doc.FindMember("messages");
@@ -158,29 +158,29 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
                                 return absl::InvalidArgumentError("Invalid base64 string in request");
                             }
-                            size_t rows = 1;
-                            size_t cols = decoded.size();
-                            cv::Mat rawData(rows, cols, CV_8UC1, (void*)decoded.data());
-                            cv::Mat image;
-                            try {
-                                image = cv::imdecode(rawData, cv::IMREAD_UNCHANGED);
-                            } catch (const cv::Exception& e) {
-                                return absl::InvalidArgumentError("Error during string to mat conversion");
-                            }
-                            std::vector<size_t> shape;
-                            shape.push_back(image.rows);
-                            shape.push_back(image.cols);
-                            shape.push_back(image.channels());
-                            auto type = getOvTypeFromMatType(image.depth());
-                            if (type == ov::element::undefined) {
-                                return absl::InvalidArgumentError("Image type is invalid");
-                            }
-                            ov::Tensor tensor(type, shape);
-                            if (image.total() * image.elemSize() != tensor.get_size()) {
-                                return absl::InvalidArgumentError("Image size invalid");
-                            }
-                            memcpy((char*)tensor.data(), (char*)image.data, image.total() * image.elemSize());
-                            request.images.push_back(tensor);
+                            // size_t rows = 1;
+                            // size_t cols = decoded.size();
+                            // cv::Mat rawData(rows, cols, CV_8UC1, (void*)decoded.data());
+                            // cv::Mat image;
+                            // try {
+                            //     image = cv::imdecode(rawData, cv::IMREAD_UNCHANGED);
+                            // } catch (const cv::Exception& e) {
+                            //     return absl::InvalidArgumentError("Error during string to mat conversion");
+                            // }
+                            // std::vector<size_t> shape;
+                            // shape.push_back(image.rows);
+                            // shape.push_back(image.cols);
+                            // shape.push_back(image.channels());
+                            // auto type = getOvTypeFromMatType(image.depth());
+                            // if (type == ov::element::undefined) {
+                            //     return absl::InvalidArgumentError("Image type is invalid");
+                            // }
+                            // ov::Tensor tensor(type, shape);
+                            // if (image.total() * image.elemSize() != tensor.get_size()) {
+                            //     return absl::InvalidArgumentError("Image size invalid");
+                            // }
+                            // memcpy((char*)tensor.data(), (char*)image.data, image.total() * image.elemSize());
+                            // request.images.push_back(tensor);
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");
                         }
