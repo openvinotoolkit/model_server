@@ -388,8 +388,13 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(int numTokens) {
         usage.completionTokens += numTokens;
 }
 
-ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig() const {
-    return request.createGenerationConfig();
+ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig(std::optional<uint> maxModelLength) const {
+    ov::genai::GenerationConfig config = request.createGenerationConfig();
+    if (maxModelLength.has_value()) {
+        config.max_length = maxModelLength.value();
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed max model length {}", maxModelLength.value());
+    }
+    return config;
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit) {
