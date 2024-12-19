@@ -139,12 +139,12 @@ IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
      if %expunge% EQU 1 (
         rmdir /S /Q %BAZEL_SHORT_PATH%\%openvino_dir%
         if %errorlevel% neq 0 exit /b %errorlevel%
-        unzip -o %openvino_zip% -d %BAZEL_SHORT_PATH%
+        C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
         if %errorlevel% neq 0 exit /b %errorlevel%
     ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir% )
     
 ) ELSE (
-    unzip -o %openvino_zip% -d %BAZEL_SHORT_PATH%
+    C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
     if %errorlevel% neq 0 exit /b %errorlevel%
 )
 :: Create OpenVINO link - always to make sure it points to latest version
