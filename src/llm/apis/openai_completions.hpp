@@ -26,6 +26,7 @@
 #include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/generation_handle.hpp>
 #include <openvino/genai/tokenizer.hpp>
+#include <openvino/runtime/tensor.hpp>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 
@@ -58,6 +59,7 @@ struct CompletionUsageStatistics {
 // Class that maps OpenAI request content and provides methods to create GenerationConfig from it.
 struct OpenAIChatCompletionsRequest {
     std::string processedJson;
+    std::vector<ov::Tensor> images;
     std::optional<std::string> prompt{std::nullopt};
     bool stream{false};
     StreamOptions streamOptions;
@@ -170,6 +172,7 @@ public:
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
     const std::string& getProcessedJson() const;
+    const std::vector<ov::Tensor> getImages() const;
 
     bool isStream() const;
     std::string getModel() const;
