@@ -28,6 +28,7 @@
 #include "../server.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
+#include "mediapipe/framework/port/integral_types.h"
 #include "test_utils.hpp"
 
 #if (PYTHON_DISABLE == 0)
