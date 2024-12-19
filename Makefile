@@ -672,10 +672,14 @@ cpu_extension:
 	mkdir -p ./lib/${OS}
 	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${OS}
 
-run_unit_tests:
+prepare_models:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
 ifeq ($(RUN_GPU_TESTS),1)
-	./prepare_gpu_models.sh ${GPU_MODEL_PATH} && \
+	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
+endif
+
+run_unit_tests: prepare_models
+ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
 		--device=/dev/dri \
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \
