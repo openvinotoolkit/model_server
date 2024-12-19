@@ -78,10 +78,11 @@ static bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision) 
 
 static cv::Mat convertStringToMat(const std::string& image) {
     OVMS_PROFILE_FUNCTION();
-    cv::Mat rawData(1, image.size(), CV_8UC1, (void*)image.data());
+    std::vector<unsigned char> data(image.begin(), image.end());
+    cv::Mat dataMat(data, true);
 
     try {
-        return cv::imdecode(rawData, cv::IMREAD_UNCHANGED);
+        return cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
     } catch (const cv::Exception& e) {
         SPDLOG_DEBUG("Error during string_val to mat conversion: {}", e.what());
         return cv::Mat{};
