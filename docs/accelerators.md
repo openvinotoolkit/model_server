@@ -54,7 +54,7 @@ If you need to build the OpenVINO Model Server with different driver version, re
 
 ## Using Multi-Device Plugin
 
-If you have multiple inference devices available (e.g. GPU and CPU) you can increase inference throughput by enabling the Multi-Device Plugin.
+If you have multiple inference devices available (e.g. GPU, CPU, and NPU) you can increase inference throughput by enabling the Multi-Device Plugin.
 It distributes Inference requests among multiple devices, balancing out the load. For more detailed information read OpenVINO’s [Multi-Device plugin documentation](https://docs.openvino.ai/2024/documentation/legacy-features/multi-device.html) documentation.
 
 To use this feature in OpenVINO Model Server, you can choose one of two ways:
