@@ -299,6 +299,9 @@ public:
     ovms::HttpResponseComponents responseComponents;
 
     static void SetUpTestSuite() {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test because we have no custom extension built for Windows";
+#endif
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json");
@@ -324,6 +327,9 @@ public:
     }
 
     void SetUp() {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test because we have no custom extension built for Windows";
+#endif
         writer = std::make_shared<MockedServerRequestInterface>();
         ovms::Server& server = ovms::Server::instance();
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
@@ -331,6 +337,9 @@ public:
     }
 
     static void TearDownTestSuite() {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test because we have no custom extension built for Windows";
+#endif
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(1);
         t->join();
@@ -338,6 +347,9 @@ public:
     }
 
     void TearDown() {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test because we have no custom extension built for Windows";
+#endif
         handler.reset();
     }
 };
