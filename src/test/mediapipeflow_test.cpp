@@ -3397,9 +3397,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "CalculatorRunnerSourceCalculator",
         "PyTensorOvTensorConverterCalculator",   // integral OVMS calculator
         "PythonExecutorCalculator",  // integral OVMS calculator
-#ifndef _WIN32  // TODO(mzegla): enable when LLMs are enabled on windows
         "HttpLLMCalculator",  // integral OVMS calculator
-#endif
 #endif
         "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
         "AddHeaderCalculator",
