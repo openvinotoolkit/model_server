@@ -523,7 +523,7 @@ public:
         const std::string modelName = "mediapipeImageInput";
         request.Clear();
         response.Clear();
-        cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+        cv::Mat imageRaw = cv::imread(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), cv::IMREAD_UNCHANGED);
         ASSERT_TRUE(!imageRaw.empty());
         cv::Mat image;
         size_t matFormat = convertKFSDataTypeToMatFormat(datatype);
@@ -914,6 +914,9 @@ public:
 };
 
 TEST_F(MediapipeFlowTwoOutputsDagTest, Infer) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows - Custom Nodes for windows are unsupported";
+#endif
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};
 
@@ -2022,6 +2025,7 @@ node {
     configJson.replace(it, pathToReplace.size(), pbtxtPath);
 
     const std::string configJsonPath = this->directoryPath + "/subconfig.json";
+    adjustConfigForTargetPlatform(configJson);
     createConfigFileWithContent(configJson, configJsonPath);
     this->SetUpServer(configJsonPath.c_str());
     // INFER
@@ -2059,7 +2063,8 @@ TEST_P(MediapipeConfig, MediapipeAdd) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/config_mediapipe_add_adapter_full.json");
+    basePath = basePath + "test/mediapipe/config_mediapipe_add_adapter_full.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     for (auto& graphName : mediaGraphsAdd) {
@@ -2075,7 +2080,8 @@ TEST_P(MediapipeConfig, MediapipeDummyWithDag) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json");
+    basePath = basePath + "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     for (auto& graphName : mediaGraphsDummy) {
@@ -2099,7 +2105,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePaths) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy.json");
+    basePath = basePath + "test/mediapipe/relative_paths/config_relative_dummy.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("graph1");
@@ -2117,7 +2124,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfig) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_add_subconfig.json");
+    basePath = basePath + "test/mediapipe/relative_paths/config_relative_add_subconfig.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("graph1");
@@ -2141,7 +2149,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfigBasePath) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy_subconfig_base_path.json");
+    basePath = basePath + "test/mediapipe/relative_paths/config_relative_dummy_subconfig_base_path.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("graphaddadapterfull");
@@ -2165,7 +2174,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsNegative) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy_negative.json");
+    basePath = basePath + std::string("test/mediapipe/relative_paths/config_relative_dummy_negative.json");
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
@@ -2383,6 +2393,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenChangeInputNameInDefinition) {
     const std::string modelPathToReplace{"XYZ"};
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
 
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     createConfigFileWithContent(graphPbtxtFileContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
@@ -2422,6 +2433,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
 
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     std::string defaultGraphDirectoryPath = directoryPath + "/" + graphName;
     std::filesystem::create_directories(defaultGraphDirectoryPath);
@@ -2572,6 +2584,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
 
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     std::string defaultGraphDirectoryPath = directoryPath + "/" + graphName;
     std::filesystem::create_directories(defaultGraphDirectoryPath);
@@ -2682,6 +2695,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     std::string graphFilePath = directoryPath + "/graph.pbtxt";
     const std::string modelPathToReplace{"XYZ"};
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
@@ -2697,6 +2711,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     // now we retire the model
     configFileContent = configFileWithGraphPathToReplaceWithoutModel;
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     modelManager.loadConfig(configFilePath);
     model = modelManager.findModelByName("dummy");
@@ -2709,11 +2724,13 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     std::string subconfigFilePath = directoryPath + "/subconfig.json";
     SPDLOG_ERROR("{}", subconfigFilePath);
     configFileContent = configFileWithoutGraph;
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, subconfigFilePath);
     configFileContent = configFileWithGraphPathToReplaceAndSubconfig;
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
     const std::string subconfigPathToReplace{"SUBCONFIG_PATH"};
     configFileContent.replace(configFileContent.find(subconfigPathToReplace), subconfigPathToReplace.size(), subconfigFilePath);
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     modelManager.loadConfig(configFilePath);
     model = modelManager.findModelByName("dummy");
@@ -2830,7 +2847,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     // 1st thread starts to load OVMS with C-API but we make it stuck on 2nd graph
     // 2nd thread as soon as sees that 1st MP graph is ready executest inference
     std::string configFilePath = directoryPath + "/config.json";
-    const std::string configContent = R"(
+    std::string configContent = R"(
 {
     "model_config_list": [
         {"config": {
@@ -2852,6 +2869,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
 }
 )";
 
+    adjustConfigForTargetPlatform(configContent);
     createConfigFileWithContent(configContent, configFilePath);
     ovms::Server& server = ovms::Server::instance();
     server.setShutdownRequest(0);
@@ -3559,7 +3577,9 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "OpenVINOModelServerSessionCalculator",
         "OpenVINOTensorsToClassificationCalculator",
         "OpenVINOTensorsToDetectionsCalculator",
+#ifndef _WIN32  // TODO windows: stdc++20 required
         "PacketClonerCalculator",
+#endif
         "PacketGeneratorWrapperCalculator",
         "PacketInnerJoinCalculator",
         "PacketPresenceCalculator",
@@ -3623,7 +3643,9 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "ThresholdingCalculator",
         "ToImageCalculator",
         "TrackedDetectionManagerCalculator",
+#ifndef _WIN32  // TODO windows: 'opencv2/optflow.hpp': No such file - will be available with opencv cmake on windows
         "Tvl1OpticalFlowCalculator",
+#endif
         "TwoInputCalculator",
         "UpdateFaceLandmarksCalculator",
         "VideoPreStreamCalculator",

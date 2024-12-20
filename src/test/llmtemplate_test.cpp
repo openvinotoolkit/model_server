@@ -558,7 +558,8 @@ public:
 protected:
     static const std::string getDirectoryPath() {
         const std::string directoryName = "LLMJinjaChatTemplateHttpTest";
-        return std::string{"/tmp/"} + directoryName;
+        std::string directoryPath = std::string{"/tmp/"} + directoryName;
+        return getGenericFullPathForTmp(directoryPath);
     }
     static void SetUpTestSuite() {
         const auto directoryPath = getDirectoryPath();
