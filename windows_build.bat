@@ -14,7 +14,7 @@
 :: limitations under the License.
 ::
 @echo on
-setlocal EnableExtensions DisableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-1234" number passed here from jenkins so that a tmp directory will be created
 IF "%~1"=="" (
@@ -74,25 +74,25 @@ set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 %opencvBatch%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Log all environment variables
 set > %envPath%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Start bazel build
 %buildCommand%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Start bazel build test
 %buildTestCommand%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Change tests configs to windows paths
 %changeConfigsCmd%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Copy OpenVINO GenAI and tokenizers libs
 copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
