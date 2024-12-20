@@ -32,7 +32,7 @@ if exist "%~1\%TEXT_GENERATION_MODEL%" if exist "%~1\%EMBEDDING_MODEL%" if exist
 
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
-C:\opt\Python39\python.exe -m venv .venv
+"C:\Program Files\Python310\python.exe" -m venv .venv
 call .\.venv\Scripts\Activate.bat
 pip install -U pip
 pip install -U -r demos\common\export_models\requirements_win.txt
