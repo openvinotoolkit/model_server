@@ -39,7 +39,7 @@ set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
 :: Python 39 needs to be first in the windows path, as well as MSYS tools
-set "setPath=C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;C:\opt;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"

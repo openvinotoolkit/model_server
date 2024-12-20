@@ -15,7 +15,7 @@
 ::
 @echo on
 :: Setting up default OVMS compilation environment variables
-set "setPath=C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;C:\opt;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
