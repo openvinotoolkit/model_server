@@ -20,7 +20,6 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <openvino/genai/tokenizer.hpp>
 
 #include "../http_rest_api_handler.hpp"
 #include "../llm/apis/openai_completions.hpp"
