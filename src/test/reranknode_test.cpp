@@ -303,7 +303,7 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
 
     std::string requestBody = buffer.GetString();
     auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
     ASSERT_THAT(status.string(), ::testing::HasSubstr("Chunking failed: exceeding max_allowed_chunks after chunking limit: 4; actual: 8"));  // 8 because of the last document which was chunked to 5 documents, 3 + 5 = 8
 }
 
