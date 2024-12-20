@@ -98,6 +98,18 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 %changeConfigsCmd%
 if %errorlevel% neq 0 exit /b %errorlevel%
 
+:: Copy OpenVINO GenAI and tokenizers libs
+copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
+
+ls %cd%\bazel-bin\src
+
+:: Install Jinja in Python for chat templates to work
+set PYTHONHOME=C:\opt\Python39
+call C:\opt\Python39\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+
+:: Download LLMs
+call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
+
 :: Start unit test
 %runTest%
 
