@@ -5,6 +5,9 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 > **Note:** This demo was tested on Intel® Xeon® processors Gen4 and Gen5 and Intel dGPU ARC and Flex models on Ubuntu22/24 and RedHat8/9.
 
+::::{tab-set}
+:::{tab-item} Linux 
+:sync: prepare-linux
 ## Get the docker image
 
 Build the image from source to try the latest enhancements in this feature.
@@ -17,6 +20,14 @@ It will create an image called `openvino/model_server:latest`.
 > **Note:** This operation might take 40min or more depending on your build host.
 > **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
 > **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. Check the [demo version from the last release](https://github.com/openvinotoolkit/model_server/tree/releases/2024/4/demos/continuous_batching) to use the public docker image.
+
+:::
+:::{tab-item} Windows 
+:sync: prepare-windows
+## Get model server package
+Download `ovms.zip` package and unpack it to `model_server` directory. The package contains OVMS binary and all of its dependecies and is ready to run.
+:::
+::::
 
 ## Model preparation
 > **Note** Python 3.9 or higher is need for that step
@@ -63,7 +74,12 @@ The default configuration of the `LLMExecutor` should work in most cases but the
 Note that the `models_path` parameter in the graph file can be an absolute path or relative to the `base_path` from `config.json`.
 Check the [LLM calculator documentation](../../docs/llm/reference.md) to learn about configuration options.
 
+
 ## Start-up
+
+::::{tab-set}
+:::{tab-item} Linux 
+:sync: run-linux
 
 ### CPU
 
@@ -81,6 +97,26 @@ python demos/common/export_models/export_model.py text_generation --source_model
 
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
+:::
+:::{tab-item} Windows 
+:sync: run-windows
+
+Running this command the model server in the current shell:
+```bash
+.\ovms\ovms.exe --rest_port 8000 --config_path .\models\config.json
+```
+
+### GPU
+
+In case you want to use GPU device to run the generation, export the models with precision matching the GPU capacity and adjust pipeline configuration.
+It can be applied using the commands below:
+```bash
+python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --cache_size 2 --config_file_path models/config.json --model_repository_path models --overwrite_models
+```
+Then rerun above command as configuration file has already been adjusted to deploy model on GPU.
+
+:::
+::::
 
 ### Check readiness
 
