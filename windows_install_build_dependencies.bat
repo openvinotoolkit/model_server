@@ -93,7 +93,7 @@ IF /I EXIST %bash_path% (
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
     IF /I NOT EXIST %msys_install% (
-        wget -P %opt_install_dir%\ %msys_url%
+        %wget_path% -P %opt_install_dir%\ %msys_url%
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
 
@@ -136,12 +136,12 @@ IF /I EXIST %openvino_zip% (
     if %expunge% EQU 1 (
         del /S /Q %openvino_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        wget -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
+        %wget_path% -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %openvino_zip% )
     
 ) ELSE (
-    wget -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
+    %wget_path% -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract OpenVINO
@@ -223,7 +223,7 @@ IF /I EXIST %bazel_path% (
     if %expunge% EQU 1 (
         del /S /Q %bazel_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        wget -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
+        %wget_path% -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
         xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
@@ -231,7 +231,7 @@ IF /I EXIST %bazel_path% (
         echo [INFO] ::::::::::::::::::::::: bazel already installed
     )
 ) ELSE (
-    wget -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
+    %wget_path% -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
     if !errorlevel! neq 0 exit /b !errorlevel!
     xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%
     if !errorlevel! neq 0 exit /b !errorlevel!
