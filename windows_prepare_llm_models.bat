@@ -35,7 +35,7 @@ set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.op
 C:\opt\Python39\python.exe -m venv .venv
 call .\.venv\Scripts\Activate.bat
 pip install -U pip
-pip install -U -r demos\common\export_models\requirements.txt
+pip install -U -r demos\common\export_models\requirements_win.txt
 
 if not exist "%~1" mkdir "%~1"
 
