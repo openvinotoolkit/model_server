@@ -25,7 +25,7 @@ if "%~1"=="" (
 IF /I EXIST c:\opt\llm_testing (
     rmdir /S /Q "%~1"
     mklink /d "%~1" c:\opt\llm_testing
-    echo Created link to exising in c:\opt\llm_testing. Skipping downloading models.
+    echo Created link to existing in c:\opt\llm_testing. Skipping downloading models.
     exit /b 0
 )
 
@@ -42,7 +42,7 @@ echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 "C:\Program Files\Python310\python.exe" -m venv .venv
 call .\.venv\Scripts\Activate.bat
-pip install -U pip
+python -m pip install --upgrade pip
 pip install -U -r demos\common\export_models\requirements_win.txt
 
 if not exist "%~1" mkdir "%~1"
