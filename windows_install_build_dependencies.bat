@@ -17,7 +17,7 @@
 :: %1 First parameter is the --output_user_root value on c:\ drive - bazel uses this, we want to install dependencies per build there
 :: %2 Second parameter is the --expunge flag - when set to 1 we will force reinstall c:\opt dependencies - default 0
 @echo on
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions DisableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-XXXX" number passed here from jenkins so that a tmp directory will be created
 IF "%~1"=="" (
