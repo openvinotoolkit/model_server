@@ -21,6 +21,14 @@ if "%~1"=="" (
   exit /b 1
 )
 
+:: Create a link to preexported models on CI workers
+IF /I EXIST c:\opt\llm_testing (
+    rmdir /S /Q "%~1"
+    mklink /d "%~1" c:\opt\llm_testing
+    echo Created link to exising in c:\opt\llm_testing. Skipping downloading models.
+    exit /b 0
+)
+
 set "EMBEDDING_MODEL=thenlper/gte-small"
 set "RERANK_MODEL=BAAI/bge-reranker-base"
 set "TEXT_GENERATION_MODEL=facebook/opt-125m"
