@@ -25,7 +25,7 @@ It will create an image called `openvino/model_server:latest`.
 :::{tab-item} Windows 
 :sync: prepare-windows
 ## Get model server package
-Download `ovms.zip` package and unpack it to `model_server` directory. The package contains OVMS binary and all of its dependecies and is ready to run.
+Download `ovms.zip` package and unpack it to `model_server` directory. The package contains OVMS binary and all of its dependencies and is ready to run.
 :::
 ::::
 
