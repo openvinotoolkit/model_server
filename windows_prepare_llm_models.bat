@@ -42,6 +42,7 @@ echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 set "PYTHONHOME="
 set "PYTHONPATH="
+rmdir /S /Q "%~1"
 "C:\Program Files\Python310\python.exe" -m venv .venv
 call .\.venv\Scripts\Activate.bat
 set
