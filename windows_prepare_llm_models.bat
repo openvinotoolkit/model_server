@@ -13,7 +13,7 @@
 :: See the License for the specific language governing permissions and
 :: limitations under
 
-:: @echo off
+@echo off
 setlocal
 
 if "%~1"=="" (
@@ -22,7 +22,7 @@ if "%~1"=="" (
 )
 
 :: Create a link to preexported models on CI workers
-IF /I EXIST c:\opt\llm_testing__ (
+IF /I EXIST c:\opt\llm_testing (
     rmdir /S /Q "%~1"
     mklink /d "%~1" c:\opt\llm_testing
     echo Created link to existing in c:\opt\llm_testing. Skipping downloading models.
@@ -41,7 +41,6 @@ if exist "%~1\%TEXT_GENERATION_MODEL%" if exist "%~1\%EMBEDDING_MODEL%" if exist
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 set "PYTHONPATH="
-rmdir /S /Q "%~1"
 C:\opt\Python39\python.exe -m venv .venv
 call .\.venv\Scripts\Activate.bat
 set
