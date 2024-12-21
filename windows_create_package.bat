@@ -26,8 +26,10 @@ md dist\windows\ovms
 copy bazel-bin\src\ovms.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-copy  %cd%\bazel-out\x64_windows-opt\bin\src\python39.dll dist\windows\ovms
-if !errorlevel! neq 0 exit /b !errorlevel!
+xcopy C:\opt\ovms-python-3.9.6-embed dist\windows\ovms\python /E /I /H
+if %errorlevel% neq 0 (
+    echo Error copying python into the distribution location. The package will not contain self-contained python.
+)
 
 copy  %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
