@@ -1812,6 +1812,7 @@ cc_test(
         "test/custom_node_output_allocator_test.cpp",
         "test/demultiplexer_node_test.cpp",
         "test/deserialization_tests.cpp",
+        "test/embeddingsnode_test.cpp",
         "test/ensemble_config_change_stress.cpp",
         "test/ensemble_flow_custom_node_tests.cpp",
         "test/ensemble_mapping_config_tests.cpp",
@@ -1850,6 +1851,7 @@ cc_test(
         "test/predict_validation_test.cpp",
         "test/prediction_service_test.cpp",
         "test/rest_utils_test.cpp",
+        "test/reranknode_test.cpp",
         "test/schema_test.cpp",
         "test/sequence_manager_test.cpp",
         "test/sequence_test.cpp",
@@ -1873,14 +1875,6 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
-            "//:is_windows_or_mediapipe_is_disabled_no_http": [
-            ],
-            # Tests that require MediaPipe and HTTP (windows does not have HTTP yet)
-            "//conditions:default" : [
-                "test/reranknode_test.cpp",  # TODO: Enable on windows
-                "test/embeddingsnode_test.cpp",  # TODO: Enable on windows
-            ],
-        }) + select({
             "//:not_disable_cloud": [
                 "test/gcsfilesystem_test.cpp",
                 "test/azurefilesystem_test.cpp",
