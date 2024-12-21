@@ -23,6 +23,7 @@
 
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
+#include "absl/strings/str_cat.h"
 
 using namespace rapidjson;
 
