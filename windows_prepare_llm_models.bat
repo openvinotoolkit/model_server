@@ -13,7 +13,7 @@
 :: See the License for the specific language governing permissions and
 :: limitations under
 
-@echo off
+:: @echo off
 setlocal
 
 if "%~1"=="" (
