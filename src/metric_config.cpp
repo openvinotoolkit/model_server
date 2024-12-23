@@ -61,7 +61,11 @@ const std::string METRIC_NAME_REQUESTS_ACCEPTED = "ovms_requests_accepted";
 const std::string METRIC_NAME_REQUESTS_REJECTED = "ovms_requests_rejected";
 
 const std::string METRIC_NAME_GRAPH_ERROR = "ovms_graph_error";
+<<<<<<< HEAD
 const std::string METRIC_NAME_PROCESSING_TIME = "ovms_graph_processing_time_us";
+=======
+const std::string METRIC_NAME_PROCESSING_TIME = "ovms_processing_time";
+>>>>>>> 8454ebcaa (process time)
 
 bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");
