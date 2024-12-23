@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "kfs_graph_executor_impl.hpp"
 
+#include <chrono>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -1040,6 +1041,9 @@ static Status deserializeTimestampIfAvailable(
             SPDLOG_DEBUG(status.string());
             return status;
         }
+    } else {
+        auto now = std::chrono::system_clock::now();
+        timestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
     }
     return StatusCode::OK;
 }
@@ -1146,8 +1150,6 @@ Status createAndPushPacketsImpl(
         }
         numberOfPacketsCreated++;
     }
-
-    currentTimestamp = currentTimestamp.NextAllowedInStream();
 
     return StatusCode::OK;
 }

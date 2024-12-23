@@ -49,6 +49,8 @@ extern const std::string METRIC_NAME_REQUESTS_REJECTED;
 extern const std::string METRIC_NAME_GRAPH_ERROR;
 extern const std::string METRIC_NAME_PROCESSING_TIME;
 
+extern const std::string METRIC_NAME_REQUEST_LATENCY;
+
 class Status;
 /**
      * @brief This class represents metrics configuration

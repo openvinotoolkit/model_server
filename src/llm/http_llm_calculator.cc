@@ -66,7 +66,7 @@ class HttpLLMCalculator : public CalculatorBase {
     static const std::string OUTPUT_TAG_NAME;
     static const std::string LOOPBACK_TAG_NAME;
 
-    mediapipe::Timestamp timestamp{0};
+    mediapipe::Timestamp iterationBeginTimestamp{0};
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -211,7 +211,7 @@ public:
                 RET_CHECK(generationOutputs.size() >= 1);
                 std::string response = this->apiHandler->serializeUnaryResponse(generationOutputs);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", response);
-                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, iterationBeginTimestamp);
             } else {
                 OVMS_PROFILE_SCOPE("Stream generation cycle");
                 // Streaming scenario
@@ -241,9 +241,9 @@ public:
                         if (lastTextChunk.size() > 0) {
                             std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason));
                             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", response);
-                            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
+                            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, iterationBeginTimestamp);
                         }
-                        cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
+                        cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
                     } else {  // finish generation
                         OVMS_PROFILE_SCOPE("Generation of last streaming response");
                         this->streamer->end();
@@ -257,7 +257,7 @@ public:
                         response += packIntoServerSideEventMessage("[DONE]");
 
                         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", response);
-                        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
+                        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, iterationBeginTimestamp);
                     }
                 }
             }
@@ -266,7 +266,8 @@ public:
         } catch (...) {
             return absl::InvalidArgumentError("Response generation failed");
         }
-        timestamp = timestamp.NextAllowedInStream();
+        auto now = std::chrono::system_clock::now();
+        iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
 
         return absl::OkStatus();
     }

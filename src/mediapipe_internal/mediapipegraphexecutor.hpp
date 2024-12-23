@@ -254,6 +254,10 @@ public:
                                                              packet,
                                                              serverReaderWriter),
                                 "error in send packet routine");
+
+                            auto now = std::chrono::system_clock::now();
+                            auto currentTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+                            OBSERVE_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestLatencyMetric(executionContext), (currentTimestamp - packet.Timestamp()).Microseconds());
                             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getResponsesMetric(executionContext));
                             return absl::OkStatus();
                         } catch (...) {

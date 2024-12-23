@@ -166,6 +166,12 @@ static void prepareInvalidRequest(::inference::ModelInferRequest& request, const
     }
 }
 
+static void assertTimestamp(const ::inference::ModelStreamInferResponse& resp, std::shared_ptr<int64_t> lastTimestamp) {
+    int64_t timestamp = getResponseTimestamp(resp.infer_response());
+    ASSERT_LT(*lastTimestamp, timestamp);
+    *lastTimestamp = timestamp;
+}
+
 static void assertResponse(const ::inference::ModelStreamInferResponse& resp, const std::vector<std::tuple<std::string, float>>& expectedContent, std::optional<int64_t> expectedTimestamp = std::nullopt, const std::string& servableName = "", const std::string& servableVersion = "") {
     ASSERT_EQ(resp.error_message().size(), 0) << resp.error_message();
     if (!servableName.empty()) {
@@ -241,14 +247,6 @@ static auto ReceiveWithTimestamp(std::vector<std::tuple<std::string, float>> con
     };
 }
 
-static auto ReceiveWhenNotified(std::vector<std::tuple<std::string, float>> content, std::future<void>& signalPromise) {
-    return [content, &signalPromise](::inference::ModelInferRequest* req) {
-        signalPromise.get();
-        prepareRequest(*req, content);
-        return true;
-    };
-}
-
 static auto ReceiveWithTimestampWhenNotified(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::future<void>& signalPromise) {
     return [content, timestamp, &signalPromise](::inference::ModelInferRequest* req) {
         signalPromise.get();
@@ -274,6 +272,14 @@ static auto DisconnectOnWriteAndNotifyEnd(std::promise<void>& signalPromise) {
     };
 }
 
+static auto SendWithAutomaticTimestamp(std::vector<std::tuple<std::string, float>> content, std::shared_ptr<int64_t> timestamp) {
+    return [content, timestamp](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        assertResponse(msg, content, std::nullopt);
+        assertTimestamp(msg, timestamp);
+        return true;
+    };
+}
+
 static auto SendWithTimestamp(std::vector<std::tuple<std::string, float>> content, int64_t timestamp) {
     return [content, timestamp](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
         assertResponse(msg, content, timestamp);
@@ -281,16 +287,18 @@ static auto SendWithTimestamp(std::vector<std::tuple<std::string, float>> conten
     };
 }
 
-static auto SendWithTimestampServableNameAndVersion(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, const std::string& servableName, const std::string& servableVersion) {
+static auto SendWithAutomaticTimestampServableNameAndVersion(std::vector<std::tuple<std::string, float>> content, std::shared_ptr<int64_t> timestamp, const std::string& servableName, const std::string& servableVersion) {
     return [content, timestamp, servableName, servableVersion](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-        assertResponse(msg, content, timestamp, servableName, servableVersion);
+        assertResponse(msg, content, std::nullopt, servableName, servableVersion);
+        assertTimestamp(msg, timestamp);
         return true;
     };
 }
 
-static auto SendWithTimestampServableNameAndVersionAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, const std::string& servableName, const std::string& servableVersion, std::promise<void>& signalPromise) {
+static auto SendWithAutomaticTimestampServableNameAndVersionAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, std::shared_ptr<int64_t> timestamp, const std::string& servableName, const std::string& servableVersion, std::promise<void>& signalPromise) {
     return [content, timestamp, servableName, servableVersion, &signalPromise](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-        assertResponse(msg, content, timestamp, servableName, servableVersion);
+        assertResponse(msg, content, std::nullopt, servableName, servableVersion);
+        assertTimestamp(msg, timestamp);
         signalPromise.set_value();
         return true;
     };
@@ -298,7 +306,16 @@ static auto SendWithTimestampServableNameAndVersionAndNotifyEnd(std::vector<std:
 
 static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::promise<void>& signalPromise) {
     return [content, timestamp, &signalPromise](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-        assertResponse(msg, content, timestamp);
+        assertResponse(msg, content, std::nullopt);
+        signalPromise.set_value();
+        return true;
+    };
+}
+
+static auto SendWithAutomaticTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, std::shared_ptr<int64_t> timestamp, std::promise<void>& signalPromise) {
+    return [content, timestamp, &signalPromise](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        assertResponse(msg, content, std::nullopt);
+        assertTimestamp(msg, timestamp);
         signalPromise.set_value();
         return true;
     };
@@ -347,11 +364,12 @@ node {
         .WillOnce(Receive({{"in", 102.4f}}))
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"out", 3.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"out", 7.2f}}, 1))
-        .WillOnce(SendWithTimestamp({{"out", 102.4f}}, 2));
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 3.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 7.2f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 102.4f}}, timestamp));
 
     auto status = executor.inferStream(this->firstRequest, this->stream, this->executionContext);
     EXPECT_EQ(status, StatusCode::OK) << status.string();
@@ -403,11 +421,12 @@ node {
         .WillOnce(Receive({{"in", 102.4f}}))  // no timestamp specified, server will assign one
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"out", 8.2f}}, 1))
-        .WillOnce(SendWithTimestamp({{"out", 103.4f}}, 2));
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 4.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 8.2f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 103.4f}}, timestamp));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -585,10 +604,11 @@ node {
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 1 response
     // The PythonExecutorCalculator produces increasing timestamps
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"output", 4.5f}}, 0));
+        .WillOnce(SendWithAutomaticTimestamp({{"output", 4.5f}}, timestamp));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -646,10 +666,11 @@ node {
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 1 response
     // The PythonExecutorCalculator produces increasing timestamps
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0));
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 4.5f}}, timestamp));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -689,11 +710,12 @@ node {
         .WillOnce(Receive({{"input", 102.4f}}))  // no timestamp specified, server will assign one
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"output", 4.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"output", 8.2f}}, 1))
-        .WillOnce(SendWithTimestamp({{"output", 103.4f}}, 2));
+        .WillOnce(SendWithAutomaticTimestamp({{"output", 4.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"output", 8.2f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"output", 103.4f}}, timestamp));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -753,11 +775,12 @@ node {
         .WillOnce(Receive({{"in", 102.4f}}))  // no timestamp specified, server will assign one
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"out", 8.2f}}, 1))
-        .WillOnce(SendWithTimestamp({{"out", 103.4f}}, 2));
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 4.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 8.2f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 103.4f}}, timestamp));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -809,10 +832,11 @@ node {
         .WillOnce(Receive({{"input2", 7.2f}}))  // no timestamp specified, server will assign one
         .WillOnce(DisconnectWhenNotified(signalFuture));
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"output1", 4.5f}}, 0))
-        .WillOnce(SendWithTimestampAndNotifyEnd({{"output2", 8.2f}}, 1, signalPromise));
+        .WillOnce(SendWithAutomaticTimestamp({{"output1", 4.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestampAndNotifyEnd({{"output2", 8.2f}}, timestamp, signalPromise));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -868,12 +892,13 @@ node {
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 3 responses (cycle)
     // The PythonExecutorCalculator produces increasing timestamps
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"output", 4.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"output", 5.5f}}, 1))
-        .WillOnce(SendWithTimestamp({{"output", 6.5f}}, 2));
+        .WillOnce(SendWithAutomaticTimestamp({{"output", 4.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"output", 5.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"output", 6.5f}}, timestamp));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -931,15 +956,17 @@ node {
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(Disconnect());
 
+    auto timestamp_a = std::make_shared<int64_t>(-1);
+    auto timestamp_b = std::make_shared<int64_t>(-1);
     // Expect 6 responses (cycle)
     // The PythonExecutorCalculator produces increasing timestamps
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"output1", 4.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"output2", 14.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"output1", 5.5f}}, 1))
-        .WillOnce(SendWithTimestamp({{"output2", 15.5f}}, 1))
-        .WillOnce(SendWithTimestamp({{"output1", 6.5f}}, 2))
-        .WillOnce(SendWithTimestamp({{"output2", 16.5f}}, 2));
+        .WillOnce(SendWithAutomaticTimestamp({{"output1", 4.5f}}, timestamp_a))
+        .WillOnce(SendWithAutomaticTimestamp({{"output2", 14.5f}}, timestamp_b))
+        .WillOnce(SendWithAutomaticTimestamp({{"output1", 5.5f}}, timestamp_a))
+        .WillOnce(SendWithAutomaticTimestamp({{"output2", 15.5f}}, timestamp_b))
+        .WillOnce(SendWithAutomaticTimestamp({{"output1", 6.5f}}, timestamp_a))
+        .WillOnce(SendWithAutomaticTimestamp({{"output2", 16.5f}}, timestamp_b));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -1593,44 +1620,6 @@ node {
     }
 }
 
-TEST_F(StreamingTest, AutomaticTimestampingExceedsMax) {
-    const std::string pbTxt{R"(
-input_stream: "in"
-output_stream: "out"
-node {
-  calculator: "AddOneSingleStreamTestCalculator"
-  input_stream: "in"
-  output_stream: "out"
-}
-    )"};
-    ::mediapipe::CalculatorGraphConfig config;
-    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
-
-    MediapipeGraphExecutor executor{
-        this->name, this->version, config,
-        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
-        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
-        {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
-
-    std::promise<void> signalPromise[2];
-    std::future<void> signalFuture[2] = {
-        signalPromise[0].get_future(),
-        signalPromise[1].get_future()};
-
-    prepareRequest(this->firstRequest, {{"in", 3.5f}}, ::mediapipe::Timestamp::Max().Value());  // valid
-    EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(ReceiveWhenNotified({{"in", 10.f}}, signalFuture[0]))  // automatic timestamping overflow
-        .WillOnce(DisconnectWhenNotified(signalFuture[1]));              // automatic timestamping overflow
-
-    EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 4.5f}}, ::mediapipe::Timestamp::Max().Value(), signalPromise[0]))
-        .WillOnce(SendErrorAndNotifyEnd(
-            Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string() + std::string{" - Timestamp::OneOverPostStream(); partial deserialization of subsequent requests"},
-            signalPromise[1]));
-
-    ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
-}
-
 TEST_F(StreamingTest, FirstRequestParametersPassedAsSidePackets) {
     const std::string pbTxt{R"(
 input_stream: "in"
@@ -1658,11 +1647,12 @@ node {
         .WillOnce(Receive({{"in", 102.4f}}))  // subsequent requests without parameters
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"out", 68.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"out", 72.2f}}, 1))
-        .WillOnce(SendWithTimestamp({{"out", 167.4f}}, 2));
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 68.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 72.2f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 167.4f}}, timestamp));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -1748,10 +1738,11 @@ node {
         .WillOnce(ReceiveWithServableNameAndVersion({{"in", 7.2f}}, this->name, this->version))  // no timestamp specified, server will assign one
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 4.5f}}, 0, this->name, this->version))
-        .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 8.2f}}, 1, this->name, this->version));
+        .WillOnce(SendWithAutomaticTimestampServableNameAndVersion({{"out", 4.5f}}, timestamp, this->name, this->version))
+        .WillOnce(SendWithAutomaticTimestampServableNameAndVersion({{"out", 8.2f}}, timestamp, this->name, this->version));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -1787,13 +1778,14 @@ node {
         .WillOnce(ReceiveWithServableNameAndVersion({{"in", 12.5f}}, this->name, ""))                                        // empty = default - correct
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestampServableNameAndVersionAndNotifyEnd({{"out", 4.5f}}, 0, this->name, this->version, signalPromise))
+        .WillOnce(SendWithAutomaticTimestampServableNameAndVersionAndNotifyEnd({{"out", 4.5f}}, timestamp, this->name, this->version, signalPromise))
         .WillOnce(SendError(Status(StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME).string() + "; validate subsequent requests"))
         .WillOnce(SendError(Status(StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION).string() + "; validate subsequent requests"))
-        .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 10.2f}}, 1, this->name, this->version))
-        .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 11.4f}}, 2, this->name, this->version))
-        .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 13.5f}}, 3, this->name, this->version));
+        .WillOnce(SendWithAutomaticTimestampServableNameAndVersion({{"out", 10.2f}}, timestamp, this->name, this->version))
+        .WillOnce(SendWithAutomaticTimestampServableNameAndVersion({{"out", 11.4f}}, timestamp, this->name, this->version))
+        .WillOnce(SendWithAutomaticTimestampServableNameAndVersion({{"out", 13.5f}}, timestamp, this->name, this->version));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
