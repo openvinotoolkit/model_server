@@ -333,6 +333,10 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
         return;
     }
 
+    for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+        this->buckets.emplace_back(floor(BUCKET_MULTIPLIER * pow(BUCKET_POWER_BASE, i)));
+    }
+
     auto familyName = METRIC_NAME_CURRENT_GRAPHS;
     if (metricConfig->isFamilyEnabled(familyName)) {
         auto family = registry->createFamily<MetricGauge>(familyName,
@@ -551,6 +555,49 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
             {"method", "ModelReady"},
             {"interface", "REST"}});
         THROW_IF_NULL(this->requestSuccessRestModelReady, "cannot create metric");
+    }
+    familyName = METRIC_NAME_PROCESSING_TIME;
+    if (metricConfig->isFamilyEnabled(familyName)) {
+        auto family = registry->createFamily<MetricHistogram>(familyName,
+            "Time packet spent in the MediaPipe graph.");
+        THROW_IF_NULL(family, "cannot create family");
+
+        // KFS
+        this->processingTimeGrpcModelInfer = family->addMetric({{"name", graphName},
+                                                                   {"api", "KServe"},
+                                                                   {"method", "ModelInfer"},
+                                                                   {"interface", "gRPC"}},
+            this->buckets);
+        THROW_IF_NULL(this->processingTimeGrpcModelInfer, "cannot create metric");
+
+        this->processingTimeGrpcModelInferStream = family->addMetric({{"name", graphName},
+                                                                         {"api", "KServe"},
+                                                                         {"method", "ModelInferStream"},
+                                                                         {"interface", "gRPC"}},
+            this->buckets);
+        THROW_IF_NULL(this->processingTimeGrpcModelInfer, "cannot create metric");
+
+        this->processingTimeRestModelInfer = family->addMetric({{"name", graphName},
+                                                                   {"api", "KServe"},
+                                                                   {"method", "ModelInfer"},
+                                                                   {"interface", "REST"}},
+            this->buckets);
+        THROW_IF_NULL(this->processingTimeRestModelInfer, "cannot create metric");
+
+        // V3
+        this->processingTimeRestV3Unary = family->addMetric({{"name", graphName},
+                                                                {"api", "V3"},
+                                                                {"method", "Unary"},
+                                                                {"interface", "REST"}},
+            this->buckets);
+        THROW_IF_NULL(this->processingTimeRestV3Unary, "cannot create metric");
+
+        this->processingTimeRestV3Stream = family->addMetric({{"name", graphName},
+                                                                 {"api", "V3"},
+                                                                 {"method", "Stream"},
+                                                                 {"interface", "REST"}},
+            this->buckets);
+        THROW_IF_NULL(this->processingTimeRestV3Stream, "cannot create metric");
     }
 }
 

@@ -398,6 +398,9 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, mpName, "gRPC", "ModelInfer", "KServe", numberOfRejectedRequests);
 
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, mpName, "gRPC", "ModelInfer", "KServe", numberOfAcceptedRequests);
+
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_PROCESSING_TIME + std::string{"_count{api=\"KServe\",interface=\"gRPC\",method=\"ModelInfer\",name=\""} + mpName + std::string{"\"} "} + std::to_string(numberOfAcceptedRequests)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_PROCESSING_TIME + std::string{"_count{api=\"KServe\",interface=\"REST\",method=\"ModelInfer\",name=\""} + mpName + std::string{"\"} "} + std::to_string(0)));
 #endif
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
@@ -717,6 +720,9 @@ TEST_F(MetricFlowTest, RestModelInfer) {
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, mpName, "REST", "ModelInfer", "KServe", numberOfRejectedRequests);
 
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, mpName, "REST", "ModelInfer", "KServe", numberOfAcceptedRequests);
+
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_PROCESSING_TIME + std::string{"_count{api=\"KServe\",interface=\"gRPC\",method=\"ModelInfer\",name=\""} + mpName + std::string{"\"} "} + std::to_string(0)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_PROCESSING_TIME + std::string{"_count{api=\"KServe\",interface=\"REST\",method=\"ModelInfer\",name=\""} + mpName + std::string{"\"} "} + std::to_string(numberOfAcceptedRequests)));
 #endif
 
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
@@ -838,6 +844,8 @@ TEST_F(MetricFlowTest, RestV3Unary) {
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests * 2);
     // checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, "dummy_gpt", "REST", "Unary", "V3", numberOfRejectedRequests);
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests * 2);
+
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_PROCESSING_TIME + std::string{"_count{api=\"V3\",interface=\"REST\",method=\"Unary\",name=\""} + "dummy_gpt" + std::string{"\"} "} + std::to_string(numberOfAcceptedRequests * 2)));
 }
 #endif
 
@@ -890,6 +898,9 @@ TEST_F(MetricFlowTest, RestV3Stream) {
     // checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, "dummy_gpt", "REST", "Stream", "V3", numberOfRejectedRequests);
     const int numberOfMockedChunksPerRequest = 9;  // Defined in openai_chat_completions_mock_calculator.cpp
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Stream", "V3", numberOfAcceptedRequests * numberOfMockedChunksPerRequest * 2);
+
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_PROCESSING_TIME + std::string{"_count{api=\"V3\",interface=\"REST\",method=\"Stream\",name=\""} + "dummy_gpt" + std::string{"\"} "} + std::to_string(numberOfAcceptedRequests * 2)));
+
     SPDLOG_ERROR(server.collect());
 }
 #endif
@@ -996,6 +1007,7 @@ std::string MetricFlowTest::prepareConfigContent() {
                          R"(",")" + METRIC_NAME_REQUESTS_REJECTED +
                          R"(",")" + METRIC_NAME_RESPONSES +
                          R"(",")" + METRIC_NAME_GRAPH_ERROR +
+                         R"(",")" + METRIC_NAME_PROCESSING_TIME +
                          R"("]
             }
         },
