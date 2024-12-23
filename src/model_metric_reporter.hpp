@@ -215,23 +215,14 @@ public:
     std::unique_ptr<MetricHistogram> processingTimeRestV3Stream;
 
     inline MetricHistogram* getProcessingTimeMetric(const ExecutionContext& context) {
-        if (context.interface == ExecutionContext::Interface::GRPC) {
-            if (context.method == ExecutionContext::Method::ModelInfer)
-                return this->processingTimeGrpcModelInfer.get();
-            if (context.method == ExecutionContext::Method::ModelInferStream)
-                return this->processingTimeGrpcModelInferStream.get();
-            return nullptr;
-        } else if (context.interface == ExecutionContext::Interface::REST) {
-            if (context.method == ExecutionContext::Method::ModelInfer)
-                return this->processingTimeRestModelInfer.get();
-            if (context.method == ExecutionContext::Method::V3Unary)
-                return this->processingTimeRestV3Unary.get();
-            if (context.method == ExecutionContext::Method::V3Stream)
-                return this->processingTimeRestV3Stream.get();
-            return nullptr;
-        } else {
-            return nullptr;
-        }
+        if (context.method == ExecutionContext::Method::ModelInfer)
+            return this->processingTimeGrpcModelInfer.get();
+        if (context.method == ExecutionContext::Method::ModelInferStream)
+            return this->processingTimeGrpcModelInferStream.get();
+        if (context.method == ExecutionContext::Method::V3Unary)
+            return this->processingTimeRestV3Unary.get();
+        if (context.method == ExecutionContext::Method::V3Stream)
+            return this->processingTimeRestV3Stream.get();
         return nullptr;
     }
 
