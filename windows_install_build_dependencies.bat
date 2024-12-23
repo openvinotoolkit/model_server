@@ -17,7 +17,7 @@
 :: %1 First parameter is the --output_user_root value on c:\ drive - bazel uses this, we want to install dependencies per build there
 :: %2 Second parameter is the --expunge flag - when set to 1 we will force reinstall c:\opt dependencies - default 0
 @echo on
-setlocal EnableExtensions DisableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-XXXX" number passed here from jenkins so that a tmp directory will be created
 IF "%~1"=="" (
@@ -39,7 +39,7 @@ set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
 :: Python 39 needs to be first in the windows path, as well as MSYS tools
-set "setPath=C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;C:\opt;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
@@ -50,14 +50,14 @@ IF /I EXIST %BAZEL_SHORT_PATH% (
     echo [INFO] directory exists %BAZEL_SHORT_PATH%
 ) ELSE (
     mkdir %BAZEL_SHORT_PATH%
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 IF /I EXIST %opt_install_dir% (
     echo [INFO] directory exists %opt_install_dir%
 ) ELSE (
     mkdir %opt_install_dir%
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -66,13 +66,13 @@ set "wget_path=%opt_install_dir%\wget.exe"
 IF /I EXIST %wget_path% (
     if %expunge% EQU 1 (
         rmdir /S /Q %wget_path%
-        if %errorlevel% neq 0 exit /b %errorlevel%
-        curl https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
-        if %errorlevel% neq 0 exit /b %errorlevel%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        curl -vf --ca-native -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
+        if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] ::::::::::::::::::::::: wget installed already in %wget_path% )
 ) ELSE (
-    curl https://eternallybored.org/misc/wget/1.21.4/64/wget.exe > %wget_path%
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    curl -vf --ca-native -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -80,7 +80,8 @@ IF /I EXIST %wget_path% (
 set "bash_path=%opt_install_dir%\msys64\usr\bin\bash.exe"
 set "msys_path=%opt_install_dir%\msys64\"
 set "msys_url=https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe"
-set "msys_install=%opt_install_dir%\msys2-x86_64-20240727.exe"
+set "msys_exe=msys2-x86_64-20240727.exe"
+set "msys_install=%opt_install_dir%\%msys_exe%"
 IF /I EXIST %bash_path% (
     if %expunge% EQU 1 (goto :install_msys) else (
         echo [INFO] ::::::::::::::::::::::: Msys bash already installed in: %bash_path%
@@ -89,19 +90,29 @@ IF /I EXIST %bash_path% (
     :install_msys
     IF /I EXIST %msys_path% (
         rmdir /S /Q %msys_path%
-        if %errorlevel% neq 0 exit /b %errorlevel%
+        if !errorlevel! neq 0 exit /b !errorlevel!
     )
     IF /I NOT EXIST %msys_install% (
-        wget -P %opt_install_dir%\ %msys_url%
-        if %errorlevel% neq 0 exit /b %errorlevel%
+        %wget_path% -P %opt_install_dir%\ %msys_url%
+        if !errorlevel! neq 0 exit /b !errorlevel!
     )
 
     start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %msys_path%
-    if %errorlevel% neq 0 exit /b %errorlevel%
-    timeout 120
-    :: Install msys hang workaround
-    taskkill /f /t /im msys2-x86_64-20240727.exe
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    for /l %%i in (1,1,90) do (
+        echo Timeout iteration: %%i
+        tasklist /NH | find /i "%msys_exe%" > nul
+        if !errorlevel! neq 0 (
+            Process "%msys_exe%" finished
+            goto install_finished
+        ) else (
+            echo Process "%msys_exe%" in progress ...
+            ping 1.1.1.1 -n 1 > nul
+        )
+    )
+
+    taskkill /f /t /im %msys_exe%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    :install_finished
     echo [INFO] ::::::::::::::::::::::: Msys installed in: %msys_path%
 )
 
@@ -122,29 +133,41 @@ set "openvino_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
 echo [INFO] ::::::::::::::::::::::: OpenVino: %openvino_dir%
 :: Download OpenVINO
 IF /I EXIST %openvino_zip% (
-    echo [INFO] file exists %openvino_zip%
+    if %expunge% EQU 1 (
+        del /S /Q %openvino_zip%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %wget_path% -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] file exists %openvino_zip% )
+    
 ) ELSE (
-    curl %openvino_http%%openvino_ver% >%BAZEL_SHORT_PATH%\%openvino_ver%
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    %wget_path% -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract OpenVINO
 IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
-    echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir%
+     if %expunge% EQU 1 (
+        rmdir /S /Q %BAZEL_SHORT_PATH%\%openvino_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir% )
+    
 ) ELSE (
-    unzip -o %openvino_zip% -d %BAZEL_SHORT_PATH%
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Create OpenVINO link - always to make sure it points to latest version
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Replace path to openvino in ovms WORKSPACE file
 powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
@@ -156,15 +179,15 @@ set "opencl_dir=%BAZEL_SHORT_PATH%\opencl"
 IF /I EXIST %opencl_dir% (
     if %expunge% EQU 1 (
         rmdir /S /Q %opencl_dir%
-        if %errorlevel% neq 0 exit /b %errorlevel%
+        if !errorlevel! neq 0 exit /b !errorlevel!
         git clone --depth 1 --branch %opencl_ver% %opencl_git% %opencl_dir%
-        if %errorlevel% neq 0 exit /b %errorlevel%
+        if !errorlevel! neq 0 exit /b !errorlevel!
     ) else (
         echo [INFO] ::::::::::::::::::::::: OpenCL is already installed in: %opencl_dir%
     )
 ) ELSE (
     git clone --depth 1 --branch %opencl_ver% %opencl_git% %opencl_dir%
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -183,30 +206,35 @@ echo "[INFO] BoringSSL: "%bringssl_ver%
 IF /I EXIST %boringssl_dir% (
     if %expunge% EQU 1 (
         rmdir /S /Q %boringssl_dir%
-        if %errorlevel% neq 0 exit /b %errorlevel%
+        if !errorlevel! neq 0 exit /b !errorlevel!
         git clone --depth 1 --branch %bringssl_ver% %bringssl_git% %boringssl_dir%
-        if %errorlevel% neq 0 exit /b %errorlevel%
+        if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] ::::::::::::::::::::::: BoringSSL already installed in %boringssl_dir% )
 ) ELSE (
     git clone --depth 1 --branch %bringssl_ver% %bringssl_git% %boringssl_dir%
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install bazel
 set "bazel_path=%opt_install_dir%\bazel.exe"
+set "bazel_file=bazel-6.4.0-windows-x86_64.exe"
 IF /I EXIST %bazel_path% (
     if %expunge% EQU 1 (
-        rmdir /S /Q %bazel_path%
-        if %errorlevel% neq 0 exit /b %errorlevel%
-        wget -O %bazel_path% https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
-        if %errorlevel% neq 0 exit /b %errorlevel%
+        del /S /Q %bazel_path%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %wget_path% -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%
+        if !errorlevel! neq 0 exit /b !errorlevel!
     ) else (
         echo [INFO] ::::::::::::::::::::::: bazel already installed
     )
 ) ELSE (
-    wget -O %bazel_path% https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    %wget_path% -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -216,13 +244,13 @@ set "python39_system=C:\Program Files\Python39\"
 IF /I EXIST %python39_path% (
     IF %expunge% EQU 1 (
         rmdir /S /Q %python39_path%
-        if %errorlevel% neq 0 exit /b %errorlevel%
+        if !errorlevel! neq 0 exit /b !errorlevel!
         IF /I EXIST "%python39_system%" (
             :: Copy system Python
             xcopy /s /e /q /y "%python39_system%" %python39_path%
-            if %errorlevel% neq 0 exit /b %errorlevel%
+            if !errorlevel! neq 0 exit /b !errorlevel!
             pip install numpy==1.23
-            if %errorlevel% neq 0 exit /b %errorlevel%
+            if !errorlevel! neq 0 exit /b !errorlevel!
         ) ELSE (
             echo [ERROR] ::::::::::::::::::::::: Python39 not found
             goto :exit_dependencies_error
@@ -234,16 +262,16 @@ IF /I EXIST %python39_path% (
     IF /I EXIST "%python39_system%" (
         :: Copy system Python
         xcopy /s /e /q /y "%python39_system%" %python39_path%
-        if %errorlevel% neq 0 exit /b %errorlevel%
-        %python39_path%\python.exe -m pip install numpy==1.23
-        if %errorlevel% neq 0 exit /b %errorlevel%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %python39_path%python.exe -m pip install numpy==1.23
+        if !errorlevel! neq 0 exit /b !errorlevel!
     ) ELSE (
         echo [ERROR] ::::::::::::::::::::::: Python39 not found
         goto :exit_dependencies_error
     )
 )
 python --version
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCV
@@ -267,31 +295,31 @@ echo [INFO] Installing OpenCV: %opencv_ver%
 :: Clone OpenCL
 IF /I EXIST %opencv_dir% (
     rmdir /S /Q %opencv_dir%
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 IF /I EXIST %opencv_contrib_dir% (
     rmdir /S /Q %opencv_contrib_dir%
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 git clone --depth 1 --branch %opencv_ver% %opencv_git% %opencv_dir%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 git clone --depth 1 --branch %opencv_ver% %opencv_contrib% %opencv_contrib_dir%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 cd %opencv_dir%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 mkdir build
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 cd build
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 :: Expected compilers in CI - -G "Visual Studio 16 2019", local -G "Visual Studio 17 2022" as default
 cmake -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --install .
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :exit_dependencies
 echo [INFO] Dependencies installed
