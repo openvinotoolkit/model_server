@@ -156,6 +156,9 @@ public:
 class MediapipeServableMetricReporter {
     MetricRegistry* registry;
 
+protected:
+    std::vector<double> buckets;
+
 public:
     std::unique_ptr<MetricGauge> currentGraphs;
 
@@ -204,6 +207,33 @@ public:
     std::unique_ptr<MetricCounter> requestErrorRestModelInfer;
     std::unique_ptr<MetricCounter> requestErrorRestV3Unary;
     std::unique_ptr<MetricCounter> requestErrorRestV3Stream;
+
+    std::unique_ptr<MetricHistogram> processingTimeGrpcModelInfer;
+    std::unique_ptr<MetricHistogram> processingTimeGrpcModelInferStream;
+    std::unique_ptr<MetricHistogram> processingTimeRestModelInfer;
+    std::unique_ptr<MetricHistogram> processingTimeRestV3Unary;
+    std::unique_ptr<MetricHistogram> processingTimeRestV3Stream;
+
+    inline MetricHistogram* getProcessingTimeMetric(const ExecutionContext& context) {
+        if (context.interface == ExecutionContext::Interface::GRPC) {
+            if (context.method == ExecutionContext::Method::ModelInfer)
+                return this->processingTimeGrpcModelInfer.get();
+            if (context.method == ExecutionContext::Method::ModelInferStream)
+                return this->processingTimeGrpcModelInferStream.get();
+            return nullptr;
+        } else if (context.interface == ExecutionContext::Interface::REST) {
+            if (context.method == ExecutionContext::Method::ModelInfer)
+                return this->processingTimeRestModelInfer.get();
+            if (context.method == ExecutionContext::Method::V3Unary)
+                return this->processingTimeRestV3Unary.get();
+            if (context.method == ExecutionContext::Method::V3Stream)
+                return this->processingTimeRestV3Stream.get();
+            return nullptr;
+        } else {
+            return nullptr;
+        }
+        return nullptr;
+    }
 
     inline MetricCounter* getRequestsMetric(const ExecutionContext& context, bool success = true) {
         if (context.interface == ExecutionContext::Interface::GRPC) {
