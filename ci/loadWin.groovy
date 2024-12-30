@@ -113,7 +113,7 @@ def check_tests(){
     if (status != 0) {
             error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check piepeline.log for details."
     } else {
-        echo "Success: Windows run test passed ${status}."
+        echo "Success: Windows run test finished with success."
     }
 
 }
