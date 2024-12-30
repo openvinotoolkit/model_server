@@ -16,6 +16,7 @@
 import os
 import sys
 import re
+import subprocess
 
 WIN_OV_VERSION_REGEX = re.compile(r'[0-9]{4}.[0-9].[0-9].[^_]+')
 VERSION_FILE = "src\\version.hpp"
@@ -25,7 +26,7 @@ def help():
     print("Usage:\n\
           Two arguments required: BAZEL_BUILD_FLAGS PATH_TO_OPENVINO_INSTALL\n\
           for example: \n\
-          set_ovms_version.py.\"--config=windows\" c:\opt\ \n\
+          python windows_set_ovms_version.py \"--config=windows\" c:\opt\ \n\
           ")
     
 def replace_in_file(file_path, old_string, new_string):
@@ -40,7 +41,6 @@ def get_openvino_name(openvino_dir):
     openvino_name = "Unknown"
     for root, dirs, files in os.walk(openvino_dir):
         for dir in dirs:
-            print(dir)
             matches = WIN_OV_VERSION_REGEX.findall(dir)
             if len(matches) > 1:
                 print("[ERROR] Multiple openvino versions detected in " + os.path.join(root, dir))
@@ -57,6 +57,11 @@ def get_openvino_name(openvino_dir):
         print("[WARNING] Openvino versions not detected in " + openvino_dir)
 
     return openvino_name
+
+def get_ovms_sha():
+    command = "git rev-parse --short HEAD"
+    output = subprocess.check_output(command, shell=True, text=True)
+    return output.rstrip()
 
 def main():
     if len(sys.argv) < 2:
@@ -77,7 +82,7 @@ def main():
 
     openvino_name = get_openvino_name(openvino_dir)
     version_file_path = os.path.join(os.getcwd(), VERSION_FILE)
-    replace_in_file(version_file_path, "REPLACE_PROJECT_VERSION", OVMS_PROJECT_VERSION)
+    replace_in_file(version_file_path, "REPLACE_PROJECT_VERSION", OVMS_PROJECT_VERSION + "." + get_ovms_sha())
     replace_in_file(version_file_path, "REPLACE_OPENVINO_NAME", openvino_name)
     replace_in_file(version_file_path, "REPLACE_BAZEL_BUILD_FLAGS", bazel_bld_flags)
 
