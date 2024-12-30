@@ -108,6 +108,14 @@ def check_tests(){
     } else {
         echo "Run test no FAILED detected."
     }
+
+    status = bat(returnStatus: true, script: 'grep "  PASSED  " win_full_test.log')
+    if (status != 0) {
+            error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check piepeline.log for details."
+    } else {
+        echo "Success: Windows run test finished with success."
+    }
+
 }
 
 // Post build steps
