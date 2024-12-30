@@ -83,7 +83,7 @@ enum : unsigned int {
 }  // namespace
 
 namespace ov {
-struct Meta;  // pure fwd declaration in getRTInfo
+class Meta;  // pure fwd declaration in getRTInfo
 }
 
 namespace ovms {
