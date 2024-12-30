@@ -79,7 +79,7 @@ protected:
 public:
     static void SetUpTestSuite() {
         std::string port = "9173";
-        std::string configPath = "/ovms/src/test/rerank/config.json";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/config.json");
         SetUpSuite(port, configPath, t);
     }
 
@@ -208,7 +208,7 @@ public:
             And maximum number of documents or chunks (after chunking process) can be 4
             Allowed space for chunk is 12-6-4=2 tokens
         */
-        std::string configPath = "/ovms/src/test/rerank/with_params/config.json";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/with_params/config.json");
         SetUpSuite(port, configPath, t);
     }
 
@@ -324,7 +324,7 @@ public:
 
             This is invalid setup since there is reservation for 4 special tokens and space for query is max half of max_position_embeddings (4) - meaning 0 token space for document
         */
-        std::string configPath = "/ovms/src/test/rerank/with_params/invalid_config.json";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/with_params/invalid_config.json");
         SetUpSuite(port, configPath, t);
     }
 
