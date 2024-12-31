@@ -40,6 +40,7 @@
 #include "../prediction_service_utils.hpp"
 #include "../schema.hpp"
 #include "../sequence_processing_spec.hpp"
+#include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
@@ -185,7 +186,7 @@ public:
         const ::testing::TestInfo* const test_info =
             ::testing::UnitTest::GetInstance()->current_test_info();
 
-        cl_models_path = "/tmp/" + std::string(test_info->name());
+        cl_models_path = getGenericFullPathForTmp("/tmp/" + std::string(test_info->name()));
         cl_model_1_path = cl_models_path + "/model1/";
         cl_model_2_path = cl_models_path + "/model2/";
 
@@ -198,14 +199,12 @@ public:
 
     void TearDown() {
         // Clean up temporary destination
+        std::cout << "Remove" << std::endl;
         std::filesystem::remove_all(cl_models_path);
     }
 };
 
 TEST_F(TestImplGetModelStatus, NegativeTfsGetModelStatus) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // Create config file with an empty config & reload
     std::string configStr = dummy_config;
     configStr = configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
@@ -239,14 +238,12 @@ public:
     ServerShutdownGuard(ovms::Server& ovmsServer) :
         ovmsServer(ovmsServer) {}
     ~ServerShutdownGuard() {
+        std::cout << "Shutdown" << std::endl;
         ovmsServer.shutdownModules();
     }
 };
 
 TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // Create config file with an empty config & reload
     std::string configStr = dummy_config;
     configStr = configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
@@ -291,4 +288,11 @@ TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
     req.set_name("dummy");
     req.set_version("$$");
     ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata), extraMetadata), StatusCode::MODEL_VERSION_INVALID_FORMAT);
+
+    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
+    auto& manager = smm->getServableManager();
+    std::shared_ptr<ovms::ModelInstance> modelInstance1;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    auto status = manager.getModelInstance("dummy", 1, modelInstance1, modelInstanceUnloadGuard);
+    modelInstance1->unloadModelComponents();
 }
