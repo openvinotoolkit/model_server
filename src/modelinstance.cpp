@@ -707,6 +707,7 @@ static std::string findFilePathWithExtension(const std::string& path, const std:
         if (!std::filesystem::is_directory(entry.status())) {
             auto name = entry.path().string();
             if (endsWith(name, extension)) {
+                std::cout << "NAME: " << name << std::endl;
                 return name;
             }
         }

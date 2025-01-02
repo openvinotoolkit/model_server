@@ -827,3 +827,10 @@ void adjustConfigForTargetPlatform(std::string& input) {
     // No changes needed for linux now, but keeping it as a placeholder
 #endif
 }
+
+// Apply necessary changes so the graph config will comply with the platform
+// that tests are run on
+const std::string& adjustConfigForTargetPlatformReturn(std::string& input) {
+    adjustConfigForTargetPlatform(input);
+    return input;
+}

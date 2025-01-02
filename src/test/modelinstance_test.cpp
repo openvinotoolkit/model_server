@@ -469,9 +469,6 @@ TEST_F(TestLoadModel, CheckIfNonExistingBinFileReturnsFileInvalid) {
 }
 
 TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_multiple_models";
@@ -515,13 +512,14 @@ TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
     ASSERT_FALSE(model_files.empty());
+#ifdef _WIN32
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_multiple_models/1\\model.xml");
+#elif
     EXPECT_EQ(model_files.front(), directoryPath + "/test_multiple_models/1/model.xml");
-}
+#endif
+} 
 
 TEST_F(TestLoadModel, CheckSavedModelHandling) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     ovms::ModelInstance modelInstance("saved-model", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_saved_model";
@@ -552,13 +550,15 @@ TEST_F(TestLoadModel, CheckSavedModelHandling) {
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
     ASSERT_FALSE(model_files.empty());
+#ifdef _WIN32
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_saved_model/1\\");
+#elif
     EXPECT_EQ(model_files.front(), directoryPath + "/test_saved_model/1/");
+#endif
+
 }
 
 TEST_F(TestLoadModel, CheckTFModelHandling) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     ovms::ModelInstance modelInstance("tf", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_tf";
@@ -589,13 +589,14 @@ TEST_F(TestLoadModel, CheckTFModelHandling) {
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
     ASSERT_FALSE(model_files.empty());
+#ifdef _WIN32
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_tf/1\\model.pb");
+#elif
     EXPECT_EQ(model_files.front(), directoryPath + "/test_tf/1/model.pb");
+#endif
 }
 
 TEST_F(TestLoadModel, CheckONNXModelHandling) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     ovms::ModelInstance modelInstance("onnx", UNUSED_MODEL_VERSION, *ieCore);
 
     const std::string modelPath = directoryPath + "/test_onnx";
@@ -626,7 +627,11 @@ TEST_F(TestLoadModel, CheckONNXModelHandling) {
     auto status = modelInstance.loadModel(config);
     auto model_files = modelInstance.getModelFiles();
     ASSERT_FALSE(model_files.empty());
+#ifdef _WIN32
+    EXPECT_EQ(model_files.front(), directoryPath + "/test_onnx/1\\my-model.onnx");
+#elif
     EXPECT_EQ(model_files.front(), directoryPath + "/test_onnx/1/my-model.onnx");
+#endif
 }
 
 TEST_F(TestLoadModel, CheckTFLiteModelHandling) {
