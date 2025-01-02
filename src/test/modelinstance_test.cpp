@@ -517,7 +517,7 @@ TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
 #elif
     EXPECT_EQ(model_files.front(), directoryPath + "/test_multiple_models/1/model.xml");
 #endif
-} 
+}
 
 TEST_F(TestLoadModel, CheckSavedModelHandling) {
     ovms::ModelInstance modelInstance("saved-model", UNUSED_MODEL_VERSION, *ieCore);
@@ -555,7 +555,6 @@ TEST_F(TestLoadModel, CheckSavedModelHandling) {
 #elif
     EXPECT_EQ(model_files.front(), directoryPath + "/test_saved_model/1/");
 #endif
-
 }
 
 TEST_F(TestLoadModel, CheckTFModelHandling) {
