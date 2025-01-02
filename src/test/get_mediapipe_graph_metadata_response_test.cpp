@@ -199,7 +199,6 @@ public:
 
     void TearDown() {
         // Clean up temporary destination
-        std::cout << "Remove" << std::endl;
         std::filesystem::remove_all(cl_models_path);
     }
 };
@@ -238,7 +237,6 @@ public:
     ServerShutdownGuard(ovms::Server& ovmsServer) :
         ovmsServer(ovmsServer) {}
     ~ServerShutdownGuard() {
-        std::cout << "Shutdown" << std::endl;
         ovmsServer.shutdownModules();
     }
 };
@@ -289,10 +287,14 @@ TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
     req.set_version("$$");
     ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata), extraMetadata), StatusCode::MODEL_VERSION_INVALID_FORMAT);
 
-    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
-    auto& manager = smm->getServableManager();
+#ifdef _WIN32
+    // Unload model to allow folder delete on Windows
     std::shared_ptr<ovms::ModelInstance> modelInstance1;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
-    auto status = manager.getModelInstance("dummy", 1, modelInstance1, modelInstanceUnloadGuard);
-    modelInstance1->unloadModelComponents();
+    manager.getModelInstance("dummy", 1, modelInstance1, modelInstanceUnloadGuard);
+    // Release guard
+    modelInstanceUnloadGuard.reset();
+    // Unload model
+    modelInstance1->retireModel();
+#endif
 }
