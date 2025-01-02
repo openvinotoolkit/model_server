@@ -40,7 +40,6 @@
 #include "../prediction_service_utils.hpp"
 #include "../schema.hpp"
 #include "../sequence_processing_spec.hpp"
-#include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"

@@ -514,7 +514,7 @@ TEST_F(TestLoadModel, CheckMultipleFormatsHandling) {
     ASSERT_FALSE(model_files.empty());
 #ifdef _WIN32
     EXPECT_EQ(model_files.front(), directoryPath + "/test_multiple_models/1\\model.xml");
-#elif
+#elif __linux__
     EXPECT_EQ(model_files.front(), directoryPath + "/test_multiple_models/1/model.xml");
 #endif
 }
@@ -552,7 +552,7 @@ TEST_F(TestLoadModel, CheckSavedModelHandling) {
     ASSERT_FALSE(model_files.empty());
 #ifdef _WIN32
     EXPECT_EQ(model_files.front(), directoryPath + "/test_saved_model/1\\");
-#elif
+#elif __linux__
     EXPECT_EQ(model_files.front(), directoryPath + "/test_saved_model/1/");
 #endif
 }
@@ -590,7 +590,7 @@ TEST_F(TestLoadModel, CheckTFModelHandling) {
     ASSERT_FALSE(model_files.empty());
 #ifdef _WIN32
     EXPECT_EQ(model_files.front(), directoryPath + "/test_tf/1\\model.pb");
-#elif
+#elif __linux__
     EXPECT_EQ(model_files.front(), directoryPath + "/test_tf/1/model.pb");
 #endif
 }
@@ -628,7 +628,7 @@ TEST_F(TestLoadModel, CheckONNXModelHandling) {
     ASSERT_FALSE(model_files.empty());
 #ifdef _WIN32
     EXPECT_EQ(model_files.front(), directoryPath + "/test_onnx/1\\my-model.onnx");
-#elif
+#elif __linux__
     EXPECT_EQ(model_files.front(), directoryPath + "/test_onnx/1/my-model.onnx");
 #endif
 }
