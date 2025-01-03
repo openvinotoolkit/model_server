@@ -121,15 +121,15 @@ static bool copy_scores_into_output(struct CustomNodeTensor* output, const std::
     return true;
 }
 
-int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+DLL_PUBLIC int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     return 0;
 }
 
-int deinitialize(void* customNodeLibraryInternalManager) {
+DLL_PUBLIC int deinitialize(void* customNodeLibraryInternalManager) {
     return 0;
 }
 
-int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+DLL_PUBLIC int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     // Parameters reading
     int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
     int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
@@ -267,7 +267,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     return 0;
 }
 
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+DLL_PUBLIC int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     int originalImageHeight = get_int_parameter("original_image_height", params, paramsCount, -1);
     int originalImageWidth = get_int_parameter("original_image_width", params, paramsCount, -1);
     NODE_ASSERT(originalImageHeight > 0, "original image height must be larger than 0");
@@ -305,7 +305,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     return 0;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+DLL_PUBLIC int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     int targetImageHeight = get_int_parameter("target_image_height", params, paramsCount, -1);
     int targetImageWidth = get_int_parameter("target_image_width", params, paramsCount, -1);
     NODE_ASSERT(targetImageHeight > 0, "target image height must be larger than 0");
@@ -355,7 +355,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     return 0;
 }
 
-int release(void* ptr, void* customNodeLibraryInternalManager) {
+DLL_PUBLIC int release(void* ptr, void* customNodeLibraryInternalManager) {
     free(ptr);
     return 0;
 }

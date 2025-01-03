@@ -47,7 +47,7 @@ Each parameter in such objects can be referenced using an index which you can se
 
 ### "execute" function
 ```
-int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount);
+DLL_PUBLIC int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount);
 ```
 
 This function implements the data transformation of the custom node. The input data for the function are passed in the form of 
@@ -90,26 +90,26 @@ node execution. This function should call `free` if `malloc` was used to allocat
 
 ### "initialize" function
 ```
-int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
+DLL_PUBLIC int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
 ```
 This function enables creation of resources to be reused between predictions. Potential use cases include optimized temporary buffers allocation. Using `initialize` is optional and not required for custom node to work. `customNodeLibraryInternalManager` should be instantiated inside this function if initialize is used. On initialize failure, status not equal to `0` should be returned to make OVMS treat it as an error.
 
 When not used, minimal dummy implementation is required. Return `0`, meaning no error:
 ```
-int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+DLL_PUBLIC int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     return 0;
 }
 ```
 
 ### "deinitialize" function
 ```
-int deinitialize(void* customNodeLibraryInternalManager);
+DLL_PUBLIC int deinitialize(void* customNodeLibraryInternalManager);
 ```
 This function enables destruction of resources that were used between predictions. Using deinitialize is optional and not required for custom node to work. `customNodeLibraryInternalManager` should be destroyed here if deinitialize is used. On deinitialization failure, status not equal to `0` should be returned to make OVMS treat it as an error.
 
 When not used, minimal dummy implementation is required. Return `0`, meaning no error:
 ```
-int deinitialize(void* customNodeLibraryInternalManager) {
+DLL_PUBLIC int deinitialize(void* customNodeLibraryInternalManager) {
     return 0;
 }
 ```
