@@ -113,9 +113,10 @@ cmake(
            "//conditions:default": dict(
                build_release
             ),
-            ":dbg":  dict(
-               build_debug
-            ),
+            # Debug does not build
+            #":dbg":  dict(
+            #   build_debug
+            #),
         }}),
     env = {{
         "OpenVINO_DIR": "{OpenVINO_DIR}",
