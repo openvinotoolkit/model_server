@@ -1829,7 +1829,6 @@ cc_test(
         "test/kfs_rest_test.cpp",
         "test/kfs_rest_parser_test.cpp",
         "test/layout_test.cpp",
-        "test/mediapipeflow_test.cpp",
         "test/metric_config_test.cpp",
         "test/metrics_test.cpp",
         "test/metrics_flow_test.cpp",
@@ -1892,8 +1891,11 @@ cc_test(
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe_framework_test.cpp",
                 "test/http_openai_handler_test.cpp",
+                "test/mediapipeflow_test.cpp",
             ],
-            "//:disable_mediapipe" : [],
+            "//:disable_mediapipe" : [
+                "test/mediapipe_disabled_test.cpp",
+            ],
         }) + select({
             "//:not_disable_python": [
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
