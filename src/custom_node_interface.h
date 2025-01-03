@@ -68,18 +68,18 @@ extern "C" {
  * CustomNodeLibraryInternalManager should be created here if initialize is used.
  * On initialize failure status not equal to zero is returned and error log is printed.
  */
-DLL_PUBLIC DLL_PUBLIC int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
+DLL_PUBLIC int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount);
 /**
  * @brief Custom node library deinitialize enables destruction of resources that were used between predictions.
  * Using deinitialize is optional and not required for custom node to work.
  * CustomNodeLibraryInternalManager should be destroyed here if deinitialize is used.
  * On deinitialize failure only error log is printed.
  */
-DLL_PUBLIC DLL_PUBLIC int deinitialize(void* customNodeLibraryInternalManager);
-DLL_PUBLIC DLL_PUBLIC int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
-DLL_PUBLIC DLL_PUBLIC int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
-DLL_PUBLIC DLL_PUBLIC int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
-DLL_PUBLIC DLL_PUBLIC int release(void* ptr, void* customNodeLibraryInternalManager);
+DLL_PUBLIC int deinitialize(void* customNodeLibraryInternalManager);
+DLL_PUBLIC int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+DLL_PUBLIC int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+DLL_PUBLIC int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager);
+DLL_PUBLIC int release(void* ptr, void* customNodeLibraryInternalManager);
 
 #ifdef __cplusplus
 }
