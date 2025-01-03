@@ -16,8 +16,9 @@
 #include "custom_node_library_manager.hpp"
 
 #include <utility>
-
-#ifdef __linux__
+#ifdef _WIN32
+#include <system_error>
+#elif __linux__
 #include <dlfcn.h>
 #endif
 
@@ -33,7 +34,7 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
         return StatusCode::PATH_INVALID;
     }
 
-    if (basePath.at(0) != '/') {
+    if (!FileSystem::isFullPath(basePath)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} is relative, should have already been constructed as full path for library {}.", basePath, name);
         return StatusCode::PATH_INVALID;
     }
@@ -113,19 +114,19 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Successfully loaded custom node library name: {}; base_path: {}", name, basePath);
 #elif _WIN32
-    // TODO: implement LoadLibrary for windows with GetProcAddress
     HMODULE handle = LoadLibraryA(basePath.c_str());
     DWORD error = GetLastError();
-    // void* handle = NULL;
+    std::string message = std::system_category().message(error);
     if (!handle) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Library name: {} failed to open base_path: {} with error: {}", name, basePath, "e");
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Library name: {} failed to open base_path: {} with error: {} message: {}", name, basePath, error, message);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN;
     }
 
     initialize_fn initialize = reinterpret_cast<initialize_fn>(GetProcAddress(handle, "initialize"));
     if (!initialize) {
         error = GetLastError();
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {} message: {}", name, error, message);
         FreeLibrary(handle);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
@@ -133,7 +134,8 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     deinitialize_fn deinitialize = reinterpret_cast<deinitialize_fn>(GetProcAddress(handle, "deinitialize"));
     if (!deinitialize) {
         error = GetLastError();
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {} message: {}", name, error, message);
         FreeLibrary(handle);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
@@ -141,7 +143,8 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     execute_fn execute = reinterpret_cast<execute_fn>(GetProcAddress(handle, "execute"));
     if (!execute) {
         error = GetLastError();
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {} message: {}", name, error, message);
         FreeLibrary(handle);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
@@ -149,7 +152,8 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     metadata_fn getInputsInfo = reinterpret_cast<metadata_fn>(GetProcAddress(handle, "getInputsInfo"));
     if (!getInputsInfo) {
         error = GetLastError();
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {} message: {}", name, error, message);
         FreeLibrary(handle);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
@@ -157,7 +161,8 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     metadata_fn getOutputsInfo = reinterpret_cast<metadata_fn>(GetProcAddress(handle, "getOutputsInfo"));
     if (!getOutputsInfo) {
         error = GetLastError();
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {} message: {}", name, error, message);
         FreeLibrary(handle);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }
@@ -165,7 +170,8 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
     release_fn release = reinterpret_cast<release_fn>(GetProcAddress(handle, "release"));
     if (!release) {
         error = GetLastError();
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {}", name, error);
+        message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load library name: {} with error: {} message: {}", name, error, message);
         FreeLibrary(handle);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM;
     }

@@ -753,6 +753,37 @@ const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bo
     return getPathFromMap(linuxPath, linuxPath);
 }
 
+// Function changes linux docker container path /ovms/bazel-bin/src/lib_node_mock.so to windows workspace "C:\git\model_server\bazel-bin\src\lib_node_mock.so"
+// Depending on the ovms_test.exe location after build
+const std::string& getGenericFullPathForBin(const std::string& linuxPath, bool logChange) {
+#ifdef __linux__
+    return getPathFromMap(linuxPath, linuxPath);
+#elif _WIN32
+    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
+
+    // Example linuxPath "/ovms/bazel-bin/src/lib_node_mock.so"
+    std::size_t postOvmsIndex = linuxPath.find("/bazel-bin/src");
+    if (postOvmsIndex != std::string::npos) {
+        // Setting winPath to "/bazel-bin/src"
+        std::string winPath = linuxPath.substr(postOvmsIndex);
+        // Set basePath to "C:\git\model_server\"
+        std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
+        // Combine "C:\git\model_server\" + "/bazel-bin/src"
+        std::string finalWinPath = basePath + winPath;
+        // Change paths to linux separator for JSON parser compatyility in configs
+        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
+
+        if (logChange) {
+            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        }
+        return getPathFromMap(linuxPath, finalWinPath);
+    }
+#endif
+    return getPathFromMap(linuxPath, linuxPath);
+}
+
 const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange) {
     return getGenericFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)), logChange);
 }
@@ -823,10 +854,20 @@ void adjustConfigForTargetPlatform(std::string& input) {
         input.replace(pos, searchString.length(), replaceString);
         pos += replaceString.length();
     }
+
+    repoTestPath = getWindowsRepoRootPath() + "/bazel-bin/src";
+    searchString = "\"/ovms/bazel-bin/src";
+    replaceString = "\"" + repoTestPath;
+    pos = 0;
+    while ((pos = input.find(searchString, pos)) != std::string::npos) {
+        input.replace(pos, searchString.length(), replaceString);
+        pos += replaceString.length();
+    }
 #elif __linux__
     // No changes needed for linux now, but keeping it as a placeholder
 #endif
 }
+
 
 // Apply necessary changes so the graph config will comply with the platform
 // that tests are run on
