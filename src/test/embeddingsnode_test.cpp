@@ -284,6 +284,19 @@ TEST_F(EmbeddingsHttpTest, simplePositiveMultipleStrings) {
     ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
 }
 
+TEST_F(EmbeddingsHttpTest, emptyInput) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": []
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, &writer);
+    ASSERT_EQ(status,
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR)
+        << status.string();
+}
+
 class EmbeddingsExtensionTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
