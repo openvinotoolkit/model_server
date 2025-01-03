@@ -214,6 +214,19 @@ public:
     std::unique_ptr<MetricHistogram> processingTimeRestV3Unary;
     std::unique_ptr<MetricHistogram> processingTimeRestV3Stream;
 
+    std::unique_ptr<MetricHistogram> requestLatencyGrpcModelInferStream;
+    std::unique_ptr<MetricHistogram> requestLatencyRestV3Stream;
+
+
+    inline MetricHistogram* getRequestLatencyMetric(const ExecutionContext& context) {
+        if (context.method == ExecutionContext::Method::ModelInferStream)
+            return this->requestLatencyGrpcModelInferStream.get();
+        if (context.method == ExecutionContext::Method::V3Stream)
+            return this->requestLatencyRestV3Stream.get();
+        return nullptr;
+
+    }
+
     inline MetricHistogram* getProcessingTimeMetric(const ExecutionContext& context) {
         if (context.method == ExecutionContext::Method::ModelInfer)
             return this->processingTimeGrpcModelInfer.get();

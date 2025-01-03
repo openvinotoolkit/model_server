@@ -591,6 +591,23 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
             this->buckets);
         THROW_IF_NULL(this->processingTimeRestV3Stream, "cannot create metric");
     }
+    familyName = METRIC_NAME_REQUEST_LATENCY;
+    if (metricConfig->isFamilyEnabled(familyName)) {
+        auto family = registry->createFamily<MetricHistogram>(familyName,
+            "Time difference between incoming request and output packet in mediapipe graph.");
+        THROW_IF_NULL(family, "cannot create family");
+
+        // KFS
+        this->requestLatencyGrpcModelInferStream = family->addMetric({{"name", graphName},
+                                                                   {"method", "ModelInferStream"}},
+            this->buckets);
+        THROW_IF_NULL(this->requestLatencyGrpcModelInferStream, "cannot create metric");
+        // V3
+        this->requestLatencyRestV3Stream = family->addMetric({{"name", graphName},
+                                                                {"method", "Stream"}},
+            this->buckets);
+        THROW_IF_NULL(this->requestLatencyRestV3Stream, "cannot create metric");
+    }
 }
 
 }  // namespace ovms

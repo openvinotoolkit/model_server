@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <chrono>
 
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../logging.hpp"
@@ -1147,7 +1148,8 @@ Status createAndPushPacketsImpl(
         numberOfPacketsCreated++;
     }
 
-    currentTimestamp = currentTimestamp.NextAllowedInStream();
+    auto now = std::chrono::system_clock::now();
+    currentTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
 
     return StatusCode::OK;
 }
