@@ -868,7 +868,6 @@ void adjustConfigForTargetPlatform(std::string& input) {
 #endif
 }
 
-
 // Apply necessary changes so the graph config will comply with the platform
 // that tests are run on
 const std::string& adjustConfigForTargetPlatformReturn(std::string& input) {
