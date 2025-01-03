@@ -255,7 +255,8 @@ public:
         } catch (...) {
             return absl::InvalidArgumentError("Response generation failed");
         }
-        timestamp = timestamp.NextAllowedInStream();
+        auto now = std::chrono::system_clock::now();
+        timestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
 
         return absl::OkStatus();
     }
