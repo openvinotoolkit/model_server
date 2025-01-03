@@ -74,9 +74,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 2b7f48e8a8ef30f467760bd98ee6b909c8d89874  # master / 2024-11-26
+OV_SOURCE_BRANCH ?= c5137ff870dc3386bfd4692176e8d6725a17b99a  # master / 2024-12-16
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
-OV_TOKENIZERS_BRANCH ?= 5cc27fb7132f51b18f4f870286ae704cdaa5fc78 # master / 2024-11-25
+OV_TOKENIZERS_BRANCH ?= bcfd3eda25ae3ec423502a4074e35c774506c732 # master / 2024-12-16
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -170,7 +170,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17449-2b7f48e8a8e/l_openvino_toolkit_ubuntu22_2025.0.0.dev20241126_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17638-c5137ff870d/l_openvino_toolkit_ubuntu22_2025.0.0.dev20241217_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -185,7 +185,7 @@ ifeq ($(BASE_OS),redhat)
   endif
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17449-2b7f48e8a8e/l_openvino_toolkit_rhel8_2025.0.0.dev20241126_x86_64.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17638-c5137ff870d/l_openvino_toolkit_rhel8_2025.0.0.dev20241217_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -200,12 +200,10 @@ endif
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_NAME = "OpenVINO Model Server"
 PRODUCT_VERSION ?= "2025.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
-$(eval PROJECT_NAME:=${PRODUCT_NAME})
 $(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})
 
 OVMS_CPP_CONTAINER_NAME ?= "server-test-${PROJECT_VER_PATCH}-$(shell date +%Y-%m-%d-%H.%M.%S)"
@@ -672,10 +670,14 @@ cpu_extension:
 	mkdir -p ./lib/${OS}
 	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${OS}
 
-run_unit_tests:
+prepare_models:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
 ifeq ($(RUN_GPU_TESTS),1)
-	./prepare_gpu_models.sh ${GPU_MODEL_PATH} && \
+	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
+endif
+
+run_unit_tests: prepare_models
+ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
 		--device=/dev/dri \
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \

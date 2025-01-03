@@ -183,6 +183,18 @@ public:
 
     std::unique_ptr<MetricCounter> responseRestModelInfer;
 
+    std::unique_ptr<MetricCounter> requestSuccessGrpcModelMetadata;
+    std::unique_ptr<MetricCounter> requestSuccessGrpcModelReady;
+
+    std::unique_ptr<MetricCounter> requestSuccessRestModelMetadata;
+    std::unique_ptr<MetricCounter> requestSuccessRestModelReady;
+
+    std::unique_ptr<MetricCounter> requestFailGrpcModelMetadata;
+    std::unique_ptr<MetricCounter> requestFailGrpcModelReady;
+
+    std::unique_ptr<MetricCounter> requestFailRestModelMetadata;
+    std::unique_ptr<MetricCounter> requestFailRestModelReady;
+
     // V3
     std::unique_ptr<MetricCounter> responseRestV3Unary;
     std::unique_ptr<MetricCounter> responseRestV3Stream;
@@ -254,6 +266,22 @@ public:
             return nullptr;
         }
         return nullptr;
+    }
+
+    inline std::unique_ptr<MetricCounter>& getModelMetadataMetric(const ExecutionContext& context, bool success = true) {
+        if (context.interface == ExecutionContext::Interface::GRPC) {
+            return success ? this->requestSuccessGrpcModelMetadata : this->requestFailGrpcModelMetadata;
+        } else {
+            return success ? this->requestSuccessRestModelMetadata : this->requestFailRestModelMetadata;
+        }
+    }
+
+    inline std::unique_ptr<MetricCounter>& getModelReadyMetric(const ExecutionContext& context, bool success = true) {
+        if (context.interface == ExecutionContext::Interface::GRPC) {
+            return success ? this->requestSuccessGrpcModelReady : this->requestFailGrpcModelReady;
+        } else {
+            return success ? this->requestSuccessRestModelReady : this->requestFailRestModelReady;
+        }
     }
 
     MediapipeServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& graphName);
