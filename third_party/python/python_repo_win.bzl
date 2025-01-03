@@ -17,7 +17,6 @@
 def _python_repository_impl(repository_ctx):
     lib_path = "Python39"
     version = "python39"
-
     build_file_content = """
 cc_library(
     name = "python3-lib",

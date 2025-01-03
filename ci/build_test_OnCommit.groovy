@@ -25,7 +25,7 @@ pipeline {
               } else {  // branches without PR - check changes in last commit
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
-              def matched = (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|WORKSPACE|(\n|^)run_unit_tests\.sh/)
+              def matched = (git_diff =~ /src|export_models|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|WORKSPACE|(\n|^)run_unit_tests\.sh/)
                 if (matched){
                   image_build_needed = "true"
               }
@@ -33,18 +33,36 @@ pipeline {
                 if (matched){
                   client_test_needed = "true"
               }
-              def win_matched = (git_diff =~ /src|third_party|external|ci|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|\.bat|\.groovy/)
+              def win_matched = (git_diff =~ /src|export_models|third_party|external|ci|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|\.bat|\.groovy/)
               if (win_matched){
                   win_image_build_needed = "true"
               }
             }
           }
         }
-
-        stage('Style check') {
-            steps {
-                sh 'make style'
+        stage('Style and clean') {
+          parallel {
+            stage('Style check') {
+                steps {
+                  sh 'make style'
+                }
             }
+            stage('Cleanup node') {
+              agent {
+                label 'win_ovms'
+              }
+              steps {
+                script {
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        windows.cleanup_directories()
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
+                }
+              }
+            }
+          }
         }
 
         stage('Sdl check') {
@@ -79,8 +97,8 @@ pipeline {
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
                         try {
-                          windows.clean()
                           windows.install_dependencies()
+                          windows.clean()
                           windows.build_and_test()
                           windows.check_tests()
                         } finally {

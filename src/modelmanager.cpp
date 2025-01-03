@@ -29,6 +29,8 @@
 #ifdef __linux__
 #include <dlfcn.h>
 #include <sysexits.h>
+#elif _WIN32
+#include <io.h>
 #endif
 
 #ifdef _WIN32
@@ -105,9 +107,9 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         }
         // TODO: check on windows
 #ifdef __linux__
-        int result = access(this->modelCacheDirectory.c_str(), EX_OK);
+        int result = access(this->modelCacheDirectory.c_str(), W_OK);
 #elif _WIN32
-        int result = access(this->modelCacheDirectory.c_str(), 0);
+        int result = _access(this->modelCacheDirectory.c_str(), 6);
 #endif
         if (result != 0) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);
@@ -130,13 +132,18 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
             throw;
         }
     }
+    const std::string DEFAULT_TOKENIZERS_PATH =
+#ifdef __linux__
+        "libopenvino_tokenizers.so";
+#elif _WIN32
+        "openvino_tokenizers.dll";
+#endif
     try {
-        const std::string TOKENIZERS_PATH = "libopenvino_tokenizers.so";
-        SPDLOG_INFO("Loading tokenizer CPU extension from {}", TOKENIZERS_PATH);
-        ieCore->add_extension(TOKENIZERS_PATH);
-        OV_LOGGER("ov::Core: {}, registered default extension from {}", reinterpret_cast<const void*>(this->ieCore.get()), TOKENIZERS_PATH);
+        ieCore->add_extension(DEFAULT_TOKENIZERS_PATH);
+        OV_LOGGER("ov::Core: {}, registered default extension from {}", reinterpret_cast<const void*>(this->ieCore.get()), DEFAULT_TOKENIZERS_PATH);
     } catch (std::exception& ex) {
-        SPDLOG_WARN("Loading of libopenvino_tokenizers has failed! Reason: {}", ex.what());
+        SPDLOG_WARN("{} extension was not enabled. Probably missing in the default location.", DEFAULT_TOKENIZERS_PATH);
+        SPDLOG_DEBUG("Fail reason: {}", ex.what());
     } catch (...) {
         SPDLOG_CRITICAL("Loading of libopenvino_tokenizers has failed with an unknown error!");
         throw;

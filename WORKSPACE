@@ -93,6 +93,8 @@ cc_library(
 )
 """,
 )
+
+# Used for gRPC API protos only
 # Tensorflow serving
 git_repository(
     name = "tensorflow_serving",
@@ -126,7 +128,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "71e4adb31872dc9bc262e65d5243d756a8a7115d", # Openvino from ENV (#100) Dec 4 2024
+    commit = "8d91559c1e900d3c043cc7aafb1b55df25d586ac", # Opencv from ENV (#101) Dec 9 2024
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -209,7 +211,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_openvino",
     build_file = "@//third_party/openvino:openvino_windows.BUILD",
-    path = "C:\\opt\\intel\\openvino\\runtime",
+    path = "C:\\opt\\openvino\\runtime",
 )
 
 new_local_repository(
@@ -221,7 +223,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
-    path = "C:\\opt\\opencv\\build",
+    path = "C:\\opt\\opencv",
 )
 
 new_local_repository(
@@ -239,6 +241,16 @@ new_local_repository(
 ########################################################### Mediapipe end
 
 ########################################################### Python support start
+
+http_archive(
+    name = "aspect_bazel_lib",
+    sha256 = "7b39d9f38b82260a8151b18dd4a6219d2d7fc4a0ac313d4f5a630ae6907d205d",
+    strip_prefix = "bazel-lib-2.10.0",
+    url = "https://github.com/bazel-contrib/bazel-lib/releases/download/v2.10.0/bazel-lib-v2.10.0.tar.gz",
+)
+
+load("@aspect_bazel_lib//lib:repositories.bzl", "register_coreutils_toolchains")
+register_coreutils_toolchains()
 
 load("@//third_party/python:python_repo.bzl", "python_repository")
 python_repository(name = "_python3-linux")
@@ -358,8 +370,12 @@ rules_pkg_dependencies()
 load("@//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
 
+### OpenVINO GenAI
 load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
+
+load("@//third_party/drogon:drogon.bzl", "drogon_cpp")
+drogon_cpp()
 
 # Azure Storage SDK
 new_local_repository(
@@ -472,5 +488,3 @@ git_repository(
     remote = "https://github.com/nlohmann/json/",
     tag = "v3.11.3",
 )
-
-

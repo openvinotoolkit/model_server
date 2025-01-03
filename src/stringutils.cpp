@@ -175,4 +175,11 @@ bool isValidUtf8(const std::string& text) {
     return false;
 }
 
+std::string toLower(const std::string& input) {
+    std::string result = input;
+    std::transform(result.begin(), result.end(), result.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+    return result;
+}
+
 }  // namespace ovms

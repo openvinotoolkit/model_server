@@ -60,9 +60,6 @@ static void testDefaultSingleModelOptions(ModelsSettingsImpl* modelsSettings) {
 const uint32_t AVAILABLE_CORES = std::thread::hardware_concurrency();
 
 TEST(CAPIConfigTest, MultiModelConfiguration) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     OVMS_ServerSettings* _serverSettings = nullptr;
     OVMS_ModelsSettings* _modelsSettings = nullptr;
 
@@ -114,16 +111,16 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetFileSystemPollWaitSeconds(_serverSettings, 2));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(_serverSettings, 3));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(_serverSettings, 4));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetCpuExtensionPath(_serverSettings, "/ovms/src/test"));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetCacheDir(_serverSettings, "/tmp/cache"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetCpuExtensionPath(_serverSettings, getGenericFullPathForSrcTest("/ovms/src/test").c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetCacheDir(_serverSettings, getGenericFullPathForTmp("/tmp/cache").c_str()));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_INFO));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_ERROR));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_DEBUG));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_WARNING));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(_serverSettings, OVMS_LOG_TRACE));
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogLevel(_serverSettings, static_cast<OVMS_LogLevel>(99)), StatusCode::NONEXISTENT_LOG_LEVEL);
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogPath(_serverSettings, "/logs"));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(_modelsSettings, "/config"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogPath(_serverSettings, getGenericFullPathForTmp("/tmp/logs").c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(_modelsSettings, getGenericFullPathForTmp("/tmp/config").c_str()));
     // check nullptr
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcPort(nullptr, 5555), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetRestPort(nullptr, 6666), StatusCode::NONEXISTENT_PTR);
@@ -142,12 +139,12 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(nullptr, 4), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCpuExtensionPath(nullptr, "/ovms/src/test"), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCpuExtensionPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCacheDir(nullptr, "/tmp/cache"), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCacheDir(nullptr, getGenericFullPathForTmp("/tmp/cache").c_str()), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetCacheDir(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogLevel(nullptr, OVMS_LOG_TRACE), StatusCode::NONEXISTENT_PTR);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogPath(nullptr, "/logs"), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogPath(nullptr, getGenericFullPathForTmp("/tmp/logs").c_str()), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetLogPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
-    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsSetConfigPath(nullptr, "/config"), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsSetConfigPath(nullptr, getGenericFullPathForTmp("/tmp/config").c_str()), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsSetConfigPath(_modelsSettings, nullptr), StatusCode::NONEXISTENT_PTR);
 
     // Test non default values
@@ -159,9 +156,9 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->restBindAddress, "3.3.3.3");
     // EXPECT_EQ(serverSettings->metricsEnabled, false);
     // EXPECT_EQ(serverSettings->metricsList, "");
-    EXPECT_EQ(serverSettings->cpuExtensionLibraryPath, "/ovms/src/test");
+    EXPECT_EQ(serverSettings->cpuExtensionLibraryPath, getGenericFullPathForSrcTest("/ovms/src/test"));
     EXPECT_EQ(serverSettings->logLevel, "TRACE");
-    EXPECT_EQ(serverSettings->logPath, "/logs");
+    EXPECT_EQ(serverSettings->logPath, getGenericFullPathForTmp("/tmp/logs"));
     // trace path  // not tested since it is not supported in C-API
     EXPECT_EQ(serverSettings->grpcChannelArguments, "grpcargs");
     EXPECT_EQ(serverSettings->grpcMaxThreads, 100);
@@ -169,10 +166,10 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->filesystemPollWaitMilliseconds, 2000);
     EXPECT_EQ(serverSettings->sequenceCleanerPollWaitMinutes, 3);
     EXPECT_EQ(serverSettings->resourcesCleanerPollWaitSeconds, 4);
-    EXPECT_EQ(serverSettings->cacheDir, "/tmp/cache");
+    EXPECT_EQ(serverSettings->cacheDir, getGenericFullPathForTmp("/tmp/cache"));
 
     testDefaultSingleModelOptions(modelsSettings);
-    EXPECT_EQ(modelsSettings->configPath, "/config");
+    EXPECT_EQ(modelsSettings->configPath, getGenericFullPathForTmp("/tmp/config"));
 
     // Test config parser
     ConstructorEnabledConfig cfg;
@@ -185,15 +182,15 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(cfg.restBindAddress(), "3.3.3.3");
     // EXPECT_EQ(serverSettings->metricsEnabled, false);
     // EXPECT_EQ(serverSettings->metricsList, "");
-    EXPECT_EQ(cfg.cpuExtensionLibraryPath(), "/ovms/src/test");
+    EXPECT_EQ(cfg.cpuExtensionLibraryPath(), getGenericFullPathForSrcTest("/ovms/src/test"));
     EXPECT_EQ(cfg.logLevel(), "TRACE");
-    EXPECT_EQ(cfg.logPath(), "/logs");
+    EXPECT_EQ(cfg.logPath(), getGenericFullPathForTmp("/tmp/logs"));
     // trace path  // not tested since it is not supported in C-API
     EXPECT_EQ(cfg.grpcChannelArguments(), "grpcargs");
     EXPECT_EQ(cfg.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(cfg.sequenceCleanerPollWaitMinutes(), 3);
     EXPECT_EQ(cfg.resourcesCleanerPollWaitSeconds(), 4);
-    EXPECT_EQ(cfg.cacheDir(), "/tmp/cache");
+    EXPECT_EQ(cfg.cacheDir(), getGenericFullPathForTmp("/tmp/cache"));
 
     EXPECT_EQ(cfg.modelName(), "");
     EXPECT_EQ(cfg.modelPath(), "");
@@ -209,7 +206,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(cfg.maxSequenceNumber(), DEFAULT_MAX_SEQUENCE_NUMBER);
     EXPECT_TRUE(cfg.idleSequenceCleanup());
 
-    EXPECT_EQ(cfg.configPath(), "/config");
+    EXPECT_EQ(cfg.configPath(), getGenericFullPathForTmp("/tmp/config"));
 
     OVMS_ModelsSettingsDelete(nullptr);
     OVMS_ModelsSettingsDelete(_modelsSettings);
@@ -232,9 +229,6 @@ TEST(CAPIStartTest, InitializingMultipleServers) {
 }
 
 TEST(CAPIStartTest, StartFlow) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     OVMS_Server* srv = nullptr;
     OVMS_ServerSettings* serverSettings = nullptr;
     OVMS_ModelsSettings* modelsSettings = nullptr;
@@ -421,11 +415,8 @@ TEST_F(CAPIInference, Validation) {
 }
 
 TEST_F(CAPIInference, ValidationMaliciousTensorStaticShapeModel) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [PORT?]";
-#endif
     // Prepare request with tensor shape not alligining with data size with overflow attempt
-    ServerGuard serverGuard("/ovms/src/test/configs/config_standard_dummy.json");
+    ServerGuard serverGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json"));
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
     OVMS_InferenceRequest* request{nullptr};
@@ -452,11 +443,8 @@ TEST_F(CAPIInference, ValidationMaliciousTensorStaticShapeModel) {
 }
 
 TEST_F(CAPIInference, ValidationMaliciousTensorDynamicShapeModel) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [PORT?]";
-#endif
     // Prepare request with tensor shape not alligining with data size with overflow attempt
-    ServerGuard serverGuard("/ovms/src/test/configs/config_dummy_full_dynamic_shape.json");
+    ServerGuard serverGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_dummy_full_dynamic_shape.json"));
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
     OVMS_InferenceRequest* request{nullptr};
@@ -483,9 +471,6 @@ TEST_F(CAPIInference, ValidationMaliciousTensorDynamicShapeModel) {
 }
 
 TEST_F(CAPIInference, AcceptInputRejectOutputStringPrecision) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [PORT?]";
-#endif
     ServerGuard serverGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_string.json"));
     OVMS_Server* cserver = serverGuard.server;
     OVMS_InferenceRequest* request{nullptr};
@@ -503,9 +488,6 @@ TEST_F(CAPIInference, AcceptInputRejectOutputStringPrecision) {
 }
 
 TEST_F(CAPIInference, TwoInputs) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [PORT?]";
-#endif
     ServerGuard serverGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_double_dummy.json").c_str());
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
@@ -561,9 +543,6 @@ TEST_F(CAPIInference, TwoInputs) {
     OVMS_InferenceRequestDelete(request);
 }
 TEST_F(CAPIInference, Basic) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [PORT?]";
-#endif
     //////////////////////
     // start server
     //////////////////////
@@ -683,9 +662,6 @@ TEST_F(CAPIInference, Basic) {
     OVMS_InferenceRequestDelete(request);
 }
 TEST_F(CAPIInference, ReuseInputRemoveAndAddData) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [PORT?]";
-#endif
     ServerGuard serverGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json").c_str());
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
@@ -778,9 +754,6 @@ TEST_F(CAPIInference, ReuseInputRemoveAndAddData) {
 }
 
 TEST_F(CAPIInference, ReuseRequestRemoveAndAddInput) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [PORT?]";
-#endif
     ServerGuard serverGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_dummy_dynamic_shape.json").c_str());
     OVMS_Server* cserver = serverGuard.server;
     ASSERT_NE(cserver, nullptr);
@@ -875,9 +848,6 @@ TEST_F(CAPIInference, ReuseRequestRemoveAndAddInput) {
 }
 
 TEST_F(CAPIInference, NegativeInference) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [PORT?]";
-#endif
     // first start OVMS
     std::string port = "9000";
     randomizePort(port);
@@ -980,9 +950,6 @@ TEST_F(CAPIInference, NegativeInference) {
     OVMS_ServerDelete(nullptr);
 }
 TEST_F(CAPIInference, String) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [PORT?]";
-#endif
     using std::string;
     ServerGuard serverGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_string.json"));
     OVMS_InferenceRequest* request{nullptr};
@@ -1049,9 +1016,6 @@ TEST_F(CAPIInference, String) {
     OVMS_InferenceResponseDelete(response2);
 }
 TEST_F(CAPIInference, Scalar) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [PORT?]";
-#endif
     //////////////////////
     // start server
     //////////////////////
@@ -1448,7 +1412,6 @@ TEST_F(CAPIStateIntegration, LiveReadyFromMalformedConfig) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&server));
     OVMS_ServerSettings* serverSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
     bool isReady;
@@ -1474,7 +1437,6 @@ TEST_F(CAPIStateIntegration, LiveReadyFromConfig) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&server));
     OVMS_ServerSettings* serverSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
     bool isReady;
@@ -1485,7 +1447,7 @@ TEST_F(CAPIStateIntegration, LiveReadyFromConfig) {
     ASSERT_TRUE(!isLive);
     OVMS_ServerReady(server, &isReady);
     ASSERT_TRUE(!isReady);
-    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfigWithMetrics.json"), configFilePath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfig.json"), configFilePath, std::filesystem::copy_options::recursive);
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(server, serverSettings, modelsSettings));
     OVMS_ServerLive(server, &isLive);
@@ -1509,14 +1471,12 @@ TEST_F(CAPIStateIntegration, Config) {
     OVMS_ServerSettings* serverSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(
         OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(
-        OVMS_ServerSettingsSetRestPort(serverSettings, 9000));
     ovms::ServerSettingsImpl* directPtrServerSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(serverSettings);
     directPtrServerSettings->filesystemPollWaitMilliseconds = 20;  // mock 20ms config.json polling to make the test shorter
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(
         OVMS_ModelsSettingsNew(&modelsSettings));
-    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfigWithMetrics.json"), configFilePath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfig.json"), configFilePath, std::filesystem::copy_options::recursive);
     ASSERT_CAPI_STATUS_NULL(
         OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
     ASSERT_CAPI_STATUS_NULL(
@@ -1635,9 +1595,6 @@ TEST_F(CAPIState, AllStates) {
 }
 
 TEST_F(CAPIMetadata, BasicDummy) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     const std::string servableName{"dummy"};
     checkServableAsDummy(servableName);
 }
@@ -1648,9 +1605,6 @@ TEST_F(CAPIMetadata, BasicDummyDag) {
 }
 
 TEST_F(CAPIMetadata, BasicScalar) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     const std::string servableName{"scalar"};
     model_version_t servableVersion = 1;
     ovms::tensor_map_t inputsInfo({{SCALAR_MODEL_INPUT_NAME,
