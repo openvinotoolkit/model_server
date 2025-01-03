@@ -741,7 +741,7 @@ const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bo
         std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
         // Combine "C:\git\model_server\" + "/src/test/dummy"
         std::string finalWinPath = basePath + winPath;
-        // Change paths to linux separator for JSON parser compatyility in configs
+        // Change paths to linux separator for JSON parser compatybility in configs
         std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
 
         if (logChange) {
@@ -772,7 +772,7 @@ const std::string& getGenericFullPathForBin(const std::string& linuxPath, bool l
         std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
         // Combine "C:\git\model_server\" + "/bazel-bin/src"
         std::string finalWinPath = basePath + winPath;
-        // Change paths to linux separator for JSON parser compatyility in configs
+        // Change paths to linux separator for JSON parser compatybility in configs
         std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
 
         if (logChange) {
@@ -808,7 +808,7 @@ const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool l
         std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
         // Combine "C:\git\model_server\" + "tmp" "\dummy"
         std::string finalWinPath = basePath + tmpString + winPath;
-        // Change paths to linux separator for JSON parser compatyility in configs
+        // Change paths to linux separator for JSON parser compatybility in configs
         std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
 
         if (logChange) {
