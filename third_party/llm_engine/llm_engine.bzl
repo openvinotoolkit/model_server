@@ -24,7 +24,7 @@ def llm_engine():
     new_git_repository(
         name = "llm_engine",
         remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "17536724b9f798bea871c8775fb1a97f69714d35", # master / Nov 20
+        commit = "973b26b2b1fed25b878ea6108b4d7c5ae825dc12", # master / Dec 17
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
@@ -52,8 +52,8 @@ def _impl(repository_ctx):
     if _is_windows(repository_ctx):
         OpenVINO_DIR = OpenVINO_DIR.replace("/", "\\\\").replace("\\", "\\\\")
         out_lib_dir = "runtime/lib/Release"
-        lib_name = "openvino_genai.lib"
-        out_libs = "out_static_libs = [\"{lib_name}\"]".format(lib_name=lib_name)
+        lib_name = "openvino_genai"
+        out_libs = "out_static_libs = [\"{lib_name}.lib\"]".format(lib_name=lib_name)
         cache_entries = """
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
@@ -64,8 +64,8 @@ def _impl(repository_ctx):
         """
     else:
         out_lib_dir = "runtime/lib/intel64"
-        lib_name = "libopenvino_genai.so.2500"
-        out_libs = "out_shared_libs = [\"{lib_name}\"]".format(lib_name=lib_name)
+        lib_name = "libopenvino_genai"
+        out_libs = "out_shared_libs = [\"{lib_name}.so.2500\"]".format(lib_name=lib_name)
         cache_entries = """
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
@@ -113,9 +113,10 @@ cmake(
            "//conditions:default": dict(
                build_release
             ),
-            ":dbg":  dict(
-               build_debug
-            ),
+            # Debug does not build
+            #":dbg":  dict(
+            #   build_debug
+            #),
         }}),
     env = {{
         "OpenVINO_DIR": "{OpenVINO_DIR}",
@@ -127,7 +128,6 @@ cmake(
     lib_source = ":all_srcs",
     out_lib_dir = "{out_lib_dir}",
     out_include_dir = "runtime/include",
-    # linking order
     {out_libs},
     tags = ["requires-network"],
     visibility = ["//visibility:public"],

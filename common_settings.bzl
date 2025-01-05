@@ -103,6 +103,12 @@ def create_config_settings():
         match_any = ["//src:windows", "//:disable_python"]
     )
 
+    # is windows and python is enabled"
+    selects.config_setting_group(
+        name = "is_windows_and_python_is_enabled",
+        match_all = ["//src:windows", "//:not_disable_python"]
+    )
+
 ###############################
 # compilation settings
 ###############################

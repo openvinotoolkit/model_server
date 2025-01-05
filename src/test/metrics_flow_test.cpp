@@ -87,7 +87,7 @@ static void checkMediapipeRequestsCounter(const std::string& collectedMetricData
     for (std::string _interface : std::set<std::string>{"gRPC", "REST"}) {
         for (std::string _api : std::set<std::string>{"KServe", "V3"}) {
             if (_api == "KServe") {
-                for (std::string _method : std::set<std::string>{"ModelInfer", "ModelInferStream"}) {  //, "ModelMetadata", "ModelReady"}) {
+                for (std::string _method : std::set<std::string>{"ModelInfer", "ModelInferStream"}) {
                     if (_interface == "REST")
                         continue;
                     std::stringstream ss;
@@ -107,6 +107,21 @@ static void checkMediapipeRequestsCounter(const std::string& collectedMetricData
                     ASSERT_THAT(collectedMetricData, HasSubstr(ss.str()));
                 }
             }
+        }
+    }
+}
+
+static void checkMediapipeRequestsCounterMetadataReady(const std::string& collectedMetricData, const std::string& metricName, const std::string& endpointName, const std::string& interfaceName, const std::string& method, const std::string& api, int value) {
+    for (std::string _interface : std::set<std::string>{"gRPC", "REST"}) {
+        for (std::string _method : std::set<std::string>{"ModelMetadata", "ModelReady"}) {
+            std::stringstream ss;
+            ss << metricName << "{api=\""
+               << "KServe"
+               << "\",interface=\"" << _interface << "\",method=\"" << _method << "\",name=\"" << endpointName << "\"";
+            ss << "}";
+            int expectedValue = interfaceName == _interface && method == _method ? value : 0;
+            ss << " " << expectedValue << "\n";
+            ASSERT_THAT(collectedMetricData, HasSubstr(ss.str()));
         }
     }
 }
@@ -500,9 +515,16 @@ TEST_F(MetricFlowTest, GrpcModelMetadata) {
         request.mutable_name()->assign(dagName);
         ASSERT_EQ(impl.ModelMetadata(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
+    for (int i = 0; i < numberOfSuccessRequests; i++) {
+        request.Clear();
+        response.Clear();
+        request.mutable_name()->assign(mpName);
+        ASSERT_EQ(impl.ModelMetadata(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    }
 
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);    // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);                  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);                    // ran by real request
+    checkMediapipeRequestsCounterMetadataReady(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);  // ran by real request
 }
 
 TEST_F(MetricFlowTest, GrpcModelReady) {
@@ -524,8 +546,16 @@ TEST_F(MetricFlowTest, GrpcModelReady) {
         ASSERT_EQ(impl.ModelReady(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
 
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
+    for (int i = 0; i < numberOfSuccessRequests; i++) {
+        request.Clear();
+        response.Clear();
+        request.mutable_name()->assign(mpName);
+        ASSERT_EQ(impl.ModelReady(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    }
+
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);                  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);                    // ran by real request
+    checkMediapipeRequestsCounterMetadataReady(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
 }
 
 TEST_F(MetricFlowTest, RestPredict) {
@@ -735,8 +765,15 @@ TEST_F(MetricFlowTest, RestModelMetadata) {
         ASSERT_EQ(handler.processModelMetadataKFSRequest(components, response, request), ovms::StatusCode::OK);
     }
 
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);    // ran by real request
+    for (int i = 0; i < numberOfSuccessRequests; i++) {
+        components.model_name = mpName;
+        std::string request, response;
+        ASSERT_EQ(handler.processModelMetadataKFSRequest(components, response, request), ovms::StatusCode::OK);
+    }
+
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);                  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);                    // ran by real request
+    checkMediapipeRequestsCounterMetadataReady(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);  // ran by real request
 }
 
 TEST_F(MetricFlowTest, ModelReady) {
@@ -755,8 +792,15 @@ TEST_F(MetricFlowTest, ModelReady) {
         ASSERT_EQ(handler.processModelReadyKFSRequest(components, response, request), ovms::StatusCode::OK);
     }
 
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
+    for (int i = 0; i < numberOfSuccessRequests; i++) {
+        components.model_name = mpName;
+        std::string request, response;
+        ASSERT_EQ(handler.processModelReadyKFSRequest(components, response, request), ovms::StatusCode::OK);
+    }
+
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);                  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);                    // ran by real request
+    checkMediapipeRequestsCounterMetadataReady(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, "REST", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
@@ -920,26 +964,26 @@ TEST_F(MetricFlowTest, CurrentGraphs) {
 // Test MP metrics when mediapipe is enabled at build time
 #if (MEDIAPIPE_DISABLE == 0)
 std::string MetricFlowTest::prepareConfigContent() {
-    return std::string{R"({
+    auto configContent = std::string{R"({
         "monitoring": {
             "metrics": {
                 "enable": true,
                 "metrics_list": [)"} +
-           R"(")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE +
-           R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
-           R"(",")" + METRIC_NAME_CURRENT_REQUESTS +
-           R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
-           R"(",")" + METRIC_NAME_REQUESTS_FAIL +
-           R"(",")" + METRIC_NAME_REQUEST_TIME +
-           R"(",")" + METRIC_NAME_STREAMS +
-           R"(",")" + METRIC_NAME_INFERENCE_TIME +
-           R"(",")" + METRIC_NAME_WAIT_FOR_INFER_REQ_TIME +
-           R"(",")" + METRIC_NAME_CURRENT_GRAPHS +
-           R"(",")" + METRIC_NAME_REQUESTS_ACCEPTED +
-           R"(",")" + METRIC_NAME_REQUESTS_REJECTED +
-           R"(",")" + METRIC_NAME_RESPONSES +
-           R"(",")" + METRIC_NAME_GRAPH_ERROR +
-           R"("]
+                         R"(")" + METRIC_NAME_INFER_REQ_QUEUE_SIZE +
+                         R"(",")" + METRIC_NAME_INFER_REQ_ACTIVE +
+                         R"(",")" + METRIC_NAME_CURRENT_REQUESTS +
+                         R"(",")" + METRIC_NAME_REQUESTS_SUCCESS +
+                         R"(",")" + METRIC_NAME_REQUESTS_FAIL +
+                         R"(",")" + METRIC_NAME_REQUEST_TIME +
+                         R"(",")" + METRIC_NAME_STREAMS +
+                         R"(",")" + METRIC_NAME_INFERENCE_TIME +
+                         R"(",")" + METRIC_NAME_WAIT_FOR_INFER_REQ_TIME +
+                         R"(",")" + METRIC_NAME_CURRENT_GRAPHS +
+                         R"(",")" + METRIC_NAME_REQUESTS_ACCEPTED +
+                         R"(",")" + METRIC_NAME_REQUESTS_REJECTED +
+                         R"(",")" + METRIC_NAME_RESPONSES +
+                         R"(",")" + METRIC_NAME_GRAPH_ERROR +
+                         R"("]
             }
         },
         "model_config_list": [
@@ -997,6 +1041,8 @@ std::string MetricFlowTest::prepareConfigContent() {
         ]
     }
     )";
+    adjustConfigForTargetPlatform(configContent);
+    return configContent;
 }
 #else
 // Do not test MP metrics when mediapipe is disabled at build time

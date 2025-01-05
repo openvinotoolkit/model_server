@@ -231,7 +231,6 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
 #endif
     if (name == GRPC_SERVER_MODULE_NAME)
         return std::make_unique<GRPCServerModule>(*this);
-    // TODO windows
     if (name == HTTP_SERVER_MODULE_NAME)
         return std::make_unique<HTTPServerModule>(*this);
     if (name == SERVABLE_MANAGER_MODULE_NAME)
@@ -372,10 +371,8 @@ static int statusToExitCode(const Status& status) {
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
-// TODO windows
-#ifdef __linux__
     installSignalHandlers();
-#endif
+
     CLIParser parser;
     ServerSettingsImpl serverSettings;
     ModelsSettingsImpl modelsSettings;

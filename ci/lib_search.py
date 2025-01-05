@@ -1,4 +1,3 @@
-#No header files detected
 # Copyright (c) 2020-2022 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -111,6 +110,7 @@ def check_dir(start_dir):
         'opencv_cmake_flags.txt',
         'ovms-c/dist',
         'requirements.txt',
+        'requirements_win.txt',
         'resnet_images.txt',
         "resnet_labels.txt",
         'rest_sdk_v2.10.16.patch',
@@ -219,6 +219,7 @@ def check_func(start_dir):
         'openvino.LICENSE.txt',
         'ovms-c/dist',
         'requirements.txt',
+        'requirements_win.txt',
         'rest_sdk_v2.10.16.patch',
         'summator.xml',
         'tf.patch',
