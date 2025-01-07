@@ -200,7 +200,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         auto body = std::string(req->getBody());
         std::string output;
         HttpResponseComponents responseComponents;
-        std::shared_ptr<HttpAsyncWriter> writer = std::make_shared<DrogonHttpAsyncWriterImpl>(callback, pool);
+        std::shared_ptr<HttpAsyncWriter> writer = std::make_shared<DrogonHttpAsyncWriterImpl>(callback, pool, req);
 
         const auto status = handler->processRequest(
             drogon::to_string_view(req->getMethod()),
