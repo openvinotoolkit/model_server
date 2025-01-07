@@ -36,12 +36,9 @@ TEST(NodeLibraryManagerTest, UnSuccessfullLibraryLoading) {
 }
 
 TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     CustomNodeLibraryManager manager;
     NodeLibrary library;
-    auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
+    auto status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
     ASSERT_EQ(status, StatusCode::OK);
     status = manager.getLibrary("random_name", library);
     ASSERT_EQ(status, StatusCode::OK);
@@ -60,61 +57,46 @@ TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingDuplicateNameAndBasePath) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
+    auto status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
     ASSERT_EQ(status, StatusCode::OK);
-    status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
+    status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_ALREADY_LOADED);
 }
 
 TEST(NodeLibraryManagerTest, LibraryReloadingDuplicateNameAndDifferentBasePath) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
+    auto status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
     ASSERT_EQ(status, StatusCode::OK);
-    status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_add_sub.so");
+    status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_add_sub.so"));
     EXPECT_EQ(status, StatusCode::OK);
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingDuplicatePath) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("library_A", "/ovms/bazel-bin/src/lib_node_mock.so");
+    auto status = manager.loadLibrary("library_A", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
     ASSERT_EQ(status, StatusCode::OK);
-    status = manager.loadLibrary("library_B", "/ovms/bazel-bin/src/lib_node_mock.so");
+    status = manager.loadLibrary("library_B", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
     EXPECT_EQ(status, StatusCode::OK);
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingMissingImplementation) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_missing_implementation.so");
+    auto status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_missing_implementation.so"));
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM);
 }
 
 TEST(NodeLibraryManagerTest, TryLoadingCorruptedLibraryNextLoadCorrectLibrary) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_missing_implementation.so");
+    auto status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_missing_implementation.so"));
     ASSERT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM);
-    status = manager.loadLibrary("random_name", "/ovms/bazel-bin/src/lib_node_mock.so");
+    status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
     EXPECT_EQ(status, StatusCode::OK);
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingMissingFile) {
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", "/tmp/non_existing_library_file");
+    auto status = manager.loadLibrary("random_name", getGenericFullPathForTmp("/tmp/non_existing_library_file"));
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN);
 }
 
@@ -127,14 +109,13 @@ TEST(NodeLibraryManagerTest, ErrorWhenLibraryPathNotEscaped) {
 class ModelManagerNodeLibraryTest : public TestWithTempDir {};
 
 TEST_F(ModelManagerNodeLibraryTest, LoadCustomNodeLibrary) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
-    const char* config = R"({
+    std::string config = R"({
         "model_config_list": [],
         "custom_node_library_config_list": [
             {"name": "lib1", "base_path": "/ovms/bazel-bin/src/lib_node_mock.so"}
         ]})";
+
+    adjustConfigForTargetPlatform(config);
     std::string fileToReload = directoryPath + "/ovms_config_file1.json";
     createConfigFileWithContent(config, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -158,11 +139,13 @@ TEST_F(ModelManagerNodeLibraryTest, LoadCustomNodeLibrary) {
 }
 
 TEST_F(ModelManagerNodeLibraryTest, FailLoadingCorruptedCustomNodeLibrary) {
-    const char* config = R"({
+    std::string config = R"({
         "model_config_list": [],
         "custom_node_library_config_list": [
             {"name": "lib1", "base_path": "/ovms/bazel-bin/src/lib_node_missing_implementation.so"}
         ]})";
+
+    adjustConfigForTargetPlatform(config);
     std::string fileToReload = directoryPath + "/ovms_config_file1.json";
     createConfigFileWithContent(config, fileToReload);
     ConstructorEnabledModelManager manager;
@@ -180,21 +163,21 @@ TEST_F(ModelManagerNodeLibraryTest, FailLoadingCorruptedCustomNodeLibrary) {
 }
 
 TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
-    const char* configBefore = R"({
+    std::string configBefore = R"({
         "model_config_list": [],
         "custom_node_library_config_list": [
             {"name": "lib1", "base_path": "/ovms/bazel-bin/src/lib_node_mock.so"}
         ]})";
-    const char* configAfter = R"({
+    std::string configAfter = R"({
         "model_config_list": [],
         "custom_node_library_config_list": [
             {"name": "lib1", "base_path": "/ovms/bazel-bin/src/lib_node_mock.so"},
             {"name": "lib2", "base_path": "/ovms/bazel-bin/src/lib_node_mock.so"}
         ]})";
     std::string fileToReload = directoryPath + "/ovms_config_file1.json";
+
+    adjustConfigForTargetPlatform(configBefore);
+    adjustConfigForTargetPlatform(configAfter);
 
     // Start with configBefore
     createConfigFileWithContent(configBefore, fileToReload);
@@ -265,25 +248,25 @@ TEST_F(ModelManagerNodeLibraryTest, AddAndRemoveLibrariesInConfigReload) {
 }
 
 TEST_F(ModelManagerNodeLibraryTest, AddRemoveAndAddLibraryInConfigReload) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
-    const char* configBefore = R"({
+    std::string configBefore = R"({
         "model_config_list": [],
         "custom_node_library_config_list": [
             {"name": "lib1", "base_path": "/ovms/bazel-bin/src/lib_node_mock.so"}
         ]})";
-    const char* configRemove = R"({
+    std::string configRemove = R"({
         "model_config_list": [],
         "custom_node_library_config_list": [
         ]})";
-    const char* configAfter = R"({
+    std::string configAfter = R"({
         "model_config_list": [],
         "custom_node_library_config_list": [
             {"name": "lib1", "base_path": "/ovms/bazel-bin/src/lib_node_add_sub.so"}
         ]})";
     std::string fileToReload = directoryPath + "/ovms_config_file1.json";
 
+    adjustConfigForTargetPlatform(configBefore);
+    adjustConfigForTargetPlatform(configRemove);
+    adjustConfigForTargetPlatform(configAfter);
     // Start with configBefore
     createConfigFileWithContent(configBefore, fileToReload);
     ConstructorEnabledModelManager manager;
