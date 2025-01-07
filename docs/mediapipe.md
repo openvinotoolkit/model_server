@@ -54,7 +54,7 @@ Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/ma
 
 ## PyTensorOvTensorConverterCalculator
 
-`PyTensorOvTensorConverterCalculator` enables conversion between nodes that are run by `PythonExecutorCalculator` and nodes that receive and/or produce [OV Tensors](https://docs.openvino.ai/2025/api/c_cpp_api/classov_1_1_tensor.html)
+`PyTensorOvTensorConverterCalculator` enables conversion between nodes that are run by `PythonExecutorCalculator` and nodes that receive and/or produce [OV Tensors](https://docs.openvino.ai/2024/api/c_cpp_api/classov_1_1_tensor.html)
 
 ## How to create the graph for deployment in OpenVINO Model Server
 

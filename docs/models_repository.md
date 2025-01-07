@@ -10,14 +10,14 @@ ovms_docs_cloud_storage
 ```
 
 The AI models served by OpenVINO&trade; Model Server must be in either of the five formats:
-- [OpenVINO IR](https://docs.openvino.ai/2025/documentation/openvino-ir-format/operation-sets.html), where the graph is represented in .bin and .xml files
+- [OpenVINO IR](https://docs.openvino.ai/2024/documentation/openvino-ir-format/operation-sets.html), where the graph is represented in .bin and .xml files
 - [ONNX](https://onnx.ai/), using the .onnx file
 - [PaddlePaddle](https://www.paddlepaddle.org.cn/en), using .pdiparams and .pdmodel files
 - [TensorFlow](https://www.tensorflow.org/), using SavedModel, MetaGraph or frozen Protobuf formats.
 - [TensorFlow Lite](https://www.tensorflow.org/lite), using the .tflite file
 
 To use models trained in other formats you need to convert them first. To do so, use
-OpenVINO’s [conversion tool](https://docs.openvino.ai/2025/openvino-workflow/model-preparation/convert-model-to-ir.html) for IR, or different
+OpenVINO’s [conversion tool](https://docs.openvino.ai/2024/openvino-workflow/model-preparation/convert-model-to-ir.html) for IR, or different
 [converters](https://onnx.ai/supported-tools.html) for ONNX.
 
 The models need to be placed and mounted in a particular directory structure and according to the following rules:

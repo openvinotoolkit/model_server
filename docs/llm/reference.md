@@ -80,7 +80,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional uint64 max_num_seqs` - max number of sequences actively processed by the engine [default = 256];
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
 -    `optional string device` - device to load models to. Supported values: "CPU", "GPU" [default = "CPU"]
--    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = "{}"]
+-    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = "{}"]
 -    `optional uint32 best_of_limit` - max value of best_of parameter accepted by endpoint [default = 20];
 -    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint [default = 4096];
 -    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];

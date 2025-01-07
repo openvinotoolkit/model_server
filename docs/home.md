@@ -49,12 +49,12 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 - [Directed Acyclic Graph Scheduler](dag_scheduler.md) along with [custom nodes in DAG pipelines](custom_node_development.md)
 - [Metrics](metrics.md) - metrics compatible with Prometheus standard
 - Support for multiple frameworks, such as TensorFlow, PaddlePaddle and ONNX
-- Support for [AI accelerators](https://docs.openvino.ai/2025/about-openvino/compatibility-and-support/supported-devices.html)
+- Support for [AI accelerators](https://docs.openvino.ai/2024/about-openvino/compatibility-and-support/supported-devices.html)
 
 ## Additional Resources
 
 * [Simplified Deployments with OpenVINO™ Model Server and TensorFlow Serving](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Simplified-Deployments-with-OpenVINO-Model-Server-and-TensorFlow/post/1353218)
 * [Inference Scaling with OpenVINO™ Model Server in Kubernetes and OpenShift Clusters](https://www.intel.com/content/www/us/en/developer/articles/technical/deploy-openvino-in-openshift-and-kubernetes.html)
-* [Benchmarking results](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
+* [Benchmarking results](https://docs.openvino.ai/2024/about-openvino/performance-benchmarks.html)
 * [Speed and Scale AI Inference Operations Across Multiple Architectures Demo Recording](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276)
 * [Release Notes](https://github.com/openvinotoolkit/model_server/releases)

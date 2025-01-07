@@ -29,7 +29,7 @@ it ignores the batch_size value.
     - JSON object e.g. `{"input1":"(1,3,224,224)","input2":"(1,3,50,50)"}` - it defines a shape of every included input in the model
 
 *Note:* Some models do not support the reshape operation. Learn more about supported model graph layers including all limitations
-on [Shape Inference Document](https://docs.openvino.ai/2025/openvino-workflow/running-inference/changing-input-shape.html).
+on [Shape Inference Document](https://docs.openvino.ai/2024/openvino-workflow/running-inference/changing-input-shape.html).
 In case the model can't be reshaped, it will remain in the original parameters and all requests with incompatible input format
 will get an error. The model server will also report such problems in the logs.
 
