@@ -280,3 +280,71 @@ C:\opt\opencv\setup_vars_opencv4.cmd
 windows_change_test_configs.py
 bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log
 ```
+
+## (Optional) Configure self-contained Python to include in the dist package
+
+1. Download embeddable python package for Windows:
+
+    ```
+    curl https://www.python.org/ftp/python/3.9.6/python-3.9.6-embed-amd64.zip -o C:/opt/python-3.9.6-embed-amd64.zip
+    ```
+
+2. Extract the downloaded zip file and get inside new catalog:
+
+    ```
+    md C:/opt/python-3.9.6-embed-amd64
+    tar -xf C:/opt/python-3.9.6-embed-amd64.zip -C C:/opt/python-3.9.6-embed-amd64
+    cd C:/opt/python-3.9.6-embed-amd64
+    ```
+
+3. Extract `python39.zip`:
+
+    ```
+    md python39
+    tar -xf python39.zip -C python39
+    ```
+
+4. Adjust paths:
+
+    Change `python39._pth` contents to:
+
+    ```
+    .\python39
+    .
+    .\Scripts
+    .\Lib\site-packages
+    
+    # Uncomment to run site.main() automatically
+    #import site
+
+    ```
+
+5. Create empty `DLLs` catalog:
+    
+    ```
+    md DLLs
+    ```
+
+6. Download `pip` and install dependencies:
+
+    ```
+    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    .\python.exe get-pip.py
+    .\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+    ```
+
+Upon completing these steps, `C:/opt/python-3.9.6-embed-amd64` directory can be copied as-is to another location. In the shell that will use this Python instance, set path to this location in `PYTHONHOME` environment variable and add it to the beginning of the `Path` environment variable:
+
+Windows Command Line
+```cmd
+set PYTHONHOME=<final_embed_dir_location>
+set Path=<final_embed_dir_location>;%Path%
+```
+
+Windows PowerShell
+```powershell
+$env:PYTHONHOME="<final_embed_dir_location>"
+$env:Path="<final_embed_dir_location>;$env:Path"
+```
+
+This will ensure that desired Python instance is used in current shell. Those changes will not affect global configuration, so you will have to set both variables in every new shell that will use this Python.  

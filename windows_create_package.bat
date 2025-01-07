@@ -35,6 +35,12 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Include self-contained python with dependencies required by LLM pipelines
+xcopy C:\opt\ovms-python-3.9.6-embed dist\windows\ovms\python /E /I /H
+if %errorlevel% neq 0 (
+    echo Error copying python into the distribution location. The package will not contain self-contained python.
+)
+
 :: Below includes OpenVINO tokenizers
 copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
