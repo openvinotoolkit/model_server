@@ -35,9 +35,12 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-:: Include self-contained python with dependencies required by LLM pipelines
-xcopy C:\opt\ovms-python-3.9.6-embed dist\windows\ovms\python /E /I /H
-if %errorlevel% neq 0 (
+:: Prepare self-contained python
+call %cd%\windows_prepare_python.bat
+:: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
+xcopy C:\opt\ovms-python-3.9.13-embed dist\windows\ovms\python /E /I /H
+.\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+if !errorlevel! neq 0 (
     echo Error copying python into the distribution location. The package will not contain self-contained python.
 )
 
