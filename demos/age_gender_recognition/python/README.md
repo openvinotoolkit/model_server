@@ -9,11 +9,16 @@ curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_z
 
 ```
 
-## Start OVMS docker container with downloaded model
+## Start OVMS with downloaded model
 Start OVMS container with image pulled in previous step and mount `model` directory :
-```bash
+```console
 docker run --rm -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/age_gender -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_path /models/age_gender --model_name age_gender --port 9000 --rest_port 8000
 ```
+or start as a binary application:
+```bat
+ovms --model_path model --model_name age_gender --port 9000 --rest_port 8000 
+```
+
 
 #### Requesting the Service
 Clone the repository
