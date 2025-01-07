@@ -129,7 +129,6 @@ static void onIllegal(int status) {
     shutdown_request = 2;
 }
 
-// TODO windows
 #ifdef __linux__
 
 static void installSignalHandlers() {
@@ -365,9 +364,7 @@ static int statusToExitCode(const Status& status) {
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
-#ifdef __linux__
     installSignalHandlers();
-#endif
     int result = OVMS_EX_OK;
 
     try {
@@ -393,9 +390,6 @@ int Server::start(int argc, char** argv) {
         return result;
     }
 
-#ifdef _WIN32
-    WSACleanup();
-#endif
     return EXIT_SUCCESS;
 }
 
