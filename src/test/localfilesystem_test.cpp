@@ -28,11 +28,11 @@ using namespace testing;
 using ::testing::UnorderedElementsAre;
 
 #ifdef __linux__
-    const std::string TMP_PATH = "/tmp/structure/";
-    const std::string TMP_CONTENT = "filecontent123\n";
+const std::string TMP_PATH = "/tmp/structure/";
+const std::string TMP_CONTENT = "filecontent123\n";
 #elif _WIN32
-    const std::filesystem::path TMP_PATH = std::filesystem::temp_directory_path() / "structure";
-    const std::string TMP_CONTENT = "filecontent123\r\n";
+const std::filesystem::path TMP_PATH = std::filesystem::temp_directory_path() / "structure";
+const std::string TMP_CONTENT = "filecontent123\r\n";
 #endif
 
 const std::string TMP_FILE = "file1.txt";
@@ -161,12 +161,12 @@ TEST(FileSystem, CreateTempFolder) {
     EXPECT_TRUE(status);
     EXPECT_EQ(sc, ovms::StatusCode::OK);
 
-    #ifdef __linux__
-        fs::perms p = fs::status(local_path).permissions();
-        EXPECT_TRUE((p & fs::perms::group_read) == fs::perms::none);
-        EXPECT_TRUE((p & fs::perms::others_read) == fs::perms::none);
-        EXPECT_TRUE((p & fs::perms::owner_read) != fs::perms::none);
-    #endif
+#ifdef __linux__
+    fs::perms p = fs::status(local_path).permissions();
+    EXPECT_TRUE((p & fs::perms::group_read) == fs::perms::none);
+    EXPECT_TRUE((p & fs::perms::others_read) == fs::perms::none);
+    EXPECT_TRUE((p & fs::perms::owner_read) != fs::perms::none);
+#endif
 }
 
 TEST(FileSystem, CheckIfPathIsEscaped) {

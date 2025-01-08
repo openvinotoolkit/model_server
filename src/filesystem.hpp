@@ -150,7 +150,8 @@ public:
     }
 #elif _WIN32
     static StatusCode createTempPath(std::string* local_path) {
-        if (!local_path) return StatusCode::FILESYSTEM_ERROR;
+        if (!local_path)
+            return StatusCode::FILESYSTEM_ERROR;
 
         wchar_t temp_path[MAX_PATH];
         wchar_t temp_file[MAX_PATH];
@@ -172,7 +173,7 @@ public:
         // Delete the temporary file to create a directory instead
         if (!DeleteFileW(temp_file)) {
             // Try to clean up the temp file in case of failure
-            SetLastError(0); // Reset error code before attempting cleanup
+            SetLastError(0);  // Reset error code before attempting cleanup
             DeleteFileW(temp_file);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to delete temp file: {}", GetLastError());
             return StatusCode::FILESYSTEM_ERROR;
@@ -181,7 +182,7 @@ public:
         // Create the directory
         if (!CreateDirectoryW(temp_file, NULL)) {
             // Try to clean up the temp file in case of failure
-            SetLastError(0); // Reset error code before attempting cleanup
+            SetLastError(0);  // Reset error code before attempting cleanup
             DeleteFileW(temp_file);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create temp directory: {}", GetLastError());
             return StatusCode::FILESYSTEM_ERROR;
