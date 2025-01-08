@@ -46,6 +46,7 @@ if "%~3"=="1" (
 :: Download and unpack everything, clean up first, if expunge is set
 if %expunge% EQU 1 (
     rmdir /S /Q %dest_dir%\%python_full_name%
+    if !errorlevel! neq 0 exit /b !errorlevel!
     del /Q %dest_dir%\%python_full_name%.zip
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
@@ -54,22 +55,24 @@ if exist %dest_dir%\%python_full_name% (
     echo Existing Python installation found. Exiting script.
     exit /b 0
 ) else ( 
-    md %dest_dir%\%python_full_name% 
+    md %dest_dir%\%python_full_name%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
-if !errorlevel! neq 0 exit /b !errorlevel!
 
 if exist %dest_dir%\%python_full_name%.zip (
     echo Python zip already downloaded. Will unpack existing file.
 ) else (
     curl %embeddable_python_url% -o %dest_dir%\%python_full_name%.zip
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
-if !errorlevel! neq 0 exit /b !errorlevel!
 
 tar -xf %dest_dir%\%python_full_name%.zip -C %dest_dir%\%python_full_name%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 cd %dest_dir%\%python_full_name%
 md python39
+if !errorlevel! neq 0 exit /b !errorlevel!
+
 tar -xf python39.zip -C python39
 if !errorlevel! neq 0 exit /b !errorlevel!
 
