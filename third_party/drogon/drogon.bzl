@@ -45,8 +45,9 @@ cc_library(
     )
     new_git_repository(
         name = "drogon",
-        remote = "https://github.com/drogonframework/drogon",
-        tag = "v1.9.9",  # Jan 1 2025
+        remote = "https://github.com/fantasy-peak/drogon",
+        #tag = "v1.9.9",  # Jan 1 2025
+        branch = "add-connection-callback",
         build_file = "@_drogon_cpp//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
