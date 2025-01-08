@@ -110,7 +110,7 @@ The custom node east_ocr can be built inside a docker container via the followin
 - go to the directory with custom node examples [src/custom_node](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes)
 - run `make` command:
 
-```
+```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/src/custom_nodes
 # replace to 'redhat` if using UBI base image

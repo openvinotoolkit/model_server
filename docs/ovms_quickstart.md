@@ -10,7 +10,7 @@ OpenVINO Model Server can perform inference using pre-trained models in either [
 
 This guide uses a [Faster R-CNN with Resnet-50 V1 Object Detection model](https://www.kaggle.com/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1) in TensorFlow format.
 
-> **Note**: - OpenVINO Model Server can run on Linux and macOS. For use on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/) is required.
+> **Note**: - OpenVINO Model Server can run on Linux, macOS and Windows both on [WSL](https://docs.microsoft.com/en-us/windows/wsl/) and as a standalone ovms.exe.
 
 To quickly start using OpenVINO™ Model Server follow these steps:
 1. Prepare Docker
@@ -22,7 +22,9 @@ To quickly start using OpenVINO™ Model Server follow these steps:
 7. Run inference
 8. Review the results
 
-### Step 1: Prepare Docker [Linux]
+The steps below are marked as Linux specific, Windows specific or common [Linux/Windows] - to be executed on Windows and Linux
+
+### [Linux] Step 1: Prepare Docker
 
 [Install Docker Engine](https://docs.docker.com/engine/install/), including its [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/), on your development system.
 To verify installation, test it using the following command. If it displays a test image and a message, it is ready.
@@ -31,7 +33,7 @@ To verify installation, test it using the following command. If it displays a te
 $ docker run hello-world
 ```
 
-### Step 2: Download the Model Server [Linux]
+### [Linux] Step 2: Download the Model Server
 
 Download the Docker image that contains OpenVINO Model Server:
 
@@ -39,11 +41,11 @@ Download the Docker image that contains OpenVINO Model Server:
 docker pull openvino/model_server:latest
 ```
 
-## For Windows download the `dist/windows/ovms.zip` package and extract it in current directory [Windows]
-## Install Microsoft Visual C++ Redistributable
+#### [Windows] For Windows download the `dist/windows/ovms.zip` package and extract it in current directory
+#### [Windows] Install Microsoft Visual C++ Redistributable
 Install C++ package - https://aka.ms/vs/17/release/VC_redist.x64.exe
 
-### Step 3: Provide a Model [Linux/Windows]
+### [Linux/Windows] Step 3: Provide a Model 
 
 Store components of the model in the `model/1` directory. Here are example commands pulling an object detection model from Kaggle:
 
@@ -69,7 +71,7 @@ For more information about the directory structure and how to deploy multiple mo
 - [Serving models](starting_server.md)
 - [Serving multiple model versions](model_version_policy.md)
 
-### Step 4: Start the Model Server Container [Linux]
+### [Linux] Step 4: Start the Model Server Container
 
 Start the container:
 
@@ -79,12 +81,12 @@ docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/mode
 
 During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage.
 
-## For windows [Windows]:
+#### [Windows] For windows :
 ```bat
 ovms.exe --model_name faster_rcnn --model_path model --port 9000
 ```
 
-### Step 5: Prepare the Example Client Components [Linux/Windows]
+### [Linux/Windows] Step 5: Prepare the Example Client Components
 
 Client scripts are available for quick access to the Model Server. Run an example command to download all required components:
 
@@ -96,7 +98,7 @@ wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/dat
 
 Check more information about the [writing the client applications](./writing_app.md).
 
-### Step 6: Download Data for Inference [Linux/Windows]
+### [Linux/Windows] Step 6: Download Data for Inference
 
 This example uses the file [coco_bike.jpg](https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg). Run the following command to download the image:
 
@@ -104,7 +106,7 @@ This example uses the file [coco_bike.jpg](https://storage.openvinotoolkit.org/r
 wget https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg
 ```
 
-### Step 7: Run Inference [Linux/Windows]
+### [Linux/Windows] Step 7: Run Inference
 
 Go to the folder with the client script and install dependencies. Create a folder for inference results and run the client script:
 
