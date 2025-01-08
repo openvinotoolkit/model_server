@@ -200,12 +200,10 @@ endif
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_NAME = "OpenVINO Model Server"
 PRODUCT_VERSION ?= "2025.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
-$(eval PROJECT_NAME:=${PRODUCT_NAME})
 $(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})
 
 OVMS_CPP_CONTAINER_NAME ?= "server-test-${PROJECT_VER_PATCH}-$(shell date +%Y-%m-%d-%H.%M.%S)"
@@ -672,10 +670,14 @@ cpu_extension:
 	mkdir -p ./lib/${OS}
 	docker cp $$(docker create --rm sample_cpu_extension:latest):/workspace/libcustom_relu_cpu_extension.so ./lib/${OS}
 
-run_unit_tests:
+prepare_models:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
 ifeq ($(RUN_GPU_TESTS),1)
-	./prepare_gpu_models.sh ${GPU_MODEL_PATH} && \
+	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
+endif
+
+run_unit_tests: prepare_models
+ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
 		--device=/dev/dri \
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \

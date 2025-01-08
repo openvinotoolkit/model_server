@@ -185,7 +185,7 @@ public:
         const ::testing::TestInfo* const test_info =
             ::testing::UnitTest::GetInstance()->current_test_info();
 
-        cl_models_path = "/tmp/" + std::string(test_info->name());
+        cl_models_path = getGenericFullPathForTmp("/tmp/" + std::string(test_info->name()));
         cl_model_1_path = cl_models_path + "/model1/";
         cl_model_2_path = cl_models_path + "/model2/";
 
@@ -203,9 +203,6 @@ public:
 };
 
 TEST_F(TestImplGetModelStatus, NegativeTfsGetModelStatus) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // Create config file with an empty config & reload
     std::string configStr = dummy_config;
     configStr = configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
@@ -244,9 +241,6 @@ public:
 };
 
 TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // Create config file with an empty config & reload
     std::string configStr = dummy_config;
     configStr = configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
@@ -291,4 +285,15 @@ TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
     req.set_name("dummy");
     req.set_version("$$");
     ASSERT_EQ(impl.ModelMetadataImpl(nullptr, &req, &res, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata), extraMetadata), StatusCode::MODEL_VERSION_INVALID_FORMAT);
+
+#ifdef _WIN32
+    // Unload model to allow folder delete on Windows
+    std::shared_ptr<ovms::ModelInstance> modelInstance1;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+    manager.getModelInstance("dummy", 1, modelInstance1, modelInstanceUnloadGuard);
+    // Release guard
+    modelInstanceUnloadGuard.reset();
+    // Unload model
+    modelInstance1->retireModel();
+#endif
 }

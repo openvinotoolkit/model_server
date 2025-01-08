@@ -918,9 +918,6 @@ TEST(ModelConfig, modelVersionPolicyIncorrect) {
 }
 
 TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::string config = R"#(
         {
         "model_config_list": [
@@ -935,6 +932,8 @@ TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
         ]
     }
     )#";
+
+    adjustConfigForTargetPlatform(config);
 
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
@@ -952,9 +951,6 @@ TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
 }
 
 TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatArray) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::string config = R"#(
         {
         "model_config_list": [
@@ -976,6 +972,7 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatArray) {
     }
     )#";
 
+    adjustConfigForTargetPlatform(config);
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
     ASSERT_EQ(parsingSucceeded.Code(), 0);
@@ -992,9 +989,6 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatArray) {
 }
 
 TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatString) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::string config = R"#(
         {
         "model_config_list": [
@@ -1011,6 +1005,7 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatString) {
     }
     )#";
 
+    adjustConfigForTargetPlatform(config);
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
     ASSERT_EQ(parsingSucceeded.Code(), 0);
@@ -1027,9 +1022,6 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatString) {
 }
 
 TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::string config = R"#(
         {
         "model_config_list": [
@@ -1051,6 +1043,7 @@ TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
     }
     )#";
 
+    adjustConfigForTargetPlatform(config);
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
     ASSERT_EQ(parsingSucceeded.Code(), 0);
@@ -1069,7 +1062,7 @@ TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
     EXPECT_EQ(shapes["input"].shape, (ovms::Shape{1, 3, 600, 600}));
 }
 
-static std::string config_low_latency_no_stateful = R"#(
+std::string config_low_latency_no_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -1083,7 +1076,7 @@ static std::string config_low_latency_no_stateful = R"#(
 }
 )#";
 
-static std::string config_low_latency_non_stateful = R"#(
+std::string config_low_latency_non_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -1098,7 +1091,7 @@ static std::string config_low_latency_non_stateful = R"#(
 }
 )#";
 
-static std::string config_idle_sequence_cleanup_non_stateful = R"#(
+std::string config_idle_sequence_cleanup_non_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -1113,7 +1106,7 @@ static std::string config_idle_sequence_cleanup_non_stateful = R"#(
 }
 )#";
 
-static std::string config_max_sequence_number_non_stateful = R"#(
+std::string config_max_sequence_number_non_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -1128,7 +1121,7 @@ static std::string config_max_sequence_number_non_stateful = R"#(
 }
 )#";
 
-static std::string config_max_sequence_number = R"#(
+std::string config_max_sequence_number = R"#(
         {
         "model_config_list": [
             {
@@ -1142,7 +1135,7 @@ static std::string config_max_sequence_number = R"#(
     }
     )#";
 
-static std::string config_stateful_should_pass = R"#(
+std::string config_stateful_should_pass = R"#(
     {
     "model_config_list": [
         {
@@ -1158,7 +1151,7 @@ static std::string config_stateful_should_pass = R"#(
 }
 )#";
 
-static std::string config_low_invalid_max_seq = R"#(
+std::string config_low_invalid_max_seq = R"#(
     {
     "model_config_list": [
         {
@@ -1178,9 +1171,6 @@ class ModelConfigParseModel : public ::testing::TestWithParam<std::pair<std::str
 };
 
 TEST_P(ModelConfigParseModel, SetWithStateful) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::pair<std::string, ovms::StatusCode> testPair = GetParam();
     std::string config = testPair.first;
     rapidjson::Document configJson;
@@ -1205,13 +1195,13 @@ TEST_P(ModelConfigParseModel, SetWithStateful) {
 }
 
 std::vector<std::pair<std::string, ovms::StatusCode>> configs = {
-    {config_low_latency_no_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_max_sequence_number, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_max_sequence_number_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_idle_sequence_cleanup_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_low_latency_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_low_invalid_max_seq, ovms::StatusCode::INVALID_MAX_SEQUENCE_NUMBER},
-    {config_stateful_should_pass, ovms::StatusCode::OK}};
+    {adjustConfigForTargetPlatformReturn(config_low_latency_no_stateful), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {adjustConfigForTargetPlatformReturn(config_max_sequence_number), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {adjustConfigForTargetPlatformReturn(config_max_sequence_number_non_stateful), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {adjustConfigForTargetPlatformReturn(config_idle_sequence_cleanup_non_stateful), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {adjustConfigForTargetPlatformReturn(config_low_latency_non_stateful), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {adjustConfigForTargetPlatformReturn(config_low_invalid_max_seq), ovms::StatusCode::INVALID_MAX_SEQUENCE_NUMBER},
+    {adjustConfigForTargetPlatformReturn(config_stateful_should_pass), ovms::StatusCode::OK}};
 
 INSTANTIATE_TEST_SUITE_P(
     Test,

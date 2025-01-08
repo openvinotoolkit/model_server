@@ -13,7 +13,7 @@
 :: See the License for the specific language governing permissions and
 :: limitations under the License.
 ::
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 IF "%~1"=="" (
     echo No argument provided. Using default opt path
     set "output_user_root=opt"
@@ -24,35 +24,35 @@ IF "%~1"=="" (
 
 md dist\windows\ovms
 copy bazel-bin\src\ovms.exe dist\windows\ovms
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 copy  %cd%\bazel-out\x64_windows-opt\bin\src\python39.dll dist\windows\ovms
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 copy  %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Below includes OpenVINO tokenizers
 copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll dist\windows\ovms
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 copy  %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows\ovms
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 dist\windows\ovms\ovms.exe --version
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 dist\windows\ovms\ovms.exe --help
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 cd dist\windows
 tar -a -c -f ovms.zip ovms
-if %errorlevel% neq 0 exit /b %errorlevel%
+if !errorlevel! neq 0 exit /b !errorlevel!
 cd ..\..
 dir dist\windows\ovms.zip

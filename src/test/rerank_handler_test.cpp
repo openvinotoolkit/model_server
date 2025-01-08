@@ -32,7 +32,7 @@ protected:
 
 TEST_F(RerankHandlerDeserializationTest, ValidRequestDocumentsMap) {
 #ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
+    GTEST_SKIP() << "Test disabled on windows [SPORADIC] CVS-160005";
 #endif
     json = R"({
     "model": "model",

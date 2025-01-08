@@ -56,7 +56,7 @@ static std::string getConfig1Model(std::string basePath) {
 })";
 }
 
-static std::string getConfig2Models(std::string firstBasePath = "/tmp/models/dummy1", std::string secondBasePath = "/tmp/models/dummy2") {
+static std::string getConfig2Models(std::string firstBasePath, std::string secondBasePath) {
     return R"({
    "model_config_list": [
     {
@@ -593,13 +593,13 @@ TEST_F(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
 }
 
 static void setupModelsDirs() {
-    std::filesystem::create_directory("/tmp/models");
-    std::filesystem::create_directory("/tmp/models/dummy1");
-    std::filesystem::create_directory("/tmp/models/dummy2");
+    std::filesystem::create_directory(getGenericFullPathForTmp("/tmp/models"));
+    std::filesystem::create_directory(getGenericFullPathForTmp("/tmp/models/dummy1"));
+    std::filesystem::create_directory(getGenericFullPathForTmp("/tmp/models/dummy2"));
 }
 
 const std::vector<std::string> WATCHER_TEST_CONFIGS{
-    getConfig2Models(),
+    getConfig2Models(getGenericFullPathForTmp("/tmp/models/dummy1"), getGenericFullPathForTmp("/tmp/models/dummy1")),
     relative_config_2_models,
 };
 
@@ -704,9 +704,6 @@ TEST_P(ModelManagerWatcher2Models, configReloadNeededChange) {
 }
 
 TEST_P(ModelManagerWatcher2Models, loadConfigManyThreads) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::string configFile = getGenericFullPathForTmp("/tmp/config.json");
 
     modelMock = std::make_shared<MockModel>();
@@ -893,10 +890,7 @@ TEST_F(ModelManager, PathEscapeError1RelativePath) {
 }
 
 TEST_F(ModelManager, PathEscapeError2) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
-    const std::string path = getGenericFullPathForTmp("../tmp/test_model/");
+    const std::string path = "../tmp/test_model/";
 
     ovms::model_versions_t versions;
     std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
@@ -1066,9 +1060,6 @@ public:
         mockedFunctorSequenceCleaner(globalSequencesViewer),
         mockedFunctorResourcesCleaner(modelManager) {}
     void SetUp() {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
-#endif
         exitSignal = cleanerExitTrigger.get_future();
     }
 

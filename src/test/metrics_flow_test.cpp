@@ -750,9 +750,6 @@ TEST_F(MetricFlowTest, RestModelInferOnUnloadedModel) {
 }
 
 TEST_F(MetricFlowTest, RestModelMetadata) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows CVS-159404";
-#endif
     HttpRestApiHandler handler(server, 0);
     HttpRequestComponents components;
 

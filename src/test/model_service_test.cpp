@@ -166,7 +166,7 @@ TYPED_TEST(ModelServiceTest, pipeline) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
-    std::string fileToReload = "/tmp/ovms_single_version_pipeline.json";
+    std::string fileToReload = getGenericFullPathForTmp("/tmp/ovms_single_version_pipeline.json");
     createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
     ASSERT_EQ(this->manager.startFromFile(fileToReload), StatusCode::OK);
 
@@ -303,9 +303,6 @@ protected:
     ConstructorEnabledModelManager manager;
 
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-#endif
         const ::testing::TestInfo* const test_info =
             ::testing::UnitTest::GetInstance()->current_test_info();
 
@@ -322,6 +319,22 @@ protected:
     }
 
     void TearDown() override {
+#ifdef _WIN32
+        // Unload model to allow folder delete on Windows
+        std::shared_ptr<ovms::ModelInstance> modelInstance1;
+        std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
+        manager.getModelInstance("dummy", 1, modelInstance1, modelInstanceUnloadGuard);
+        // Release guard
+        modelInstanceUnloadGuard.reset();
+        // Unload model
+        modelInstance1->retireModel();
+
+        manager.getModelInstance("dummy", 2, modelInstance1, modelInstanceUnloadGuard);
+        // Release guard
+        modelInstanceUnloadGuard.reset();
+        // Unload model
+        modelInstance1->retireModel();
+#endif
         // Clean up temporary destination
         std::filesystem::remove_all(directoryPath);
     }
@@ -387,9 +400,6 @@ TEST_F(TFSModelServiceTest, getAllModelsStatuses_two_models_with_one_versions) {
 }
 
 TEST_F(TFSModelServiceTest, config_reload) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
-#endif
     std::string port = "9000";
     randomizePort(port);
     char* argv[] = {
