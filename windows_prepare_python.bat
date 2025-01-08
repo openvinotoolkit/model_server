@@ -16,28 +16,34 @@
 setlocal EnableExtensions EnableDelayedExpansion
 @echo off
 
-set "embeddable_python_url=https://www.python.org/ftp/python/3.9.13/python-3.9.13-embed-amd64.zip"
+if "%~1"=="" (
+    set "python_version=3.9.13"
+) else (
+    set "python_version=%~1"
+)
+set "python_full_name=python-%python_version%-embed-amd64"
+set "embeddable_python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.zip"
 
 :: Download and unpack everything 
-if exist C:\opt\python-3.9.13-embed-amd64 (
+if exist C:\opt\%python_full_name% (
     echo Existing Python installation found. Exiting script.
-    exit 0
+    exit /b 0
 ) else ( 
-    md C:\opt\python-3.9.13-embed-amd64 
+    md C:\opt\%python_full_name% 
 )
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-if exist C:\opt\python-3.9.13-embed-amd64.zip (
+if exist C:\opt\%python_full_name%.zip (
     echo Python zip already downloaded. Will unpack existing file.
 ) else (
-    curl %embeddable_python_url% -o C:\opt\python-3.9.13-embed-amd64.zip
+    curl %embeddable_python_url% -o C:\opt\%python_full_name%.zip
 )
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-tar -xf C:\opt\python-3.9.13-embed-amd64.zip -C C:\opt\python-3.9.13-embed-amd64
+tar -xf C:\opt\%python_full_name%.zip -C C:\opt\%python_full_name%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-cd C:\opt\python-3.9.13-embed-amd64
+cd C:\opt\%python_full_name%
 md python39
 tar -xf python39.zip -C python39
 if !errorlevel! neq 0 exit /b !errorlevel!

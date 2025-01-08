@@ -26,9 +26,6 @@ md dist\windows\ovms
 copy bazel-bin\src\ovms.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-copy  %cd%\bazel-out\x64_windows-opt\bin\src\python39.dll dist\windows\ovms
-if !errorlevel! neq 0 exit /b !errorlevel!
-
 copy  %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
@@ -36,9 +33,10 @@ copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windo
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Prepare self-contained python
-call %cd%\windows_prepare_python.bat
+set "python_version=3.9.13"
+call %cd%\windows_prepare_python.bat %python_version%
 :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
-xcopy C:\opt\ovms-python-3.9.13-embed dist\windows\ovms\python /E /I /H
+xcopy C:\opt\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
 .\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
 if !errorlevel! neq 0 (
     echo Error copying python into the distribution location. The package will not contain self-contained python.
