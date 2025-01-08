@@ -13,6 +13,7 @@
 :: See the License for the specific language governing permissions and
 :: limitations under the License.
 ::
+:: Prepares embedded python installation for the purpose of ovms building and creating the final ovms distribution. 
 setlocal EnableExtensions EnableDelayedExpansion
 @echo off
 
