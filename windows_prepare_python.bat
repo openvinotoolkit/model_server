@@ -36,29 +36,12 @@ if "%~2"=="" (
 set "python_full_name=python-%python_version%-embed-amd64"
 set "embeddable_python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.zip"
 
-if "%~3"=="1" (
-    set "expunge=1"
-    echo Expunge option set. Python environment in %dest_dir%\%python_full_name% will be cleaned for the fresh installation.
-) else (
-    set "expunge=0"
-    echo Expunge option not set. Python environment in %dest_dir%\%python_full_name% will be reused if exists.
-)
+:: Download and unpack everything
+rmdir /S /Q %dest_dir%\%python_full_name%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
-:: Download and unpack everything, clean up first, if expunge is set
-if %expunge% EQU 1 (
-    rmdir /S /Q %dest_dir%\%python_full_name%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    del /Q %dest_dir%\%python_full_name%.zip
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-
-if exist %dest_dir%\%python_full_name% (
-    echo Existing Python installation found. Exiting script.
-    exit /b 0
-) else ( 
-    md %dest_dir%\%python_full_name%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
+md %dest_dir%\%python_full_name%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 if exist %dest_dir%\%python_full_name%.zip (
     echo Python zip already downloaded. Will unpack existing file.
