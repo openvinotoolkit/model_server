@@ -28,16 +28,16 @@ using namespace testing;
 using ::testing::UnorderedElementsAre;
 
 #ifdef __linux__
-const std::string TMP_PATH = "/tmp/structure/";
+const std::filesystem::path TMP_PATH = "/tmp/structure/";
 const std::string TMP_CONTENT = "filecontent123\n";
 #elif _WIN32
 const std::filesystem::path TMP_PATH = std::filesystem::temp_directory_path() / "structure";
 const std::string TMP_CONTENT = "filecontent123\r\n";
 #endif
 
-const std::string TMP_FILE = "file1.txt";
-const std::string TMP_DIR1 = "dir1";
-const std::string TMP_DIR2 = "dir2";
+const std::filesystem::path TMP_FILE = "file1.txt";
+const std::filesystem::path TMP_DIR1 = "dir1";
+const std::filesystem::path TMP_DIR2 = "dir2";
 
 static void createTmpFiles() {
     std::ofstream configFile((TMP_PATH / TMP_FILE).string());
