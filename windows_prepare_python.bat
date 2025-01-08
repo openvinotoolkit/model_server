@@ -17,33 +17,58 @@ setlocal EnableExtensions EnableDelayedExpansion
 @echo off
 
 if "%~1"=="" (
-    set "python_version=3.9.13"
+    set "dest_dir=C:\opt"
+    echo Destination directory not specified. Using: C:\opt
 ) else (
-    set "python_version=%~1"
+    set "dest_dir=%~1"
+    echo User specified destination directory: %1
 )
+
+if "%~2"=="" (
+    set "python_version=3.9.13"
+    echo Python version not specified. Using: 3.9.13
+) else (
+    set "python_version=%~2"
+    echo User specified Python version: %2
+)
+
 set "python_full_name=python-%python_version%-embed-amd64"
 set "embeddable_python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.zip"
 
-:: Download and unpack everything 
-if exist C:\opt\%python_full_name% (
+if "%~3"=="1" (
+    set "expunge=1"
+    echo Expunge option set. Python environment in %dest_dir%\%python_full_name% will be cleaned for the fresh installation.
+) else (
+    set "expunge=0"
+    echo Expunge option not set. Python environment in %dest_dir%\%python_full_name% will be reused if exists.
+)
+
+:: Download and unpack everything, clean up first, if expunge is set
+if %expunge% EQU 1 (
+    rmdir /S /Q %dest_dir%\%python_full_name%
+    del /Q %dest_dir%\%python_full_name%.zip
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+if exist %dest_dir%\%python_full_name% (
     echo Existing Python installation found. Exiting script.
     exit /b 0
 ) else ( 
-    md C:\opt\%python_full_name% 
+    md %dest_dir%\%python_full_name% 
 )
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-if exist C:\opt\%python_full_name%.zip (
+if exist %dest_dir%\%python_full_name%.zip (
     echo Python zip already downloaded. Will unpack existing file.
 ) else (
-    curl %embeddable_python_url% -o C:\opt\%python_full_name%.zip
+    curl %embeddable_python_url% -o %dest_dir%\%python_full_name%.zip
 )
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-tar -xf C:\opt\%python_full_name%.zip -C C:\opt\%python_full_name%
+tar -xf %dest_dir%\%python_full_name%.zip -C %dest_dir%\%python_full_name%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-cd C:\opt\%python_full_name%
+cd %dest_dir%\%python_full_name%
 md python39
 tar -xf python39.zip -C python39
 if !errorlevel! neq 0 exit /b !errorlevel!

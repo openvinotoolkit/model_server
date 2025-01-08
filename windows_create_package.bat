@@ -33,8 +33,9 @@ copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windo
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Prepare self-contained python
+set "dest_dir=C:\opt"
 set "python_version=3.9.13"
-call %cd%\windows_prepare_python.bat %python_version%
+call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
 :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
 xcopy C:\opt\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
 .\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
