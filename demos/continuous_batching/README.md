@@ -5,30 +5,6 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 > **Note:** This demo was tested on Intel® Xeon® processors Gen4 and Gen5 and Intel dGPU ARC and Flex models on Ubuntu22/24 and RedHat8/9.
 
-::::{tab-set}
-:::{tab-item} Linux 
-:sync: prepare-linux
-## Get the docker image
-
-Build the image from source to try the latest enhancements in this feature.
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make release_image GPU=1
-```
-It will create an image called `openvino/model_server:latest`.
-> **Note:** This operation might take 40min or more depending on your build host.
-> **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
-> **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. Check the [demo version from the last release](https://github.com/openvinotoolkit/model_server/tree/releases/2024/4/demos/continuous_batching) to use the public docker image.
-
-:::
-:::{tab-item} Windows 
-:sync: prepare-windows
-## Get model server package
-Download `ovms.zip` package and unpack it to `model_server` directory. The package contains OVMS binary and all of its dependencies and is ready to run.
-:::
-::::
-
 ## Model preparation
 > **Note** Python 3.9 or higher is need for that step
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
@@ -36,12 +12,12 @@ That ensures faster initialization time, better performance and lower memory con
 LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Install python dependencies for the conversion script:
-```bash
+```console
 pip3 install -U -r demos/common/export_models/requirements.txt
 ```
 
 Run optimum-cli to download and quantize the model:
-```bash
+```console
 mkdir models 
 python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models 
 ```
@@ -75,11 +51,7 @@ Note that the `models_path` parameter in the graph file can be an absolute path 
 Check the [LLM calculator documentation](../../docs/llm/reference.md) to learn about configuration options.
 
 
-## Start-up
-
-::::{tab-set}
-:::{tab-item} Linux 
-:sync: run-linux
+## Deploying with Docker
 
 ### CPU
 
@@ -97,26 +69,74 @@ python demos/common/export_models/export_model.py text_generation --source_model
 
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
-:::
-:::{tab-item} Windows 
-:sync: run-windows
 
-Running this command the model server in the current shell:
+### Build Image From Source (Linux Host)
+
+In case you want to try out features that have not been released yet, you can build the image from source code yourself. 
 ```bash
-.\ovms\ovms.exe --rest_port 8000 --config_path .\models\config.json
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+make release_image GPU=1
 ```
+It will create an image called `openvino/model_server:latest`.
+> **Note:** This operation might take 40min or more depending on your build host.
+> **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
+> **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. Check the [demo version from the last release](https://github.com/openvinotoolkit/model_server/tree/releases/2024/4/demos/continuous_batching) to use the public docker image.
+
+## Deploying on Bare Metal
+
+Download model server archive and unpack it to `model_server` directory. The package contains OVMS binary and all of its dependencies.
+
+```console
+curl https://github.com/openvinotoolkit/model_server/releases/download/<release>/<dist>
+tar -xf <dist>
+```
+where:
+
+- `<release>` - model server version: `v2024.4`, `v2024.5` etc.
+- `<dist>` - package for desired OS, one of: `ovms_redhat.tar.gz`, `ovms_ubuntu22.tar.gz`, `ovms_win.zip`
+
+For correct Python initialization also set `PYTHONHOME` environment variable in the shell that will be used to launch model server:
+
+**Linux**
+
+```bash
+export PYTHONHOME=$PWD/ovms/python
+```
+
+**Windows Command Line**:
+```bat
+set PYTHONHOME=$pwd\ovms\python
+```
+
+**Windows PowerShell**:
+```powershell
+$env:PYTHONHOME=$pwd\ovms\python
+```
+
+Once it's set, you can launch the model server.
+
+### CPU
+
+In model preparation section, configuration is set to load models on CPU, so you can simply run the binary pointing to the configuration file and selecting port for the HTTP server to expose inference endpoint.
+
+```console
+.\ovms\ovms --rest_port 8000 --config_path .\models\config.json
+```
+
 
 ### GPU
 
 In case you want to use GPU device to run the generation, export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
-```bash
+```console
 python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --cache_size 2 --config_file_path models/config.json --model_repository_path models --overwrite_models
 ```
-Then rerun above command as configuration file has already been adjusted to deploy model on GPU.
+Then rerun above command as configuration file has already been adjusted to deploy model on GPU:
 
-:::
-::::
+```console
+.\ovms\ovms --rest_port 8000 --config_path .\models\config.json
+```
 
 ### Check readiness
 
