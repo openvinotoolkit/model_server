@@ -35,9 +35,11 @@ const std::filesystem::path TMP_PATH = std::filesystem::temp_directory_path() / 
 const std::string TMP_CONTENT = "filecontent123\r\n";
 #endif
 
-const std::filesystem::path TMP_FILE = "file1.txt";
+const std::filesystem::path TMP_FILE = "file.txt";
+const std::filesystem::path TMP_FILE1 = "file1.txt";
 const std::filesystem::path TMP_DIR1 = "dir1";
 const std::filesystem::path TMP_DIR2 = "dir2";
+const std::filesystem::path TMP_DIR5345 = "dir5345";
 
 static void createTmpFiles() {
     std::ofstream configFile((TMP_PATH / TMP_FILE).string());
@@ -53,11 +55,11 @@ TEST(LocalFileSystem, FileExists) {
     bool exists = false;
     createTmpFiles();
 
-    auto status = lfs.fileExists((TMP_PATH / "file.txt").string(), &exists);
+    auto status = lfs.fileExists((TMP_PATH / TMP_FILE).string(), &exists);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(exists, false);
 
-    status = lfs.fileExists((TMP_PATH / "dir1").string(), &exists);
+    status = lfs.fileExists((TMP_PATH / TMP_DIR1).string(), &exists);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(exists, true);
 }
@@ -67,15 +69,15 @@ TEST(LocalFileSystem, IsDirectory) {
     bool isDir = false;
     createTmpFiles();
 
-    auto status = lfs.isDirectory((TMP_PATH / "file.txt").string(), &isDir);
+    auto status = lfs.isDirectory((TMP_PATH / TMP_FILE).string(), &isDir);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(isDir, false);
 
-    status = lfs.isDirectory((TMP_PATH / "dir1").string(), &isDir);
+    status = lfs.isDirectory((TMP_PATH / TMP_DIR1).string(), &isDir);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(isDir, true);
 
-    status = lfs.isDirectory((TMP_PATH / "dir5345").string(), &isDir);
+    status = lfs.isDirectory((TMP_PATH / TMP_DIR5345).string(), &isDir);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(isDir, false);
 }
@@ -85,10 +87,10 @@ TEST(LocalFileSystem, GetDirectoryContents) {
     ovms::files_list_t files;
     createTmpFiles();
 
-    auto status = lfs.getDirectoryContents((TMP_PATH / "file.txt").string(), &files);
+    auto status = lfs.getDirectoryContents((TMP_PATH / TMP_FILE).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
-    status = lfs.getDirectoryContents((TMP_PATH / "file1.txt").string(), &files);
+    status = lfs.getDirectoryContents((TMP_PATH / TMP_FILE1).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
     status = lfs.getDirectoryContents((TMP_PATH).string(), &files);
@@ -101,10 +103,10 @@ TEST(LocalFileSystem, GetDirectorySubdirs) {
     ovms::files_list_t files;
     createTmpFiles();
 
-    auto status = lfs.getDirectorySubdirs((TMP_PATH / "file.txt").string(), &files);
+    auto status = lfs.getDirectorySubdirs((TMP_PATH / TMP_FILE).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
-    status = lfs.getDirectorySubdirs((TMP_PATH / "file1.txt").string(), &files);
+    status = lfs.getDirectorySubdirs((TMP_PATH / TMP_FILE1).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
     status = lfs.getDirectorySubdirs((TMP_PATH).string(), &files);
@@ -117,10 +119,10 @@ TEST(LocalFileSystem, GetDirectoryFiles) {
     ovms::files_list_t files;
     createTmpFiles();
 
-    auto status = lfs.getDirectoryFiles((TMP_PATH / "file.txt").string(), &files);
+    auto status = lfs.getDirectoryFiles((TMP_PATH / TMP_FILE).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
-    status = lfs.getDirectoryFiles((TMP_PATH / "file1.txt").string(), &files);
+    status = lfs.getDirectoryFiles((TMP_PATH / TMP_FILE1).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
     status = lfs.getDirectoryFiles((TMP_PATH).string(), &files);
@@ -131,7 +133,8 @@ TEST(LocalFileSystem, GetDirectoryFiles) {
 TEST(LocalFileSystem, DownloadFileFolder) {
     ovms::LocalFileSystem lfs;
     std::string location;
-    auto status = lfs.downloadFileFolder((TMP_PATH / "download").string(), location);
+    const std::filesystem::path TMP_DOWNLOAD = "download";
+    auto status = lfs.downloadFileFolder((TMP_PATH / TMP_DOWNLOAD).string(), location);
     // auto status = lfs.downloadFileFolder("/path/to/download", location);
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
@@ -139,15 +142,15 @@ TEST(LocalFileSystem, DownloadFileFolder) {
 TEST(LocalFileSystem, DestroyFileFolder) {
     ovms::LocalFileSystem lfs;
     bool exists = false;
-    auto status = lfs.fileExists((TMP_PATH / "dir1").string(), &exists);
+    auto status = lfs.fileExists((TMP_PATH / TMP_DIR1).string(), &exists);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(exists, true);
-    status = lfs.deleteFileFolder((TMP_PATH / "dir1").string());
+    status = lfs.deleteFileFolder((TMP_PATH / TMP_DIR1).string());
     EXPECT_EQ(status, ovms::StatusCode::OK);
-    status = lfs.fileExists((TMP_PATH / "dir1").string(), &exists);
+    status = lfs.fileExists((TMP_PATH / TMP_DIR1).string(), &exists);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(exists, false);
-    status = lfs.deleteFileFolder((TMP_PATH / "dir1").string());
+    status = lfs.deleteFileFolder((TMP_PATH / TMP_DIR1).string());
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
@@ -197,7 +200,7 @@ TEST(FileSystem, SetRootDirectoryPath) {
     std::string givenPath = "/givenpath";
 
     auto normalize_path = [](const std::string& path) -> std::string {
-        return fs::weakly_canonical(fs::path(path)).string();
+        return std::filesystem::weakly_canonical(std::filesystem::path(path)).string();
     };
 
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
