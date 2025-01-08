@@ -185,21 +185,20 @@ Status LLMNodeResources::initializeLLMNodeResources(LLMNodeResources& nodeResour
             lora_path = fsModelsPath.string();
         }
         SPDLOG_LOGGER_INFO(modelmanager_logger, "LORA PATH {}, alpha {}", lora_path, alpha);
-
-        // if (lora_path.empty()) {
-        //     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Adapter path for adapter");
-        //     return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-        // }
-        // if (!std::filesystem::exists(lora_path)) {
-        //     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Adapter path for adapter {} does not exist: {}", lora_path);
-        //     return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-        // }
-        // if (!std::filesystem::is_regular_file(lora_path)) {
-        //     SPDLOG_LOGGER_ERROR(modelmanager_logger, "Adapter path for adapter {} is not a file: {}", lora_path);
-        //     return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-        // }
+        if (lora_path.empty()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Adapter path for adapter");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        if (!std::filesystem::exists(lora_path)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Adapter path for adapter {} does not exist: {}", lora_path);
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        if (!std::filesystem::is_regular_file(lora_path)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Adapter path for adapter {} is not a file: {}", lora_path);
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
         try {
-            nodeResources.adapters.add(ov::genai::Adapter(std::filesystem::path(lora_path)), alpha);
+            nodeResources.adapters.add(ov::genai::Adapter(std::filesystem::path(lora_path)));
             SPDLOG_LOGGER_INFO(modelmanager_logger,"Adapter loaded from path {} with alpha {}", lora_path, alpha);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error loading adapter from path {}: {}", lora_path, e.what());
@@ -221,16 +220,13 @@ void LLMNodeResources::initializeContinuousBatchingPipeline(
     const std::string& device,
     const plugin_config_t& pluginConfig,
     const plugin_config_t& tokenizerPluginConfig) {
-    //SPDLOG_INFO("Initializing adapter");
-    //this->adapters["my_adapter"] = ov::genai::Adapter("/ovms/demos/common/export_models/models/adapter_model.safetensors");
-    //SPDLOG_INFO("Adapter loaded");
     this->cbPipe = std::make_unique<ov::genai::ContinuousBatchingPipeline>(basePath, schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
 }
 
 void LLMNodeResources::initiateGeneration() {
     if (!cbPipe) {
         throw std::logic_error("Cannot initiate generation with uninitialized pipeline");
-    }   
+    }
     llmExecutorWrapper = std::make_unique<LLMExecutorWrapper>(cbPipe);
 }
 
