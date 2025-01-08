@@ -22,7 +22,7 @@ To quickly start using OpenVINO™ Model Server follow these steps:
 7. Run inference
 8. Review the results
 
-### Step 1: Prepare Docker
+### Step 1: Prepare Docker [Linux]
 
 [Install Docker Engine](https://docs.docker.com/engine/install/), including its [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/), on your development system.
 To verify installation, test it using the following command. If it displays a test image and a message, it is ready.
@@ -31,7 +31,7 @@ To verify installation, test it using the following command. If it displays a te
 $ docker run hello-world
 ```
 
-### Step 2: Download the Model Server
+### Step 2: Download the Model Server [Linux]
 
 Download the Docker image that contains OpenVINO Model Server:
 
@@ -39,18 +39,22 @@ Download the Docker image that contains OpenVINO Model Server:
 docker pull openvino/model_server:latest
 ```
 
-### Step 3: Provide a Model
+## For Windows download the `dist/windows/ovms.zip` package and extract it in current directory [Windows]
+## Install Microsoft Visual C++ Redistributable
+Install C++ package - https://aka.ms/vs/17/release/VC_redist.x64.exe
+
+### Step 3: Provide a Model [Linux/Windows]
 
 Store components of the model in the `model/1` directory. Here are example commands pulling an object detection model from Kaggle:
 
-```bash
+```console
 mkdir -p model/1
 wget https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -O 1.tar.gz
 tar xzf 1.tar.gz -C model/1
 ```
 
 OpenVINO Model Server expects a particular folder structure for models - in this case `model` directory has the following content:
-```bash
+```console
 model
 └── 1
     ├── saved_model.pb
@@ -65,20 +69,26 @@ For more information about the directory structure and how to deploy multiple mo
 - [Serving models](starting_server.md)
 - [Serving multiple model versions](model_version_policy.md)
 
-### Step 4: Start the Model Server Container
+### Step 4: Start the Model Server Container [Linux]
 
 Start the container:
 
 ```bash
 docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/model_server:latest --model_name faster_rcnn --model_path /model --port 9000
 ```
+
 During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage.
 
-### Step 5: Prepare the Example Client Components
+## For windows [Windows]:
+```bat
+ovms.exe --model_name faster_rcnn --model_path model --port 9000
+```
+
+### Step 5: Prepare the Example Client Components [Linux/Windows]
 
 Client scripts are available for quick access to the Model Server. Run an example command to download all required components:
 
-```bash
+```console
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/object_detection.py
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/object_detection/python/requirements.txt
 wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_91cl.txt
@@ -86,23 +96,23 @@ wget https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/dat
 
 Check more information about the [writing the client applications](./writing_app.md).
 
-### Step 6: Download Data for Inference
+### Step 6: Download Data for Inference [Linux/Windows]
 
 This example uses the file [coco_bike.jpg](https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg). Run the following command to download the image:
 
-```bash
+```console
 wget https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/image/coco_bike.jpg
 ```
 
-### Step 7: Run Inference
+### Step 7: Run Inference [Linux/Windows]
 
 Go to the folder with the client script and install dependencies. Create a folder for inference results and run the client script:
 
-```bash
+```console
 pip install --upgrade pip
 pip install -r requirements.txt
 
-python3 object_detection.py --image coco_bike.jpg --output output.jpg --service_url localhost:9000
+python object_detection.py --image coco_bike.jpg --output output.jpg --service_url localhost:9000
 ```
 
 ### Step 8: Review the Results
