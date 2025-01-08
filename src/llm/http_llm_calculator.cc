@@ -170,7 +170,7 @@ public:
                     this->generationHandle = nodeResources->cbPipe->add_request(
                         currentRequestId++, /*to be removed from API?*/ 
                         finalPromptIds,
-                        this->apiHandler->createGenerationConfig(nodeResources->adapters["my_adapter"]));
+                        this->apiHandler->createGenerationConfig(nodeResources->adapters));
 
                     // TODO: Revert when drogon adds disconnection callbacks: https://github.com/drogonframework/drogon/pull/2204
                     // this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {

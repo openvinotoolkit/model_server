@@ -110,7 +110,8 @@ public:
     plugin_config_t pluginConfig;
     ov::genai::SchedulerConfig schedulerConfig;
     TextProcessor textProcessor;
-    std::map<std::string, ov::genai::Adapter> adapters;
+    //std::map<std::string, ov::genai::Adapter> adapters;
+    ov::genai::AdapterConfig adapters;
     int maxTokensLimit;
     int bestOfLimit;
 

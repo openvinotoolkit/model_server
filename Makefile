@@ -74,9 +74,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= c5137ff870dc3386bfd4692176e8d6725a17b99a  # master / 2024-12-16
+OV_SOURCE_BRANCH ?= 552ba6682b40739fa0a9b8ee5a28675d9874fe34  # master / 2025-01-06
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
-OV_TOKENIZERS_BRANCH ?= bcfd3eda25ae3ec423502a4074e35c774506c732 # master / 2024-12-16
+OV_TOKENIZERS_BRANCH ?= cd9fb9b7fe4085fe74edbff54a1b70fa9dd11423 # master / 2024-12-27
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -170,7 +170,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17638-c5137ff870d/l_openvino_toolkit_ubuntu22_2025.0.0.dev20241217_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17757-552ba6682b4/l_openvino_toolkit_ubuntu22_2025.0.0.dev20250106_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)

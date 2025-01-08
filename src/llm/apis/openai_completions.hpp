@@ -86,9 +86,9 @@ struct OpenAIChatCompletionsRequest {
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
 
-    ov::genai::GenerationConfig createGenerationConfig(ov::genai::Adapter adapter) const {
+    ov::genai::GenerationConfig createGenerationConfig(ov::genai::AdapterConfig adapters) const {
         ov::genai::GenerationConfig config;
-        ov::genai::AdaptersProperty test;
+        //ov::genai::AdaptersProperty test;
 
         // Generic
         if (maxTokens.has_value())
@@ -141,7 +141,7 @@ struct OpenAIChatCompletionsRequest {
 
         if (logprobschat || logprobs > 0)
             config.logprobs = 1;    
-        //config.adapters = ov::genai::AdapterConfig(adapter, 1, ov::genai::AdapterConfig::Mode::MODE_STATIC);
+        config.adapters = adapters;
         //config.adapters = std::nullptr;
         return config;
     }
@@ -183,7 +183,7 @@ public:
 
     void incrementProcessedTokens(int numTokens = 1);
 
-    ov::genai::GenerationConfig createGenerationConfig(ov::genai::Adapter) const;
+    ov::genai::GenerationConfig createGenerationConfig(ov::genai::AdapterConfig) const;
 
     absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit);
     absl::Status parseMessages();

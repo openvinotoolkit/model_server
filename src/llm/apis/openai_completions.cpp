@@ -516,8 +516,8 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(int numTokens) {
         usage.completionTokens += numTokens;
 }
 
-ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig(ov::genai::Adapter adapter) const {
-    return request.createGenerationConfig(adapter);
+ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig(ov::genai::AdapterConfig adapters) const {
+    return request.createGenerationConfig(adapters);
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit) {
