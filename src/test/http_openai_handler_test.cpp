@@ -270,7 +270,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceeds) {
     ov::Tensor image = images[0];
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 3);
-    std::vector<uint8_t> expectedBytes = {160, 181, 110};
+    std::vector<uint8_t> expectedBytes = {110, 181, 160};
     for (size_t i = 0; i < image.get_size(); i++) {
         EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
     }
@@ -304,7 +304,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {
     ov::Tensor image = images[0];
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 3);
-    std::vector<uint8_t> expectedBytes = {241, 245, 54};
+    std::vector<uint8_t> expectedBytes = {54, 245, 241};
     for (size_t i = 0; i < image.get_size(); i++) {
         EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
     }
@@ -385,7 +385,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
     std::vector<ov::Tensor> images = apiHandler->getImages();
     ASSERT_EQ(images.size(), 2);
-    std::vector<uint8_t> expectedBytes = {160, 181, 110};
+    std::vector<uint8_t> expectedBytes = {110, 181, 160};
     for (auto image : images) {
         EXPECT_EQ(image.get_element_type(), ov::element::u8);
         EXPECT_EQ(image.get_size(), 3);
