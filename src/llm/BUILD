@@ -81,6 +81,7 @@ cc_library(
         ":llm_engine",
         "//src:libovmsprofiler",
         "//third_party:opencv",
+        "@stb//:image",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
