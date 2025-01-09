@@ -96,22 +96,26 @@ where:
 - `<release>` - model server version: `v2024.4`, `v2024.5` etc.
 - `<dist>` - package for desired OS, one of: `ovms_redhat.tar.gz`, `ovms_ubuntu22.tar.gz`, `ovms_win.zip`
 
-For correct Python initialization also set `PYTHONHOME` environment variable in the shell that will be used to launch model server:
+For correct Python initialization also set `PYTHONHOME` environment variable in the shell that will be used to launch model server.
+It may also be required to add this location to `PATH` in case there are already other Python installation on the system so that model server picks the right one.
 
 **Linux**
 
 ```bash
 export PYTHONHOME=$PWD/ovms/python
+export PATH=$PWD/ovms/python;$PATH
 ```
 
 **Windows Command Line**:
 ```bat
-set PYTHONHOME=$pwd\ovms\python
+set PYTHONHOME="$pwd\ovms\python"
+set PATH="$pwd\ovms\python;%PATH%"
 ```
 
 **Windows PowerShell**:
 ```powershell
-$env:PYTHONHOME=$pwd\ovms\python
+$env:PYTHONHOME="$pwd\ovms\python"
+$env:PATH="$pwd\ovms\python;$env:PATH"
 ```
 
 Once it's set, you can launch the model server.
@@ -121,7 +125,7 @@ Once it's set, you can launch the model server.
 In model preparation section, configuration is set to load models on CPU, so you can simply run the binary pointing to the configuration file and selecting port for the HTTP server to expose inference endpoint.
 
 ```console
-.\ovms\ovms --rest_port 8000 --config_path .\models\config.json
+./ovms/ovms --rest_port 8000 --config_path ./models/config.json
 ```
 
 
@@ -135,13 +139,13 @@ python demos/common/export_models/export_model.py text_generation --source_model
 Then rerun above command as configuration file has already been adjusted to deploy model on GPU:
 
 ```console
-.\ovms\ovms --rest_port 8000 --config_path .\models\config.json
+./ovms/ovms --rest_port 8000 --config_path ./models/config.json
 ```
 
 ### Check readiness
 
 Wait for the model to load. You can check the status with a simple command:
-```bash
+```console
 curl http://localhost:8000/v1/config
 ```
 ```json
@@ -168,7 +172,7 @@ Chat endpoint is expected to be used for scenarios where conversation context sh
 Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
 
 ### Unary:
-```bash
+```console
 curl http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -212,7 +216,7 @@ curl http://localhost:8000/v3/chat/completions \
 ```
 
 A similar call can be made with a `completion` endpoint:
-```bash
+```console
 curl http://localhost:8000/v3/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -248,7 +252,7 @@ curl http://localhost:8000/v3/completions \
 The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
 Install the client library:
-```bash
+```console
 pip3 install openai
 ```
 ```python
@@ -275,7 +279,7 @@ It looks like you're testing me!
 ```
 
 A similar code can be applied for the completion endpoint:
-```bash
+```console
 pip3 install openai
 ```
 ```python
@@ -306,7 +310,7 @@ It looks like you're testing me!
 
 OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
 It can be demonstrated using benchmarking app from vLLM repository:
-```bash
+```console
 git clone --branch v0.6.0 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
