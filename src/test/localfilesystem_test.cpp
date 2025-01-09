@@ -233,9 +233,6 @@ TEST(FileSystem, SetRootDirectoryPath) {
 }
 
 TEST(FileSystem, SetPath) {
-    #ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-    #endif
     std::string rootPath = "";
     std::string testPath = "";
     std::string givenPath = "";
@@ -245,7 +242,11 @@ TEST(FileSystem, SetPath) {
     } catch (std::logic_error& e) {
     }
 
+#ifdef __linux__
     rootPath = "/rootPath";
+#elif _WIN32
+    rootPath = "C:\\rootPath";
+#endif
     testPath = "";
     givenPath = "";
 
@@ -253,22 +254,40 @@ TEST(FileSystem, SetPath) {
     ASSERT_EQ(testPath, rootPath);
 
     testPath = "";
+#ifdef __linux__
     givenPath = "/givenPath";
+#elif _WIN32
+    givenPath = "C:\\givenPath";
+#endif
 
     ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+#ifdef __linux__
     ASSERT_EQ(testPath, "/givenPath");
+#elif _WIN32
+    ASSERT_EQ(testPath, "C:\\givenPath");
+#endif
+    
 
     testPath = "";
     givenPath = "givenPath";
 
     ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+#ifdef __linux__
     ASSERT_EQ(testPath, "/rootPathgivenPath");
+#elif _WIN32
+    ASSERT_EQ(testPath, "C:\\rootPathgivenPath");
+#endif
 
     testPath = "";
     givenPath = "long/givenPath";
 
     ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+
+#ifdef __linux__
     ASSERT_EQ(testPath, "/rootPathlong/givenPath");
+#elif _WIN32
+    ASSERT_EQ(testPath, "C:\\rootPathlong/givenPath");
+#endif
 
     testPath = "";
     givenPath = "s3://long/givenPath";
