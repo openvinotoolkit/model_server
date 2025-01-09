@@ -1,6 +1,6 @@
 ## Deploying Model Server in Docker Container
 
-This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Linux, using a pre-build Docker Container.
+This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Linux, using Docker.
 
 **Before you start, make sure you have:**
 
@@ -73,3 +73,16 @@ python predict.py
 zebra
 ```
 If everything is set up correctly, you will see 'zebra' prediction in the output.
+
+### Build Image From Source
+
+In case you want to try out features that have not been released yet, you can build the image from source code yourself. 
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+make release_image GPU=1
+```
+It will create an image called `openvino/model_server:latest`.
+> **Note:** This operation might take 40min or more depending on your build host.
+> **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
+> **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. Check the [demo version from the last release](https://github.com/openvinotoolkit/model_server/tree/releases/2024/4/demos/continuous_batching) to use the public docker image.

@@ -18,4 +18,5 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "OVMS_DIR=%~dp0"
 set "PYTHONHOME=%OVMS_DIR%\python"
 set "PATH=%OVMS_DIR%;%PYTHONHOME%;%PATH%"
+echo "OpenVINO Model Server Environment Initialized"
 endlocal

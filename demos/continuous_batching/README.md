@@ -5,6 +5,10 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 > **Note:** This demo was tested on Intel® Xeon® processors Gen4 and Gen5 and Intel dGPU ARC and Flex models on Ubuntu22/24 and RedHat8/9.
 
+## Prerequisites
+- **For Linux users**: Installed Docker Engine 
+- **For Windows users**: Installed OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+
 ## Model preparation
 > **Note** Python 3.9 or higher is need for that step
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
@@ -46,9 +50,7 @@ models
         └── tokenizer.json
 ```
 
-The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. 
-Note that the `models_path` parameter in the graph file can be an absolute path or relative to the `base_path` from `config.json`.
-Check the [LLM calculator documentation](../../docs/llm/reference.md) to learn about configuration options.
+The default configuration  should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
 
 
 ## Deploying with Docker
@@ -70,62 +72,26 @@ python demos/common/export_models/export_model.py text_generation --source_model
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 
-### Build Image From Source (Linux Host)
-
-In case you want to try out features that have not been released yet, you can build the image from source code yourself. 
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make release_image GPU=1
-```
-It will create an image called `openvino/model_server:latest`.
-> **Note:** This operation might take 40min or more depending on your build host.
-> **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
-> **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. Check the [demo version from the last release](https://github.com/openvinotoolkit/model_server/tree/releases/2024/4/demos/continuous_batching) to use the public docker image.
-
 ## Deploying on Bare Metal
 
-Download model server archive and unpack it to `model_server` directory. The package contains OVMS binary and all of its dependencies.
+Assuming you have unpacked model server package to your current working directory run `setupvars` script for environment setup:
 
-```console
-curl https://github.com/openvinotoolkit/model_server/releases/download/<release>/<dist>
-tar -xf <dist>
-```
-where:
-
-- `<release>` - model server version: `v2024.4`, `v2024.5` etc.
-- `<dist>` - package for desired OS, one of: `ovms_redhat.tar.gz`, `ovms_ubuntu22.tar.gz`, `ovms_win.zip`
-
-For correct Python initialization also set `PYTHONHOME` environment variable in the shell that will be used to launch model server.
-It may also be required to add OVMS-provided Python catalog to `PATH` to make it a primary choice for the serving during startup.
-
-**Linux**
-
-```bash
-export PYTHONHOME=$PWD/ovms/python
-export PATH=$PWD/ovms/python;$PATH
-```
-
-**Windows Command Line**:
+**Windows Command Line**
 ```bat
-set PYTHONHOME="$pwd\ovms\python"
-set PATH="$pwd\ovms\python;%PATH%"
+./ovms/setupvars.bat
 ```
 
-**Windows PowerShell**:
+**Windows PowerShell**
 ```powershell
-$env:PYTHONHOME="$pwd\ovms\python"
-$env:PATH="$pwd\ovms\python;$env:PATH"
+./ovms/setupvars.ps1
 ```
-
-Once it's set, you can launch the model server.
 
 ### CPU
 
 In model preparation section, configuration is set to load models on CPU, so you can simply run the binary pointing to the configuration file and selecting port for the HTTP server to expose inference endpoint.
 
-```console
-./ovms/ovms --rest_port 8000 --config_path ./models/config.json
+```bat
+ovms --rest_port 8000 --config_path ./models/config.json
 ```
 
 
@@ -138,8 +104,8 @@ python demos/common/export_models/export_model.py text_generation --source_model
 ```
 Then rerun above command as configuration file has already been adjusted to deploy model on GPU:
 
-```console
-./ovms/ovms --rest_port 8000 --config_path ./models/config.json
+```bat
+ovms --rest_port 8000 --config_path ./models/config.json
 ```
 
 ### Check readiness
