@@ -22,6 +22,11 @@ IF "%~1"=="" (
     set "output_user_root=%1"
 )
 
+if exist dist\windows\ovms (
+    rmdir /s /q dist\windows\ovms
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
 md dist\windows\ovms
 copy bazel-bin\src\ovms.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
