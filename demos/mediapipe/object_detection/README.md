@@ -8,15 +8,13 @@ Example usage of graph that accepts Mediapipe::ImageFrame as a input:
 ## Prepare the repository
 
 Clone the repository and enter mediapipe object_detection directory
-```bash
+```console
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/object_detection
 ```
 
 ## Prepare models and the environment:
-```bash
-virtualenv .venv
-. .venv/bin/activate
+```console
 pip install -r requirements.txt
 
 python mediapipe_object_detection.py --download_models
@@ -24,11 +22,17 @@ python mediapipe_object_detection.py --download_models
 
 ## Run OpenVINO Model Server
 ```bash
-docker run -d -v $PWD/ovms:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
+docker run -d -v $PWD:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
+```
+
+On Windows open another command window and run
+```bat
+cd demos\mediapipe\object_detection
+ovms.exe --config_path config.json --port 9000
 ```
 
 ## Run the client:
-```bash
+```console
 python mediapipe_object_detection.py --grpc_port 9000 --images ./input_images.txt
 Start processing:
 	Graph name: objectDetection

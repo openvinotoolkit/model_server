@@ -2,19 +2,19 @@
     "model_config_list" : [ 
         { "config": {
                 "name":"face_landmark",
-                "base_path":"/models/face_landmark",
+                "base_path":"face_landmark",
                 "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
             }
         },
         { "config": {
                 "name":"face_detection",
-                "base_path":"/models/face_detection_short_range",
+                "base_path":"face_detection_short_range",
                 "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
             }
         },
         { "config": {
             "name":"iris_landmark",
-            "base_path":"/models/iris_landmark",
+            "base_path":"iris_landmark",
             "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
           }
         }
@@ -22,6 +22,7 @@
     "mediapipe_config_list": [
         {
             "name":"irisTracking",
+            "base_path":"",
             "graph_path":"iris_tracking.pbtxt"
         }
     ]

@@ -11,17 +11,17 @@ the functionality of dynamic shape in OpenVINO Model Server and how to process t
 The example relies on the model [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/face-detection-retail-0004/README.md).
 
 Clone the repository and enter face_detection directory
-```bash
+```console
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/face_detection/python
 ```
 
 Prepare environment:
-```bash
+```console
 pip install -r ../../common/python/requirements.txt
 ```
 
-```bash
+```console
 python face_detection.py --help
 usage: face_detection.py [-h] [--input_images_dir INPUT_IMAGES_DIR]
                          [--output_dir OUTPUT_DIR] [--batch_size BATCH_SIZE]
@@ -64,15 +64,27 @@ optional arguments:
 
 Start the OVMS service locally:
 
+```console
+curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.bin
+curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.xml
+```
+
+## Deploying OVMS
+
+Deploy OVMS with single face detection pipeline using the following command:
+
 ```bash
-mkdir -p model/1
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml
 docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto
 ```
 
+On Windows open another command window and run
+```bat
+cd demos\face_detection\python
+ovms.exe --model_path model --model_name face-detection --port 9000  --shape auto
+```
+
 Run the client:
-```bash
+```console
 mkdir results
 
 python face_detection.py --batch_size 1 --width 300 --height 300 --grpc_port 9000
@@ -214,7 +226,7 @@ time standard deviation: 1.79
 time variance: 3.19
 ```
 
-```bash
+```console
 python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_dir ../../common/static/images/people --output_dir results --grpc_port 9000
 
 ['people3.jpeg', 'people1.jpeg', 'people4.jpeg', 'people2.jpeg']

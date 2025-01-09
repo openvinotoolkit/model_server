@@ -5,12 +5,10 @@ The purpose of this demo is to show how to send data from multiple sources (came
 ## Deploy person, vehicle, bike detection model
 
 ### Download model files
-```bash
-mkdir -p model/1
+```console
+curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.bin -o model/1/person-vehicle-bike-detection-crossroad-0078.bin
 
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.bin
-
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml
+curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml -o model/1/person-vehicle-bike-detection-crossroad-0078.xml
 ```
 
 ### Run OpenVINO Model Server
@@ -18,10 +16,16 @@ wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/
 docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name person-vehicle-detection --port 9000 --shape auto
 ```
 
+On Windows open another command window and run
+```bat
+cd demos\single_face_analysis_pipeline\python
+ovms.exe --model_path model --model_name person-vehicle-detection --port 9000 --shape auto
+```
+
 ## Running the client application
 
 
-```bash
+```console
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/person_vehicle_bike_detection/python
 pip3 install -r requirements.txt
@@ -45,12 +49,12 @@ python person_vehicle_bike_detection.py --help
 ### Using with video file
 
 Copy example video file:
-```bash
+```console
 git clone "https://github.com/intel-iot-devkit/sample-videos.git"
 ```
 
 Set `camera` count to `0` with `-c 0` and provide path to the video file with `-f` parameter.
-```bash
+```console
 python person_vehicle_bike_detection.py -n person-vehicle-detection -l data -o detection_out -d 1024 -c 0 -f sample-videos/person-bicycle-car-detection.mp4 -i localhost -p 9000
 ```
 Output:
@@ -63,7 +67,7 @@ Output:
 ### Using with video file and camera
 
 Set `camera` count to `1` with `-c 1` and provide path to the video file with `-f` parameter.
-```bash
+```console
 python person_vehicle_bike_detection.py -n person-vehicle-detection -l data -o detection_out -d 1024 -c 1 -f sample-videos/person-bicycle-car-detection.mp4 -i localhost -p 9000
 ```
 

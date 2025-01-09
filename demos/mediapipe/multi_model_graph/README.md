@@ -7,17 +7,24 @@ Example usage:
 ## Prepare the repository
 
 Clone the repository and enter mediapipe image_classification directory
-```bash
+```console
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/multi_model_graph
 ```
 
-## Download ResNet50 model
-
+## Download models
+On Linux
 ```bash
 cp -r ../../../src/test/add_two_inputs_model ./dummyAdd/
 cp -r ../../../src/test/dummy ./dummyAdd/
 ```
+
+On Windows
+```bat
+xcopy /s /e /q /y ..\..\..\src\test\add_two_inputs_model .\dummyAdd\add_two_inputs_model\
+xcopy /s /e /q /y ..\..\..\src\test\dummy .\dummyAdd\dummy\
+```
+ 
 
 ## Run OpenVINO Model Server
 Prepare virtualenv according to [kserve samples readme](https://github.com/openvinotoolkit/model_server/blob/main/client/python/kserve-api/samples/README.md)
@@ -25,8 +32,14 @@ Prepare virtualenv according to [kserve samples readme](https://github.com/openv
 docker run -d -v $PWD:/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
 ```
 
+On Windows open another command window and run
+```bat
+cd demos\mediapipe\multi_model_graph
+ovms.exe --config_path config.json --port 9000
+```
+
 ## Run the client:
-```bash
+```console
 python mediapipe_multi_model_client.py --grpc_port 9000
 Output:
 [[ 3.  5.  7.  9. 11. 13. 15. 17. 19. 21.]]
