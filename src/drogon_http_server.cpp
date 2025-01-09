@@ -37,6 +37,7 @@ DrogonHttpServer::DrogonHttpServer(size_t num_workers, int port, const std::stri
     SPDLOG_DEBUG("Starting http thread pool ({} threads)", num_workers);
     pool->StartWorkers();  // this is for actual workload which is scheduled to other threads than drogon's internal listener threads
     SPDLOG_DEBUG("Thread pool started");
+    trantor::Logger::setLogLevel(trantor::Logger::kInfo);
 }
 
 Status DrogonHttpServer::startAcceptingRequests() {

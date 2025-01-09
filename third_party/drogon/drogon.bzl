@@ -46,7 +46,7 @@ cc_library(
     new_git_repository(
         name = "drogon",
         remote = "https://github.com/drogonframework/drogon",
-        tag = "v1.9.7",  # Sep 10 2024
+        tag = "v1.9.9",  # Jan 1 2025
         build_file = "@_drogon_cpp//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
