@@ -57,8 +57,8 @@ public:
 
     std::string getModel() const;
     std::string getQuery() const;
-    std::vector<std::string> getDocumentsList() const;
-    std::unordered_map<std::string, std::string> getDocumentsMap() const;
+    const std::vector<std::string>& getDocumentsList() const;
+    const std::unordered_map<std::string, std::string>& getDocumentsMap() const;
 
     std::optional<int> getTopN() const;
     std::optional<bool> getReturnDocuments() const;
