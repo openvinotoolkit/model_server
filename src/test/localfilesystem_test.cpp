@@ -266,7 +266,6 @@ TEST(FileSystem, SetPath) {
 #elif _WIN32
     ASSERT_EQ(testPath, "C:\\givenPath");
 #endif
-    
 
     testPath = "";
     givenPath = "givenPath";
