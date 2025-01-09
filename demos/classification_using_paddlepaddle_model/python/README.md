@@ -36,7 +36,7 @@ docker run -p 9000:9000 -d -v ${PWD}/model:/models openvino/model_server --port 
 
 On Windows open another command window and run
 ```bat
-cd demos\age_gender_recognition\python
+cd demos\classification_using_paddlepaddle_model\python
 ovms.exe --port 9000 --model_path model --model_name mobilenet --shape "(1,3,-1,-1)"
 ```
 

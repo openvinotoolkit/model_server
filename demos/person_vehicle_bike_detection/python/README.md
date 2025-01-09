@@ -18,7 +18,7 @@ docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest -
 
 On Windows open another command window and run
 ```bat
-cd demos\single_face_analysis_pipeline\python
+cd demos\person_vehicle_bike_detection\python
 ovms.exe --model_path model --model_name person-vehicle-detection --port 9000 --shape auto
 ```
 
