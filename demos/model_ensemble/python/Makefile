@@ -27,14 +27,14 @@ venv:
 
 download_models: venv
 	mkdir -p workspace/models/argmax
-	docker run -u $(id -u):$(id -g) -e http_proxy=${http_proxy} -e https_proxy=${https_proxy} -e no_proxy=${no_proxy} -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu18_dev:latest omz_downloader --name googlenet-v2-tf --output_dir /models
-	docker run -u $(id -u):$(id -g) -e http_proxy=${http_proxy} -e https_proxy=${https_proxy} -e no_proxy=${no_proxy} -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu18_dev:latest omz_downloader --name resnet-50-tf --output_dir /models
+	docker run -u $(id -u):$(id -g) -e http_proxy=${http_proxy} -e https_proxy=${https_proxy} -e no_proxy=${no_proxy} -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu18_dev:2024.6.0 omz_downloader --name googlenet-v2-tf --output_dir /models
+	docker run -u $(id -u):$(id -g) -e http_proxy=${http_proxy} -e https_proxy=${https_proxy} -e no_proxy=${no_proxy} -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu18_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models
 	python3 ../../../tests/models/argmax_sum.py --input_size 1001 --export_dir $(THIS_DIR)/workspace/models/argmax
 
 convert_models: download_models
-	docker run -u $(id -u):$(id -g) -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu18_dev:latest omz_converter --name googlenet-v2-tf --download_dir /models --output_dir /models --precisions FP32
-	docker run -u $(id -u):$(id -g) -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu18_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
-	docker run -u $(id -u):$(id -g) -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu18_dev:latest mo --input input1,input2 --input_shape '[1,1001],[1,1001]' --saved_model_dir /models/argmax/ --output_dir /models/argmax/1
+	docker run -u $(id -u):$(id -g) -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu18_dev:2024.6.0 omz_converter --name googlenet-v2-tf --download_dir /models --output_dir /models --precisions FP32
+	docker run -u $(id -u):$(id -g) -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu18_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
+	docker run -u $(id -u):$(id -g) -v $(THIS_DIR)/workspace/models:/models:rw openvino/ubuntu18_dev:2024.6.0 mo --input input1,input2 --input_shape '[1,1001],[1,1001]' --saved_model_dir /models/argmax/ --output_dir /models/argmax/1
 
 prepare_repository: convert_models
 	mkdir -p models/googlenet-v2-tf/1
