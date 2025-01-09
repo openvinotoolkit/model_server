@@ -1,0 +1,16 @@
+diff --git a/absl/strings/ascii.cc b/absl/strings/ascii.cc
+index 8c6b1e05..977e5503 100644
+--- a/absl/strings/ascii.cc
++++ b/absl/strings/ascii.cc
+@@ -202,8 +202,9 @@ static constexpr size_t ValidateAsciiCasefold() {
+   }
+   return incorrect_index;
+ }
+-
+-static_assert(ValidateAsciiCasefold() == 0, "error in case conversion");
++// This causes constant expression overflow on gcc 8.5 on rh (there is limit on what can be done in constexpr) and this seems to be
++// only the issue on calculation side not actual functionality
++//static_assert(ValidateAsciiCasefold() == 0, "error in case conversion");
+ 
+ }  // namespace ascii_internal
+ 
