@@ -24,6 +24,7 @@
 
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/genai/scheduler_config.hpp>
+#include <openvino/genai/lora_adapter.hpp>
 #include <openvino/openvino.hpp>
 
 #pragma GCC diagnostic push

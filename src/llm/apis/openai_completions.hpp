@@ -88,7 +88,7 @@ struct OpenAIChatCompletionsRequest {
 
     ov::genai::GenerationConfig createGenerationConfig(ov::genai::AdapterConfig adapters) const {
         ov::genai::GenerationConfig config;
-        //ov::genai::AdaptersProperty test;
+        config.adapters = adapters;
 
         // Generic
         if (maxTokens.has_value())
@@ -140,9 +140,7 @@ struct OpenAIChatCompletionsRequest {
         config.do_sample = config.temperature > 0.0f && config.num_beams == 1;
 
         if (logprobschat || logprobs > 0)
-            config.logprobs = 1;    
-        config.adapters = adapters;
-        //config.adapters = std::nullptr;
+            config.logprobs = 1;
         return config;
     }
 };

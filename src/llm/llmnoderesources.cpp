@@ -198,7 +198,7 @@ Status LLMNodeResources::initializeLLMNodeResources(LLMNodeResources& nodeResour
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
         try {
-            nodeResources.adapters.add(ov::genai::Adapter(std::filesystem::path(lora_path)));
+            nodeResources.adapters.add(ov::genai::Adapter(std::filesystem::path(lora_path)), alpha);
             SPDLOG_LOGGER_INFO(modelmanager_logger,"Adapter loaded from path {} with alpha {}", lora_path, alpha);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error loading adapter from path {}: {}", lora_path, e.what());
@@ -220,6 +220,8 @@ void LLMNodeResources::initializeContinuousBatchingPipeline(
     const std::string& device,
     const plugin_config_t& pluginConfig,
     const plugin_config_t& tokenizerPluginConfig) {
+    ov::genai::GenerationConfig gen_config;
+    gen_config.adapters = this->adapters;
     this->cbPipe = std::make_unique<ov::genai::ContinuousBatchingPipeline>(basePath, schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
 }
 
