@@ -60,6 +60,9 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy  %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+copy  %cd%\setupvars.* dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+
 dist\windows\ovms\ovms.exe --version
 if !errorlevel! neq 0 exit /b !errorlevel!
 

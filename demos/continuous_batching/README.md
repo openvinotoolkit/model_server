@@ -97,7 +97,7 @@ where:
 - `<dist>` - package for desired OS, one of: `ovms_redhat.tar.gz`, `ovms_ubuntu22.tar.gz`, `ovms_win.zip`
 
 For correct Python initialization also set `PYTHONHOME` environment variable in the shell that will be used to launch model server.
-It may also be required to add this location to `PATH` in case there are already other Python installation on the system so that model server picks the right one.
+It may also be required to add OVMS-provided Python catalog to `PATH` to make it a primary choice for the serving during startup.
 
 **Linux**
 
