@@ -1,31 +1,11 @@
-diff --git a/tensorflow/tools/proto_text/BUILD b/tensorflow/tools/proto_text/BUILD
-index b2998173b53..afd5f4eabfe 100644
---- a/tensorflow/tools/proto_text/BUILD
-+++ b/tensorflow/tools/proto_text/BUILD
-@@ -39,7 +39,8 @@ cc_binary(
-         "//tensorflow/core:lib_proto_parsing",
-         "//tensorflow/tsl/platform:protobuf_compiler",
-         "@com_google_protobuf//:protobuf",
--    ] + if_ios(["//tensorflow/core/platform:logging"]),
-+    ] + ["//tensorflow/tsl/platform:logging",
-+         "//tensorflow/tsl/platform/default:glog"],
- )
- 
- cc_library(
-diff --git a/tensorflow/tsl/platform/default/BUILD b/tensorflow/tsl/platform/default/BUILD
-index 3542c8ae3e8..ea7b8e4db8f 100644
---- a/tensorflow/tsl/platform/default/BUILD
-+++ b/tensorflow/tsl/platform/default/BUILD
-@@ -229,6 +229,19 @@ cc_library(
+diff --git a/third_party/xla/third_party/tsl/tsl/platform/default/BUILD b/third_party/xla/third_party/tsl/tsl/platform/default/BUILD
+index 785a44cfff0..d98afb28d11 100644
+--- a/third_party/xla/third_party/tsl/tsl/platform/default/BUILD
++++ b/third_party/xla/third_party/tsl/tsl/platform/default/BUILD
+@@ -262,6 +262,18 @@ cc_library(
      ],
  )
  
-+cc_library(
-+    name = "log_macros",
-+    hdrs = ["log_macros.h"],
-+    visibility = ["//visibility:public"],
-+)
-+
 +cc_library(
 +    name = "glog",
 +    #hdrs = ["@com_github_glog_glog//:glog/logging.h",]
@@ -33,24 +13,29 @@ index 3542c8ae3e8..ea7b8e4db8f 100644
 +    deps = ["@com_github_glog_glog//:glog",],
 +)
 +
++cc_library(
++    name = "log_macros",
++    hdrs = ["log_macros.h"],
++)
++
  cc_library(
      name = "logging",
      srcs = ["logging.cc"],
-@@ -247,6 +260,8 @@ cc_library(
-         "//tensorflow/tsl/platform:types",
+@@ -281,6 +293,8 @@ cc_library(
          "@com_google_absl//absl/base",
+         "@com_google_absl//absl/base:log_severity",
          "@com_google_absl//absl/strings",
 +        ":glog",
 +        ":log_macros",
      ],
  )
  
-diff --git a/tensorflow/tsl/platform/default/log_macros.h b/tensorflow/tsl/platform/default/log_macros.h
+diff --git a/third_party/xla/third_party/tsl/tsl/platform/default/log_macros.h b/third_party/xla/third_party/tsl/tsl/platform/default/log_macros.h
 new file mode 100644
-index 00000000000..05dba0a2f7a
+index 00000000000..221d42c9e77
 --- /dev/null
-+++ b/tensorflow/tsl/platform/default/log_macros.h
-@@ -0,0 +1,101 @@
++++ b/third_party/xla/third_party/tsl/tsl/platform/default/log_macros.h
+@@ -0,0 +1,102 @@
 +#pragma once
 +#define LOG(severity) _TF_LOG_##severity
 +
@@ -82,7 +67,7 @@ index 00000000000..05dba0a2f7a
 +  ? (void)0                                                      \
 +  : ::tsl::internal::Voidifier() &                        \
 +          ::tsl::internal::LogMessage(__FILE__, __LINE__, \
-+                                             tensorflow::INFO)
++                                             absl::LogSeverity::kInfo)
 +
 +// `DVLOG` behaves like `VLOG` in debug mode (i.e. `#ifndef NDEBUG`).
 +// Otherwise, it compiles away and does nothing.
@@ -152,58 +137,24 @@ index 00000000000..05dba0a2f7a
 +#define DCHECK_GT(x, y) _TF_DCHECK_NOP(x, y)
 +
 +#endif
-diff --git a/tensorflow/tsl/platform/default/logging.cc b/tensorflow/tsl/platform/default/logging.cc
-index 9f978e29599..429190a6218 100644
---- a/tensorflow/tsl/platform/default/logging.cc
-+++ b/tensorflow/tsl/platform/default/logging.cc
-@@ -381,7 +381,6 @@ void LogString(const char* fname, int line, int severity,
-   LogMessage(fname, line, severity) << message;
- }
- 
--template <>
- void MakeCheckOpValueString(std::ostream* os, const char& v) {
-   if (v >= 32 && v <= 126) {
-     (*os) << "'" << v << "'";
-@@ -390,7 +389,6 @@ void MakeCheckOpValueString(std::ostream* os, const char& v) {
-   }
- }
- 
--template <>
- void MakeCheckOpValueString(std::ostream* os, const signed char& v) {
-   if (v >= 32 && v <= 126) {
-     (*os) << "'" << v << "'";
-@@ -399,7 +397,6 @@ void MakeCheckOpValueString(std::ostream* os, const signed char& v) {
-   }
- }
- 
--template <>
- void MakeCheckOpValueString(std::ostream* os, const unsigned char& v) {
-   if (v >= 32 && v <= 126) {
-     (*os) << "'" << v << "'";
-@@ -409,7 +406,6 @@ void MakeCheckOpValueString(std::ostream* os, const unsigned char& v) {
- }
- 
- #if LANG_CXX11
--template <>
- void MakeCheckOpValueString(std::ostream* os, const std::nullptr_t& v) {
-   (*os) << "nullptr";
- }
-diff --git a/tensorflow/tsl/platform/default/logging.h b/tensorflow/tsl/platform/default/logging.h
-index 417d7d81f83..84f7e1d5c2f 100644
---- a/tensorflow/tsl/platform/default/logging.h
-+++ b/tensorflow/tsl/platform/default/logging.h
-@@ -43,6 +43,7 @@ limitations under the License.
- // Undef everything in case we're being mixed with some other Google library
++
+diff --git a/third_party/xla/third_party/tsl/tsl/platform/default/logging.h b/third_party/xla/third_party/tsl/tsl/platform/default/logging.h
+index bc94f79c060..bc6a2eb858c 100644
+--- a/third_party/xla/third_party/tsl/tsl/platform/default/logging.h
++++ b/third_party/xla/third_party/tsl/tsl/platform/default/logging.h
+@@ -44,6 +44,7 @@ limitations under the License.
  // which already defined them itself.  Presumably all Google libraries will
  // support the same syntax for these so it should not be a big deal if they
-+#define COMPACT_GOOGLE_LOG_QFATAL COMPACT_GOOGLE_LOG_ERROR
  // end up using our definitions instead.
++#define COMPACT_GOOGLE_LOG_QFATAL COMPACT_GOOGLE_LOG_ERROR
  #undef LOG
- #undef VLOG
-@@ -63,6 +64,15 @@ limitations under the License.
- #undef DCHECK_GT
- #undef DCHECK_GE
+ #undef LOG_EVERY_N
+ #undef LOG_FIRST_N
+@@ -77,6 +78,17 @@ limitations under the License.
  
+ #undef PCHECK
+ 
++
 +#pragma GCC diagnostic push
 +#pragma GCC diagnostic ignored "-Wsign-compare"
 +#include "glog/logging.h"
@@ -213,12 +164,13 @@ index 417d7d81f83..84f7e1d5c2f 100644
 +#include "log_macros.h"
 +#endif
 +
++
  namespace tsl {
- const int INFO = 0;            // base_logging::INFO;
- const int WARNING = 1;         // base_logging::WARNING;
-@@ -142,42 +152,6 @@ class LogMessageNull : public std::basic_ostringstream<char> {
  
- #define _TF_LOG_QFATAL _TF_LOG_FATAL
+ namespace internal {
+@@ -157,43 +169,6 @@ class LogMessageNull : public std::basic_ostringstream<char> {
+ #define _TF_LOG_DFATAL _TF_LOG_FATAL
+ #endif
  
 -#define LOG(severity) _TF_LOG_##severity
 -
@@ -241,11 +193,12 @@ index 417d7d81f83..84f7e1d5c2f 100644
 -
 -#endif
 -
--#define VLOG(level)                   \
--  TF_PREDICT_TRUE(!VLOG_IS_ON(level)) \
--  ? (void)0                           \
--  : ::tsl::internal::Voidifier() &    \
--          ::tsl::internal::LogMessage(__FILE__, __LINE__, tsl::INFO)
+-#define VLOG(level)                                       \
+-  TF_PREDICT_TRUE(!VLOG_IS_ON(level))                     \
+-  ? (void)0                                               \
+-  : ::tsl::internal::Voidifier() &                        \
+-          ::tsl::internal::LogMessage(__FILE__, __LINE__, \
+-                                      absl::LogSeverity::kInfo)
 -
 -// `DVLOG` behaves like `VLOG` in debug mode (i.e. `#ifndef NDEBUG`).
 -// Otherwise, it compiles away and does nothing.
@@ -259,7 +212,7 @@ index 417d7d81f83..84f7e1d5c2f 100644
  class LogEveryNState {
   public:
    bool ShouldLog(int n);
-@@ -244,26 +218,6 @@ class LogEveryNSecState {
+@@ -260,26 +235,6 @@ class LogEveryNSecState {
             logging_internal_stateful_condition_do_log;              \
             logging_internal_stateful_condition_do_log = false)
  
@@ -286,7 +239,7 @@ index 417d7d81f83..84f7e1d5c2f 100644
  // `LOG_EVERY_POW_2` behaves like `LOG_EVERY_N` except that the specified
  // message is logged when the counter's value is a power of 2.
  // `LOG_EVERY_POW_2` is thread-safe.
-@@ -281,13 +235,6 @@ class LogEveryNSecState {
+@@ -297,14 +252,6 @@ class LogEveryNSecState {
    LOGGING_INTERNAL_STATEFUL_CONDITION(EveryNSec, true, n_seconds) \
    LOG(severity)
  
@@ -297,109 +250,11 @@ index 417d7d81f83..84f7e1d5c2f 100644
 -#define CHECK(condition)              \
 -  if (TF_PREDICT_FALSE(!(condition))) \
 -  LOG(FATAL) << "Check failed: " #condition " "
- 
+-
  // Function is overloaded for integral types to allow static const
  // integrals declared in classes and not defined to be used as arguments to
-@@ -306,28 +253,6 @@ inline unsigned int GetReferenceableValue(unsigned int t) { return t; }
- inline int64_t GetReferenceableValue(int64_t t) { return t; }
- inline uint64 GetReferenceableValue(uint64 t) { return t; }
- 
--// This formats a value for a failing CHECK_XX statement.  Ordinarily,
--// it uses the definition for operator<<, with a few special cases below.
--template <typename T>
--inline void MakeCheckOpValueString(std::ostream* os, const T& v) {
--  (*os) << v;
--}
--
--// Overrides for char types provide readable values for unprintable
--// characters.
--template <>
--void MakeCheckOpValueString(std::ostream* os, const char& v);
--template <>
--void MakeCheckOpValueString(std::ostream* os, const signed char& v);
--template <>
--void MakeCheckOpValueString(std::ostream* os, const unsigned char& v);
--
--#if LANG_CXX11
--// We need an explicit specialization for std::nullptr_t.
--template <>
--void MakeCheckOpValueString(std::ostream* os, const std::nullptr_t& v);
--#endif
--
- // A container for a string pointer which can be evaluated to a bool -
- // true iff the pointer is non-NULL.
- struct CheckOpString {
-@@ -338,17 +263,6 @@ struct CheckOpString {
-   string* str_;
- };
- 
--// Build the error message string. Specify no inlining for code size.
--template <typename T1, typename T2>
--string* MakeCheckOpString(const T1& v1, const T2& v2,
--                          const char* exprtext) TF_ATTRIBUTE_NOINLINE;
--
--// A helper class for formatting "expr (V1 vs. V2)" in a CHECK_XX
--// statement.  See MakeCheckOpString for sample usage.  Other
--// approaches were considered: use of a template method (e.g.,
--// base::BuildCheckOpString(exprtext, base::Print<T1>, &v1,
--// base::Print<T2>, &v2), however this approach has complications
--// related to volatile arguments and function-pointer arguments).
- class CheckOpMessageBuilder {
-  public:
-   // Inserts "exprtext" and " (" to the stream.
-@@ -366,14 +280,6 @@ class CheckOpMessageBuilder {
-   std::ostringstream* stream_;
- };
- 
--template <typename T1, typename T2>
--string* MakeCheckOpString(const T1& v1, const T2& v2, const char* exprtext) {
--  CheckOpMessageBuilder comb(exprtext);
--  MakeCheckOpValueString(comb.ForVar1(), v1);
--  MakeCheckOpValueString(comb.ForVar2(), v2);
--  return comb.NewString();
--}
--
- // Helper functions for CHECK_OP macro.
- // We use the full name Check_EQ, Check_NE, etc. in case the file including
- // base/logging.h provides its own #defines for the simpler names EQ, NE, etc.
-@@ -389,7 +295,8 @@ string* MakeCheckOpString(const T1& v1, const T2& v2, const char* exprtext) {
-     if (TF_PREDICT_TRUE(v1 op v2))                                  \
-       return NULL;                                                  \
-     else                                                            \
--      return ::tsl::internal::MakeCheckOpString(v1, v2, exprtext);  \
-+      /*return ::tsl::internal::MakeCheckOpString(v1, v2, exprtext);*/  \
-+      return google::MakeCheckOpString(v1, v2, exprtext);           \
-   }                                                                 \
-   inline string* name##Impl(int v1, int v2, const char* exprtext) { \
-     return name##Impl<int, int>(v1, v2, exprtext);                  \
-@@ -404,7 +311,7 @@ TF_DEFINE_CHECK_OP_IMPL(Check_EQ, ==)
- 
- inline string* Check_EQImpl(int v1, size_t v2, const char* exprtext) {
-   if (TF_PREDICT_FALSE(v1 < 0))
--    ::tsl::internal::MakeCheckOpString(v1, v2, exprtext);
-+    google::MakeCheckOpString(v1, v2, exprtext);
- 
-   return Check_EQImpl(size_t(v1), v2, exprtext);
- }
-@@ -435,7 +342,7 @@ inline string* Check_LEImpl(int v1, size_t v2, const char* exprtext) {
- 
- inline string* Check_LEImpl(size_t v1, int v2, const char* exprtext) {
-   if (TF_PREDICT_FALSE(v2 < 0))
--    return ::tsl::internal::MakeCheckOpString(v1, v2, exprtext);
-+    return google::MakeCheckOpString(v1, v2, exprtext);
-   return Check_LEImpl(v1, size_t(v2), exprtext);
- }
- 
-@@ -448,7 +355,7 @@ inline string* Check_LTImpl(int v1, size_t v2, const char* exprtext) {
- }
- 
- inline string* Check_LTImpl(size_t v1, int v2, const char* exprtext) {
--  if (v2 < 0) return ::tsl::internal::MakeCheckOpString(v1, v2, exprtext);
-+  if (v2 < 0) return google::MakeCheckOpString(v1, v2, exprtext);
-   return Check_LTImpl(v1, size_t(v2), exprtext);
- }
- 
-@@ -465,58 +372,6 @@ inline string* Check_GTImpl(const T1& v1, const T2& v2, const char* exprtext) {
+ // CHECK* macros. It's not encouraged though.
+@@ -481,58 +428,6 @@ inline string* Check_GTImpl(const T1& v1, const T2& v2, const char* exprtext) {
  
  #undef TF_DEFINE_CHECK_OP_IMPL
  
@@ -458,17 +313,3 @@ index 417d7d81f83..84f7e1d5c2f 100644
  // These are for when you don't want a CHECK failure to print a verbose
  // stack trace.  The implementation of CHECK* in this file already doesn't.
  #define QCHECK(condition) CHECK(condition)
-diff --git a/tensorflow/tsl/platform/logging.h b/tensorflow/tsl/platform/logging.h
-index 68c209fa491..dfe5c45700c 100644
---- a/tensorflow/tsl/platform/logging.h
-+++ b/tensorflow/tsl/platform/logging.h
-@@ -21,7 +21,8 @@ limitations under the License.
- #if defined(PLATFORM_GOOGLE) || defined(PLATFORM_GOOGLE_ANDROID) || \
-     defined(PLATFORM_GOOGLE_IOS) || defined(GOOGLE_LOGGING) ||      \
-     defined(__EMSCRIPTEN__) || defined(PLATFORM_CHROMIUMOS)
--#include "tensorflow/tsl/platform/google/logging.h"  // IWYU pragma: export
-+#include "tensorflow/tsl/platform/default/logging.h"  // IWYU pragma: export
-+//#include "tensorflow/tsl/platform/google/logging.h"  // IWYU pragma: export
- #else
- #include "tensorflow/tsl/platform/default/logging.h"  // IWYU pragma: export
- #endif
