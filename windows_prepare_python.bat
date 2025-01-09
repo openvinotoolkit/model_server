@@ -46,9 +46,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 if exist %dest_dir%\%python_full_name%.zip (
     echo Python zip already downloaded. Will unpack existing file.
 ) else (
-    :: Using msys curl to download Python archive
-    set Path="C:\opt\msys64\usr\bin\;%Path%;"
-    curl %embeddable_python_url% -o %dest_dir%\%python_full_name%.zip
+    curl -k %embeddable_python_url% -o %dest_dir%\%python_full_name%.zip
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
