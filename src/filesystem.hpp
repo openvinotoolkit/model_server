@@ -156,40 +156,31 @@ public:
         wchar_t temp_path[MAX_PATH];
         wchar_t temp_file[MAX_PATH];
 
-        // Get the temp path
         DWORD path_len = GetTempPathW(MAX_PATH, temp_path);
         if (path_len == 0 || path_len > MAX_PATH) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get temp path: {}", GetLastError());
             return StatusCode::FILESYSTEM_ERROR;
         }
 
-        // Create a temporary file
         UINT unique_num = GetTempFileNameW(temp_path, L"file", 0, temp_file);
         if (unique_num == 0) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create temp file: {}", GetLastError());
             return StatusCode::FILESYSTEM_ERROR;
         }
 
-        // Delete the temporary file to create a directory instead
         if (!DeleteFileW(temp_file)) {
-            // Try to clean up the temp file in case of failure
-            SetLastError(0);  // Reset error code before attempting cleanup
+            SetLastError(0);
             DeleteFileW(temp_file);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to delete temp file: {}", GetLastError());
             return StatusCode::FILESYSTEM_ERROR;
         }
 
-        // Create the directory
         if (!CreateDirectoryW(temp_file, NULL)) {
-            // Try to clean up the temp file in case of failure
-            SetLastError(0);  // Reset error code before attempting cleanup
+            SetLastError(0);
             DeleteFileW(temp_file);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create temp directory: {}", GetLastError());
             return StatusCode::FILESYSTEM_ERROR;
         }
-
-        // Set permissions (optional, Windows handles permissions differently)
-        // Note: Setting permissions on Windows is more complex and may require additional code
 
         *local_path = fs::path(temp_file).generic_string();
 

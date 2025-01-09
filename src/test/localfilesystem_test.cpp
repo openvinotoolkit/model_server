@@ -42,7 +42,7 @@ const std::filesystem::path TMP_DIR2 = "dir2";
 const std::filesystem::path TMP_DIR5345 = "dir5345";
 
 static void createTmpFiles() {
-    std::ofstream configFile((TMP_PATH / TMP_FILE).string());
+    std::ofstream configFile((TMP_PATH / TMP_FILE1).string());
     configFile << TMP_CONTENT << std::endl;
     configFile.close();
 
@@ -216,7 +216,7 @@ TEST(FileSystem, SetRootDirectoryPath) {
 
     givenPath = "givenpath";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    std::string currentWorkingDir = std::filesystem::current_path();
+    std::string currentWorkingDir = std::filesystem::current_path().string();
     ASSERT_EQ(normalize_path(rootPath), normalize_path(ovms::FileSystem::joinPath({currentWorkingDir, ""})));
 
     givenPath = "/givenpath/";
