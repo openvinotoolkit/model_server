@@ -151,6 +151,9 @@ public:
 #elif _WIN32
     static StatusCode createTempPath(std::string* local_path) {
         if (!local_path)
+            DWORD error = GetLastError();
+            std::string message = std::system_category().message(error);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set: {}", message);
             return StatusCode::FILESYSTEM_ERROR;
 
         wchar_t temp_path[MAX_PATH];
@@ -158,27 +161,35 @@ public:
 
         DWORD path_len = GetTempPathW(MAX_PATH, temp_path);
         if (path_len == 0 || path_len > MAX_PATH) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get temp path: {}", GetLastError());
+            DWORD error = GetLastError();
+            std::string message = std::system_category().message(error);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get temp path: {}", message);
             return StatusCode::FILESYSTEM_ERROR;
         }
 
         UINT unique_num = GetTempFileNameW(temp_path, L"file", 0, temp_file);
         if (unique_num == 0) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create temp file: {}", GetLastError());
+            DWORD error = GetLastError();
+            std::string message = std::system_category().message(error);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create temp file: {}", message);
             return StatusCode::FILESYSTEM_ERROR;
         }
 
         if (!DeleteFileW(temp_file)) {
             SetLastError(0);
             DeleteFileW(temp_file);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to delete temp file: {}", GetLastError());
+            DWORD error = GetLastError();
+            std::string message = std::system_category().message(error);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to delete temp file: {}", message);
             return StatusCode::FILESYSTEM_ERROR;
         }
 
         if (!CreateDirectoryW(temp_file, NULL)) {
             SetLastError(0);
             DeleteFileW(temp_file);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create temp directory: {}", GetLastError());
+            DWORD error = GetLastError();
+            std::string message = std::system_category().message(error);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create temp directory: {}", message);
             return StatusCode::FILESYSTEM_ERROR;
         }
 
