@@ -312,6 +312,89 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {
     EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":null}]}"));
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, Parsing10SmallImagesJpeg) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGISF3UABAAA//8AuwBvwAMyhwAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGKqKLUEBAAA//8ClwEp7hauRgAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGKSv+0NCAAA//8CagFI9N6uZQAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLa6hcCCAAA//8DGwFaM9mxkAAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGJqmssGCAAA//8C0gEoJOf44AAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLaKakECAAA//8CiwD34NOvMwAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGJilvIGBAAA//8AlABr5i34EwAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLis78CCAAA//8BiAEkZi4mWwAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLqm8cLCAAA//8C/wE8yoOJIQAAAABJRU5ErkJggg=="
+            }
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    auto startTime = std::chrono::high_resolution_clock::now();
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto processingTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+    SPDLOG_ERROR("Processing time: {}", processingTime.count());
+    std::vector<ov::Tensor> images = apiHandler->getImages();
+    ASSERT_EQ(images.size(), 10);
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageStringWithNoPrefixSucceeds) {
     std::string json = R"({
     "model": "llama",
