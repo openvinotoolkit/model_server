@@ -233,9 +233,9 @@ TEST(FileSystem, SetRootDirectoryPath) {
 }
 
 TEST(FileSystem, SetPath) {
-    #ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-    #endif
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
     std::string rootPath = "";
     std::string testPath = "";
     std::string givenPath = "";
