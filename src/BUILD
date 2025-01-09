@@ -1874,11 +1874,11 @@ cc_test(
         "test/tfs_rest_parser_row_test.cpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
+        "test/localfilesystem_test.cpp",
         ] + select({
             "//:not_disable_cloud": [
                 "test/gcsfilesystem_test.cpp",
                 "test/azurefilesystem_test.cpp",
-                "test/localfilesystem_test.cpp",
             ],
             "//:disable_cloud": []
             })
