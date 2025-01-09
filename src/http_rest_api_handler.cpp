@@ -27,6 +27,10 @@
 
 #ifndef _WIN32
 #include <curl/curl.h>
+#else
+#include <sstream>
+#include <iomanip>
+#include <cctype>
 #endif
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -1157,8 +1161,34 @@ std::string urlDecode(const std::string& encoded) {
         }
         curl_easy_cleanup(curl);
     }
+#else
+    std::ostringstream decoded;
+
+    for (size_t i = 0; i < encoded.size(); ++i) {
+        if (encoded[i] == '%') {
+            // Check if the next two characters are valid hex digits
+            if (i + 2 < encoded.size() &&
+                std::isxdigit(static_cast<unsigned char>(encoded[i + 1])) &&
+                std::isxdigit(static_cast<unsigned char>(encoded[i + 2]))) {
+                // Convert the two hexadecimal digits to a character
+                int value = 0;
+                std::stringstream hex_value;
+                hex_value << encoded.substr(i + 1, 2);
+                hex_value >> std::hex >> value;
+                decoded << static_cast<char>(value);
+                i += 2; // Skip the next two characters
+            } else {
+                // Invalid escape sequence, copy '%' as is
+                decoded << '%';
+            }
+        } else {
+            // Regular character, just add it
+            decoded << encoded[i];
+        }
+    }
+
+    return decoded.str();
 #endif
-    return encoded;
 }
 
 }  // namespace ovms
