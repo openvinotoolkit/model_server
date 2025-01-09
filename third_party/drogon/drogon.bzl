@@ -46,7 +46,7 @@ cc_library(
     new_git_repository(
         name = "drogon",
         remote = "https://github.com/drogonframework/drogon",
-        tag = "v1.9.7",  # Sep 10 2024
+        tag = "v1.9.9",  # Jan 1 2025
         build_file = "@_drogon_cpp//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
@@ -107,39 +107,43 @@ if __name__ == "__main__":
         fail("Script execution failed: " + result.stderr)  # Log the error output
 
     if _is_windows(repository_ctx):
-        platform_cache_entries = {
+        cache_entries = """
+            "ZLIB_INCLUDE_DIR": "../drogon_cmake.ext_build_deps/include",  # This is a hack because drogon does not allow absolute path
+            "ZLIB_LIBRARY": "@zlib//:zlib",
+            "JSONCPP_INCLUDE_DIR": "@jsoncpp//:jsoncpp",
+            "BUILD_CTL": "OFF",
+            "BUILD_EXAMPLES": "OFF",
+            "BUILD_ORM": "OFF",
+            "BUILD_BROTLI": "OFF",
+            "BUILD_YAML_CONFIG": "OFF",
+            "CMAKE_INSTALL_LIBDIR": "lib",
+            "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
             "CMAKE_CXX_STANDARD": "17",
             "CXX_FILESYSTEM_HAVE_FS": "1",
-            "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1"
-        }
+            "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 "
+        """
         out_static_libs = [
             "drogon.lib",
             "trantor.lib"
         ]
     else:
-        platform_cache_entries  = {
-            "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized "
-        }
+        cache_entries  = """
+            "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized ",
+            "ZLIB_INCLUDE_DIR": "../drogon_cmake.ext_build_deps/include",  # This is a hack because drogon does not allow absolute path
+            "ZLIB_LIBRARY": "@zlib//:zlib",
+            "JSONCPP_INCLUDE_DIR": "@jsoncpp//:jsoncpp",
+            "BUILD_CTL": "OFF",
+            "BUILD_EXAMPLES": "OFF",
+            "BUILD_ORM": "OFF",
+            "BUILD_BROTLI": "OFF",
+            "BUILD_YAML_CONFIG": "OFF",
+            "CMAKE_INSTALL_LIBDIR": "lib",
+            "CMAKE_POSITION_INDEPENDENT_CODE": "ON"
+        """
         out_static_libs = [
             "libdrogon.a",
             "libtrantor.a"
         ]
-
-    base_cache_entries = {
-        "ZLIB_INCLUDE_DIR": "../drogon_cmake.ext_build_deps/include",  # This is a hack because drogon does not allow absolute path
-        "ZLIB_LIBRARY": "@zlib//:zlib",
-        "JSONCPP_INCLUDE_DIR": "@jsoncpp//:jsoncpp",
-        "BUILD_CTL": "OFF",
-        "BUILD_EXAMPLES": "OFF",
-        "BUILD_ORM": "OFF",
-        "BUILD_BROTLI": "OFF",
-        "BUILD_YAML_CONFIG": "OFF",
-        "CMAKE_INSTALL_LIBDIR": "lib",
-        "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-        "CMAKE_BUILD_TYPE": "Release",
-    }
-
-    base_cache_entries.update(platform_cache_entries)
 
     # Note we need to escape '{/}' by doubling them due to call to format
     build_file_content = """
@@ -147,6 +151,19 @@ load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 
 visibility = ["//visibility:public"]
+
+config_setting(
+    name = "dbg",
+    values = {{"compilation_mode": "dbg"}},
+)
+
+config_setting(
+    name = "opt",
+    values = {{"compilation_mode": "opt"}},
+)
+
+build_release = {{"CMAKE_BUILD_TYPE": "Release"}}
+build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
 
 filegroup(
     name = "all_srcs",
@@ -163,7 +180,16 @@ cmake(
         # there is no elegant parallel compilation support
         "-j 6",
     ],
-    cache_entries = {cache_entries},
+    cache_entries = {{ 
+        {cache_entries}
+    }} | select({{
+           "//conditions:default": dict(
+               build_release
+            ),
+            ":dbg":  dict(
+               build_debug
+            ),
+        }}),
     env = {{
         "HTTP_PROXY": "{http_proxy}",
         "HTTPS_PROXY": "{https_proxy}",
@@ -179,7 +205,7 @@ cmake(
 """
     repository_ctx.file("BUILD", build_file_content.format(
         http_proxy=http_proxy, https_proxy=https_proxy, is_windows=_is_windows(repository_ctx),
-        cache_entries=base_cache_entries, out_static_libs=out_static_libs))
+        cache_entries=cache_entries, out_static_libs=out_static_libs))
 
 drogon_cpp_repository = repository_rule(
     implementation = _impl,

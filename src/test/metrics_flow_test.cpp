@@ -515,16 +515,19 @@ TEST_F(MetricFlowTest, GrpcModelMetadata) {
         request.mutable_name()->assign(dagName);
         ASSERT_EQ(impl.ModelMetadata(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
+#if (MEDIAPIPE_DISABLE == 0)
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         request.Clear();
         response.Clear();
         request.mutable_name()->assign(mpName);
         ASSERT_EQ(impl.ModelMetadata(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
-
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);                  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);                    // ran by real request
+#endif
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);    // ran by real request
+#if (MEDIAPIPE_DISABLE == 0)
     checkMediapipeRequestsCounterMetadataReady(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, "gRPC", "ModelMetadata", "KServe", numberOfSuccessRequests);  // ran by real request
+#endif
 }
 
 TEST_F(MetricFlowTest, GrpcModelReady) {
@@ -546,16 +549,19 @@ TEST_F(MetricFlowTest, GrpcModelReady) {
         ASSERT_EQ(impl.ModelReady(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
 
+#if (MEDIAPIPE_DISABLE == 0)
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         request.Clear();
         response.Clear();
         request.mutable_name()->assign(mpName);
         ASSERT_EQ(impl.ModelReady(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     }
-
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);                  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);                    // ran by real request
+#endif
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
+#if (MEDIAPIPE_DISABLE == 0)
     checkMediapipeRequestsCounterMetadataReady(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
+#endif
 }
 
 TEST_F(MetricFlowTest, RestPredict) {
@@ -750,9 +756,6 @@ TEST_F(MetricFlowTest, RestModelInferOnUnloadedModel) {
 }
 
 TEST_F(MetricFlowTest, RestModelMetadata) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows CVS-159404";
-#endif
     HttpRestApiHandler handler(server, 0);
     HttpRequestComponents components;
 
@@ -767,16 +770,18 @@ TEST_F(MetricFlowTest, RestModelMetadata) {
         std::string request, response;
         ASSERT_EQ(handler.processModelMetadataKFSRequest(components, response, request), ovms::StatusCode::OK);
     }
-
+#if (MEDIAPIPE_DISABLE == 0)
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         components.model_name = mpName;
         std::string request, response;
         ASSERT_EQ(handler.processModelMetadataKFSRequest(components, response, request), ovms::StatusCode::OK);
     }
-
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);                  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);                    // ran by real request
+#endif
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);    // ran by real request
+#if (MEDIAPIPE_DISABLE == 0)
     checkMediapipeRequestsCounterMetadataReady(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, "REST", "ModelMetadata", "KServe", numberOfSuccessRequests);  // ran by real request
+#endif
 }
 
 TEST_F(MetricFlowTest, ModelReady) {
@@ -794,16 +799,18 @@ TEST_F(MetricFlowTest, ModelReady) {
         std::string request, response;
         ASSERT_EQ(handler.processModelReadyKFSRequest(components, response, request), ovms::StatusCode::OK);
     }
-
+#if (MEDIAPIPE_DISABLE == 0)
     for (int i = 0; i < numberOfSuccessRequests; i++) {
         components.model_name = mpName;
         std::string request, response;
         ASSERT_EQ(handler.processModelReadyKFSRequest(components, response, request), ovms::StatusCode::OK);
     }
-
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);                  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);                    // ran by real request
+#endif
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
+    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "ModelReady", "KServe", numberOfSuccessRequests);    // ran by real request
+#if (MEDIAPIPE_DISABLE == 0)
     checkMediapipeRequestsCounterMetadataReady(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, "REST", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
+#endif
 }
 
 #if (MEDIAPIPE_DISABLE == 0)

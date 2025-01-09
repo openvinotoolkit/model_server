@@ -42,7 +42,9 @@
 #include <ntstatus.h>
 #include <windows.h>
 #endif
+#ifdef __linux__
 #include <unistd.h>
+#endif
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
@@ -231,7 +233,6 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
 #endif
     if (name == GRPC_SERVER_MODULE_NAME)
         return std::make_unique<GRPCServerModule>(*this);
-    // TODO windows
     if (name == HTTP_SERVER_MODULE_NAME)
         return std::make_unique<HTTPServerModule>(*this);
     if (name == SERVABLE_MANAGER_MODULE_NAME)

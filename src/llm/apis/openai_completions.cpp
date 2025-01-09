@@ -25,6 +25,7 @@
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
 #include "absl/strings/escaping.h"
+#include "absl/strings/str_cat.h"
 
 using namespace rapidjson;
 

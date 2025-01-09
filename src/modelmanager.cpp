@@ -45,7 +45,9 @@
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #include <sys/stat.h>
+#ifdef __linux__
 #include <unistd.h>
+#endif
 
 #include "cleaner_utils.hpp"
 #include "config.hpp"
@@ -1378,7 +1380,7 @@ const std::string ModelManager::getFullPath(const std::string& pathToCheck) cons
     if (!FileSystem::isLocalFilesystem(pathToCheck)) {
         // Cloud filesystem
         return pathToCheck;
-    } else if (pathToCheck.size() > 0 && pathToCheck.at(0) == '/') {
+    } else if (pathToCheck.size() > 0 && FileSystem::isFullPath(pathToCheck)) {
         // Full path case
         return pathToCheck;
     } else {

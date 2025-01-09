@@ -18,6 +18,5 @@ src/test/modelconfig_test.cpp:503: OptionA
 src/test/modelinstance_test.cpp:1093: THROUGHTPUT
 third_party/aws-sdk-cpp/aws-sdk-cpp.bz
 third_party/llm_engine/llm_engine.bzl
-WORKSPACE:39: thirdparty
-WORKSPACE:47: thirdparty
+WORKSPACE:98: thirdparty
 demos/classification_using_paddlepaddle_model/python/utils/imagenet_class_index.json

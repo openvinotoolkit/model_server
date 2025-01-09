@@ -32,13 +32,16 @@ class DrogonHttpAsyncWriterImpl : public HttpAsyncWriter {
     drogon::ResponseStreamPtr stream;
     bool isDisconnected = false;
     std::unordered_map<std::string, std::string> additionalHeaders;
+    const drogon::HttpRequestPtr requestPtr{nullptr};
 
 public:
     DrogonHttpAsyncWriterImpl(
         std::function<void(const drogon::HttpResponsePtr&)>& callback,
-        mediapipe::ThreadPool& pool) :
+        mediapipe::ThreadPool& pool,
+        const drogon::HttpRequestPtr& requestPtr) :
         callback(callback),
-        pool(pool) {}
+        pool(pool),
+        requestPtr(requestPtr) {}
 
     // Used by V3 handler
     void OverwriteResponseHeader(const std::string& key, const std::string& value) override;
