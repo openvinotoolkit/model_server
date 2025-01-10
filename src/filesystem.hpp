@@ -153,7 +153,7 @@ public:
         if (!local_path){
             DWORD error = GetLastError();
             std::string message = std::system_category().message(error);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set: {}", message);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set: {}, error: {}",local_path, message);
             return StatusCode::FILESYSTEM_ERROR;
         }
         
