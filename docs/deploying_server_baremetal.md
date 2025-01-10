@@ -21,13 +21,14 @@ Install required libraries:
 ```{code} sh
 sudo apt update -y && apt install -y liblibxml2 curl
 ```
-Set path to the libraries
+Set path to the libraries and add binary to the `PATH`
 ```{code} sh
-export LD_LIBRARY_PATH=${pwd}/ovms/lib
+export LD_LIBRARY_PATH=${PWD}/ovms/lib
+export PATH=$PATH;${PWD}/ovms/bin
 ```
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
-export PYTHONPATH=${pwd}/ovms/lib/python
+export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.8
 ```
 :::
@@ -52,13 +53,14 @@ Install required libraries:
 ```{code} sh
 sudo apt update -y && apt install -y libxml2 curl
 ```
-Set path to the libraries
+Set path to the libraries and add binary to the `PATH`
 ```{code} sh
-export LD_LIBRARY_PATH=${pwd}/ovms/lib
+export LD_LIBRARY_PATH=${PWD}/ovms/lib
+export PATH=$PATH;${PWD}/ovms/bin
 ```
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
-export PYTHONPATH=${pwd}/ovms/lib/python
+export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
 ```
 :::
@@ -83,13 +85,14 @@ Install required libraries:
 ```{code} sh
 sudo apt update -y && apt install -y libxml2 curl
 ```
-Set path to the libraries
+Set path to the libraries and add binary to the `PATH`
 ```{code} sh
-export LD_LIBRARY_PATH=${pwd}/ovms/lib
+export LD_LIBRARY_PATH=${PWD}/ovms/lib
+export PATH=$PATH;${PWD}/ovms/bin
 ```
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
-export PYTHONPATH=${pwd}/ovms/lib/python
+export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
 ```
 :::
@@ -110,13 +113,14 @@ make docker_build BASE_OS=redhat PYTHON_DISABLE=1 RUN_TESTS=0
 # Unpack the package
 tar -xzvf dist/redhat/ovms.tar.gz
 ```
-Set path to the libraries
+Set path to the libraries and add binary to the `PATH`
 ```{code} sh
-export LD_LIBRARY_PATH=${pwd}/ovms/lib
+export LD_LIBRARY_PATH=${PWD}/ovms/lib
+export PATH=$PATH;${PWD}/ovms/bin
 ```
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
-export PYTHONPATH=${pwd}/ovms/lib/python
+export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
 ```
 :::
@@ -141,18 +145,21 @@ Install required libraries:
 ```{code} sh
 sudo yum install compat-openssl11.x86_64
 ```
-Set path to the libraries
+Set path to the libraries and add binary to the `PATH`
 ```{code} sh
-export LD_LIBRARY_PATH=${pwd}/ovms/lib
+export LD_LIBRARY_PATH=${PWD}/ovms/lib
+export PATH=$PATH;${PWD}/ovms/bin
 ```
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
-export PYTHONPATH=${pwd}/ovms/lib/python
+export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
 ```
 :::
 :::{tab-item} Windows
 :sync: windows
+Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/release/VC_redist.x64.exe) installed before moving forward.
+
 Download and unpack model server archive for Windows:
 
 ```bat
@@ -175,6 +182,8 @@ Run `setupvars` script to set required environment variables.
 ```
 
 > Note: Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
+
+You can also build model server from source by following the [developer guide](windows_developer_guide.md).
 
 :::
 ::::
