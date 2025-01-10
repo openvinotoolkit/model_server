@@ -47,7 +47,7 @@ cc_library(
         name = "drogon",
         remote = "https://github.com/fantasy-peak/drogon",
         #tag = "v1.9.9",  # Jan 1 2025
-        branch = "add-connection-callback",
+        commit = "686f68a12ff82c6c3114a4c48502334261f258f6",  # commit from master with a installing callback feature
         build_file = "@_drogon_cpp//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
