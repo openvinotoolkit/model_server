@@ -1,9 +1,7 @@
-## Deploying Model Server on Baremetal 
+## Deploying Model Server on Baremetal {#ovms_docs_deploying_server_baremetal}
 
 It is possible to deploy Model Server outside of container.
 To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubuntu22, RHEL8 or Windows 11.
-
-### Linux
 
 ::::{tab-set}
 :::{tab-item} Ubuntu 20.04
@@ -153,28 +151,18 @@ export PYTHONPATH=${pwd}/ovms/lib/python
 sudo yum install -y python39-libs
 ```
 :::
-::::
-
-Start the server:
-
-```bash
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
-
-./ovms/bin/ovms --model_name resnet --model_path models/resnet50
-```
-
-or start as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
-
-
-### Windows
-
+:::{tab-item} Windows
+:sync: windows
 Download and unpack model server archive for Windows:
+
 ```bat
 curl https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_win11.zip
 tar -xf ovms_win11.zip
 ```
 
-Run `setupvars` script to set required environment variables. Note that running this script changes Python settings for the shell that runs it.
+Run `setupvars` script to set required environment variables. 
+
+> Note: Running this script changes Python settings for the shell that runs it.
 
 **Windows Command Line**
 ```bat
@@ -185,7 +173,25 @@ Run `setupvars` script to set required environment variables. Note that running 
 ```powershell
 ./ovms/setupvars.ps1
 ```
- 
+
+> Note: Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
+
+:::
+::::
+
+Start the server:
+
+```console
+mkdir models/resnet50/1
+
+curl -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet50/1/model.xml
+curl -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
+
+ovms --model_name resnet --model_path models/resnet50
+```
+
+or start as a background process, daemon initiated by ```systemctl/initd``` or a Windows service depending on the operating system and specific hosting requirements.
+
 Most of the Model Server documentation demonstrate containers usage, but the same can be achieved with just the binary package.
 Learn more about model server [starting parameters](parameters.md).
 

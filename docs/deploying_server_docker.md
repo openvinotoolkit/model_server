@@ -1,4 +1,4 @@
-## Deploying Model Server in Docker Container
+## Deploying Model Server in Docker Container {#ovms_docs_deploying_server_docker}
 
 This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Linux, using Docker.
 

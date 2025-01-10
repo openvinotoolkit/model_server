@@ -15,8 +15,10 @@ Here, the original Pytorch LLM model and the tokenizer will be converted to IR f
 That ensures faster initialization time, better performance and lower memory consumption.
 LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
-Install python dependencies for the conversion script:
+Clone model server repository and install python dependencies for the conversion script:
 ```console
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
 pip3 install -U -r demos/common/export_models/requirements.txt
 ```
 
@@ -74,17 +76,7 @@ docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /de
 
 ## Deploying on Bare Metal
 
-Assuming you have unpacked model server package to your current working directory run `setupvars` script for environment setup:
-
-**Windows Command Line**
-```bat
-./ovms/setupvars.bat
-```
-
-**Windows PowerShell**
-```powershell
-./ovms/setupvars.ps1
-```
+Assuming you have unpacked model server package, make sure to run `setupvars` script as mentioned in baremetal deployment guide in every new shell dedicated to running OpenVINO Model Server.
 
 ### CPU
 

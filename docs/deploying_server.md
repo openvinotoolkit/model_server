@@ -1,5 +1,15 @@
 # Deploy Model Server {#ovms_docs_deploying_server}
 
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
+ovms_docs_deploying_server_docker
+ovms_docs_deploying_server_baremetal
+ovms_docs_deploying_server_kubernetes
+```
+
 There are multiple options for deploying OpenVINO Model Server
 
 1. [With Docker](docs/deploying_server_docker.md) - use pre-built container images available on Docker Hub and Red Hat Ecosystem Catalog or build your own image from source.
