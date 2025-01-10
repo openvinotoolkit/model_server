@@ -1331,7 +1331,7 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStopStringType) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stop is not a string or array of strings\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stop is not a string or array of strings\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1358,7 +1358,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadStopStringElementType) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stop array contains non string element\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stop array contains non string element\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1391,7 +1391,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsIncludeStopStrInOutputFalse) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: include_stop_str_in_output cannot be set to false if streaming is used\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: include_stop_str_in_output cannot be set to false if streaming is used\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1419,7 +1419,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeStopStrInOutputType) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: include_stop_str_in_output accepts values true or false\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: include_stop_str_in_output accepts values true or false\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1451,7 +1451,7 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStreamOptionsBadType) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options is not an object\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options is not an object\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1478,7 +1478,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadType) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options is not an object\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options is not an object\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1510,7 +1510,7 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsStreamOptionsBadContent) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1537,7 +1537,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadContent) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1569,7 +1569,7 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadIncludeUsage) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options.include_usage is not a boolean\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options.include_usage is not a boolean\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1596,7 +1596,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeUsage) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options.include_usage is not a boolean\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options.include_usage is not a boolean\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1662,7 +1662,7 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedImmediately)
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_)).WillOnce([this, &i](std::string partialResponse, ovms::HTTPStatusCode code) {
         i++;
-        ASSERT_EQ(partialResponse, "{\"error\":\"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: \"}");
+        ASSERT_EQ(partialResponse, "{\"error\":\"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: \"}");
         rapidjson::Document d;
         rapidjson::ParseResult ok = d.Parse(partialResponse.c_str());
         ASSERT_EQ(ok.Code(), 0);
@@ -1697,7 +1697,7 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedImmediately) {
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_)).WillOnce([this, &i](std::string partialResponse, ovms::HTTPStatusCode code) {
         i++;
-        ASSERT_EQ(partialResponse, "{\"error\":\"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: \"}");
+        ASSERT_EQ(partialResponse, "{\"error\":\"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: \"}");
         rapidjson::Document d;
         rapidjson::ParseResult ok = d.Parse(partialResponse.c_str());
         ASSERT_EQ(ok.Code(), 0);

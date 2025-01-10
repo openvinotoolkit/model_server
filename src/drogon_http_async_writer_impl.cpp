@@ -64,7 +64,7 @@ void DrogonHttpAsyncWriterImpl::PartialReplyEnd() {
 }
 // Used by graph executor impl
 void DrogonHttpAsyncWriterImpl::PartialReply(std::string message) {
-    if (this->isDisconnected) {
+    if (this->IsDisconnected()) {
         return;
     }
     if (!this->stream->send(message))
@@ -72,7 +72,7 @@ void DrogonHttpAsyncWriterImpl::PartialReply(std::string message) {
 }
 // Used by calculator via HttpClientConnection
 bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {
-    return this->isDisconnected;
+    return this->isDisconnected || !requestPtr->connected();
 }
 
 void DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback(std::function<void()> callback) {

@@ -180,8 +180,8 @@ absl::Status RerankHandler::parseResponse(StringBuffer& buffer, std::vector<floa
 
 std::string RerankHandler::getModel() const { return request.model; }
 std::string RerankHandler::getQuery() const { return request.query; }
-std::vector<std::string> RerankHandler::getDocumentsList() const { return request.documentsList; }
-std::unordered_map<std::string, std::string> RerankHandler::getDocumentsMap() const { return request.documentsMap; }
+const std::vector<std::string>& RerankHandler::getDocumentsList() const { return request.documentsList; }
+const std::unordered_map<std::string, std::string>& RerankHandler::getDocumentsMap() const { return request.documentsMap; }
 std::optional<int> RerankHandler::getTopN() const { return request.topN; }
 std::optional<bool> RerankHandler::getReturnDocuments() const { return request.returnDocuments; }
 std::optional<std::vector<std::string>> RerankHandler::getRankFields() const { return request.rankFields; }

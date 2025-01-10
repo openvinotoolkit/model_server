@@ -45,7 +45,9 @@
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #include <sys/stat.h>
+#ifdef __linux__
 #include <unistd.h>
+#endif
 
 #include "cleaner_utils.hpp"
 #include "config.hpp"
