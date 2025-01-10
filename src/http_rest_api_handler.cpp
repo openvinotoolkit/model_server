@@ -15,23 +15,19 @@
 //*****************************************************************************
 #include "http_rest_api_handler.hpp"
 
+#include <cctype>
+#include <iomanip>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#ifndef _WIN32
-#include <curl/curl.h>
-#else
-#include <cctype>
-#include <iomanip>
-#include <sstream>
-#endif
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
@@ -1147,23 +1143,7 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
 }
 
 std::string urlDecode(const std::string& encoded) {
-// TODO
-#ifndef _WIN32
-    int output_length;
-    CURL* curl = curl_easy_init();
-    if (curl) {
-        const auto decoded_value = curl_easy_unescape(curl, encoded.c_str(), static_cast<int>(encoded.length()), &output_length);
-        if (decoded_value) {
-            std::string result(decoded_value, output_length);
-            curl_free(decoded_value);
-            curl_easy_cleanup(curl);
-            return result;
-        }
-        curl_easy_cleanup(curl);
-    }
-#else
     std::ostringstream decoded;
-
     for (size_t i = 0; i < encoded.size(); ++i) {
         if (encoded[i] == '%') {
             // Check if the next two characters are valid hex digits
@@ -1186,9 +1166,7 @@ std::string urlDecode(const std::string& encoded) {
             decoded << encoded[i];
         }
     }
-
     return decoded.str();
-#endif
 }
 
 }  // namespace ovms
