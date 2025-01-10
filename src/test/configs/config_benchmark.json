@@ -5,7 +5,7 @@
                 "base_path": "/ovms/src/test/dummy",
                 "plugin_config": {
                     "NUM_STREAMS":1,
-                    "AFFINITY": "CORE",
+                    "ENABLE_CPU_PINNING" : "YES",
                     "PERFORMANCE_HINT": "THROUGHPUT",
                     "PERF_COUNT":"NO"
                 },
@@ -17,7 +17,7 @@
                 "base_path": "/models/resnet-50-tf",
                 "plugin_config": {
                     "NUM_STREAMS":12,
-                    "AFFINITY": "CORE",
+                    "ENABLE_CPU_PINNING" : "YES",
                     "PERFORMANCE_HINT": "THROUGHPUT",
                     "PERF_COUNT":"NO"
                 },

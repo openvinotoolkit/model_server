@@ -4,7 +4,7 @@
                 "name": "dummy",
                 "base_path": "/ovms/demos/dummy",
                 "plugin_config": {
-                    "AFFINITY": "CORE",
+                    "ENABLE_CPU_PINNING" : "YES",
                     "PERFORMANCE_HINT": "THROUGHPUT",
                     "PERF_COUNT":"NO"
                 },
