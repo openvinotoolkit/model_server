@@ -30,7 +30,7 @@ set "openvino_dir=C:/%1/openvino/runtime/cmake"
 
 set "bazelBuildArgs=--config=windows --action_env OpenVINO_DIR=%openvino_dir%"
 set "buildCommand=bazel %bazelStartupCmd% build  %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms 2>&1 | tee win_build.log"
-set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=8 --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
+set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
 set "changeConfigsCmd=windows_change_test_configs.py"
 set "setOvmsVersionCmd=windows_set_ovms_version.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log"
