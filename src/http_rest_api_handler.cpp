@@ -28,9 +28,9 @@
 #ifndef _WIN32
 #include <curl/curl.h>
 #else
-#include <sstream>
-#include <iomanip>
 #include <cctype>
+#include <iomanip>
+#include <sstream>
 #endif
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -1176,7 +1176,7 @@ std::string urlDecode(const std::string& encoded) {
                 hex_value << encoded.substr(i + 1, 2);
                 hex_value >> std::hex >> value;
                 decoded << static_cast<char>(value);
-                i += 2; // Skip the next two characters
+                i += 2;  // Skip the next two characters
             } else {
                 // Invalid escape sequence, copy '%' as is
                 decoded << '%';
