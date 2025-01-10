@@ -135,7 +135,6 @@ TEST(LocalFileSystem, DownloadFileFolder) {
     std::string location;
     const std::filesystem::path TMP_DOWNLOAD = "download";
     auto status = lfs.downloadFileFolder((TMP_PATH / TMP_DOWNLOAD).string(), location);
-    // auto status = lfs.downloadFileFolder("/path/to/download", location);
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
