@@ -27,6 +27,23 @@ index 623d906a..bd61837d 100644
      if (runAsDaemon_)
      {
          // go daemon!
+diff --git a/lib/src/Utilities.cc b/lib/src/Utilities.cc
+index c6601f61..60b2a358 100644
+--- a/lib/src/Utilities.cc
++++ b/lib/src/Utilities.cc
+@@ -20,11 +20,11 @@
+ #include <brotli/decode.h>
+ #include <brotli/encode.h>
+ #endif
++#include <iomanip>
+ #ifdef _WIN32
+ #include <rpc.h>
+ #include <direct.h>
+ #include <io.h>
+-#include <iomanip>
+ #else
+ #include <uuid.h>
+ #include <unistd.h>
 diff --git a/orm_lib/inc/drogon/orm/SqlBinder.h b/orm_lib/inc/drogon/orm/SqlBinder.h
 index 3335e6ff..7874f18b 100644
 --- a/orm_lib/inc/drogon/orm/SqlBinder.h

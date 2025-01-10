@@ -1,26 +1,8 @@
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
-index c8d0501b..0484bf97 100644
+index 75bf2f38..4a0771e2 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.cc
-@@ -17,6 +17,8 @@ limitations under the License.
- 
- #include "tensorflow_serving/util/net_http/server/internal/evhttp_request.h"
- 
-+#include <mutex>
-+
- #include <zlib.h>
- 
- #include <cassert>
-@@ -26,6 +28,8 @@ limitations under the License.
- #include <string>
- #include <vector>
- 
-+#include <event.h>
-+
- #include "absl/strings/match.h"
- #include "absl/strings/string_view.h"
- #include "absl/types/span.h"
-@@ -118,18 +122,43 @@ bool ParsedEvRequest::decode() {
+@@ -121,18 +121,44 @@ bool ParsedEvRequest::decode() {
    return true;
  }
  
@@ -62,10 +44,11 @@ index c8d0501b..0484bf97 100644
 +    this->disconnected_callback_();
 +}
 +
++
  absl::string_view EvHTTPRequest::uri_path() const {
    return parsed_request_->path_and_query;
  }
-@@ -338,12 +367,18 @@ void EvHTTPRequest::AppendResponseHeader(absl::string_view header,
+@@ -341,12 +367,18 @@ void EvHTTPRequest::AppendResponseHeader(absl::string_view header,
    }
  }
  
@@ -88,7 +71,7 @@ index c8d0501b..0484bf97 100644
  }
  
  ServerRequestInterface::CallbackStatus
-@@ -371,6 +406,33 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
+@@ -374,6 +406,33 @@ void EvHTTPRequest::EvSendReply(HTTPStatusCode status) {
    delete this;
  }
  
@@ -111,7 +94,7 @@ index c8d0501b..0484bf97 100644
 +      // Start before we end can end the reply
 +      evhttp_send_reply_start(parsed_request_->request, HTTP_OK, "no messages");
 +    }
-+    
++
 +    evhttp_send_reply_end(parsed_request_->request);
 +  }
 +
@@ -122,7 +105,7 @@ index c8d0501b..0484bf97 100644
  void EvHTTPRequest::Reply() { ReplyWithStatus(HTTPStatusCode::OK); }
  
  // Treats this as 500 for now and let libevent decide what to do
-@@ -381,6 +443,16 @@ void EvHTTPRequest::Abort() {
+@@ -384,6 +443,15 @@ void EvHTTPRequest::Abort() {
    delete this;
  }
  
@@ -135,23 +118,24 @@ index c8d0501b..0484bf97 100644
 +    Abort();
 +  }
 +}
-+
  }  // namespace net_http
  }  // namespace serving
  }  // namespace tensorflow
 diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
-index 2f8e601d..72e47bce 100644
+index 2f8e601d..54dc17b0 100644
 --- a/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
 +++ b/tensorflow_serving/util/net_http/server/internal/evhttp_request.h
-@@ -21,6 +21,7 @@ limitations under the License.
+@@ -19,7 +19,9 @@ limitations under the License.
+ #define TENSORFLOW_SERVING_UTIL_NET_HTTP_SERVER_INTERNAL_EVHTTP_REQUEST_H_
+ 
  #include <cstdint>
++#include <functional>
  #include <memory>
- #include <string>
 +#include <mutex>
+ #include <string>
  
  #include "tensorflow_serving/util/net_http/server/internal/server_support.h"
- #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
-@@ -93,8 +94,8 @@ class EvHTTPRequest final : public ServerRequestInterface {
+@@ -93,8 +95,13 @@ class EvHTTPRequest final : public ServerRequestInterface {
    void AppendResponseHeader(absl::string_view header,
                              absl::string_view value) override;
  
@@ -159,25 +143,14 @@ index 2f8e601d..72e47bce 100644
 -  void PartialReply() override;
 +  void PartialReplyWithStatus(std::string data, HTTPStatusCode status) override;
 +  void PartialReply(std::string data) override;
- 
-   CallbackStatus PartialReplyWithFlushCallback(
-       std::function<void()> callback) override;
-@@ -104,9 +105,15 @@ class EvHTTPRequest final : public ServerRequestInterface {
- 
-   void Abort() override;
- 
 +  void PartialReplyEnd() override;
 +
-   // Initializes the resource and returns false if any error.
-   bool Initialize();
- 
 +  bool IsDisconnected() const override { return this->is_disconnected_; }
 +  void RegisterDisconnectionCallback(std::function<void()> callback) override;
 +  void ExecuteDisconnectionCallback();
-+
-   // Keeps a reference to the registered RequestHandlerOptions
-   void SetHandlerOptions(const RequestHandlerOptions& handler_options) {
-     this->handler_options_ = &handler_options;
+ 
+   CallbackStatus PartialReplyWithFlushCallback(
+       std::function<void()> callback) override;
 @@ -114,6 +121,8 @@ class EvHTTPRequest final : public ServerRequestInterface {
  
   private:
@@ -187,11 +160,10 @@ index 2f8e601d..72e47bce 100644
  
    // Returns true if the data needs be uncompressed
    bool NeedUncompressGzipContent();
-@@ -133,6 +142,12 @@ class EvHTTPRequest final : public ServerRequestInterface {
+@@ -133,6 +142,11 @@ class EvHTTPRequest final : public ServerRequestInterface {
    std::unique_ptr<ParsedEvRequest> parsed_request_;
  
    evbuffer* output_buf;  // owned by this
-+
 +  bool is_reply_started_{false};
 +  bool is_disconnected_{false};
 +
@@ -200,37 +172,11 @@ index 2f8e601d..72e47bce 100644
  };
  
  }  // namespace net_http
-diff --git a/tensorflow_serving/util/net_http/server/internal/evhttp_server.cc b/tensorflow_serving/util/net_http/server/internal/evhttp_server.cc
-index 36c925a8..20527907 100644
---- a/tensorflow_serving/util/net_http/server/internal/evhttp_server.cc
-+++ b/tensorflow_serving/util/net_http/server/internal/evhttp_server.cc
-@@ -240,17 +240,17 @@ bool EvHTTPServer::StartAcceptingRequests() {
-     ResolveEphemeralPort(ev_listener_, &port_);
-   }
- 
-+  accepting_requests_.Notify();
-+
-   IncOps();
-   server_options_->executor()->Schedule([this]() {
-     NET_LOG(INFO, "Entering the event loop ...");
--    int result = event_base_dispatch(ev_base_);
--    NET_LOG(INFO, "event_base_dispatch() exits with value %d", result);
-+    int result = event_base_loop(ev_base_, EVLOOP_NO_EXIT_ON_EMPTY);
-+    NET_LOG(INFO, "event_base_loop() exits with value %d", result);
- 
-     DecOps();
-   });
- 
--  accepting_requests_.Notify();
--
-   return true;
- }
- 
 diff --git a/tensorflow_serving/util/net_http/server/public/server_request_interface.h b/tensorflow_serving/util/net_http/server/public/server_request_interface.h
-index e5f4b05f..40e87833 100644
+index e5f4b05f..47554412 100644
 --- a/tensorflow_serving/util/net_http/server/public/server_request_interface.h
 +++ b/tensorflow_serving/util/net_http/server/public/server_request_interface.h
-@@ -143,8 +143,8 @@ class ServerRequestInterface {
+@@ -143,8 +143,9 @@ class ServerRequestInterface {
    // Trying to modify headers or specifying a status after the first
    // PartialReply() is called is considered a programming error and
    // the underlying behavior is undefined.
@@ -238,15 +184,14 @@ index e5f4b05f..40e87833 100644
 -  virtual void PartialReply() = 0;
 +  virtual void PartialReplyWithStatus(std::string data, HTTPStatusCode status) = 0;
 +  virtual void PartialReply(std::string data) = 0;
++  virtual void PartialReplyEnd() = 0;
  
    // Similar to PartialReply() but with an on_flush callback which will be
    // invoked when the response data has been completely flushed by the
-@@ -182,6 +182,12 @@ class ServerRequestInterface {
+@@ -182,6 +183,10 @@ class ServerRequestInterface {
    // by the server runtime.
    virtual void Abort() = 0;
  
-+  virtual void PartialReplyEnd() = 0;
-+
 +  // Helpers for handling disconnection states
 +  virtual bool IsDisconnected() const = 0;
 +  virtual void RegisterDisconnectionCallback(std::function<void()> callback) = 0;
