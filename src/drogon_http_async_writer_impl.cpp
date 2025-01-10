@@ -77,8 +77,7 @@ bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {
 
 void DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback(std::function<void()> callback) {
     const auto& weakConnPtr = requestPtr->getConnectionPtr();
-    if (auto connPtr = weakConnPtr.lock())
-    {
+    if (auto connPtr = weakConnPtr.lock()) {
         connPtr->setCloseCallback([callback = std::move(callback)](const trantor::TcpConnectionPtr& conn) {
             callback();
         });
