@@ -94,6 +94,18 @@ pipeline {
               when { expression { win_image_build_needed == "true" } }
               steps {
                   script {
+                      def bazel_remote_cache_url = env.OVMS_BAZEL_REMOTE_CACHE_URL
+                      // Check if the environment variable is set
+                      if (bazel_remote_cache_url) {
+                          def filePath = '.user.bazelrc'
+                          def content = "build --remote_cache=\"${bazel_remote_cache_url}\""
+                          new File(filePath).text = content
+                      
+                          println "File '${filePath}' created with content:"
+                          println content
+                      } else {
+                          println "Environment variable 'BAZEL_REMOTE_CACHE' is not set."
+                      }
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
                         try {
