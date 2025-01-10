@@ -30,7 +30,9 @@ FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequ
 bool malloc_trim_win() {
     HANDLE heap = GetProcessHeap();
     if (heap == NULL) {
-        SPDLOG_ERROR("Failed to get process heap");
+        DWORD error = GetLastError();
+        std::string message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR("Failed to get process heap: {}", message);
         return false;
     }
 
@@ -38,7 +40,8 @@ bool malloc_trim_win() {
     if (freed_bytes == 0) {
         DWORD error = GetLastError();
         if (error != 0) {
-            SPDLOG_ERROR("HeapCompact failed with error: {}", error);
+            std::string message = std::system_category().message(error);
+            SPDLOG_LOGGER_ERROR("HeapCompact failed with error: {}", message);
             return false;
         }
     }
