@@ -150,13 +150,13 @@ public:
     }
 #elif _WIN32
     static StatusCode createTempPath(std::string* local_path) {
-        if (!local_path){
+        if (!local_path) {
             DWORD error = GetLastError();
             std::string message = std::system_category().message(error);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set: {}, error: {}",local_path, message);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set: {}, error: {}", local_path, message);
             return StatusCode::FILESYSTEM_ERROR;
         }
-        
+
         wchar_t temp_path[MAX_PATH];
         wchar_t temp_file[MAX_PATH];
 
