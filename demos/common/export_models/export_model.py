@@ -255,33 +255,31 @@ def export_text_generation_model(model_repository_path, source_model, model_name
             model_path = source_model
     else: # assume HF model name or local pytorch model folder
         llm_model_path = os.path.join(model_repository_path, model_name)
-        if adapter is not None:
-            print("Loading model with adapter")
-            HFmodel = LlamaForCausalLM.from_pretrained(source_model, trust_remote_code=True)
-            
-            for adapteri in adapter:
-                print("Loading adapter", adapteri)
-                #HFmodel = PeftModel.from_pretrained(HFmodel, adapteri)
-            HFmodel = HFmodel.eval()
-            HFmodel = HFmodel.to("cpu")
-            print("Exporting LLM model to /tmp/adapter_model")
-            print(HFmodel)
-            #HFmodel.merge_and_unload()
-            print(HFmodel)
-            HFmodel.save_pretrained("/tmp/adapter_model")
-            print("SAVED")
-            source_model = "/tmp/adapter_model"
-            
-
-        print("Exporting LLM model to ", llm_model_path)
+        tmp_folder = None
         if not os.path.isdir(llm_model_path) or args['overwrite_models']:
-            optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, llm_model_path)
+            if adapter is not None:
+                tmp_folder = tempfile.mkdtemp()
+                print("Loading model with adapter")
+                HFmodel = LlamaForCausalLM.from_pretrained(source_model, trust_remote_code=True)  
+                for adapteri in adapter:
+                    print("Loading adapter", adapteri)
+                    HFmodel = PeftModel.from_pretrained(HFmodel, adapteri)
+                print("Merging model with adapters")
+                HFmodel = HFmodel.merge_and_unload()
+                HFmodel.save_pretrained(tmp_folder)
+                tokenizer = AutoTokenizer.from_pretrained(source_model, trust_remote_code=True)
+                tokenizer.save_pretrained(tmp_folder)
+                source_model = tmp_folder
+            print("Exporting LLM model to ", llm_model_path)
+            optimum_command = "optimum-cli export openvino --task text-generation --disable-convert-tokenizer --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, llm_model_path)
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)
             print("Exporting tokenizer to ", llm_model_path)
             convert_tokenizer_command = "convert_tokenizer --utf8_replace_mode replace --with-detokenizer --skip-special-tokens --streaming-detokenizer -o {} {}".format(llm_model_path, source_model) 
             if (os.system(convert_tokenizer_command)):
                 raise ValueError("Failed to export tokenizer model", source_model)
+            if adapter is not None:
+                shutil.rmtree(tmp_folder)
     os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
     graph_content = gtemplate.render(tokenizer_model="{}_tokenizer_model".format(model_name), embeddings_model="{}_embeddings_model".format(model_name), model_path=model_path, **task_parameters)
