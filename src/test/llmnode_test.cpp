@@ -632,6 +632,92 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonContentArray) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "best_of" : 16,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "What is OpenVINO?"}]
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    int i = 0;
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        ASSERT_EQ(choice["index"], i++);
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+}
+
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonContentArrayWithImage) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "seed" : 1,
+            "best_of" : 16,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "What is OpenVINO?"}, {"type": "image_url", "image_url": {"url":  "base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="}}]
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    int i = 0;
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        ASSERT_EQ(choice["index"], i++);
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+}
+
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonNMultipleStopStrings) {
     std::string requestBody = R"(
         {
@@ -1245,7 +1331,7 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStopStringType) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stop is not a string or array of strings\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stop is not a string or array of strings\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1272,7 +1358,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadStopStringElementType) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stop array contains non string element\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stop array contains non string element\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1305,7 +1391,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsIncludeStopStrInOutputFalse) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: include_stop_str_in_output cannot be set to false if streaming is used\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: include_stop_str_in_output cannot be set to false if streaming is used\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1333,7 +1419,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeStopStrInOutputType) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: include_stop_str_in_output accepts values true or false\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: include_stop_str_in_output accepts values true or false\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1365,7 +1451,7 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStreamOptionsBadType) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options is not an object\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options is not an object\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1392,7 +1478,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadType) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options is not an object\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options is not an object\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1424,7 +1510,7 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsStreamOptionsBadContent) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1451,7 +1537,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadContent) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Found unexpected stream options. Properties accepted in stream_options: include_usage\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1483,7 +1569,7 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadIncludeUsage) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options.include_usage is not a boolean\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options.include_usage is not a boolean\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1510,7 +1596,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeUsage) {
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options.include_usage is not a boolean\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: stream_options.include_usage is not a boolean\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1576,7 +1662,7 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedImmediately)
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_)).WillOnce([this, &i](std::string partialResponse, ovms::HTTPStatusCode code) {
         i++;
-        ASSERT_EQ(partialResponse, "{\"error\":\"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: \"}");
+        ASSERT_EQ(partialResponse, "{\"error\":\"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: \"}");
         rapidjson::Document d;
         rapidjson::ParseResult ok = d.Parse(partialResponse.c_str());
         ASSERT_EQ(ok.Code(), 0);
@@ -1611,7 +1697,7 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedImmediately) {
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_)).WillOnce([this, &i](std::string partialResponse, ovms::HTTPStatusCode code) {
         i++;
-        ASSERT_EQ(partialResponse, "{\"error\":\"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed in Run: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: \"}");
+        ASSERT_EQ(partialResponse, "{\"error\":\"Mediapipe execution failed. MP status - CANCELLED: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: \"}");
         rapidjson::Document d;
         rapidjson::ParseResult ok = d.Parse(partialResponse.c_str());
         ASSERT_EQ(ok.Code(), 0);
@@ -1672,6 +1758,88 @@ TEST_F(LLMHttpParametersValidationTest, maxTokensExceedsUint32Size) {
             "model": "llmDummyKFS",
             "stream": false,
             "max_tokens": 4294967296,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, maxTokensExceeds4000WhenIgnoreEosTrue) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "ignore_eos": true,
+            "max_tokens": 4001,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensInvalid) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_completion_tokens": "INVALID",
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceedsUint32Size) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "max_completion_tokens": 4294967296,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceeds4000WhenIgnoreEosTrue) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummyKFS",
+            "stream": false,
+            "ignore_eos": true,
+            "max_completion_tokens": 4001,
             "messages": [
             {
                 "role": "user",
@@ -2363,6 +2531,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeNameExists) {
         }
         }
     )";
+    adjustConfigForTargetPlatform(testPbtxt);
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
@@ -2492,7 +2661,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
         }
         }
     )";
-
+    adjustConfigForTargetPlatform(testPbtxt);
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
@@ -2598,6 +2767,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
         }
         }
     )";
+    adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     MockedLLMNodeResources nodeResources;
@@ -2647,7 +2817,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
         }
         }
     )";
-
+    adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     MockedLLMNodeResources nodeResources;
@@ -2695,7 +2865,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
         }
         }
     )";
-
+    adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     MockedLLMNodeResources nodeResources;
@@ -2737,7 +2907,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
         }
         }
     )";
-
+    adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<MockedLLMNodeResources>();
@@ -2791,7 +2961,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
         }
         }
     )";
-
+    adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     MockedLLMNodeResources nodeResources;

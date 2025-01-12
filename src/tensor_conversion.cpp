@@ -51,8 +51,10 @@ static int getMatTypeFromTensorPrecision(ovms::Precision tensorPrecision) {
         return CV_32F;
     case ovms::Precision::FP64:
         return CV_64F;
+        // TODO @atobisze - doesn't work on MP external/ovms/src/tensor_conversion.cpp:55:16: error: 'CV_16F' was not declared in this scope; did you mean 'CV_16S'?
     case ovms::Precision::FP16:
-        return CV_16F;
+        //  return CV_16F;
+        return -1;  // TODO FIXME Mediapipe 0.10.18 update
     case ovms::Precision::I16:
         return CV_16S;
     case ovms::Precision::U8:
@@ -78,11 +80,10 @@ static bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision) 
 
 static cv::Mat convertStringToMat(const std::string& image) {
     OVMS_PROFILE_FUNCTION();
-    std::vector<unsigned char> data(image.begin(), image.end());
-    cv::Mat dataMat(data, true);
+    cv::Mat rawData(1, image.size(), CV_8UC1, (void*)image.data());
 
     try {
-        return cv::imdecode(dataMat, cv::IMREAD_UNCHANGED);
+        return cv::imdecode(rawData, cv::IMREAD_UNCHANGED);
     } catch (const cv::Exception& e) {
         SPDLOG_DEBUG("Error during string_val to mat conversion: {}", e.what());
         return cv::Mat{};

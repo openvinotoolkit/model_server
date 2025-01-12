@@ -57,7 +57,7 @@ def cleanup_directories() {
 
 def install_dependencies() {
     println "Install dependencies on node: NODE_NAME = ${env.NODE_NAME}"
-    def status = bat(returnStatus: true, script: 'windows_install_dependencies.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def status = bat(returnStatus: true, script: 'windows_install_build_dependencies.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
     if (status != 0) {
         error "Error: Windows install dependencies failed: ${status}. Check piepeline.log for details."
     } else {
@@ -66,7 +66,7 @@ def install_dependencies() {
 }
 
 def clean() {
-    def output1 = bat(returnStdout: true, script: 'windows_clean.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def output1 = bat(returnStdout: true, script: 'windows_clean_build.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
 }
 
 def build_and_test(){
@@ -76,6 +76,12 @@ def build_and_test(){
         error "Error: Windows build failed ${status}. Check win_build.log for details."
     } else {
         echo "Build successful."
+    }
+    def status_pkg = bat(returnStatus: true, script: 'windows_create_package.bat ' + env.JOB_BASE_NAME)
+    if (status_pkg != 0) {
+        error "Error: Windows package failed ${status_pkg}."
+    } else {
+        echo "Windows package created successfully."
     }
 }
 
@@ -102,12 +108,20 @@ def check_tests(){
     } else {
         echo "Run test no FAILED detected."
     }
+
+    status = bat(returnStatus: true, script: 'grep "  PASSED  " win_full_test.log')
+    if (status != 0) {
+            error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check piepeline.log for details."
+    } else {
+        echo "Success: Windows run test finished with success."
+    }
+
 }
 
 // Post build steps
 def archive_artifacts(){
     // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
-    archiveArtifacts allowEmptyArchive: true, artifacts: "bazel-bin\\src\\ovms.exe"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms.zip"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_environment.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build_test.log"

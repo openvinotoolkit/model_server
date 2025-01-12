@@ -18,7 +18,9 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#ifdef __linux__
 #include <unistd.h>
+#endif
 
 #include "../status.hpp"
 #include "../systeminfo.hpp"

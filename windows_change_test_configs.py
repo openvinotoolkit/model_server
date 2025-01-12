@@ -77,7 +77,10 @@ def main():
     print("\n".join(map(str, files_with_extension)))
 
     for file in files_with_extension:
-        replace_string_in_file(file, linux_path, windows_path)   
+        try:
+            replace_string_in_file(file, linux_path, windows_path)
+        except Exception as e:
+            print(f"Error parsing file {file}: {e} - changes were not applied")
 
 if __name__ == '__main__':
     main()

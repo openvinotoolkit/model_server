@@ -31,9 +31,6 @@ protected:
 };
 
 TEST_F(RerankHandlerDeserializationTest, ValidRequestDocumentsMap) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
-#endif
     json = R"({
     "model": "model",
     "query": "query",
@@ -61,7 +58,7 @@ TEST_F(RerankHandlerDeserializationTest, ValidRequestDocumentsMap) {
     ASSERT_FALSE(handler.getMaxChunksPerDoc().has_value());
     EXPECT_EQ(handler.getDocumentsList().size(), 0);
     ASSERT_EQ(handler.getDocumentsMap().size(), 2);
-    std::unordered_map<std::string, std::string>::iterator it = handler.getDocumentsMap().find("first document title");
+    auto it = handler.getDocumentsMap().find("first document title");
     EXPECT_NE(it, handler.getDocumentsMap().end());
     EXPECT_STREQ(handler.getDocumentsMap().at("first document title").c_str(), "first document text");
     it = handler.getDocumentsMap().find("second document title");

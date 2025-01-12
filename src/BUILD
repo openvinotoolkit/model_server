@@ -447,22 +447,18 @@ cc_library(
             "//:disable_mediapipe" : [],
         }),
         deps = select({
-            "//:is_windows_or_python_is_disabled_no_llm": [ # Temporary, until HTTP works for Windows
-                "//src/llm:llmnoderesources", 
-                "//src/llm:text_processor",],
-            "//conditions:default" : [
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
                 # Jinja template processing is done in Python
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
-                "//src/llm:text_processor",],
-            }) + select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
+                "//src/llm:text_processor",
             ],
             "//:disable_python": []
         }) + select({
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
+                "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator",
                 "//src/rerank:rerankcalculator",],
         }) + select({
@@ -1827,12 +1823,14 @@ cc_test(
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/get_pipeline_metadata_response_test.cpp",
+        "test/http_rest_api_handler_test.cpp",
         "test/kfs_metadata_test.cpp",
         "test/kfs_rest_test.cpp",
         "test/kfs_rest_parser_test.cpp",
         "test/layout_test.cpp",
         "test/metric_config_test.cpp",
         "test/metrics_test.cpp",
+        "test/metrics_flow_test.cpp",
         "test/mockmodelinstancechangingstates.hpp",
         "test/model_cache_test.cpp",
         "test/model_service_test.cpp",
@@ -1874,21 +1872,6 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
-                "//conditions:default": [
-                    "test/metrics_flow_test.cpp",  # TODO: Enable on windows
-                    "test/http_rest_api_handler_test.cpp",  # TODO: Enable on windows
-                ],
-                "//src:windows" : [
-                ],
-        }) + select({
-            "//:is_windows_or_mediapipe_is_disabled_no_http": [],
-            # Tests that require MediaPipe and HTTP (windows does not have HTTP yet)
-            "//conditions:default" : [
-                "test/mediapipeflow_test.cpp",  # TODO: Enable on windows
-                "test/reranknode_test.cpp",  # TODO: Enable on windows
-                "test/embeddingsnode_test.cpp",  # TODO: Enable on windows
-            ],
-        }) + select({
             "//:not_disable_cloud": [
                 "test/gcsfilesystem_test.cpp",
                 "test/azurefilesystem_test.cpp",
@@ -1898,7 +1881,10 @@ cc_test(
             })
         + select({
             "//:not_disable_mediapipe": [
+                "test/embeddingsnode_test.cpp",
+                "test/mediapipeflow_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
+                "test/reranknode_test.cpp",
                 "test/rerank_handler_test.cpp",
                 "test/rerank_chunking_test.cpp",
                 "test/streaming_test.cpp", # Mediapipe enabled
@@ -1909,17 +1895,14 @@ cc_test(
             ],
             "//:disable_mediapipe" : [],
         }) + select({
-            "//:is_windows_or_python_is_disabled_no_llm": [], # LLM tests depend on HTTP
-            "//conditions:default" : [
-                # LLM logic uses Python for processing Jinja templates
-                "test/llmnode_test.cpp",
-                "test/llmtemplate_test.cpp",
-                "test/text_streamer_test.cpp",],
-            }) + select({
             "//:not_disable_python": [
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
                 "test/pythonnode_test.cpp",
+                # LLM logic uses Python for processing Jinja templates
+                "test/llmnode_test.cpp",
+                "test/llmtemplate_test.cpp",
+                "test/text_streamer_test.cpp",
             ],
             "//:disable_python" : [],
         }),
@@ -2062,16 +2045,13 @@ cc_test(
                     ],
             })  + select({
             "//conditions:default": [
+                "//src/llm:llmnoderesources",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
             "//:disable_mediapipe" : [],
-        }) + select({
-            "//:is_windows_or_python_is_disabled_no_llm": [], # LLM tests depend on HTTP
-            "//conditions:default" : [
-                "//src/llm:llmnoderesources",],
-            }),
+        }),
     copts = COPTS_TESTS,
 )
 

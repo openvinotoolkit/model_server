@@ -79,7 +79,7 @@ protected:
 public:
     static void SetUpTestSuite() {
         std::string port = "9173";
-        std::string configPath = "/ovms/src/test/rerank/config.json";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/config.json");
         SetUpSuite(port, configPath, t);
     }
 
@@ -208,7 +208,7 @@ public:
             And maximum number of documents or chunks (after chunking process) can be 4
             Allowed space for chunk is 12-6-4=2 tokens
         */
-        std::string configPath = "/ovms/src/test/rerank/with_params/config.json";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/with_params/config.json");
         SetUpSuite(port, configPath, t);
     }
 
@@ -303,7 +303,7 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
 
     std::string requestBody = buffer.GetString();
     auto status = handler->dispatchToProcessor(endpointRerank, requestBody, &response, comp, responseComponents, writer);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
     ASSERT_THAT(status.string(), ::testing::HasSubstr("Chunking failed: exceeding max_allowed_chunks after chunking limit: 4; actual: 8"));  // 8 because of the last document which was chunked to 5 documents, 3 + 5 = 8
 }
 
@@ -324,7 +324,7 @@ public:
 
             This is invalid setup since there is reservation for 4 special tokens and space for query is max half of max_position_embeddings (4) - meaning 0 token space for document
         */
-        std::string configPath = "/ovms/src/test/rerank/with_params/invalid_config.json";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/with_params/invalid_config.json");
         SetUpSuite(port, configPath, t);
     }
 

@@ -31,7 +31,7 @@
 #include <signal.h>
 #include <stdlib.h>
 
-// TODO: Write windows/linux specific status codes.
+#include "ovms_exit_codes.hpp"
 #ifdef __linux__
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -40,9 +40,13 @@
 #include <csignal>
 
 #include <ntstatus.h>
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32.lib")
 #include <windows.h>
 #endif
+#ifdef __linux__
 #include <unistd.h>
+#endif
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
@@ -127,7 +131,6 @@ static void onIllegal(int status) {
     shutdown_request = 2;
 }
 
-// TODO windows
 #ifdef __linux__
 
 static void installSignalHandlers() {
@@ -231,7 +234,6 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
 #endif
     if (name == GRPC_SERVER_MODULE_NAME)
         return std::make_unique<GRPCServerModule>(*this);
-    // TODO windows
     if (name == HTTP_SERVER_MODULE_NAME)
         return std::make_unique<HTTPServerModule>(*this);
     if (name == SERVABLE_MANAGER_MODULE_NAME)
@@ -355,42 +357,41 @@ void Server::shutdownModules() {
 
 static int statusToExitCode(const Status& status) {
     if (status.ok()) {
-#ifdef __linux__
-        return EX_OK;
-#elif _WIN32
-        return 0;
-#endif
+        return OVMS_EX_OK;
     } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
-#ifdef __linux__
-        return EX_USAGE;
-#elif _WIN32
-        return 3;
-#endif
+        return OVMS_EX_USAGE;
     }
-    return EXIT_FAILURE;
+    return OVMS_EX_FAILURE;
 }
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
     installSignalHandlers();
+    int result = OVMS_EX_OK;
 
-    CLIParser parser;
-    ServerSettingsImpl serverSettings;
-    ModelsSettingsImpl modelsSettings;
-    parser.parse(argc, argv);
-    parser.prepare(&serverSettings, &modelsSettings);
-    Status ret = start(&serverSettings, &modelsSettings);
-    ModulesShutdownGuard shutdownGuard(*this);
-    if (!ret.ok()) {
-        return statusToExitCode(ret);
+    try {
+        CLIParser parser;
+        ServerSettingsImpl serverSettings;
+        ModelsSettingsImpl modelsSettings;
+        parser.parse(argc, argv);
+        parser.prepare(&serverSettings, &modelsSettings);
+        Status ret = start(&serverSettings, &modelsSettings);
+        ModulesShutdownGuard shutdownGuard(*this);
+        if (!ret.ok()) {
+            return statusToExitCode(ret);
+        }
+        while (!shutdown_request) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+        if (shutdown_request == 2) {
+            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Exception; {}", e.what());
+        result = OVMS_EX_FAILURE;
+        return result;
     }
-    while (!shutdown_request) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
-    if (shutdown_request == 2) {
-        SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
-    }
-    SPDLOG_INFO("Shutting down");
+
     return EXIT_SUCCESS;
 }
 

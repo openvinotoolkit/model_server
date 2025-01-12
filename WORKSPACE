@@ -20,6 +20,26 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# 2023-06-05
+# This version of Glog is required for Windows support, but currently causes
+# crashes on some Android devices.
+# OVMS - must be before MP
+http_archive(
+    name = "com_github_glog_glog_windows",
+    strip_prefix = "glog-3a0d4d22c5ae0b9a2216988411cfa6bf860cc372",
+    sha256 = "170d08f80210b82d95563f4723a15095eff1aad1863000e8eeb569c96a98fefb",
+    urls = [
+      "https://github.com/google/glog/archive/3a0d4d22c5ae0b9a2216988411cfa6bf860cc372.zip",
+    ],
+    patches = [
+        "@mediapipe//third_party:com_github_glog_glog.diff",
+        "@mediapipe//third_party:com_github_glog_glog_windows_patch.diff",
+    ],
+    patch_args = [
+        "-p1",
+    ],
+)
+
 http_archive(
     name = "bazel_skylib",
     sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
@@ -32,6 +52,37 @@ load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 bazel_skylib_workspace()
 load("@bazel_skylib//lib:versions.bzl", "versions")
 versions.check(minimum_bazel_version = "6.0.0")
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "rules_python",
+    sha256 = "0cc05ddb27614baecace068986931e2a6e9f69114e6115fc5dc58250faf56e0f",
+    strip_prefix = "rules_python-0.37.0",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.37.0/rules_python-0.37.0.tar.gz",
+)
+
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
+
+# ABSL on 2023-10-18
+# Needed for MP
+# https://github.com/google-ai-edge/mediapipe/commit/743cdb747332efdfb43338d92aa6349acc40a06a
+# patch for static_assert(ValidateAsciiCasefold() == 0, "error in case conversion");
+# needs to be before MP & TF
+git_repository(
+    name = "com_google_absl",
+    remote = "https://github.com/abseil/abseil-cpp",
+    commit = "9687a8ea750bfcddf790372093245a1d041b21a3", # MP image buildable original MP
+    patches = [
+        "@mediapipe//third_party:com_google_absl_windows_patch.diff",
+        "abseil_gcc_8.5_constant_expression.patch",
+    ],
+    patch_args = [
+        "-p1",
+    ],
+)
 
 http_archive(
     name = "zlib",
@@ -99,9 +150,9 @@ cc_library(
 git_repository(
     name = "tensorflow_serving",
     remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.13.0",
+    tag = "2.18.0",
     patch_args = ["-p1"],
-    patches = ["net_http.patch", "listen.patch", "partial.patch"]
+    patches = ["net_http.patch", "listen.patch", "partial_2.18.patch"]
     #                             ^^^^^^^^^^^^
     #                       make bind address configurable
     #          ^^^^^^^^^^^^
@@ -128,7 +179,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "8d91559c1e900d3c043cc7aafb1b55df25d586ac", # Opencv from ENV (#101) Dec 9 2024
+    commit = "43313dccb312ae6a373b101d534635820362c2a2", # MP update to 0.10.18 09/01/2025
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -285,15 +336,7 @@ http_archive(
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 python_configure(name = "local_config_python")
 
-http_archive(
-    name = "rules_python",
-    sha256 = "29a801171f7ca190c543406f9894abf2d483c206e14d6acbd695623662320097",
-    strip_prefix = "rules_python-0.18.1",
-    url = "https://github.com/bazelbuild/rules_python/releases/download/0.18.1/rules_python-0.18.1.tar.gz",
-)
-
 load("@rules_python//python:repositories.bzl", "py_repositories")
-
 py_repositories()
 
 load("@rules_python//python:pip.bzl", "pip_parse")
@@ -327,20 +370,28 @@ cc_library(
 )
 
 # TensorFlow repo should always go after the other external dependencies.
-# TF on 2023-06-13.
-_TENSORFLOW_GIT_COMMIT = "491681a5620e41bf079a582ac39c585cc86878b9"
-_TENSORFLOW_SHA256 = "9f76389af7a2835e68413322c1eaabfadc912f02a76d71dc16be507f9ca3d3ac"
+# TF on 2024-09-24 same as in Mediapipe
+_TENSORFLOW_GIT_COMMIT = "5329ec8dd396487982ef3e743f98c0195af39a6b"
+_TENSORFLOW_SHA256 = "eb1f8d740d59ea3dee91108ab1fc19d91c4e9ac2fd17d9ab86d865c3c43d81c9"
 http_archive(
     name = "org_tensorflow",
     urls = [
       "https://github.com/tensorflow/tensorflow/archive/%s.tar.gz" % _TENSORFLOW_GIT_COMMIT,
     ],
     patches = [
-        "@mediapipe//third_party:org_tensorflow_compatibility_fixes.diff",
+        #"@mediapipe//third_party:org_tensorflow_compatibility_fixes.diff",
+        # Diff is generated with a script, don't update it manually.
+        #"@mediapipe//third_party:org_tensorflow_custom_ops.diff",
+        #"tf.patch",
+        #"tf_graph_info_multilinecomment.patch",
+        "@mediapipe//third_party:org_tensorflow_c_api_experimental.diff",
         # Diff is generated with a script, don't update it manually.
         "@mediapipe//third_party:org_tensorflow_custom_ops.diff",
-        "tf.patch",
-        "tf_graph_info_multilinecomment.patch",
+        # Works around Bazel issue with objc_library.
+        # See https://github.com/bazelbuild/bazel/issues/19912
+        "@mediapipe//third_party:org_tensorflow_objc_build_fixes.diff",
+        "tf_2.18_logging.patch",
+        #"tf_graph_info_multilinecomment.patch", # TODO @atobisze remove unneeded patches after CI pass & rev
     ],
     patch_args = [
         "-p1",
@@ -351,17 +402,53 @@ http_archive(
 )
 
 load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
-tf_serving_workspace()
 
 # Initialize TensorFlow's external dependencies.
 load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
 workspace()
+# Initialize hermetic Python
+load("@org_tensorflow//third_party/xla/third_party/py:python_init_rules.bzl", "python_init_rules")
+python_init_rules()
+
+load("@org_tensorflow//third_party/xla/third_party/py:python_init_repositories.bzl", "python_init_repositories")
+python_init_repositories(
+    default_python_version = "system",
+    local_wheel_dist_folder = "dist",
+    requirements = {
+        "3.9": "@mediapipe//:requirements_lock.txt",
+        "3.10": "@mediapipe//:requirements_lock_3_10.txt",
+        "3.11": "@mediapipe//:requirements_lock_3_11.txt",
+        "3.12": "@mediapipe//:requirements_lock_3_12.txt",
+    },
+    #local_wheel_inclusion_list = ["mediapipe*"],
+    #local_wheel_workspaces = ["//:WORKSPACE"],
+)
+
+load("@org_tensorflow//third_party/xla/third_party/py:python_init_toolchains.bzl", "python_init_toolchains")
+python_init_toolchains()
+
+load("@org_tensorflow//third_party/xla/third_party/py:python_init_pip.bzl", "python_init_pip")
+python_init_pip()
+
+load("@pypi//:requirements.bzl", "install_deps")
+install_deps()
+# End hermetic Python initialization
 load("@org_tensorflow//tensorflow:workspace2.bzl", "workspace")
 workspace()
 load("@org_tensorflow//tensorflow:workspace1.bzl", "workspace")
 workspace()
 load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
 workspace()
+
+tf_serving_workspace() #moved past TF
+# required after update to mp 0.10.18
+load(
+    "@org_tensorflow//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
+    "cuda_configure",
+)
+cuda_configure(name = "local_config_cuda")
+
+
 
 # Initialize bazel package rules' external dependencies.
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
@@ -488,3 +575,4 @@ git_repository(
     remote = "https://github.com/nlohmann/json/",
     tag = "v3.11.3",
 )
+
