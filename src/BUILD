@@ -16,7 +16,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
-     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS_VISIBLE", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_PYTHON", "COPTS_MEDIAPIPE",
+     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS_VISIBLE", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_PYTHON", "COPTS_MEDIAPIPE", "COPTS_DROGON",
      "create_config_settings")
 
 COPTS_OV_TRACE = select({
@@ -36,7 +36,7 @@ COPTS_CLOUD = select({
     "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
 })
 
-COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_CLOUD
+COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_CLOUD
 
 config_setting(
     name = "windows",
@@ -380,25 +380,13 @@ cc_library(
         "get_model_metadata_impl.cpp",
         "get_model_metadata_impl.hpp",
         "global_sequences_viewer.hpp",
-        "global_sequences_viewer.cpp",]
-        + select({
-            "//:is_windows_or_mediapipe_is_disabled_no_http": [],
-            "//conditions:default" : [
-                "http_frontend/http_graph_executor_impl.cpp",
-                "http_frontend/http_graph_executor_impl.hpp",],
-            })
-        #TODO : add to server lib and cleanup headers too many includes
-         + select({
-                "//conditions:default": [
-                    "http_server.hpp",
-                    "http_server.cpp",
-                    "http_rest_api_handler.hpp",
-                    "httpservermodule.hpp",
-                    "http_rest_api_handler.cpp",
-                    "httpservermodule.cpp",
-                ],
-                "//src:windows" : [],
-                }) + [      
+        "global_sequences_viewer.cpp",
+        "http_server.hpp",
+        "http_server.cpp",
+        "http_rest_api_handler.hpp",
+        "httpservermodule.hpp",
+        "http_rest_api_handler.cpp",
+        "httpservermodule.cpp",
         "grpc_utils.cpp",
         "grpc_utils.hpp",
         "grpcservermodule.cpp",
@@ -453,26 +441,29 @@ cc_library(
                 "mediapipe_internal/packettypes.hpp",
                 "kfs_frontend/kfs_graph_executor_impl.cpp",
                 "kfs_frontend/kfs_graph_executor_impl.hpp",
+                "http_frontend/http_graph_executor_impl.cpp",
+                "http_frontend/http_graph_executor_impl.hpp",
             ],
             "//:disable_mediapipe" : [],
         }),
         deps = select({
-            "//:is_windows_or_python_is_disabled_no_llm": [],
-            "//conditions:default" : [
+            "//:not_disable_python": [
+                "//src/python:libovmspythonmodule",
                 # Jinja template processing is done in Python
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
-                "//src/llm:text_processor",],
-            }) + select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
+                "//src/llm:text_processor",
             ],
             "//:disable_python": []
         }) + select({
-            "//:is_windows_or_mediapipe_is_disabled_no_http": [],
-            "//conditions:default" : [
+            "//conditions:default": [],
+            "//:not_disable_mediapipe" : [
+                "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator",
                 "//src/rerank:rerankcalculator",],
+        }) + select({
+            "//:enable_drogon": ["libdrogon_http_server"],
+            "//conditions:default" : ["libnet_http_server"],
         }) + [
             "cpp_headers",
             "libovms_capi_servable_metadata",
@@ -524,6 +515,8 @@ cc_library(
             "libovms_dags_tensormap",
             "libovmsstring_utils",
             "libovmsmodelversioning",
+            "httppayload",
+            "libhttpclientconnection",
 	    #"libovmsoclutils", # TODO decide if will need
             "libovmstensorfactory",
             "libovms_threadsafequeue",
@@ -559,16 +552,21 @@ cc_library(
         }),
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_OV_TRACE,
+    copts = COPTS_ADJUSTED + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_OV_TRACE,
     linkopts = LINKOPTS_ADJUSTED + select({
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
-                "//src:windows" : [],}),
+                "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
     data = select({
         "//:not_disable_python": [
             "//src/python/binding:pyovms.so",
         ],
         "//:disable_python": []
-    }),
+        }) + select({
+            "//:is_windows_and_python_is_enabled": [
+                "//src/python/binding:copy_pyovms",
+            ],
+            "//conditions:default": [],
+        }),
     alwayslink = 1,
 )
 
@@ -639,7 +637,7 @@ cc_library(
     hdrs = ["http_frontend/http_client_connection.hpp"],
     deps = [
         "libovmsclient_connection",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "libhttp_async_writer_interface",  # interface for http output streaming
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -885,6 +883,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+# Unused
 cc_library( # TODO split dependencies
     name = "libovmshttpservermodule",
     hdrs = [
@@ -901,14 +900,13 @@ cc_library( # TODO split dependencies
         "@com_github_jupp0r_prometheus_cpp//core",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "libovms_module",
         "libovmslogging",
         "libovmsprofiler",
         "libovmsstatus",
+        "libdrogon_http_server",
         "//src/kfserving_api:kfserving_api_cpp",
     ] + select({
             "//:not_disable_python": [
@@ -933,7 +931,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED + COPTS_MEDIAPIPE,
+    copts = COPTS_ADJUSTED + COPTS_MEDIAPIPE + COPTS_DROGON,
     linkopts = LINKOPTS_ADJUSTED,
 )
 
@@ -1653,6 +1651,81 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+  # interface for http output streaming
+cc_library(
+    name = "libhttp_async_writer_interface",
+    hdrs = [
+        "http_async_writer_interface.hpp",
+    ],
+    deps = [
+        "libhttp_status_code"
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "libhttp_status_code",
+    srcs = [
+        "http_status_code.hpp",
+    ],
+    deps = [
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+# HTTP Server implementation using Drogon
+# To use other library simply create new target and implementation of libhttp_async_writer_interface
+cc_library(
+    name = "libdrogon_http_server",
+    srcs = [
+        "drogon_http_server.hpp",
+        "drogon_http_server.cpp",
+        "drogon_http_async_writer_impl.hpp",
+        "drogon_http_async_writer_impl.cpp",
+    ],
+    deps = [
+        "libhttp_async_writer_interface",
+        "@drogon//:drogon_cmake",
+        "@mediapipe//mediapipe/framework/port:threadpool",
+        "libovmslogging",
+        "libovmsstatus",
+        "libhttp_status_code"
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+# HTTP Server implementation using net_http of tensorflow
+# To use other library simply create new target and implementation of libhttp_async_writer_interface
+cc_library(
+    name = "libnet_http_server",
+    srcs = [
+        "net_http_async_writer_impl.hpp",
+        "net_http_async_writer_impl.cpp",
+    ],
+    deps = [
+        "libhttp_async_writer_interface",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
+        "libovmslogging",
+        "libovmsstatus",
+        "libhttp_status_code"
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
 cc_library( # TODO split further
     name = "cpp_headers",
     hdrs = [
@@ -1746,14 +1819,18 @@ cc_test(
         "test/ensemble_tests.cpp",
         "test/gather_node_test.cpp",
         "test/get_model_metadata_response_test.cpp",
+        "test/standalone_http_server_test.cpp",
         "test/get_model_metadata_signature_test.cpp",
         "test/get_model_metadata_validation_test.cpp",
         "test/get_pipeline_metadata_response_test.cpp",
+        "test/http_rest_api_handler_test.cpp",
         "test/kfs_metadata_test.cpp",
+        "test/kfs_rest_test.cpp",
         "test/kfs_rest_parser_test.cpp",
         "test/layout_test.cpp",
         "test/metric_config_test.cpp",
         "test/metrics_test.cpp",
+        "test/metrics_flow_test.cpp",
         "test/mockmodelinstancechangingstates.hpp",
         "test/model_cache_test.cpp",
         "test/model_service_test.cpp",
@@ -1787,6 +1864,7 @@ cc_test(
         "test/tensor_conversion_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
+        "test/test_http_utils.hpp",
         "test/tfs_rest_parser_binary_inputs_test.cpp",
         "test/tfs_rest_parser_column_test.cpp",
         "test/tfs_rest_parser_nonamed_test.cpp",
@@ -1794,24 +1872,6 @@ cc_test(
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         ] + select({
-                "//conditions:default": [
-                    "test/kfs_rest_test.cpp",
-                    "test/metrics_flow_test.cpp",
-                    "test/http_rest_api_handler_test.cpp",
-                    "test/http_openai_handler_test.cpp",
-                    "test/test_http_utils.hpp",
-                ],
-                "//src:windows" : [],
-        }) + select({
-            "//:is_windows_or_mediapipe_is_disabled_no_http": [],
-            # Tests that require MediaPipe and HTTP (windows does not have HTTP yet)
-            "//conditions:default" : [
-                "test/mediapipeflow_test.cpp",
-                "test/mediapipe_framework_test.cpp",
-                "test/reranknode_test.cpp",
-                "test/embeddingsnode_test.cpp",
-            ],
-        }) + select({
             "//:not_disable_cloud": [
                 "test/gcsfilesystem_test.cpp",
                 "test/azurefilesystem_test.cpp",
@@ -1821,26 +1881,28 @@ cc_test(
             })
         + select({
             "//:not_disable_mediapipe": [
+                "test/embeddingsnode_test.cpp",
+                "test/mediapipeflow_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
+                "test/reranknode_test.cpp",
                 "test/rerank_handler_test.cpp",
                 "test/rerank_chunking_test.cpp",
                 "test/streaming_test.cpp", # Mediapipe enabled
                 "test/mediapipe_validation_test.cpp", # Mediapipe enabled
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
+                "test/mediapipe_framework_test.cpp",
+                "test/http_openai_handler_test.cpp",
             ],
             "//:disable_mediapipe" : [],
         }) + select({
-            "//:is_windows_or_python_is_disabled_no_llm": [],
-            "//conditions:default" : [
-                # LLM logic uses Python for processing Jinja templates
-                "test/llmnode_test.cpp",
-                "test/llmtemplate_test.cpp",
-                "test/text_streamer_test.cpp",],
-            }) + select({
             "//:not_disable_python": [
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
                 "test/pythonnode_test.cpp",
+                # LLM logic uses Python for processing Jinja templates
+                "test/llmnode_test.cpp",
+                "test/llmtemplate_test.cpp",
+                "test/text_streamer_test.cpp",
             ],
             "//:disable_python" : [],
         }),
@@ -1981,16 +2043,13 @@ cc_test(
                     ],
             })  + select({
             "//conditions:default": [
+                "//src/llm:llmnoderesources",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
             "//:disable_mediapipe" : [],
-        }) + select({
-            "//:is_windows_or_python_is_disabled_no_llm": [],
-            "//conditions:default" : [
-                "//src/llm:llmnoderesources",],
-            }),
+        }),
     copts = COPTS_TESTS,
 )
 

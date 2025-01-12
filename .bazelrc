@@ -110,7 +110,7 @@ build --incompatible_strict_action_env
 build --cxxopt=-DOVMS_DUMP_TO_FILE=0
 # envs below are required to succesfully run binaries in bazel as bazel is
 # very strict in sandboxing
-test --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
+test:linux --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 # TF bazelrc settings
 # TensorFlow Bazel configuration file.
@@ -255,10 +255,10 @@ build:windows --override_repository="boringssl=C:\\opt\\boringSSL-SwiftPM"
 
 build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe
 
-test --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+test:linux --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 # genai hardcodes path during build time so without this so is not visible
-test --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
+test:linux --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
 
 # file below should contain sth like
 # build --remote_cache=http://IP:PORT
@@ -290,4 +290,17 @@ build:windows --define=CLOUD_DISABLE=1
 build:windows --define=PYTHON_DISABLE=0
 build:windows --define=MEDIAPIPE_DISABLE=0
 # Change this path alongside WORKSPACE:"windows_openvino" path for model_api cmake compilation.
-build:windows --action_env OpenVINO_DIR="c:/opt/intel/openvino/runtime/cmake"
+build:windows --action_env OpenVINO_DIR="c:/opt/openvino/runtime/cmake"
+build:windows --action_env OpenCV_DIR="c:/opt/opencv"
+
+build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.9
+
+build:windows --define=USE_DROGON=1
+build:linux --define=USE_DROGON=1  # 0=legacy net_http, available only on linux
+# those below are required for XNNPACK build with gcc <12 (ubuntu 22 default is 11)
+build --define=xnn_enable_avxvnniint8=false
+build --define=xnn_enable_avx512fp16=false
+build --define=xnn_enable_avx512amx=false
+build --define xnn_enable_avxvnni=false
+# TODO to check
+build --define=no_cuda=1

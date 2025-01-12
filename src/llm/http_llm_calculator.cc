@@ -135,7 +135,13 @@ public:
                 bool encodeAddSpecialTokens = false;
                 switch (endpoint) {
                 case Endpoint::CHAT_COMPLETIONS: {
-                    if (!TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt)) {
+                    bool success;
+                    if (this->apiHandler->getProcessedJson().size() > 0) {
+                        success = TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, this->apiHandler->getProcessedJson(), finalPrompt);
+                    } else {
+                        success = TextProcessor::applyChatTemplate(this->nodeResources->textProcessor, this->nodeResources->modelsPath, payload.body, finalPrompt);
+                    }
+                    if (!success) {
                         return absl::Status(absl::StatusCode::kInvalidArgument, finalPrompt);
                     }
                     if (finalPrompt.size() == 0) {
@@ -166,9 +172,10 @@ public:
                         finalPromptIds,
                         this->apiHandler->createGenerationConfig());
 
-                    this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
-                        genHandle->drop();
-                    });
+                    // TODO: Revert when drogon adds disconnection callbacks: https://github.com/drogonframework/drogon/pull/2204
+                    // this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
+                    //     genHandle->drop();
+                    // });
                 }
                 nodeResources->notifyExecutorThread();
                 this->streamer = std::make_shared<TextStreamer>(
@@ -179,6 +186,10 @@ public:
             RET_CHECK(this->apiHandler != nullptr);
             RET_CHECK(this->streamer != nullptr);
             RET_CHECK(this->client != nullptr);
+
+            if (this->client->isDisconnected()) {
+                return absl::CancelledError();
+            }
 
             // Unary scenario
             if (!this->apiHandler->isStream()) {

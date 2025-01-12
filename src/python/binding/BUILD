@@ -47,6 +47,14 @@ pybind_extension(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+load("@aspect_bazel_lib//:e2e/copy_action/copy.bzl", "simple_copy_file")
+simple_copy_file(
+    name = "copy_pyovms",
+    src = "pyovms.so",
+    out = "pyovms.pyd",
+    visibility = ["//visibility:public"],
+)
+
 py_test(
     name = "test_python_binding",
     srcs = glob(["tests/*.py"]),

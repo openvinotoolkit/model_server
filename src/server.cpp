@@ -31,7 +31,7 @@
 #include <signal.h>
 #include <stdlib.h>
 
-// TODO: Write windows/linux specific status codes.
+#include "ovms_exit_codes.hpp"
 #ifdef __linux__
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -40,19 +40,20 @@
 #include <csignal>
 
 #include <ntstatus.h>
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32.lib")
 #include <windows.h>
 #endif
+#ifdef __linux__
 #include <unistd.h>
+#endif
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
-// TODO windows
-#ifdef __linux__
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
-#endif
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "metric_module.hpp"
@@ -130,7 +131,6 @@ static void onIllegal(int status) {
     shutdown_request = 2;
 }
 
-// TODO windows
 #ifdef __linux__
 
 static void installSignalHandlers() {
@@ -234,11 +234,8 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
 #endif
     if (name == GRPC_SERVER_MODULE_NAME)
         return std::make_unique<GRPCServerModule>(*this);
-// TODO windows
-#ifdef __linux__
     if (name == HTTP_SERVER_MODULE_NAME)
         return std::make_unique<HTTPServerModule>(*this);
-#endif
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
 #if (PYTHON_DISABLE == 0)
@@ -307,13 +304,10 @@ Status Server::startModules(ovms::Config& config) {
     INSERT_MODULE(GRPC_SERVER_MODULE_NAME, it);
     START_MODULE(it);
     // if we ever decide not to start GRPC module then we need to implement HTTP responses without using grpc implementations
-    // TODO windows
-#ifdef __linux__
     if (config.restPort() != 0) {
         INSERT_MODULE(HTTP_SERVER_MODULE_NAME, it);
         START_MODULE(it);
     }
-#endif
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
 #if (PYTHON_DISABLE == 0)
@@ -348,10 +342,7 @@ void Server::shutdownModules() {
     // we want very precise order of modules shutdown
     // first we should stop incoming new requests
     ensureModuleShutdown(GRPC_SERVER_MODULE_NAME);
-    // TODO windows
-#ifdef __linux__
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
-#endif
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
 #if (PYTHON_DISABLE == 0)
@@ -366,44 +357,41 @@ void Server::shutdownModules() {
 
 static int statusToExitCode(const Status& status) {
     if (status.ok()) {
-#ifdef __linux__
-        return EX_OK;
-#elif _WIN32
-        return 0;
-#endif
+        return OVMS_EX_OK;
     } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
-#ifdef __linux__
-        return EX_USAGE;
-#elif _WIN32
-        return 3;
-#endif
+        return OVMS_EX_USAGE;
     }
-    return EXIT_FAILURE;
+    return OVMS_EX_FAILURE;
 }
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
-// TODO windows
-#ifdef __linux__
     installSignalHandlers();
-#endif
-    CLIParser parser;
-    ServerSettingsImpl serverSettings;
-    ModelsSettingsImpl modelsSettings;
-    parser.parse(argc, argv);
-    parser.prepare(&serverSettings, &modelsSettings);
-    Status ret = start(&serverSettings, &modelsSettings);
-    ModulesShutdownGuard shutdownGuard(*this);
-    if (!ret.ok()) {
-        return statusToExitCode(ret);
+    int result = OVMS_EX_OK;
+
+    try {
+        CLIParser parser;
+        ServerSettingsImpl serverSettings;
+        ModelsSettingsImpl modelsSettings;
+        parser.parse(argc, argv);
+        parser.prepare(&serverSettings, &modelsSettings);
+        Status ret = start(&serverSettings, &modelsSettings);
+        ModulesShutdownGuard shutdownGuard(*this);
+        if (!ret.ok()) {
+            return statusToExitCode(ret);
+        }
+        while (!shutdown_request) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+        if (shutdown_request == 2) {
+            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Exception; {}", e.what());
+        result = OVMS_EX_FAILURE;
+        return result;
     }
-    while (!shutdown_request) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
-    if (shutdown_request == 2) {
-        SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
-    }
-    SPDLOG_INFO("Shutting down");
+
     return EXIT_SUCCESS;
 }
 

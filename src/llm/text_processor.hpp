@@ -35,7 +35,7 @@ public:
     std::string eosToken = "";
     std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
 
-    static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, std::string& requestBody, std::string& output);
+    static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, const std::string& requestBody, std::string& output);
 };
 
 template <typename T>

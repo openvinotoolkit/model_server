@@ -79,7 +79,8 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
         ":llm_engine",
-        "//src:libovmsprofiler"
+        "//src:libovmsprofiler",
+        "//third_party:opencv",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,

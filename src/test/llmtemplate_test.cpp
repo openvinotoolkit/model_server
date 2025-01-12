@@ -511,11 +511,13 @@ public:
     ovms::HttpRequestComponents comp;
     const std::string endpointChatCompletions = "/v3/chat/completions";
     const std::string endpointCompletions = "/v3/completions";
-    MockedServerRequestInterface writer;
+    std::shared_ptr<MockedServerRequestInterface> writer;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
 
     void SetUp() {
+        writer = std::make_shared<MockedServerRequestInterface>();
+        ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
         TestWithTempDir::SetUp();
         tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
         jinjaConfigFilePath = directoryPath + "/template.jinja";
@@ -556,7 +558,8 @@ public:
 protected:
     static const std::string getDirectoryPath() {
         const std::string directoryName = "LLMJinjaChatTemplateHttpTest";
-        return std::string{"/tmp/"} + directoryName;
+        std::string directoryPath = std::string{"/tmp/"} + directoryName;
+        return getGenericFullPathForTmp(directoryPath);
     }
     static void SetUpTestSuite() {
         const auto directoryPath = getDirectoryPath();
@@ -582,6 +585,8 @@ protected:
     }
 
     void SetUp() override {
+        writer = std::make_shared<MockedServerRequestInterface>();
+        ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
         ovms::Server& server = ovms::Server::instance();
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointChatCompletions, headers), ovms::StatusCode::OK);
@@ -619,7 +624,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsUnary) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
     // Assertion split in two parts to avoid timestamp mismatch
     // const size_t timestampLength = 10;
@@ -641,7 +646,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsUnary) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
     // Assertion split in two parts to avoid timestamp mismatch
     // const size_t timestampLength = 10;
@@ -683,7 +688,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
     // TODO: New output EXPECT_CALL(writer, IsDisconnected()).Times(7);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::PARTIAL_END);
 
     ASSERT_EQ(response, "");
@@ -723,7 +728,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
     // TODO: New output EXPECT_CALL(writer, IsDisconnected()).Times(7);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::PARTIAL_END);
 
     ASSERT_EQ(response, "");
@@ -749,7 +754,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, &writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
     // Assertion split in two parts to avoid timestamp mismatch
     // const size_t timestampLength = 10;

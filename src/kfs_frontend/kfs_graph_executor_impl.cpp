@@ -1105,6 +1105,7 @@ Status onPacketReadySerializeImpl(
         SPDLOG_DEBUG("Response processing packet type:  OVTensor name: {}", packetName);
         status = receiveAndSerializePacket<ov::Tensor>(packet, response, packetName);
     } else {
+        SPDLOG_DEBUG("Unknown error in packet serialization for packet: {}. Unreachable code", packetName);
         status = Status(StatusCode::UNKNOWN_ERROR, "Unreachable code");
     }
     response.set_model_name(endpointName);

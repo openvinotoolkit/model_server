@@ -24,7 +24,7 @@ class OvmsPythonModel:
     def execute(self, inputs: list):
         # Increment every element of every input and return them with changed tensor name.
         inputs_data = {}
-        for _ in range(3):
+        for i in range(3):
             outputs = []
             for input in inputs:
                 output_name = input.name.replace("input", "output")
@@ -33,5 +33,5 @@ class OvmsPythonModel:
                 inputs_data[input.name] = input_fp32
                 output_data = struct.pack('f', input_fp32)
                 outputs.append(Tensor(output_name, output_data))
-            print(outputs)
+            print(i, outputs, flush=True)
             yield outputs

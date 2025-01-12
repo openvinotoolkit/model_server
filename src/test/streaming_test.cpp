@@ -28,6 +28,7 @@
 #include "../server.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
+#include "mediapipe/framework/port/integral_types.h"
 #include "test_utils.hpp"
 
 #if (PYTHON_DISABLE == 0)
@@ -552,7 +553,7 @@ namespace py = pybind11;
 // ------------------------- Regular mode
 
 TEST_F(PythonStreamingTest, Positive_SingleStreamSend1Receive1Python) {
-    const std::string testPbtxt{R"(
+    std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR:input"
 output_stream: "OVMS_PY_TENSOR:output"
 node {
@@ -568,6 +569,7 @@ node {
     }
 }
 )"};
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -592,7 +594,7 @@ node {
 }
 
 TEST_F(PythonStreamingTest, Positive_SingleStreamSend1Receive1PythonWithConverters) {
-    const std::string testPbtxt{R"(
+    std::string testPbtxt{R"(
 input_stream: "OVTENSOR:in"
 output_stream: "OVTENSOR:out"
 node {
@@ -628,6 +630,7 @@ node {
     output_stream: "OVTENSOR:out"
 }
 )"};
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -652,7 +655,7 @@ node {
 }
 
 TEST_F(PythonStreamingTest, Positive_SingleStreamSend3Receive3Python) {
-    const std::string testPbtxt{R"(
+    std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR:input"
 output_stream: "OVMS_PY_TENSOR:output"
 node {
@@ -668,6 +671,7 @@ node {
     }
 }
 )"};
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -695,7 +699,7 @@ node {
 }
 
 TEST_F(PythonStreamingTest, Positive_SingleStreamSend3Receive3PythonWithConverters) {
-    const std::string testPbtxt{R"(
+    std::string testPbtxt{R"(
 input_stream: "OVTENSOR:in"
 output_stream: "OVTENSOR:out"
 node {
@@ -731,6 +735,7 @@ node {
     output_stream: "OVTENSOR:out"
 }
 )"};
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -761,7 +766,10 @@ node {
 // symmetric_scalar_increment.py returns outputs symmetrically,
 // so if Process() is run with one input, there will be one output
 TEST_F(PythonStreamingTest, Positive_SingleStreamSendIncompleteInputs) {
-    const std::string testPbtxt{R"(
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+    std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR1:input1"
 input_stream: "OVMS_PY_TENSOR2:input2"
 output_stream: "OVMS_PY_TENSOR1:output1"
@@ -785,6 +793,7 @@ node {
     }
 }
 )"};
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -813,7 +822,7 @@ node {
 // --------------------------- Generative mode
 
 TEST_F(PythonStreamingTest, SingleStreamSend1Receive3Python) {
-    const std::string testPbtxt{R"(
+    std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR:input"
 output_stream: "OVMS_PY_TENSOR:output"
 node {
@@ -845,6 +854,7 @@ node {
     }
 }
 )"};
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -871,7 +881,10 @@ node {
 }
 
 TEST_F(PythonStreamingTest, MultipleStreamsInSingleRequestSend1Receive3Python) {
-    const std::string testPbtxt{R"(
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+    std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR1:input1"
 input_stream: "OVMS_PY_TENSOR2:input2"
 output_stream: "OVMS_PY_TENSOR1:output1"
@@ -907,6 +920,7 @@ node {
     }
 }
 )"};
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -936,7 +950,10 @@ node {
 }
 
 TEST_F(PythonStreamingTest, MultipleStreamsInMultipleRequestSend1Receive3Python) {
-    const std::string testPbtxt{R"(
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows";
+#endif
+    std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR1:input1"
 input_stream: "OVMS_PY_TENSOR2:input2"
 output_stream: "OVMS_PY_TENSOR1:output1"
@@ -972,6 +989,7 @@ node_options: {
 }
 }
 )"};
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -1004,7 +1022,7 @@ node_options: {
 
 // Negative - execute yields, but no loopback
 TEST_F(PythonStreamingTest, ExecuteYieldsButNoLoopback) {
-    const std::string testPbtxt{R"(
+    std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR1:input1"
 input_stream: "OVMS_PY_TENSOR2:input2"
 output_stream: "OVMS_PY_TENSOR1:output1"
@@ -1024,6 +1042,7 @@ node_options: {
 }
 }
 )"};
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -1044,7 +1063,7 @@ node_options: {
 }
 
 TEST_F(PythonStreamingTest, Negative_calculatorReturnNotListOrIteratorObject) {
-    const std::string testPbtxt{R"(
+    std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR:input"
 output_stream: "OVMS_PY_TENSOR:output"
 node {
@@ -1060,6 +1079,7 @@ node {
     }
 }
 )"};
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);
@@ -1076,7 +1096,7 @@ node {
 }
 
 TEST_F(PythonStreamingTest, Negative_calculatorReturnListWithNonTensorObject) {
-    const std::string testPbtxt{R"(
+    std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR:input"
 output_stream: "OVMS_PY_TENSOR:output"
 node {
@@ -1092,6 +1112,7 @@ node {
     }
 }
 )"};
+    adjustConfigForTargetPlatform(testPbtxt);
 
     ovms::MediapipeGraphConfig mgc{"my_graph", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("my_graph", mgc, testPbtxt, this->pythonBackend);

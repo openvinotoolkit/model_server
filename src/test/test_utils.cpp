@@ -129,6 +129,11 @@ void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
 
 bool createConfigFileWithContent(const std::string& content, std::string filename) {
     std::ofstream configFile{filename};
+    // Check if the file was successfully opened
+    if (!configFile.is_open()) {
+        SPDLOG_ERROR("Failed to open file: {}", filename);
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
     SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filename, content);
     configFile << content << std::endl;
     configFile.close();
@@ -729,14 +734,45 @@ const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bo
 
     // Example linuxPath "/ovms/src/test/dummy"
     std::size_t postOvmsIndex = linuxPath.find("/src/test");
-    if (bazelOutIndex > 0 && postOvmsIndex > 0) {
+    if (postOvmsIndex != std::string::npos) {
         // Setting winPath to "/src/test/dummy"
         std::string winPath = linuxPath.substr(postOvmsIndex);
         // Set basePath to "C:\git\model_server\"
-        std::string basePath = cwd.string().substr(0, bazelOutIndex);
+        std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
         // Combine "C:\git\model_server\" + "/src/test/dummy"
         std::string finalWinPath = basePath + winPath;
-        // Change paths to linux separator for JSON parser compatyility in configs
+        // Change paths to linux separator for JSON parser compatybility in configs
+        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
+
+        if (logChange) {
+            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        }
+        return getPathFromMap(linuxPath, finalWinPath);
+    }
+#endif
+    return getPathFromMap(linuxPath, linuxPath);
+}
+
+// Function changes linux docker container path /ovms/bazel-bin/src/lib_node_mock.so to windows workspace "C:\git\model_server\bazel-bin\src\lib_node_mock.so"
+// Depending on the ovms_test.exe location after build
+const std::string& getGenericFullPathForBin(const std::string& linuxPath, bool logChange) {
+#ifdef __linux__
+    return getPathFromMap(linuxPath, linuxPath);
+#elif _WIN32
+    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
+
+    // Example linuxPath "/ovms/bazel-bin/src/lib_node_mock.so"
+    std::size_t postOvmsIndex = linuxPath.find("/bazel-bin/src");
+    if (postOvmsIndex != std::string::npos) {
+        // Setting winPath to "/bazel-bin/src"
+        std::string winPath = linuxPath.substr(postOvmsIndex);
+        // Set basePath to "C:\git\model_server\"
+        std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
+        // Combine "C:\git\model_server\" + "/bazel-bin/src"
+        std::string finalWinPath = basePath + winPath;
+        // Change paths to linux separator for JSON parser compatybility in configs
         std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
 
         if (logChange) {
@@ -766,13 +802,13 @@ const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool l
     const size_t tmpStringSize = 4;
 
     size_t postTmpIndex = linuxPath.find(tmpString) + tmpStringSize;
-    if (bazelOutIndex > 0 && postTmpIndex > 0) {
+    if (postTmpIndex != std::string::npos) {
         std::string winPath = linuxPath.substr(postTmpIndex);
         // Set basePath to "C:\git\model_server\"
-        std::string basePath = cwd.string().substr(0, bazelOutIndex);
+        std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
         // Combine "C:\git\model_server\" + "tmp" "\dummy"
         std::string finalWinPath = basePath + tmpString + winPath;
-        // Change paths to linux separator for JSON parser compatyility in configs
+        // Change paths to linux separator for JSON parser compatybility in configs
         std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
 
         if (logChange) {
@@ -786,4 +822,55 @@ const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool l
 
 const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange) {
     return getGenericFullPathForTmp(std::string(linuxPath, strlen(linuxPath)), logChange);
+}
+
+#ifdef _WIN32
+const std::string getWindowsRepoRootPath() {
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
+    std::string rootPath = cwd.string().substr(0, bazelOutIndex);
+    std::replace(rootPath.begin(), rootPath.end(), '\\', '/');
+    return rootPath;
+}
+#endif
+// Apply necessary changes so the graph config will comply with the platform
+// that tests are run on
+void adjustConfigForTargetPlatform(std::string& input) {
+#ifdef _WIN32
+    std::string repoTestPath = getWindowsRepoRootPath() + "/src/test";
+    std::string searchString = "\"/ovms/src/test";
+    std::string replaceString = "\"" + repoTestPath;
+    size_t pos = 0;
+    while ((pos = input.find(searchString, pos)) != std::string::npos) {
+        input.replace(pos, searchString.length(), replaceString);
+        pos += replaceString.length();
+    }
+
+    repoTestPath = getWindowsRepoRootPath() + "/tmp";
+    searchString = "\"/tmp";
+    replaceString = "\"" + repoTestPath;
+    pos = 0;
+    while ((pos = input.find(searchString, pos)) != std::string::npos) {
+        input.replace(pos, searchString.length(), replaceString);
+        pos += replaceString.length();
+    }
+
+    repoTestPath = getWindowsRepoRootPath() + "/bazel-bin/src";
+    searchString = "\"/ovms/bazel-bin/src";
+    replaceString = "\"" + repoTestPath;
+    pos = 0;
+    while ((pos = input.find(searchString, pos)) != std::string::npos) {
+        input.replace(pos, searchString.length(), replaceString);
+        pos += replaceString.length();
+    }
+#elif __linux__
+    // No changes needed for linux now, but keeping it as a placeholder
+#endif
+}
+
+// Apply necessary changes so the graph config will comply with the platform
+// that tests are run on
+const std::string& adjustConfigForTargetPlatformReturn(std::string& input) {
+    adjustConfigForTargetPlatform(input);
+    return input;
 }

@@ -14,45 +14,101 @@
 :: limitations under the License.
 ::
 @echo on
-setlocal EnableExtensions DisableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-1234" number passed here from jenkins so that a tmp directory will be created
-set "BAZEL_SHORT_PATH=C:\%1"
+IF "%~1"=="" (
+    echo No argument provided. Using default opt path
+    set "BAZEL_SHORT_PATH=C:\opt"
+) ELSE (
+    echo Argument provided: Using install path %1
+    set "BAZEL_SHORT_PATH=C:\%1"
+)
+
 set "bazelStartupCmd=--output_user_root=%BAZEL_SHORT_PATH%"
 set "openvino_dir=C:/%1/openvino/runtime/cmake"
 
-set "buildCommand=bazel %bazelStartupCmd% build --config=windows --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms 2>&1 | tee win_build.log"
-set "buildTestCommand=bazel %bazelStartupCmd% build --config=windows --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
+set "bazelBuildArgs=--config=windows --action_env OpenVINO_DIR=%openvino_dir%"
+set "buildCommand=bazel %bazelStartupCmd% build  %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms 2>&1 | tee win_build.log"
+set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
 set "changeConfigsCmd=windows_change_test_configs.py"
+set "setOvmsVersionCmd=windows_set_ovms_version.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Tools\MSVC\14.29.30133\bin\HostX86\x86;c:\opt;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\VC\VCPackages;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TeamFoundation\Team Explorer;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\MSBuild\Current\bin\Roslyn;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Team Tools\Performance Tools;C:\Program Files (x86)\Microsoft Visual Studio\Shared\Common\VSPerfCollectionTools\vs2019\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\devinit;C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x86;C:\Program Files (x86)\Windows Kits\10\bin\x86;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\\MSBuild\Current\Bin;C:\Windows\Microsoft.NET\Framework\v4.0.30319;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Utils\;C:\Program Files\Git\cmd;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Ninja;C:\Program Files\CMake\bin;C:\Program Files\7-zip;C:\opt\Python39\Scripts\;C:\opt\Python39\;C:\opencl\install\;C:\opencl\;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja"
+set "setPath=C:\opt;C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 set "envPath=win_environment.log"
+set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
+
+:: Bazel compilation settings
+set VS_2019_PRO="C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"
+set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+IF /I EXIST %VS_2019_PRO% goto :msvc_pro
+IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :mscv_error
+
+:mscv_error
+echo [ERROR] Required MSVC compiler not installed
+goto :exit_build_error
+:msvc_pro
+echo [INFO] Using MSVC %VS_2019_PRO%
+set BAZEL_VS=%VS_2019_PRO%
+goto :msvc_end
+:msvc_bt
+echo [INFO] Using MSVC %VS_2022_BT%
+set BAZEL_VS=%VS_2022_BT%
+
+:: Bazel compilation settings end
+:msvc_end
+set "BAZEL_VC=%BAZEL_VS:"=%\VC"
+set "BAZEL_VC_FULL_VERSION=14.29.30133"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
+set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
+
+set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call %BAZEL_SHORT_PATH%\openvino\setupvars.bat"
-set "opencvBatch=call C:\opt\opencv\build\setup_vars_opencv4.cmd"
+set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%
+if !errorlevel! neq 0 exit /b !errorlevel!
 %opencvBatch%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Log all environment variables
 set > %envPath%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Set ovms.exe --version parameters
+%setOvmsVersionCmd% "%bazelBuildArgs%" %BAZEL_SHORT_PATH%
 :: Start bazel build
 %buildCommand%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Start bazel build test
 %buildTestCommand%
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Change tests configs to windows paths
 %changeConfigsCmd%
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+:: Copy OpenVINO GenAI and tokenizers libs
+copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
+
+ls %cd%\bazel-bin\src
+
+:: Install Jinja in Python for chat templates to work
+set PYTHONHOME=C:\opt\Python39
+call C:\opt\Python39\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+
+:: Download LLMs
+call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
 
 :: Start unit test
 %runTest%
@@ -61,4 +117,10 @@ set > %envPath%
 set regex="\[  .* ms"
 set sed_clean="s/ (.* ms)//g"
 grep -a %regex% win_full_test.log | sed %sed_clean% | tee win_test.log
+:exit_build
+echo [INFO] Build finished
+exit /b 0
+:exit_build_error
+echo [ERROR] Build finished with error
+exit /b 1
 endlocal

@@ -1,27 +1,27 @@
 # Deploy Model Server {#ovms_docs_deploying_server}
 
-1. Docker is the recommended way to deploy OpenVINO Model Server. Pre-built container images are available on Docker Hub and Red Hat Ecosystem Catalog. 
+1. Docker is the recommended way to deploy OpenVINO Model Server. Pre-built container images are available on Docker Hub and Red Hat Ecosystem Catalog.
 2. Host Model Server on baremetal.
 3. Deploy OpenVINO Model Server in Kubernetes via helm chart, Kubernetes Operator or OpenShift Operator.
 
-## Deploying Model Server in Docker Container 
+## Deploying Model Server in Docker Container
 
-This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Linux, using a pre-build Docker Container. 
+This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Linux, using a pre-build Docker Container.
 
 **Before you start, make sure you have:**
 
-- [Docker Engine](https://docs.docker.com/engine/) installed 
+- [Docker Engine](https://docs.docker.com/engine/) installed
 - Intel® Core™ processor (6-13th gen.) or Intel® Xeon® processor (1st to 4th gen.)
-- Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/) 
+- Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/)
 - (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Accelerators are tested only on bare-metal Linux hosts.
 
-### Launch Model Server Container 
+### Launch Model Server Container
 
 This example shows how to launch the model server with a ResNet50 image classification model from a cloud storage:
 
 #### Step 1. Pull Model Server Image
 
-Pull an image from Docker: 
+Pull an image from Docker:
 
 ```bash
 docker pull openvino/model_server:latest
@@ -39,9 +39,9 @@ docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 
 ```bash
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
-docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest \ 
---model_name resnet --model_path /models/resnet50 \ 
---layout NHWC:NCHW --port 9000 
+docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest \
+--model_name resnet --model_path /models/resnet50 \
+--layout NHWC:NCHW --port 9000
 ```
 
 ##### 2.2 Download input files: an image and a label mapping file
@@ -217,15 +217,15 @@ wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/mode
 
 or start as a background process or a daemon initiated by ```systemctl/initd``` depending on the Linux distribution and specific hosting requirements.
 
-Most of the Model Server documentation demonstrate containers usage, but the same can be achieved with just the binary package.  
+Most of the Model Server documentation demonstrate containers usage, but the same can be achieved with just the binary package.
 Learn more about model server [starting parameters](parameters.md).
 
 > **NOTE**:
-> When serving models on [AI accelerators](accelerators.md), some additional steps may be required to install device drivers and dependencies. 
+> When serving models on [AI accelerators](accelerators.md), some additional steps may be required to install device drivers and dependencies.
 > Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/2024/get-started/configurations.html) documentation.
 
 
-## Deploying Model Server in Kubernetes 
+## Deploying Model Server in Kubernetes
 
 There are three recommended methods for deploying OpenVINO Model Server in Kubernetes:
 1. [helm chart](https://github.com/openvinotoolkit/operator/tree/main/helm-charts/ovms) - deploys Model Server instances using the [helm](https://helm.sh) package manager for Kubernetes
@@ -236,7 +236,7 @@ For operators mentioned in 2. and 3. see the [description of the deployment proc
 
 ## Next Steps
 
-- [Start the server](starting_server.md) 
+- [Start the server](starting_server.md)
 - Try the model server [features](features.md)
 - Explore the model server [demos](../demos/README.md)
 
@@ -249,6 +249,6 @@ For operators mentioned in 2. and 3. see the [description of the deployment proc
 
 ## Deploying ovms.exe on Windows
 
-Once you have built the ovms.exe following the [Developer Guide for Windows](windows_developer_guide.md) 
+Once you have built the ovms.exe following the [Developer Guide for Windows](windows_developer_guide.md)
 Follow the experimental/alpha windows deployment instructions to start the ovms server as a standalone binary on a Windows 11 system.
 [Deployment Guide for Windows](windows_binary_guide.md)
