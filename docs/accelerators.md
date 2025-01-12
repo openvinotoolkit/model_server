@@ -13,9 +13,8 @@ mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 
 ## Starting a Docker Container with Intel integrated GPU, Intel® Data Center GPU Flex Series and Intel® Arc™ GPU
 
-The [GPU plugin](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) uses the Intel Compute Library for
-Deep Neural Networks ([clDNN](https://01.org/cldnn)) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including
-Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics.
+The [GPU plugin](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) uses the [oneDNN](https://github.com/oneapi-src/oneDNN) and [OpenCL](https://github.com/KhronosGroup/OpenCL-SDK) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including
+Intel® Arc™ GPU Series, Intel® UHD Graphics, Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics and Intel® Data Center GPU.
 
 
 Before using GPU as OpenVINO Model Server target device, you need to:
@@ -30,7 +29,7 @@ Running inference on GPU requires the model server process security context acco
 stat -c "group_name=%G group_id=%g" /dev/dri/render*
 ```
 
-The default account in the docker image is preconfigured. If you change the security context, use the following command to start the model server container:
+Use the following command to start the model server container:
 
 ```bash
 docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
@@ -48,27 +47,16 @@ docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -u $(i
 ```
 
 
-
 ## Using NPU device Plugin
 
-OpenVINO Model Server can support using [NPU device](https://docs.openvino.ai/canonical/openvino_docs_install_guides_configurations_for_intel_npu.html)
-
-Docker image with required dependencies can be build using this procedure:
-The docker image of OpenVINO Model Server including support for NVIDIA can be built from sources
-
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make release_image NPU=1
-cd ..
-```
+OpenVINO Model Server can support using [NPU device](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/npu-device.html)
 
 Example command to run container with NPU:
 ```bash
 docker run --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest --model_path /opt/model --model_name resnet --port 9000 --target_device NPU
+-v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-gpu --model_path /opt/model --model_name resnet --port 9000 --target_device NPU
 ```
-Check more info about the [NPU driver for Linux](https://github.com/intel/linux-npu-driver).
+Check more info about the [NPU driver configuration](https://docs.openvino.ai/2024/get-started/configurations/configurations-intel-npu.html).
 
 
 
@@ -161,8 +149,11 @@ With Automatic Batching, gathering the input and scattering the output from the 
 > **NOTE**: Autobatching can be applied only for static models
 
 ```bash
-docker run -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
+docker run -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 \
 --plugin_config '{"AUTO_BATCH_TIMEOUT": 200}' \
 --target_device BATCH:CPU(16)
 ```
+
+In the example above, there will be 200ms timeout to wait for filling the batch size up to 16.
+Note, that autobatching is enabled by default, then the `target_device` is set to `GPU` with `--plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}'`. 
