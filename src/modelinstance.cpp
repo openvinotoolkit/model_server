@@ -306,14 +306,9 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
     }
 
     OV_LOGGER("ov::Model: {}, model->outputs()", reinterpret_cast<void*>(model.get()));
-    size_t outputIndex = 0;
     for (ov::Output<ov::Node>& output : model->outputs()) {
         try {
             OV_LOGGER("ov::Output<ov::Node> output: {}, output.get_any_name()", reinterpret_cast<const void*>(&output));
-            if (output.get_names().size() == 0) {
-                std::unordered_set<std::string> dummy_name{"OUT_" + std::to_string(outputIndex)};
-                output.add_names(dummy_name);
-            }
             std::string name = output.get_any_name();
             std::string mappedName = config.getMappingOutputByKey(name).empty() ? name : config.getMappingOutputByKey(name);
             if (config.getLayouts().count(mappedName) > 0) {
@@ -361,7 +356,6 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
                 modelVersion);
             return StatusCode::UNKNOWN_ERROR;
         }
-        outputIndex++;
     }
 
     try {
@@ -419,6 +413,29 @@ Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLa
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during configuration validation against model");
         return status;
+    }
+    // add output names if not present in the model
+    size_t outputIndex = 0;
+    for (ov::Output<ov::Node>& output : model->outputs()) {
+        try {
+            OV_LOGGER("ov::Output<ov::Node> output: {}, output.get_any_name()", reinterpret_cast<const void*>(&output));
+            if (output.get_names().size() == 0) {
+                std::unordered_set<std::string> dummy_name{"out_" + std::to_string(outputIndex)};
+                output.add_names(dummy_name);
+            }
+        } catch (const ov::Exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to set the missing name in output for model:{}; version:{}; Error:{}",
+                modelName,
+                modelVersion,
+                e.what());
+            return StatusCode::UNKNOWN_ERROR;
+        } catch (...) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to set the missing name in output for model:{}; version:{};",
+                getName(),
+                getVersion());
+            return StatusCode::UNKNOWN_ERROR;
+        }
+        outputIndex++;
     }
     if (needsToApplyLayoutConfiguration) {
         status = applyLayoutConfiguration(config, this->model, getName(), getVersion());

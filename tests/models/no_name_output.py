@@ -24,8 +24,8 @@ dtype = np.int8
 model_name = "no_name_output"
 model_version_dir = model_name
 print(batch_dim + shape)
-in0 = ov.opset1.parameter(shape=batch_dim + shape, dtype=dtype, name="INPUT1")
-in1 = ov.opset1.parameter(shape=batch_dim + shape, dtype=dtype, name="INPUT2")
+in0 = ov.opset1.parameter(shape=batch_dim + shape, dtype=dtype, name="input1")
+in1 = ov.opset1.parameter(shape=batch_dim + shape, dtype=dtype, name="input2")
 op0 = ov.opset1.multiply(in1, in0, name="MULTIPLY")
 op1 = ov.opset1.add(in1, in0, name="ADD")
 
@@ -35,7 +35,8 @@ for idx, inp in enumerate(model.inputs):
     print(f"Input {idx}: {inp.get_names()} {inp.get_shape()} {inp.get_index()}")
 print(model.outputs)
 for idx, out in enumerate(model.outputs):  
-    print(f"Output {idx}: {out.get_names()} {out.get_shape()} {out.get_index()} {out.get_any_name()}")
+    print(f"Output {idx}: {out.get_names()} {out.get_shape()} {out.get_index()} ")
+    assert len(out.get_names()) == 0, "number of output names should be 0"
 
 try:
     os.makedirs(model_version_dir)
@@ -48,8 +49,7 @@ ov_model = ov.Core().read_model(model_version_dir + "/model.xml")
 compiled_model = ov.Core().compile_model(model, "CPU")
 
 input_data = np.ones((1, 10),dtype=np.int8)*10
-results = compiled_model({"INPUT1": input_data, "INPUT2": input_data})
-
-print(input_data)
-print(results)
+results = compiled_model({"input1": input_data, "input2": input_data})
+assert np.all(results[0] == 100), "for inputs np.ones((1, 10), the expected output is 100 in every element: 10*10"
+assert np.all(results[1] == 20), "for inputs np.ones((1, 10), the expected output is 20 in every element: 10+10"
 
