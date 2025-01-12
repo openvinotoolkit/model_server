@@ -426,7 +426,7 @@ Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLa
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to set the missing name in output for model:{}; version:{}; Error:{}",
                 getName(),
-                getVersion()
+                getVersion(),
                 e.what());
             return StatusCode::UNKNOWN_ERROR;
         } catch (...) {
