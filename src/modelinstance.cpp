@@ -416,7 +416,7 @@ Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLa
     }
     // add output names if not present in the model
     size_t outputIndex = 0;
-    for (ov::Output<ov::Node>& output : model->outputs()) {
+    for (ov::Output<ov::Node>& output : this->model->outputs()) {
         try {
             OV_LOGGER("ov::Output<ov::Node> output: {}, output.get_any_name()", reinterpret_cast<const void*>(&output));
             if (output.get_names().size() == 0) {
@@ -425,8 +425,8 @@ Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLa
             }
         } catch (const ov::Exception& e) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to set the missing name in output for model:{}; version:{}; Error:{}",
-                modelName,
-                modelVersion,
+                getName(),
+                getVersion()
                 e.what());
             return StatusCode::UNKNOWN_ERROR;
         } catch (...) {
