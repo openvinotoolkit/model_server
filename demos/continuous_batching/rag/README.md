@@ -3,7 +3,7 @@
 
 ## Creating models repository for all the endpoints
 
-```bash
+```console
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server/demos/common/export_models
 pip install -q -r requirements.txt
@@ -16,8 +16,15 @@ python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-fo
 
 ## Deploying the model server
 
+
+### With Docker
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config_all.json
+```
+
+### On Baremetal
+```bat
+ovms --rest_port 8000 --config_path ./models/config_all.json
 ```
 
 ## Using RAG

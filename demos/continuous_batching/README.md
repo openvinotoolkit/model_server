@@ -76,7 +76,12 @@ docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /de
 
 ## Deploying on Bare Metal
 
-Assuming you have unpacked model server package, make sure to run `setupvars` script as mentioned in baremetal deployment guide in every new shell dedicated to running OpenVINO Model Server.
+Assuming you have unpacked model server package, make sure to:
+
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+ as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ### CPU
 
@@ -85,7 +90,6 @@ In model preparation section, configuration is set to load models on CPU, so you
 ```bat
 ovms --rest_port 8000 --config_path ./models/config.json
 ```
-
 
 ### GPU
 
@@ -273,7 +277,7 @@ git clone --branch v0.6.0 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
-wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
+curl https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
 python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate inf
 
 Namespace(backend='openai-chat', base_url=None, host='localhost', port=8000, endpoint='/v3/chat/completions', dataset=None, dataset_name='sharegpt', dataset_path='ShareGPT_V3_unfiltered_cleaned_split.json', model='meta-llama/Meta-Llama-3-8B-Instruct', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, sharegpt_output_len=None, sonnet_input_len=550, sonnet_output_len=150, sonnet_prefix_len=200, random_input_len=1024, random_output_len=128, random_range_ratio=1.0, request_rate=inf, seed=0, trust_remote_code=False, disable_tqdm=False, profile=False, save_result=False, metadata=None, result_dir=None, result_filename=None, percentile_metrics='ttft,tpot,itl', metric_percentiles='99')

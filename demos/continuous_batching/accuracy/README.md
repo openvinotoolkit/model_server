@@ -7,25 +7,59 @@ It reports end to end quality of served model from the client application point 
 
 ## Preparing the lm-evaluation-harness framework 
 
-Install the framework via:
+Install the framework via pip. Set extra index url for CPU-only pytorch installation:
+
+::::{tab-set}
+:::{tab-item} Bash
+:sync: bash
 ```bash
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+```
+:::{tab-item} Windows Command Line
+:sync: cmd
+```bat
+set PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+```
+:::
+
+:::{tab-item} Windows PowerShell
+:sync: powershell
+```powershell
+$env:PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+```
+:::
+::::
+
+Install the packages:
+```console
 pip3 install lm_eval[api] langdetect immutabledict
 ```
 
-## Exporting the models and starting the model server
-```bash
+## Exporting the models
+```console
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 pip3 install -U -r demos/common/export_models/requirements.txt
 mkdir models 
 python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
 python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
+```
+
+## Starting the model server
+
+### With Docker
+```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
+
+### On Baremetal
+```bat
+ovms --rest_port 8000 --config_path ./models/config.json
+```
+
 ## Running the tests
 
-```bash
+```console
 lm-eval --model local-chat-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3-8B-Instruct,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path test/ --seed 1 --apply_chat_template --limit 100
 
 local-chat-completions (model=meta-llama/Meta-Llama-3-8B-Instruct,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=10,max_retries=3,tokenized_requests=False), gen_kwargs: (None), limit: 100.0, num_fewshot: None, batch_size: 1
@@ -37,7 +71,7 @@ local-chat-completions (model=meta-llama/Meta-Llama-3-8B-Instruct,base_url=http:
 
 While testing the non chat model and `completion` endpoint, the command would look like this:
 
-```bash
+```console
 lm-eval --model local-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3-8B,base_url=http://localhost:8000/v3/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path results/ --seed 1 --limit 100
 
 local-completions (model=meta-llama/Meta-Llama-3-8B,base_url=http://localhost:8000/v3/completions,num_concurrent=10,max_retries=3,tokenized_requests=False), gen_kwargs: (None), limit: 100.0, num_fewshot: None, batch_size: 1
@@ -49,11 +83,11 @@ local-completions (model=meta-llama/Meta-Llama-3-8B,base_url=http://localhost:80
 
 Other examples are below:
 
-```bash
+```console
 lm-eval --model local-chat-completions --tasks leaderboard_ifeval --model_args model=meta-llama/Meta-Llama-3-8B-Instruct,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=10,max_retries=3,tokenized_requests=False --verbosity DEBUG --log_samples --output_path test/ --seed 1 --limit 100 --apply_chat_template  
 ```
 
-```bash
+```console
 lm-eval --model local-completions --tasks wikitext --model_args model=meta-llama/Meta-Llama-3-8B,base_url=http://localhost:8000/v3/completions,num_concurrent=10,max_retries=3,tokenized_requests=False --verbosity DEBUG --log_samples --output_path test/ --seed 1 --limit 100
 ```
 
