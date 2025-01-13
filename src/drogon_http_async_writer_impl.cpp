@@ -82,7 +82,6 @@ void DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback(std::function<void
             callback();
         });
     }
-    // TODO: Implement once https://github.com/drogonframework/drogon/pull/2204 is merged
 }
 
 }  // namespace ovms
