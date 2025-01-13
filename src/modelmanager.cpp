@@ -90,6 +90,10 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     metricRegistry(registry),
     pythonBackend(pythonBackend) {
     OV_LOGGER("ov::Core(): {}", reinterpret_cast<void*>(this->ieCore.get()));
+#ifdef _WIN32
+    // On Windows, we do not want to use mmap in order to support model version management
+    ieCore->set_property(ov::AnyMap{{ov::enable_mmap(false)}});
+#endif
     // Take --cache_dir from CLI
     if (this->modelCacheDirectory.empty()) {
         this->modelCacheDirectory = ovms::Config::instance().cacheDir();
