@@ -1,4 +1,4 @@
-# RAG demo with all execution steps delegated to the OpenVINO Model Server {#ovms_demos_rag}
+# RAG demo with all execution steps delegated to the OpenVINO Model Server {#ovms_demos_continuous_batching_rag}
 
 
 ## Creating models repository for all the endpoints

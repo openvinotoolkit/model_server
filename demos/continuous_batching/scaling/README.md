@@ -1,4 +1,4 @@
-# Scaling on a dual CPU socket server
+# Scaling on a dual CPU socket server {#ovms_demos_continuous_batching_scaling}
 
 Text generation in OpenVINO Model Server with continuous batching is most efficient on a single CPU socket. OpenVINO ensures the load to be constrained to a single NUMA node. 
 That ensure fast memory access from the node and avoids intra socket communication.

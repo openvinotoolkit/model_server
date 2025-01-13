@@ -1,4 +1,4 @@
-# Testing LLM serving accuracy
+# Testing LLM serving accuracy {#ovms_demos_continuous_batching_accuracy}
 
 This guide shows how to access to LLM model over serving endpoint. 
 
@@ -7,7 +7,7 @@ It reports end to end quality of served model from the client application point 
 
 ## Preparing the lm-evaluation-harness framework 
 
-Install the framework via pip. Set extra index url for CPU-only pytorch installation:
+Set extra index url for CPU-only dependency installation:
 
 ::::{tab-set}
 :::{tab-item} Bash
@@ -30,7 +30,7 @@ $env:PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
 :::
 ::::
 
-Install the packages:
+Install the framework via pip:
 ```console
 pip3 install lm_eval[api] langdetect immutabledict
 ```

@@ -1,3 +1,14 @@
+
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
+ovms_demos_continuous_batching_accuracy
+ovms_demos_continuous_batching_rag
+ovms_demos_continuous_batching_scaling
+```
+
 # How to serve LLM models with Continuous Batching via OpenAI API {#ovms_demos_continuous_batching}
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
 Text generation use case is exposed via OpenAI API `chat/completions` and `completions` endpoints.
@@ -6,29 +17,50 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 > **Note:** This demo was tested on Intel® Xeon® processors Gen4 and Gen5 and Intel dGPU ARC and Flex models on Ubuntu22/24 and RedHat8/9.
 
 ## Prerequisites
+
+### Model preparation
+- Python 3.9 or higher
+- pip package installer
+- HuggingFace account
+
+### Model Server deployment
 - **For Linux users**: Installed Docker Engine 
 - **For Windows users**: Installed OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
+### Client
+Depending on how you will interact with the model server
+- curl (for running simple requests from the CLI)
+- git (for vLLM benchmark app)
+- Python and pip package installer (for OpenAI client package and vLLM benchmark app)
+
 ## Model preparation
-> **Note** Python 3.9 or higher is need for that step
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
-Clone model server repository and install python dependencies for the conversion script:
+Download export script, install it's dependecies and create directory for the models:
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-pip3 install -U -r demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+mkdir models 
 ```
 
 Run optimum-cli to download and quantize the model:
-```console
-mkdir models 
-python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models 
-```
-> **Note:** Change the `--weight-format` to quantize the model to `int8` or `int4` precision to reduce memory consumption and improve performance.
+
 > **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/meta-llama/Meta-Llama-3-8B) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`.
+
+### CPU
+```console
+python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models  --overwrite_models
+```
+
+### GPU
+```console
+python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --cache_size 2 --config_file_path models/config.json --model_repository_path models --overwrite_models
+```
+
+> **Note:** Change the `--weight-format` to quantize the model to `int8` or `int4` precision to reduce memory consumption and improve performance.
+
 > **Note:** You can change the model used in the demo out of any topology [tested](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models) with OpenVINO.
 
 You should have a model folder like below:
@@ -52,10 +84,12 @@ models
         └── tokenizer.json
 ```
 
-The default configuration  should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
 
 
 ## Deploying with Docker
+
+Select deployment option depending on how you prepared models in the previous step.
 
 ### CPU
 
@@ -69,8 +103,6 @@ In case you want to use GPU device to run the generation, add extra docker param
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
-python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --cache_size 2 --config_file_path models/config.json --model_repository_path models --overwrite_models
-
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 
@@ -83,28 +115,14 @@ Assuming you have unpacked model server package, make sure to:
 
  as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
-### CPU
-
-In model preparation section, configuration is set to load models on CPU, so you can simply run the binary pointing to the configuration file and selecting port for the HTTP server to expose inference endpoint.
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
 ovms --rest_port 8000 --config_path ./models/config.json
 ```
 
-### GPU
 
-In case you want to use GPU device to run the generation, export the models with precision matching the GPU capacity and adjust pipeline configuration.
-It can be applied using the commands below:
-```console
-python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --cache_size 2 --config_file_path models/config.json --model_repository_path models --overwrite_models
-```
-Then rerun above command as configuration file has already been adjusted to deploy model on GPU:
-
-```bat
-ovms --rest_port 8000 --config_path ./models/config.json
-```
-
-### Check readiness
+## Check readiness
 
 Wait for the model to load. You can check the status with a simple command:
 ```console
