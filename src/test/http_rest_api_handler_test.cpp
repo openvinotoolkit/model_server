@@ -1250,12 +1250,7 @@ TEST_F(ConfigStatus, configWithMediapipeRemoved) {
 #endif
 
 TEST_F(ConfigStatus, url_decode) {
-    std::string input = "a%20b%20c%20d";
-    std::string expected = "a b c d";
-    std::string output = ovms::urlDecode(input);
-    EXPECT_EQ(expected, output);
-    input = "model%2Fname";
-    expected = "model/name";
-    output = ovms::urlDecode(input);
-    EXPECT_EQ(expected, output);
+    EXPECT_EQ("a b c d", ovms::urlDecode("a%20b%20c%20d"));
+    EXPECT_EQ("model/name", ovms::urlDecode("model%2Fname"));
+    EXPECT_EQ("model%", ovms::urlDecode("model%"));
 }
