@@ -134,6 +134,10 @@ public:
      * @return StatusCode
      */
     static StatusCode createTempPath(std::string* local_path) {
+        if (!local_path) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set.");
+            return StatusCode::FILESYSTEM_ERROR;
+        }
         std::string file_template = "/tmp/fileXXXXXX";
         char* tmp_folder = mkdtemp(const_cast<char*>(file_template.c_str()));
         if (tmp_folder == nullptr) {
@@ -151,9 +155,7 @@ public:
 #elif _WIN32
     static StatusCode createTempPath(std::string* local_path) {
         if (!local_path) {
-            DWORD error = GetLastError();
-            std::string message = std::system_category().message(error);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set: {}, error: {}", local_path, message);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set.");
             return StatusCode::FILESYSTEM_ERROR;
         }
 
