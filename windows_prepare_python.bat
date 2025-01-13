@@ -15,8 +15,7 @@
 ::
 :: Prepares embedded python installation for the purpose of ovms building and creating the final ovms distribution. 
 setlocal EnableExtensions EnableDelayedExpansion
-@echo off
-
+:: @echo off
 if "%~1"=="" (
     set "dest_dir=C:\opt"
     echo Destination directory not specified. Using: C:\opt
