@@ -345,11 +345,6 @@ TEST_F(ConfigReload, startWith1DummyThenAddVersion) {
     EXPECT_EQ(expectedJson2, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 
-    // Workaround to unload before removing the model,
-    // because on windows does not close the handle (uses mmap)
-#ifdef _WIN32
-    this->UnloadConfig(t.getManager());
-#endif
     std::filesystem::remove_all(getGenericFullPathForTmp("/tmp/dummy"));
 }
 
@@ -391,11 +386,6 @@ TEST_F(ConfigReload, startWithMissingXmlThenAddAndReload) {
     EXPECT_EQ(expectedJson2, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 
-    // Workaround to unload before removing the model,
-    // because on windows does not close the handle (uses mmap)
-#ifdef _WIN32
-    this->UnloadConfig(t.getManager());
-#endif
     std::filesystem::remove_all(getGenericFullPathForTmp("/tmp/dummy"));
 }
 
@@ -418,11 +408,6 @@ TEST_F(ConfigReload, startWithEmptyModelDir) {
     ASSERT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
     EXPECT_EQ(expectedJson, response);
 
-    // Workaround to unload before removing the model,
-    // because on windows does not close the handle (uses mmap)
-#ifdef _WIN32
-    this->UnloadConfig(t.getManager());
-#endif
     std::filesystem::remove_all("/tmp/dummy");
 }
 
