@@ -60,8 +60,8 @@ if !errorlevel! neq 0 (
 echo Sth9
 
 :: Below includes OpenVINO tokenizers
-copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll dist\windows\ovms
-if !errorlevel! neq 0 exit /b !errorlevel!
+:: copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll dist\windows\ovms
+:: if !errorlevel! neq 0 exit /b !errorlevel!
 echo Sth10
 copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
