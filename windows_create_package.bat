@@ -61,7 +61,9 @@ echo Sth9
 
 :: Below includes OpenVINO tokenizers
 :: copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll dist\windows\ovms
-:: if !errorlevel! neq 0 exit /b !errorlevel!
+:: TODO Better manage dependency declarationw with llm_engine & bazel
+copy %cd%\bazel-out\x64_windows-opt\bin\external\llm_engine\copy_openvino_genai\openvino_genai\runtime\bin\Release\*.dll dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
 echo Sth10
 copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
