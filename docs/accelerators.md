@@ -49,7 +49,7 @@ docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -u $(i
 
 ## Using NPU device Plugin
 
-OpenVINO Model Server can support using [NPU device](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/npu-device.html)
+OpenVINO Model Server supports using [NPU device](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/npu-device.html)
 
 Example command to run container with NPU:
 ```bash
@@ -101,7 +101,7 @@ docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render*
 
 The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.md) plugin config property that enables you to specify a performance mode for the plugin.
 While LATENCY and THROUGHPUT hint can select one target device with your preferred performance option, the CUMULATIVE_THROUGHPUT option enables running inference on multiple devices for higher throughput. 
-With CUMULATIVE_THROUGHPUT, AUTO loads the network model to all available devices (specified by AUTO) in the candidate list, and then runs inference on them based on the default or specified priority.
+With CUMULATIVE_THROUGHPUT hint, AUTO plugin loads the network model to all available devices (specified by the plugin) in the candidate list, and then runs inference on them based on the default or specified priority.
 
 > **NOTE**: NUM_STREAMS and PERFORMANCE_HINT should not be used together.
 
