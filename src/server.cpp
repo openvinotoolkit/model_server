@@ -116,7 +116,7 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
     SPDLOG_DEBUG("file system poll wait milliseconds: {}", config.filesystemPollWaitMilliseconds());
-    SPDLOG_DEBUG("sequence sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
+    SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
 }
 
 static void onInterrupt(int status) {
