@@ -298,6 +298,7 @@ COPY src/ /ovms/src/
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 
 # Copy example clients into build image for static analysis
 WORKDIR /example_cpp_client
 COPY demos/common/cpp /example_cpp_client/cpp
