@@ -41,7 +41,7 @@ parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS
 subparsers = parser.add_subparsers(help='subcommand help', required=True, dest='task')
 parser_text = subparsers.add_parser('text_generation', help='export model for chat and completion endpoints')
 add_common_arguments(parser_text)
-parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
+parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8", "fp32"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
 parser_text.add_argument('--enable_prefix_caching', action='store_true', help='This algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
@@ -271,7 +271,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 tokenizer.save_pretrained(tmp_folder)
                 source_model = tmp_folder
             print("Exporting LLM model to ", llm_model_path)
-            optimum_command = "optimum-cli export openvino --task text-generation --disable-convert-tokenizer --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, llm_model_path)
+            optimum_command = "optimum-cli export openvino --task text-generation-with-past --disable-convert-tokenizer --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, llm_model_path)
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)
             print("Exporting tokenizer to ", llm_model_path)
