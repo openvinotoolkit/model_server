@@ -16,8 +16,9 @@
 
 #include "cleaner_utils.hpp"
 
-#include <malloc.h>
 #include <string>
+
+#include <malloc.h>
 
 #include "global_sequences_viewer.hpp"
 #include "logging.hpp"
