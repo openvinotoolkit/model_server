@@ -636,9 +636,9 @@ test_python_clients:
 	@echo "Download models"
 	@if [ ! -d "tests/python/models" ]; then cd tests/python && \
 		mkdir models && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:latest omz_downloader --name resnet-50-tf --output_dir /models && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32 && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:latest mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1; fi
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models && \
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32 && \
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1; fi
 	@echo "Start test container"
 	@docker run -d --rm --name $(PYTHON_CLIENT_TEST_CONTAINER_NAME) -v ${PWD}/tests/python/models/public/resnet-50-tf:/models/public/resnet-50-tf -p $(PYTHON_CLIENT_TEST_REST_PORT):8000 -p $(PYTHON_CLIENT_TEST_GRPC_PORT):9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 && \
 		sleep 10

@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from tensorflow.python.saved_model import signature_constants
 from tensorflow.python.saved_model import tag_constants
 import numpy as np
