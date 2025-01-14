@@ -1253,4 +1253,5 @@ TEST_F(ConfigStatus, url_decode) {
     EXPECT_EQ("a b c d", ovms::urlDecode("a%20b%20c%20d"));
     EXPECT_EQ("model/name", ovms::urlDecode("model%2Fname"));
     EXPECT_EQ("model%", ovms::urlDecode("model%"));
+    EXPECT_EQ("model%2", ovms::urlDecode("model%2"));
 }
