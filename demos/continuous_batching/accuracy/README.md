@@ -15,6 +15,8 @@ Set extra index url for CPU-only dependency installation:
 ```bash
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
 ```
+:::
+
 :::{tab-item} Windows Command Line
 :sync: cmd
 ```bat

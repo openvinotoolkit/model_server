@@ -9,7 +9,7 @@ pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/r
 
 2. Run optimum-cli to download and quantize the model:
 ```bash
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py
 mkdir models
 python export_model.py text_generation --source_model TinyLlama/TinyLlama-1.1B-Chat-v1.0 --weight-format int8 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models 
 ```

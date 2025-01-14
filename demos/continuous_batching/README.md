@@ -1,3 +1,4 @@
+# How to serve LLM models with Continuous Batching via OpenAI API {#ovms_demos_continuous_batching}
 
 ```{toctree}
 ---
@@ -9,7 +10,6 @@ ovms_demos_continuous_batching_rag
 ovms_demos_continuous_batching_scaling
 ```
 
-# How to serve LLM models with Continuous Batching via OpenAI API {#ovms_demos_continuous_batching}
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
 Text generation use case is exposed via OpenAI API `chat/completions` and `completions` endpoints.
 That makes it easy to use and efficient especially on on Intel® Xeon® processors.

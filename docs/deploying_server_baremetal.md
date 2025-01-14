@@ -163,13 +163,11 @@ Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/r
 Download and unpack model server archive for Windows:
 
 ```bat
-curl https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_win11.zip
-tar -xf ovms_win11.zip
+curl <url_to_be_provided>
+tar -xf ovms.zip
 ```
 
 Run `setupvars` script to set required environment variables. 
-
-> Note: Running this script changes Python settings for the shell that runs it.
 
 **Windows Command Line**
 ```bat
@@ -181,21 +179,23 @@ Run `setupvars` script to set required environment variables.
 ./ovms/setupvars.ps1
 ```
 
-> Note: Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
+> **Note**: Running this script changes Python settings for the shell that runs it.Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
 
 You can also build model server from source by following the [developer guide](windows_developer_guide.md).
 
 :::
 ::::
 
-Start the server:
-
+Download ResNet50 model:
 ```console
 mkdir models/resnet50/1
 
 curl -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet50/1/model.xml
 curl -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
+```
 
+Start the server:
+```console
 ovms --model_name resnet --model_path models/resnet50
 ```
 
