@@ -99,7 +99,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Copy OpenVINO GenAI and tokenizers libs
-copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
+:: TODO this is a hack to be improved after bazel llm windows integration
+copy %cd%\bazel-out\x64_windows-opt\bin\external\llm_engine\copy_openvino_genai\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
 
 ls %cd%\bazel-bin\src
 
