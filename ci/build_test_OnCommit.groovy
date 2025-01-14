@@ -94,24 +94,10 @@ pipeline {
               when { expression { win_image_build_needed == "true" } }
               steps {
                   script {
-                      def bazel_remote_cache_url = env.OVMS_BAZEL_REMOTE_CACHE_URL
-                      def filePath = '.user.bazelrc'
-                      def content = "build --remote_cache=\"${bazel_remote_cache_url}\""
-                      def command = "echo ${content} > ${filePath}"
-                      status = bat(returnStatus: true, script: command)
-                      if ( status != 0) {
-                          println "Failed to set up bazel remote cache for Windows"
-                          return
-                      }
-                      command = "cat ${filePath}"
-                      status = bat(returnStatus: true, script: command)
-                      if ( status != 0) {
-                          println "Failed to read file"
-                          return
-                      }
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
                         try {
+                          windows.setup_bazel_remote_cache()
                           windows.install_dependencies()
                           windows.clean()
                           windows.build_and_test()
