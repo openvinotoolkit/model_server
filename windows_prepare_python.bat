@@ -32,40 +32,48 @@ if "%~2"=="" (
     echo User specified Python version: %2
 )
 
+if "%~3"=="" (
+    set "python_dir=python39"
+    echo Python directory not specified. Using: python39
+) else (
+    set "python_dir=%~3"
+    echo User specified Python directory: %3
+)
+
 set "python_full_name=python-%python_version%-embed-amd64"
 set "embeddable_python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.zip"
 
 :: Download and unpack everything
-rmdir /S /Q %dest_dir%\%python_full_name%
+rmdir /S /Q %dest_dir%\%python_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-md %dest_dir%\%python_full_name%
+md %dest_dir%\%python_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-if exist %dest_dir%\%python_full_name%.zip (
+if exist %dest_dir%\%python_dir%.zip (
     echo Python zip already downloaded. Will unpack existing file.
 ) else (
-    curl -k %embeddable_python_url% -o %dest_dir%\%python_full_name%.zip
+    curl -k %embeddable_python_url% -o %dest_dir%\%python_dir%.zip
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-tar -xf %dest_dir%\%python_full_name%.zip -C %dest_dir%\%python_full_name%
+C:\Windows\System32\tar.exe -xf %dest_dir%\%python_dir%.zip -C %dest_dir%\%python_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-cd %dest_dir%\%python_full_name%
-md python39
+cd %dest_dir%\%python_dir%
+md %python_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-tar -xf python39.zip -C python39
+C:\Windows\System32\tar.exe -xf %python_dir%.zip -C %python_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Adjust paths so everything is accessible
 (
-echo .\python39
+echo .\%python_dir%
 echo .
 echo .\Scripts
 echo .\Lib\site-packages
-) > python39._pth
+) > %python_dir%._pth
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Install pip

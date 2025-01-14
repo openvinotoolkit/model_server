@@ -239,36 +239,25 @@ IF /I EXIST %bazel_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python39
-set "python39_path=%opt_install_dir%\Python39\"
-set "python39_system=C:\Program Files\Python39\"
+set "python_version=3.9.13"
+set "python_dir=python39"
+set "python39_path=%opt_install_dir%\%python_dir%"
 IF /I EXIST %python39_path% (
     IF %expunge% EQU 1 (
         rmdir /S /Q %python39_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        IF /I EXIST "%python39_system%" (
-            :: Copy system Python
-            xcopy /s /e /q /y "%python39_system%" %python39_path%
-            if !errorlevel! neq 0 exit /b !errorlevel!
-            pip install numpy==1.23
-            if !errorlevel! neq 0 exit /b !errorlevel!
-        ) ELSE (
-            echo [ERROR] ::::::::::::::::::::::: Python39 not found
-            goto :exit_dependencies_error
-        )
+        call %cd%\windows_prepare_python.bat %opt_install_dir% %python_version% %python_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %python39_path%\Scripts\pip.exe install --target=%python39_path%\site-packages numpy==1.23 Jinja2==3.1.4 MarkupSafe==3.0.2
+        if !errorlevel! neq 0 exit /b !errorlevel!
     ) ELSE (
         echo [INFO] ::::::::::::::::::::::: Python39 already installed
     )
 ) ELSE (
-    IF /I EXIST "%python39_system%" (
-        :: Copy system Python
-        xcopy /s /e /q /y "%python39_system%" %python39_path%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        %python39_path%python.exe -m pip install numpy==1.23
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) ELSE (
-        echo [ERROR] ::::::::::::::::::::::: Python39 not found
-        goto :exit_dependencies_error
-    )
+    call %cd%\windows_prepare_python.bat %opt_install_dir% %python_version% %python_dir%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    %python39_path%\Scripts\pip.exe install --target=%python39_path%\site-packages numpy==1.23 Jinja2==3.1.4 MarkupSafe==3.0.2
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -324,7 +313,4 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 :exit_dependencies
 echo [INFO] Dependencies installed
 exit /b 0
-:exit_dependencies_error
-echo [ERROR] Some dependencies not installed
-exit /b 1
 endlocal

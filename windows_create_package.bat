@@ -39,10 +39,11 @@ md dist\windows\ovms\python
 copy  %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-:: Prepare self-contained python
-set "dest_dir=C:\opt"
+:: Prepare self-contained python - with minimal embedded python, thus clean path
+set "dest_dir=C:\opt\clean"
 set "python_version=3.9.13"
 call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
+if !errorlevel! neq 0 exit /b !errorlevel!
 :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
 xcopy %dest_dir%\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
 .\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
