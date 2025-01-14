@@ -14,6 +14,8 @@
 :: limitations under the License.
 ::
 setlocal EnableExtensions EnableDelayedExpansion
+set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
+set "PATH=%setPath%"
 IF "%~1"=="" (
     echo No argument provided. Using default opt path
     set "output_user_root=opt"

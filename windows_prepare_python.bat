@@ -16,6 +16,8 @@
 :: Prepares embedded python installation for the purpose of ovms building and creating the final ovms distribution. 
 setlocal EnableExtensions EnableDelayedExpansion
 @echo off
+set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
+set "PATH=%setPath%"
 if "%~1"=="" (
     set "dest_dir=C:\opt"
     echo Destination directory not specified. Using: C:\opt
@@ -61,15 +63,15 @@ C:\Windows\System32\tar.exe -xf %dest_dir%\%python_dir%.zip -C %dest_dir%\%pytho
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 cd %dest_dir%\%python_dir%
-md %python_dir%
+md python39
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-C:\Windows\System32\tar.exe -xf %python_dir%.zip -C %python_dir%
+C:\Windows\System32\tar.exe -xf python39.zip -C python39
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Adjust paths so everything is accessible
 (
-echo .\%python_dir%
+echo .python39
 echo .
 echo .\Scripts
 echo .\Lib\site-packages
