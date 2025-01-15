@@ -17,7 +17,7 @@
 setlocal EnableExtensions EnableDelayedExpansion
 set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
 set "PATH=%setPath%"
-@echo off
+@echo on
 if "%~1"=="" (
     set "dest_dir=C:\opt"
     echo Destination directory not specified. Using: C:\opt
@@ -34,20 +34,22 @@ if "%~2"=="" (
     echo User specified Python version: %2
 )
 
-if "%~3"=="" (
-    set "python_dir=python39"
-    echo Python directory not specified. Using: python39
-) else (
-    set "python_dir=%~3"
-    echo User specified Python directory: %3
+for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
+  set BEFORE_DOT=%%a
+  set AFTER_DOT=%%b
 )
+
+set "python_dir=python%BEFORE_DOT%%AFTER_DOT%"
+echo Python directory set to: %python_dir%
 
 set "python_full_name=python-%python_version%-embed-amd64"
 set "embeddable_python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.zip"
 
 :: Download and unpack everything
-rmdir /S /Q %dest_dir%\%python_dir%
-if !errorlevel! neq 0 exit /b !errorlevel!
+if exist %dest_dir%\%python_dir% (
+    rmdir /S /Q %dest_dir%\%python_dir%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
 
 md %dest_dir%\%python_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -83,3 +85,10 @@ curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 if !errorlevel! neq 0 exit /b !errorlevel!
 .\python.exe get-pip.py
 if !errorlevel! neq 0 exit /b !errorlevel!
+
+:: Return the directory where python will be installed - need to be at the end because of endlocal
+if "%~3" == "" (
+    echo Not returning python dir. Arg 3 not provided.
+) else (endlocal
+  set "%~3=%python_dir%"
+)
