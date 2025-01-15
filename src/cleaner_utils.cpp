@@ -18,7 +18,10 @@
 
 #include <string>
 
+#ifdef __linux__
 #include <malloc.h>
+#elif _WIN32
+#include <crtdbg.h>
 
 #include "global_sequences_viewer.hpp"
 #include "logging.hpp"
@@ -30,23 +33,13 @@ FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequ
 
 #ifdef _WIN32
 bool malloc_trim_win() {
-    HANDLE heap = GetProcessHeap();
-    if (heap == NULL) {
+    int result = _heapmin();
+    if (result != 0 ){
         DWORD error = GetLastError();
         std::string message = std::system_category().message(error);
-        SPDLOG_ERROR("Failed to get process heap: {}", message);
+        SPDLOG_ERROR("Failed to trim heap: {}", message);
         return false;
-    }
-
-    ULONG_PTR freed_bytes = HeapCompact(heap, 0);
-    if (freed_bytes == 0) {
-        DWORD error = GetLastError();
-        if (error != 0) {
-            std::string message = std::system_category().message(error);
-            SPDLOG_ERROR("HeapCompact failed with error: {}", message);
-            return false;
-        }
-    }
+    } 
     return true;
 }
 #endif
