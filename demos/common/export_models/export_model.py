@@ -48,6 +48,7 @@ parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty o
 parser_text.add_argument('--max_num_seqs', default=None, help='256 by default. The maximum number of sequences that can be processed together.', dest='max_num_seqs')
 parser_text.add_argument('--cache_size', default=10, type=int, help='cache size in GB', dest='cache_size')
 parser_text.add_argument('--adapter',action='append', help='lora adapter in HF or a local folder with the adapter', dest='adapter')
+parser_text.add_argument('--tokenizer', default=None, help='alternative tokenizer for the adapter', dest='tokenizer')
 parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
 add_common_arguments(parser_embeddings)
 parser_embeddings.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
@@ -248,7 +249,7 @@ def add_servable_to_config(config_path, mediapipe_name, base_path):
         json.dump(config_data, config_file, indent=4)
     print("Added servable to config file", config_path)
 
-def export_text_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, adapter):
+def export_text_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, adapter, adapter_tokenizer):
     model_path = "./"
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
             print("OV model is source folder. Skipping conversion.")
@@ -258,16 +259,21 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         tmp_folder = None
         if not os.path.isdir(llm_model_path) or args['overwrite_models']:
             if adapter is not None:
+                if len(adapter) > 1 and adapter_tokenizer is not None:
+                    raise ValueError("Only one adapter can be used with a custom tokenizer")
+                if adapter_tokenizer is None:
+                    adapter_tokenizer = source_model
                 tmp_folder = tempfile.mkdtemp()
                 print("Loading model with adapter")
-                HFmodel = LlamaForCausalLM.from_pretrained(source_model, trust_remote_code=True)  
+                HFmodel = AutoModelForCausalLM.from_pretrained(source_model, trust_remote_code=True)  
                 for adapteri in adapter:
                     print("Loading adapter", adapteri)
+                    HFmodel.resize_token_embeddings(len(AutoTokenizer.from_pretrained(adapter_tokenizer)), mean_resizing=False)
                     HFmodel = PeftModel.from_pretrained(HFmodel, adapteri)
                 print("Merging model with adapters")
                 HFmodel = HFmodel.merge_and_unload()
                 HFmodel.save_pretrained(tmp_folder)
-                tokenizer = AutoTokenizer.from_pretrained(source_model, trust_remote_code=True)
+                tokenizer = AutoTokenizer.from_pretrained(adapter_tokenizer, trust_remote_code=True)
                 tokenizer.save_pretrained(tmp_folder)
                 source_model = tmp_folder
             print("Exporting LLM model to ", llm_model_path)
@@ -388,7 +394,7 @@ template_parameters = {k: v for k, v in args.items() if k not in ['model_reposit
 print("template params:",template_parameters)
 
 if args['task'] == 'text_generation':
-    export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['adapter'])
+    export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['adapter'], args['tokenizer'])
 
 elif args['task'] == 'embeddings':
     export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, str(args['version']), args['config_file_path'])
