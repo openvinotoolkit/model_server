@@ -41,7 +41,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Prepare self-contained python
 set "dest_dir=C:\opt"
-set "python_version=3.9.13"
+set "python_version=3.11.11"
 call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
 :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
 xcopy %dest_dir%\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H

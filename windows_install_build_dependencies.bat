@@ -39,7 +39,7 @@ set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
 :: Python 39 needs to be first in the windows path, as well as MSYS tools
-set "setPath=C:\opt;C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
@@ -238,35 +238,35 @@ IF /I EXIST %bazel_path% (
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Python39
-set "python39_path=%opt_install_dir%\Python39\"
-set "python39_system=C:\Program Files\Python39\"
-IF /I EXIST %python39_path% (
+::::::::::::::::::::::: Python
+set "python_path=%opt_install_dir%\Python311\"
+set "python_system=C:\Program Files\Python311\"
+IF /I EXIST %python_path% (
     IF %expunge% EQU 1 (
-        rmdir /S /Q %python39_path%
+        rmdir /S /Q %python_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        IF /I EXIST "%python39_system%" (
+        IF /I EXIST "%python_system%" (
             :: Copy system Python
-            xcopy /s /e /q /y "%python39_system%" %python39_path%
+            xcopy /s /e /q /y "%python_system%" %python_path%
             if !errorlevel! neq 0 exit /b !errorlevel!
             pip install numpy==1.23
             if !errorlevel! neq 0 exit /b !errorlevel!
         ) ELSE (
-            echo [ERROR] ::::::::::::::::::::::: Python39 not found
+            echo [ERROR] ::::::::::::::::::::::: %python_system% not found
             goto :exit_dependencies_error
         )
     ) ELSE (
-        echo [INFO] ::::::::::::::::::::::: Python39 already installed
+        echo [INFO] ::::::::::::::::::::::: %python_path% already installed
     )
 ) ELSE (
-    IF /I EXIST "%python39_system%" (
+    IF /I EXIST "%python_system%" (
         :: Copy system Python
-        xcopy /s /e /q /y "%python39_system%" %python39_path%
+        xcopy /s /e /q /y "%python_system%" %python_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %python39_path%python.exe -m pip install numpy==1.23
+        %python_path%python.exe -m pip install numpy==1.23
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) ELSE (
-        echo [ERROR] ::::::::::::::::::::::: Python39 not found
+        echo [ERROR] ::::::::::::::::::::::: %python_system% not found
         goto :exit_dependencies_error
     )
 )

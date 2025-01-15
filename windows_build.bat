@@ -37,7 +37,7 @@ set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_fu
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 set "envPath=win_environment.log"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
@@ -105,8 +105,8 @@ copy %cd%\bazel-out\x64_windows-opt\bin\external\llm_engine\copy_openvino_genai\
 ls %cd%\bazel-bin\src
 
 :: Install Jinja in Python for chat templates to work
-set PYTHONHOME=C:\opt\Python39
-call C:\opt\Python39\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+set PYTHONHOME=C:\opt\Python311
+call C:\opt\Python311\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
 
 :: Download LLMs
 call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing

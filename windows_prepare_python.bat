@@ -25,8 +25,8 @@ if "%~1"=="" (
 )
 
 if "%~2"=="" (
-    set "python_version=3.9.13"
-    echo Python version not specified. Using: 3.9.13
+    set "python_version=3.11.11"
+    echo Python version not specified. Using: 3.11.11
 ) else (
     set "python_version=%~2"
     echo User specified Python version: %2
@@ -53,19 +53,19 @@ tar -xf %dest_dir%\%python_full_name%.zip -C %dest_dir%\%python_full_name%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 cd %dest_dir%\%python_full_name%
-md python39
+md python311
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-tar -xf python39.zip -C python39
+tar -xf python311.zip -C python311
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Adjust paths so everything is accessible
 (
-echo .\python39
+echo .\python311
 echo .
 echo .\Scripts
 echo .\Lib\site-packages
-) > python39._pth
+) > python311._pth
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Install pip

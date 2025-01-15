@@ -21,14 +21,6 @@ if "%~1"=="" (
   exit /b 1
 )
 
-:: Create a link to preexported models on CI workers
-IF /I EXIST c:\opt\llm_testing (
-    rmdir /S /Q "%~1"
-    mklink /d "%~1" c:\opt\llm_testing
-    echo Created link to existing in c:\opt\llm_testing. Skipping downloading models.
-    exit /b 0
-)
-
 set "EMBEDDING_MODEL=thenlper/gte-small"
 set "RERANK_MODEL=BAAI/bge-reranker-base"
 set "TEXT_GENERATION_MODEL=facebook/opt-125m"
@@ -41,7 +33,7 @@ if exist "%~1\%TEXT_GENERATION_MODEL%" if exist "%~1\%EMBEDDING_MODEL%" if exist
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 set "PYTHONPATH="
-C:\opt\Python39\python.exe -m venv .venv
+C:\opt\Python311\python.exe -m venv .venv
 call .\.venv\Scripts\Activate.bat
 set
 python -m pip install --upgrade pip
