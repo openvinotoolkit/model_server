@@ -50,9 +50,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
 xcopy %dest_dir%\%python_dir% dist\windows\ovms\python /E /I /H
 .\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
-if !errorlevel! neq 0 (
-    echo Error copying python into the distribution location. The package will not contain self-contained python.
-)
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Below includes OpenVINO tokenizers
 :: TODO Better manage dependency declaration with llm_engine & bazel
