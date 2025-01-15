@@ -34,12 +34,12 @@ FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequ
 #ifdef _WIN32
 bool malloc_trim_win() {
     int result = _heapmin();
-    if (result != 0 ){
+    if (result != 0){
         DWORD error = GetLastError();
         std::string message = std::system_category().message(error);
         SPDLOG_ERROR("Failed to trim heap: {}", message);
         return false;
-    } 
+    }
     return true;
 }
 #endif
