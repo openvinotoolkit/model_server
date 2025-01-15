@@ -40,7 +40,7 @@ if "%~3"=="" (
         set AFTER_DOT=%%b
     )
 
-    set "python_dir=python%BEFORE_DOT%%AFTER_DOT%"
+    set "python_dir=python!BEFORE_DOT!!AFTER_DOT!"
     echo Python directory not specified. Using: %python_dir%
 ) else (
     set "python_dir=%~3"
