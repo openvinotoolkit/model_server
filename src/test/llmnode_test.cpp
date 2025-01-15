@@ -1611,8 +1611,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeUsage) {
 // /v3/chat/completions endpoint
 // unary, gready search
 // Correct payload, however disconnection immediately
-// Disabled because registering disconnection callback is unsupported in drogon https://github.com/drogonframework/drogon/pull/2204
-TEST_F(LLMFlowHttpTest, DISABLED_inferChatCompletionsUnaryClientDisconnectedImmediately) {
+TEST_F(LLMFlowHttpTest, inferChatCompletionsUnaryClientDisconnectedImmediately) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
