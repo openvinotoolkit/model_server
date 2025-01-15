@@ -123,9 +123,9 @@ IF /I EXIST %bash_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenVINO - reinstalled per build trigger
-set "openvino_dir=w_openvino_toolkit_windows_2025.0.0.dev20250109_x86_64"
-set "openvino_ver=w_openvino_toolkit_windows_2025.0.0.dev20250109_x86_64.zip"
-set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17800-91ae987c516/"
+set "openvino_dir=w_openvino_toolkit_windows_2025.0.0.dev20250115_x86_64"
+set "openvino_ver=w_openvino_toolkit_windows_2025.0.0.dev20250115_x86_64.zip"
+set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17891-5c55539e74e/"
 set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
 set "openvino_workspace=C:\\\\opt\\\\openvino\\\\runtime"
 set "openvino_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
