@@ -44,8 +44,14 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 :: Prepare self-contained python - with minimal embedded python, thus clean path
 set "dest_dir=C:\opt\clean"
 set "python_version=3.9.13"
+for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
+        set BEFORE_DOT=%%a
+        set AFTER_DOT=%%b
+    )
+set "python_dir=python%BEFORE_DOT%%AFTER_DOT%"
+
 :: python_dir can be provided as 3rd argument when we want to get the Python destination directory value from the script
-call %cd%\windows_prepare_python.bat %dest_dir% %python_version% python_dir
+call %cd%\windows_prepare_python.bat %dest_dir% %python_version% %python_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
 xcopy %dest_dir%\%python_dir% dist\windows\ovms\python /E /I /H

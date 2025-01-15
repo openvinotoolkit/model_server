@@ -240,7 +240,12 @@ IF /I EXIST %bazel_path% (
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python39
 set "python_version=3.9.13"
-set "python_dir=python39"
+for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
+        set BEFORE_DOT=%%a
+        set AFTER_DOT=%%b
+    )
+set "python_dir=python%BEFORE_DOT%%AFTER_DOT%"
+
 set "python39_path=%opt_install_dir%\%python_dir%"
 IF /I EXIST %python39_path% (
     IF %expunge% EQU 1 (
