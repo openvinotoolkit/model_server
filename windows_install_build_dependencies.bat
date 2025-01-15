@@ -245,15 +245,15 @@ for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
         set AFTER_DOT=%%b
     )
 set "python_dir=python%BEFORE_DOT%%AFTER_DOT%"
+set "python_path=%opt_install_dir%\%python_dir%"
 
-set "python39_path=%opt_install_dir%\%python_dir%"
-IF /I EXIST %python39_path% (
+IF /I EXIST %python_path% (
     IF %expunge% EQU 1 (
-        rmdir /S /Q %python39_path%
+        rmdir /S /Q %python_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
         call %cd%\windows_prepare_python.bat %opt_install_dir% %python_version% %python_dir%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %python39_path%\Scripts\pip.exe install --target=%python39_path%\site-packages numpy==1.23 Jinja2==3.1.4 MarkupSafe==3.0.2
+        %python_path%\python.exe  -m pip install "numpy==1.23" "Jinja2==3.1.4" "MarkupSafe==3.0.2"
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) ELSE (
         echo [INFO] ::::::::::::::::::::::: Python39 already installed
@@ -261,7 +261,7 @@ IF /I EXIST %python39_path% (
 ) ELSE (
     call %cd%\windows_prepare_python.bat %opt_install_dir% %python_version% %python_dir%
     if !errorlevel! neq 0 exit /b !errorlevel!
-    %python39_path%\Scripts\pip.exe install --target=%python39_path%\site-packages numpy==1.23 Jinja2==3.1.4 MarkupSafe==3.0.2
+    %python_path%\python.exe  -m pip install "numpy==1.23" "Jinja2==3.1.4" "MarkupSafe==3.0.2"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 python --version
