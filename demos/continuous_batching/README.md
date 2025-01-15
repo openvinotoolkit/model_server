@@ -78,7 +78,9 @@ models
 
 The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
 
-## Deploying with Docker
+## Server Deployment
+
+:::{dropdown} Deploying with Docker
 
 Select deployment option depending on how you prepared models in the previous step.
 
@@ -96,8 +98,9 @@ It can be applied using the commands below:
 ```bash
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
+:::
 
-## Deploying on Bare Metal
+:::{dropdown} Deploying on Bare Metal
 
 Assuming you have unpacked model server package, make sure to:
 
@@ -111,7 +114,7 @@ Depending on how you prepared models in the first step of this demo, they are de
 ```bat
 ovms --rest_port 8000 --config_path ./models/config.json
 ```
-
+:::
 
 ## Readiness Check
 
@@ -142,7 +145,7 @@ A single servable exposes both `chat/completions` and `completions` endpoints wi
 Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
 Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
 
-### Unary call with cURL
+:::{dropdown} Unary call with cURL
 ```console
 curl http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
@@ -217,8 +220,9 @@ curl http://localhost:8000/v3/completions \
   }
 }
 ```
+:::
 
-### Streaming call with OpenAI Python package
+:::{dropdown} Streaming call with OpenAI Python package
 
 The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
@@ -275,7 +279,7 @@ Output:
 ```
 It looks like you're testing me!
 ```
-
+:::
 
 ## Benchmarking text generation with high concurrency
 
