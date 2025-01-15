@@ -14,47 +14,39 @@ This demo shows how to deploy LLM models in the OpenVINO Model Server using cont
 Text generation use case is exposed via OpenAI API `chat/completions` and `completions` endpoints.
 That makes it easy to use and efficient especially on on Intel® Xeon® processors.
 
-> **Note:** This demo was tested on Intel® Xeon® processors Gen4 and Gen5 and Intel dGPU ARC and Flex models on Ubuntu22/24 and RedHat8/9.
+> **Note:** This demo was tested on4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Data Center GPU Series on Ubuntu22/24, RedHat8/9 and Windows11.
 
 ## Prerequisites
 
-### Model preparation
-- Python 3.9 or higher
-- pip package installer
-- HuggingFace account
+**Model preparation**: Python 3.9 or higher with pip and HuggingFace account
 
-### Model Server deployment
-- **For Linux users**: Installed Docker Engine 
-- **For Windows users**: Installed OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
-### Client
-Depending on how you will interact with the model server
-- curl (for running simple requests from the CLI)
-- git (for vLLM benchmark app)
-- Python and pip package installer (for OpenAI client package and vLLM benchmark app)
+**(Optional) Client**: git and Python for using OpenAI client package and vLLM benchmark app
+
 
 ## Model preparation
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
-Download export script, install it's dependecies and create directory for the models:
+Download export script, install it's dependencies and create directory for the models:
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 mkdir models 
 ```
 
-Run optimum-cli to download and quantize the model:
+Run `export_model.py` script to download and quantize the model:
 
 > **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/meta-llama/Meta-Llama-3-8B) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`.
 
-### CPU
+**CPU**
 ```console
 python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models  --overwrite_models
 ```
 
-### GPU
+**GPU**
 ```console
 python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --cache_size 2 --config_file_path models/config.json --model_repository_path models --overwrite_models
 ```
@@ -86,43 +78,44 @@ models
 
 The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
 
+## Server Deployment
 
-## Deploying with Docker
+.. dropdown:: Deploying with Docker
 
-Select deployment option depending on how you prepared models in the previous step.
+  Select deployment option depending on how you prepared models in the previous step.
 
-### CPU
+  **CPU**
 
-Running this command starts the container with CPU only target device:
-```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
-```
-### GPU
+  Running this command starts the container with CPU only target device:
+  ```bash
+  docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
+  ```
+  **GPU**
 
-In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
-to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
-It can be applied using the commands below:
-```bash
-docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
-```
+  In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
+  to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
+  It can be applied using the commands below:
+  ```bash
+  docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
+  ```
 
-## Deploying on Bare Metal
+.. dropdown:: Deploying on Bare Metal
 
-Assuming you have unpacked model server package, make sure to:
+  Assuming you have unpacked model server package, make sure to:
 
-- **On Windows**: run `setupvars` script
-- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+  - **On Windows**: run `setupvars` script
+  - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
- as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+  as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
-Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+  Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
-```bat
-ovms --rest_port 8000 --config_path ./models/config.json
-```
+  ```bat
+  ovms --rest_port 8000 --config_path ./models/config.json
+  ```
 
 
-## Check readiness
+## Readiness Check
 
 Wait for the model to load. You can check the status with a simple command:
 ```console
@@ -145,145 +138,145 @@ curl http://localhost:8000/v1/config
 }
 ```
 
-## Client code
+## Request Generation
 
 A single servable exposes both `chat/completions` and `completions` endpoints with and without stream capabilities.
 Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
 Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
 
-### Unary:
-```console
-curl http://localhost:8000/v3/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-    "max_tokens":30,
-    "stream":false,
-    "messages": [
+.. dropdown:: Unary call with cURL
+  ```console
+  curl http://localhost:8000/v3/chat/completions \
+    -H "Content-Type: application/json" \
+    -d '{
+      "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+      "max_tokens":30,
+      "stream":false,
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are a helpful assistant."
+        },
+        {
+          "role": "user",
+          "content": "What is OpenVINO?"
+        }
+      ]
+    }'| jq .
+  ```
+  ```json
+  {
+    "choices": [
       {
-        "role": "system",
-        "content": "You are a helpful assistant."
-      },
-      {
-        "role": "user",
-        "content": "What is OpenVINO?"
+        "finish_reason": "length",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "OpenVINO is an open-source software framework developed by Intel for optimizing and deploying computer vision, machine learning, and deep learning models on various devices,",
+          "role": "assistant"
+        }
       }
-    ]
-  }'| jq .
-```
-```json
-{
-  "choices": [
-    {
-      "finish_reason": "length",
-      "index": 0,
-      "logprobs": null,
-      "message": {
-        "content": "OpenVINO is an open-source software framework developed by Intel for optimizing and deploying computer vision, machine learning, and deep learning models on various devices,",
-        "role": "assistant"
-      }
-    }
-  ],
-  "created": 1724405301,
-  "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-  "object": "chat.completion",
-  "usage": {
-    "prompt_tokens": 27,
-    "completion_tokens": 30,
-    "total_tokens": 57
-  }
-}
-```
-
-A similar call can be made with a `completion` endpoint:
-```console
-curl http://localhost:8000/v3/completions \
-  -H "Content-Type: application/json" \
-  -d '{
+    ],
+    "created": 1724405301,
     "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-    "max_tokens":30,
-    "stream":false,
-    "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
-  }'| jq .
-```
-```json
-{
-  "choices": [
-    {
-      "finish_reason": "length",
-      "index": 0,
-      "logprobs": null,
-      "text": "\n\nOpenVINO is an open-source computer vision platform developed by Intel for deploying and optimizing computer vision, machine learning, and autonomous driving applications. It"
+    "object": "chat.completion",
+    "usage": {
+      "prompt_tokens": 27,
+      "completion_tokens": 30,
+      "total_tokens": 57
     }
-  ],
-  "created": 1724405354,
-  "model": "meta-llama/Meta-Llama-3-8B-Instruct",
-  "object": "text_completion",
-  "usage": {
-    "prompt_tokens": 23,
-    "completion_tokens": 30,
-    "total_tokens": 53
   }
-}
-```
+  ```
 
-### Streaming:
+  A similar call can be made with a `completion` endpoint:
+  ```console
+  curl http://localhost:8000/v3/completions \
+    -H "Content-Type: application/json" \
+    -d '{
+      "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+      "max_tokens":30,
+      "stream":false,
+      "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
+    }'| jq .
+  ```
+  ```json
+  {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "logprobs": null,
+        "text": "\n\nOpenVINO is an open-source computer vision platform developed by Intel for deploying and optimizing computer vision, machine learning, and autonomous driving applications. It"
+      }
+    ],
+    "created": 1724405354,
+    "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 23,
+      "completion_tokens": 30,
+      "total_tokens": 53
+    }
+  }
+  ```
 
-The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
+.. dropdown:: Streaming call with OpenAI Python package
 
-Install the client library:
-```console
-pip3 install openai
-```
-```python
-from openai import OpenAI
+  The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
-client = OpenAI(
-  base_url="http://localhost:8000/v3",
-  api_key="unused"
-)
+  Install the client library:
+  ```console
+  pip3 install openai
+  ```
+  ```python
+  from openai import OpenAI
 
-stream = client.chat.completions.create(
-    model="meta-llama/Meta-Llama-3-8B-Instruct",
-    messages=[{"role": "user", "content": "Say this is a test"}],
-    stream=True,
-)
-for chunk in stream:
-    if chunk.choices[0].delta.content is not None:
-        print(chunk.choices[0].delta.content, end="", flush=True)
-```
+  client = OpenAI(
+    base_url="http://localhost:8000/v3",
+    api_key="unused"
+  )
 
-Output:
-```
-It looks like you're testing me!
-```
+  stream = client.chat.completions.create(
+      model="meta-llama/Meta-Llama-3-8B-Instruct",
+      messages=[{"role": "user", "content": "Say this is a test"}],
+      stream=True,
+  )
+  for chunk in stream:
+      if chunk.choices[0].delta.content is not None:
+          print(chunk.choices[0].delta.content, end="", flush=True)
+  ```
 
-A similar code can be applied for the completion endpoint:
-```console
-pip3 install openai
-```
-```python
-from openai import OpenAI
+  Output:
+  ```
+  It looks like you're testing me!
+  ```
 
-client = OpenAI(
-  base_url="http://localhost:8000/v3",
-  api_key="unused"
-)
+  A similar code can be applied for the completion endpoint:
+  ```console
+  pip3 install openai
+  ```
+  ```python
+  from openai import OpenAI
 
-stream = client.completions.create(
-    model="meta-llama/Meta-Llama-3-8B-Instruct",
-    prompt="<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nSay this is a test.<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
-    stream=True,
-)
-for chunk in stream:
-    if chunk.choices[0].text is not None:
-        print(chunk.choices[0].text, end="", flush=True)
-```
+  client = OpenAI(
+    base_url="http://localhost:8000/v3",
+    api_key="unused"
+  )
 
-Output:
-```
-It looks like you're testing me!
-```
+  stream = client.completions.create(
+      model="meta-llama/Meta-Llama-3-8B-Instruct",
+      prompt="<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nSay this is a test.<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
+      stream=True,
+  )
+  for chunk in stream:
+      if chunk.choices[0].text is not None:
+          print(chunk.choices[0].text, end="", flush=True)
+  ```
+
+  Output:
+  ```
+  It looks like you're testing me!
+  ```
 
 
 ## Benchmarking text generation with high concurrency

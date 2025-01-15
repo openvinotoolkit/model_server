@@ -186,6 +186,15 @@ You can also build model server from source by following the [developer guide](w
 :::
 ::::
 
+**Important**: Text generation use case requires model server installation with Python. Linux public package comes with Python disabled so in order to, for example, run [text-generation demo](../demos/continuous_batching/README.md) you need to build the package with Python enabled. Additionally, before the first run, install appropriate Python - (3.10 on Ubuntu, 3.9 on RedHat) - along with pip and install dependencies:
+```
+pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+```
+
+Windows package comes with slef contained environment, so no additional action is required.
+
+## Test the Deployment
+
 Download ResNet50 model:
 ```console
 mkdir models/resnet50/1

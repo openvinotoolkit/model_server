@@ -2,30 +2,38 @@
 This demo shows how to deploy embeddings models in the OpenVINO Model Server for text feature extractions.
 Text generation use case is exposed via OpenAI API `embeddings` endpoint.
 
+## Prerequisites
+
+**Model preparation**: Python 3.9 or higher with pip 
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+
+**(Optional) Client**: Python with pip
+
 ## Model preparation
-> **Note** Python 3.9 or higher is needed for that step
-> 
+
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 
-Clone model server repository:
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
+Download export script, install it's dependencies and create directory for the models:
+```console
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+mkdir models 
 ```
 
-Install python dependencies for the conversion script:
-```bash
-pushd .
-cd demos/common/export_models
-pip3 install -U -r requirements.txt
+Run `export_model.py` script to download and quantize the model:
+
+**CPU**
+```console
+python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 
-Run optimum-cli to download and quantize the model:
-```bash
-mkdir -p models
-python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config.json
+**GPU**
+```console
+python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
+
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
 You should have a model folder like below:
 ```
@@ -66,24 +74,39 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
     thenlper/gte-small
 ```
 
-## Start-up
+## Server Deployment
 
-### CPU
+### Deploying with Docker
 
+**CPU**
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --port 9000 --rest_port 8000 --config_path /workspace/config.json
 ```
-### GPU
+**GPU**
 
 In case you want to use GPU device to run the embeddings model, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with GPU support and make sure set the target_device in subconfig.json to GPU. Also make sure the export model quantization level and cache size fit to the GPU memory. All of that can be applied with the commands:
 
 ```bash
-python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
-### Check readiness
+
+### Deploying On Bare Metal
+
+Assuming you have unpacked model server package, make sure to:
+
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+
+```bat
+ovms --rest_port 8000 --config_path ./models/config.json
+```
+
+### Readiness Check
 
 Wait for the model to load. You can check the status with a simple command below. Note that the slash `/` in the model name needs to be escaped with `%2F`:
 ```bash
