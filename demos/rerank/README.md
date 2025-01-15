@@ -9,7 +9,7 @@
 **(Optional) Client**: Python with pip
 
 ## Model preparation
-> **Note** Python 3.9 or higher is needed for that step
+
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 
