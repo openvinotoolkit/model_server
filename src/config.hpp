@@ -124,6 +124,7 @@ public:
          * @return const std::string&
          */
     const std::string restBindAddress() const;
+    const int threadsForDrogon() const;
 
     /**
          * @brief Gets the gRPC workers count

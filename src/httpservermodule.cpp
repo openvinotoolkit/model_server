@@ -45,7 +45,7 @@ Status HTTPServerModule::start(const ovms::Config& config) {
         return status;
     }
 #else
-    drogonServer = ovms::createAndStartDrogonHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
+    drogonServer = ovms::createAndStartDrogonHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer, -1, config.threadsForDrogon());
     if (drogonServer == nullptr) {
         std::stringstream ss;
         ss << "at " << server_address;

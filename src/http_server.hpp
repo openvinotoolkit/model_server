@@ -37,7 +37,7 @@ class Server;
 #if (USE_DROGON == 0)
 std::unique_ptr<tensorflow::serving::net_http::HTTPServerInterface> createAndStartNetHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
 #else
-std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1);
+std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms = -1, int threads_for_drogon = 3);
 #endif
 
 }  // namespace ovms

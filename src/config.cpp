@@ -185,6 +185,7 @@ const std::string Config::cpuExtensionLibraryPath() const { return this->serverS
 const std::string Config::grpcBindAddress() const { return this->serverSettings.grpcBindAddress; }
 uint32_t Config::restPort() const { return this->serverSettings.restPort; }
 const std::string Config::restBindAddress() const { return this->serverSettings.restBindAddress; }
+const int Config::threadsForDrogon() const { return this->serverSettings.threadsForDrogon; }
 uint32_t Config::grpcWorkers() const { return this->serverSettings.grpcWorkers; }
 uint32_t Config::grpcMaxThreads() const { return this->serverSettings.grpcMaxThreads.value_or(DEFAULT_GRPC_MAX_THREADS); }
 size_t Config::grpcMemoryQuota() const { return this->serverSettings.grpcMemoryQuota.value_or(DEFAULT_GRPC_MEMORY_QUOTA); }

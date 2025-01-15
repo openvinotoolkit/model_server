@@ -40,7 +40,7 @@ class DrogonHttpServer {
 public:
     DrogonHttpServer(size_t num_workers, int port, const std::string& address);
 
-    Status startAcceptingRequests();
+    Status startAcceptingRequests(int threads_for_drogon);
     void terminate();
 
     mediapipe::ThreadPool& getPool();

@@ -179,7 +179,7 @@ static const ovms::HTTPStatusCode http(const ovms::Status& status) {
 }
 
 #if (USE_DROGON == 1)
-std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
+std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms, int threads_for_drogon) {
     auto server = std::make_unique<DrogonHttpServer>(num_threads, port, address);
     auto handler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
     auto& pool = server->getPool();
@@ -250,7 +250,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         }
         callback(resp);
     });
-    if (!server->startAcceptingRequests().ok()) {
+    if (!server->startAcceptingRequests(threads_for_drogon).ok()) {
         SPDLOG_ERROR("Failed to start Drogon server");
         return nullptr;
     }

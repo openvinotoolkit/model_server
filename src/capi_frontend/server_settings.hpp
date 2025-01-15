@@ -28,6 +28,7 @@ struct ServerSettingsImpl {
     std::optional<uint32_t> restWorkers;
     std::optional<uint32_t> grpcMaxThreads;
     std::string restBindAddress = "0.0.0.0";
+    int threadsForDrogon = 3;
     bool metricsEnabled = false;
     std::string metricsList;
     std::string cpuExtensionLibraryPath;

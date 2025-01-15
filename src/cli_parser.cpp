@@ -56,6 +56,10 @@ void CLIParser::parse(int argc, char** argv) {
                 "Network interface address to bind to for the REST API",
                 cxxopts::value<std::string>()->default_value("0.0.0.0"),
                 "REST_BIND_ADDRESS")
+            ("threads_for_drogon",
+                "Threads for drogon",
+                cxxopts::value<int>()->default_value("3"),
+                "THREADS_FOR_DROGON")
             ("grpc_workers",
                 "Number of gRPC servers. Default 1. Increase for multi client, high throughput scenarios",
                 cxxopts::value<uint32_t>()->default_value("1"),
@@ -244,6 +248,9 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     if (result->count("rest_bind_address"))
         serverSettings->restBindAddress = result->operator[]("rest_bind_address").as<std::string>();
+
+    if (result->count("threads_for_drogon"))
+        serverSettings->threadsForDrogon = result->operator[]("threads_for_drogon").as<int>();
 
     serverSettings->grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 

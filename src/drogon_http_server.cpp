@@ -19,6 +19,7 @@
 #include <limits>
 #include <thread>
 #include <utility>
+#include <cstdlib> // For std::getenv
 
 #include <drogon/drogon.h>
 
@@ -27,7 +28,7 @@
 
 namespace ovms {
 
-static const int THREAD_COUNT_FOR_DROGON_LISTENER = 3;  // TODO: how many is best perf?
+static const int THREAD_COUNT_FOR_DROGON_LISTENER = 128;  // TODO: how many is best perf?
 
 DrogonHttpServer::DrogonHttpServer(size_t num_workers, int port, const std::string& address) :
     num_workers(num_workers),
@@ -40,8 +41,20 @@ DrogonHttpServer::DrogonHttpServer(size_t num_workers, int port, const std::stri
     trantor::Logger::setLogLevel(trantor::Logger::kInfo);
 }
 
-Status DrogonHttpServer::startAcceptingRequests() {
-    SPDLOG_DEBUG("DrogonHttpServer::startAcceptingRequests()");
+Status DrogonHttpServer::startAcceptingRequests(int threads_for_drogon) {
+       // Specify the name of the environment variable
+    const char* envVarName = "THREADS_FOR_DROGON";
+
+    // Get the environment variable value
+    const char* envVarValue = std::getenv(envVarName);
+
+    if (envVarValue) {
+        threads_for_drogon = std::stoi(envVarValue);
+        SPDLOG_INFO("DrogonHttpServer::startAcceptingRequests(threads_for_drogon (from env)={})", threads_for_drogon);
+    } else {
+        SPDLOG_INFO("DrogonHttpServer::startAcceptingRequests(threads_for_drogon={})", threads_for_drogon);
+    }
+
 
     // OVMS has its own sigterm handling
     drogon::app().disableSigtermHandling();
@@ -67,7 +80,7 @@ Status DrogonHttpServer::startAcceptingRequests() {
     }
 
     pool->Schedule(
-        [address = this->address, port = this->port] {
+        [address = this->address, port = this->port, threads_for_drogon] {
             static int numberOfLaunchesInApplication = 0;
             numberOfLaunchesInApplication++;
             if (numberOfLaunchesInApplication > 1) {
@@ -77,10 +90,14 @@ Status DrogonHttpServer::startAcceptingRequests() {
             SPDLOG_DEBUG("Starting to listen on port {}", port);
             try {
                 drogon::app()
-                    .setThreadNum(THREAD_COUNT_FOR_DROGON_LISTENER)  // threads only for accepting requests, the workload is on separate thread pool
+                    .setThreadNum(threads_for_drogon) //.setThreadNum(THREAD_COUNT_FOR_DROGON_LISTENER)  // threads only for accepting requests, the workload is on separate thread pool
                     .setIdleConnectionTimeout(0)
                     .setClientMaxBodySize(1024 * 1024 * 1024)  // 1GB
                     .setClientMaxMemoryBodySize(std::numeric_limits<size_t>::max())
+                    // .setKeepaliveRequestsNumber
+                    // .setPipeliningRequestsNumber(THREAD_COUNT_FOR_DROGON_LISTENER)
+                    // .enableCompressedRequest
+
                     // .setMaxConnectionNum(100000)  // default is 100000
                     // .setMaxConnectionNumPerIP(0)  // default is 0=unlimited
                     // .setServerHeaderField("OpenVINO Model Server")
