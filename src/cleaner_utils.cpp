@@ -22,6 +22,7 @@
 #include <malloc.h>
 #elif _WIN32
 #include <crtdbg.h>
+#endif
 
 #include "global_sequences_viewer.hpp"
 #include "logging.hpp"
