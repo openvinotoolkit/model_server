@@ -45,19 +45,25 @@ set "python_version=3.9.13"
 call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
 :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
 xcopy %dest_dir%\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
-.\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
 if !errorlevel! neq 0 (
     echo Error copying python into the distribution location. The package will not contain self-contained python.
 )
+.\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+if !errorlevel! neq 0 (
+    echo Error during Python dependencies for LLM installation. The package will not be fully functional.
+)
 
 :: Below includes OpenVINO tokenizers
-copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll dist\windows\ovms
+:: TODO Better manage dependency declaration with llm_engine & bazel
+copy %cd%\bazel-out\x64_windows-opt\bin\external\llm_engine\copy_openvino_genai\openvino_genai\runtime\bin\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-
 copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 copy  %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+copy  %cd%\setupvars.* dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 dist\windows\ovms\ovms.exe --version

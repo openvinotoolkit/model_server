@@ -589,6 +589,24 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
+TEST_F(LLMFlowHttpTest, KFSApiRequestToChatCompletionsGraph) {
+    std::string requestBody = R"({
+    "inputs" : [
+        {
+        "name" : "input",
+        "shape" : [ 2, 2 ],
+        "datatype" : "UINT32",
+        "data" : [ 1, 2, 3, 4 ]
+        }
+    ]
+    })";
+    std::vector<std::pair<std::string, std::string>> headers;
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", "/v2/models/llmDummyKFS/versions/1/infer", headers), ovms::StatusCode::OK);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
+}
+
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
     std::string requestBody = R"(
         {
@@ -1611,8 +1629,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeUsage) {
 // /v3/chat/completions endpoint
 // unary, gready search
 // Correct payload, however disconnection immediately
-// Disabled because registering disconnection callback is unsupported in drogon https://github.com/drogonframework/drogon/pull/2204
-TEST_F(LLMFlowHttpTest, DISABLED_inferChatCompletionsUnaryClientDisconnectedImmediately) {
+TEST_F(LLMFlowHttpTest, inferChatCompletionsUnaryClientDisconnectedImmediately) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
