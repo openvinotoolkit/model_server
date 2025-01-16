@@ -29,7 +29,7 @@ mkdir models && cd models
 wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/rm_lstm4f.counts
 wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/rm_lstm4f.nnet
 wget https://storage.openvinotoolkit.org/models_contrib/speech/2021.2/rm_lstm4f/rm_lstm4f.mapping
-docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu20_dev:latest mo --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1
+docker run -u $(id -u):$(id -g) -v $(pwd):/models:rw openvino/ubuntu20_dev:2024.6.0 mo --framework kaldi --input_model /models/rm_lstm4f.nnet --counts /models/rm_lstm4f.counts --remove_output_softmax --output_dir /models/rm_lstm4f/1
 ```
 
 * Starting OVMS with stateful model via command line:

@@ -172,10 +172,9 @@ public:
                         finalPromptIds,
                         this->apiHandler->createGenerationConfig());
 
-                    // TODO: Revert when drogon adds disconnection callbacks: https://github.com/drogonframework/drogon/pull/2204
-                    // this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
-                    //     genHandle->drop();
-                    // });
+                    this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
+                        genHandle->drop();
+                    });
                 }
                 nodeResources->notifyExecutorThread();
                 this->streamer = std::make_shared<TextStreamer>(

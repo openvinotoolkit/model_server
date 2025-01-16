@@ -128,4 +128,22 @@ def archive_artifacts(){
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test.log"
 }
 
+def setup_bazel_remote_cache(){
+    def bazel_remote_cache_url = env.OVMS_BAZEL_REMOTE_CACHE_URL
+    def content = "build --remote_cache=\"${bazel_remote_cache_url}\""
+    def filePath = '.user.bazelrc'
+    def command = "echo ${content} > ${filePath}"
+    status = bat(returnStatus: true, script: command)
+    if ( status != 0) {
+        println "Failed to set up bazel remote cache for Windows"
+        return
+    }
+    command = "cat ${filePath}"
+    status = bat(returnStatus: true, script: command)
+    if ( status != 0) {
+        println "Failed to read file"
+        return
+    }
+}
+
 return this
