@@ -191,6 +191,10 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
     mgconfig = config;
     passKfsRequestFlag = false;
+    if (!sharedThreadPool) {
+        SPDLOG_ERROR("Created shared Thread Pool XXX");
+        sharedThreadPool = std::make_shared<mediapipe::ThreadPoolExecutor>(std::thread::hardware_concurrency());  // TODO FIXME should be in MP factory
+    }
 }
 
 Status MediapipeGraphDefinition::createInputsInfo() {
@@ -474,4 +478,5 @@ Status MediapipeGraphDefinition::initializeNodes() {
     }
     return StatusCode::OK;
 }
+std::shared_ptr<mediapipe::ThreadPoolExecutor> sharedThreadPool;  // TODO FIXME should be in MP factory
 }  // namespace ovms
