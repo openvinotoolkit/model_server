@@ -22,9 +22,14 @@ To quickly start using OpenVINO™ Model Server follow these steps:
 7. Run inference
 8. Review the results
 
+## Prerequisites
+
+**Model preparation**: Python 3.9 or higher with pip 
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](deploying_server_baremetal.md)
+
 ### Step 1: For Linux prepare Docker
 
-[Install Docker Engine](https://docs.docker.com/engine/install/), including its [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/), on your development system.
 To verify installation, test it using the following command. If it displays a test image and a message, it is ready.
 
 ``` bash
@@ -38,10 +43,6 @@ Download the Docker image that contains OpenVINO Model Server:
 ```bash
 docker pull openvino/model_server:latest
 ```
-
-#### For Windows download the `dist/windows/ovms.zip` package and extract it in current directory
-#### Install Microsoft Visual C++ Redistributable
-Install C++ package - https://aka.ms/vs/17/release/VC_redist.x64.exe
 
 ### Step 3: Provide a Model 
 
@@ -78,9 +79,9 @@ docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/mode
 
 During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage.
 
-#### For windows run:
-```bat
-ovms.exe --model_name faster_rcnn --model_path model --port 9000
+#### On unix baremetal or Windows open another command window and run
+```console
+ovms --model_name faster_rcnn --model_path model --port 9000
 ```
 
 ### Step 5: Prepare the Example Client Components
