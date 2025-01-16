@@ -34,6 +34,7 @@
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
+#include "mediapipe/framework/thread_pool_executor.h"
 #pragma GCC diagnostic pop
 
 #include "mediapipegraphconfig.hpp"
@@ -53,6 +54,7 @@ struct LLMNodeResources;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;
 
+extern std::shared_ptr<mediapipe::ThreadPoolExecutor> sharedThreadPool;
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
 
