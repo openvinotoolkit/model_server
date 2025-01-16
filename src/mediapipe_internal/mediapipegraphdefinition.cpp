@@ -24,25 +24,25 @@
 #include <utility>
 #include <vector>
 
-#include "../execution_context.hpp"
-#include "../filesystem.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../kfs_frontend/kfs_request_utils.hpp"
-#include "../deserialization_main.hpp"
-#include "../metric.hpp"
-#include "../model_metric_reporter.hpp"
-#include "../modelmanager.hpp"
-#include "../ov_utils.hpp"
-#include "../llm/servable.hpp"
-#include "../llm/servable_initializer.hpp"
+#include "src/execution_context.hpp"
+#include "src/filesystem.hpp"
+#include "src/kfs_frontend/kfs_utils.hpp"
+#include "src/kfs_frontend/kfs_request_utils.hpp"
+#include "src/deserialization_main.hpp"
+#include "src/metric.hpp"
+#include "src/model_metric_reporter.hpp"
+#include "src/modelmanager.hpp"
+#include "src/ov_utils.hpp"
+#include "src/llm/servable.hpp"
+#include "src/llm/servable_initializer.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "../python/pythonnoderesources.hpp"
+#include "src/python/pythonnoderesources.hpp"
 #endif
-#include "../status.hpp"
-#include "../stringutils.hpp"
-#include "../tensorinfo.hpp"
-#include "../timer.hpp"
-#include "../version.hpp"
+#include "src/status.hpp"
+#include "src/stringutils.hpp"
+#include "src/tensorinfo.hpp"
+#include "src/timer.hpp"
+#include "src/version.hpp"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipe_utils.hpp"
@@ -53,6 +53,13 @@
 #include "src/image_gen/pipelines.hpp"
 #include "src/image_gen/imagegen_init.hpp"
 #include "src/image_gen/image_gen_calculator.pb.h"
+
+#include "src/sidepacket_servable.hpp"
+#include "src/embeddings/embeddings_servable.hpp"
+#include "src/rerank/rerank_servable.hpp"
+#include "src/audio/speech_to_text/s2t_servable.hpp"
+#include "src/audio/text_to_speech/t2s_servable.hpp"
+
 
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
@@ -129,7 +136,7 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
 }
 Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
-    if (!this->sidePacketMaps.empty()) {
+    if (!this->sidePacketMaps->empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
@@ -146,12 +153,14 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     if (!validationResult.ok()) {
         return validationResult;
     }
+    SPDLOG_ERROR("ER");
     std::unique_lock lock(metadataMtx);
     auto status = createInputsInfo();
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create inputs info for mediapipe graph definition: {}", getName());
         return status;
     }
+    SPDLOG_ERROR("ER");
     status = createOutputsInfo();
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
@@ -177,6 +186,10 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     if (!status.ok()) {
         return status;
     }
+    // TODO FIXME @atobisze
+    SPDLOG_ERROR("ER");
+    this->queue = std::make_shared<GraphQueue>(this->config, this->sidePacketMaps, 12);
+    SPDLOG_ERROR("XXX ER GraphQueue:{}", (void*)this->queue.get());
 
     lock.unlock();
     notifier.passed = true;
@@ -192,12 +205,20 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     MetricRegistry* registry,
     const MetricConfig* metricConfig,
     PythonBackend* pythonBackend) :
+    sidePacketMaps(std::make_shared<GraphSidePackets>()),
     name(name),
     status(SCHEDULER_CLASS_NAME, this->name),
     pythonBackend(pythonBackend),
     reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
     mgconfig = config;
     passKfsRequestFlag = false;
+    SPDLOG_ERROR("XXX ER new PythonNodeResourcesMap:{}", (void*)&this->sidePacketMaps->pythonNodeResourcesMap);
+    SPDLOG_ERROR("XXX ER new genAiServableMap:{}", (void*)&this->sidePacketMaps->genAiServableMap);
+    /*if (!sharedThreadPool) {
+        SPDLOG_ERROR("Created shared Thread Pool XXX");
+        //sharedThreadPool = std::make_shared<mediapipe::ThreadPoolExecutor>(std::thread::hardware_concurrency());  // TODO FIXME should be in MP factory
+    }*/
+   // TODO FIXME illegal constructor as we do not create queue here
 }
 
 Status MediapipeGraphDefinition::createInputsInfo() {
@@ -261,11 +282,12 @@ Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>&
         return status;
     }
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
-
+    GraphIdGuard graphIdGuard(this->queue);  // TODO timeout?
+    SPDLOG_ERROR("ER");
     pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
         this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
-        this->sidePacketMaps,
-        this->pythonBackend, this->reporter.get());
+        *this->sidePacketMaps,
+        this->pythonBackend, this->reporter.get(), std::move(graphIdGuard));
     return status;
 }
 
@@ -339,12 +361,20 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
     this->mgconfig = config;
-    this->sidePacketMaps.clear();
+    //this->pythonNodeResourcesMap.reset();
+    //this->genAiServableMap.reset();
+    this->queue.reset();
+    SPDLOG_ERROR("XXX ER cleared queue");
+    this->sidePacketMaps.reset(); 
+    SPDLOG_ERROR("XXX ER cleared sidePacketMaps");
+    // TODO FIXME @atobisze NOW we created new maps here before
     return validate(manager);
 }
 
 void MediapipeGraphDefinition::retire(ModelManager& manager) {
-    this->sidePacketMaps.clear();
+    this->queue.reset();
+    // now we reset shared ptr maps so ongoing executions can continue
+    this->sidePacketMaps.reset();
     this->status.handle(RetireEvent());
 }
 
@@ -411,7 +441,7 @@ public:
         resources(resources) {}
     ~ResourcesCleaningGuard() {
         if (shouldCleanup) {
-            resources.clear();
+            resources.clear(); // TODO FIXME @atobisze check
         }
     }
     void disableCleaning() {
@@ -423,7 +453,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     for (int i = 0; i < config.node().size(); i++) {
 #if (PYTHON_DISABLE == 0)
-        auto& pythonNodeResourcesMap = this->sidePacketMaps.pythonNodeResourcesMap;
+        auto& pythonNodeResourcesMap = this->sidePacketMaps->pythonNodeResourcesMap;
         if (config.node(i).calculator() == PYTHON_NODE_CALCULATOR_NAME) {
             ResourcesCleaningGuard<PythonNodeResourcesMap> pythonResourcesCleaningGuard(pythonNodeResourcesMap);
             if (!config.node(i).node_options().size()) {
@@ -453,7 +483,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
 #endif
         // Passed to both calculators that require LLM Engine (gRPC KServe & HTTP OpenAI)
         if (endsWith(config.node(i).calculator(), LLM_NODE_CALCULATOR_NAME)) {
-            auto& genAiServableMap = this->sidePacketMaps.genAiServableMap;
+            auto& genAiServableMap = this->sidePacketMaps->genAiServableMap;
             ResourcesCleaningGuard<GenAiServableMap> genAiServablesCleaningGuard(genAiServableMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node missing options in graph: {}. ", this->name);
@@ -479,7 +509,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
         }
         // Passed to both calculators that require Image Generation pipelines
         if (endsWith(config.node(i).calculator(), IMAGE_GEN_CALCULATOR_NAME)) {
-            auto& imageGenPipelinesMap = this->sidePacketMaps.imageGenPipelinesMap;
+            auto& imageGenPipelinesMap = this->sidePacketMaps->imageGenPipelinesMap;
             ResourcesCleaningGuard<ImageGenerationPipelinesMap> guard(imageGenPipelinesMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Image Gen node missing options in graph: {}. ", this->name);
@@ -513,7 +543,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             guard.disableCleaning();
         }
         if (endsWith(config.node(i).calculator(), EMBEDDINGS_NODE_CALCULATOR_NAME)) {
-            auto& embeddingsServableMap = this->sidePacketMaps.embeddingsServableMap;
+            auto& embeddingsServableMap = this->sidePacketMaps->embeddingsServableMap;
             ResourcesCleaningGuard<EmbeddingsServableMap> embeddingsServablesCleaningGuard(embeddingsServableMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node missing options in graph: {}. ", this->name);
@@ -546,7 +576,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             embeddingsServablesCleaningGuard.disableCleaning();
         }
         if (endsWith(config.node(i).calculator(), RERANK_NODE_CALCULATOR_NAME)) {
-            auto& rerankServableMap = this->sidePacketMaps.rerankServableMap;
+            auto& rerankServableMap = this->sidePacketMaps->rerankServableMap;
             ResourcesCleaningGuard<RerankServableMap> rerankServablesCleaningGuard(rerankServableMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Rerank node missing options in graph: {}. ", this->name);
@@ -569,7 +599,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             rerankServablesCleaningGuard.disableCleaning();
         }
         if (endsWith(config.node(i).calculator(), STT_NODE_CALCULATOR_NAME)) {
-            auto& sttServableMap = this->sidePacketMaps.sttServableMap;
+            auto& sttServableMap = this->sidePacketMaps->sttServableMap;
             ResourcesCleaningGuard<SttServableMap> sttServablesCleaningGuard(sttServableMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "SpeechToText node missing options in graph: {}. ", this->name);
@@ -595,7 +625,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             sttServablesCleaningGuard.disableCleaning();
         }
         if (endsWith(config.node(i).calculator(), TTS_NODE_CALCULATOR_NAME)) {
-            auto& ttsServableMap = this->sidePacketMaps.ttsServableMap;
+            auto& ttsServableMap = this->sidePacketMaps->ttsServableMap;
             ResourcesCleaningGuard<TtsServableMap> ttsServablesCleaningGuard(ttsServableMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "TextToSpeech node missing options in graph: {}. ", this->name);
