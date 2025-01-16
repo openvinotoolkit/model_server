@@ -69,7 +69,7 @@ echo .\Lib\site-packages
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Install pip
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+curl -k https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 if !errorlevel! neq 0 exit /b !errorlevel!
 .\python.exe get-pip.py
 if !errorlevel! neq 0 exit /b !errorlevel!
