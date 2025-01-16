@@ -25,6 +25,11 @@ message LLMCalculatorOptions {
     // no rule to obtain this
     optional LLMCalculatorOptions ext = 113473750;
     }
+    message adapter_config{
+      required string lora_path = 1;
+      optional float alpha = 2 [default = 1];
+    }
+
     required string models_path = 1;
 
     optional uint64 max_num_batched_tokens = 2 [default = 256];
@@ -45,4 +50,6 @@ message LLMCalculatorOptions {
     optional uint32 max_tokens_limit = 9 [default = 4096];
 
     optional bool enable_prefix_caching = 10 [default = false];
+
+    repeated adapter_config adapter_configs = 11;
 }

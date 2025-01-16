@@ -175,6 +175,40 @@ Status LLMNodeResources::initializeLLMNodeResources(LLMNodeResources& nodeResour
     nodeResources.maxTokensLimit = nodeOptions.max_tokens_limit();
     nodeResources.bestOfLimit = nodeOptions.best_of_limit();
 
+    for (const auto& adapterConfig : nodeOptions.adapter_configs()) {
+        float alpha = adapterConfig.alpha();
+        auto fsLoraPath = std::filesystem::path(adapterConfig.lora_path());
+        std::string lora_path;
+        if (fsLoraPath.is_relative()) {
+            lora_path = (std::filesystem::path(graphPath) / fsLoraPath).string();
+        } else {
+            lora_path = fsModelsPath.string();
+        }
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "LORA PATH {}, alpha {}", lora_path, alpha);
+        if (lora_path.empty()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Adapter path for adapter");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        if (!std::filesystem::exists(lora_path)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Adapter path for adapter {} does not exist: {}", lora_path);
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        if (!std::filesystem::is_regular_file(lora_path)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Adapter path for adapter {} is not a file: {}", lora_path);
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        try {
+            nodeResources.adapters.add(ov::genai::Adapter(std::filesystem::path(lora_path)), alpha);
+            SPDLOG_LOGGER_INFO(modelmanager_logger,"Adapter loaded from path {} with alpha {}", lora_path, alpha);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error loading adapter from path {}: {}", lora_path, e.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        } catch (...) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error loading adapter from path {}", lora_path);
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+    }
+
     nodeResources.initiateGeneration();
 
     return StatusCode::OK;
@@ -186,6 +220,8 @@ void LLMNodeResources::initializeContinuousBatchingPipeline(
     const std::string& device,
     const plugin_config_t& pluginConfig,
     const plugin_config_t& tokenizerPluginConfig) {
+    ov::genai::GenerationConfig gen_config;
+    gen_config.adapters = this->adapters;
     this->cbPipe = std::make_unique<ov::genai::ContinuousBatchingPipeline>(basePath, schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
 }
 

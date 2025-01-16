@@ -166,11 +166,14 @@ public:
                     ov::Tensor finalPromptIds = nodeResources->cbPipe->get_tokenizer().encode(finalPrompt, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
                     this->apiHandler->setPromptTokensUsage(finalPromptIds.get_size());
                     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(finalPromptIds));
+                    
+                    SPDLOG_LOGGER_INFO(llm_calculator_logger, "Adapters count: {}", nodeResources->adapters.get_adapters().size());
+                    SPDLOG_LOGGER_INFO(llm_calculator_logger, "Adapters mode: {}", nodeResources->adapters.get_mode());
 
                     this->generationHandle = nodeResources->cbPipe->add_request(
                         currentRequestId++, /*to be removed from API?*/
                         finalPromptIds,
-                        this->apiHandler->createGenerationConfig());
+                        this->apiHandler->createGenerationConfig(nodeResources->adapters));
 
                     this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
                         genHandle->drop();
