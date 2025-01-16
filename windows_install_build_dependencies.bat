@@ -243,10 +243,10 @@ IF /I EXIST %bazel_path% (
 ::::::::::::::::::::::: Python
 set "python_version=3.11.9"
 for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
-        set BEFORE_DOT=%%a
-        set AFTER_DOT=%%b
+        set MAJOR_VER=%%a
+        set MINOR_VER=%%b
     )
-set "python_dir=python%BEFORE_DOT%%AFTER_DOT%"
+set "python_dir=python%MAJOR_VER%%MINOR_VER%"
 set "python_path=%opt_install_dir%\%python_dir%"
 set "python_full_name=python-%python_version%-amd64"
 ::https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe

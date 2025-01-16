@@ -35,12 +35,12 @@ if "%~2"=="" (
 )
 
 for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
-        set BEFORE_DOT=%%a
-        set AFTER_DOT=%%b
+        set MAJOR_VER=%%a
+        set MINOR_VER=%%b
     )
 
-set "python_dir=python!BEFORE_DOT!!AFTER_DOT!"
-echo Python directory set: %python_dir%
+set "python_short_name=python!MAJOR_VER!!MINOR_VER!"
+echo Python directory set: %python_short_name%
 
 set "python_full_name=python-%python_version%-embed-amd64"
 set "embeddable_python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.zip"
@@ -65,19 +65,19 @@ C:\Windows\System32\tar.exe -xf %dest_dir%\%python_full_name%.zip -C %dest_dir%\
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 cd %dest_dir%\%python_full_name%
-md %python_dir%
+md %python_short_name%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-C:\Windows\System32\tar.exe -xf %python_dir%.zip -C %python_dir%
+C:\Windows\System32\tar.exe -xf %python_short_name%.zip -C %python_short_name%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Adjust paths so everything is accessible
 (
-echo .\%python_dir%
+echo .\%python_short_name%
 echo .
 echo .\Scripts
 echo .\Lib\site-packages
-) > %python_dir%._pth
+) > %python_short_name%._pth
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Install pip
