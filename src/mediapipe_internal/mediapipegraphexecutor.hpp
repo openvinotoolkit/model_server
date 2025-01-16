@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "../execution_context.hpp"
+#include "../logging.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
@@ -109,6 +110,9 @@ public:
         MetricCounterGuard failedRequestsGuard(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, false));
         MetricGaugeGuard currentGraphsGuard(this->mediapipeServableMetricReporter->currentGraphs.get());
         ::mediapipe::CalculatorGraph graph;
+        SPDLOG_ERROR("SetExecutor XXX");
+        std::ignore = graph.SetExecutor("", sharedThreadPool);  // TODO FIXME
+        SPDLOG_ERROR("Start unary KServe request mediapipe graph: {} initializationXXXbegin", this->name);
         MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
         enum : unsigned int {
             PROCESS,
@@ -116,6 +120,7 @@ public:
         };
         Timer<TIMER_END2> timer;
         timer.start(PROCESS);
+        SPDLOG_ERROR("Start unary KServe request mediapipe graph: {} initializationXXXend", this->name);
         std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
         for (auto& name : this->outputNames) {
             if (name.empty()) {
@@ -136,7 +141,9 @@ public:
         inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
         inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
+        SPDLOG_ERROR("Start unary KServe request mediapipe graph: {} startRunXXXbegin", this->name);
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
+        SPDLOG_ERROR("Start unary KServe request mediapipe graph: {} startRunXXXend", this->name);
 
         ::mediapipe::Packet packet;
         std::set<std::string> outputPollersWithReceivedPacket;
@@ -231,7 +238,9 @@ public:
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph initialization");
                 // Init
+                SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} initializationXXX", this->name);
                 MP_RETURN_ON_FAIL(graph.Initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+                SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} initializationXXX ended", this->name);
             }
             enum : unsigned int {
                 PROCESS,
