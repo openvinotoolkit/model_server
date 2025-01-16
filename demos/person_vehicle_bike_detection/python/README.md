@@ -2,6 +2,12 @@
 
 The purpose of this demo is to show how to send data from multiple sources (cameras, video files) to a model served in OpenVINO Model Server.
 
+## Prerequisites
+
+**Model preparation**: Python 3.9 or higher with pip 
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+
 ## Deploy person, vehicle, bike detection model
 
 ### Download model files
@@ -16,10 +22,10 @@ curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zo
 docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name person-vehicle-detection --port 9000 --shape auto
 ```
 
-On Windows open another command window and run
-```bat
+On unix baremetal or Windows open another command window and run
+```console
 cd demos\person_vehicle_bike_detection\python
-ovms.exe --model_path model --model_name person-vehicle-detection --port 9000 --shape auto
+ovms --model_path model --model_name person-vehicle-detection --port 9000 --shape auto
 ```
 
 ## Running the client application

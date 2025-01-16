@@ -1,6 +1,12 @@
 # Age and Gender Recognition via REST API {#ovms_demo_age_gender_guide}
 This article describes how to use OpenVINO&trade; Model Server to execute inference requests sent over the REST API interface. The demo uses a pretrained model from the [Open Model Zoo](https://github.com/openvinotoolkit/open_model_zoo) repository.
 
+## Prerequisites
+
+**Model preparation**: Python 3.9 or higher with pip 
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+
 ## Download the pretrained model for age and gender recognition
 Download both components of the model (xml and bin file) using curl in the `model` directory
 
@@ -15,10 +21,10 @@ Start OVMS container with image pulled in previous step and mount `model` direct
 docker run --rm -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/age_gender -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_path /models/age_gender --model_name age_gender --port 9000 --rest_port 8000
 ```
 
-On Windows open another command window and run
-```bat
+On unix baremetal or Windows open another command window and run
+```console
 cd demos\age_gender_recognition\python
-ovms.exe --model_path model --model_name age_gender --port 9000 --rest_port 8000
+ovms --model_path model --model_name age_gender --port 9000 --rest_port 8000
 ```
 
 #### Requesting the Service

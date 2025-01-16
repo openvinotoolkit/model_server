@@ -6,6 +6,12 @@ When you need to execute several predictions on the same data, you can create a 
 
 ![diagram](single_face_analysis_pipeline.png)
 
+## Prerequisites
+
+**Model preparation**: Python 3.9 or higher with pip 
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+
 ## Prepare workspace to run the demo
 
 In this example the following models are used:
@@ -57,10 +63,10 @@ Deploy OVMS with single face analysis pipeline using the following command:
 docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server --config_path /workspace/config.json --port 9000
 ```
 
-On Windows open another command window and run
-```bat
+On unix baremetal or Windows open another command window and run
+```console
 cd demos\single_face_analysis_pipeline\python
-ovms.exe --config_path workspace/config.json --port 9001
+ovms --config_path workspace/config.json --port 9001
 ```
 
 ## Requesting the Service

@@ -7,9 +7,9 @@ As an example, we will use [MobileNetV3_large_x1_0_infer](https://paddle-imagene
 
 ## Prerequisites
 
-- [Docker](https://docs.docker.com/engine/install/) installed
+**Model preparation**: Python 3.9 or higher with pip 
 
-- Python 3.9 or newer installed
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
 ## Preparing to Run
 
@@ -34,10 +34,10 @@ Deploy OVMS with vehicles analysis pipeline using the following command:
 docker run -p 9000:9000 -d -v ${PWD}/model:/models openvino/model_server --port 9000 --model_path /models --model_name mobilenet --shape "(1,3,-1,-1)"
 ```
 
-On Windows open another command window and run
-```bat
+On unix baremetal or Windows open another command window and run
+```console
 cd demos\classification_using_paddlepaddle_model\python
-ovms.exe --port 9000 --model_path model --model_name mobilenet --shape "(1,3,-1,-1)"
+ovms --port 9000 --model_path model --model_name mobilenet --shape "(1,3,-1,-1)"
 ```
 
 ## Requesting the Service

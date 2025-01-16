@@ -4,6 +4,11 @@ This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph 
 
 Example usage of graph that accepts Mediapipe::ImageFrame as a input:
 
+## Prerequisites
+
+**Model preparation**: Python 3.9 or higher with pip 
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
 ## Prepare the repository
 
@@ -25,10 +30,10 @@ python mediapipe_object_detection.py --download_models
 docker run -d -v $PWD:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
 ```
 
-On Windows open another command window and run
-```bat
+On unix baremetal or Windows open another command window and run
+```console
 cd demos\mediapipe\object_detection
-ovms.exe --config_path config.json --port 9000
+ovms --config_path config.json --port 9000
 ```
 
 ## Run the client:

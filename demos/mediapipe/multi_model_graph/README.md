@@ -2,7 +2,11 @@
 
 This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph using OVMS.
 
-Example usage:
+## Prerequisites
+
+**Model preparation**: Python 3.9 or higher with pip 
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
 ## Prepare the repository
 
@@ -32,10 +36,10 @@ Prepare virtualenv according to [kserve samples readme](https://github.com/openv
 docker run -d -v $PWD:/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
 ```
 
-On Windows open another command window and run
-```bat
+On unix baremetal or Windows open another command window and run
+```console
 cd demos\mediapipe\multi_model_graph
-ovms.exe --config_path config.json --port 9000
+ovms --config_path config.json --port 9000
 ```
 
 ## Run the client:

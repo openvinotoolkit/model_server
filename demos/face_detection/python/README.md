@@ -1,5 +1,11 @@
 # Face Detection Demo {#ovms_demo_face_detection}
 
+## Prerequisites
+
+**Model preparation**: Python 3.9 or higher with pip 
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+
 ## Overview
 
 The script [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/face_detection/python/face_detection.py) runs face detection inference requests for all the images
@@ -77,10 +83,10 @@ Deploy OVMS with single face detection pipeline using the following command:
 docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto
 ```
 
-On Windows open another command window and run
-```bat
+On unix baremetal or Windows open another command window and run
+```console
 cd demos\face_detection\python
-ovms.exe --model_path model --model_name face-detection --port 9000  --shape auto
+ovms --model_path model --model_name face-detection --port 9000  --shape auto
 ```
 
 Run the client:

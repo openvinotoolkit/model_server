@@ -6,6 +6,12 @@ Example usage of graph that accepts Mediapipe::ImageFrame as a input:
 
 The demo is based on the [upstream Mediapipe holistic demo](https://github.com/google/mediapipe/blob/master/docs/solutions/holistic.md).
 
+## Prerequisites
+
+**Model preparation**: Python 3.9 or higher with pip 
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+
 ## Prepare the server deployment
 
 Clone the repository and enter mediapipe holistic_tracking directory
@@ -69,10 +75,10 @@ docker pull openvino/model_server:latest
 docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
 ```
 
-On Windows open another command window and run
-```bat
+On unix baremetal or Windows open another command window and run
+```console
 cd demos\mediapipe\holistic_tracking
-ovms.exe --config_path config_holistic.json --port 9000
+ovms --config_path config_holistic.json --port 9000
 ```
 
 ## Run client application for holistic tracking - default demo
