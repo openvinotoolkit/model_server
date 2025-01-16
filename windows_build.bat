@@ -106,7 +106,6 @@ ls %cd%\bazel-bin\src
 
 :: Install Jinja in Python for chat templates to work
 set PYTHONHOME=C:\opt\Python311
-call C:\opt\Python311\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
 
 :: Download LLMs
 call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing

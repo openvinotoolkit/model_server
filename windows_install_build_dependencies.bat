@@ -166,8 +166,10 @@ mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Replace path to openvino in ovms WORKSPACE file
-powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
-if !errorlevel! neq 0 exit /b !errorlevel!
+if "!output_user_root!" neq "opt" (
+    powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
@@ -239,36 +241,54 @@ IF /I EXIST %bazel_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
-set "python_path=%opt_install_dir%\Python311\"
-set "python_system=C:\Program Files\Python311\"
+set "python_version=3.11.9"
+for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
+        set BEFORE_DOT=%%a
+        set AFTER_DOT=%%b
+    )
+set "python_dir=python%BEFORE_DOT%%AFTER_DOT%"
+set "python_path=%opt_install_dir%\%python_dir%"
+set "python_full_name=python-%python_version%-amd64"
+::https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe
+set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
 IF /I EXIST %python_path% (
     IF %expunge% EQU 1 (
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        :: Uninstall Python
+        IF /I EXIST "%opt_install_dir%\%python_full_name%.exe" (
+            %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+            rm %opt_install_dir%\%python_full_name%.exe
+            if !errorlevel! neq 0 exit /b !errorlevel!
+        )
         rmdir /S /Q %python_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        IF /I EXIST "%python_system%" (
-            :: Copy system Python
-            xcopy /s /e /q /y "%python_system%" %python_path%
-            if !errorlevel! neq 0 exit /b !errorlevel!
-            pip install numpy==1.23
-            if !errorlevel! neq 0 exit /b !errorlevel!
-        ) ELSE (
-            echo [ERROR] ::::::::::::::::::::::: %python_system% not found
-            goto :exit_dependencies_error
-        )
+
+        :: Install python
+        curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        :: setuptools<60.0 required for numpy1.23 on python311 to install
+        %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+        if !errorlevel! neq 0 exit /b !errorlevel!
     ) ELSE (
         echo [INFO] ::::::::::::::::::::::: %python_path% already installed
     )
 ) ELSE (
-    IF /I EXIST "%python_system%" (
-        :: Copy system Python
-        xcopy /s /e /q /y "%python_system%" %python_path%
+    :: Uninstall Python
+    IF /I EXIST "%opt_install_dir%\%python_full_name%.exe" (
+        %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+        rm %opt_install_dir%\%python_full_name%.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %python_path%python.exe -m pip install numpy==1.23
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) ELSE (
-        echo [ERROR] ::::::::::::::::::::::: %python_system% not found
-        goto :exit_dependencies_error
     )
+    :: Install python
+    curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    :: setuptools<60.0 required for numpy1.23 on python311 to install
+    %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!

@@ -15,6 +15,8 @@
 ::
 :: Prepares embedded python installation for the purpose of ovms building and creating the final ovms distribution. 
 setlocal EnableExtensions EnableDelayedExpansion
+set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
+set "PATH=%setPath%"
 @echo off
 if "%~1"=="" (
     set "dest_dir=C:\opt"
@@ -25,19 +27,29 @@ if "%~1"=="" (
 )
 
 if "%~2"=="" (
-    set "python_version=3.11.11"
-    echo Python version not specified. Using: 3.11.11
+    set "python_version=3.11.9"
+    echo Python version not specified. Using: 3.11.9
 ) else (
     set "python_version=%~2"
     echo User specified Python version: %2
 )
 
+for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
+        set BEFORE_DOT=%%a
+        set AFTER_DOT=%%b
+    )
+
+set "python_dir=python!BEFORE_DOT!!AFTER_DOT!"
+echo Python directory set: %python_dir%
+
 set "python_full_name=python-%python_version%-embed-amd64"
 set "embeddable_python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.zip"
 
 :: Download and unpack everything
-rmdir /S /Q %dest_dir%\%python_full_name%
-if !errorlevel! neq 0 exit /b !errorlevel!
+if exist %dest_dir%\%python_full_name% (
+    rmdir /S /Q %dest_dir%\%python_full_name%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
 
 md %dest_dir%\%python_full_name%
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -49,23 +61,23 @@ if exist %dest_dir%\%python_full_name%.zip (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-tar -xf %dest_dir%\%python_full_name%.zip -C %dest_dir%\%python_full_name%
+C:\Windows\System32\tar.exe -xf %dest_dir%\%python_full_name%.zip -C %dest_dir%\%python_full_name%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 cd %dest_dir%\%python_full_name%
-md python311
+md %python_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-tar -xf python311.zip -C python311
+C:\Windows\System32\tar.exe -xf %python_dir%.zip -C %python_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Adjust paths so everything is accessible
 (
-echo .\python311
+echo .\%python_dir%
 echo .
 echo .\Scripts
 echo .\Lib\site-packages
-) > python311._pth
+) > %python_dir%._pth
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Install pip

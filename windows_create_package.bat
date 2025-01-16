@@ -14,6 +14,8 @@
 :: limitations under the License.
 ::
 setlocal EnableExtensions EnableDelayedExpansion
+set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
+set "PATH=%setPath%"
 IF "%~1"=="" (
     echo No argument provided. Using default opt path
     set "output_user_root=opt"
@@ -41,14 +43,12 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Prepare self-contained python
 set "dest_dir=C:\opt"
-set "python_version=3.11.11"
+
 call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
 :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
 xcopy %dest_dir%\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
 .\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
-if !errorlevel! neq 0 (
-    echo Error copying python into the distribution location. The package will not contain self-contained python.
-)
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Below includes OpenVINO tokenizers
 :: TODO Better manage dependency declaration with llm_engine & bazel
