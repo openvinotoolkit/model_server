@@ -75,7 +75,7 @@ ovms_cc_library(
         "pythonexecutorcalculator_cc_proto",
         "utils",
     ],
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
     alwayslink = 1,
     data = ["//src/python/binding:pyovms.so"],
 )

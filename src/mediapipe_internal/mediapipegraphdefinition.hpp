@@ -42,6 +42,8 @@
 
 #include "mediapipegraphconfig.hpp"
 #include "packettypes.hpp"
+#include "graphqueue.hpp"
+#include "graph_side_packets.hpp"
 
 #include "../sidepacket_servable.hpp"
 
@@ -62,28 +64,6 @@ using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiSe
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
 using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
-
-struct GraphSidePackets {
-    PythonNodeResourcesMap pythonNodeResourcesMap;
-    GenAiServableMap genAiServableMap;
-    ImageGenerationPipelinesMap imageGenPipelinesMap;
-    EmbeddingsServableMap embeddingsServableMap;
-    RerankServableMap rerankServableMap;
-    void clear() {
-        pythonNodeResourcesMap.clear();
-        genAiServableMap.clear();
-        imageGenPipelinesMap.clear();
-        embeddingsServableMap.clear();
-        rerankServableMap.clear();
-    }
-    bool empty() {
-        return (pythonNodeResourcesMap.empty() &&
-                genAiServableMap.empty() &&
-                imageGenPipelinesMap.empty() &&
-                embeddingsServableMap.empty() &&
-                rerankServableMap.empty());
-    }
-};
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -128,7 +108,7 @@ public:
     static constexpr model_version_t VERSION = 1;
 
 protected:
-    GraphSidePackets sidePacketMaps;
+    std::shared_ptr<GraphSidePackets> sidePacketMaps;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
@@ -165,7 +145,7 @@ protected:
     PipelineDefinitionStatus status;
 
     MediapipeGraphConfig mgconfig;
-    ::mediapipe::CalculatorGraphConfig config;
+    ::mediapipe::CalculatorGraphConfig config;  // TODO rename configs
 
     Status createInputsInfo();
     Status createOutputsInfo();
@@ -195,6 +175,7 @@ private:
     PythonBackend* pythonBackend;
 
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
+    std::shared_ptr<GraphQueue> queue;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

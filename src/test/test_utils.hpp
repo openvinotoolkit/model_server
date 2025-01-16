@@ -1085,8 +1085,8 @@ public:
     std::string inputConfig;
 #if (PYTHON_DISABLE == 0)
     ovms::PythonNodeResources* getPythonNodeResources(const std::string& nodeName) {
-        auto it = this->sidePacketMaps.pythonNodeResourcesMap.find(nodeName);
-        if (it == std::end(this->sidePacketMaps.pythonNodeResourcesMap)) {
+        auto it = this->sidePacketMaps->pythonNodeResourcesMap.find(nodeName);
+        if (it == std::end(this->sidePacketMaps->pythonNodeResourcesMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1095,8 +1095,8 @@ public:
 #endif
 
     ovms::GenAiServable* getGenAiServable(const std::string& nodeName) {
-        auto it = this->sidePacketMaps.genAiServableMap.find(nodeName);
-        if (it == std::end(this->sidePacketMaps.genAiServableMap)) {
+        auto it = this->sidePacketMaps->genAiServableMap.find(nodeName);
+        if (it == std::end(this->sidePacketMaps->genAiServableMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1107,7 +1107,7 @@ public:
         return this->validateForConfigLoadableness();
     }
 
-    ovms::GenAiServableMap& getGenAiServableMap() { return this->sidePacketMaps.genAiServableMap; }
+    ovms::GenAiServableMap& getGenAiServableMap() { return this->sidePacketMaps->genAiServableMap; }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,

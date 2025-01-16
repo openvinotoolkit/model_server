@@ -154,6 +154,28 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "mediapipe_internal_graphqueue",
+    hdrs = [
+    "mediapipe_internal/graphqueue.hpp",
+    "mediapipe_internal/outputstreamobserver.hpp",
+    ], # TODO FIXME
+    srcs = ["mediapipe_internal/graphqueue.cpp"],
+    deps = [
+        "libovms_queue",
+        "libovmslogging",
+        "execution_context",
+        "mediapipe_internal_graph_side_packets",
+        "libovmstimer",
+        "libovmsmetrics",
+        "model_metric_reporter",
+        "//third_party:openvino",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+        "//src/python:libovmspythonmodule", # TODO not splitted
+        "//src/llm:genai_servables", # TODO split!
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "libovms_ovinferrequestsqueue",
     hdrs = ["ovinferrequestsqueue.hpp"],
     srcs = ["ovinferrequestsqueue.cpp"],
@@ -338,7 +360,7 @@ ovms_cc_library(
     srcs = ["model_metric_reporter.cpp"],
     deps = [
         "libovmsmodelversion",
-        "libovms_execution_context",
+        "execution_context",
         "libovmslogging",
         "libovmsmetrics",
     ],
@@ -410,12 +432,21 @@ ovms_cc_library(
     deps = [
         "libovms_dags_aliases",
         "libovms_dags_node",
-        "libovms_execution_context",
+        "execution_context",
         "libovmsprofiler",
         "libovmslogging",
         "libovmsstatus",
         "libovms_dags_pipelineeventqueue",
         "libovms_dags_nodesession",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
+    name = "mediapipe_internal_graph_side_packets",
+    hdrs = ["mediapipe_internal/graph_side_packets.hpp",],
+    srcs = ["mediapipe_internal/graph_side_packets.cpp",],
+    deps = [
+            "@mediapipe//mediapipe/framework:packet",
     ],
     visibility = ["//visibility:public",],
 )
@@ -541,6 +572,7 @@ ovms_cc_library(
                 "mediapipe_internal/mediapipegraphconfig.cpp",
                 "mediapipe_internal/mediapipegraphdefinition.cpp",
                 "mediapipe_internal/mediapipegraphdefinition.hpp",
+                "mediapipe_internal/outputstreamobserver.hpp",
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_internal/packettypes.hpp",
@@ -610,7 +642,7 @@ ovms_cc_library(
             "libovms_dags_nodesessionresult",
             "libovms_dags_nodeinputhandler",
             "custom_node_output_allocator",
-            "libovms_execution_context",
+            "execution_context",
             "executingstreamidguard",
             "libovmsfilesystem",
             "libovmsfilesystemfactory_h",
@@ -677,6 +709,8 @@ ovms_cc_library(
                 })
             + select({
             "//conditions:default": [
+                "mediapipe_internal_graph_side_packets",
+                "mediapipe_internal_graphqueue",
                 "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
                 "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
                 "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
@@ -1691,7 +1725,7 @@ ovms_cc_library(
     ],
     deps = [
         "libovmslogging",
-        "libovms_execution_context",
+        "execution_context",
         "libovms_dags_session_id",
     ],
     visibility = ["//visibility:public"],
@@ -2028,7 +2062,7 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-    name = "libovms_execution_context",
+    name = "execution_context",
     hdrs = ["execution_context.hpp",],
     deps = [],
     visibility = ["//visibility:public"],
@@ -2107,7 +2141,7 @@ ovms_cc_library(
     deps = [
             "libovmslogging",
             "libovmsmodelversionstatus",
-            "libovms_execution_context",
+            "execution_context",
             "libovms_dags_aliases",
             "libovms_dags_pipelineeventqueue",
             "libovms_dags_session_id",

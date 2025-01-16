@@ -71,7 +71,7 @@ ovms_cc_library(
         "//src:sidepacket_servable",
         "//src:model_metric_reporter",
         "//src:executingstreamidguard",
-        "//src:libovms_execution_context",
+        "//src:execution_context",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

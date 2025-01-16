@@ -169,4 +169,5 @@ TEST_F(MediapipeValidationTest, WrongPrecision) {
     prepareSingleInput();
     request.mutable_inputs(0)->set_datatype("unknown");
     ASSERT_EQ(impl->ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
+    SPDLOG_ERROR("ER");
 }

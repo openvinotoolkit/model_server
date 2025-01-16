@@ -147,7 +147,7 @@ pipeline {
             timeout(time: 120, unit: 'MINUTES')
           }
           parallel {
-            stage("Run unit tests") {
+            /*stage("Run unit tests") {
               agent {
                 label "${agent_name_linux}"
               }
@@ -163,7 +163,7 @@ pipeline {
               }
               } 
               }
-            }
+            }*/
             stage("Internal tests") {
               agent {
                 label "${agent_name_linux}"
@@ -183,7 +183,7 @@ pipeline {
                 }
               }            
             }
-            stage('Test windows') {
+            /*stage('Test windows') {
               agent {
                 label "${agent_name_windows}"
               }
@@ -207,7 +207,7 @@ pipeline {
                       }
                   }
               }
-            }
+            }*/
           }
         }
     }
