@@ -63,7 +63,7 @@ In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABL
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
 ```
-Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependecies: 
+Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
 ```
 pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
 ```
@@ -100,7 +100,7 @@ export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
 ```
 
-Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependecies: 
+Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
 ```
 pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
 ```
@@ -133,7 +133,7 @@ export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
 ```
 
-Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependecies: 
+Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
 ```
 pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
 ```
@@ -170,7 +170,7 @@ export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
 ```
 
-Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependecies: 
+Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
 ```
 pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
 ```

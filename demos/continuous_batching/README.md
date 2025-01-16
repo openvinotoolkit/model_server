@@ -145,7 +145,7 @@ A single servable exposes both `chat/completions` and `completions` endpoints wi
 Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
 Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
 
-:::{dropdown} Unary call with cURL
+:::{dropdown} **Unary call with cURL**
 ```console
 curl http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
@@ -222,7 +222,7 @@ curl http://localhost:8000/v3/completions \
 ```
 :::
 
-:::{dropdown} Streaming call with OpenAI Python package
+:::{dropdown} **Streaming call with OpenAI Python package**
 
 The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 

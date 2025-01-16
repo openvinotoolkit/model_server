@@ -57,7 +57,7 @@ models
 
 ## Server Deployment
 
-:::{dropdown} Deploying with Docker
+:::{dropdown} **Deploying with Docker**
 
 **CPU**
 ```bash
@@ -73,7 +73,7 @@ docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /de
 ```
 :::
 
-:::{dropdown} Deploying On Bare Metal
+:::{dropdown} **Deploying On Bare Metal**
 
 Assuming you have unpacked model server package, make sure to:
 
@@ -102,7 +102,7 @@ Content-Length: 0
 
 ## Client code
 
-:::{dropdown} Requesting rerank score with cURL
+:::{dropdown} **Requesting rerank score with cURL**
 
 ```bash
 curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
@@ -124,7 +124,7 @@ curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
 ```
 :::
 
-:::{dropdown} Requesting rerank score with Cohere Python package
+:::{dropdown} **Requesting rerank score with Cohere Python package**
 ```bash
 pip3 install cohere
 ```
