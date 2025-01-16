@@ -7,34 +7,9 @@ It reports end to end quality of served model from the client application point 
 
 ## Preparing the lm-evaluation-harness framework 
 
-Set extra index url for CPU-only dependency installation:
-
-::::{tab-set}
-:::{tab-item} Bash
-:sync: bash
-```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-```
-:::
-
-:::{tab-item} Windows Command Line
-:sync: cmd
-```bat
-set PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-```
-:::
-
-:::{tab-item} Windows PowerShell
-:sync: powershell
-```powershell
-$env:PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
-```
-:::
-::::
-
 Install the framework via pip:
 ```console
-pip3 install lm_eval[api] langdetect immutabledict
+pip3 install --extra-index-url "https://download.pytorch.org/whl/cpu" lm_eval[api] langdetect immutabledict
 ```
 
 ## Exporting the models

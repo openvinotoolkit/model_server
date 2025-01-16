@@ -57,7 +57,7 @@ models
 
 ## Server Deployment
 
-### Deploying with Docker
+:::{dropdown} Deploying with Docker
 
 **CPU**
 ```bash
@@ -71,8 +71,9 @@ to `docker run` command, use the image with GPU support and make sure set the ta
 ```bash
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
+:::
 
-### Deploying On Bare Metal
+:::{dropdown} Deploying On Bare Metal
 
 Assuming you have unpacked model server package, make sure to:
 
@@ -86,6 +87,7 @@ Depending on how you prepared models in the first step of this demo, they are de
 ```bat
 ovms --rest_port 8000 --config_path ./models/config.json
 ```
+:::
 
 ## Readiness Check
 
@@ -100,6 +102,7 @@ Content-Length: 0
 
 ## Client code
 
+:::{dropdown} Requesting rerank score with cURL
 
 ```bash
 curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
@@ -119,8 +122,9 @@ curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
   ]
 }
 ```
+:::
 
-Alternatively there could be used cohere python client like in the example below:
+:::{dropdown} Requesting rerank score with Cohere Python package
 ```bash
 pip3 install cohere
 ```
@@ -139,6 +143,7 @@ It will return response similar to:
 index 0, relevance_score 0.9968273043632507
 index 1, relevance_score 0.09138210117816925
 ```
+:::
 
 ## Comparison with Hugging Faces
 

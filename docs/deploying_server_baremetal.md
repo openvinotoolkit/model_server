@@ -63,6 +63,10 @@ In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABL
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
 ```
+Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependecies: 
+```
+pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+```
 :::
 :::{tab-item} Ubuntu 24.04
 :sync: ubuntu-24-04
@@ -95,6 +99,11 @@ In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABL
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
 ```
+
+Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependecies: 
+```
+pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+```
 :::
 :::{tab-item} RHEL 8.10
 :sync: rhel-8-10
@@ -122,6 +131,11 @@ In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABL
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
+```
+
+Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependecies: 
+```
+pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} RHEL 9.4
@@ -155,6 +169,11 @@ In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABL
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
 ```
+
+Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependecies: 
+```
+pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+```
 :::
 :::{tab-item} Windows
 :sync: windows
@@ -185,13 +204,6 @@ You can also build model server from source by following the [developer guide](w
 
 :::
 ::::
-
-**Important**: Text generation use case requires model server installation with Python. Linux public package comes with Python disabled so in order to, for example, run [text-generation demo](../demos/continuous_batching/README.md) you need to build the package with Python enabled. Additionally, before the first run, install appropriate Python - (3.10 on Ubuntu, 3.9 on RedHat) - along with pip and install dependencies:
-```
-pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
-```
-
-Windows package comes with slef contained environment, so no additional action is required.
 
 ## Test the Deployment
 

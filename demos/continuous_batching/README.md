@@ -14,7 +14,7 @@ This demo shows how to deploy LLM models in the OpenVINO Model Server using cont
 Text generation use case is exposed via OpenAI API `chat/completions` and `completions` endpoints.
 That makes it easy to use and efficient especially on on Intel® Xeon® processors.
 
-> **Note:** This demo was tested on4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Data Center GPU Series on Ubuntu22/24, RedHat8/9 and Windows11.
+> **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Data Center GPU Series on Ubuntu22/24, RedHat8/9 and Windows11.
 
 ## Prerequisites
 
@@ -80,7 +80,7 @@ The default configuration should work in most cases but the parameters can be tu
 
 ## Server Deployment
 
-:::{dropdown} Deploying with Docker
+:::{dropdown} **Deploying with Docker**
 
 Select deployment option depending on how you prepared models in the previous step.
 
@@ -100,7 +100,7 @@ docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /de
 ```
 :::
 
-:::{dropdown} Deploying on Bare Metal
+:::{dropdown} **Deploying on Bare Metal**
 
 Assuming you have unpacked model server package, make sure to:
 
