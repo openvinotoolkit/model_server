@@ -75,7 +75,7 @@ dist\windows\ovms\ovms.exe --help
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 cd dist\windows
-tar -a -c -f ovms.zip ovms
+C:\Windows\System32\tar.exe -a -c -f ovms.zip ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 cd ..\..
 dir dist\windows\ovms.zip

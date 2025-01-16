@@ -71,6 +71,9 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 C:\Windows\System32\tar.exe -xf %python_short_name%.zip -C %python_short_name%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+del /q %python_short_name%.zip
+if !errorlevel! neq 0 exit /b !errorlevel!
+
 :: Adjust paths so everything is accessible
 (
 echo .\%python_short_name%
