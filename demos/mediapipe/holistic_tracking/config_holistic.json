@@ -40,7 +40,7 @@
     "mediapipe_config_list": [
         {
             "name":"holisticTracking",
-            "base_path":"",
+            "base_path":"./",
             "graph_path":"holistic_tracking.pbtxt"
         }
     ]

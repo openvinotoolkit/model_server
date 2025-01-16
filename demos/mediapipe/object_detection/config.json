@@ -9,7 +9,7 @@
     "mediapipe_config_list": [
     {
         "name":"objectDetection",
-        "base_path":"",
+        "base_path":"./",
         "graph_path":"graph.pbtxt"
     }
     ]
