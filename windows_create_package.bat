@@ -50,7 +50,7 @@ call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
 xcopy %dest_dir%\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
 .\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
 if !errorlevel! neq 0 (
-    echo Error copying python into the distribution location. The package will not contain self-contained python.
+    echo Error occurred when creating Python environment for the distribution.
     exit /b !errorlevel!
 )
 
