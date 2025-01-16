@@ -60,7 +60,7 @@ Status DrogonHttpServer::startAcceptingRequests(int threads_for_drogon) {
     drogon::app().disableSigtermHandling();
 
     drogon::app().setDefaultHandler([this](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-        this->pool->Schedule([this, req, callback = std::move(callback)]() mutable {
+        //this->pool->Schedule([this, req, callback = std::move(callback)]() mutable {
             try {
                 this->dispatcher(req, std::move(callback));
             } catch (...) {
@@ -70,7 +70,7 @@ Status DrogonHttpServer::startAcceptingRequests(int threads_for_drogon) {
                 resp->setStatusCode(drogon::HttpStatusCode::k500InternalServerError);
                 callback(resp);
             }
-        });
+        //});
     });
 
     // Should never happen
