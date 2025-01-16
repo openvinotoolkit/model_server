@@ -31,7 +31,7 @@ The image `openvino/model_server:2023.3` and newer includes ready to use OpenVIN
 ## Start the model server in a container
 You can start the service with a command:
 ```bash
-docker run -d --name ovms -p 9000:9000 -p 8000:8000 -v $(pwd)/universal-sentence-encoder-multilingual:/model openvino/model_server:latest --model_name usem --model_path /model --cpu_extension /ovms/lib/libopenvino_tokenizers.so --plugin_config '{"NUM_STREAMS": 1}' --port 9000 --rest_port 8000
+docker run -d --name ovms -p 9000:9000 -p 8000:8000 -v $(pwd)/universal-sentence-encoder-multilingual:/model openvino/model_server:latest --model_name usem --model_path /model --cpu_extension /ovms/lib/libopenvino_tokenizers.so --plugin_config "{\"NUM_STREAMS\": 1}" --port 9000 --rest_port 8000
 ```
 
 Check the container logs to confirm successful start:

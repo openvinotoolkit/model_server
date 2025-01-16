@@ -28,7 +28,7 @@ CPU
 ```bash
 docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
       --model_path /opt/model --model_name resnet --port 9001 \
-      --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+      --plugin_config "{\"PERFORMANCE_HINT\": \"THROUGHPUT\"}" \
       --target_device CPU
 ```
 
@@ -38,7 +38,7 @@ GPU
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
       -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
       --model_path /opt/model --model_name resnet --port 9001 \
-      --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+      --plugin_config "{\"PERFORMANCE_HINT\": \"THROUGHPUT\"}" \
       --target_device GPU
 ```
 
@@ -53,7 +53,7 @@ CPU
 ```bash
 docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
       --model_path /opt/model --model_name resnet --port 9001 \
-      --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+      --plugin_config "{\"PERFORMANCE_HINT\": \"LATENCY\"}" \
       --target_device CPU
 ```
 
@@ -63,7 +63,7 @@ GPU
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
       -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
       --model_path /opt/model --model_name resnet --port 9001 \
-      --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+      --plugin_config "{\"PERFORMANCE_HINT\": \"LATENCY\"}" \
       --target_device GPU
 ```
 
@@ -81,7 +81,7 @@ of the device plugin configuration or set the performance hint to `THROUGHPUT`.
 
 In a scenario with a single connections/client, set the following parameter:
 
-`--plugin_config '{"NUM_STREAMS": "1"}'`
+`--plugin_config "{\"NUM_STREAMS\": \"1\"}"`
 
 When the number of concurrent requests is high, increase the number of streams. Make sure, however, that the number of streams is lower than the average volume of concurrent inference operations. Otherwise, the server might not be fully utilized.
 
@@ -89,13 +89,13 @@ Number of streams should not exceed the number of cores.
 
 For example, with ~50 clients sending the requests to the server with 48 cores, set the number of streams to 24:
 
-`--plugin_config '{"NUM_STREAMS": "24"}'`
+`--plugin_config "{\"NUM_STREAMS\": \"24\"}"`
 
 ## Disabling CPU pinning
 
 By default, OpenVINO Model Server will enable CPU threads pinning for better performance. User also can use plugin config to switch it off. Disable threads pinning might be beneficial in complex applications with several workloads executed in parallel.
 
-`--plugin_config '{"ENABLE_CPU_PINNING": false}'`
+`--plugin_config "{\"ENABLE_CPU_PINNING\": false}"`
 
 ## Input data in REST API calls
 
@@ -133,7 +133,7 @@ Following docker command will set `NUM_STREAMS` parameter to a value `1`:
 ```bash
 docker run --rm -d --cpuset-cpus 0,1,2,3 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 \
---plugin_config '{"NUM_STREAMS": "1"}'
+--plugin_config "{\"NUM_STREAMS\": \"1\"}"
 
 ```
 
@@ -177,7 +177,7 @@ Following docker command sets a parameter `NUM_STREAMS` to a value `32`, `AFFINI
 ```bash
 docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 --grpc_workers 8  --nireq 32 \
---plugin_config '{"NUM_STREAMS": 32, "AFFINITY": "NUMA", "ENABLE_CPU_PINNING": false}'
+--plugin_config "{\"NUM_STREAMS\": 32, \"AFFINITY\": \"NUMA\", \"ENABLE_CPU_PINNING\": false}"
 ```
 
 ## Analyzing performance issues
@@ -198,7 +198,7 @@ Please note that the target devices GPU and NVIDIA usually change the default mo
 It is recommended to compare accuracy results versus OpenVINO benchmark app.
 
 It is possible to enforce a specific runtime precision by using a plugin config parameter `INFERENCE_PRECISION_HINT`. For example:  
- `--plugin_config '{"INFERENCE_PRECISION_HINT": "f32"}'`.
+ `--plugin_config "{\"INFERENCE_PRECISION_HINT\": \"f32\"}"`.
 
 
 ## Text generation using LLM calculator with continuous batching
