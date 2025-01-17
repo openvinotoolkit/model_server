@@ -27,8 +27,6 @@
 
 namespace ovms {
 
-static const int THREAD_COUNT_FOR_DROGON_LISTENER = 3;  // TODO: how many is best perf?
-
 DrogonHttpServer::DrogonHttpServer(size_t num_workers, int port, const std::string& address) :
     num_workers(num_workers),
     pool(std::make_unique<mediapipe::ThreadPool>("DrogonThreadPool", num_workers)),
@@ -47,17 +45,16 @@ Status DrogonHttpServer::startAcceptingRequests() {
     drogon::app().disableSigtermHandling();
 
     drogon::app().setDefaultHandler([this](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-        this->pool->Schedule([this, req, callback = std::move(callback)]() mutable {
-            try {
-                this->dispatcher(req, std::move(callback));
-            } catch (...) {
-                SPDLOG_DEBUG("Exception caught in REST request handler");
-                auto resp = drogon::HttpResponse::newHttpResponse();
-                resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
-                resp->setStatusCode(drogon::HttpStatusCode::k500InternalServerError);
-                callback(resp);
-            }
-        });
+        // No separate pool for unary requests, they are handled by drogon's listener threads
+        try {
+            this->dispatcher(req, std::move(callback));
+        } catch (...) {
+            SPDLOG_DEBUG("Exception caught in REST request handler");
+            auto resp = drogon::HttpResponse::newHttpResponse();
+            resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
+            resp->setStatusCode(drogon::HttpStatusCode::k500InternalServerError);
+            callback(resp);
+        }
     });
 
     // Should never happen
@@ -67,7 +64,7 @@ Status DrogonHttpServer::startAcceptingRequests() {
     }
 
     pool->Schedule(
-        [address = this->address, port = this->port] {
+        [address = this->address, port = this->port, num_workers = this->num_workers] {
             static int numberOfLaunchesInApplication = 0;
             numberOfLaunchesInApplication++;
             if (numberOfLaunchesInApplication > 1) {
@@ -77,7 +74,7 @@ Status DrogonHttpServer::startAcceptingRequests() {
             SPDLOG_DEBUG("Starting to listen on port {}", port);
             try {
                 drogon::app()
-                    .setThreadNum(THREAD_COUNT_FOR_DROGON_LISTENER)  // threads only for accepting requests, the workload is on separate thread pool
+                    .setThreadNum(num_workers)  // threads for unary processing, streaming is done in separate pool of same size
                     .setIdleConnectionTimeout(0)
                     .setClientMaxBodySize(1024 * 1024 * 1024)  // 1GB
                     .setClientMaxMemoryBodySize(std::numeric_limits<size_t>::max())
