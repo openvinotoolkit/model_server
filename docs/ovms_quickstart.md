@@ -80,7 +80,7 @@ docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/mode
 During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage.
 
 #### On unix baremetal or Windows open another command window and run
-```console
+```bat
 ovms --model_name faster_rcnn --model_path model --port 9000
 ```
 
