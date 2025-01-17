@@ -35,7 +35,7 @@ docker run -p 9000:9000 -d -v ${PWD}/model:/models openvino/model_server --port 
 ```
 
 On unix baremetal or Windows open another command window and run
-```console
+```bat
 cd demos\classification_using_paddlepaddle_model\python
 ovms --port 9000 --model_path model --model_name mobilenet --shape "(1,3,-1,-1)"
 ```

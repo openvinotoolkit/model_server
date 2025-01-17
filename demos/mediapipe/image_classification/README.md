@@ -31,7 +31,7 @@ docker run -d -v $PWD:/mediapipe -p 9000:9000 openvino/model_server:latest --con
 ```
 
 On unix baremetal or Windows open another command window and run
-```console
+```bat
 cd demos\mediapipe\image_classification
 ovms --config_path config.json --port 9000
 ```

@@ -31,7 +31,7 @@ docker run -d -v $PWD:/demo -p 9000:9000 openvino/model_server:latest --config_p
 ```
 
 On unix baremetal or Windows open another command window and run
-```console
+```bat
 cd demos\mediapipe\object_detection
 ovms --config_path config.json --port 9000
 ```

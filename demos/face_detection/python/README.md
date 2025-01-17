@@ -84,7 +84,7 @@ docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 open
 ```
 
 On unix baremetal or Windows open another command window and run
-```console
+```bat
 cd demos\face_detection\python
 ovms --model_path model --model_name face-detection --port 9000  --shape auto
 ```

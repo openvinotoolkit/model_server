@@ -64,7 +64,7 @@ docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server 
 ```
 
 On unix baremetal or Windows open another command window and run
-```console
+```bat
 cd demos\single_face_analysis_pipeline\python
 ovms --config_path workspace/config.json --port 9001
 ```

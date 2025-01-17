@@ -22,7 +22,7 @@ docker run --rm -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/age_gender -p 90
 ```
 
 On unix baremetal or Windows open another command window and run
-```console
+```bat
 cd demos\age_gender_recognition\python
 ovms --model_path model --model_name age_gender --port 9000 --rest_port 8000
 ```

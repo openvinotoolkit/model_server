@@ -37,7 +37,7 @@ docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD:/models -p 9000:9000 openvino
 ```
 
 On unix baremetal or Windows open another command window and run
-```console
+```bat
 cd demos\mediapipe\iris_tracking
 ovms --config_path config_iris.json --port 9000
 ```
