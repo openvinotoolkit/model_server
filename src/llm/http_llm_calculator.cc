@@ -172,9 +172,9 @@ public:
                         finalPromptIds,
                         this->apiHandler->createGenerationConfig());
 
-                    this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
-                        genHandle->drop();
-                    });
+                    // this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
+                    //     genHandle->drop();
+                    // });
                 }
                 nodeResources->notifyExecutorThread();
                 this->streamer = std::make_shared<TextStreamer>(
