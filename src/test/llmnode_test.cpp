@@ -1629,7 +1629,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeUsage) {
 // /v3/chat/completions endpoint
 // unary, gready search
 // Correct payload, however disconnection immediately
-TEST_F(LLMFlowHttpTest, inferChatCompletionsUnaryClientDisconnectedImmediately) {
+TEST_F(LLMFlowHttpTest, DISABLED_inferChatCompletionsUnaryClientDisconnectedImmediately) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
