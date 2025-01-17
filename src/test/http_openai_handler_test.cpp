@@ -482,3 +482,26 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid message structure - content array is empty"));
 }
+
+TEST_F(HttpOpenAIHandlerTest, V3ApiWithNonLLMCalculator) {
+    handler.reset();
+    server.setShutdownRequest(1);
+    t->join();
+    server.setShutdownRequest(0);
+    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_dummy_kfs.json").c_str());
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
+    std::string requestBody = R"(
+        {
+            "model": "mediapipeDummyKFS",
+            "stream": false,
+            "messages": []
+        }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
+
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
+}

@@ -41,6 +41,7 @@
 
 #include "capi_frontend/inferencerequest.hpp"
 #include "capi_frontend/inferenceresponse.hpp"
+#include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
@@ -1317,8 +1318,9 @@ void ModelInstance::unloadModelComponents() {
     }
 #ifdef __linux__
     malloc_trim(0);
+#elif _WIN32
+    malloc_trim_win();
 #endif
-    // TODO: windows for malloc_trim(0);
 }
 
 const std::set<std::string>& ModelInstance::getOptionalInputNames() {
