@@ -76,7 +76,12 @@ bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {
 }
 
 void DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback(std::function<void()> callback) {
-    // TODO: Implement once https://github.com/drogonframework/drogon/pull/2204 is merged
+    const auto& weakConnPtr = requestPtr->getConnectionPtr();
+    if (auto connPtr = weakConnPtr.lock()) {
+        connPtr->setCloseCallback([callback = std::move(callback)](const trantor::TcpConnectionPtr& conn) {
+            callback();
+        });
+    }
 }
 
 }  // namespace ovms

@@ -27,19 +27,27 @@
 using namespace testing;
 using ::testing::UnorderedElementsAre;
 
-const std::string TMP_PATH = "/tmp/structure/";
-const std::string TMP_FILE = "file1.txt";
+#ifdef __linux__
+const std::filesystem::path TMP_PATH = "/tmp/structure/";
+const std::string TMP_CONTENT = "filecontent123\n";
+#elif _WIN32
+const std::filesystem::path TMP_PATH = std::filesystem::temp_directory_path() / "structure";
 const std::string TMP_CONTENT = "filecontent123\r\n";
-const std::string TMP_DIR1 = "dir1";
-const std::string TMP_DIR2 = "dir2";
+#endif
+
+const std::filesystem::path TMP_FILE = "file.txt";
+const std::filesystem::path TMP_FILE1 = "file1.txt";
+const std::filesystem::path TMP_DIR1 = "dir1";
+const std::filesystem::path TMP_DIR2 = "dir2";
+const std::filesystem::path TMP_DIR5345 = "dir5345";
 
 static void createTmpFiles() {
-    std::ofstream configFile(TMP_PATH + TMP_FILE);
+    std::ofstream configFile((TMP_PATH / TMP_FILE1).string());
     configFile << TMP_CONTENT << std::endl;
     configFile.close();
 
-    std::filesystem::create_directories(TMP_PATH + TMP_DIR1);
-    std::filesystem::create_directories(TMP_PATH + TMP_DIR2);
+    std::filesystem::create_directories(TMP_PATH / TMP_DIR1);
+    std::filesystem::create_directories(TMP_PATH / TMP_DIR2);
 }
 
 TEST(LocalFileSystem, FileExists) {
@@ -47,11 +55,11 @@ TEST(LocalFileSystem, FileExists) {
     bool exists = false;
     createTmpFiles();
 
-    auto status = lfs.fileExists("/tmp/structure/file.txt", &exists);
+    auto status = lfs.fileExists((TMP_PATH / TMP_FILE).string(), &exists);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(exists, false);
 
-    status = lfs.fileExists("/tmp/structure/dir1", &exists);
+    status = lfs.fileExists((TMP_PATH / TMP_DIR1).string(), &exists);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(exists, true);
 }
@@ -61,15 +69,15 @@ TEST(LocalFileSystem, IsDirectory) {
     bool isDir = false;
     createTmpFiles();
 
-    auto status = lfs.isDirectory("/tmp/structure/file.txt", &isDir);
+    auto status = lfs.isDirectory((TMP_PATH / TMP_FILE).string(), &isDir);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(isDir, false);
 
-    status = lfs.isDirectory("/tmp/structure/dir1", &isDir);
+    status = lfs.isDirectory((TMP_PATH / TMP_DIR1).string(), &isDir);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(isDir, true);
 
-    status = lfs.isDirectory("/tmp/structure/dir5345", &isDir);
+    status = lfs.isDirectory((TMP_PATH / TMP_DIR5345).string(), &isDir);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(isDir, false);
 }
@@ -79,13 +87,13 @@ TEST(LocalFileSystem, GetDirectoryContents) {
     ovms::files_list_t files;
     createTmpFiles();
 
-    auto status = lfs.getDirectoryContents("/tmp/structure/file.txt", &files);
+    auto status = lfs.getDirectoryContents((TMP_PATH / TMP_FILE).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
-    status = lfs.getDirectoryContents("/tmp/structure/file1.txt", &files);
+    status = lfs.getDirectoryContents((TMP_PATH / TMP_FILE1).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
-    status = lfs.getDirectoryContents("/tmp/structure/", &files);
+    status = lfs.getDirectoryContents((TMP_PATH).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(files.size(), 3);
 }
@@ -95,13 +103,13 @@ TEST(LocalFileSystem, GetDirectorySubdirs) {
     ovms::files_list_t files;
     createTmpFiles();
 
-    auto status = lfs.getDirectorySubdirs("/tmp/structure/file.txt", &files);
+    auto status = lfs.getDirectorySubdirs((TMP_PATH / TMP_FILE).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
-    status = lfs.getDirectorySubdirs("/tmp/structure/file1.txt", &files);
+    status = lfs.getDirectorySubdirs((TMP_PATH / TMP_FILE1).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
-    status = lfs.getDirectorySubdirs("/tmp/structure/", &files);
+    status = lfs.getDirectorySubdirs((TMP_PATH).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(files.size(), 2);
 }
@@ -111,13 +119,13 @@ TEST(LocalFileSystem, GetDirectoryFiles) {
     ovms::files_list_t files;
     createTmpFiles();
 
-    auto status = lfs.getDirectoryFiles("/tmp/structure/file.txt", &files);
+    auto status = lfs.getDirectoryFiles((TMP_PATH / TMP_FILE).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
-    status = lfs.getDirectoryFiles("/tmp/structure/file1.txt", &files);
+    status = lfs.getDirectoryFiles((TMP_PATH / TMP_FILE1).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
-    status = lfs.getDirectoryFiles("/tmp/structure/", &files);
+    status = lfs.getDirectoryFiles((TMP_PATH).string(), &files);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(files.size(), 1);
 }
@@ -125,22 +133,23 @@ TEST(LocalFileSystem, GetDirectoryFiles) {
 TEST(LocalFileSystem, DownloadFileFolder) {
     ovms::LocalFileSystem lfs;
     std::string location;
-    auto status = lfs.downloadFileFolder("/path/to/download", location);
+    const std::filesystem::path TMP_DOWNLOAD = "download";
+    auto status = lfs.downloadFileFolder((TMP_PATH / TMP_DOWNLOAD).string(), location);
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
 TEST(LocalFileSystem, DestroyFileFolder) {
     ovms::LocalFileSystem lfs;
     bool exists = false;
-    auto status = lfs.fileExists("/tmp/structure/dir1", &exists);
+    auto status = lfs.fileExists((TMP_PATH / TMP_DIR1).string(), &exists);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(exists, true);
-    status = lfs.deleteFileFolder("/tmp/structure/dir1");
+    status = lfs.deleteFileFolder((TMP_PATH / TMP_DIR1).string());
     EXPECT_EQ(status, ovms::StatusCode::OK);
-    status = lfs.fileExists("/tmp/structure/dir1", &exists);
+    status = lfs.fileExists((TMP_PATH / TMP_DIR1).string(), &exists);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(exists, false);
-    status = lfs.deleteFileFolder("/tmp/structure/dir1");
+    status = lfs.deleteFileFolder((TMP_PATH / TMP_DIR1).string());
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
@@ -153,10 +162,13 @@ TEST(FileSystem, CreateTempFolder) {
     bool status = fs::exists(local_path);
     EXPECT_TRUE(status);
     EXPECT_EQ(sc, ovms::StatusCode::OK);
+
+#ifdef __linux__
     fs::perms p = fs::status(local_path).permissions();
     EXPECT_TRUE((p & fs::perms::group_read) == fs::perms::none);
     EXPECT_TRUE((p & fs::perms::others_read) == fs::perms::none);
     EXPECT_TRUE((p & fs::perms::owner_read) != fs::perms::none);
+#endif
 }
 
 TEST(FileSystem, CheckIfPathIsEscaped) {
@@ -186,33 +198,37 @@ TEST(FileSystem, SetRootDirectoryPath) {
     std::string rootPath = "";
     std::string givenPath = "/givenpath";
 
+    auto normalize_path = [](const std::string& path) -> std::string {
+        return std::filesystem::weakly_canonical(std::filesystem::path(path)).string();
+    };
+
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, "/");
+    ASSERT_EQ(normalize_path(rootPath), normalize_path("/"));
 
     givenPath = "/givenpath/longer";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, "/givenpath/");
+    ASSERT_EQ(normalize_path(rootPath), normalize_path("/givenpath/"));
 
     givenPath = "/givenpath/longer/somefile.txt";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, "/givenpath/longer/");
+    ASSERT_EQ(normalize_path(rootPath), normalize_path("/givenpath/longer/"));
 
     givenPath = "givenpath";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    std::string currentWorkingDir = std::filesystem::current_path();
-    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
+    std::string currentWorkingDir = std::filesystem::current_path().string();
+    ASSERT_EQ(normalize_path(rootPath), normalize_path(ovms::FileSystem::joinPath({currentWorkingDir, ""})));
 
     givenPath = "/givenpath/";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, givenPath);
+    ASSERT_EQ(normalize_path(rootPath), normalize_path(givenPath));
 
     givenPath = "1";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
+    ASSERT_EQ(normalize_path(rootPath), normalize_path(ovms::FileSystem::joinPath({currentWorkingDir, ""})));
 
     givenPath = "";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(rootPath, ovms::FileSystem::joinPath({currentWorkingDir, ""}));
+    ASSERT_EQ(normalize_path(rootPath), normalize_path(ovms::FileSystem::joinPath({currentWorkingDir, ""})));
 }
 
 TEST(FileSystem, SetPath) {
@@ -225,7 +241,11 @@ TEST(FileSystem, SetPath) {
     } catch (std::logic_error& e) {
     }
 
+#ifdef __linux__
     rootPath = "/rootPath";
+#elif _WIN32
+    rootPath = "C:\\rootPath";
+#endif
     testPath = "";
     givenPath = "";
 
@@ -233,22 +253,39 @@ TEST(FileSystem, SetPath) {
     ASSERT_EQ(testPath, rootPath);
 
     testPath = "";
+#ifdef __linux__
     givenPath = "/givenPath";
+#elif _WIN32
+    givenPath = "C:\\givenPath";
+#endif
 
     ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+#ifdef __linux__
     ASSERT_EQ(testPath, "/givenPath");
+#elif _WIN32
+    ASSERT_EQ(testPath, "C:\\givenPath");
+#endif
 
     testPath = "";
     givenPath = "givenPath";
 
     ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+#ifdef __linux__
     ASSERT_EQ(testPath, "/rootPathgivenPath");
+#elif _WIN32
+    ASSERT_EQ(testPath, "C:\\rootPathgivenPath");
+#endif
 
     testPath = "";
     givenPath = "long/givenPath";
 
     ovms::FileSystem::setPath(testPath, givenPath, rootPath);
+
+#ifdef __linux__
     ASSERT_EQ(testPath, "/rootPathlong/givenPath");
+#elif _WIN32
+    ASSERT_EQ(testPath, "C:\\rootPathlong/givenPath");
+#endif
 
     testPath = "";
     givenPath = "s3://long/givenPath";

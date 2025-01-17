@@ -74,9 +74,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= c5137ff870dc3386bfd4692176e8d6725a17b99a  # master / 2024-12-16
+OV_SOURCE_BRANCH ?= 513dcc5c7b7a0a4d85ec9e59e6f7e50040008fba # releases/2025/0 / 2025-01-16
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
-OV_TOKENIZERS_BRANCH ?= bcfd3eda25ae3ec423502a4074e35c774506c732 # master / 2024-12-16
+OV_TOKENIZERS_BRANCH ?= 2a595797be4a4615a953b47014cf98d8eb2d9ff9 # releases/2025/0 2025-01-17
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -170,7 +170,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17638-c5137ff870d/l_openvino_toolkit_ubuntu22_2025.0.0.dev20241217_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc1/l_openvino_toolkit_ubuntu22_2025.0.0.dev20250116_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -185,7 +185,7 @@ ifeq ($(BASE_OS),redhat)
   endif
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "23.22.26516"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17638-c5137ff870d/l_openvino_toolkit_rhel8_2025.0.0.dev20241217_x86_64.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc1/l_openvino_toolkit_rhel8_2025.0.0.dev20250116_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -636,9 +636,9 @@ test_python_clients:
 	@echo "Download models"
 	@if [ ! -d "tests/python/models" ]; then cd tests/python && \
 		mkdir models && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:latest omz_downloader --name resnet-50-tf --output_dir /models && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32 && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:latest mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1; fi
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models && \
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32 && \
+		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1; fi
 	@echo "Start test container"
 	@docker run -d --rm --name $(PYTHON_CLIENT_TEST_CONTAINER_NAME) -v ${PWD}/tests/python/models/public/resnet-50-tf:/models/public/resnet-50-tf -p $(PYTHON_CLIENT_TEST_REST_PORT):8000 -p $(PYTHON_CLIENT_TEST_GRPC_PORT):9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 && \
 		sleep 10

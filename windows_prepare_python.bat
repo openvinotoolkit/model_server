@@ -16,7 +16,6 @@
 :: Prepares embedded python installation for the purpose of ovms building and creating the final ovms distribution. 
 setlocal EnableExtensions EnableDelayedExpansion
 @echo off
-
 if "%~1"=="" (
     set "dest_dir=C:\opt"
     echo Destination directory not specified. Using: C:\opt
@@ -70,7 +69,7 @@ echo .\Lib\site-packages
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Install pip
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+curl -k https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 if !errorlevel! neq 0 exit /b !errorlevel!
 .\python.exe get-pip.py
 if !errorlevel! neq 0 exit /b !errorlevel!
