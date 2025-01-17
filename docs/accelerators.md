@@ -6,8 +6,8 @@ Download ResNet50 model
 
 ```bash
 mkdir models
-docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu20_dev:latest omz_downloader --name resnet-50-tf --output_dir /models
-docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu20_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
 mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 ```
 
@@ -113,7 +113,7 @@ LATENCY
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name resnet --port 9001 \
---plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+--plugin_config "{\"PERFORMANCE_HINT\": \"LATENCY\"}" \
 --target_device AUTO
 ```
 
@@ -123,7 +123,7 @@ THROUGHPUT
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name resnet --port 9001 \
---plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+--plugin_config "{\"PERFORMANCE_HINT\": \"THROUGHPUT\"}" \
 --target_device AUTO
 ```
 
@@ -154,6 +154,5 @@ docker run -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino
 --plugin_config '{"AUTO_BATCH_TIMEOUT": 200}' \
 --target_device BATCH:CPU(16)
 ```
-
 In the example above, there will be 200ms timeout to wait for filling the batch size up to 16.
 Note, that autobatching is enabled by default, then the `target_device` is set to `GPU` with `--plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}'`. 

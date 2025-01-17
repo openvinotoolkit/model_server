@@ -98,7 +98,7 @@ static int reinitializeInternalManagerIfNeccessary(void** customNodeLibraryInter
     return 0;
 }
 
-int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
+DLL_PUBLIC int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     auto status = 0;
     if (*customNodeLibraryInternalManager == nullptr) {
         status = initializeInternalManager(customNodeLibraryInternalManager, params, paramsCount);
@@ -109,7 +109,7 @@ int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeP
     return 0;
 }
 
-int deinitialize(void* customNodeLibraryInternalManager) {
+DLL_PUBLIC int deinitialize(void* customNodeLibraryInternalManager) {
     if (customNodeLibraryInternalManager != nullptr) {
         InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
         delete internalManager;
@@ -117,7 +117,7 @@ int deinitialize(void* customNodeLibraryInternalManager) {
     return 0;
 }
 
-int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+DLL_PUBLIC int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct CustomNodeTensor** outputs, int* outputsCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
     NODE_ASSERT(internalManager != nullptr, "internalManager is not initialized");
     std::shared_lock<std::shared_timed_mutex> lock(internalManager->getInternalManagerLock());
@@ -171,7 +171,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
     return 0;
 }
 
-int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+DLL_PUBLIC int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
     NODE_ASSERT(internalManager != nullptr, "internalManager is not initialized");
     std::shared_lock<std::shared_timed_mutex> lock(internalManager->getInternalManagerLock());
@@ -192,7 +192,7 @@ int getInputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const stru
     return 0;
 }
 
-int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
+DLL_PUBLIC int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const struct CustomNodeParam* params, int paramsCount, void* customNodeLibraryInternalManager) {
     InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
     NODE_ASSERT(internalManager != nullptr, "internalManager is not initialized");
     std::shared_lock<std::shared_timed_mutex> lock(internalManager->getInternalManagerLock());
@@ -213,7 +213,7 @@ int getOutputsInfo(struct CustomNodeTensorInfo** info, int* infoCount, const str
     return 0;
 }
 
-int release(void* ptr, void* customNodeLibraryInternalManager) {
+DLL_PUBLIC int release(void* ptr, void* customNodeLibraryInternalManager) {
     InternalManager* internalManager = static_cast<InternalManager*>(customNodeLibraryInternalManager);
     if (!internalManager->releaseBuffer(ptr)) {
         free(ptr);

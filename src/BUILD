@@ -1812,7 +1812,6 @@ cc_test(
         "test/custom_node_output_allocator_test.cpp",
         "test/demultiplexer_node_test.cpp",
         "test/deserialization_tests.cpp",
-        "test/embeddingsnode_test.cpp",
         "test/ensemble_config_change_stress.cpp",
         "test/ensemble_flow_custom_node_tests.cpp",
         "test/ensemble_mapping_config_tests.cpp",
@@ -1829,7 +1828,6 @@ cc_test(
         "test/kfs_rest_test.cpp",
         "test/kfs_rest_parser_test.cpp",
         "test/layout_test.cpp",
-        "test/mediapipeflow_test.cpp",
         "test/metric_config_test.cpp",
         "test/metrics_test.cpp",
         "test/metrics_flow_test.cpp",
@@ -1851,7 +1849,6 @@ cc_test(
         "test/predict_validation_test.cpp",
         "test/prediction_service_test.cpp",
         "test/rest_utils_test.cpp",
-        "test/reranknode_test.cpp",
         "test/schema_test.cpp",
         "test/sequence_manager_test.cpp",
         "test/sequence_test.cpp",
@@ -1874,17 +1871,20 @@ cc_test(
         "test/tfs_rest_parser_row_test.cpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
+        "test/localfilesystem_test.cpp",
         ] + select({
             "//:not_disable_cloud": [
                 "test/gcsfilesystem_test.cpp",
                 "test/azurefilesystem_test.cpp",
-                "test/localfilesystem_test.cpp",
             ],
             "//:disable_cloud": []
             })
         + select({
             "//:not_disable_mediapipe": [
+                "test/embeddingsnode_test.cpp",
+                "test/mediapipeflow_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
+                "test/reranknode_test.cpp",
                 "test/rerank_handler_test.cpp",
                 "test/rerank_chunking_test.cpp",
                 "test/streaming_test.cpp", # Mediapipe enabled
@@ -1893,7 +1893,9 @@ cc_test(
                 "test/mediapipe_framework_test.cpp",
                 "test/http_openai_handler_test.cpp",
             ],
-            "//:disable_mediapipe" : [],
+            "//:disable_mediapipe" : [
+                "test/mediapipe_disabled_test.cpp",
+            ],
         }) + select({
             "//:not_disable_python": [
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.

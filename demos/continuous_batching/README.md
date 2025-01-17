@@ -1,41 +1,58 @@
 # How to serve LLM models with Continuous Batching via OpenAI API {#ovms_demos_continuous_batching}
+
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
+ovms_demos_continuous_batching_accuracy
+ovms_demos_continuous_batching_rag
+ovms_demos_continuous_batching_scaling
+```
+
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
 Text generation use case is exposed via OpenAI API `chat/completions` and `completions` endpoints.
 That makes it easy to use and efficient especially on on Intel® Xeon® processors.
 
-> **Note:** This demo was tested on Intel® Xeon® processors Gen4 and Gen5 and Intel dGPU ARC and Flex models on Ubuntu22/24 and RedHat8/9.
+> **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Data Center GPU Series on Ubuntu22/24, RedHat8/9 and Windows11.
 
-## Get the docker image
+## Prerequisites
 
-Build the image from source to try the latest enhancements in this feature.
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make release_image GPU=1
-```
-It will create an image called `openvino/model_server:latest`.
-> **Note:** This operation might take 40min or more depending on your build host.
-> **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
-> **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. Check the [demo version from the last release](https://github.com/openvinotoolkit/model_server/tree/releases/2024/4/demos/continuous_batching) to use the public docker image.
+**Model preparation**: Python 3.9 or higher with pip and HuggingFace account
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+
+**(Optional) Client**: git and Python for using OpenAI client package and vLLM benchmark app
+
 
 ## Model preparation
-> **Note** Python 3.9 or higher is need for that step
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
-Install python dependencies for the conversion script:
-```bash
-pip3 install -U -r demos/common/export_models/requirements.txt
+Download export script, install it's dependencies and create directory for the models:
+```console
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+mkdir models 
 ```
 
-Run optimum-cli to download and quantize the model:
-```bash
-mkdir models 
-python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models 
-```
-> **Note:** Change the `--weight-format` to quantize the model to `int8` or `int4` precision to reduce memory consumption and improve performance.
+Run `export_model.py` script to download and quantize the model:
+
 > **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/meta-llama/Meta-Llama-3-8B) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`.
+
+**CPU**
+```console
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models  --overwrite_models
+```
+
+**GPU**
+```console
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --cache_size 2 --config_file_path models/config.json --model_repository_path models --overwrite_models
+```
+
+> **Note:** Change the `--weight-format` to quantize the model to `int8` or `int4` precision to reduce memory consumption and improve performance.
+
 > **Note:** You can change the model used in the demo out of any topology [tested](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models) with OpenVINO.
 
 You should have a model folder like below:
@@ -59,33 +76,50 @@ models
         └── tokenizer.json
 ```
 
-The default configuration of the `LLMExecutor` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. 
-Note that the `models_path` parameter in the graph file can be an absolute path or relative to the `base_path` from `config.json`.
-Check the [LLM calculator documentation](../../docs/llm/reference.md) to learn about configuration options.
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
 
-## Start-up
+## Server Deployment
 
-### CPU
+:::{dropdown} **Deploying with Docker**
+
+Select deployment option depending on how you prepared models in the previous step.
+
+**CPU**
 
 Running this command starts the container with CPU only target device:
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
-### GPU
+**GPU**
 
 In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
-python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --target_device GPU --cache_size 2 --config_file_path models/config.json --model_repository_path models --overwrite_models
-
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
+:::
 
-### Check readiness
+:::{dropdown} **Deploying on Bare Metal**
+
+Assuming you have unpacked model server package, make sure to:
+
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+
+```bat
+ovms --rest_port 8000 --config_path ./models/config.json
+```
+:::
+
+## Readiness Check
 
 Wait for the model to load. You can check the status with a simple command:
-```bash
+```console
 curl http://localhost:8000/v1/config
 ```
 ```json
@@ -105,14 +139,14 @@ curl http://localhost:8000/v1/config
 }
 ```
 
-## Client code
+## Request Generation
 
 A single servable exposes both `chat/completions` and `completions` endpoints with and without stream capabilities.
 Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
 Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
 
-### Unary:
-```bash
+:::{dropdown} **Unary call with cURL**
+```console
 curl http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -156,7 +190,7 @@ curl http://localhost:8000/v3/chat/completions \
 ```
 
 A similar call can be made with a `completion` endpoint:
-```bash
+```console
 curl http://localhost:8000/v3/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -186,13 +220,14 @@ curl http://localhost:8000/v3/completions \
   }
 }
 ```
+:::
 
-### Streaming:
+:::{dropdown} **Streaming call with OpenAI Python package**
 
 The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
 Install the client library:
-```bash
+```console
 pip3 install openai
 ```
 ```python
@@ -219,7 +254,7 @@ It looks like you're testing me!
 ```
 
 A similar code can be applied for the completion endpoint:
-```bash
+```console
 pip3 install openai
 ```
 ```python
@@ -244,18 +279,18 @@ Output:
 ```
 It looks like you're testing me!
 ```
-
+:::
 
 ## Benchmarking text generation with high concurrency
 
 OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
 It can be demonstrated using benchmarking app from vLLM repository:
-```bash
+```console
 git clone --branch v0.6.0 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
-wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json  # sample dataset
+curl https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
 python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate inf
 
 Namespace(backend='openai-chat', base_url=None, host='localhost', port=8000, endpoint='/v3/chat/completions', dataset=None, dataset_name='sharegpt', dataset_path='ShareGPT_V3_unfiltered_cleaned_split.json', model='meta-llama/Meta-Llama-3-8B-Instruct', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, sharegpt_output_len=None, sonnet_input_len=550, sonnet_output_len=150, sonnet_prefix_len=200, random_input_len=1024, random_output_len=128, random_range_ratio=1.0, request_rate=inf, seed=0, trust_remote_code=False, disable_tqdm=False, profile=False, save_result=False, metadata=None, result_dir=None, result_filename=None, percentile_metrics='ttft,tpot,itl', metric_percentiles='99')

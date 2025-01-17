@@ -28,9 +28,11 @@ IF "%~1"=="" (
 set "bazelStartupCmd=--output_user_root=%BAZEL_SHORT_PATH%"
 set "openvino_dir=C:/%1/openvino/runtime/cmake"
 
-set "buildCommand=bazel %bazelStartupCmd% build --config=windows --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms 2>&1 | tee win_build.log"
-set "buildTestCommand=bazel %bazelStartupCmd% build --config=windows --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
+set "bazelBuildArgs=--config=windows --action_env OpenVINO_DIR=%openvino_dir%"
+set "buildCommand=bazel %bazelStartupCmd% build  %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms 2>&1 | tee win_build.log"
+set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
 set "changeConfigsCmd=windows_change_test_configs.py"
+set "setOvmsVersionCmd=windows_set_ovms_version.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
@@ -82,6 +84,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 set > %envPath%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Set ovms.exe --version parameters
+%setOvmsVersionCmd% "%bazelBuildArgs%" %BAZEL_SHORT_PATH%
 :: Start bazel build
 %buildCommand%
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -95,7 +99,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Copy OpenVINO GenAI and tokenizers libs
-copy %cd%\bazel-bin\external\llm_engine\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
+:: TODO this is a hack to be improved after bazel llm windows integration
+copy %cd%\bazel-out\x64_windows-opt\bin\external\llm_engine\copy_openvino_genai\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
 
 ls %cd%\bazel-bin\src
 

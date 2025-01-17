@@ -596,9 +596,6 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
 
 TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     // Disabled due to issue with gethering RT info
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::string request = "/v2/models/dummy/versions/1";
     ovms::HttpRequestComponents comp;
 

@@ -108,6 +108,14 @@ def check_tests(){
     } else {
         echo "Run test no FAILED detected."
     }
+
+    status = bat(returnStatus: true, script: 'grep "  PASSED  " win_full_test.log')
+    if (status != 0) {
+            error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check piepeline.log for details."
+    } else {
+        echo "Success: Windows run test finished with success."
+    }
+
 }
 
 // Post build steps
@@ -118,6 +126,24 @@ def archive_artifacts(){
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build_test.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test.log"
+}
+
+def setup_bazel_remote_cache(){
+    def bazel_remote_cache_url = env.OVMS_BAZEL_REMOTE_CACHE_URL
+    def content = "build --remote_cache=\"${bazel_remote_cache_url}\""
+    def filePath = '.user.bazelrc'
+    def command = "echo ${content} > ${filePath}"
+    status = bat(returnStatus: true, script: command)
+    if ( status != 0) {
+        println "Failed to set up bazel remote cache for Windows"
+        return
+    }
+    command = "cat ${filePath}"
+    status = bat(returnStatus: true, script: command)
+    if ( status != 0) {
+        println "Failed to read file"
+        return
+    }
 }
 
 return this

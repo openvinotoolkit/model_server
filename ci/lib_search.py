@@ -1,4 +1,3 @@
-#No header files detected
 # Copyright (c) 2020-2022 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,6 +81,7 @@ def check_dir(start_dir):
         'REST_age_gender.ipynb',
         '__pycache__',
         'add.xml',
+        'abseil_gcc_8.5_constant_expression.patch',
         'azure_sdk.patch',
         'cb.patch',
         'bazel-',
@@ -119,6 +119,8 @@ def check_dir(start_dir):
         'tf.patch',
         'tf_graph_info_multilinecomment.patch',
         'tftext.patch',
+        'partial_2.18.patch',
+        'tf_2.18_logging.patch',
         'vehicle_images.txt',
         'bazel_rules_apple.patch',
         "pom.xml",
@@ -192,6 +194,7 @@ def check_func(start_dir):
         'REST_age_gender.ipynb',
         '__pycache__',
         'add.xml',
+        'abseil_gcc_8.5_constant_expression.patch',
         'azure_sdk.patch',
         'bazel-',
         'boost.LICENSE.txt',
@@ -226,6 +229,8 @@ def check_func(start_dir):
         'tf.patch',
         'tf_graph_info_multilinecomment.patch',
         'tftext.patch',
+        'partial_2.18.patch',
+        'tf_2.18_logging.patch',
         'zlib.LICENSE.txt',
         'bazel_rules_apple.patch',
         'yarn.lock',

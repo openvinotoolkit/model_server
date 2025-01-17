@@ -16,7 +16,13 @@
 
 #include "cleaner_utils.hpp"
 
+#include <string>
+
+#ifdef __linux__
 #include <malloc.h>
+#elif _WIN32
+#include <crtdbg.h>
+#endif
 
 #include "global_sequences_viewer.hpp"
 #include "logging.hpp"
@@ -26,13 +32,27 @@ namespace ovms {
 FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
     globalSequencesViewer(globalSequencesViewer) {}
 
+#ifdef _WIN32
+bool malloc_trim_win() {
+    int result = _heapmin();
+    if (result != 0) {
+        DWORD error = GetLastError();
+        std::string message = std::system_category().message(error);
+        SPDLOG_ERROR("Failed to trim heap: {}", message);
+        return false;
+    }
+    return true;
+}
+#endif
+
 void FunctorSequenceCleaner::cleanup() {
     globalSequencesViewer.removeIdleSequences();
     SPDLOG_TRACE("malloc_trim(0)");
 #ifdef __linux__
     malloc_trim(0);
+#elif _WIN32
+    malloc_trim_win();
 #endif
-    // TODO: windows for malloc_trim(0);
 }
 
 FunctorSequenceCleaner::~FunctorSequenceCleaner() = default;

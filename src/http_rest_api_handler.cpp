@@ -15,19 +15,19 @@
 //*****************************************************************************
 #include "http_rest_api_handler.hpp"
 
+#include <cctype>
+#include <iomanip>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#ifndef _WIN32
-#include <curl/curl.h>
-#endif
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
@@ -1143,22 +1143,30 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
 }
 
 std::string urlDecode(const std::string& encoded) {
-// TODO
-#ifndef _WIN32
-    int output_length;
-    CURL* curl = curl_easy_init();
-    if (curl) {
-        const auto decoded_value = curl_easy_unescape(curl, encoded.c_str(), static_cast<int>(encoded.length()), &output_length);
-        if (decoded_value) {
-            std::string result(decoded_value, output_length);
-            curl_free(decoded_value);
-            curl_easy_cleanup(curl);
-            return result;
+    std::ostringstream decoded;
+    for (size_t i = 0; i < encoded.size(); ++i) {
+        if (encoded[i] == '%') {
+            // Check if the next two characters are valid hex digits
+            if (i + 2 < encoded.size() &&
+                std::isxdigit(static_cast<unsigned char>(encoded[i + 1])) &&
+                std::isxdigit(static_cast<unsigned char>(encoded[i + 2]))) {
+                // Convert the two hexadecimal digits to a character
+                int value = 0;
+                std::stringstream hex_value;
+                hex_value << encoded.substr(i + 1, 2);
+                hex_value >> std::hex >> value;
+                decoded << static_cast<char>(value);
+                i += 2;  // Skip the next two characters
+            } else {
+                // Invalid escape sequence, copy '%' as is
+                decoded << '%';
+            }
+        } else {
+            // Regular character, just add it
+            decoded << encoded[i];
         }
-        curl_easy_cleanup(curl);
     }
-#endif
-    return encoded;
+    return decoded.str();
 }
 
 }  // namespace ovms
