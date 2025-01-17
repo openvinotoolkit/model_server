@@ -266,6 +266,8 @@ IF /I EXIST %python_path% (
         :: Install python
         curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
+        %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+        if !errorlevel! neq 0 exit /b !errorlevel!
         %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
         :: setuptools<60.0 required for numpy1.23 on python311 to install
@@ -283,6 +285,8 @@ IF /I EXIST %python_path% (
     )
     :: Install python
     curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
     if !errorlevel! neq 0 exit /b !errorlevel!
     %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
     if !errorlevel! neq 0 exit /b !errorlevel!
