@@ -437,14 +437,14 @@ RUN apt-get update ; \
         mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
         apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
         if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-driver-compiler-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-fw-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-level-zero-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-driver-compiler-npu_1.10.1.20241220-12430270326_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-fw-npu_1.10.1.20241220-12430270326_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-level-zero-npu_1.10.1.20241220-12430270326_ubuntu22.04_amd64.deb ; \
             curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.44/level-zero_1.17.44+u22.04_amd64.deb ; \
         else \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-driver-compiler-npu_1.10.0.20241107-11729849322_ubuntu24.04_amd64.deb ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-fw-npu_1.10.0.20241107-11729849322_ubuntu24.04_amd64.deb ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-level-zero-npu_1.10.0.20241107-11729849322_ubuntu24.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-driver-compiler-npu_1.10.1.20241220-12430270326_ubuntu24.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-fw-npu_1.10.1.20241220-12430270326_ubuntu24.04_amd64.deb    ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-level-zero-npu_1.10.1.20241220-12430270326_ubuntu24.04_amd64.deb ; \
             curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.44/level-zero_1.17.44+u24.04_amd64.deb ; \ 
         fi ; \      
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \

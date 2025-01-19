@@ -168,7 +168,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   endif
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
-	INSTALL_DRIVER_VERSION ?= "24.39.31294"
+	INSTALL_DRIVER_VERSION ?= "24.52.32224"
 	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc1/l_openvino_toolkit_ubuntu24_2025.0.0.dev20250116_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
