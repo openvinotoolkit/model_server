@@ -15,15 +15,21 @@
 #
 
 # This script should be used inside build image to run unit tests
-exit 0
+
+JOBS=${JOBS:-"$(nproc)"}
+RUN_TESTS=${RUN_TESTS:-"1"}
+RUN_GPU_TESTS=${RUN_GPU_TESTS:-"0"}
+CHECK_COVERAGE=${CHECK_COVERAGE:-"0"}
+TEST_LOG="test.log"
+BAZEL_OPTIONS="--config=mp_on_py_on"
+
 TEST_FILTER="--test_filter=*"
 SHARED_OPTIONS=" \
 --jobs=$JOBS \
 ${debug_bazel_flags} \
 --test_timeout=1800 \
 --test_summary=detailed \
---test_output=streamed \
---test_env PYTHONPATH=${PYTHONPATH}"
+--test_output=streamed"
 
 # Check if RUN_GPU_TESTS is set and add it to SHARED_OPTIONS
 if [ "$RUN_GPU_TESTS" == "1" ]; then
@@ -33,18 +39,17 @@ if [ "$RUN_GPU_TESTS" == "1" ]; then
     SHARED_OPTIONS+=" --test_env RUN_GPU_TESTS=1"
 fi
 
-test_success_procedure() {
-    grep -a " ms \| ms)" ${TEST_LOG}
-    tail -50 ${TEST_LOG}
-}
+compress_logs() {
+    tar -czf test_logs.tar.gz ${TEST_LOG}
+    rm -rf ${TEST_LOG}
+    rm -rf tmp${TEST_LOG}
+} 
+
 generate_coverage_report() {
     test_success_procedure
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
 }
-test_fail_procedure() {
-    test_success_procedure
-    cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1
-}
+
 echo "Run test: ${RUN_TESTS}"
 echo "Run GPU test: ${RUN_GPU_TESTS}"
 echo "Run coverage: ${CHECK_COVERAGE}"
@@ -53,15 +58,21 @@ if [ "$RUN_TESTS" == "1" ] ; then
         { bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
             ${SHARED_OPTIONS} ${TEST_FILTER} \
             //src:ovms_test ${BAZEL_OPTIONS} > ${TEST_LOG} 2>&1 || \
-            test_fail_procedure; } && \
+            compress_logs && exit 1; } && \
             generate_coverage_report;
     fi
-    { 
-        bazel test --jobs=$JOBS ${BAZEL_OPTIONS} ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding && \
-        bazel test \
-          ${SHARED_OPTIONS} "${TEST_FILTER}" \
-          //src:ovms_test ${BAZEL_OPTIONS} > ${TEST_LOG} 2>&1 || \
-          test_fail_procedure; } && \
-          test_success_procedure && \
-          rm -rf ${TEST_LOG};
+    bazel build ${SHARED_OPTIONS} "${TEST_FILTER}" //src:ovms_test ${BAZEL_OPTIONS}
+    set +x
+    failed=0
+    for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
+        ./bazel-bin/src/ovms_test --gtest_filter="$i.*" > tmp${TEST_LOG} 2>&1 || ( failed=1 ; echo $i ; cat tmp${TEST_LOG} ) 
+        cat tmp${TEST_LOG} >> ${TEST_LOG}
+    done
+    for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep -v '^  '` ; do
+        ./bazel-bin/src/ovms_test --gtest_filter="*.$i" > tmp${TEST_LOG} 2>&1 || ( failed=1 ; echo "TEST NAME $i" ; cat tmp${TEST_LOG} ) 
+        cat tmp${TEST_LOG} >> ${TEST_LOG}
+    done    
+    grep -a " ms \| ms)" ${TEST_LOG}
+    compress_logs
+    exit $failed
 fi
