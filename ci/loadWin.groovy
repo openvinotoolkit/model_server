@@ -66,7 +66,7 @@ def install_dependencies() {
 }
 
 def clean() {
-    def output1 = bat(returnStdout: true, script: 'windows_clean_build.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def output1 = bat(returnStdout: true, script: 'windows_clean_build.bat ' + env.JOB_BASE_NAME + ' ' + "1")
 }
 
 def build_and_test(){
