@@ -49,17 +49,13 @@ build --define=no_cuda=1
 
 build --spawn_strategy=standalone
 build --genrule_strategy=standalone
-
 build --define=grpc_no_ares=true
 
-# Select settings
+# Default select settings
 build --define=MEDIAPIPE_DISABLE_GPU=1
 build --define=MEDIAPIPE_DISABLE=0
 build --define=CLOUD_DISABLE=0
 build --define=PYTHON_DISABLE=0
-
-# sometimes failed logs exceed this threshold
-test --experimental_ui_max_stdouterr_bytes=104857600
 
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos
@@ -142,17 +138,11 @@ build:windows --noenable_bzlmod
 
 # TF bazelrc settings
 # TensorFlow Bazel configuration file.
-build:windows --define framework_shared_object=true
-build:windows --define tsl_protobuf_header_only=true
 build:windows --define=use_fast_cpp_protos=true
 build:windows --define=allow_oversize_protos=true
-build:windows --spawn_strategy=standalone
 
 # Make Bazel print out all options from rc files.
 build:windows --announce_rc
-
-# TODO(mihaimaruseac): Document this option or remove if no longer needed
-build:windows --define=grpc_no_ares=true
 
 build:windows --noincompatible_remove_legacy_whole_archive
 build:windows --features=-force_no_whole_archive
@@ -183,7 +173,6 @@ build:windows --incompatible_enforce_config_setting_visibility
 # //tensorflow:libtensorflow_framework.so.
 build:monolithic --define framework_shared_object=false
 build:monolithic --define tsl_protobuf_header_only=false
-build:monolithic --experimental_link_static_libraries_once=false  # b/229868128
 # On windows, we still link everything into a single DLL - required by TF
 build:windows --config=monolithic
 
@@ -229,10 +218,6 @@ build:windows --host_linkopt=/OPT:REF
 build:windows --linkopt=/OPT:ICF
 build:windows --host_linkopt=/OPT:ICF
 
-# Work around potential issues with large command lines on windows.
-# See: https://github.com/bazelbuild/bazel/issues/5163
-build:windows --features=compiler_param_file
-
 build:windows --action_env PYTHON_BIN_PATH="C:/opt/Python311/python.exe"
 build:windows --action_env PYTHON_LIB_PATH="C:/opt/Python311/lib/site-packages"
 build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python311/python.exe
@@ -262,6 +247,9 @@ build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.11
 build:windows --define=USE_DROGON=1
 
 # Tests settings ############################################################################################################################
+# sometimes failed logs exceed this threshold
+test --experimental_ui_max_stdouterr_bytes=104857600
+
 test:linux --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 # genai hardcodes path during build time so without this so is not visible
 test:linux --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
