@@ -1,24 +1,39 @@
 # Using AI Accelerators {#ovms_docs_target_devices}
 
+## Prerequisites
+
+Docker engine installed (on Linux and WSL), or ovms binary package installed like installed in the [guide](./deploying_server_baremetal.md) (on Linux or Windows).  
+
 ## Prepare test model
-
-Download ResNet50 model
-
-```bash
-mkdir models
-docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models
-docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
-mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
+Download ResNet50 model to follow the deployment examples:
+```console
+curl -L -o model/1/model.tar.gz https://www.kaggle.com/api/v1/models/tensorflow/resnet-50/tensorFlow2/classification/1/download --create-dirs
+tar -xzf model/1/model.tar.gz -C model/1/
+rm model/1/model.tar.gz
 ```
+
+## Deployment options
+
+### Binary server package
+When OpenVINO Model Server is deployed as a binary application, it can use the accelerators available on the host by just setting the parameter `target_device` in the configuration files `config.json` or `subconfig.json`. When using pipelines based on MediaPipe graphs, there might be also additional parameters defined in `graph.pbtxt` files.
+> **NOTE**: For generative use cases, like text generation, exporting models and preparing the deployment configuration can be automated using [export_model.py](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/export_models). It also has an optional parameter `--target_device`.
+
+Before staring the model server, make sure there are installed GPU or/and NPU required drivers like described in [https://docs.openvino.ai/2024/get-started/configurations.html](https://docs.openvino.ai/2024/get-started/configurations.html)
+
+### Docker Container
+Deployment can be easily arranged using public images. It also allows using accelerators but there are additional considerations:
+- make sure to use the image version including runtime drivers. The public image has a suffix -gpu like `openvino/model_server:latest-gpu`.
+- additional parameters needs to be passed to the docker run command depending on the accelerator.
+- kernel modules needs to be present on the host with support for the accelerators
 
 ## Starting a Docker Container with Intel integrated GPU, Intel® Data Center GPU Flex Series and Intel® Arc™ GPU
 
 The [GPU plugin](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) uses the [oneDNN](https://github.com/oneapi-src/oneDNN) and [OpenCL](https://github.com/KhronosGroup/OpenCL-SDK) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including
 Intel® Arc™ GPU Series, Intel® UHD Graphics, Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics and Intel® Data Center GPU.
 
-
-Before using GPU as OpenVINO Model Server target device, you need to:
-- install the required drivers - refer to [OpenVINO installation guide](https://docs.openvino.ai/2024/get-started/configurations.html)
+### Container
+Before using GPU as OpenVINO Model Server target device in a container, you need to:
+- install the required kernel modules - refer to [OpenVINO installation guide](https://docs.openvino.ai/2024/get-started/configurations.html)
 - start the docker container with the additional parameter of `--device /dev/dri` to pass the device context
 - set the parameter of `--target_device` to `GPU`.
 - use the `openvino/model_server:latest-gpu` image, which contains GPU dependencies
@@ -46,16 +61,33 @@ docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -u $(i
 --model_path /opt/model --model_name resnet --port 9001 --target_device GPU
 ```
 
+### Binary 
+
+Starting the server with GPU acceleration requires installation of runtime drivers and opencl package like described on [configuration guide](https://docs.openvino.ai/2024/get-started/configurations/configurations-intel-gpu.html)
+
+Start the model server with GPU accelerations using a command:
+```console
+ovms --model_path model --model_name resnet --port 9001 --target_device GPU
+```
+
 
 ## Using NPU device Plugin
 
 OpenVINO Model Server supports using [NPU device](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/npu-device.html)
 
+### Container
 Example command to run container with NPU:
 ```bash
 docker run --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -v ${PWD}/models/public/resnet-50-tf:/opt/model openvino/model_server:latest-gpu --model_path /opt/model --model_name resnet --port 9000 --target_device NPU
 ```
+
+### Binary package
+Start the model server with NPU accelerations using a command:
+```console
+ovms --model_path model --model_name resnet --port 9001 --target_device NPU
+```
+
 Check more info about the [NPU driver configuration](https://docs.openvino.ai/2024/get-started/configurations/configurations-intel-npu.html).
 
 
@@ -87,6 +119,15 @@ echo '{"model_config_list": [
 [Auto Device](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/auto-device-selection.html) (or AUTO in short) is a new special “virtual” or “proxy” device in the OpenVINO toolkit, it doesn’t bind to a specific type of HW device.
 AUTO solves the complexity in application required to code a logic for the HW device selection (through HW devices) and then, on the deducing the best optimization settings on that device.
 AUTO always chooses the best device, if compiling model fails on this device, AUTO will try to compile it on next best device until one of them succeeds.
+
+The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.md) plugin config property that enables you to specify a performance mode for the plugin.
+While LATENCY and THROUGHPUT hint can select one target device with your preferred performance option, the CUMULATIVE_THROUGHPUT option enables running inference on multiple devices for higher throughput. 
+With CUMULATIVE_THROUGHPUT hint, AUTO plugin loads the network model to all available devices (specified by the plugin) in the candidate list, and then runs inference on them based on the default or specified priority.
+
+> **NOTE**: NUM_STREAMS and PERFORMANCE_HINT should not be used together.
+
+### Container
+
 Make sure you have passed the devices and access to the devices you want to use in for the docker image. For example with:
 `--device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g)`
 
@@ -98,12 +139,6 @@ docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render*
 --model_path /opt/model --model_name resnet --port 9001 \
 --target_device AUTO
 ```
-
-The `Auto Device` plugin can also use the [PERFORMANCE_HINT](performance_tuning.md) plugin config property that enables you to specify a performance mode for the plugin.
-While LATENCY and THROUGHPUT hint can select one target device with your preferred performance option, the CUMULATIVE_THROUGHPUT option enables running inference on multiple devices for higher throughput. 
-With CUMULATIVE_THROUGHPUT hint, AUTO plugin loads the network model to all available devices (specified by the plugin) in the candidate list, and then runs inference on them based on the default or specified priority.
-
-> **NOTE**: NUM_STREAMS and PERFORMANCE_HINT should not be used together.
 
 To enable Performance Hints for your application, use the following command:
 
@@ -137,6 +172,29 @@ docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render*
 --target_device AUTO:GPU,CPU
 ```
 
+### Binary package
+
+Below is the equivalent of the deployment command with a binary package at below:
+
+AUTO
+```console
+ovms --model_path model --model_name resnet --port 9001 --target_device AUTO:GPU,CPU
+```
+
+THROUGHPUT
+```console
+ovms --model_path model --model_name resnet --port 9001 --plugin_config "{\"PERFORMANCE_HINT\": \"THROUGHPUT\"}" --target_device AUTO:GPU,CPU
+```
+
+LATENCY
+```console
+ovms --model_path model --model_name resnet --port 9001 --plugin_config "{\"PERFORMANCE_HINT\": \"LATENCY\"}" --target_device AUTO:GPU,CPU
+```
+
+CUMULATIVE_THROUGHPUT
+```console
+ovms --model_path model --model_name resnet --port 9001 --plugin_config "{\"PERFORMANCE_HINT\": \"CUMULATIVE_THROUGHPUT\"}" --target_device AUTO:GPU,CPU
+```
 
 ## Using Automatic Batching Plugin
 
@@ -147,7 +205,9 @@ It performs automatic batching on-the-fly to improve device utilization by group
 With Automatic Batching, gathering the input and scattering the output from the individual inference requests required for the batch happen transparently, without affecting the application code.
 
 > **NOTE**: Autobatching can be applied only for static models
+> **NOTE**: Autobatching is enabled by default, then the `target_device` is set to `GPU` with `--plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}'`. 
 
+### Containers
 ```bash
 docker run -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 \
@@ -155,4 +215,11 @@ docker run -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino
 --target_device BATCH:CPU(16)
 ```
 In the example above, there will be 200ms timeout to wait for filling the batch size up to 16.
-Note, that autobatching is enabled by default, then the `target_device` is set to `GPU` with `--plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}'`. 
+
+### Binary package
+
+The same deployment with a binary package can be completed with a command:
+```console
+ovms --model_path model --model_name resnet --port 9001 --plugin_config "{\"AUTO_BATCH_TIMEOUT\": 200}" --target_device "BATCH:CPU(16)"
+```
+```
