@@ -4,31 +4,47 @@ This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph 
 
 Example usage of graph that accepts Mediapipe::ImageFrame as a input:
 
+## Prerequisites
+
+**Model preparation**: Python 3.9 or higher with pip 
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
 ## Prepare the repository
 
 Clone the repository and enter mediapipe object_detection directory
-```bash
+```console
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/object_detection
 ```
 
-## Prepare models and the environment:
-```bash
-virtualenv .venv
-. .venv/bin/activate
+## Prepare models
+```console
 pip install -r requirements.txt
 
 python mediapipe_object_detection.py --download_models
 ```
 
-## Run OpenVINO Model Server
+## Server Deployment
+:::{dropdown} **Deploying with Docker**
 ```bash
-docker run -d -v $PWD/ovms:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
+docker run -d -v $PWD:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
 ```
+:::
+:::{dropdown} **Deploying on Bare Metal**
+Assuming you have unpacked model server package, make sure to:
 
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+```bat
+cd demos\mediapipe\object_detection
+ovms --config_path config.json --port 9000
+```
+:::
 ## Run the client:
-```bash
+```console
 python mediapipe_object_detection.py --grpc_port 9000 --images ./input_images.txt
 Start processing:
 	Graph name: objectDetection

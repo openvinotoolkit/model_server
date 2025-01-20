@@ -144,7 +144,7 @@ node {
   output_stream: "output_detections"
   node_options: {
     [type.googleapis.com/mediapipe.DetectionLabelIdToTextCalculatorOptions] {
-      label_map_path: "/demo/ssdlite_object_detection_labelmap.txt"
+      label_map_path: "ssdlite_object_detection_labelmap.txt"
     }
   }
 }

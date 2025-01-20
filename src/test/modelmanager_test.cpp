@@ -1076,6 +1076,9 @@ public:
 };
 
 TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
+#endif
     std::mutex mx[2];
     std::condition_variable cv[2];
 

@@ -20,7 +20,7 @@
 setlocal EnableExtensions DisableDelayedExpansion
 set "BAZEL_SHORT_PATH=C:\%1"
 set "bazelStartupCmd=--output_user_root=%BAZEL_SHORT_PATH%"
-set "setPath=C:\opt;C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 if %2 EQU 1 (set "cleanCmd=bazel %bazelStartupCmd% clean --expunge") else ( set "cleanCmd=bazel %bazelStartupCmd% clean" )
 
 

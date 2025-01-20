@@ -15,7 +15,7 @@
 ::
 @echo on
 :: Setting up default OVMS compilation environment variables
-set "setPath=C:\opt;C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
@@ -53,13 +53,13 @@ set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%
-EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
 if !errorlevel! neq 0 exit /b !errorlevel!
-DisableDelayedExpandsion
+endlocal
 %opencvBatch%
-EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
 if !errorlevel! neq 0 exit /b !errorlevel!
-DisableDelayedExpandsion
+endlocal
 
 :exit_build
 echo [INFO] Setup finished
