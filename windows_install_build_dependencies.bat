@@ -39,7 +39,7 @@ set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
 :: Python 39 needs to be first in the windows path, as well as MSYS tools
-set "setPath=C:\opt;C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
@@ -123,9 +123,10 @@ IF /I EXIST %bash_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenVINO - reinstalled per build trigger
-set "openvino_dir=w_openvino_toolkit_windows_2025.0.0.dev20241217_x86_64"
-set "openvino_ver=w_openvino_toolkit_windows_2025.0.0.dev20241217_x86_64.zip"
-set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17638-c5137ff870d/"
+set "openvino_dir=w_openvino_toolkit_windows_2025.0.0.dev20250116_x86_64"
+set "openvino_ver=w_openvino_toolkit_windows_2025.0.0.dev20250116_x86_64.zip"
+set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc1/"
+
 set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
 set "openvino_workspace=C:\\\\opt\\\\openvino\\\\runtime"
 set "openvino_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
@@ -166,8 +167,10 @@ mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Replace path to openvino in ovms WORKSPACE file
-powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
-if !errorlevel! neq 0 exit /b !errorlevel!
+if "!output_user_root!" neq "opt" (
+    powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
@@ -238,37 +241,59 @@ IF /I EXIST %bazel_path% (
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Python39
-set "python39_path=%opt_install_dir%\Python39\"
-set "python39_system=C:\Program Files\Python39\"
-IF /I EXIST %python39_path% (
+::::::::::::::::::::::: Python
+set "python_version=3.11.9"
+for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
+        set MAJOR_VER=%%a
+        set MINOR_VER=%%b
+    )
+set "python_dir=python%MAJOR_VER%%MINOR_VER%"
+set "python_path=%opt_install_dir%\%python_dir%"
+set "python_full_name=python-%python_version%-amd64"
+::https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe
+set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
+IF /I EXIST %python_path% (
     IF %expunge% EQU 1 (
-        rmdir /S /Q %python39_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        IF /I EXIST "%python39_system%" (
-            :: Copy system Python
-            xcopy /s /e /q /y "%python39_system%" %python39_path%
+        :: Uninstall Python
+        IF /I EXIST "%opt_install_dir%\%python_full_name%.exe" (
+            %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+            rm %opt_install_dir%\%python_full_name%.exe
             if !errorlevel! neq 0 exit /b !errorlevel!
-            pip install numpy==1.23
-            if !errorlevel! neq 0 exit /b !errorlevel!
-        ) ELSE (
-            echo [ERROR] ::::::::::::::::::::::: Python39 not found
-            goto :exit_dependencies_error
         )
+        rmdir /S /Q %python_path%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+
+        :: Install python
+        curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        :: setuptools<60.0 required for numpy1.23 on python311 to install
+        %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+        if !errorlevel! neq 0 exit /b !errorlevel!
     ) ELSE (
-        echo [INFO] ::::::::::::::::::::::: Python39 already installed
+        echo [INFO] ::::::::::::::::::::::: %python_path% already installed
     )
 ) ELSE (
-    IF /I EXIST "%python39_system%" (
-        :: Copy system Python
-        xcopy /s /e /q /y "%python39_system%" %python39_path%
+    :: Uninstall Python
+    IF /I EXIST "%opt_install_dir%\%python_full_name%.exe" (
+        %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+        rm %opt_install_dir%\%python_full_name%.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %python39_path%python.exe -m pip install numpy==1.23
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) ELSE (
-        echo [ERROR] ::::::::::::::::::::::: Python39 not found
-        goto :exit_dependencies_error
     )
+    :: Install python
+    curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    :: setuptools<60.0 required for numpy1.23 on python311 to install
+    %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!

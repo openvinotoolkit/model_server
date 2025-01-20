@@ -41,7 +41,7 @@ if exist "%~1\%TEXT_GENERATION_MODEL%" if exist "%~1\%EMBEDDING_MODEL%" if exist
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 set "PYTHONPATH="
-C:\opt\Python39\python.exe -m venv .venv
+C:\opt\Python311\python.exe -m venv .venv
 if !errorlevel! neq 0 exit /b !errorlevel!
 call .\.venv\Scripts\Activate.bat
 if !errorlevel! neq 0 exit /b !errorlevel!

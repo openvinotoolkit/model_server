@@ -4,7 +4,6 @@
                 "name": "dummy",
                 "base_path": "/ovms/demos/dummy",
                 "plugin_config": {
-                    "AFFINITY": "CORE",
                     "PERFORMANCE_HINT": "THROUGHPUT",
                     "PERF_COUNT":"NO"
                 },
