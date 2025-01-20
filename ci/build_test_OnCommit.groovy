@@ -97,7 +97,7 @@ pipeline {
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
                         try {
-                          windows.setup_bazel_remote_cache()
+                          // windows.setup_bazel_remote_cache()
                           windows.install_dependencies()
                           windows.clean()
                           windows.build_and_test()
