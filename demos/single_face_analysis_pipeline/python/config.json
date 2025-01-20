@@ -3,13 +3,13 @@
         {
             "config": {
                 "name": "emotions-recognition",
-                "base_path": "/workspace/emotions-recognition-retail-0003"
+                "base_path": "emotions-recognition-retail-0003"
             }
         },
         {
             "config": {
                 "name": "age-gender-recognition",
-                "base_path": "/workspace/age-gender-recognition-retail-0013",
+                "base_path": "age-gender-recognition-retail-0013",
                 "shape": "(1, 3, 64, 64)"
             }
         }

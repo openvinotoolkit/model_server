@@ -53,13 +53,13 @@ set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%
-EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
 if !errorlevel! neq 0 exit /b !errorlevel!
-DisableDelayedExpandsion
+endlocal
 %opencvBatch%
-EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
 if !errorlevel! neq 0 exit /b !errorlevel!
-DisableDelayedExpandsion
+endlocal
 
 :exit_build
 echo [INFO] Setup finished
