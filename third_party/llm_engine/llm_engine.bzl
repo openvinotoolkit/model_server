@@ -132,11 +132,15 @@ cmake(
     tags = ["requires-network"],
     visibility = ["//visibility:public"],
     lib_name = "{lib_name}",
+    deps = [
+        "@ovms//third_party:openvino",
+    ]
 )
 
 cc_library(
     name = "llm_engine",
     deps = [
+        "@ovms//third_party:openvino",
         ":llm_engine_cmake",
     ],
     visibility = ["//visibility:public"],
