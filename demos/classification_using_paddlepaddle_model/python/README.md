@@ -26,20 +26,26 @@ You can download the model and prepare the workspace by just running:
 python download_model.py
 ```
 
-## Deploying OVMS
-
+## Server Deployment
+:::{dropdown} **Deploying with Docker**
 Deploy OVMS with vehicles analysis pipeline using the following command:
 
 ```bash
 docker run -p 9000:9000 -d -v ${PWD}/model:/models openvino/model_server --port 9000 --model_path /models --model_name mobilenet --shape "(1,3,-1,-1)"
 ```
+:::
+:::{dropdown} **Deploying on Bare Metal**
+Assuming you have unpacked model server package, make sure to:
 
-On unix baremetal or Windows open another command window and run
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 cd demos\classification_using_paddlepaddle_model\python
 ovms --port 9000 --model_path model --model_name mobilenet --shape "(1,3,-1,-1)"
 ```
-
+:::
 ## Requesting the Service
 
 Install python dependencies:

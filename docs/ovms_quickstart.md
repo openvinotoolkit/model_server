@@ -28,6 +28,7 @@ To quickly start using OpenVINO™ Model Server follow these steps:
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](deploying_server_baremetal.md)
 
+
 ### Step 1: For Linux prepare Docker
 
 To verify installation, test it using the following command. If it displays a test image and a message, it is ready.
@@ -69,21 +70,25 @@ For more information about the directory structure and how to deploy multiple mo
 - [Serving models](starting_server.md)
 - [Serving multiple model versions](model_version_policy.md)
 
-### Step 4: Start the Model Server Container on Linux
-
-Start the container:
-
+### Step 4: Start the Model Server
+:::{dropdown} **Deploying with Docker**
 ```bash
 docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/model_server:latest --model_name faster_rcnn --model_path /model --port 9000
 ```
 
 During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage.
+:::
+:::{dropdown} **Deploying on Bare Metal**
+Assuming you have unpacked model server package, make sure to:
 
-#### On unix baremetal or Windows open another command window and run
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 ovms --model_name faster_rcnn --model_path model --port 9000
 ```
-
+:::
 ### Step 5: Prepare the Example Client Components
 
 Client scripts are available for quick access to the Model Server. Run an example command to download all required components:

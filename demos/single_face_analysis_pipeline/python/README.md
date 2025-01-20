@@ -12,7 +12,7 @@ When you need to execute several predictions on the same data, you can create a 
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
-## Prepare workspace to run the demo
+## Prepare models
 
 In this example the following models are used:
 
@@ -55,20 +55,24 @@ workspace/
         └── emotions-recognition-retail-0003.xml
 ```
 
-## Deploying OVMS
-
-Deploy OVMS with single face analysis pipeline using the following command:
-
+## Server Deployment
+:::{dropdown} **Deploying with Docker**
 ```bash
 docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server --config_path /workspace/config.json --port 9000
 ```
+:::
+:::{dropdown} **Deploying on Bare Metal**
+Assuming you have unpacked model server package, make sure to:
 
-On unix baremetal or Windows open another command window and run
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 cd demos\single_face_analysis_pipeline\python
 ovms --config_path workspace/config.json --port 9001
 ```
-
+:::
 ## Requesting the Service
 
 Exemplary client [single_face_analysis_pipeline.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/single_face_analysis_pipeline/python/single_face_analysis_pipeline.py) can be used to request pipeline deployed in previous step.

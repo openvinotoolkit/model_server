@@ -77,18 +77,23 @@ curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zo
 
 ## Deploying OVMS
 
-Deploy OVMS with single face detection pipeline using the following command:
-
+:::{dropdown} **Deploying with Docker**
 ```bash
 docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto
 ```
+:::
+:::{dropdown} **Deploying on Bare Metal**
+Assuming you have unpacked model server package, make sure to:
 
-On unix baremetal or Windows open another command window and run
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 cd demos\face_detection\python
 ovms --model_path model --model_name face-detection --port 9000  --shape auto
 ```
-
+:::
 Run the client:
 ```console
 mkdir results

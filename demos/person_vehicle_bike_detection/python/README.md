@@ -8,28 +8,32 @@ The purpose of this demo is to show how to send data from multiple sources (came
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
-## Deploy person, vehicle, bike detection model
-
-### Download model files
+## Prepare model files
 ```console
 curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.bin -o model/1/person-vehicle-bike-detection-crossroad-0078.bin
 
 curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml -o model/1/person-vehicle-bike-detection-crossroad-0078.xml
 ```
 
-### Run OpenVINO Model Server
+## Server Deployment
+:::{dropdown} **Deploying with Docker**
 ```bash
 docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name person-vehicle-detection --port 9000 --shape auto
 ```
+:::
+:::{dropdown} **Deploying on Bare Metal**
+Assuming you have unpacked model server package, make sure to:
 
-On unix baremetal or Windows open another command window and run
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 cd demos\person_vehicle_bike_detection\python
 ovms --model_path model --model_name person-vehicle-detection --port 9000 --shape auto
 ```
-
+:::
 ## Running the client application
-
 
 ```console
 git clone https://github.com/openvinotoolkit/model_server.git

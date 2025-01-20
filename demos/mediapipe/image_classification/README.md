@@ -25,17 +25,24 @@ curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_z
 curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o resnetMediapipe/model/1/resnet50-binary-0001.xml
 ```
 
-## Run OpenVINO Model Server
+## Server Deployment
+:::{dropdown} **Deploying with Docker**
 ```bash
 docker run -d -v $PWD:/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
 ```
+:::
+:::{dropdown} **Deploying on Bare Metal**
+Assuming you have unpacked model server package, make sure to:
 
-On unix baremetal or Windows open another command window and run
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 cd demos\mediapipe\image_classification
 ovms --config_path config.json --port 9000
 ```
-
+:::
 ## Run the client:
 ```console
 cd ../../../client/python/kserve-api/samples

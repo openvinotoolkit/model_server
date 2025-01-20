@@ -12,7 +12,7 @@ The demo is based on the [Mediapipe Iris demo](https://github.com/google/mediapi
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
-## Prepare the server deployment
+## Prepare models
 
 Clone the repository and enter mediapipe object_detection directory
 ```console
@@ -24,24 +24,29 @@ curl https://storage.googleapis.com/mediapipe-assets/face_landmark.tflite -o fac
 curl https://storage.googleapis.com/mediapipe-assets/iris_landmark.tflite -o iris_landmark/1/iris_landmark.tflite --create-dirs
 
 ```
-### Pull the Latest Model Server Image
+## Server Deployment
+:::{dropdown} **Deploying with Docker**
 Pull the latest version of OpenVINO&trade; Model Server from Docker Hub:
 ```Bash
 docker pull openvino/model_server:latest
 
 ```
-
-## Run OpenVINO Model Server
 ```bash
 docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_iris.json --port 9000
 ```
+:::
+:::{dropdown} **Deploying on Bare Metal**
+Assuming you have unpacked model server package, make sure to:
 
-On unix baremetal or Windows open another command window and run
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 cd demos\mediapipe\iris_tracking
 ovms --config_path config_iris.json --port 9000
 ```
-
+:::
 ## Run client application for iris tracking
 ```console
 pip install -r requirements.txt
