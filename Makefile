@@ -677,6 +677,7 @@ endif
 run_unit_tests: prepare_models
 ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
+		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 		--device=/dev/dri \
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \
 		-u 0 \
@@ -689,10 +690,13 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-e JOBS=$(JOBS) \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
-		./run_unit_tests.sh ; \
-		exit $$?
+		./run_unit_tests.sh
+		exit_code=$$?
+		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz .
+		exit $$exit_code
 else
 	docker run \
+		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		-e https_proxy=${https_proxy} \
@@ -701,7 +705,9 @@ else
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		./run_unit_tests.sh ;\
-		exit $$?
+		exit_code=$$?
+		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz .
+		exit $$exit_code
 endif
 
 run_lib_files_test:

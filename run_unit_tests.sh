@@ -73,6 +73,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
         cat tmp${TEST_LOG} >> ${TEST_LOG}
     done    
     grep -a " ms \| ms)" ${TEST_LOG}
+    echo "Tests completed:" `grep -a " ms \| ms)" ${TEST_LOG} | wc -l`
     compress_logs
     exit $failed
 fi

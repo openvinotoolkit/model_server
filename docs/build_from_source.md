@@ -27,7 +27,7 @@ To build the image with non default configuration, add parameters described belo
 
 Select base OS:
 - `ubuntu22` for Ubuntu 22.04 (default)
-- `ubuntu24` for Ubuntu 22.04
+- `ubuntu24` for Ubuntu 24.04
 - `redhat` for Red Hat UBI 8.10
 
 ```bash
@@ -43,9 +43,9 @@ Example:
 Parameter used to control which GPU driver version will be installed. Supported versions:
 | OS | Versions |
 |---|---|
-| Ubuntu22 | 24.39.31294 (default), <br >24.26.30049 (default), <br />23.22.26516, <br />23.13.2603|
-| Ubuntu24 | 24.39.31294 (default) |
-| RedHat | 23.22.26516 (default), <br /> 24.26.30049, <br />23.22.26516, <br />22.10.22597 |
+| Ubuntu22 | 24.39.31294 (default), <br /> 24.26.30049 (default), <br /> 23.22.26516|
+| Ubuntu24 | 24.52.32224 (default), <br /> 24.39.31294 |
+| RedHat | 23.22.26516 (default), <br /> 24.26.30049, <br />23.22.26516, <br /> 22.10.22597 |
 
 Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.  
 Warning: _Maintained only for Ubuntu base OS._
