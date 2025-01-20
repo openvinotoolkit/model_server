@@ -140,9 +140,9 @@ else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
 CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
-ifeq ($(BASE_OS),ubuntu24)
-	REPO_ENV=" --repo_env PYTHON_BIN_PATH=/usr/bin/python3.12"
-endif
+# ifeq ($(BASE_OS),ubuntu24)
+# 	REPO_ENV=" --repo_env PYTHON_BIN_PATH=/usr/bin/python3.12"
+# endif
 BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(REPO_ENV)
 
 # Option to Override release image.
