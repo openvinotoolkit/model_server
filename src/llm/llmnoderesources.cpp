@@ -153,8 +153,15 @@ Status LLMNodeResources::initializeLLMNodeResources(LLMNodeResources& nodeResour
     nodeResources.device = nodeOptions.device();
 
     if (!nodeOptions.draft_models_path().empty()) {
+        auto fsDraftModelsPath = std::filesystem::path(nodeOptions.draft_models_path());
+        std::string draftModelsPath;
+        if (fsDraftModelsPath.is_relative()) {
+            draftModelsPath = (std::filesystem::path(graphPath) / fsDraftModelsPath).string();
+        } else {
+            draftModelsPath = fsDraftModelsPath.string();
+        }
         auto draftSchedulerConfig = prepareDraftModelSchedulerConfig(nodeOptions);
-        auto draftModelConfig = ov::genai::draft_model(nodeOptions.draft_models_path(), nodeOptions.draft_device(),
+        auto draftModelConfig = ov::genai::draft_model(draftModelsPath, nodeOptions.draft_device(),
             ov::genai::scheduler_config(draftSchedulerConfig));
         nodeResources.pluginConfig.insert(draftModelConfig);
         nodeResources.isSpeculativePipeline = true;
