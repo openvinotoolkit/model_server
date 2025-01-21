@@ -65,6 +65,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
     set +x
     echo "Executing unit tests"
     failed=0
+    # Tests starting python interpreter should be executed separately with python3.12
     for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
         ./bazel-bin/src/ovms_test --gtest_filter="$i.*" > tmp.log 2>&1 || ( failed=1 ; echo $i ; cat tmp.log ) 
         cat tmp.log >> ${TEST_LOG}
