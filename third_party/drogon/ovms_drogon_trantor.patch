@@ -76,7 +76,7 @@ index 3335e6ff..7874f18b 100644
  {
 Submodule trantor contains modified content
 diff --git a/trantor/trantor/net/EventLoop.cc b/trantor/trantor/net/EventLoop.cc
-index 8db1090..1013972 100644
+index 8db1090..b55f74a 100644
 --- a/trantor/trantor/net/EventLoop.cc
 +++ b/trantor/trantor/net/EventLoop.cc
 @@ -35,6 +35,9 @@ using ssize_t = long long;
@@ -94,7 +94,7 @@ index 8db1090..1013972 100644
      if (evtfd < 0)
      {
 -        std::cout << "Failed in eventfd" << std::endl;
-+        std::cout << "Failed in eventfd" << strerror(errno) << " (errno: " << errno << ")" << std::endl;
++        std::cout << "Failed in eventfd: " << strerror(errno) << " (errno: " << errno << ")" << std::endl;
          abort();
      }
  
