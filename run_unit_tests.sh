@@ -61,7 +61,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
             compress_logs && exit 1; } && \
             generate_coverage_report;
     fi
-    bazel build ${SHARED_OPTIONS} "${TEST_FILTER}" //src:ovms_test ${BAZEL_OPTIONS}
+    bazel build --jobs=$JOBS ${BAZEL_OPTIONS} //src:ovms_test 
     set +x
     echo "Executing unit tests"
     failed=0
