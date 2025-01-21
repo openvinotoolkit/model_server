@@ -50,7 +50,7 @@ def _impl(repository_ctx):
     OpenVINO_DIR = repository_ctx.os.environ.get("OpenVINO_DIR", "")
 
     if _is_windows(repository_ctx):
-        OpenVINO_DIR = OpenVINO_DIR.replace("\", "\\").replace("/", "\\")
+        OpenVINO_DIR = OpenVINO_DIR.replace("\\", "\\\\").replace("/", "\\\\")
         out_lib_dir = "runtime/lib/Release"
         lib_name = "openvino_genai"
         out_libs = "out_static_libs = [\"{lib_name}.lib\"]".format(lib_name=lib_name)
