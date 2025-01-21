@@ -250,11 +250,10 @@ build:windows --define=USE_DROGON=1
 # sometimes failed logs exceed this threshold
 test --experimental_ui_max_stdouterr_bytes=104857600
 
+# envs below are required to succesfully run binaries in bazel as bazel is very strict in sandboxing
 test:linux --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 # genai hardcodes path during build time so without this so is not visible
 test:linux --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
-# envs below are required to succesfully run binaries in bazel as bazel is
-# very strict in sandboxing
 test:linux --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 # Bazelrc imports ############################################################################################################################
