@@ -37,7 +37,6 @@
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
-#include "mediapipe/framework/thread_pool_executor.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -58,7 +57,6 @@ class GenAiServable;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
 
-extern std::shared_ptr<mediapipe::ThreadPoolExecutor> sharedThreadPool;
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
 
