@@ -39,7 +39,7 @@ def run_command(command):
 def download_model(model_path: str):
     """Downloads the oss model from Google Cloud Storage if it doesn't exist in the package."""
     model_url = _GCS_URL_PREFIX + model_path.split('/')[-1]
-    dst = os.path.join("ovms/", model_path.replace("/","/1/"))
+    dst = model_path.replace("/","/1/")
     dst_dir = os.path.dirname(model_path)
 
     # Workaround to copy every model in separate directory
@@ -50,7 +50,7 @@ def download_model(model_path: str):
 
     dst_dir = os.path.dirname(dst)
     if model_path == 'ssdlite_object_detection_labelmap.txt':
-        dst_dir = 'ovms'
+        dst_dir = ''
     elif not os.path.exists(dst_dir):
         os.makedirs(dst_dir)
 
@@ -80,11 +80,8 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
 
     if args['download_models'] == True:
-        run_command("mkdir -p ovms")
         download_model('models/ssdlite_object_detection.tflite')
         download_model('ssdlite_object_detection_labelmap.txt')
-        run_command("cp config.json ovms/")
-        run_command("cp graph.pbtxt ovms/")
         exit(0)
 
     address = "{}:{}".format(args['grpc_address'],args['grpc_port'])

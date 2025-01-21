@@ -14,7 +14,7 @@
 :: limitations under
 
 @echo off
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 
 if "%~1"=="" (
   echo Error: No directory specified.
@@ -42,10 +42,14 @@ echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 set "PYTHONPATH="
 C:\opt\Python311\python.exe -m venv .venv
+if !errorlevel! neq 0 exit /b !errorlevel!
 call .\.venv\Scripts\Activate.bat
+if !errorlevel! neq 0 exit /b !errorlevel!
 set
 python -m pip install --upgrade pip
+if !errorlevel! neq 0 exit /b !errorlevel!
 pip install -U -r demos\common\export_models\requirements.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 if not exist "%~1" mkdir "%~1"
 
@@ -53,18 +57,21 @@ if exist "%~1\%TEXT_GENERATION_MODEL%" (
   echo Models directory %~1\%TEXT_GENERATION_MODEL% exists. Skipping downloading models.
 ) else (
   python demos\common\export_models\export_model.py text_generation --source_model "%TEXT_GENERATION_MODEL%" --weight-format int8 --model_repository_path %~1
+  if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 if exist "%~1\%EMBEDDING_MODEL%" (
   echo Models directory %~1\%EMBEDDING_MODEL% exists. Skipping downloading models.
 ) else (
   python demos\common\export_models\export_model.py embeddings --source_model "%EMBEDDING_MODEL%" --weight-format int8 --model_repository_path %~1
+  if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 if exist "%~1\%RERANK_MODEL%" (
   echo Models directory %~1\%RERANK_MODEL% exists. Skipping downloading models.
 ) else (
   python demos\common\export_models\export_model.py rerank --source_model "%RERANK_MODEL%" --weight-format int8 --model_repository_path %~1
+  if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 endlocal

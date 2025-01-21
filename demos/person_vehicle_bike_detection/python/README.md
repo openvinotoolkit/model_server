@@ -2,26 +2,40 @@
 
 The purpose of this demo is to show how to send data from multiple sources (cameras, video files) to a model served in OpenVINO Model Server.
 
-## Deploy person, vehicle, bike detection model
+## Prerequisites
 
-### Download model files
-```bash
-mkdir -p model/1
+**Model preparation**: Python 3.9 or higher with pip 
 
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.bin
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml
+## Prepare model files
+```console
+curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.bin -o model/1/person-vehicle-bike-detection-crossroad-0078.bin
+
+curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/person-vehicle-bike-detection-crossroad-0078/FP32/person-vehicle-bike-detection-crossroad-0078.xml -o model/1/person-vehicle-bike-detection-crossroad-0078.xml
 ```
 
-### Run OpenVINO Model Server
+## Server Deployment
+:::{dropdown} **Deploying with Docker**
 ```bash
 docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name person-vehicle-detection --port 9000 --shape auto
 ```
+:::
+:::{dropdown} **Deploying on Bare Metal**
+Assuming you have unpacked model server package, make sure to:
 
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+```bat
+cd demos\person_vehicle_bike_detection\python
+ovms --model_path model --model_name person-vehicle-detection --port 9000 --shape auto
+```
+:::
 ## Running the client application
 
-
-```bash
+```console
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/person_vehicle_bike_detection/python
 pip3 install -r requirements.txt
@@ -45,12 +59,12 @@ python person_vehicle_bike_detection.py --help
 ### Using with video file
 
 Copy example video file:
-```bash
+```console
 git clone "https://github.com/intel-iot-devkit/sample-videos.git"
 ```
 
 Set `camera` count to `0` with `-c 0` and provide path to the video file with `-f` parameter.
-```bash
+```console
 python person_vehicle_bike_detection.py -n person-vehicle-detection -l data -o detection_out -d 1024 -c 0 -f sample-videos/person-bicycle-car-detection.mp4 -i localhost -p 9000
 ```
 Output:
@@ -63,7 +77,7 @@ Output:
 ### Using with video file and camera
 
 Set `camera` count to `1` with `-c 1` and provide path to the video file with `-f` parameter.
-```bash
+```console
 python person_vehicle_bike_detection.py -n person-vehicle-detection -l data -o detection_out -d 1024 -c 1 -f sample-videos/person-bicycle-car-detection.mp4 -i localhost -p 9000
 ```
 

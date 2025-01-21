@@ -2,14 +2,15 @@
     "model_config_list": [
         {"config": {
             "name": "ssdlite_object_detection",
-            "base_path": "/demo/ssdlite_object_detection"
+            "base_path": "ssdlite_object_detection"
     }
     }
     ],
     "mediapipe_config_list": [
     {
         "name":"objectDetection",
-        "graph_path":"/demo/graph.pbtxt"
+        "base_path":"./",
+        "graph_path":"graph.pbtxt"
     }
     ]
 }
