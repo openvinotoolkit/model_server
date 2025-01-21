@@ -2,13 +2,13 @@
 
 ## Prerequisites
 
-Docker engine installed (on Linux and WSL), or ovms binary package installed like installed in the [guide](./deploying_server_baremetal.md) (on Linux or Windows). 
+Docker engine installed (on Linux and WSL), or ovms binary package installed as described in the [guide](./deploying_server_baremetal.md) (on Linux or Windows). 
 
 Supported HW is documented in [OpenVINO system requirements](https://docs.openvino.ai/2024/about-openvino/release-notes-openvino/system-requirements.html)
 
 Before staring the model server as a binary package, make sure there are installed GPU or/and NPU required drivers like described in [https://docs.openvino.ai/2024/get-started/configurations.html](https://docs.openvino.ai/2024/get-started/configurations.html)
 
-Deployment via a container has with accelerators has several additional considerations:
+Additional considerations when deploying with docker container:
 - make sure to use the image version including runtime drivers. The public image has a suffix -gpu like `openvino/model_server:latest-gpu`.
 - additional parameters needs to be passed to the docker run command depending on the accelerator.
 - kernel modules needs to be present on the host with support for the accelerators
