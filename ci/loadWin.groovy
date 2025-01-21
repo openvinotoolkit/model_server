@@ -83,7 +83,7 @@ def build_and_test(){
     } else {
         echo "Build successful."
     }
-    status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms_test.exe win_build_test.log | grep "Build test completed successfully"')
+    status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms_test.exe win_build_test.log | grep "Build completed successfully"')
     if (status != 0) {
         error "Error: Windows build test failed ${status}. Check win_build_test.log for details."
     } else {
