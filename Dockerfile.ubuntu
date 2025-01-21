@@ -343,8 +343,8 @@ RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_f
 
 # OVMS
 ARG BUILD_TESTS=0
-# hadolint ignore=DL3059
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms "$(if [ "${BASE_IMAGE}" == "1" ] ; then echo //src/ovms_test; fi)"; fi;
+# hadolint ignore=SC2046
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${BASE_IMAGE}" == "1" ] ; then echo //src/ovms_test; fi); fi;
 
 # hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so; fi;
