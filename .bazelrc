@@ -237,9 +237,9 @@ build:windows --experimental_repo_remote_exec
 
 # Load rc file written by ./configure.
 # try-import %workspace%/.tf_configure.bazelrc
-build:windows --action_env PYTHON_BIN_PATH="C:/opt/Python39/python.exe"
-build:windows --action_env PYTHON_LIB_PATH="C:/opt/Python39/lib/site-packages"
-build:windows --python_path="C:/opt/Python39/python.exe"
+build:windows --action_env PYTHON_BIN_PATH="C:/opt/Python311/python.exe"
+build:windows --action_env PYTHON_LIB_PATH="C:/opt/Python311/lib/site-packages"
+build:windows --python_path="C:/opt/Python311/python.exe"
 build:windows:opt --copt=/arch:AVX
 build:windows:opt --host_copt=/arch:AVX
 build:windows --define=override_eigen_strong_inline=true
@@ -253,7 +253,7 @@ build:windows --deleted_packages=tensorflow/core/tfrt/stubs,tensorflow/compiler/
 # Windows build ssl headers for GRPC workaround
 build:windows --override_repository="boringssl=C:\\opt\\boringSSL-SwiftPM"
 
-build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python39/python.exe
+build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python311/python.exe
 
 test:linux --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
