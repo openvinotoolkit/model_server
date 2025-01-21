@@ -188,8 +188,8 @@ class Unbuffered(object):
    def write(self, data):
        self.stream.write(data)
        self.stream.flush()
-   def writelines(self, datas):
-       self.stream.writelines(datas)
+   def writelines(self, data):
+       self.stream.writelines(data)
        self.stream.flush()
    def __getattr__(self, attr):
        return getattr(self.stream, attr)
@@ -269,7 +269,7 @@ if __name__ == "__main__":
     parser.add_argument("--report_warmup", required=False, action="store_true",
                         help="flag to report warmup statistics")
     parser.add_argument("--certs_dir", required=False, default=None,
-                        help="directory to certificats, default: None")
+                        help="directory to certificates, default: None")
     parser.add_argument("-q", "--stateful_length", required=False, default=0,
                         help="stateful series length, default: 0")
     parser.add_argument("--stateful_id", required=False, default=1,

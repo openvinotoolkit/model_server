@@ -15,7 +15,7 @@
 #
 
 cc_library(
-   name = "lib",
+   name = "boost",
    srcs = [
       "libboost_log_setup.a",
       "libboost_log.a",

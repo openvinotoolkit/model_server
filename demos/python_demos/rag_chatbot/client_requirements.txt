@@ -1,2 +1,0 @@
-tritonclient[grpc]==2.45.0
-gradio

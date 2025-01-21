@@ -17,7 +17,7 @@
 package(
     default_visibility = ["//visibility:public"],
 )
-
+#/openvino/src/plugins/intel_gpu/include/va/va.h
 cc_library(
     name = "openvino_old_headers",
     hdrs = glob([

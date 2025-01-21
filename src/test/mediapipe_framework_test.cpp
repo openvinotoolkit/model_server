@@ -81,7 +81,7 @@ class MediapipeNegativeFrameworkTest : public MediapipeFrameworkTest {
 // purpose of this test is to ensure there is no hang in case of one of the graph nodes
 // not producing output packet
 TEST_F(MediapipeNegativeFrameworkTest, NoOutputPacketProduced) {
-    SetUpServer("/ovms/src/test/mediapipe/negative/config_no_calc_output_stream.json");
+    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_no_calc_output_stream.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -99,7 +99,7 @@ TEST_F(MediapipeNegativeFrameworkTest, NoOutputPacketProduced) {
 
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringProcess) {
     GTEST_SKIP() << "Terminate called otherwise";
-    SetUpServer("/ovms/src/test/mediapipe/negative/config_exception_during_process.json");
+    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_process.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -121,7 +121,7 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringProcess) {
     }
 }
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) {
-    SetUpServer("/ovms/src/test/mediapipe/negative/config_exception_during_getcontract.json");
+    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_getcontract.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -144,7 +144,7 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) {
 }
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetOpen) {
     GTEST_SKIP() << "Terminate called otherwise";
-    SetUpServer("/ovms/src/test/mediapipe/negative/config_exception_during_open.json");
+    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_open.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -167,7 +167,7 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetOpen) {
 }
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringClose) {
     GTEST_SKIP() << "Terminate called otherwise";
-    SetUpServer("/ovms/src/test/mediapipe/negative/config_exception_during_close.json");
+    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_close.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;

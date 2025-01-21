@@ -16,6 +16,8 @@
 
 #include "src/python/ovms_py_tensor.hpp"
 
+#include <optional>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 

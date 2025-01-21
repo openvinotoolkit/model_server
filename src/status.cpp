@@ -18,7 +18,7 @@
 
 namespace ovms {
 
-const std::unordered_map<const StatusCode, const std::string> Status::statusMessageMap = {
+const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::OK, ""},
 
     {StatusCode::PATH_INVALID, "The provided base path is invalid or doesn't exists"},
@@ -74,6 +74,8 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::INVALID_BATCH_DIMENSION, "Invalid batch dimension in shape"},
     {StatusCode::LAYOUT_INCOMPATIBLE_WITH_SHAPE, "Layout incompatible with given shape"},
     {StatusCode::MODEL_WITH_SCALAR_AUTO_UNSUPPORTED, "Batching set to AUTO but model contains scalar tensor"},
+    {StatusCode::OV_NO_INPUTS, "Cannot load model with no inputs"},
+    {StatusCode::OV_NO_OUTPUTS, "Cannot load model with no outputs"},
     {StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER, "allow_cache is set to true with custom loader usage"},
     {StatusCode::UNKNOWN_ERROR, "Unknown error"},
 
@@ -149,6 +151,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::REST_UNSUPPORTED_PRECISION, "Could not parse input content. Unsupported data precision detected"},
     {StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, "Size of data in tensor_content does not match declared tensor shape"},
     {StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE, "Number of elements in xxx_val field does not match declared tensor shape"},
+    {StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_EXCEEDED, "Inference-Header-Content-Length header exceeds actual payload length"},
     {StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID, "binary_data_size parameter is invalid and cannot be parsed"},
     {StatusCode::REST_BINARY_BUFFER_EXCEEDED, "Received buffer size is smaller than binary_data_size parameter indicates"},
     {StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID, "Inference-Header-Content-Length header is invalid and couldn't be parsed"},
@@ -160,7 +163,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::PIPELINE_MULTIPLE_ENTRY_NODES, "Pipeline definition has multiple request nodes"},
     {StatusCode::PIPELINE_MULTIPLE_EXIT_NODES, "Pipeline definition has multiple response nodes"},
     {StatusCode::PIPELINE_MISSING_ENTRY_OR_EXIT, "Pipeline definition is missing request or response node"},
-    {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, "Model with requested name is not found"},
+    {StatusCode::PIPELINE_DEFINITION_NAME_MISSING, "Pipeline with requested name is not found"},
     {StatusCode::PIPELINE_NODE_NAME_DUPLICATE, "Pipeline definition has multiple nodes with the same name"},
     {StatusCode::PIPELINE_CYCLE_FOUND, "Pipeline definition contains a cycle"},
     {StatusCode::PIPELINE_CONTAINS_UNCONNECTED_NODES, "Pipeline definition has unconnected nodes"},
@@ -196,11 +199,11 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_DESERIALIZATION_ERROR, "Failed to deserialize tensor for mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_START_ERROR, "Failed to start mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, "Failed to read protobuf graph configuration file"},
-    {StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, "Failed to initalize mediapipe graph"},
+    {StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, "Failed to initialize mediapipe graph"},
     {StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, "Failed to add mediapipe graph output stream"},
     {StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR, "Failed to close mediapipe graph input stream"},
     {StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM, "Failed to add packet to mediapipe graph input stream"},
-    {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, "Model with requested name is not found"},
+    {StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING, "Mediapipe graph definition with requested name is not found"},
     {StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Mediapipe execution failed. MP status"},
     {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE, "Mediapipe is retired"},
     {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET, "Mediapipe is not loaded yet"},
@@ -216,6 +219,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE, "Client disconnected during reading first streaming request"},
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME, "Subsequent request with incorrect servable name"},
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION, "Subsequent request with incorrect servable version"},
+    {StatusCode::MEDIAPIPE_PRECONDITION_FAILED, "Mediapipe graph precondition failed"},
 
     // Python Nodes
     {StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS, "The Python Node name is already present in nodes list"},
@@ -311,6 +315,7 @@ const std::unordered_map<const StatusCode, const std::string> Status::statusMess
     {StatusCode::DOUBLE_TENSOR_INSERT, "Cannot insert more than one tensor with the same name"},
     {StatusCode::DOUBLE_PARAMETER_INSERT, "Cannot insert more than one parameter with the same name"},
     {StatusCode::NONEXISTENT_BUFFER_FOR_REMOVAL, "Tried to remove nonexisting buffer"},
+    {StatusCode::NONEXISTENT_BUFFER, "Output does not contain buffer"},
     {StatusCode::NONEXISTENT_PARAMETER, "Tried to use nonexisting parameter"},
     {StatusCode::NONEXISTENT_TENSOR, "Tried to get nonexisting tensor"},
     {StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER, "Tried to set buffer for nonexisting tensor"},

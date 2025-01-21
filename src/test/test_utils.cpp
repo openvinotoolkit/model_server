@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <chrono>
 #include <functional>
+#include <optional>
 #include <unordered_set>
 
 #include "../capi_frontend/capi_utils.hpp"
@@ -105,7 +106,7 @@ void waitForOVMSConfigReload(ovms::ModelManager& manager) {
     // This is effectively multiplying by 5 to have at least 1 config reload in between
     // two test steps, but we check if config files changed to exit earlier if changes are already applied
     const float WAIT_MULTIPLIER_FACTOR = 5;
-    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getWatcherIntervalMillisec() * 1000;
+    const uint32_t waitTime = WAIT_MULTIPLIER_FACTOR * manager.getWatcherIntervalMillisec() * 1000;
     bool reloadIsNeeded = true;
     int timestepMs = 10;
 
@@ -121,21 +122,28 @@ void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
     // This is effectively multiplying by 1.8 to have 1 config reload in between
     // two test steps
     const float WAIT_MULTIPLIER_FACTOR = 1.8;
-    const uint waitTime = WAIT_MULTIPLIER_FACTOR * manager.getResourcesCleanupIntervalSec() * 1000;
+    const uint32_t waitTime = WAIT_MULTIPLIER_FACTOR * manager.getResourcesCleanupIntervalMillisec();
+    SPDLOG_DEBUG("waitForOVMSResourcesCleanup {} ms", waitTime);
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }
 
-std::string createConfigFileWithContent(const std::string& content, std::string filename) {
+bool createConfigFileWithContent(const std::string& content, std::string filename) {
     std::ofstream configFile{filename};
+    // Check if the file was successfully opened
+    if (!configFile.is_open()) {
+        SPDLOG_ERROR("Failed to open file: {}", filename);
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
     SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filename, content);
     configFile << content << std::endl;
     configFile.close();
     if (configFile.fail()) {
         SPDLOG_INFO("Closing configFile failed");
+        return false;
     } else {
         SPDLOG_INFO("Closing configFile succeed");
     }
-    return filename;
+    return true;
 }
 
 ovms::tensor_map_t prepareTensors(
@@ -169,7 +177,6 @@ std::string readableSetError(std::unordered_set<std::string> actual, std::unorde
             }
         }
     }
-
     return ss.str();
 }
 
@@ -190,8 +197,7 @@ void checkDummyResponse(const std::string outputName,
     float* actual_output = (float*)output_proto.tensor_content().data();
     float* expected_output = responseData.data();
     const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
+    checkBuffers(actual_output, expected_output, dataLengthToCheck);
 }
 
 void checkScalarResponse(const std::string outputName,
@@ -284,9 +290,7 @@ void checkAddResponse(const std::string outputName,
     const float* actual_output = (const float*)content.data();
     float* expected_output = responseData.data();
     const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
-    EXPECT_EQ(actual_output[0], expected_output[0]);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
+    checkBuffers(actual_output, expected_output, dataLengthToCheck);
 }
 
 void checkIncrement4DimShape(const std::string outputName,
@@ -366,11 +370,11 @@ void readImage(const std::string& path, size_t& filesize, std::unique_ptr<char[]
 }
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage("/ovms/src/test/binaryutils/rgb.jpg", filesize, image_bytes);
+    return readImage(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg"), filesize, image_bytes);
 }
 
 void read4x4RgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
-    return readImage("/ovms/src/test/binaryutils/rgb4x4.jpg", filesize, image_bytes);
+    return readImage(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), filesize, image_bytes);
 }
 
 void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) {
@@ -700,4 +704,173 @@ std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_
         newPrecision,
         src->getShape(),
         src->getLayout());
+}
+
+// Static map workaround for char* pointers as paths
+const std::string& getPathFromMap(std::string inputPath, std::string outputPath) {
+    static std::mutex mtx;
+    std::unique_lock<std::mutex> lock(mtx);
+    static std::unordered_map<std::string, std::string> inputMap = {};
+    auto it = inputMap.find(inputPath);
+    if (it != inputMap.end()) {
+        // element exists
+        return inputMap.at(inputPath);
+    } else {
+        // element does not exist
+        inputMap.emplace(inputPath, outputPath);
+        return inputMap.at(inputPath);
+    }
+}
+
+// Function changes linux docker container path /ovms/src/test/dummy to windows workspace "C:\git\model_server\src\test\dummy"
+// Depending on the ovms_test.exe location after build
+const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange) {
+#ifdef __linux__
+    return getPathFromMap(linuxPath, linuxPath);
+#elif _WIN32
+    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
+
+    // Example linuxPath "/ovms/src/test/dummy"
+    std::size_t postOvmsIndex = linuxPath.find("/src/test");
+    if (postOvmsIndex != std::string::npos) {
+        // Setting winPath to "/src/test/dummy"
+        std::string winPath = linuxPath.substr(postOvmsIndex);
+        // Set basePath to "C:\git\model_server\"
+        std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
+        // Combine "C:\git\model_server\" + "/src/test/dummy"
+        std::string finalWinPath = basePath + winPath;
+        // Change paths to linux separator for JSON parser compatybility in configs
+        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
+
+        if (logChange) {
+            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        }
+        return getPathFromMap(linuxPath, finalWinPath);
+    }
+#endif
+    return getPathFromMap(linuxPath, linuxPath);
+}
+
+// Function changes linux docker container path /ovms/bazel-bin/src/lib_node_mock.so to windows workspace "C:\git\model_server\bazel-bin\src\lib_node_mock.so"
+// Depending on the ovms_test.exe location after build
+const std::string& getGenericFullPathForBin(const std::string& linuxPath, bool logChange) {
+#ifdef __linux__
+    return getPathFromMap(linuxPath, linuxPath);
+#elif _WIN32
+    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
+
+    // Example linuxPath "/ovms/bazel-bin/src/lib_node_mock.so"
+    std::size_t postOvmsIndex = linuxPath.find("/bazel-bin/src");
+    if (postOvmsIndex != std::string::npos) {
+        // Setting winPath to "/bazel-bin/src"
+        std::string winPath = linuxPath.substr(postOvmsIndex);
+        // Set basePath to "C:\git\model_server\"
+        std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
+        // Combine "C:\git\model_server\" + "/bazel-bin/src"
+        std::string finalWinPath = basePath + winPath;
+        // Change paths to linux separator for JSON parser compatybility in configs
+        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
+
+        if (logChange) {
+            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        }
+        return getPathFromMap(linuxPath, finalWinPath);
+    }
+#endif
+    return getPathFromMap(linuxPath, linuxPath);
+}
+
+const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange) {
+    return getGenericFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)), logChange);
+}
+
+// Function changes docker linux paths starting with /tmp: "/tmp/dummy" to windows C:\git\model_server\tmp\dummy
+const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange) {
+#ifdef __linux__
+    return getPathFromMap(linuxPath, linuxPath);
+#elif _WIN32
+    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
+    std::filesystem::path cwd = std::filesystem::current_path();
+    size_t bazelOutIndex = cwd.string().find("bazel-out");
+
+    // Example linuxPath "/tmp/dummy"
+    const std::string tmpString = "/tmp";
+    const size_t tmpStringSize = 4;
+
+    size_t postTmpIndex = linuxPath.find(tmpString) + tmpStringSize;
+    if (postTmpIndex != std::string::npos) {
+        std::string winPath = linuxPath.substr(postTmpIndex);
+        // Set basePath to "C:\git\model_server\"
+        std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
+        // Combine "C:\git\model_server\" + "tmp" "\dummy"
+        std::string finalWinPath = basePath + tmpString + winPath;
+        // Change paths to linux separator for JSON parser compatybility in configs
+        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
+
+        if (logChange) {
+            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
+        }
+        return getPathFromMap(linuxPath, finalWinPath);
+    }
+#endif
+    return getPathFromMap(linuxPath, linuxPath);
+}
+
+const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange) {
+    return getGenericFullPathForTmp(std::string(linuxPath, strlen(linuxPath)), logChange);
+}
+
+#ifdef _WIN32
+const std::string getWindowsRepoRootPath() {
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
+    std::string rootPath = cwd.string().substr(0, bazelOutIndex);
+    std::replace(rootPath.begin(), rootPath.end(), '\\', '/');
+    return rootPath;
+}
+#endif
+// Apply necessary changes so the graph config will comply with the platform
+// that tests are run on
+void adjustConfigForTargetPlatform(std::string& input) {
+#ifdef _WIN32
+    std::string repoTestPath = getWindowsRepoRootPath() + "/src/test";
+    std::string searchString = "\"/ovms/src/test";
+    std::string replaceString = "\"" + repoTestPath;
+    size_t pos = 0;
+    while ((pos = input.find(searchString, pos)) != std::string::npos) {
+        input.replace(pos, searchString.length(), replaceString);
+        pos += replaceString.length();
+    }
+
+    repoTestPath = getWindowsRepoRootPath() + "/tmp";
+    searchString = "\"/tmp";
+    replaceString = "\"" + repoTestPath;
+    pos = 0;
+    while ((pos = input.find(searchString, pos)) != std::string::npos) {
+        input.replace(pos, searchString.length(), replaceString);
+        pos += replaceString.length();
+    }
+
+    repoTestPath = getWindowsRepoRootPath() + "/bazel-bin/src";
+    searchString = "\"/ovms/bazel-bin/src";
+    replaceString = "\"" + repoTestPath;
+    pos = 0;
+    while ((pos = input.find(searchString, pos)) != std::string::npos) {
+        input.replace(pos, searchString.length(), replaceString);
+        pos += replaceString.length();
+    }
+#elif __linux__
+    // No changes needed for linux now, but keeping it as a placeholder
+#endif
+}
+
+// Apply necessary changes so the graph config will comply with the platform
+// that tests are run on
+const std::string& adjustConfigForTargetPlatformReturn(std::string& input) {
+    adjustConfigForTargetPlatform(input);
+    return input;
 }

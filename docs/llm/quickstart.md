@@ -3,97 +3,61 @@
 Let's deploy [TinyLlama/TinyLlama-1.1B-Chat-v1.0](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0) model and request generation.
 
 1. Install python dependencies for the conversion script:
-```bash
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
-
-pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git openvino-tokenizers
+```console
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 ```
 
 2. Run optimum-cli to download and quantize the model:
-```bash
-mkdir workspace && cd workspace
-
-optimum-cli export openvino --disable-convert-tokenizer --model TinyLlama/TinyLlama-1.1B-Chat-v1.0 --weight-format int8 TinyLlama-1.1B-Chat-v1.0
-
-convert_tokenizer -o TinyLlama-1.1B-Chat-v1.0 --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens TinyLlama/TinyLlama-1.1B-Chat-v1.0
+```console
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+mkdir models
+python export_model.py text_generation --source_model TinyLlama/TinyLlama-1.1B-Chat-v1.0 --weight-format int8 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models 
 ```
 
-3. Create `graph.pbtxt` file in a model directory: 
-```bash
-echo '
-input_stream: "HTTP_REQUEST_PAYLOAD:input"
-output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+3. Deploy:
 
-node: {
-  name: "LLMExecutor"
-  calculator: "HttpLLMCalculator"
-  input_stream: "LOOPBACK:loopback"
-  input_stream: "HTTP_REQUEST_PAYLOAD:input"
-  input_side_packet: "LLM_NODE_RESOURCES:llm"
-  output_stream: "LOOPBACK:loopback"
-  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
-  input_stream_info: {
-    tag_index: "LOOPBACK:0",
-    back_edge: true
-  }
-  node_options: {
-      [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-          models_path: "./"
-      }
-  }
-  input_stream_handler {
-    input_stream_handler: "SyncSetInputStreamHandler",
-    options {
-      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
-        sync_set {
-          tag_index: "LOOPBACK:0"
-        }
-      }
-    }
-  }
-}
-' >> TinyLlama-1.1B-Chat-v1.0/graph.pbtxt
-```
+:::{dropdown} With Docker
 
-4. Create server `config.json` file:
-```bash
-echo '
-{
-    "model_config_list": [],
-    "mediapipe_config_list": [
-        {
-            "name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-            "base_path": "TinyLlama-1.1B-Chat-v1.0"
-        }
-    ]
-}
-' >> config.json
-```
-5. Deploy:
+> Required: Docker Engine installed
 
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/:/workspace:ro openvino/model_server --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server --rest_port 8000 --config_path /workspace/config.json
 ```
+:::
+
+:::{dropdown} On Baremetal Host
+
+> Required: OpenVINO Model Server package - see [deployment instruction](../deploying_server_baremetal.md) for details.
+
+```bat
+ovms --rest_port 8000 --config_path ./models/config.json
+```
+:::
+
+4. Check readiness
 Wait for the model to load. You can check the status with a simple command:
-```bash
+```console
 curl http://localhost:8000/v1/config
+```
+```json
 {
-"TinyLlama/TinyLlama-1.1B-Chat-v1.0" : 
-{
- "model_version_status": [
-  {
-   "version": "1",
-   "state": "AVAILABLE",
-   "status": {
-    "error_code": "OK",
-    "error_message": "OK"
-   }
+  "TinyLlama/TinyLlama-1.1B-Chat-v1.0": {
+    "model_version_status": [
+      {
+        "version": "1",
+        "state": "AVAILABLE",
+        "status": {
+          "error_code": "OK",
+          "error_message": "OK"
+        }
+      }
+    ]
   }
- ]
 }
 ```
-6. Run generation
-```bash
+
+5. Run generation
+```console
 curl -s http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -127,7 +91,12 @@ curl -s http://localhost:8000/v3/chat/completions \
   ],
   "created": 1718607923,
   "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-  "object": "chat.completion"
+  "object": "chat.completion",
+  "usage": {
+    "prompt_tokens": 23,
+    "completion_tokens": 30,
+    "total_tokens": 53
+  }
 }
 ```
 **Note:** If you want to get the response chunks streamed back as they are generated change `stream` parameter in the request to `true`.

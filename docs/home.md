@@ -7,6 +7,7 @@ hidden:
 ---
 
 ovms_docs_quick_start_guide
+ovms_docs_llm_quickstart
 ovms_docs_serving_model
 ovms_docs_deploying_server
 ovms_docs_server_app
@@ -37,7 +38,9 @@ The models used by the server need to be stored locally or hosted remotely by ob
 Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](ovms_quickstart.md) or explore [Model Server features](features.md).
 
 ### Key features:
-- **[NEW]** [Efficient Text Generation - preview](llm/reference.md)
+- **[NEW]** [Embeddings endpoint compatible with OpenAI API](../demos/embeddings/README.md)
+- **[NEW]** [Reranking compatible with Cohere API](../demos/rerank/README.md)
+- **[NEW]** [Efficient Text Generation with OpenAI API](../demos/continuous_batching/README.md)
 - [Python code execution](python_support/reference.md)
 - [gRPC streaming](streaming_endpoints.md)
 - [MediaPipe graphs serving](mediapipe.md) 

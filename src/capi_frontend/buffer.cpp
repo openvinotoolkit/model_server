@@ -16,38 +16,40 @@
 #include "buffer.hpp"
 
 #include <cstring>
+#include <utility>
+
+#include "../logging.hpp"
 
 namespace ovms {
+Buffer::Buffer(std::unique_ptr<std::vector<std::string>>&& values) :
+    byteSize(values->size() * sizeof(std::string)),
+    bufferType(OVMS_BUFFERTYPE_CPU),
+    stringVec(std::move(values)),
+    ptr(stringVec->data()) {
+}
 Buffer::Buffer(const void* pptr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> bufferDeviceId, bool createCopy) :
-    ptr(createCopy ? nullptr : pptr),
     byteSize(byteSize),
     bufferType(bufferType),
-    bufferDeviceId(bufferDeviceId) {
+    bufferDeviceId(bufferDeviceId),
+    ownedCopy(createCopy ? std::make_unique<char[]>(byteSize) : nullptr),
+    ptr(createCopy ? ownedCopy.get() : const_cast<void*>(pptr)) {
     if (!createCopy)
         return;
-    ownedCopy = std::make_unique<char[]>(byteSize);
     std::memcpy(ownedCopy.get(), pptr, byteSize);
 }
 Buffer::Buffer(size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> bufferDeviceId) :
-    ptr(nullptr),
     byteSize(byteSize),
     bufferType(bufferType),
-    bufferDeviceId(bufferDeviceId) {
-    ownedCopy = std::make_unique<char[]>(byteSize);
+    bufferDeviceId(bufferDeviceId),
+    ownedCopy(std::make_unique<char[]>(byteSize)),
+    ptr(ownedCopy.get()) {
 }
-
 const void* Buffer::data() const {
-    return (ptr != nullptr) ? ptr : ownedCopy.get();
+    return ptr;
 }
-
-void* Buffer::data() {
-    return (ptr != nullptr) ? nullptr : ownedCopy.get();
-}
-
 size_t Buffer::getByteSize() const {
     return byteSize;
 }
-
 OVMS_BufferType Buffer::getBufferType() const {
     return this->bufferType;
 }

@@ -19,6 +19,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include "../capi_frontend/capi_utils.hpp"
@@ -28,7 +29,9 @@
 #include "../ov_utils.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "../profiler.hpp"
+#include "../regularovtensorfactory.hpp"
 #include "../tensor_conversion.hpp"
+#include "../tensorinfo.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "nodesession.hpp"
 
@@ -41,7 +44,6 @@
 namespace ovms {
 
 const std::string ENTRY_NODE_NAME = "request";
-
 template <typename RequestType>
 Status EntryNode<RequestType>::execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) {
     OVMS_PROFILE_FUNCTION();
@@ -74,7 +76,7 @@ Status EntryNode<RequestType>::fetchResults(TensorWithSourceMap& outputs) {
     }
     InputSink<TensorWithSourceMap&> inputSink(outputs);
     bool isPipeline = true;
-    return deserializePredictRequest<ConcreteTensorProtoDeserializator>(*request, inputsInfo, inputSink, isPipeline);
+    return deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<TensorWithSourceMap&>>(*request, inputsInfo, outputsInfo, inputSink, isPipeline, factories);
 }
 
 template <>
@@ -117,6 +119,7 @@ const Status EntryNode<RequestType>::validate() {
     return request_validation_utils::validate(
         *request,
         inputsInfo,
+        outputsInfo,
         getRequestServableName(*request),
         1,
         optionalInputNames);  // Pipelines are not versioned and always reports version 1

@@ -1,0 +1,21 @@
+{
+    "model_config_list": [
+    { "config": 
+	    {
+                "name": "tokenizer",
+                "base_path": "/ovms/src/test/dummy"
+            }
+	},
+    { "config": 
+	    {
+                "name": "embeddings_model",
+                "base_path": "/ovms/src/test/llm_testing/thenlper/gte-small/embeddings"
+            }
+    }],
+    "mediapipe_config_list": [
+    {
+        "name":"embeddings",
+        "base_path":"/ovms/src/test/embeddings/"
+    }
+    ]
+}

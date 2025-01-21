@@ -15,8 +15,10 @@
 //*****************************************************************************
 #include "inferencetensor.hpp"
 
+#include <optional>
 #include <utility>
 
+#include "../logging.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../status.hpp"
 #include "buffer.hpp"
@@ -35,7 +37,14 @@ Status InferenceTensor::setBuffer(const void* addr, size_t byteSize, OVMS_Buffer
     if (nullptr != this->buffer) {
         return StatusCode::DOUBLE_BUFFER_SET;
     }
-    this->buffer = std::make_unique<Buffer>(addr, byteSize, bufferType, deviceId, createCopy);
+    if (createCopy && this->datatype == OVMS_DATATYPE_STRING) {
+        using type = std::vector<std::string>;
+        auto cstrptr = reinterpret_cast<const std::string*>(addr);
+        auto uniqarraystrptr = std::make_unique<type>(cstrptr, cstrptr + (byteSize / sizeof(std::string)));
+        this->buffer = std::make_unique<Buffer>(std::move(uniqarraystrptr));
+    } else {
+        this->buffer = std::make_unique<Buffer>(addr, byteSize, bufferType, deviceId, createCopy);
+    }
     return StatusCode::OK;
 }
 

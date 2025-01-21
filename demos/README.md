@@ -5,7 +5,9 @@
 maxdepth: 1
 hidden:
 ---
-
+ovms_demos_rerank
+ovms_demos_embeddings
+ovms_demos_continuous_batching
 ovms_demo_clip_image_classification
 ovms_demo_age_gender_guide
 ovms_demo_horizontal_text_detection
@@ -32,23 +34,24 @@ ovms_demo_bert
 ovms_demo_universal-sentence-encoder
 ovms_demo_speech_recognition
 ovms_demo_benchmark_client
-ovms_demo_python_llama
 ovms_demo_python_seq2seq
 ovms_demo_python_stable_diffusion
 ovms_string_output_model_demo
-ovms_demos_continuous_batching
+
 ```
 
 OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities.
 ### Check Out New Generative AI Demos
+ - [OpenAI API text embeddings ](embeddings/README.md)
+ - [Reranking with Cohere API](rerank/README.md)
  - [Text Generation with continuous batching](continuous_batching/README.md)
+ - [RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
 
 Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
 
 ## With Python Client 
 | Demo | Description |
 |---|---|
-|[Text Generation](python_demos/llm_text_generation/README.md) | Generate text using one of popular LLMs sending prompts via gRPC API unary or interactive streaming endpoint.|
 |[Stable Diffusion](python_demos/stable_diffusion/README.md) | Generate image using Stable Diffusion model sending prompts via gRPC API unary or interactive streaming endpoint.|
 |[CLIP image classification](python_demos/clip_image_classification/README.md) | Classify image according to provided labels using CLIP model embedded in a multi-node MediaPipe graph.|
 |[Seq2seq translation](python_demos/seq2seq_translation/README.md) | Translate text using seq2seq model via gRPC API.|
@@ -65,7 +68,7 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 |[Person, Vehicle, Bike Detection](person_vehicle_bike_detection/python/README.md)|Run prediction on a video file or camera stream using person, vehicle, bike detection model via gRPC API.|
 |[Vehicle Analysis Pipeline](vehicle_analysis_pipeline/python/README.md)|Detect vehicles and recognize their attributes using a pipeline of vehicle detection and vehicle attributes recognition models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection). |
 |[Real Time Stream Analysis](real_time_stream_analysis/python/README.md)| Analyze RTSP video stream in real time with generic application template for custom pre and post processing routines as well as simple results visualizer for displaying predictions in the browser. |
-|[Segmentation with PaddlePaddle](segmentation_using_paddlepaddle_model/python/README.md)| Perform segmentation on an image with a PaddlePaddle model. |
+|[Classification with PaddlePaddle](classification_using_paddlepaddle_model/python/README.md)| Perform classification on an image with a PaddlePaddle model. |
 |[Natural Language Processing with BERT](bert_question_answering/python/README.md)|Provide a knowledge source and a query and use BERT model for question answering use case via gRPC API. This demo uses dynamic shape feature. |
 |[Using inputs data in string format with universal-sentence-encoder model](universal-sentence-encoder/README.md)| Handling AI model with text as the model input. | 
 |[Benchmark App](benchmark/python/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
@@ -82,3 +85,5 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 | Demo | Description |
 |---|---|
 |[Image Classification](image_classification/go/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
+
+

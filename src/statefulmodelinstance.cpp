@@ -229,7 +229,7 @@ template <>
 Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::postInferenceProcessing(tensorflow::serving::PredictResponse* response, ov::InferRequest& inferRequest) {
     // Reset inferRequest states on SEQUENCE_END
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
-        SPDLOG_DEBUG("Received SEQUENCE_END signal. Reseting model state");
+        SPDLOG_DEBUG("Received SEQUENCE_END signal. Resetting model state");
         for (auto&& state : inferRequest.query_state()) {
             state.reset();
         }
@@ -288,7 +288,7 @@ const Status StatefulModelInstance::postInferenceProcessing(tensorflow::serving:
     ov::InferRequest& inferRequest, Sequence& sequence, SequenceProcessingSpec& sequenceProcessingSpec) {
     // Reset inferRequest states on SEQUENCE_END
     if (sequenceProcessingSpec.getSequenceControlInput() == SEQUENCE_END) {
-        spdlog::debug("Received SEQUENCE_END signal. Reseting model state and removing sequence");
+        spdlog::debug("Received SEQUENCE_END signal. Resetting model state and removing sequence");
         for (auto&& state : inferRequest.query_state()) {
             state.reset();
         }

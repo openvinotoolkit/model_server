@@ -1,5 +1,8 @@
---extra-index-url https://download.pytorch.org/whl/cpu
-openvino==2023.3.0
+--extra-index-url "https://download.pytorch.org/whl/cpu"
+--extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
+--pre
+openvino==2025.0.*
+numpy<2.0
 transformers==4.40.2
 pillow==10.3.0
-torch==1.13.1+cpu
+torch==2.2.0+cpu

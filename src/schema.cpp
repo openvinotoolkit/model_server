@@ -25,6 +25,7 @@
 #include <rapidjson/stringbuffer.h>
 
 #include "logging.hpp"
+#include "status.hpp"
 
 namespace ovms {
 const std::string DAG_DEFINITIONS = R"(
@@ -460,7 +461,7 @@ const std::string MEDIAPIPE_SUBCONFIG_SCHEMA = R"({
 Status validateJsonAgainstSchema(rapidjson::Document& json, const char* schema, bool detailedError) {
     rapidjson::Document schemaJson;
     rapidjson::ParseResult parsingSucceeded = schemaJson.Parse(schema);
-    if (!parsingSucceeded) {
+    if (parsingSucceeded.Code()) {
         std::string errorMsg = "JSON schema parse error:";
         errorMsg += rapidjson::GetParseError_En(parsingSucceeded.Code());
         errorMsg += ", at: ";

@@ -1,9 +1,12 @@
 --extra-index-url https://download.pytorch.org/whl/cpu 
 langchain_community
+langchain_cohere
 openai
+cohere
 sentence_transformers
-chromadb
+faiss-cpu
 unstructured
 langchain-openai
 langchain
 langchainhub
+ipywidgets

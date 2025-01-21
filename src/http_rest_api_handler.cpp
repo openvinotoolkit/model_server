@@ -15,9 +15,13 @@
 //*****************************************************************************
 #include "http_rest_api_handler.hpp"
 
+#include <cctype>
+#include <iomanip>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -27,12 +31,6 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-#pragma GCC diagnostic pop
 
 #include "config.hpp"
 #include "dags/pipeline.hpp"
@@ -62,6 +60,7 @@
 #include "timer.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
+#include "http_frontend/http_client_connection.hpp"
 #include "http_frontend/http_graph_executor_impl.hpp"
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
@@ -154,7 +153,7 @@ void HttpRestApiHandler::registerHandler(RequestType type, HandlerCallbackFn f) 
 }
 
 void HttpRestApiHandler::registerAll() {
-    registerHandler(Predict, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(Predict, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
                 request_components.model_version_label, request_body, &response);
@@ -164,44 +163,44 @@ void HttpRestApiHandler::registerAll() {
         }
     });
 
-    registerHandler(GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) {
+    registerHandler(GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
         return processModelMetadataRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(GetModelStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) {
+    registerHandler(GetModelStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
         return processModelStatusRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(ConfigReload, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(ConfigReload, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         return processConfigReloadRequest(response, this->modelManager);
     });
-    registerHandler(ConfigStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(ConfigStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         return processConfigStatusRequest(response, this->modelManager);
     });
-    registerHandler(KFS_GetModelReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_GetModelReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         return processModelReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         return processModelMetadataKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_Infer, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_Infer, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         return processInferKFSRequest(request_components, response, request_body, response_components.inferenceHeaderContentLength);
     });
-    registerHandler(KFS_GetServerReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_GetServerReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         return processServerReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerLive, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_GetServerLive, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         return processServerLiveKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(KFS_GetServerMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         return processServerMetadataKFSRequest(request_components, response, request_body);
     });
 
-    registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) -> Status {
+    registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         OVMS_PROFILE_FUNCTION();
         return processV3(uri, request_components, response, request_body, serverReaderWriter);
     });
-    registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) -> Status {
+    registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         return processMetrics(request_components, response, request_body);
     });
 }
@@ -237,30 +236,8 @@ Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComp
     if (!status.ok()) {
         return StatusCode::INTERNAL_ERROR;
     }
-    response = output;
+    response = std::move(output);
     return StatusCode::OK;
-}
-
-void HttpRestApiHandler::parseParams(Value& scope, Document& doc) {
-    Value::ConstMemberIterator itr = scope.FindMember("parameters");
-    if (itr != scope.MemberEnd()) {
-        for (Value::ConstMemberIterator i = scope["parameters"].MemberBegin(); i != scope["parameters"].MemberEnd(); ++i) {
-            Value param(rapidjson::kObjectType);
-            if (i->value.IsInt64()) {
-                Value value(i->value.GetInt64());
-                param.AddMember("int64_param", value, doc.GetAllocator());
-            }
-            if (i->value.IsString()) {
-                Value value(i->value.GetString(), doc.GetAllocator());
-                param.AddMember("string_param", value, doc.GetAllocator());
-            }
-            if (i->value.IsBool()) {
-                Value value(i->value.GetBool());
-                param.AddMember("bool_param", value, doc.GetAllocator());
-            }
-            scope["parameters"].GetObject()[i->name.GetString()] = param;
-        }
-    }
 }
 
 static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
@@ -341,8 +318,10 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             }
         }
         auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs_buffer, *input, grpc_request.add_raw_input_contents());
-        if (!status.ok())
+        if (!status.ok()) {
+            SPDLOG_DEBUG("Error handling binary input");
             return status;
+        }
     }
     return StatusCode::OK;
 }
@@ -351,6 +330,10 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     KFSRestParser requestParser;
 
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
+    if (endOfJson > request_body.length()) {
+        SPDLOG_DEBUG("Inference header content length exceeded JSON size");
+        return StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_EXCEEDED;
+    }
     auto status = requestParser.parse(request_body.substr(0, endOfJson).c_str());
     if (!status.ok()) {
         SPDLOG_DEBUG("Parsing http request failed");
@@ -359,6 +342,7 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
     grpc_request = requestParser.getProto();
     status = handleBinaryInputs(grpc_request, request_body, endOfJson);
     if (!status.ok()) {
+        SPDLOG_DEBUG("Error handling binary inputs");
         return status;
     }
     grpc_request.set_model_name(modelName);
@@ -435,7 +419,7 @@ Status HttpRestApiHandler::processInferKFSRequest(const HttpRequestComponents& r
 
     if (!reporter) {
         return StatusCode::OK;
-        // TODO fix after Mediapipe metrics implementation
+        // There is no request time metric for MediaPipe endpoints
     }
     OBSERVE_IF_ENABLED(reporter->requestTimeRest, totalTime);
     return StatusCode::OK;
@@ -447,7 +431,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
     std::string* response,
     const HttpRequestComponents& request_components,
     HttpResponseComponents& response_components,
-    tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
+    std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
 
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
@@ -458,44 +442,47 @@ Status HttpRestApiHandler::dispatchToProcessor(
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
-Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
+Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter>& serverReaderWriter) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
     HttpPayload request;
-    Document doc;
+    std::shared_ptr<Document> doc = std::make_shared<Document>();
     std::shared_ptr<MediapipeGraphExecutor> executor;
     bool streamFieldVal = false;
     {
         OVMS_PROFILE_SCOPE("rapidjson parse body");
-        doc.Parse(request_body.c_str());
+        doc->Parse(request_body.c_str());
     }
     {
         OVMS_PROFILE_SCOPE("rapidjson validate");
-        if (doc.HasParseError()) {
+        if (doc->HasParseError()) {
             return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
         }
 
-        if (!doc.IsObject()) {
+        if (!doc->IsObject()) {
             return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
         }
 
-        auto modelNameIt = doc.FindMember("model");
-        if (modelNameIt == doc.MemberEnd()) {
-            return Status(StatusCode::JSON_INVALID, "\"model\" field is missing in JSON body");
+        auto modelNameIt = doc->FindMember("model");
+        if (modelNameIt == doc->MemberEnd()) {
+            return Status(StatusCode::JSON_INVALID, "model field is missing in JSON body");
         }
 
         if (!modelNameIt->value.IsString()) {
-            return Status(StatusCode::JSON_INVALID, "\"model\" field is not a string");
+            return Status(StatusCode::JSON_INVALID, "model field is not a string");
         }
 
         const std::string model_name = modelNameIt->value.GetString();
 
-        auto streamIt = doc.FindMember("stream");
-        if (streamIt != doc.MemberEnd()) {
-            if (!streamIt->value.IsBool()) {
-                return Status(StatusCode::JSON_INVALID, "\"stream\" field is not a boolean");
+        bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
+        if (isTextGenerationEndpoint) {
+            auto streamIt = doc->FindMember("stream");
+            if (streamIt != doc->MemberEnd()) {
+                if (!streamIt->value.IsBool()) {
+                    return Status(StatusCode::JSON_INVALID, "stream field is not a boolean");
+                }
+                streamFieldVal = streamIt->value.GetBool();
             }
-            streamFieldVal = streamIt->value.GetBool();
         }
 
         auto status = this->modelManager.createPipeline(executor, model_name);
@@ -505,22 +492,31 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         // TODO: Possibly avoid making copy
         request.headers = request_components.headers;
         request.body = request_body;
-        request.parsedJson = &doc;
+        request.parsedJson = std::move(doc);
         request.uri = std::string(uri);
+        request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
     }
     if (streamFieldVal == false) {
-        ServableMetricReporter* smr = nullptr;                                                         // Unused
-        ExecutionContext ec{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelInfer};  // Unused
-        return executor->infer(&request, &response, ec, smr);
+        ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Unary};
+        return executor->infer(&request, &response, executionContext);
     } else {
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        auto status = executor->inferStream(request, *serverReaderWriter);
-        if (!status.ok()) {
-            sendErrorImpl(status.string(), *serverReaderWriter);
-        }
-        serverReaderWriter->PartialReplyEnd();
+        serverReaderWriter->PartialReplyBegin([executor, serverReaderWriter, request] {
+            ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
+            auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
+            if (!status.ok()) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                writer.StartObject();
+                writer.String("error");
+                writer.String(status.string().c_str());
+                writer.EndObject();
+                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
+            }
+            serverReaderWriter->PartialReplyEnd();
+        });
         return StatusCode::PARTIAL_END;
     }
 #else
@@ -580,6 +576,29 @@ void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
     }
 }
 
+void HttpRestApiHandler::convertRTInfo(Value& scope, Document& doc, ov::AnyMap& rtInfo) {
+    scope.SetObject();
+    for (auto& [key, value] : rtInfo) {
+        SPDLOG_DEBUG("building rest response: rt_info: key: {}; value: {}", key, value.as<std::string>());
+        rapidjson::Value rtInfoKey, rtInfoValue, subScope;
+        rtInfoKey.SetString(key.c_str(), doc.GetAllocator());
+        if (value.is<ov::AnyMap>()) {
+            SPDLOG_DEBUG("building submap rest response : key: {};", key);
+            subScope.SetObject();
+            convertRTInfo(subScope, doc, value.as<ov::AnyMap>());
+            scope.AddMember(rtInfoKey, subScope, doc.GetAllocator());
+        } else {
+            try {
+                rtInfoValue.SetString(value.as<std::string>().c_str(), doc.GetAllocator());
+            } catch (const std::exception& e) {
+                SPDLOG_ERROR("Error converting RT info value to string: {}", e.what());
+                rtInfoValue.SetString("Error converting value", doc.GetAllocator());
+            }
+            scope.AddMember(rtInfoKey, rtInfoValue, doc.GetAllocator());
+        }
+    }
+}
+
 Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     ::KFSModelMetadataRequest grpc_request;
     ::KFSModelMetadataResponse grpc_response;
@@ -590,7 +609,8 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     }
     std::string modelVersionLog = request_components.model_version.has_value() ? std::to_string(request_components.model_version.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}", modelName, modelVersionLog);
-    Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelMetadata});
+    KFSModelExtraMetadata extraMetadata;
+    Status gstatus = kfsGrpcImpl.ModelMetadataImpl(nullptr, &grpc_request, &grpc_response, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelMetadata}, extraMetadata);
     if (!gstatus.ok()) {
         return gstatus;
     }
@@ -608,6 +628,19 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
 
     convertShapeType(doc["inputs"], doc);
     convertShapeType(doc["outputs"], doc);
+    if (extraMetadata.rt_info.count("model_info")) {
+        rapidjson::Value modelInfoScope, rtInfoScope;
+        modelInfoScope.SetObject();
+        rtInfoScope.SetObject();
+        try {
+            convertRTInfo(modelInfoScope, doc, extraMetadata.rt_info["model_info"].as<ov::AnyMap>());
+        } catch (const std::exception& e) {
+            SPDLOG_DEBUG("Error converting RT info: {}", e.what());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        rtInfoScope.AddMember("model_info", modelInfoScope, doc.GetAllocator());
+        doc.AddMember("rt_info", rtInfoScope, doc.GetAllocator());
+    }
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -620,7 +653,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
 static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
     const std::vector<std::pair<std::string, std::string>>& headers) {
     for (auto& header : headers) {
-        if (header.first == "Inference-Header-Content-Length") {
+        if (toLower(header.first) == "inference-header-content-length") {  // drogon automatically converts all headers to lowercase, net_http does not
             requestComponents.inferenceHeaderContentLength = stoi32(header.second);
             if (!requestComponents.inferenceHeaderContentLength.has_value() || requestComponents.inferenceHeaderContentLength.value() < 0) {
                 return StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID;
@@ -648,7 +681,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     if (http_method == "POST") {
         if (std::regex_match(request_path, sm, predictionRegex)) {
             requestComponents.type = Predict;
-            requestComponents.model_name = sm[2];
+            requestComponents.model_name = urlDecode(sm[2]);
 
             std::string model_version_str = sm[3];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
@@ -666,7 +699,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         }
         if (std::regex_match(request_path, sm, kfs_inferRegex, std::regex_constants::match_any)) {
             requestComponents.type = KFS_Infer;
-            requestComponents.model_name = sm[1];
+            requestComponents.model_name = urlDecode(sm[1]);
             std::string model_version_str = sm[2];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
@@ -702,7 +735,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
 
     } else if (http_method == "GET") {
         if (std::regex_match(request_path, sm, modelstatusRegex)) {
-            requestComponents.model_name = sm[2];
+            requestComponents.model_name = urlDecode(sm[2]);
             std::string model_version_str = sm[3];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
@@ -738,7 +771,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, kfs_modelmetadataRegex)) {
-            requestComponents.model_name = sm[1];
+            requestComponents.model_name = urlDecode(sm[1]);
             std::string model_version_str = sm[2];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
@@ -747,7 +780,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, kfs_modelreadyRegex)) {
-            requestComponents.model_name = sm[1];
+            requestComponents.model_name = urlDecode(sm[1]);
             std::string model_version_str = sm[2];
             auto status = parseModelVersion(model_version_str, requestComponents.model_version);
             if (!status.ok())
@@ -781,7 +814,7 @@ Status HttpRestApiHandler::processRequest(
     std::vector<std::pair<std::string, std::string>>* headers,
     std::string* response,
     HttpResponseComponents& responseComponents,
-    tensorflow::serving::net_http::ServerRequestInterface* serverReaderWriter) {
+    std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
 
     std::smatch sm;
     std::string request_path_str(request_path);
@@ -845,7 +878,7 @@ Status HttpRestApiHandler::processPredictRequest(
     SPDLOG_DEBUG("Total REST request processing time: {} ms", requestTime / 1000);
     if (!reporterOut) {
         return StatusCode::OK;
-        // TODO fix after Mediapipe metrics implementation
+        // There is no request time metric for MediaPipe endpoints
     }
     OBSERVE_IF_ENABLED(reporterOut->requestTimeRest, requestTime);
     return StatusCode::OK;
@@ -1107,6 +1140,33 @@ Status HttpRestApiHandler::processConfigStatusRequest(std::string& response, Mod
     }
 
     return StatusCode::OK;
+}
+
+std::string urlDecode(const std::string& encoded) {
+    std::ostringstream decoded;
+    for (size_t i = 0; i < encoded.size(); ++i) {
+        if (encoded[i] == '%') {
+            // Check if the next two characters are valid hex digits
+            if (i + 2 < encoded.size() &&
+                std::isxdigit(static_cast<unsigned char>(encoded[i + 1])) &&
+                std::isxdigit(static_cast<unsigned char>(encoded[i + 2]))) {
+                // Convert the two hexadecimal digits to a character
+                int value = 0;
+                std::stringstream hex_value;
+                hex_value << encoded.substr(i + 1, 2);
+                hex_value >> std::hex >> value;
+                decoded << static_cast<char>(value);
+                i += 2;  // Skip the next two characters
+            } else {
+                // Invalid escape sequence, copy '%' as is
+                decoded << '%';
+            }
+        } else {
+            // Regular character, just add it
+            decoded << encoded[i];
+        }
+    }
+    return decoded.str();
 }
 
 }  // namespace ovms

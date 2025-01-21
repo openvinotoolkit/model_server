@@ -79,7 +79,7 @@ public:
 };
 
 /**
- * @brief Model version policy for explicitely specifying which versions should be enabled
+ * @brief Model version policy for explicitly specifying which versions should be enabled
  */
 class SpecificModelVersionPolicy : public ModelVersionPolicy {
     model_versions_t specificVersions;

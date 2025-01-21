@@ -15,7 +15,9 @@
 //*****************************************************************************
 #include "rest_utils.hpp"
 
+#include <optional>
 #include <set>
+#include <sstream>
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -54,8 +56,11 @@ enum : unsigned int {
 namespace ovms {
 
 static Status checkValField(const size_t& fieldSize, const size_t& expectedElementsNumber) {
-    if (fieldSize != expectedElementsNumber)
-        return StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE;
+    if (fieldSize != expectedElementsNumber) {
+        std::stringstream ss;
+        ss << "Expected val field elements number: " << expectedElementsNumber << "; actual: " << fieldSize;
+        return Status(StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE, ss.str());
+    }
     return StatusCode::OK;
 }
 
@@ -349,8 +354,11 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         }
         size_t expectedElementsNumber = dataTypeSize > 0 ? expectedContentSize / dataTypeSize : 0;
 
-        if (!seekDataInValField && (tensor.datatype() != "BYTES" && response_proto.raw_output_contents(tensor_it).size() != expectedContentSize))
-            return StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE;
+        if (!seekDataInValField && (tensor.datatype() != "BYTES" && response_proto.raw_output_contents(tensor_it).size() != expectedContentSize)) {
+            std::stringstream ss;
+            ss << "Expected raw output content size: " << expectedContentSize << "; actual: " << response_proto.raw_output_contents(tensor_it).size();
+            return Status(StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE, ss.str());
+        }
         writer.StartObject();
         writer.Key("name");
         writer.String(tensor.name().c_str());
@@ -392,7 +400,9 @@ static Status parseOutputs(const ::KFSResponse& response_proto, rapidjson::Prett
         } else if (tensor.datatype() == "BYTES") {
             PARSE_OUTPUT_DATA_STRING(bytes_contents, String)
         } else {
-            return StatusCode::REST_UNSUPPORTED_PRECISION;
+            std::stringstream ss;
+            ss << "Unsupported precision" << tensor.datatype();
+            return Status(StatusCode::REST_UNSUPPORTED_PRECISION, ss.str());
         }
         if (!binaryOutput) {
             writer.EndArray();

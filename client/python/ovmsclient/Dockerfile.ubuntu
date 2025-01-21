@@ -40,7 +40,7 @@ FROM $FINAL_IMAGE as final_build
 
 # NOTE: Final stage image does not contain pip.
 # The library and its dependencies are copied from base_build directly.
-# We do it like this bacause python3-pip is ~350 MB and this way the final image is way smaller.
+# We do it like this because python3-pip is ~350 MB and this way the final image is way smaller.
 # Keep in mind that you would need to install pip yourself, if you decide to use it in your own layers.
 
 ENV OVMSCLIENT_DIR="/ovmsclient"

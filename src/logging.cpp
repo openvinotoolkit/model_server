@@ -32,8 +32,11 @@ std::shared_ptr<spdlog::logger> capi_logger = std::make_shared<spdlog::logger>("
 #if (MEDIAPIPE_DISABLE == 0)
 std::shared_ptr<spdlog::logger> mediapipe_logger = std::make_shared<spdlog::logger>("mediapipe");
 std::shared_ptr<spdlog::logger> llm_executor_logger = std::make_shared<spdlog::logger>("llm_executor");
+std::shared_ptr<spdlog::logger> llm_calculator_logger = std::make_shared<spdlog::logger>("llm_calculator");
+std::shared_ptr<spdlog::logger> embeddings_calculator_logger = std::make_shared<spdlog::logger>("embeddings_calculator");
+std::shared_ptr<spdlog::logger> rerank_calculator_logger = std::make_shared<spdlog::logger>("rerank_calculator");
 #endif
-#if (OV_TRACING == 1)
+#if (OV_TRACE == 1)
 std::shared_ptr<spdlog::logger> ov_logger = std::make_shared<spdlog::logger>("openvino");
 #endif
 const std::string default_pattern = "[%Y-%m-%d %T.%e][%t][%n][%l][%s:%#] %v";
@@ -43,7 +46,7 @@ static void set_log_level(const std::string log_level, std::shared_ptr<spdlog::l
     if (!log_level.empty()) {
         if (log_level == "DEBUG") {
             logger->set_level(spdlog::level::debug);
-            logger->flush_on(spdlog::level::trace);
+            logger->flush_on(spdlog::level::debug);
         } else if (log_level == "ERROR") {
             logger->set_level(spdlog::level::err);
             logger->flush_on(spdlog::level::err);
@@ -70,8 +73,11 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
 #if (MEDIAPIPE_DISABLE == 0)
     mediapipe_logger->set_pattern(default_pattern);
     llm_executor_logger->set_pattern(default_pattern);
+    llm_calculator_logger->set_pattern(default_pattern);
+    rerank_calculator_logger->set_pattern(default_pattern);
+    embeddings_calculator_logger->set_pattern(default_pattern);
 #endif
-#if (OV_TRACING == 1)
+#if (OV_TRACE == 1)
     ov_logger->set_pattern(default_pattern);
 #endif
     for (auto& sink : sinks) {
@@ -85,8 +91,11 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
 #if (MEDIAPIPE_DISABLE == 0)
         mediapipe_logger->sinks().push_back(sink);
         llm_executor_logger->sinks().push_back(sink);
+        llm_calculator_logger->sinks().push_back(sink);
+        rerank_calculator_logger->sinks().push_back(sink);
+        embeddings_calculator_logger->sinks().push_back(sink);
 #endif
-#if (OV_TRACING == 1)
+#if (OV_TRACE == 1)
         ov_logger->sinks().push_back(sink);
 #endif
     }
@@ -101,8 +110,11 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
 #if (MEDIAPIPE_DISABLE == 0)
     set_log_level(log_level, mediapipe_logger);
     set_log_level(log_level, llm_executor_logger);
+    set_log_level(log_level, llm_calculator_logger);
+    set_log_level(log_level, rerank_calculator_logger);
+    set_log_level(log_level, embeddings_calculator_logger);
 #endif
-#if (OV_TRACING == 1)
+#if (OV_TRACE == 1)
     set_log_level(log_level, ov_logger);
 #endif
     spdlog::set_default_logger(serving_logger);
@@ -122,12 +134,21 @@ void configure_logger(const std::string& log_level, const std::string& log_path)
     }
     register_loggers(log_level, sinks);
 #if (MEDIAPIPE_DISABLE == 0)
+#ifdef __linux__
     if (log_level == "DEBUG" || log_level == "TRACE")
         FLAGS_minloglevel = google::INFO;
     else if (log_level == "WARNING")
         FLAGS_minloglevel = google::WARNING;
     else  // ERROR, FATAL
         FLAGS_minloglevel = google::ERROR;
+#elif _WIN32
+    if (log_level == "DEBUG" || log_level == "TRACE")
+        FLAGS_minloglevel = google::GLOG_INFO;
+    else if (log_level == "WARNING")
+        FLAGS_minloglevel = google::GLOG_WARNING;
+    else  // ERROR, FATAL
+        FLAGS_minloglevel = google::GLOG_ERROR;
+#endif
 #endif
 }
 

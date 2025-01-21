@@ -34,7 +34,6 @@
 #include "../server.hpp"
 #include "../version.hpp"
 #include "mockmodelinstancechangingstates.hpp"
-#include "test_utils.hpp"
 
 using ovms::ModelManager;
 using ovms::Module;
@@ -122,7 +121,7 @@ static void requestServerAlive(const char* grpcPort, grpc::StatusCode status = g
 static void requestServerReady(const char* grpcPort, grpc::StatusCode status = grpc::StatusCode::OK, bool expectedStatus = true) {
     grpc::ChannelArguments args;
     std::string address = std::string("localhost") + ":" + grpcPort;
-    SPDLOG_INFO("Veryfying if server is ready on address: {}", address);
+    SPDLOG_INFO("Verifying if server is ready on address: {}", address);
     ServingClient client(grpc::CreateCustomChannel(address, grpc::InsecureChannelCredentials(), args));
     client.verifyReady(status, expectedStatus);
 }
@@ -203,6 +202,9 @@ public:
 using ovms::SERVABLE_MANAGER_MODULE_NAME;
 
 TEST(Server, ServerAliveBeforeLoadingModels) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows CVS-159591";
+#endif
     // purpose of this test is to ensure that the server responds with alive=true before loading any models.
     // this is to make sure that eg. k8s won't restart container until all models are loaded because of not being alivea
     std::string port = "9000";
@@ -213,7 +215,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
+        (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
         (char*)"--log_level",
         (char*)"DEBUG",
         (char*)"--port",
@@ -294,7 +296,7 @@ TEST(Server, ServerMetadata) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
+        (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
         (char*)"--port",
         (char*)port.c_str(),
         nullptr};
@@ -354,7 +356,7 @@ TEST(Server, grpcArguments) {
         (char*)"--model_name",
         (char*)"dummy",
         (char*)"--model_path",
-        (char*)"/ovms/src/test/dummy",
+        (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
         (char*)"--port",
         (char*)port.c_str(),
         (char*)"--grpc_channel_arguments",

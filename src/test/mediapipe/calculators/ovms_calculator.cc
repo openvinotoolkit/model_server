@@ -121,7 +121,7 @@ static ov::Tensor* makeOvTensor(OVMS_DataType datatype, const int64_t* shape, ui
     for (size_t i = 0; i < dimCount; ++i) {
         ovShape.push_back(shape[i]);
     }
-    // here we make copy of underlying OVMS repsonse tensor
+    // here we make copy of underlying OVMS response tensor
     ov::Tensor* output = new ov::Tensor(CAPI2OVPrecision(datatype), ovShape);
     std::memcpy(output->data(), voutputData, bytesize);
     return output;
@@ -131,7 +131,7 @@ static ov::Tensor makeOvTensorO(OVMS_DataType datatype, const int64_t* shape, ui
     for (size_t i = 0; i < dimCount; ++i) {
         ovShape.push_back(shape[i]);
     }
-    // here we make copy of underlying OVMS repsonse tensor
+    // here we make copy of underlying OVMS response tensor
     ov::Tensor output(CAPI2OVPrecision(datatype), ovShape);
     std::memcpy(output.data(), voutputData, bytesize);
     return output;
@@ -169,7 +169,7 @@ public:
             // Close is called on input node and output node in initial pipeline
             // Commented out since for now this happens twice in 2 nodes graph. Server will close
             // OVMS_ServerDelete(cserver);
-            // moreover we may need several ovms calculators use in graph each providing its own model? how to handle then different model inputs, as wel as config?
+            // moreover we may need several ovms calculators use in graph each providing its own model? how to handle then different model inputs, as well as config?
         }
         return absl::OkStatus();
     }

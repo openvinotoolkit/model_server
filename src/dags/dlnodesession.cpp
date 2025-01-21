@@ -30,7 +30,6 @@
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "nodeinputhandler.hpp"
-#include "nodeoutputhandler.hpp"
 #include "nodestreamidguard.hpp"
 
 namespace ovms {
@@ -56,7 +55,7 @@ ModelInstance& DLNodeSession::getModelInstance() {
     return *this->model;
 }
 
-ov::InferRequest& DLNodeSession::getInferRequest(const uint microseconds) {
+ov::InferRequest& DLNodeSession::getInferRequest(const uint32_t microseconds) {
     auto& inferRequestsQueue = this->model->getInferRequestsQueue();
     auto streamIdOpt = this->nodeStreamIdGuard->tryGetId(microseconds);
     if (!streamIdOpt) {
@@ -201,7 +200,7 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
     return StatusCode::OK;
 }
 
-Status DLNodeSession::execute(PipelineEventQueue& notifyEndQueue, uint waitForStreamIdTimeoutMicroseconds, Node& node) {
+Status DLNodeSession::execute(PipelineEventQueue& notifyEndQueue, uint32_t waitForStreamIdTimeoutMicroseconds, Node& node) {
     OVMS_PROFILE_FUNCTION();
     Status status;
     if (this->nodeStreamIdGuard == nullptr) {
@@ -294,15 +293,15 @@ Status DLNodeSession::executeInference(PipelineEventQueue& notifyEndQueue, ov::I
         OVMS_PROFILE_SYNC_END("ov::InferRequest::start_async");
         OVMS_PROFILE_ASYNC_BEGIN("async inference", this);
     } catch (const ov::Exception& e) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occured when starting async inference or setting completion callback on model: {}, error: {}",
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occurred when starting async inference or setting completion callback on model: {}, error: {}",
             getName(), getModelName(), e.what());
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     } catch (const std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occured when starting async inference or setting completion callback on  model: {}, error: {}",
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Exception occurred when starting async inference or setting completion callback on  model: {}, error: {}",
             getName(), getModelName(), e.what());
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     } catch (...) {
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Unknown exception occured when starting async inference or setting completion callback on model: {}",
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "[Node: {}] Unknown exception occurred when starting async inference or setting completion callback on model: {}",
             getName(), getModelName());
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     }
@@ -315,7 +314,7 @@ void DLNodeSession::release() {
     this->modelUnloadGuard.reset();
 }
 
-bool DLNodeSession::tryDisarm(uint microseconds) {
+bool DLNodeSession::tryDisarm(uint32_t microseconds) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Trying to disarm stream id guard of node: {}", getName());
     if (this->nodeStreamIdGuard == nullptr) {
         return true;

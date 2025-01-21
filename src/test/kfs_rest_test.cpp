@@ -14,22 +14,15 @@
 // limitations under the License.
 //*****************************************************************************
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
-#include "tensorflow_serving/util/net_http/server/public/httpserver.h"
-#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-#include "tensorflow_serving/util/threadpool_executor.h"
-#pragma GCC diagnostic pop
-
 #include "../config.hpp"
 #include "../grpcservermodule.hpp"
+#include "../http_async_writer_interface.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -69,7 +62,7 @@ public:
             (char*)"--model_name",
             (char*)"dummy",
             (char*)"--model_path",
-            (char*)"/ovms/src/test/dummy",
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
             (char*)"--log_level",
             (char*)"DEBUG",
             (char*)"--batch_size",
@@ -113,7 +106,7 @@ public:
             (char*)"--model_name",
             (char*)"scalar",
             (char*)"--model_path",
-            (char*)"/ovms/src/test/scalar",
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/scalar").c_str(),
             (char*)"--log_level",
             (char*)"DEBUG",
             (char*)"--port",
@@ -141,7 +134,7 @@ public:
             (char*)"--model_name",
             (char*)"dummy",
             (char*)"--model_path",
-            (char*)"/ovms/src/test/dummy",
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
             (char*)"--shape",
             (char*)"(-1,-1)",
             (char*)"--log_level",
@@ -171,7 +164,7 @@ public:
             (char*)"--model_name",
             (char*)"string",
             (char*)"--model_path",
-            (char*)"/ovms/src/test/passthrough_string",
+            (char*)getGenericFullPathForSrcTest("/ovms/src/test/passthrough_string").c_str(),
             (char*)"--log_level",
             (char*)"DEBUG",
             (char*)"--port",
@@ -197,7 +190,7 @@ std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
 
 static void testInference(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler, const std::string endpoint = "/v2/models/mediapipeAdd/versions/1/infer") {
     std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", std::to_string(headerLength)};
+    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", std::to_string(headerLength)};
     headers.emplace_back(binaryInputsHeader);
 
     ovms::HttpRequestComponents comp;
@@ -206,7 +199,7 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
 
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
@@ -229,7 +222,7 @@ static void testInferenceNegative(int headerLength, std::string& request_body, s
     std::string request = "/v2/models/mediapipeAdd/versions/1/infer";
 
     std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", std::to_string(headerLength)};
+    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", std::to_string(headerLength)};
     headers.emplace_back(binaryInputsHeader);
 
     ovms::HttpRequestComponents comp;
@@ -238,7 +231,7 @@ static void testInferenceNegative(int headerLength, std::string& request_body, s
 
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), processorStatus);
 }
 
@@ -261,7 +254,7 @@ protected:
     }
 
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_python_summator.json");
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_python_summator.json").c_str());
     }
 
     void TearDown() {
@@ -275,7 +268,7 @@ protected:
 class HttpRestApiHandlerWithMediapipePassthrough : public HttpRestApiHandlerWithMediapipe {
 protected:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mp_pytensor_passthrough.json");
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mp_pytensor_passthrough.json").c_str());
     }
 };
 
@@ -322,7 +315,16 @@ TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestBOOL) {
 
 TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32DataInJsonAndBinaryExtension) {
     // 10 element array of floats: [1,1,1,1,1,1,1,1,1,1]
-    std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
+    std::string binaryData{
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F)};
 
     std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
     std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\", \"data\": [1,1,1,1,1,1,1,1,1,1]}";
@@ -337,7 +339,17 @@ TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32DataInJsonAndBinaryExten
 }
 
 TEST_F(HttpRestApiHandlerWithMediapipe, inferRequestFP32BinaryExtension) {
-    std::string binaryData{0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F};
+    std::string binaryData{
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F),
+        static_cast<char>(0x00), static_cast<char>(0x00), static_cast<char>(0x80), static_cast<char>(0x3F)};
 
     std::string tensor1 = "{\"name\":\"in1\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
     std::string tensor2 = "{\"name\":\"in2\",\"shape\":[1,10],\"datatype\":\"FP32\",\"parameters\":{\"binary_data_size\":40}}";
@@ -369,7 +381,7 @@ TEST_F(HttpRestApiHandlerWithMediapipePassthrough, inferRequestBYTES) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
@@ -523,7 +535,7 @@ TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputs) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
     std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", "15"};
+    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", "15"};
     headers.emplace_back(binaryInputsHeader);
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::OK);
 }
@@ -532,7 +544,7 @@ TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputsSizeNegative) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
     std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", "-15"};
+    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", "-15"};
     headers.emplace_back(binaryInputsHeader);
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID);
 }
@@ -541,7 +553,7 @@ TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputsSizeNotInt) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
     std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"Inference-Header-Content-Length", "value"};
+    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", "value"};
     headers.emplace_back(binaryInputsHeader);
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID);
 }
@@ -551,14 +563,14 @@ TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
     ovms::HttpRequestComponents comp;
     int c = 0;
 
-    handler->registerHandler(KFS_GetModelMetadata, [&](const std::string_view uri, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) {
+    handler->registerHandler(KFS_GetModelMetadata, [&](const std::string_view uri, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, std::shared_ptr<ovms::HttpAsyncWriter>) {
         c++;
         return ovms::StatusCode::OK;
     });
     comp.type = ovms::KFS_GetModelMetadata;
     std::string discard;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     handler->dispatchToProcessor("", std::string(), &discard, comp, responseComponents, writer);
 
     ASSERT_EQ(c, 1);
@@ -569,27 +581,28 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
     ovms::HttpRequestComponents comp;
     int c = 0;
 
-    handler->registerHandler(KFS_GetModelReady, [&](const std::string_view, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, tensorflow::serving::net_http::ServerRequestInterface*) {
+    handler->registerHandler(KFS_GetModelReady, [&](const std::string_view, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, std::shared_ptr<ovms::HttpAsyncWriter> writer) {
         c++;
         return ovms::StatusCode::OK;
     });
     comp.type = ovms::KFS_GetModelReady;
     std::string discard;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     handler->dispatchToProcessor("", std::string(), &discard, comp, responseComponents, writer);
 
     ASSERT_EQ(c, 1);
 }
 
 TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
+    // Disabled due to issue with gethering RT info
     std::string request = "/v2/models/dummy/versions/1";
     ovms::HttpRequestComponents comp;
 
     handler->parseRequestComponents(comp, "GET", request);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", std::string(), &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
@@ -611,8 +624,13 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 2);
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
+    ASSERT_EQ(doc["rt_info"].GetArray().Size(), 1);
+    ASSERT_EQ(std::string(doc["rt_info"].GetObject()["model_info"].GetObject()["resolution"].GetObject()["height"].GetString()), "200");
+    ASSERT_EQ(std::string(doc["rt_info"].GetObject()["model_info"].GetObject()["precision"].GetString()), "FP16");
 }
 
+// Disabled due to bad cast when getting RT info
+#ifndef _WIN32
 TEST_F(HttpRestApiHandlerWithScalarModelTest, modelMetadataRequest) {
     std::string request = "/v2/models/scalar/versions/1";
     ovms::HttpRequestComponents comp;
@@ -620,7 +638,7 @@ TEST_F(HttpRestApiHandlerWithScalarModelTest, modelMetadataRequest) {
     handler->parseRequestComponents(comp, "GET", request);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", std::string(), &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
@@ -637,6 +655,7 @@ TEST_F(HttpRestApiHandlerWithScalarModelTest, modelMetadataRequest) {
     ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 0);
 }
+#endif
 
 TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
     std::string request = "/v2/models/dummy/versions/1/infer";
@@ -646,7 +665,7 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
@@ -667,7 +686,7 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
@@ -690,7 +709,7 @@ TEST_F(HttpRestApiHandlerWithScalarModelTest, inferRequestScalar) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
@@ -713,7 +732,7 @@ TEST_F(HttpRestApiHandlerWithDynamicModelTest, inferRequestZeroBatch) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
@@ -737,7 +756,7 @@ TEST_F(HttpRestApiHandlerWithDynamicModelTest, inferRequestZeroDim) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
@@ -1231,6 +1250,22 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsBufferSmallerThanExpected_noBinaryDat
     ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_BINARY_BUFFER_EXCEEDED);
 }
 
+TEST_F(HttpRestApiHandlerTest, binaryInputsInferenceHeaderContentLengthSmallerThanJsonBody) {
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"INT32\",\"parameters\":{\"binary_data_size\":true}}]}";
+    int inferenceHeaderContentLength = request_body.size() - 1;
+
+    ::KFSRequest grpc_request;
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::JSON_INVALID);
+}
+
+TEST_F(HttpRestApiHandlerTest, binaryInputsInferenceHeaderContentLengthLargerThanJsonBody) {
+    std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"INT32\",\"parameters\":{\"binary_data_size\":true}}]}";
+    int inferenceHeaderContentLength = request_body.size() + 1;
+
+    ::KFSRequest grpc_request;
+    ASSERT_EQ(HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength), ovms::StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_EXCEEDED);
+}
+
 TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidBinaryDataSizeParameter) {
     std::string binaryData{0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00};
     std::string request_body = "{\"inputs\":[{\"name\":\"b\",\"shape\":[1,4],\"datatype\":\"INT32\",\"parameters\":{\"binary_data_size\":true}}]}";
@@ -1284,7 +1319,7 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidPrecision) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
@@ -1296,7 +1331,7 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
@@ -1308,7 +1343,7 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_noData) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
@@ -1320,7 +1355,7 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_emptyData) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
@@ -1355,7 +1390,7 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, positivePassthrough) {
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request), ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
@@ -1400,12 +1435,12 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, positivePassthrough_binaryInput) {
     request_body += binaryInputData;
 
     std::vector<std::pair<std::string, std::string>> headers{
-        {"Inference-Header-Content-Length", std::to_string(jsonEnd)},
+        {"inference-header-content-length", std::to_string(jsonEnd)},
         {"Content-Type", "application/json"},
     };
     ovms::HttpResponseComponents responseComponents;
     std::string output;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->processRequest("POST", request, request_body, &headers, &output, responseComponents, writer), ovms::StatusCode::OK);
     ASSERT_TRUE(responseComponents.inferenceHeaderContentLength.has_value());
     ASSERT_EQ(responseComponents.inferenceHeaderContentLength.value(), 272);
@@ -1432,7 +1467,7 @@ TEST_F(HttpRestApiHandlerTest, serverReady) {
     std::string request;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
@@ -1444,7 +1479,7 @@ TEST_F(HttpRestApiHandlerTest, serverLive) {
     std::string request;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
@@ -1456,7 +1491,7 @@ TEST_F(HttpRestApiHandlerTest, serverMetadata) {
     std::string request;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
-    tensorflow::serving::net_http::ServerRequestInterface* writer{nullptr};  // unused here, used only in streaming
+    std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer);
 
     rapidjson::Document doc;

@@ -17,7 +17,7 @@
 #include <string>
 #include <thread>
 
-#include "../../../llm/http_payload.hpp"
+#include "../../../http_payload.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -42,6 +42,7 @@ class OpenAIChatCompletionsMockCalculator : public CalculatorBase {
 
     mediapipe::Timestamp timestamp{0};
     std::string body;
+    std::shared_ptr<ovms::ClientConnection> client;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -67,13 +68,19 @@ public:
             return absl::OkStatus();
         }
         if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
-            auto data = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();  // TODO: Possibly avoid making copy
+            auto data = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+            // This calculator produces string so that it contains:
+            // - URI
+            // - Headers (kv pairs)
+            // - Request body
+            // - timestamps 0-8 (appended in cycles)
             this->body = data.uri + std::string{"\n"};
             for (auto header : data.headers) {
                 this->body += header.first;
                 this->body += header.second;
             }
             this->body += data.body;
+            this->client = data.client;
             if (data.parsedJson != NULL) {
                 rapidjson::StringBuffer buffer;
                 buffer.Clear();
@@ -81,6 +88,15 @@ public:
                 data.parsedJson->Accept(writer);
                 this->body += buffer.GetString();
             }
+
+            // Mock failing scenario
+            if (data.body.find("ReturnError") != std::string::npos) {
+                return absl::InvalidArgumentError("Returned error");
+            }
+        }
+
+        if (client->isDisconnected()) {
+            return absl::OkStatus();
         }
 
         this->body += std::to_string(timestamp.Value());

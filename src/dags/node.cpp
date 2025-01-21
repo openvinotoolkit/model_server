@@ -16,6 +16,7 @@
 #include "node.hpp"
 
 #include <algorithm>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <vector>
@@ -158,7 +159,7 @@ NodeSession* Node::getNodeSession(const NodeSessionMetadata& metadata) {
         try {
             sessionKey = metadata.getSessionKey(gatherFrom.value());
         } catch (const std::exception& e) {
-            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to create collapsed metadata session key for node: {}, incomming session key: {}",
+            SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to create collapsed metadata session key for node: {}, incoming session key: {}",
                 getName(), metadata.getSessionKey());
             return nullptr;
         }

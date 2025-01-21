@@ -18,16 +18,18 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include <openvino/openvino.hpp>
-#include <spdlog/spdlog.h>
 
 #include "logging.hpp"
-#include "modelconfig.hpp"
+#include "shape.hpp"
 #include "stringutils.hpp"
+
+using plugin_config_t = std::map<std::string, ov::Any>;
 
 namespace ovms {
 class Status;

@@ -69,7 +69,7 @@ ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   
 > **NOTE**: Video source is cropped to 704x704 resolution to match model input size.
 
 ## Recognize Detected Text with OCR Pipeline
-Optical Character Recognition (OCR) pipeline based on [horizontal text detection](https://docs.openvino.ai/2023.0/omz_models_model_horizontal_text_detection_0001.html) model, [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014)
+Optical Character Recognition (OCR) pipeline based on [horizontal text detection](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2023/0/models/intel/horizontal-text-detection-0001/README.md) model, [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014)
 combined with a custom node implementation can be used with the same python script used before. OCR pipeline provides location of detected text boxes on the image and additionally recognized text for each box.
 
 ![horizontal text detection using OCR pipeline](horizontal-text-detection-ocr.gif)
@@ -77,7 +77,7 @@ combined with a custom node implementation can be used with the same python scri
 ### Prepare workspace to run the demo
 
 To successfully deploy OCR pipeline you need to have a workspace that contains:
-- [horizontal text detection](https://docs.openvino.ai/2023.0/omz_models_model_horizontal_text_detection_0001.html) and [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) models
+- [horizontal text detection](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/horizontal-text-detection-0001/README.md) and [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) models
 - Custom node for image processing
 - Configuration file
 
@@ -90,7 +90,7 @@ cd model_server/demos/horizontal_text_detection/python
 You can prepare the workspace that contains all the above by just running `make` command.
 Since custom node used in this demo is included in OpenVINO Model Server image you can either use the custom node from the image, or build one.
 
-If you just want to quickly run this demo and use already compiled custom node, run: 
+If you just want to quickly run this demo and use already compiled custom node, run:
 
 ```bash
 make

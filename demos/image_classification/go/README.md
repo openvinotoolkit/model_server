@@ -11,7 +11,7 @@ cd model_server/demos/image_classification/go
 
 ## Get the model
 
-To run end to end flow and get correct results, please download `resnet-50-tf` model and convert it to IR format by following [instructions available on the OpenVINO Model Zoo page](https://docs.openvino.ai/2024/omz_models_model_resnet_50_tf.html)
+To run end to end flow and get correct results, please download `resnet-50-tf` model and convert it to IR format by following [instructions available on the OpenVINO Model Zoo page](https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/public/resnet-50-tf/README.md)
 
 Place converted model files (XML and BIN) under the following path: `<PATH_TO_MODELS>/resnet-50-tf/1`
 
@@ -20,8 +20,8 @@ Where `PATH_TO_MODELS` is the path to the directory with models on the host file
 For example:
 ```bash
 mkdir models
-docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu20_dev:latest omz_downloader --name resnet-50-tf --output_dir /models
-docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu20_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
 mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 
 tree models/public/resnet-50-tf
@@ -38,7 +38,7 @@ Before building the image let's copy single zebra image, here so it's included i
 
 ```bash
 cp ../../common/static/images/zebra.jpeg .
-``` 
+```
 Then build the docker image and tag it `ovmsclient`:
 ```bash
 docker build . -t ovmsclient

@@ -1,0 +1,9 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+        {
+            "name": "Alibaba-NLP/gte-large-en-v1.5",
+            "base_path": "/workspace/models"
+        }
+    ]
+}

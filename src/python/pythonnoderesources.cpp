@@ -65,7 +65,7 @@ void PythonNodeResources::finalize() {
 // IMPORTANT: This is an internal method meant to be run in a specific context.
 // It assumes GIL is being held by the thread and doesn't handle potential errors.
 // It MUST be called in the scope of py::gil_scoped_acquire and within the try - catch block
-py::dict PythonNodeResources::preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath) {
+py::dict PythonNodeResources::preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, const std::string& basePath) {
     py::dict kwargsParam = py::dict();
     std::string nodeName = graphNodeConfig.name();
     py::list inputStreams = py::list();
@@ -123,17 +123,20 @@ Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNode
     auto fsHandlerPath = std::filesystem::path(nodeOptions.handler_path());
 
     std::string basePath;
-    std::string extension = fsHandlerPath.extension();
+    std::string extension = fsHandlerPath.extension().string();
     fsHandlerPath.replace_extension();
-    std::string filename = fsHandlerPath.filename();
+    std::string filename = fsHandlerPath.filename().string();
     if (fsHandlerPath.is_relative()) {
         basePath = (std::filesystem::path(graphPath) / fsHandlerPath.parent_path()).string();
     } else {
-        basePath = fsHandlerPath.parent_path();
+        basePath = fsHandlerPath.parent_path().string();
     }
     auto hpath = std::filesystem::path(basePath) / std::filesystem::path(filename + extension);
-    nodeResources->handlerPath = hpath.string();
-    if (!std::filesystem::exists(hpath)) {
+    // Make final handler path uniform with forward slashes as separators
+    std::string hpathStr = hpath.string();
+    std::replace(hpathStr.begin(), hpathStr.end(), '\\', '/');  // Replace backslashes with forward slashes
+    nodeResources->handlerPath = hpathStr;
+    if (!std::filesystem::exists(hpathStr)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Python node handler_path: {} does not exist. ", hpath.string());
         return StatusCode::PYTHON_NODE_FILE_DOES_NOT_EXIST;
     }

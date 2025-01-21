@@ -10,8 +10,8 @@ Download ResNet50 model
 
 ```bash
 mkdir models
-docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu20_dev:latest omz_downloader --name resnet-50-tf --output_dir /models
-docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu20_dev:latest omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models
+docker run -u $(id -u):$(id -g) -v ${PWD}/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32
 mv ${PWD}/models/public/resnet-50-tf/FP32 ${PWD}/models/public/resnet-50-tf/1
 ```
 
@@ -28,7 +28,7 @@ CPU
 ```bash
 docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
       --model_path /opt/model --model_name resnet --port 9001 \
-      --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+      --plugin_config "{\"PERFORMANCE_HINT\": \"THROUGHPUT\"}" \
       --target_device CPU
 ```
 
@@ -38,7 +38,7 @@ GPU
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
       -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
       --model_path /opt/model --model_name resnet --port 9001 \
-      --plugin_config '{"PERFORMANCE_HINT": "THROUGHPUT"}' \
+      --plugin_config "{\"PERFORMANCE_HINT\": \"THROUGHPUT\"}" \
       --target_device GPU
 ```
 
@@ -53,7 +53,7 @@ CPU
 ```bash
 docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
       --model_path /opt/model --model_name resnet --port 9001 \
-      --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+      --plugin_config "{\"PERFORMANCE_HINT\": \"LATENCY\"}" \
       --target_device CPU
 ```
 
@@ -63,7 +63,7 @@ GPU
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
       -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
       --model_path /opt/model --model_name resnet --port 9001 \
-      --plugin_config '{"PERFORMANCE_HINT": "LATENCY"}' \
+      --plugin_config "{\"PERFORMANCE_HINT\": \"LATENCY\"}" \
       --target_device GPU
 ```
 
@@ -81,7 +81,7 @@ of the device plugin configuration or set the performance hint to `THROUGHPUT`.
 
 In a scenario with a single connections/client, set the following parameter:
 
-`--plugin_config '{"NUM_STREAMS": "1"}'`
+`--plugin_config "{\"NUM_STREAMS\": \"1\"}"`
 
 When the number of concurrent requests is high, increase the number of streams. Make sure, however, that the number of streams is lower than the average volume of concurrent inference operations. Otherwise, the server might not be fully utilized.
 
@@ -89,19 +89,19 @@ Number of streams should not exceed the number of cores.
 
 For example, with ~50 clients sending the requests to the server with 48 cores, set the number of streams to 24:
 
-`--plugin_config '{"NUM_STREAMS": "24"}'`
+`--plugin_config "{\"NUM_STREAMS\": \"24\"}"`
 
 ## Disabling CPU pinning
 
 By default, OpenVINO Model Server will enable CPU threads pinning for better performance. User also can use plugin config to switch it off. Disable threads pinning might be beneficial in complex applications with several workloads executed in parallel.
 
-`--plugin_config '{"ENABLE_CPU_PINNING": false}'`
+`--plugin_config "{\"ENABLE_CPU_PINNING\": false}"`
 
 ## Input data in REST API calls
 
 While using REST API, you can adjust the data format to optimize the communication and deserialization from json format. Here are some tips to effectively use REST interface when working with OpenVINO Model Server:
 
-- use [binary data format](binary_input.md) when possible(for TFS API binary data format is support ony for JPEG/PNG inputs, for KFS API there are no such limitations ) - binary data representation is smaller in terms of request size and easier to process on the server side. 
+- use [binary data format](binary_input.md) when possible(for TFS API binary data format is support only for JPEG/PNG inputs, for KFS API there are no such limitations ) - binary data representation is smaller in terms of request size and easier to process on the server side. 
 - when working with images, consider sending JPEG/PNG directly - compressed data will greatly reduce the traffic and speed up the communication.
 - with JPEG/PNG it is the most efficient to send the images with the resolution of the configured model. It will avoid image resizing on the server to fit the model.
 - if you decide to send data inside JSON object, try to adjust the numerical data type to reduce the message size i.e. reduce the numbers precisions in the json message with a command similar to `np.round(imgs.astype(np.float),decimals=2)`. 
@@ -133,7 +133,7 @@ Following docker command will set `NUM_STREAMS` parameter to a value `1`:
 ```bash
 docker run --rm -d --cpuset-cpus 0,1,2,3 -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 \
---plugin_config '{"NUM_STREAMS": "1"}'
+--plugin_config "{\"NUM_STREAMS\": \"1\"}"
 
 ```
 
@@ -177,7 +177,7 @@ Following docker command sets a parameter `NUM_STREAMS` to a value `32`, `AFFINI
 ```bash
 docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 --grpc_workers 8  --nireq 32 \
---plugin_config '{"NUM_STREAMS": 32, "AFFINITY": "NUMA", "ENABLE_CPU_PINNING": false}'
+--plugin_config "{\"NUM_STREAMS\": 32, \"AFFINITY\": \"NUMA\", \"ENABLE_CPU_PINNING\": false}"
 ```
 
 ## Analyzing performance issues
@@ -198,4 +198,14 @@ Please note that the target devices GPU and NVIDIA usually change the default mo
 It is recommended to compare accuracy results versus OpenVINO benchmark app.
 
 It is possible to enforce a specific runtime precision by using a plugin config parameter `INFERENCE_PRECISION_HINT`. For example:  
- `--plugin_config '{"INFERENCE_PRECISION_HINT": "f32"}'`.
+ `--plugin_config "{\"INFERENCE_PRECISION_HINT\": \"f32\"}"`.
+
+
+## Text generation using LLM calculator with continuous batching
+
+There are a few special consideration for tuning the serving of LLM models via OpenAI API endpoint.
+ - choose the correct cache size to match the used model and expected level of concurrency. The recommendation is to start from a value like 10GB and observe the consumption in the server logs during normal load.
+ - Text generation is done in a scope of a single NUMA node on the multi socket servers. To get the best performance it is recommended to turn off virtual NUMA nodes. In results there will be a single NUMA node per CPU socket and the text generation will consume all cores form one CPU socket.
+ - set `enable_prefix_cache: true` configuration in the graph to reuse KV Cache for sequential requests with repeating prompt tokens like in chat history. It will avoid duplicated prompt evaluation.
+ - Use lower precision via model quantization and in KV cache. It will improve performance and memory consumption. 
+ - `--rest_workers` can limit the number of concurrent requests processed by the models server. By default it set to #vCPU * 4. In most cases this is correct value. You might increase it in case of running benchmarking with extreme number of clients or reduce it to prevent server overloading (some clients will wait for connection).

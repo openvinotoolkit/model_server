@@ -16,6 +16,7 @@
 #include "dl_node.hpp"
 
 #include <map>
+#include <optional>
 #include <utility>
 
 #include "../executingstreamidguard.hpp"
@@ -33,7 +34,7 @@
 
 namespace ovms {
 
-const uint WAIT_FOR_STREAM_ID_TIMEOUT_MICROSECONDS = 1;
+const uint32_t WAIT_FOR_STREAM_ID_TIMEOUT_MICROSECONDS = 1;
 
 Status DLNode::getRealOutputName(ModelInstance& model, const std::string& alias, std::string* result) const {
     auto it = nodeOutputNameAlias.find(alias);
@@ -78,7 +79,7 @@ Status DLNode::fetchResults(NodeSession& nodeSession, SessionResults& nodeSessio
     auto& metadataTensorResultsPair = it.first->second;
     auto& tensorResults = metadataTensorResultsPair.second;
     Status status;
-    const uint waitTimeMicroseconds = 1;
+    const uint32_t waitTimeMicroseconds = 1;
     auto& inferRequest = dlNodeSession.getInferRequest(waitTimeMicroseconds);
     auto& model = dlNodeSession.getModelInstance();
     status = this->fetchResults(tensorResults, inferRequest, model, nodeSession.getSessionKey());
@@ -93,10 +94,10 @@ Status DLNode::fetchResults(TensorWithSourceMap& outputs, ov::InferRequest& infe
     try {
         inferRequest.wait();
     } catch (const ov::Exception& e) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} IE exception occured during infer request wait: {}", getName(), sessionKey, e.what());
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} IE exception occurred during infer request wait: {}", getName(), sessionKey, e.what());
         return StatusCode::INTERNAL_ERROR;
     } catch (std::exception& e) {
-        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} exception occured during infer request wait: {}", getName(), sessionKey, e.what());
+        SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} session: {} exception occurred during infer request wait: {}", getName(), sessionKey, e.what());
         return StatusCode::INTERNAL_ERROR;
     }
     double ovInferTime = this->getNodeSession(sessionKey).getTimer().elapsed<std::chrono::microseconds>(EXECUTE);
@@ -154,7 +155,7 @@ void DLNode::release(session_key_t sessionId) {
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Release node: {} sessionKey: {}", getName(), sessionId);
     getNodeSession(sessionId).release();
 }
-bool DLNode::tryDisarm(const session_key_t& sessionKey, const uint microseconds) {
+bool DLNode::tryDisarm(const session_key_t& sessionKey, const uint32_t microseconds) {
     return getNodeSession(sessionKey).tryDisarm(microseconds);
 }
 

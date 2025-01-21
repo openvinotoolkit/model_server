@@ -27,11 +27,15 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
-#include <netinet/in.h>
 #include <signal.h>
 #include <stdlib.h>
+#ifdef __linux__
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#elif _WIN32
+#include <winsock2.h>
+#endif
 
 #include "config.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -53,7 +57,9 @@ static const int GIGABYTE = 1024 * 1024 * 1024;
 // so it happens before docker container graceful stop.
 static const int SERVER_SHUTDOWN_DEADLINE_SECONDS = 5;
 
-static bool isPortAvailable(uint64_t port) {
+// TODO windows
+#ifdef __linux__
+bool GRPCServerModule::isPortAvailable(uint64_t port) {
     struct sockaddr_in addr;
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if (s == -1) {
@@ -71,6 +77,37 @@ static bool isPortAvailable(uint64_t port) {
     close(s);
     return true;
 }
+#else
+bool GRPCServerModule::isPortAvailable(uint64_t port) {
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        SPDLOG_ERROR("WSAStartup error.");
+        return false;
+    }
+
+    // Create a socket
+    this->sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (this->sock == INVALID_SOCKET) {
+        SPDLOG_ERROR("INVALID_SOCKET error.");
+        WSACleanup();
+        return false;
+    }
+
+    // Bind to port
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_port = htons(port);
+    if (bind(this->sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
+        SPDLOG_ERROR("Bind port {} error: {}", port, WSAGetLastError());
+        closesocket(this->sock);
+        WSACleanup();
+        return false;
+    }
+
+    return true;
+}
+#endif
 
 static Status setDefaultGrpcChannelArgs(std::map<std::string, std::string>& result) {
     uint16_t cores = getCoreCount();
@@ -96,7 +133,7 @@ static Status parseGrpcChannelArgs(const std::string& channel_arguments_str, std
     return StatusCode::OK;
 }
 
-static uint getGRPCServersCount(const ovms::Config& config) {
+static uint32_t getGRPCServersCount(const ovms::Config& config) {
     const char* environmentVariableBuffer = std::getenv("GRPC_SERVERS");
     if (environmentVariableBuffer) {
         auto result = stou32(environmentVariableBuffer);
@@ -105,7 +142,7 @@ static uint getGRPCServersCount(const ovms::Config& config) {
         }
     }
 
-    return std::max<uint>(1, config.grpcWorkers());
+    return std::max<uint32_t>(1, config.grpcWorkers());
 }
 
 GRPCServerModule::~GRPCServerModule() {
@@ -165,7 +202,7 @@ Status GRPCServerModule::start(const ovms::Config& config) {
     if ((config.grpcMemoryQuota() != 0) || (config.grpcMaxThreads() != 0)) {
         builder.SetResourceQuota(resource_quota);
     }
-    uint grpcServersCount = getGRPCServersCount(config);
+    uint32_t grpcServersCount = getGRPCServersCount(config);
     servers.reserve(grpcServersCount);
     SPDLOG_DEBUG("Starting gRPC servers: {}", grpcServersCount);
 
@@ -176,7 +213,7 @@ Status GRPCServerModule::start(const ovms::Config& config) {
         SPDLOG_ERROR(status.string());
         return status;
     }
-    for (uint i = 0; i < grpcServersCount; ++i) {
+    for (uint32_t i = 0; i < grpcServersCount; ++i) {
         std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
         if (server == nullptr) {
             std::stringstream ss;
@@ -204,6 +241,12 @@ void GRPCServerModule::shutdown() {
         server->Shutdown(serverDeadline);
         SPDLOG_INFO("Shutdown gRPC server");
     }
+
+#ifdef _WIN32
+    closesocket(this->sock);
+    WSACleanup();
+#endif
+
     servers.clear();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", GRPC_SERVER_MODULE_NAME);

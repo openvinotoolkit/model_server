@@ -25,12 +25,19 @@ class OVInferRequestsQueue;
 class ModelMetricReporter;
 class OVInferRequestsQueue;
 
-struct ExecutingStreamIdGuard {
-    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter);
-    ~ExecutingStreamIdGuard();
-
+struct StreamIdGuard {
+    StreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue);
+    ~StreamIdGuard();
     int getId();
     ov::InferRequest& getInferRequest();
+    OVInferRequestsQueue& inferRequestsQueue_;
+    const int id_;
+    ov::InferRequest& inferRequest;
+};
+
+struct ExecutingStreamIdGuard : public StreamIdGuard {
+    ExecutingStreamIdGuard(ovms::OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter);
+    ~ExecutingStreamIdGuard();
 
 private:
     class CurrentRequestsMetricGuard {
@@ -40,11 +47,7 @@ private:
         CurrentRequestsMetricGuard(ModelMetricReporter& reporter);
         ~CurrentRequestsMetricGuard();
     };
-
     CurrentRequestsMetricGuard currentRequestsMetricGuard;
-    OVInferRequestsQueue& inferRequestsQueue_;
-    const int id_;
-    ov::InferRequest& inferRequest;
     ModelMetricReporter& reporter;
 };
 

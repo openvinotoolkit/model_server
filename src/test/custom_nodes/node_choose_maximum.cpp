@@ -161,7 +161,7 @@ int execute(const struct CustomNodeTensor* inputs, int inputsCount, struct Custo
         std::max_element(fromWhichContainerToChoose->begin(),
             fromWhichContainerToChoose->end()));
     ss << "Selected tensor pos: " << whichTensor << std::endl;
-    // copy appropiate tensor
+    // copy appropriate tensor
     for (size_t i = 0; i < valuesPerTensor; ++i) {
         size_t index = whichTensor * valuesPerTensor + i;
         ss << "Putting tensor:" << whichTensor

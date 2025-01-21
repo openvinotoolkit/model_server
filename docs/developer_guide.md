@@ -4,17 +4,18 @@
 
 This document gives information and steps to run and debug tests. It gives information about following points :
 
-1. [Set up the Development Environment](#set-up-the-development-environment)
-2. [Prepare environment to use the tests](#prepare-environment-to-use-the-tests)
-3. [Run the tests of your choice](#run-the-tests)
-	* Inference test
-	* Functional tests
-	* Performance tests
-	* Tests on a Python image
-	* Tests on an OpenVINO Model Server binary file
-4. [Learn to debug](#debug)
-	* How to use `gdb` to debug in Docker
-	* How to debug functional tests
+- [OpenVINO™ Model Server Developer Guide](#openvino-model-server-developer-guide)
+	- [Introduction](#introduction)
+	- [Set up the Development Environment](#set-up-the-development-environment)
+	- [Prepare Environment to Use the Tests](#prepare-environment-to-use-the-tests)
+		- [Step 1: Compile source code](#step-1-compile-source-code)
+		- [Step 2: Install software](#step-2-install-software)
+	- [Run the Tests](#run-the-tests)
+	- [Run unit tests](#run-unit-tests)
+	- [Debugging](#debugging)
+		- [Option 1. Use OpenVINO Model Server build image.](#option-1-use-openvino-model-server-build-image)
+		- [Option 2. Build OVMS image with minitrace enabled](#option-2-build-ovms-image-with-minitrace-enabled)
+		- [Profiling macros](#profiling-macros)
 
 ## Set up the Development Environment
 
@@ -50,33 +51,39 @@ In-case of problems, see [Debugging](#debugging).
 
    > **Note**: docker_build target accepts the same set of parameters as release_image target described here: [build_from_source.md](./build_from_source.md)
 
-2. Mount the source code in the Docker container :
+2. Download test LLM models
+   ```bash
+   ./prepare_llm_models.sh ./src/test/llm_testing
+   ```
+
+3. Mount the source code in the Docker container :
 	```bash
 	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest
 	```
 
-3. In the docker container context compile the source code via :
+4. In the docker container context compile the source code via (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
-	bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
+	bazel build --//:distro=ubuntu --config=mp_on_py_on //src:ovms
+> **NOTE**: There are several options that would disable specific parts of OVMS. For details check ovms bazel build files.
 	```
 
-4. From the container, run a single unit test :
+5. From the container, run a single unit test (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
-	bazel test --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --//:distro=ubuntu --config=mp_on_py_on --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |
 | :---        |    :----   |
 | `test`       | builds and runs the specified test target       |
 | `--test_summary=detailed`   |   the output includes failure information       |
-| `--test_output=all` | log all tests |
+| `--test_output=all` | log all tests stdout at the end |
 | `--test_filter='ModelVersionStatus.*'` | limits the tests run to the indicated test  |
 | `//src:ovms_test` | the test source |
 > **NOTE**: For more information, see the [bazel command-line reference](https://docs.bazel.build/versions/master/command-line-reference.html)
+> **NOTE**: If container has access to Intel GPU device and test models, add `--test_env RUN_GPU_TESTS=1` to run GPU unit tests.
 
 
-
-5. Select one of these options to change the target image name or network port to be used in tests. It might be helpful on a shared development host:
+6. Select one of these options to change the target image name or network port to be used in tests. It might be helpful on a shared development host:
 
 	* With a Docker cache :
 
@@ -115,7 +122,7 @@ Click the test that needs to be run:
 
 <details><summary>Run test inference</summary>
 
-1. Download an exemplary model [ResNet50-binary model](https://docs.openvinotoolkit.org/2022.1/omz_models_intel_resnet50_binary_0001_description_resnet50_binary_0001.html) :
+1. Download an exemplary model [ResNet50-binary model](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/resnet50-binary-0001/README.md) :
 
 	```bash
 	source tests/performance/download_model.sh
@@ -279,6 +286,38 @@ export LD_LIBRARY_PATH="'${PWD}'/dist/<os_name>/ovms/lib"
 
 > **NOTE**: For additional problems, see the [debugging section](#debugging).
 
+
+## Run unit tests
+
+Executing the unit tests require building the ovms build image. All unit tests are expected to be started in a container using model server build image. Some unit tests require test models to be pulled and attached to the container.
+The following commands create the build image and start the unit tests:
+
+```
+make ovms_builder_image
+make run_unit_tests
+```
+
+To run unit tests, verifying integration with Intel GPUs, add `RUN_GPU_TESTS=1` parameter:
+```
+make run_unit_tests RUN_GPU_TESTS=1
+```
+
+> NOTE: It is required to follow [this guide](https://dgpu-docs.intel.com/driver/installation.html#ubuntu) to prepare host machine to work with VA API (Ubuntu).
+
+On bare metal, run (just once):
+```
+sudo apt install -y \
+    linux-headers-$(uname -r) \
+    linux-modules-extra-$(uname -r) \
+    flex bison \
+    intel-fw-gpu intel-i915-dkms xpu-smi
+sudo reboot
+```
+
+> NOTE: It is required to execute unit tests on machine with Intel Data Center GPU.
+
+> NOTE: For RedHat base OS unit tests, which require VA API, are skipped.
+
 ## Debugging
 
 Debugging options are available. Click on the required option :
@@ -291,6 +330,8 @@ Debugging options are available. Click on the required option :
 	make docker_build BAZEL_BUILD_TYPE=dbg
 	```
 
+	> **NOTE**: You can build also the debug version of the major dependencies like OpenVINO Runtime using extra flag `CMAKE_BUILD_TYPE=Debug`.
+
 2. Run the container :
 	```bash
 	docker run -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v ${PWD}:/ovms -p 9178:9178 --entrypoint bash openvino/model_server-build:latest
@@ -300,7 +341,7 @@ Debugging options are available. Click on the required option :
 	mkdir -p /models/1 && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
 	```
 	```bash
-	bazel build //src:ovms -c dbg
+	bazel build --config=mp_on_py_on //src:ovms -c dbg
 	```
 	```bash
 	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models
@@ -317,6 +358,7 @@ Debugging options are available. Click on the required option :
 	```
 	# (in gdb cli) set follow-fork-mode child
 	```
+- For tracing what OpenVINO calls are used underneath you can use `--define OV_TRACE=1` option when building ovms with bazel or its tests.
 </details>
 
 <details><summary>Use minitrace to display flame graph</summary>
@@ -342,7 +384,7 @@ docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_ser
 
 3. Build OVMS with minitrace enabled.
 ```bash
-bazel build --copt="-DMTR_ENABLED" //src:ovms
+bazel build --config=linux --copt="-DMTR_ENABLED" //src:ovms
 ```
 
 4. Run OVMS with `--trace_path` specifying where to save flame graph JSON file.

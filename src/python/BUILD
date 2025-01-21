@@ -22,12 +22,6 @@ load("//:common_settings.bzl",
 COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
         "//conditions:default": [],
         "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-}) + select({
-        "//conditions:default": ["-DPYTHON_DISABLE=1"],
-        "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
-}) + select({
-        "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
-        "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
 })
 
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
@@ -108,7 +102,7 @@ cc_library(
     name = "pytensorovtensorconvertercalculator",
     srcs = ["pytensor_ovtensor_converter_calculator.cc",],
     deps = PYBIND_DEPS + [
-        "@linux_openvino//:openvino",
+        "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmsprecision",
         "ovmspytensor",
@@ -126,7 +120,7 @@ cc_library(
     name = "pythonexecutorcalculator",
     srcs = ["python_executor_calculator.cc",],
     deps = PYBIND_DEPS + [
-        "@linux_openvino//:openvino",
+        "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "ovmspytensor",
         "pythonexecutorcalculator_cc_proto",
@@ -154,7 +148,6 @@ cc_library(
     #data = [":pyovms.so"], #todo split to header?
 )
 
-
 cc_library(
     name = "libovmspythonmodule",
     hdrs = ["pythoninterpretermodule.hpp",],
@@ -162,6 +155,7 @@ cc_library(
     deps = PYBIND_DEPS + [
         "//src:cpp_headers", # TODO make ovmslib depend on that
         "//src:libovmslogging",
+        "//src:libovms_module",
         "//src:libovmsmediapipe_utils",
         "ovmspytensor",
         "pytensorovtensorconvertercalculator",

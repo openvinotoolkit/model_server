@@ -15,11 +15,13 @@
 //*****************************************************************************
 
 #include "environment.hpp"
+#include "gpuenvironment.hpp"
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     ::testing::InitGoogleMock(&argc, argv);
     ::testing::AddGlobalTestEnvironment(new Environment);
+    ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
     ::testing::FLAGS_gtest_death_test_style = "threadsafe";
     return RUN_ALL_TESTS();
 }

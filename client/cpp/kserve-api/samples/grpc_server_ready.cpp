@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
     bool ready;
     FAIL_IF_ERR(
         client->IsServerReady(&ready),
-        "unable to get server readyness");
+        "unable to get server readiness");
     std::cout<<"Server Ready: "<<(ready?"True":"False") << std::endl;
 
 

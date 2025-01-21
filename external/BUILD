@@ -47,4 +47,5 @@ exports_files([
     "listen.patch",
     "tf.patch",
     "net_http.patch",
+    "cb.patch",
 ])

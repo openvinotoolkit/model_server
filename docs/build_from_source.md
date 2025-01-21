@@ -89,7 +89,7 @@ and `OV_CONTRIB_BRANCH` to choose the branch from [OpenVINO contrib](https://git
 
 Example:
 ```bash
-make release_image NVIDIA=1
+make release_image NVIDIA=1 OV_USE_BINARY=0
 ```
 
  > **Note**: In order to build the image with redhat UBI8.8 as the base os, it is required to use a host with RedHat subscription and entitlements in `/etc/pki/entitlement` and `/etc/rhsm`. 
@@ -108,28 +108,6 @@ Example:
 make release_image OV_USE_BINARY=0 OV_SOURCE_BRANCH=<commit or branch> OV_SOURCE_ORG=<fork org>
 ```
 
-### `RUN_TESTS`
-
-Enables or disabled unit tests execution as part of the docker image building.
-- `0` Unit tests are skipped
-- `1` Unit tests are executed (default)
-
-```bash
-make release_image RUN_TESTS=0
-```
-
-Running the unit tests will make the building last longer and it will consume a bit more RAM
-
-### `CHECK_COVERAGE`
-
-Enables or disabled calculating the unit tests coverage as part of the docker image building.
-- `0` Checking the coverage is skipped
-- `1` Checking the coverage is included
-
-```bash
-make release_image CHECK_COVERAGE=0
-```
-
 Running the unit tests will increase build time and consume more RAM
 
 ### `JOBS`
@@ -141,22 +119,22 @@ make release_image JOBS=2
 ```
 <hr />
 
+### `PYTHON_DISABLE`
+
+When set to `0`, OpenVINO&trade Model Server will be built with [Python Nodes](python_support/quickstart.md) support. Default value: `0`.
+
+Example:
+```bash
+make release_image PYTHON_DISABLE=1
+```
+
 ### `MEDIAPIPE_DISABLE`
 
 When set to `0`, OpenVINO&trade Model Server will be built with [MediaPipe](mediapipe.md) support. Default value: `0`.
 
 Example:
 ```bash
-make release_image MEDIAPIPE_DISABLE=1
-```
-
-### `PYTHON_DISABLE`
-
-When set to `0`, OpenVINO&trade Model Server will be built with [Python Nodes](python_support/quickstart.md) support. Default value: `0`. 
-
-Example:
-```bash
-make release_image PYTHON_DISABLE=1
+make release_image MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
 ```
 
  > **Note**: In order to build the image with python nodes support (PYTHON_DISABLE=0) mediapipe have to be enabled (MEDIAPIPE_DISABLE=0)
@@ -175,7 +153,7 @@ make release_image GPU=1
 Building minimalistic OVMS docker image requires disabling all optional features:
 
 ```bash
-make release_image GPU=0 MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1 TOKENIZERS=0
+make release_image GPU=0 MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
 ```
 
 ## Building Binary Package
@@ -184,16 +162,19 @@ The binary packages includes the `ovms` executable and linked libraries for bare
 
 ```bash
 make targz_package PYTHON_DISABLE=1
-tree dist/ubuntu
+tree dist/ubuntu22
 ````
 
 ```bash
-dist/ubuntu
+dist/ubuntu22
 ├── ovms.tar.gz
-├── ovms.tar.gz.sha256
-├── ovms.tar.xz
-└── ovms.tar.xz.sha2
+└── ovms.tar.gz.sha256
 ```
 
 
 Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/main/docs/developer_guide.md).
+
+## Building ovms.exe on Windows
+
+[Developer Guide for Windows](windows_developer_guide.md) document describes experimental/alpha windows deployment for ovms.exe binary.
+Follow the instructions to start the ovms server as a standalone binary on a Windows 11 system.

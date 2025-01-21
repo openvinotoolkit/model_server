@@ -301,7 +301,7 @@ public:
             call->response_reader->Finish(&call->reply, &call->status, (void*)call);
         } else {
             // No pre-processing step.
-            // Re-use previously prepared gRPC message.
+            // Reuse previously prepared gRPC message.
             call->response_reader = stub_->PrepareAsyncPredict(&call->context, this->predictRequest, &this->cq_);
             call->response_reader->StartCall();
             call->response_reader->Finish(&call->reply, &call->status, (void*)call);

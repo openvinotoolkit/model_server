@@ -349,9 +349,9 @@ MODEL_STATUS_REQUEST_INVALID_REQUEST_TYPE = [
 
 # (grpc_error_status_code, grpc_error_details, raised_error_type, raised_error_message)
 COMMON_INVALID_GRPC = [
-    (StatusCode.UNAVAILABLE, "failed to connect to all adresses",
+    (StatusCode.UNAVAILABLE, "failed to connect to all addresses",
      ConnectionError, "Error occurred during handling the request: "
-                      "failed to connect to all adresses"),
+                      "failed to connect to all addresses"),
     (StatusCode.UNAVAILABLE, "Empty update",
      ConnectionError, "Error occurred during handling the request: Empty update"),
     (StatusCode.DEADLINE_EXCEEDED, "Deadline Exceeded",

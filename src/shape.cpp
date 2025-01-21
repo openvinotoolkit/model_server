@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <exception>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <utility>
 
@@ -303,7 +304,7 @@ Status Shape::fromFlatShape(const shape_t& shapeIn, Shape& shapeOut) {
             shape.add(Dimension{static_cast<dimension_value_t>(dim)});
         }
     }
-    shapeOut = shape;
+    shapeOut = std::move(shape);
     return StatusCode::OK;
 }
 
@@ -508,7 +509,7 @@ Status Shape::fromString(const std::string& strIn, Shape& shapeOut) {
         }
     }
 
-    shapeOut = shape;
+    shapeOut = std::move(shape);
     return StatusCode::OK;
 }
 

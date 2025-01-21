@@ -17,6 +17,8 @@
 
 #include <functional>
 #include <map>
+#include <memory>
+#include <optional>
 #include <regex>
 #include <string>
 #include <utility>
@@ -27,12 +29,9 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "http_async_writer_interface.hpp"
 #include "rest_parser.hpp"
 #include "status.hpp"
-
-namespace tensorflow::serving::net_http {
-class ServerRequestInterface;
-}
 
 namespace ovms {
 class ServableMetricReporter;
@@ -71,7 +70,9 @@ struct HttpResponseComponents {
     std::optional<int> inferenceHeaderContentLength;
 };
 
-using HandlerCallbackFn = std::function<Status(const std::string_view, const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&, tensorflow::serving::net_http::ServerRequestInterface*)>;
+using HandlerCallbackFn = std::function<Status(const std::string_view, const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&, std::shared_ptr<HttpAsyncWriter>)>;
+
+std::string urlDecode(const std::string& encoded);
 
 class HttpRestApiHandler {
 public:
@@ -104,7 +105,6 @@ public:
         const std::vector<std::pair<std::string, std::string>>& headers = {});
 
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
-    static void parseParams(rapidjson::Value&, rapidjson::Document&);
     static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
 
     void registerHandler(RequestType type, HandlerCallbackFn);
@@ -116,7 +116,7 @@ public:
         std::string* response,
         const HttpRequestComponents& request_components,
         HttpResponseComponents& response_components,
-        tensorflow::serving::net_http::ServerRequestInterface* writer);
+        std::shared_ptr<HttpAsyncWriter> writer);
 
     /**
      * @brief Process Request
@@ -136,7 +136,7 @@ public:
         std::vector<std::pair<std::string, std::string>>* headers,
         std::string* response,
         HttpResponseComponents& responseComponents,
-        tensorflow::serving::net_http::ServerRequestInterface* writer);
+        std::shared_ptr<HttpAsyncWriter> writer);
 
     /**
      * @brief Process predict request
@@ -205,6 +205,7 @@ public:
     Status processConfigReloadRequest(std::string& response, ModelManager& manager);
 
     void convertShapeType(rapidjson::Value& scope, rapidjson::Document& doc);
+    void convertRTInfo(rapidjson::Value& scope, rapidjson::Document& doc, ov::AnyMap& rt_info);
 
     Status processConfigStatusRequest(std::string& response, ModelManager& manager);
     Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
@@ -216,7 +217,7 @@ public:
     Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
-    Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, tensorflow::serving::net_http::ServerRequestInterface* writer);
+    Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter>& serverReaderWriter);
 
 private:
     const std::regex predictionRegex;

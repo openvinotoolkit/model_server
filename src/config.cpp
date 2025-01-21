@@ -20,8 +20,13 @@
 #include <regex>
 #include <thread>
 
-#include <spdlog/spdlog.h>
+#include "logging.hpp"
+// TODO: Write windows/linux specific status codes.
+#ifdef __linux__
 #include <sysexits.h>
+#elif _WIN32
+#include <ntstatus.h>
+#endif
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
@@ -30,8 +35,8 @@
 
 namespace ovms {
 
-const uint AVAILABLE_CORES = getCoreCount();
-const uint MAX_PORT_NUMBER = std::numeric_limits<ushort>::max();
+const uint32_t AVAILABLE_CORES = getCoreCount();
+const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint16_t>::max();
 
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
 const uint32_t DEFAULT_GRPC_MAX_THREADS = AVAILABLE_CORES * 8.0;
@@ -45,7 +50,11 @@ Config& Config::parse(int argc, char** argv) {
     p.parse(argc, argv);
     p.prepare(&serverSettings, &modelsSettings);
     if (!this->parse(&serverSettings, &modelsSettings))
+#ifdef __linux__
         exit(EX_USAGE);
+#elif _WIN32
+        exit(3);
+#endif
     return *this;
 }
 
@@ -207,7 +216,7 @@ const std::string& Config::logPath() const { return this->serverSettings.logPath
 const std::string& Config::tracePath() const { return this->serverSettings.tracePath; }
 #endif
 const std::string& Config::grpcChannelArguments() const { return this->serverSettings.grpcChannelArguments; }
-uint32_t Config::filesystemPollWaitSeconds() const { return this->serverSettings.filesystemPollWaitSeconds; }
+uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
 uint32_t Config::sequenceCleanerPollWaitMinutes() const { return this->serverSettings.sequenceCleanerPollWaitMinutes; }
 uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSettings.resourcesCleanerPollWaitSeconds; }
 const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }

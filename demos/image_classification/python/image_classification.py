@@ -45,7 +45,7 @@ def getJpeg(path, size, rgb_image=0):
 
     img = np.frombuffer(content, dtype=np.uint8)
     img = cv2.imdecode(img, cv2.IMREAD_COLOR)  # BGR format
-    # retrived array has BGR format and 0-255 normalization
+    # retrieved array has BGR format and 0-255 normalization
     # format of data is HWC
     # add image preprocessing if needed by the model
     img = crop_resize(img, size, size)

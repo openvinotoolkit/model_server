@@ -126,7 +126,7 @@ private:
     /**
      * @brief Cleaner thread for sequence and resources cleanup
      */
-    void cleanerRoutine(uint32_t resourcesCleanupIntervalSec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal);
+    void cleanerRoutine(uint32_t resourcesCleanupIntervalMillisec, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal);
 
     /**
      * @brief Mutex for blocking concurrent add & remove of resources
@@ -190,7 +190,7 @@ protected:
     /**
      * Time interval between each config file check
      */
-    uint watcherIntervalMillisec = 1000;
+    uint32_t watcherIntervalMillisec = 1000;
     const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
 
 private:
@@ -199,11 +199,13 @@ private:
      */
     uint32_t sequenceCleaupIntervalMinutes = 5;
 
+protected:
     /**
-     * Time interval between two consecutive resources cleanup scans (in seconds)
+     * Time interval between two consecutive resources cleanup scans (in milliseconds)
      */
-    uint32_t resourcesCleanupIntervalSec = 1;
+    uint32_t resourcesCleanupIntervalMillisec = 1000;
 
+private:
     /**
       * @brief last md5sum of configfile
       */
@@ -256,15 +258,15 @@ public:
     /**
      *  @brief Gets the watcher interval timestep in seconds
      */
-    uint getWatcherIntervalMillisec() {
+    uint32_t getWatcherIntervalMillisec() {
         return watcherIntervalMillisec;
     }
 
     /**
      *  @brief Gets the cleaner resources interval timestep in seconds
      */
-    uint32_t getResourcesCleanupIntervalSec() {
-        return resourcesCleanupIntervalSec;
+    uint32_t getResourcesCleanupIntervalMillisec() {
+        return resourcesCleanupIntervalMillisec;
     }
 
     /**
@@ -461,9 +463,9 @@ public:
      *
      * @param modelVersionsInstances map with currently served versions
      * @param requestedVersions container with requested versions
-     * @param versionsToRetireIn cointainer for versions to retire
-     * @param versionsToReloadIn cointainer for versions to reload
-     * @param versionsToStartIn cointainer for versions to start
+     * @param versionsToRetireIn container for versions to retire
+     * @param versionsToReloadIn container for versions to reload
+     * @param versionsToStartIn container for versions to start
      */
     static void getVersionsToChange(
         const ModelConfig& newModelConfig,

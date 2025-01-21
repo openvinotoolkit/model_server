@@ -12,17 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-input_stream: "REQUEST:in"
-output_stream: "RESPONSE:out"
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
     name: "llmNode1"
-    calculator: "LLMCalculator"
+    calculator: "HttpLLMCalculator"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
-    input_stream: "REQUEST:in"
-    output_stream: "RESPONSE:out"
+    input_stream: "LOOPBACK:loopback"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "LOOPBACK:loopback"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+      tag_index: 'LOOPBACK:0',
+      back_edge: true
+    }
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          models_path: "/ovms/src/test/llm/facebook/opt-125m"
+          models_path: "/ovms/src/test/llm_testing/facebook/opt-125m",
+          plugin_config: "{\"INFERENCE_PRECISION_HINT\":\"f32\"}"
+          cache_size: 1
         }
+    }
+    input_stream_handler {
+      input_stream_handler: "SyncSetInputStreamHandler",
+      options {
+        [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+          sync_set {
+            tag_index: "LOOPBACK:0"
+          }
+        }
+      }
     }
 }

@@ -35,7 +35,8 @@ model_inputs = processor(text=text_descriptions, images=[image], return_tensors=
 
 print(f'Converting pretrained model {model_id} ...')
 ov_model = ov.convert_model(model, example_input=dict(model_inputs))
-
+for idx, out in enumerate(ov_model.outputs):
+    out.get_tensor().set_names({f"out_{idx}"})
 print(f'Saving converted model {model_id} ...')
 ov.save_model(ov_model, 'clip-vit-base-patch16.xml')
 

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "executingstreamidguard.hpp"
 
+#include "logging.hpp"
 #include "model_metric_reporter.hpp"
 #include "ovinferrequestsqueue.hpp"
 
@@ -30,20 +31,28 @@ ExecutingStreamIdGuard::CurrentRequestsMetricGuard::~CurrentRequestsMetricGuard(
 }
 
 ExecutingStreamIdGuard::ExecutingStreamIdGuard(OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter) :
+    StreamIdGuard(inferRequestsQueue),
     currentRequestsMetricGuard(reporter),
-    inferRequestsQueue_(inferRequestsQueue),
-    id_(inferRequestsQueue_.getIdleStream().get()),
-    inferRequest(inferRequestsQueue.getInferRequest(id_)),
     reporter(reporter) {
     INCREMENT_IF_ENABLED(this->reporter.inferReqActive);
 }
 
 ExecutingStreamIdGuard::~ExecutingStreamIdGuard() {
     DECREMENT_IF_ENABLED(this->reporter.inferReqActive);
+}
+
+StreamIdGuard::StreamIdGuard(OVInferRequestsQueue& inferRequestsQueue) :
+    inferRequestsQueue_(inferRequestsQueue),
+    id_(inferRequestsQueue_.getIdleStream().get()),
+    inferRequest(inferRequestsQueue.getInferRequest(id_)) {
+    SPDLOG_TRACE("Got request id:{}", getId());
+}
+
+StreamIdGuard::~StreamIdGuard() {
     this->inferRequestsQueue_.returnStream(this->id_);
 }
 
-int ExecutingStreamIdGuard::getId() { return this->id_; }
-ov::InferRequest& ExecutingStreamIdGuard::getInferRequest() { return this->inferRequest; }
+int StreamIdGuard::getId() { return this->id_; }
+ov::InferRequest& StreamIdGuard::getInferRequest() { return this->inferRequest; }
 
 }  //  namespace ovms

@@ -26,7 +26,7 @@ class ServerManagementClient():
             ConfigStatusResponse object with all models and their versions statuses
 
         Raises:
-            Exceptions for different serving reponses...
+            Exceptions for different serving responses...
 
         Examples:
 
@@ -50,7 +50,7 @@ class ServerManagementClient():
             ConfigStatusResponse object with all models and their versions statuses
 
         Raises:
-            Exceptions for different serving reponses...
+            Exceptions for different serving responses...
 
         Examples:
 

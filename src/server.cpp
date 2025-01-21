@@ -28,12 +28,25 @@
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
-#include <netinet/in.h>
 #include <signal.h>
 #include <stdlib.h>
+
+#include "ovms_exit_codes.hpp"
+#ifdef __linux__
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <sysexits.h>
+#elif _WIN32
+#include <csignal>
+
+#include <ntstatus.h>
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32.lib")
+#include <windows.h>
+#endif
+#ifdef __linux__
 #include <unistd.h>
+#endif
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
@@ -102,7 +115,7 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("gRPC channel arguments: {}", config.grpcChannelArguments());
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
-    SPDLOG_DEBUG("file system poll wait seconds: {}", config.filesystemPollWaitSeconds());
+    SPDLOG_DEBUG("file system poll wait milliseconds: {}", config.filesystemPollWaitMilliseconds());
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
 }
 
@@ -117,6 +130,8 @@ static void onTerminate(int status) {
 static void onIllegal(int status) {
     shutdown_request = 2;
 }
+
+#ifdef __linux__
 
 static void installSignalHandlers() {
     static struct sigaction sigIntHandler;
@@ -137,6 +152,30 @@ static void installSignalHandlers() {
     sigIllHandler.sa_flags = 0;
     sigaction(SIGILL, &sigIllHandler, NULL);
 }
+#elif _WIN32
+
+static BOOL WINAPI onConsoleEvent(DWORD event) {
+    switch (event) {
+    case CTRL_C_EVENT:
+        onInterrupt(SIGINT);
+        return TRUE;
+    case CTRL_CLOSE_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
+        onTerminate(SIGTERM);
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+static void installSignalHandlers() {
+    SetConsoleCtrlHandler(onConsoleEvent, TRUE);
+    signal(SIGINT, onInterrupt);
+    signal(SIGTERM, onTerminate);
+    signal(SIGILL, onIllegal);
+}
+
+#endif
 
 ModuleState Module::getState() const {
     return state;
@@ -240,7 +279,7 @@ Status Server::startModules(ovms::Config& config) {
     // GRPC depends on SERVABLE
     // SERVABLE depends on metrics, python
     // while we want to start the server as quickly as possible to respond with liveness probe
-    // thats why we delay starting the servable until the very end while we need to create it before
+    // that's why we delay starting the servable until the very end while we need to create it before
     // GRPC & REST
     Status status;
     bool inserted = false;
@@ -318,33 +357,41 @@ void Server::shutdownModules() {
 
 static int statusToExitCode(const Status& status) {
     if (status.ok()) {
-        return EX_OK;
+        return OVMS_EX_OK;
     } else if (status == StatusCode::OPTIONS_USAGE_ERROR) {
-        return EX_USAGE;
+        return OVMS_EX_USAGE;
     }
-    return EXIT_FAILURE;
+    return OVMS_EX_FAILURE;
 }
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
     installSignalHandlers();
-    CLIParser parser;
-    ServerSettingsImpl serverSettings;
-    ModelsSettingsImpl modelsSettings;
-    parser.parse(argc, argv);
-    parser.prepare(&serverSettings, &modelsSettings);
-    Status ret = start(&serverSettings, &modelsSettings);
-    ModulesShutdownGuard shutdownGuard(*this);
-    if (!ret.ok()) {
-        return statusToExitCode(ret);
+    int result = OVMS_EX_OK;
+
+    try {
+        CLIParser parser;
+        ServerSettingsImpl serverSettings;
+        ModelsSettingsImpl modelsSettings;
+        parser.parse(argc, argv);
+        parser.prepare(&serverSettings, &modelsSettings);
+        Status ret = start(&serverSettings, &modelsSettings);
+        ModulesShutdownGuard shutdownGuard(*this);
+        if (!ret.ok()) {
+            return statusToExitCode(ret);
+        }
+        while (!shutdown_request) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+        if (shutdown_request == 2) {
+            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Exception; {}", e.what());
+        result = OVMS_EX_FAILURE;
+        return result;
     }
-    while (!shutdown_request) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
-    if (shutdown_request == 2) {
-        SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
-    }
-    SPDLOG_INFO("Shutting down");
+
     return EXIT_SUCCESS;
 }
 

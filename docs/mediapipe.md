@@ -219,8 +219,8 @@ Check the [code snippets](https://docs.openvino.ai/2024/ovms_docs_clients_kfs.ht
 
 Review also the information about the [gRPC streaming feature](./streaming_endpoints.md)
 
-Graphs can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_kfs.md), [REST Model Status](model_server_rest_api_kfs.md)
-and [GetModelMetadata](model_server_grpc_api_kfs.md) and [REST Model Metadata](model_server_rest_api_kfs.md).
+Graphs can be queried for their state using the calls [Model Ready](model_server_grpc_api_kfs.md#model-ready-api), [REST Model Ready](model_server_rest_api_kfs.md#model-ready-api)
+and [Model Metadata](model_server_grpc_api_kfs.md#model-metadata-api) and [REST Model Metadata](model_server_rest_api_kfs.md#model-metadata-api).
 
 The difference in using the MediaPipe graphs and individual models is in version management. In all calls to the MediaPipe graphs,
 the version parameter is ignored. MediaPipe graphs are not versioned. Though, they can reference a particular version of the models in the graph.

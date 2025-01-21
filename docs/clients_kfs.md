@@ -810,7 +810,7 @@ infer_input.set_data_from_numpy(data)
 
 client.start_stream(callback=callback)
 
-for _ in range(5):  # re-use opened stream
+for _ in range(5):  # reuse opened stream
     client.async_stream_infer(
         model_name="model_name",
         inputs=[infer_input],

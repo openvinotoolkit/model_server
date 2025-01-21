@@ -63,7 +63,7 @@ class KFS_Client(BaseClient):
         self.print_info(f"try to send request to endpoint: {status_url}")
         response = requests.post(url=status_url, params={}, timeout=15)
         self.print_info(f"received status code is {response.status_code}.")
-        message = "It seems to REST service is not runnig"
+        message = "It seems to REST service is not running"
         assert response.status_code == HTTPStatus.OK.value, message
         self.print_info("found models and their status:")
         for model in list(response.json()):

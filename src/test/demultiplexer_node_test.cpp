@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <optional>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -116,7 +118,7 @@ TEST(DemultiplexerTest, CheckDemultipliedTensorsMultipleOutputs) {
 TEST(DemultiplexerTest, DemultiplyShouldReturnErrorWhenWrongOutputDimensions) {
     const uint16_t demultiplyCount = 3;
     std::vector<float> tensorData{-1, 4, 5, 12, 3, 52};
-    // imitate (1, 2, 3) but shoudl be (1,3,x1, ..., xN)
+    // imitate (1, 2, 3) but should be (1,3,x1, ..., xN)
     const std::vector<size_t> shape{1, demultiplyCount - 1, 3};
     const auto precision{ov::element::Type_t::f32};
     TensorWithSourceMap intermediateResultTensors{
@@ -192,7 +194,7 @@ TEST(DemultiplexerTest, ShardsShareDataWithSourceTensor) {
 }
 
 // In case of demultiplexer right before gather, the input tensor object (TensorWithShape) will contain source tensor.
-// This test ensures the gathering prodcues tensor with correct data (which implies it takes care of source tensor ownership).
+// This test ensures the gathering produces tensor with correct data (which implies it takes care of source tensor ownership).
 TEST(DemultiplexerTest, GatherShardsWithExistingSourceTensors) {
     // Mock DLNode session to be possible to get inputs from its input handler.
     class MockNodeSession : public DLNodeSession {

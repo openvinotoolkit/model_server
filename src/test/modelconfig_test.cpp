@@ -36,14 +36,14 @@ TEST(ModelConfig, getters_setters) {
     auto name = config.getName();
     EXPECT_EQ(name, "alexnet");
 
-    config.setBasePath("/path");
+    config.setBasePath(getGenericFullPathForTmp("/tmp/path"));
     auto path = config.getBasePath();
-    EXPECT_EQ(path, "/path");
+    EXPECT_EQ(path, getGenericFullPathForTmp("/tmp/path"));
 
-    config.setRootDirectoryPath("/pathto/");
+    config.setRootDirectoryPath(getGenericFullPathForTmp("/tmp/pathto/"));
     config.setBasePath("relative/path");
     path = config.getBasePath();
-    EXPECT_EQ(path, "/pathto/relative/path");
+    EXPECT_EQ(path, getGenericFullPathForTmp("/tmp/pathto/relative/path"));
 
     config.setTargetDevice("GPU");
     auto device = config.getTargetDevice();
@@ -213,7 +213,7 @@ TEST(ModelConfig, shape) {
     EXPECT_EQ((gs1["first"].shape), (ovms::Shape{1, 2, 3}));
     EXPECT_EQ((gs1["second"].shape), (ovms::Shape{6, 6, 200, 300}));
 
-    // mutli shape
+    // multi shape
     config.setShapes(shapeMap);
     config.addShape("third", s3);
 
@@ -933,9 +933,11 @@ TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
     }
     )#";
 
+    adjustConfigForTargetPlatform(config);
+
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -970,9 +972,10 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatArray) {
     }
     )#";
 
+    adjustConfigForTargetPlatform(config);
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -1002,9 +1005,10 @@ TEST(ModelConfig, ConfigParseNodeWithInvalidShapeFormatString) {
     }
     )#";
 
+    adjustConfigForTargetPlatform(config);
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -1039,9 +1043,10 @@ TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
     }
     )#";
 
+    adjustConfigForTargetPlatform(config);
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -1057,7 +1062,7 @@ TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
     EXPECT_EQ(shapes["input"].shape, (ovms::Shape{1, 3, 600, 600}));
 }
 
-static std::string config_low_latency_no_stateful = R"#(
+std::string config_low_latency_no_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -1071,7 +1076,7 @@ static std::string config_low_latency_no_stateful = R"#(
 }
 )#";
 
-static std::string config_low_latency_non_stateful = R"#(
+std::string config_low_latency_non_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -1086,7 +1091,7 @@ static std::string config_low_latency_non_stateful = R"#(
 }
 )#";
 
-static std::string config_idle_sequence_cleanup_non_stateful = R"#(
+std::string config_idle_sequence_cleanup_non_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -1101,7 +1106,7 @@ static std::string config_idle_sequence_cleanup_non_stateful = R"#(
 }
 )#";
 
-static std::string config_max_sequence_number_non_stateful = R"#(
+std::string config_max_sequence_number_non_stateful = R"#(
     {
     "model_config_list": [
         {
@@ -1116,7 +1121,7 @@ static std::string config_max_sequence_number_non_stateful = R"#(
 }
 )#";
 
-static std::string config_max_sequence_number = R"#(
+std::string config_max_sequence_number = R"#(
         {
         "model_config_list": [
             {
@@ -1130,7 +1135,7 @@ static std::string config_max_sequence_number = R"#(
     }
     )#";
 
-static std::string config_stateful_should_pass = R"#(
+std::string config_stateful_should_pass = R"#(
     {
     "model_config_list": [
         {
@@ -1146,7 +1151,7 @@ static std::string config_stateful_should_pass = R"#(
 }
 )#";
 
-static std::string config_low_invalid_max_seq = R"#(
+std::string config_low_invalid_max_seq = R"#(
     {
     "model_config_list": [
         {
@@ -1170,7 +1175,7 @@ TEST_P(ModelConfigParseModel, SetWithStateful) {
     std::string config = testPair.first;
     rapidjson::Document configJson;
     rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
-    ASSERT_EQ(parsingSucceeded, true);
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
 
     const auto modelConfigList = configJson.FindMember("model_config_list");
     ASSERT_NE(modelConfigList, configJson.MemberEnd());
@@ -1190,13 +1195,13 @@ TEST_P(ModelConfigParseModel, SetWithStateful) {
 }
 
 std::vector<std::pair<std::string, ovms::StatusCode>> configs = {
-    {config_low_latency_no_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_max_sequence_number, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_max_sequence_number_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_idle_sequence_cleanup_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_low_latency_non_stateful, ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
-    {config_low_invalid_max_seq, ovms::StatusCode::INVALID_MAX_SEQUENCE_NUMBER},
-    {config_stateful_should_pass, ovms::StatusCode::OK}};
+    {adjustConfigForTargetPlatformReturn(config_low_latency_no_stateful), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {adjustConfigForTargetPlatformReturn(config_max_sequence_number), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {adjustConfigForTargetPlatformReturn(config_max_sequence_number_non_stateful), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {adjustConfigForTargetPlatformReturn(config_idle_sequence_cleanup_non_stateful), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {adjustConfigForTargetPlatformReturn(config_low_latency_non_stateful), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER},
+    {adjustConfigForTargetPlatformReturn(config_low_invalid_max_seq), ovms::StatusCode::INVALID_MAX_SEQUENCE_NUMBER},
+    {adjustConfigForTargetPlatformReturn(config_stateful_should_pass), ovms::StatusCode::OK}};
 
 INSTANTIATE_TEST_SUITE_P(
     Test,

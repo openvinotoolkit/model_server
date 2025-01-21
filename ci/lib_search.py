@@ -1,4 +1,3 @@
-#No header files detected
 # Copyright (c) 2020-2022 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,6 +57,7 @@ def check_function(fd):
 def check_dir(start_dir):
     no_header = []
     exclude_files = [
+        '.user.bazelrc',
         '.bandit',
         '.bin',
         '.dockerignore',
@@ -81,7 +81,9 @@ def check_dir(start_dir):
         'REST_age_gender.ipynb',
         '__pycache__',
         'add.xml',
+        'abseil_gcc_8.5_constant_expression.patch',
         'azure_sdk.patch',
+        'cb.patch',
         'bazel-',
         'check_coverage.bat',
         'genhtml',
@@ -105,9 +107,11 @@ def check_dir(start_dir):
         'model.xml',
         'net_http.patch',
         'partial.patch',
+        'ovms_drogon_trantor.patch',
         'opencv_cmake_flags.txt',
         'ovms-c/dist',
         'requirements.txt',
+        'requirements_win.txt',
         'resnet_images.txt',
         "resnet_labels.txt",
         'rest_sdk_v2.10.16.patch',
@@ -117,6 +121,8 @@ def check_dir(start_dir):
         'tftext.patch',
         'upb_platform_fix.patch',
         'upb_warning_turn_off.patch',
+        'partial_2.18.patch',
+        'tf_2.18_logging.patch',
         'vehicle_images.txt',
         'bazel_rules_apple.patch',
         "pom.xml",
@@ -128,6 +134,7 @@ def check_dir(start_dir):
         "BUILD.bazel",
         "package.json",
         "graph.pbtxt",
+        "graph_gpu.pbtxt",
         "holistic_tracking.pbtxt",
         "ssdlite_object_detection_labelmap.txt",
         "build_dependencies.sh",
@@ -137,7 +144,13 @@ def check_dir(start_dir):
         "aipc.txt",
         "internal_tests",
         "pugixml_v1.13_flags.patch",
-        "rag_demo.ipynb"
+        "rag_demo.ipynb",
+        ".bazelversion",
+        "lib_files.txt",
+        "lib_files_python.txt",
+        "lib_custom_nodes_files",
+        "spelling-whitelist.txt",
+        "results.txt",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
@@ -183,6 +196,7 @@ def check_func(start_dir):
         'REST_age_gender.ipynb',
         '__pycache__',
         'add.xml',
+        'abseil_gcc_8.5_constant_expression.patch',
         'azure_sdk.patch',
         'bazel-',
         'boost.LICENSE.txt',
@@ -207,23 +221,29 @@ def check_func(start_dir):
         'missing_headers.txt',
         'net_http.patch',
         'partial.patch',
+        'ovms_drogon_trantor.patch',
         'openvino.LICENSE.txt',
         'ovms-c/dist',
         'requirements.txt',
+        'requirements_win.txt',
         'rest_sdk_v2.10.16.patch',
         'summator.xml',
         'tf.patch',
         'tf_graph_info_multilinecomment.patch',
         'tftext.patch',
+        'partial_2.18.patch',
+        'tf_2.18_logging.patch',
         'zlib.LICENSE.txt',
         'bazel_rules_apple.patch',
         'yarn.lock',
         'BUILD.bazel',
         'package.json',
         'graph.pbtxt',
+        'graph_gpu.pbtxt',
         "build_dependencies.sh",
         "iris_tracking.pbtxt",
-        "internal_tests"
+        "internal_tests",
+        ".bazelversion",
     ]
 
     exclude_directories = ['/dist/']

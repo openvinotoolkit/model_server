@@ -25,6 +25,7 @@
 
 #include "../ov_utils.hpp"
 #include "../sequence.hpp"
+#include "../status.hpp"
 #include "stateful_test_utils.hpp"
 
 TEST(Sequence, SequenceDisabled) {

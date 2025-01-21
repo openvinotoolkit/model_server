@@ -15,7 +15,10 @@
 //*****************************************************************************
 #include "inferencerequest.hpp"
 
+#include <optional>
+
 #include "../status.hpp"
+#include "buffer.hpp"
 
 namespace ovms {
 // this constructor can be removed with prediction tests overhaul
@@ -36,12 +39,33 @@ Status InferenceRequest::addInput(const char* name, OVMS_DataType datatype, cons
     auto [it, emplaced] = inputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
     return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
 }
+Status InferenceRequest::addOutput(const char* name, OVMS_DataType datatype, const int64_t* shape, size_t dimCount) {
+    if (datatype == OVMS_DATATYPE_STRING) {
+        return Status(StatusCode::NOT_IMPLEMENTED, "String is not supported for setting outputs in C-API");
+    }
+    auto [it, emplaced] = outputs.emplace(name, InferenceTensor{datatype, shape, dimCount});
+    return emplaced ? StatusCode::OK : StatusCode::DOUBLE_TENSOR_INSERT;
+}
 Status InferenceRequest::setInputBuffer(const char* name, const void* addr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto it = inputs.find(name);
     if (it == inputs.end()) {
         return StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER;
     }
     return it->second.setBuffer(addr, byteSize, bufferType, deviceId);
+}
+Status InferenceRequest::setOutputBuffer(const char* name, const void* addr, size_t byteSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
+    auto it = outputs.find(name);
+    if (it == outputs.end()) {
+        return StatusCode::NONEXISTENT_TENSOR_FOR_SET_BUFFER;
+    }
+    return it->second.setBuffer(addr, byteSize, bufferType, deviceId);
+}
+Status InferenceRequest::removeOutputBuffer(const char* name) {
+    auto it = outputs.find(name);
+    if (it == outputs.end()) {
+        return StatusCode::NONEXISTENT_TENSOR_FOR_REMOVE_BUFFER;
+    }
+    return it->second.removeBuffer();
 }
 Status InferenceRequest::removeInputBuffer(const char* name) {
     auto it = inputs.find(name);
@@ -63,11 +87,30 @@ Status InferenceRequest::getInput(const char* name, const InferenceTensor** tens
     *tensor = &it->second;
     return StatusCode::OK;
 }
+Status InferenceRequest::getOutput(const char* name, const InferenceTensor** tensor) const {
+    auto it = outputs.find(name);
+    if (it == outputs.end()) {
+        *tensor = nullptr;
+        return StatusCode::NONEXISTENT_TENSOR;
+    }
+    *tensor = &it->second;
+    return StatusCode::OK;
+}
 uint64_t InferenceRequest::getInputsSize() const {
     return inputs.size();
 }
+uint64_t InferenceRequest::getOutputsSize() const {
+    return outputs.size();
+}
 Status InferenceRequest::removeInput(const char* name) {
     auto count = inputs.erase(name);
+    if (count) {
+        return StatusCode::OK;
+    }
+    return StatusCode::NONEXISTENT_TENSOR_FOR_REMOVAL;
+}
+Status InferenceRequest::removeOutput(const char* name) {
+    auto count = outputs.erase(name);
     if (count) {
         return StatusCode::OK;
     }
@@ -116,4 +159,10 @@ std::map<std::string, shape_t> InferenceRequest::getRequestShapes() const {
     }
     return result;
 }
+
+void InferenceRequest::setCompletionCallback(OVMS_InferenceRequestCompletionCallback_t callback, void* callbackData) {
+    this->responseCompleteCallback = callback;
+    this->responseCompleteCallbackData = callbackData;
+}
+
 }  // namespace ovms

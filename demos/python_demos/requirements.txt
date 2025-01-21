@@ -3,22 +3,13 @@
 git+https://github.com/dtrawins/optimum-intel.git@concurrency_support_cloneall
 ## used a fork to provide support for multi concurrency https://github.com/huggingface/optimum-intel/pull/519
 
-onnx==1.16.0
+onnx==1.17.0
 pillow==10.3.0
 optimum[diffusers]==1.17.1
-tritonclient[grpc]==2.37.0.9383150  # Required to use batch string serialization/deserialization (4byte length prepend)
+tritonclient[grpc]==2.51.0  # Required to use batch string serialization/deserialization (4byte length prepend)
 transformers==4.40
 diffusers==0.26.3
 datasets==2.18.0
-
-# Required for RAG Chatbot Demo:
-langchain==0.1.12
-langchain-community==0.0.28
-scikit-learn==1.4.1.post1
-chromadb==0.4.24
-pysqlite3-binary==0.5.2.post3  # Workaround: https://docs.trychroma.com/troubleshooting#sqlite
-unstructured==0.13.2
-markdown==3.6
-nncf==2.10.0
-nltk==3.8.1
+numpy<2.0
+huggingface_hub==0.24.7
 

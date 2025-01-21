@@ -17,21 +17,26 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 #include <openvino/openvino.hpp>
 
 #include "../logging.hpp"
+#include "../ovms.h"  // NOLINT
+#include "../regularovtensorfactory.hpp"
 #include "../tensorinfo.hpp"
 #include "node.hpp"
 
 namespace ovms {
-
+class IOVTensorFactory;
 extern const std::string ENTRY_NODE_NAME;
 
 template <typename RequestType>
 class EntryNode : public Node {
     const RequestType* request;
     const tensor_map_t inputsInfo;
+    const tensor_map_t outputsInfo;  // specifying outputs is not supported for DAGS
+    std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories;
 
 public:
     EntryNode(const RequestType* request,
@@ -39,7 +44,9 @@ public:
         std::optional<int32_t> demultiplyCount = std::nullopt) :
         Node(ENTRY_NODE_NAME, demultiplyCount),
         request(request),
-        inputsInfo(inputsInfo) {}
+        inputsInfo(inputsInfo) {
+        factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
+    }
 
     Status execute(session_key_t sessionId, PipelineEventQueue& notifyEndQueue) override;
 

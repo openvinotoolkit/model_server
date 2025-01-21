@@ -119,7 +119,7 @@ make
 ```
 
 - Command
-```
+```bash
 docker run openvino/model_server-capi:latest -c /ovms/bin/capi_benchmark
 OpenVINO Model Server
 Usage:
@@ -130,11 +130,13 @@ Usage:
                                 INFO, WARNING, ERROR (default: ERROR)
       --config_path CONFIG_PATH
                                 Config file path for OVMS to read (default:
-                                /ovms/src/test/c_api/config_benchmark.json)
+                                /ovms/src/test/configs/config_benchmark.json)
       --niter NITER             number of inferences to conduct (default:
                                 1000)
-      --nstreams NSTREAMS       nstreams from OVMS configuration (default:
-                                1)
+      --nstreams NSTREAMS       number of execution streams to be performed
+                                simultaneously (suggested for best
+                                throughput is NUM_STREAMS of a ovms model
+                                config) (default: 1)
       --servable_name MODEL_NAME
                                 Model name to sent request to
       --servable_version MODEL_VERSION
@@ -149,7 +151,7 @@ Usage:
 
 ## Available modes
 
-- INFERENCE_ONLY (default), measures only the time it takes to preform inferences using C-API
+- INFERENCE_ONLY (default), measures only the time it takes to perform inferences using C-API
 - RESET_BUFFER, include time it takes to recreate inference request data buffer
 - RESET_REQUEST, include time it takes to recreate whole inference request 
 

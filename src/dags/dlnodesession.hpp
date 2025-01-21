@@ -16,7 +16,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 
@@ -50,7 +49,7 @@ public:
     DLNodeSession(const NodeSessionMetadata&& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails, ModelManager& manager, const std::string& modelName, model_version_t modelVersion);
     virtual ~DLNodeSession();
 
-    ov::InferRequest& getInferRequest(const uint microseconds);
+    ov::InferRequest& getInferRequest(const uint32_t microseconds);
     ModelInstance& getModelInstance();
 
 private:
@@ -59,7 +58,7 @@ private:
 public:
     Status prepareInputsAndModelForInference();
     Status validate(const ov::Tensor& tensor, const TensorInfo& info);
-    Status execute(PipelineEventQueue& notifyEndQueue, uint waitForStreamIdTimeoutMicroseconds, Node& node);
+    Status execute(PipelineEventQueue& notifyEndQueue, uint32_t waitForStreamIdTimeoutMicroseconds, Node& node);
     Status executeInference(PipelineEventQueue& notifyEndQueue, ov::InferRequest&, Node& node);
     Status setInputsForInference(ov::InferRequest& inferRequest);
     Status getRealInputName(const std::string& alias, std::string* result) const;
@@ -68,6 +67,6 @@ public:
     void clearInputs();
 
     const std::string& getModelName() { return modelName; }
-    bool tryDisarm(uint microseconds) override;
+    bool tryDisarm(uint32_t microseconds) override;
 };
 }  // namespace ovms

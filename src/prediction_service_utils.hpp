@@ -23,8 +23,11 @@
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#include "capi_frontend/inferencerequest.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "logging.hpp"
 #include "shape.hpp"
+#include "status.hpp"
 
 namespace ovms {
 class InferenceRequest;
@@ -38,9 +41,95 @@ std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::Predi
 std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex);
 std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request);
 
+enum class ExtractChoice {
+    EXTRACT_INPUT,
+    EXTRACT_OUTPUT,
+};
+
+template <typename Request, typename InputTensorType, ExtractChoice choice>
+class RequestTensorExtractor {
+public:
+    static Status extract(const Request& request, const std::string& name, const InputTensorType** tensor, size_t* bufferId = nullptr);
+};
+
+template <>
+class RequestTensorExtractor<InferenceRequest, InferenceTensor, ExtractChoice::EXTRACT_OUTPUT> {
+public:
+    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor, size_t* bufferId = nullptr) {
+        SPDLOG_TRACE("Extracting output: {}", name);
+        return request.getOutput(name.c_str(), tensor);
+    }
+};
+
+template <>
+class RequestTensorExtractor<InferenceRequest, InferenceTensor, ExtractChoice::EXTRACT_INPUT> {
+public:
+    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor, size_t* bufferId = nullptr) {
+        SPDLOG_TRACE("Extracting input: {}", name);
+        return request.getInput(name.c_str(), tensor);
+    }
+};
+
+template <>
+class RequestTensorExtractor<tensorflow::serving::PredictRequest, tensorflow::TensorProto, ExtractChoice::EXTRACT_OUTPUT> {
+public:
+    static Status extract(const tensorflow::serving::PredictRequest& request, const std::string& name, const tensorflow::TensorProto** tensor, size_t* bufferId) {
+        return StatusCode::NOT_IMPLEMENTED;
+    }
+};
+
+template <>
+class RequestTensorExtractor<tensorflow::serving::PredictRequest, tensorflow::TensorProto, ExtractChoice::EXTRACT_INPUT> {
+public:
+    static Status extract(const tensorflow::serving::PredictRequest& request, const std::string& name, const tensorflow::TensorProto** tensor, size_t* bufferId) {
+        if (bufferId == nullptr) {
+            return StatusCode::INTERNAL_ERROR;
+        }
+        auto it = request.inputs().find(name);
+        if (it == request.inputs().end()) {
+            return StatusCode::NONEXISTENT_TENSOR;
+        }
+        *tensor = &it->second;
+        return StatusCode::OK;
+    }
+};
+
+template <>
+class RequestTensorExtractor<KFSRequest, KFSTensorInputProto, ExtractChoice::EXTRACT_OUTPUT> {
+public:
+    static Status extract(const KFSRequest& request, const std::string& name, const KFSTensorInputProto** tensor, size_t* bufferId) {
+        return StatusCode::NOT_IMPLEMENTED;
+    }
+};
+
+template <>
+class RequestTensorExtractor<KFSRequest, KFSTensorInputProto, ExtractChoice::EXTRACT_INPUT> {
+public:
+    static Status extract(const KFSRequest& request, const std::string& name, const KFSTensorInputProto** tensor, size_t* bufferId) {
+        if (bufferId == nullptr) {
+            return StatusCode::INTERNAL_ERROR;
+        }
+        size_t id = 0;
+        auto it = request.inputs().begin();
+        while (it != request.inputs().end()) {
+            if (it->name() == name) {
+                break;
+            }
+            ++it;
+            ++id;
+        }
+        if (it == request.inputs().end()) {
+            return StatusCode::NONEXISTENT_TENSOR;
+        }
+        *bufferId = id;
+        *tensor = &(*it);
+        return StatusCode::OK;
+    }
+};
+
 /**
  * This is specific check required for passing KFS API related info
- * which informs how response should be formated. Therefore return value should not have an impact for
+ * which informs how response should be formatted. Therefore return value should not have an impact for
  * any other frontend.
  */
 bool useSharedOutputContentFn(const tensorflow::serving::PredictRequest* request);

@@ -20,8 +20,8 @@
 
 #include <openvino/openvino.hpp>
 #include <rapidjson/document.h>
-#include <spdlog/spdlog.h>
 
+#include "logging.hpp"
 #include "status.hpp"
 
 namespace ovms {

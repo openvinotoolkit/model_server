@@ -24,11 +24,11 @@ exports_files([
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
-     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
+     "COMMON_STATIC_LIBS_COPTS_VISIBLE", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
      "create_config_settings")
 create_config_settings()
 
-#To build without python use flags - bazel build --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
+#To build without python use flags - bazel build --config=linux --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
 
 cc_library(
   name = "ovms_dependencies",
@@ -37,32 +37,25 @@ cc_library(
         "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
         "@minitrace//:trace",
         "@com_github_grpc_grpc//:grpc++",
-        "@org_tensorflow//tensorflow/core:framework",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "@org_tensorflow//tensorflow/core:framework",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
-        ] + select({
-            "//:ubuntu_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_ubuntu",
-                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_ubuntu",
-            ],
-            "//:redhat_build": [
-                "@aws-sdk-cpp//:aws-sdk-cpp_redhat",
-                "@aws-sdk-cpp//:aws-sdk-cpp_cmake_redhat",
-            ],
-        }) + [
-        "@azure//:storage",
-        "@cpprest//:sdk",
-        "@boost//:lib",
-        "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
-        "@linux_openvino//:openvino",
-        "@linux_opencv//:opencv",
+        "//third_party:openvino",
+        "//third_party:opencv",
         "@com_github_jupp0r_prometheus_cpp//core",
         ] + select({
+            "//:not_disable_cloud": [
+                "@aws-sdk-cpp//:aws-sdk-cpp",
+                "@aws-sdk-cpp//:aws-sdk-cpp_cmake",
+                "@azure//:storage",
+                "@cpprest//:sdk",
+                "//third_party:boost",
+                "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",],
+            "//:disable_cloud": []
+            })
+         + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework:calculator_framework",
                 "@mediapipe//mediapipe/framework/stream_handler:barrier_input_stream_handler",
@@ -82,10 +75,10 @@ cc_library(
             })
          + select({
             "//:not_disable_python": [
-                "@python3_linux//:python3-lib",
+                "//third_party:python3",
                 "@pybind11//:pybind11_embed",
                 ],
             "//:disable_python": []
             }),
-  visibility = ["//visibility:public"],
+    visibility = ["//visibility:public"],
 )

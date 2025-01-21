@@ -84,7 +84,7 @@ protected:
     std::string port = "9178";
 
     void SetUpServer(const char* configPath) {
-        ::SetUpServer(this->t, this->server, this->port, configPath);
+        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(configPath).c_str());
     }
 
     void SetUp() override {
@@ -146,6 +146,13 @@ public:
     }
 };
 
+class MediapipeEmbeddingsTest : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/embeddings/config_embeddings.json");
+    }
+};
+
 template <class W, class R>
 class MockedServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<W, R> {
 public:
@@ -154,6 +161,41 @@ public:
     MOCK_METHOD(bool, Read, (R * msg), (override));
     MOCK_METHOD(bool, Write, (const W& msg, ::grpc::WriteOptions options), (override));
 };
+
+TEST_F(MediapipeEmbeddingsTest, startup) {
+    auto start = std::chrono::high_resolution_clock::now();
+    const int timeout = 5;
+    while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
+    }
+
+    const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+    ASSERT_TRUE(servableModule != nullptr);
+    ModelManager* manager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
+    auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName("embeddings");
+    ASSERT_TRUE(mediapipeGraphDefinition != nullptr);
+    ASSERT_TRUE(mediapipeGraphDefinition->getStatus().isAvailable());
+}
+
+TEST_F(MediapipeEmbeddingsTest, grpcInference) {
+    auto start = std::chrono::high_resolution_clock::now();
+    const int timeout = 5;
+    while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
+    }
+
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "embeddings";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{{"input", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::NOT_FOUND);
+}
 
 TEST_F(MediapipeFlowKfsTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -170,7 +212,7 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
     preparePredictRequest(request, inputsMeta, requestData1);
     request.mutable_model_name()->assign(modelName);
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    // Checking that KFSPASS calculator copies requestData1 to the reponse so that we expect requestData1 on output
+    // Checking that KFSPASS calculator copies requestData1 to the response so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
@@ -301,7 +343,7 @@ TEST_F(MediapipeTensorTest, DummyInfer) {
 
 TEST_F(MediapipeTfLiteTensorTest, DummyInfer) {
     GTEST_SKIP() << "OVMS calculator doesn't handle TfLite on output. Only vector of TfLite"
-                 << "OVMS deserialization & serialization of TfLiteTensors is not finised as well";
+                 << "OVMS deserialization & serialization of TfLiteTensors is not finished as well";
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -481,7 +523,7 @@ public:
         const std::string modelName = "mediapipeImageInput";
         request.Clear();
         response.Clear();
-        cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+        cv::Mat imageRaw = cv::imread(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), cv::IMREAD_UNCHANGED);
         ASSERT_TRUE(!imageRaw.empty());
         cv::Mat image;
         size_t matFormat = convertKFSDataTypeToMatFormat(datatype);
@@ -520,7 +562,7 @@ public:
         const std::string modelName = "mediapipeImageInput";
         request.Clear();
         response.Clear();
-        cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/grayscale.jpg", cv::IMREAD_UNCHANGED);
+        cv::Mat imageRaw = cv::imread(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/grayscale.jpg"), cv::IMREAD_UNCHANGED);
         ASSERT_TRUE(!imageRaw.empty());
         cv::Mat grayscaled;
         size_t matFormat = convertKFSDataTypeToMatFormat(datatype);
@@ -587,7 +629,7 @@ TEST_F(MediapipeFlowImageInput, InvalidShape) {
     const std::string modelName = "mediapipeImageInput";
     request.Clear();
     response.Clear();
-    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+    cv::Mat imageRaw = cv::imread(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), cv::IMREAD_UNCHANGED);
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat image;
     size_t matFormat = convertKFSDataTypeToMatFormat("UINT8");
@@ -640,7 +682,7 @@ TEST_F(MediapipeFlowImageInput, InvalidDatatype) {
     const std::string modelName = "mediapipeImageInput";
     request.Clear();
     response.Clear();
-    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+    cv::Mat imageRaw = cv::imread(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), cv::IMREAD_UNCHANGED);
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat image;
     size_t matFormat = convertKFSDataTypeToMatFormat("INT64");
@@ -670,7 +712,7 @@ TEST_F(MediapipeFlowImageInput, Float32_4Channels) {
     const std::string modelName = "mediapipeImageInput";
     request.Clear();
     response.Clear();
-    cv::Mat imageRaw = cv::imread("/ovms/src/test/binaryutils/rgb4x4.jpg", cv::IMREAD_UNCHANGED);
+    cv::Mat imageRaw = cv::imread(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb4x4.jpg"), cv::IMREAD_UNCHANGED);
     ASSERT_TRUE(!imageRaw.empty());
     cv::Mat imageFP32;
     imageRaw.convertTo(imageFP32, CV_32F);
@@ -872,6 +914,9 @@ public:
 };
 
 TEST_F(MediapipeFlowTwoOutputsDagTest, Infer) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Test disabled on windows - Custom Nodes for windows are unsupported";
+#endif
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};
 
@@ -1340,10 +1385,10 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
         startReloading.get_future().get();
         MediapipeGraphConfig mgc{
             this->modelName,
-            "",                                               // default base path
-            "/ovms/src/test/mediapipe/graphscalar_tf.pbtxt",  // graphPath - valid but includes missing models, will fail for new streams
-            "",                                               // default subconfig path
-            ""                                                // dummy md5
+            "",                                                                             // default base path
+            getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/graphscalar_tf.pbtxt"),  // graphPath - valid but includes missing models, will fail for new streams
+            "",                                                                             // default subconfig path
+            ""                                                                              // dummy md5
         };
         auto status = definition->reload(modelManager, mgc);
         ASSERT_EQ(status, StatusCode::OK) << status.string();
@@ -1377,7 +1422,7 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
             return true;
         });
     status = impl.ModelStreamInferImpl(nullptr, &newStream);
-    ASSERT_EQ(status, StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_PRECONDITION_FAILED) << status.string();
 }
 
 TEST_F(MediapipeStreamFlowAddTest, NegativeShouldNotReachInferDueToRetiredGraph) {
@@ -1557,16 +1602,17 @@ public:
     MockModelInstance(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
     }
-    ov::AnyMap getRTInfo() const override {
+    ov::AnyMap getRTInfo() override {
         std::vector<std::string> mockLabels;
         for (size_t i = 0; i < 5; i++) {
             mockLabels.emplace_back(std::to_string(i));
         }
-        ov::AnyMap configuration = {
+        ov::AnyMap modelInfo = {
             {"layout", "data:HWCN"},
             {"resize_type", "unnatural"},
             {"labels", mockLabels}};
-        return configuration;
+        ov::AnyMap rtInfo = {{"model_info", modelInfo}};
+        return rtInfo;
     }
 };
 
@@ -1639,7 +1685,7 @@ TEST(Mediapipe, AdapterRTInfo) {
     uint32_t portNum = ovms::stou32(port).value();
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, portNum));
     // we will use dummy model that will have mocked rt_info
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config.json"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getGenericFullPathForSrcTest("/ovms/src/test/configs/config.json").c_str()));
 
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
     const std::string mockedModelName = "dummy";
@@ -1654,7 +1700,9 @@ TEST(Mediapipe, AdapterRTInfo) {
     ov::AnyMap notUsedAnyMap;
     adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
     ov::AnyMap modelConfig = adapter.getModelConfig();
+
     auto checkModelInfo = [](const ov::AnyMap& modelConfig) {
+        std::cout << "Model config size: " << modelConfig.size() << std::endl;
         ASSERT_EQ(modelConfig.size(), 3);
         auto it = modelConfig.find("resize_type");
         ASSERT_NE(modelConfig.end(), it);
@@ -1675,13 +1723,13 @@ TEST(Mediapipe, AdapterRTInfo) {
     const ov::AnyMap* servableMetadataRtInfo;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
     ASSERT_NE(nullptr, servableMetadataRtInfo);
-    checkModelInfo(*servableMetadataRtInfo);
+    checkModelInfo((*servableMetadataRtInfo).at("model_info").as<ov::AnyMap>());
     OVMS_ServableMetadataDelete(servableMetadata);
 }
 
 TEST(Mediapipe, MetadataDummy) {
     ConstructorEnabledModelManager manager;
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", "/ovms/src/test/mediapipe/graphdummy.pbtxt"};
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/graphdummy.pbtxt").c_str()};
     ovms::MediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc);
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
     tensor_map_t inputs = mediapipeDummy.getInputsInfo();
@@ -1977,6 +2025,7 @@ node {
     configJson.replace(it, pathToReplace.size(), pbtxtPath);
 
     const std::string configJsonPath = this->directoryPath + "/subconfig.json";
+    adjustConfigForTargetPlatform(configJson);
     createConfigFileWithContent(configJson, configJsonPath);
     this->SetUpServer(configJsonPath.c_str());
     // INFER
@@ -2014,7 +2063,8 @@ TEST_P(MediapipeConfig, MediapipeAdd) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/config_mediapipe_add_adapter_full.json");
+    basePath = basePath + "test/mediapipe/config_mediapipe_add_adapter_full.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     for (auto& graphName : mediaGraphsAdd) {
@@ -2030,7 +2080,8 @@ TEST_P(MediapipeConfig, MediapipeDummyWithDag) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json");
+    basePath = basePath + "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     for (auto& graphName : mediaGraphsDummy) {
@@ -2054,7 +2105,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePaths) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy.json");
+    basePath = basePath + "test/mediapipe/relative_paths/config_relative_dummy.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("graph1");
@@ -2072,7 +2124,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfig) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_add_subconfig.json");
+    basePath = basePath + "test/mediapipe/relative_paths/config_relative_add_subconfig.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("graph1");
@@ -2096,7 +2149,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsSubconfigBasePath) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy_subconfig_base_path.json");
+    basePath = basePath + "test/mediapipe/relative_paths/config_relative_dummy_subconfig_base_path.json";
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionFull = manager.getMediapipeFactory().findDefinitionByName("graphaddadapterfull");
@@ -2120,7 +2174,8 @@ TEST_P(MediapipeConfig, MediapipeFullRelativePathsNegative) {
     ConstructorEnabledModelManager manager;
     std::string basePath = GetParam();
     std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    auto status = manager.startFromFile(basePath + "test/mediapipe/relative_paths/config_relative_dummy_negative.json");
+    basePath = basePath + std::string("test/mediapipe/relative_paths/config_relative_dummy_negative.json");
+    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
     EXPECT_EQ(status, ovms::StatusCode::OK);
 
     auto definitionAdd = manager.getMediapipeFactory().findDefinitionByName("mediapipeAddADAPT");
@@ -2338,6 +2393,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenChangeInputNameInDefinition) {
     const std::string modelPathToReplace{"XYZ"};
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
 
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     createConfigFileWithContent(graphPbtxtFileContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
@@ -2377,6 +2433,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
 
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     std::string defaultGraphDirectoryPath = directoryPath + "/" + graphName;
     std::filesystem::create_directories(defaultGraphDirectoryPath);
@@ -2403,11 +2460,12 @@ class MediapipeSerialization : public ::testing::Test {
             stream_types_mapping_t outputTypes,
             std::vector<std::string> inputNames, std::vector<std::string> outputNames,
             const PythonNodeResourcesMap& pythonNodeResourcesMap,
-            PythonBackend* pythonBackend) :
-            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, pythonBackend) {}
+            MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, nullptr, mediapipeServableMetricReporter) {}
     };
 
 protected:
+    std::unique_ptr<MediapipeServableMetricReporter> reporter;
     std::unique_ptr<MockedMediapipeGraphExecutor> executor;
     ::inference::ModelInferResponse mp_response;
     void SetUp() {
@@ -2421,7 +2479,8 @@ protected:
         const std::vector<std::string> outputNames;
         const ::mediapipe::CalculatorGraphConfig config;
         PythonNodeResourcesMap pythonNodeResourcesMap;
-        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, nullptr);
+        this->reporter = std::make_unique<MediapipeServableMetricReporter>(nullptr, nullptr, "");  // disabled reporter
+        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, this->reporter.get());
     }
 };
 
@@ -2525,6 +2584,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
 
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     std::string defaultGraphDirectoryPath = directoryPath + "/" + graphName;
     std::filesystem::create_directories(defaultGraphDirectoryPath);
@@ -2635,6 +2695,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     std::string graphFilePath = directoryPath + "/graph.pbtxt";
     const std::string modelPathToReplace{"XYZ"};
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
@@ -2650,6 +2711,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     // now we retire the model
     configFileContent = configFileWithGraphPathToReplaceWithoutModel;
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     modelManager.loadConfig(configFilePath);
     model = modelManager.findModelByName("dummy");
@@ -2662,11 +2724,13 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     std::string subconfigFilePath = directoryPath + "/subconfig.json";
     SPDLOG_ERROR("{}", subconfigFilePath);
     configFileContent = configFileWithoutGraph;
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, subconfigFilePath);
     configFileContent = configFileWithGraphPathToReplaceAndSubconfig;
     configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
     const std::string subconfigPathToReplace{"SUBCONFIG_PATH"};
     configFileContent.replace(configFileContent.find(subconfigPathToReplace), subconfigPathToReplace.size(), subconfigFilePath);
+    adjustConfigForTargetPlatform(configFileContent);
     createConfigFileWithContent(configFileContent, configFilePath);
     modelManager.loadConfig(configFilePath);
     model = modelManager.findModelByName("dummy");
@@ -2783,7 +2847,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     // 1st thread starts to load OVMS with C-API but we make it stuck on 2nd graph
     // 2nd thread as soon as sees that 1st MP graph is ready executest inference
     std::string configFilePath = directoryPath + "/config.json";
-    const std::string configContent = R"(
+    std::string configContent = R"(
 {
     "model_config_list": [
         {"config": {
@@ -2805,6 +2869,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
 }
 )";
 
+    adjustConfigForTargetPlatform(configContent);
     createConfigFileWithContent(configContent, configFilePath);
     ovms::Server& server = ovms::Server::instance();
     server.setShutdownRequest(0);
@@ -2940,8 +3005,7 @@ protected:
         ASSERT_EQ(modelManager.createPipeline(executor, this->request.model_name()), ovms::StatusCode::OK);
         using ovms::ExecutionContext;
         ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer};
-        ServableMetricReporter* reporter = nullptr;
-        auto status = executor->infer(&this->request, &response, executionContext, reporter);
+        auto status = executor->infer(&this->request, &response, executionContext);
         EXPECT_EQ(status, expectedStatus) << status.string();
         if (expectedStatus == ovms::StatusCode::OK) {
             ASSERT_EQ(response.outputs_size(), 1);
@@ -3040,7 +3104,7 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
     {typeid(double), {ovms::Precision::FP64, ovms::StatusCode::OK}},
     {typeid(void), {ovms::Precision::BIN, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR}}};
 
-typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t, bool> InferInputTensorContentsTypesToTest;  // TODO add all kfs relevant bool
+typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t, bool> InferInputTensorContentsTypesToTest;
 TYPED_TEST_SUITE(KFSGRPCContentFieldsSupportTest, InferInputTensorContentsTypesToTest);
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentOVTensor = R"(
@@ -3334,7 +3398,6 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "PyTensorOvTensorConverterCalculator",   // integral OVMS calculator
         "PythonExecutorCalculator",  // integral OVMS calculator
         "HttpLLMCalculator",  // integral OVMS calculator
-        "LLMCalculator",  // integral OVMS calculator
 #endif
         "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
         "AddHeaderCalculator",
@@ -3359,6 +3422,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "BeginLoopNormalizedLandmarkListVectorCalculator",
         "BeginLoopNormalizedRectCalculator",
         "BeginLoopRectanglePredictionCalculator",
+        "BeginLoopStringCalculator",
         "BeginLoopTensorCalculator",
         "BeginLoopUint64tCalculator",
         "BoxDetectorCalculator",
@@ -3380,6 +3444,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "ConcatenateFloatVectorCalculator",
         "ConcatenateImageVectorCalculator",
         "ConcatenateInt32VectorCalculator",
+        "ConcatenateJointListCalculator",
         "ConcatenateLandmarListVectorCalculator",
         "ConcatenateLandmarkListCalculator",
         "ConcatenateLandmarkListVectorCalculator",
@@ -3410,6 +3475,8 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "DetectionSerializationCalculator",
         "DetectionsToRectsCalculator",
         "DetectionsToRenderDataCalculator",
+        "EmbeddingsCalculator",
+        "RerankCalculator",
         "EmptyLabelCalculator",
         "EmptyLabelClassificationCalculator",
         "EmptyLabelDetectionCalculator",
@@ -3423,6 +3490,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "EndLoopGpuBufferCalculator",
         "EndLoopImageCalculator",
         "EndLoopImageFrameCalculator",
+        "EndLoopImageSizeCalculator",
         "EndLoopLandmarkListVectorCalculator",
         "EndLoopMatrixCalculator",
         "EndLoopModelApiDetectionClassificationCalculator",
@@ -3455,6 +3523,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "GraphProfileCalculator",
         "HandDetectionsFromPoseToRectsCalculator",
         "HandLandmarksToRectCalculator",
+        "HttpSerializationCalculator",
         "ImageCloneCalculator",
         "ImageCroppingCalculator",
         "ImagePropertiesCalculator",
@@ -3466,6 +3535,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "InstanceSegmentationCalculator",
         "InverseMatrixCalculator",
         "IrisToRenderDataCalculator",
+        "KeypointDetectionCalculator",
         "LandmarkLetterboxRemovalCalculator",
         "LandmarkListVectorSizeCalculator",
         "LandmarkProjectionCalculator",
@@ -3474,7 +3544,6 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "LandmarksSmoothingCalculator",
         "LandmarksToDetectionCalculator",
         "LandmarksToRenderDataCalculator",
-        "LocalFileContentsCalculator",
         "LongLoadingCalculator",
         "MakePairCalculator",
         "MatrixMultiplyCalculator",
@@ -3485,9 +3554,11 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "MergeDetectionsToVectorCalculator",
         "MergeGpuBuffersToVectorCalculator",
         "MergeImagesToVectorCalculator",
+        "ModelInferHttpRequestCalculator",
         "ModelInferRequestImageCalculator",
         "MotionAnalysisCalculator",
         "MuxCalculator",
+        "NegativeCalculator",
         "NoOutputStreamsProducedCalculator",
         "NonMaxSuppressionCalculator",
         "NonZeroCalculator",
@@ -3508,7 +3579,9 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "OpenVINOModelServerSessionCalculator",
         "OpenVINOTensorsToClassificationCalculator",
         "OpenVINOTensorsToDetectionsCalculator",
+#ifndef _WIN32  // TODO windows: stdc++20 required
         "PacketClonerCalculator",
+#endif
         "PacketGeneratorWrapperCalculator",
         "PacketInnerJoinCalculator",
         "PacketPresenceCalculator",
@@ -3522,6 +3595,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "RectToRenderScaleCalculator",
         "RectTransformationCalculator",
         "RefineLandmarksFromHeatmapCalculator",
+        "ResourceProviderCalculator",
         "RoiTrackingCalculator",
         "RotatedDetectionCalculator",
         "RotatedDetectionSerializationCalculator",
@@ -3538,6 +3612,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "SplitDetectionVectorCalculator",
         "SplitFloatVectorCalculator",
         "SplitImageVectorCalculator",
+        "SplitJointListCalculator",
         "SplitLandmarkListCalculator",
         "SplitLandmarkVectorCalculator",
         "SplitMatrixVectorCalculator",
@@ -3572,7 +3647,10 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "ThresholdingCalculator",
         "ToImageCalculator",
         "TrackedDetectionManagerCalculator",
+#ifndef _WIN32  // TODO windows: 'opencv2/optflow.hpp': No such file - will be available with opencv cmake on windows
         "Tvl1OpticalFlowCalculator",
+#endif
+        "TwoInputCalculator",
         "UpdateFaceLandmarksCalculator",
         "VideoPreStreamCalculator",
         "VisibilityCopyCalculator",

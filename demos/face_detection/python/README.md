@@ -1,27 +1,33 @@
 # Face Detection Demo {#ovms_demo_face_detection}
 
+## Prerequisites
+
+**Model preparation**: Python 3.9 or higher with pip 
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+
 ## Overview
 
 The script [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/face_detection/python/face_detection.py) runs face detection inference requests for all the images
-saved in `input_images_dir` directory. 
+saved in `input_images_dir` directory.
 
 The script can adjust the input image size and change the batch size in the request. It demonstrates how to use
 the functionality of dynamic shape in OpenVINO Model Server and how to process the output from the server.
 
-The example relies on the model [face-detection-retail-0004](https://docs.openvinotoolkit.org/2022.1/omz_models_model_face_detection_retail_0004.html).
+The example relies on the model [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/face-detection-retail-0004/README.md).
 
 Clone the repository and enter face_detection directory
-```bash
+```console
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/face_detection/python
 ```
 
 Prepare environment:
-```bash
+```console
 pip install -r ../../common/python/requirements.txt
 ```
 
-```bash
+```console
 python face_detection.py --help
 usage: face_detection.py [-h] [--input_images_dir INPUT_IMAGES_DIR]
                          [--output_dir OUTPUT_DIR] [--batch_size BATCH_SIZE]
@@ -64,15 +70,32 @@ optional arguments:
 
 Start the OVMS service locally:
 
-```bash
-mkdir -p model/1
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml
-docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto
+```console
+curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.bin -o model/1/face-detection-retail-0004.bin
+curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/face-detection-retail-0004/FP32/face-detection-retail-0004.xml -o model/1/face-detection-retail-0004.xml
 ```
 
-Run the client:
+## Deploying OVMS
+
+:::{dropdown} **Deploying with Docker**
 ```bash
+docker run --rm -d -u $(id -u):$(id -g) -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name face-detection --port 9000  --shape auto
+```
+:::
+:::{dropdown} **Deploying on Bare Metal**
+Assuming you have unpacked model server package, make sure to:
+
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+```bat
+cd demos\face_detection\python
+ovms --model_path model --model_name face-detection --port 9000  --shape auto
+```
+:::
+Run the client:
+```console
 mkdir results
 
 python face_detection.py --batch_size 1 --width 300 --height 300 --grpc_port 9000
@@ -214,7 +237,7 @@ time standard deviation: 1.79
 time variance: 3.19
 ```
 
-```bash
+```console
 python face_detection.py --batch_size 4 --width 600 --height 400 --input_images_dir ../../common/static/images/people --output_dir results --grpc_port 9000
 
 ['people3.jpeg', 'people1.jpeg', 'people4.jpeg', 'people2.jpeg']

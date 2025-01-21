@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <optional>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>

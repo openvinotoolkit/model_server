@@ -32,13 +32,17 @@ message LLMCalculatorOptions {
     // model memory cache to allocate in GB
     optional uint64 cache_size  = 3 [default = 8];
 
-    optional uint64 block_size = 4 [default = 32];
+    optional uint64 max_num_seqs = 4 [default = 256];
 
-    optional uint64 max_num_seqs = 5 [default = 256];
+    optional bool dynamic_split_fuse = 5 [default = true];
 
-    optional bool dynamic_split_fuse = 7 [default = true];
+    optional string device = 6 [default = "CPU"];
 
-    optional string device = 8 [default = "CPU"];
+    optional string plugin_config = 7 [default = ""];
 
-    optional string plugin_config = 9 [default = ""];
+    optional uint32 best_of_limit = 8 [default = 20];
+
+    optional uint32 max_tokens_limit = 9 [default = 4096];
+
+    optional bool enable_prefix_caching = 10 [default = false];
 }

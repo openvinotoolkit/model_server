@@ -43,7 +43,6 @@ class NodeSession {
 protected:
     std::unique_ptr<Timer<TIMER_END>> timer;
     std::unique_ptr<NodeInputHandler> inputHandler;
-    std::unique_ptr<NodeOutputHandler> outputHandler;
 
 public:
     NodeSession(const NodeSessionMetadata& metadata, const std::string& nodeName, uint32_t inputsCount, const CollapseDetails& collapsingDetails);
@@ -54,7 +53,7 @@ public:
     const session_key_t& getSessionKey() const { return sessionKey; }
     bool isReady() const;
     virtual void release() {}
-    virtual bool tryDisarm(uint microseconds) { return true; }
+    virtual bool tryDisarm(uint32_t microseconds) { return true; }
     Status notifyFinishedDependency();
     Timer<TIMER_END>& getTimer() const;
 };

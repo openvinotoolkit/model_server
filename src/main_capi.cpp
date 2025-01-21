@@ -26,6 +26,13 @@
 #include <signal.h>
 #include <stdio.h>
 
+#ifdef _WIN32
+#include <csignal>
+
+#include <ntstatus.h>
+#include <windows.h>
+#endif
+
 #include "ovms.h"  // NOLINT
 
 const char* MODEL_NAME = "dummy";
@@ -50,6 +57,7 @@ static void onIllegal(int status) {
     shutdown_request = 2;
 }
 
+#ifdef __linux__
 static void installSignalHandlers() {
     static struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = onInterrupt;
@@ -69,6 +77,31 @@ static void installSignalHandlers() {
     sigIllHandler.sa_flags = 0;
     sigaction(SIGILL, &sigIllHandler, NULL);
 }
+
+#elif _WIN32
+
+static BOOL WINAPI onConsoleEvent(DWORD event) {
+    switch (event) {
+    case CTRL_C_EVENT:
+        onInterrupt(SIGINT);
+        return TRUE;
+    case CTRL_CLOSE_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
+        onTerminate(SIGTERM);
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+static void installSignalHandlers() {
+    SetConsoleCtrlHandler(onConsoleEvent, TRUE);
+    signal(SIGINT, onInterrupt);
+    signal(SIGTERM, onTerminate);
+    signal(SIGILL, onIllegal);
+}
+
+#endif
 
 int main(int argc, char** argv) {
     installSignalHandlers();
@@ -97,7 +130,7 @@ int main(int argc, char** argv) {
     OVMS_ServerSettingsSetRestPort(serverSettings, 11338);
 
     OVMS_ServerSettingsSetLogLevel(serverSettings, OVMS_LOG_DEBUG);
-    OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/c_api/config_standard_dummy.json");
+    OVMS_ModelsSettingsSetConfigPath(modelsSettings, "/ovms/src/test/configs/config_standard_dummy.json");
 
     OVMS_Status* res = OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings);
 
@@ -134,7 +167,7 @@ int main(int argc, char** argv) {
         const char* details = 0;
         OVMS_StatusCode(res, &code);
         OVMS_StatusDetails(res, &details);
-        std::cout << "Error occured during inference. Code:" << code
+        std::cout << "Error occurred during inference. Code:" << code
                   << ", details:" << details << std::endl;
         OVMS_StatusDelete(res);
         OVMS_InferenceRequestDelete(request);

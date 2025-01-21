@@ -31,14 +31,7 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 cc_library(
     name = "llm_engine",
     srcs = [],
-    deps = select({
-            "//:ubuntu_build": [
-                "@llm_engine//:llm_engine_ubuntu",
-            ],
-            "//:redhat_build": [
-                "@llm_engine//:llm_engine_redhat",
-            ],
-        }),
+    deps =  ["@llm_engine//:llm_engine"],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
@@ -47,18 +40,22 @@ cc_library(
 
 cc_library(
     name = "llmcalculator",
-    srcs = ["llm_calculator.cc", "http_llm_calculator.cc"],
+    srcs = ["http_llm_calculator.cc"],
     deps = [
-        "@linux_openvino//:openvino",
+        "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
         ":llm_engine",
         ":llmnoderesources",
-        ":httppayload",
+        "//src:httppayload",
+        "//src:libhttpclientconnection",
+        ":text_processor",
+        ":openai_completions_api_handler"
     ],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
@@ -75,11 +72,28 @@ mediapipe_proto_library(
 )
 
 cc_library(
+    name = "openai_completions_api_handler",
+    hdrs = ["apis/openai_completions.hpp"],
+    srcs = ["apis/openai_completions.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
+        ":llm_engine",
+        "//src:libovmsprofiler",
+        "//third_party:opencv",
+    ],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
     name = "llmnoderesources",
     hdrs = ["llmnoderesources.hpp", "llm_executor.hpp",],
     srcs = ["llmnoderesources.cpp",],
     deps = [
-        "@linux_openvino//:openvino",
+        "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libmodelconfigjsonparser",
@@ -90,6 +104,7 @@ cc_library(
         "llmcalculator_cc_proto",
         ":llm_engine",
         "//src/python:utils",
+        ":text_processor",
     ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -99,11 +114,14 @@ cc_library(
 )
 
 cc_library(
-    name = "httppayload",
-    srcs = ["http_payload.hpp",],
-    deps = [
-        "@com_github_tencent_rapidjson//:rapidjson",
-    ],
+    name = "text_processor",
+    hdrs = ["text_processor.hpp"],
+    srcs = ["text_processor.cpp"],
+    deps = ["@mediapipe//mediapipe/framework:calculator_framework",
+            "//third_party:openvino",
+            "//src:libovmslogging",
+            "//src/python:utils",
+    ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,

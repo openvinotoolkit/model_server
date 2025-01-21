@@ -137,7 +137,7 @@ class PythonExecutorCalculator : public CalculatorBase {
 
     void generate(CalculatorContext* cc, mediapipe::Timestamp& timestamp) {
         py::list pyOutputs = py::cast<py::list>(*pyIteratorPtr->getObject());
-        pushOutputs(cc, pyOutputs, timestamp, true);
+        pushOutputs(cc, std::move(pyOutputs), timestamp, true);
         ++(pyIteratorPtr->getObject());  // increment iterator
     }
 
@@ -151,11 +151,11 @@ class PythonExecutorCalculator : public CalculatorBase {
 
     void handleExecutionResult(CalculatorContext* cc, py::object executionResult) {
         if (py::isinstance<py::list>(executionResult)) {
-            pushOutputs(cc, executionResult, outputTimestamp, false);
+            pushOutputs(cc, std::move(executionResult), outputTimestamp, false);
         } else if (py::isinstance<py::iterator>(executionResult)) {
             if (!hasLoopback)
                 throw BadPythonNodeConfigurationError("Execute yielded, but LOOPBACK is not defined in the node");
-            initializeGenerator(executionResult);
+            initializeGenerator(std::move(executionResult));
             generate(cc, outputTimestamp);
         } else {
             throw UnexpectedPythonObjectError(executionResult, "list or generator");
@@ -215,7 +215,7 @@ public:
                 if (!generatorFinished()) {
                     generate(cc, outputTimestamp);
                 } else {
-                    LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] finished generating. Reseting the generator.";
+                    LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] finished generating. Resetting the generator.";
                     resetGenerator();
                 }
             } else {
@@ -227,7 +227,7 @@ public:
                 std::vector<py::object> pyInputs;
                 prepareInputs(cc, &pyInputs);
                 py::object executeResult = std::move(nodeResources->ovmsPythonModel->attr("execute")(pyInputs));
-                handleExecutionResult(cc, executeResult);
+                handleExecutionResult(cc, std::move(executeResult));
             }
         } catch (const UnexpectedOutputTensorError& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();

@@ -36,8 +36,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             curl \
             ca-certificates \
             git \
+            gpg \
             libcurl4-openssl-dev \
             libssl-dev \
+            libva-dev \
             libxml2-dev \
             patch \
             pkg-config \
@@ -61,7 +63,8 @@ sed -i -e 's|#if PTHREAD_STACK_MIN > 0|#ifdef PTHREAD_STACK_MIN|g' boost/thread/
 --with-log --with-locale \
 install
 
-COPY third_party /ovms/third_party/
+COPY third_party/azure /ovms/third_party/azure
+COPY third_party/cpprest /ovms/third_party/cpprest
 
 ####### Azure SDK
 WORKDIR /azure
@@ -80,6 +83,7 @@ RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="-fPIC -Wno-erro
 ####### End of Azure SDK
 
 ####### Build OpenCV
+COPY third_party/opencv /ovms/third_party/opencv
 WORKDIR /ovms/third_party/opencv
 RUN ./install_opencv.sh
 ####### End of OpenCV
@@ -90,13 +94,16 @@ ARG BASE_IMAGE
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG debug_bazel_flags="--strip=always --define MEDIAPIPE_DISABLE=0 --define PYTHON_DISABLE=0 --//:distro=ubuntu"
+ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=ubuntu"
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
             libgflags-dev \
             bc \
+            ca-certificates \
+            curl \
             default-jdk \
             lcov \
+            less \
             libpugixml1v5 \
             libusb-dev \
             libusb-1.0-0-dev \
@@ -107,19 +114,20 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             python2 \
             python2-dev \
             python3-dev \
+            python3-venv \
             python3-pip \
             unzip \
             gdb \
-            vim \
-            xz-utils && \
+            vim && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/* && \
     python3 -m pip install "numpy<2.0.0" --no-cache-dir  && \
-    python3 -m pip install "Jinja2==3.1.4" --no-cache-dir
+    python3 -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2" --no-cache-dir
+
+RUN apt-get update; apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 ARG JOBS=8
 ARG ov_use_binary=0
-ARG tokenizers=1
 ARG ov_source_org=openvinotoolkit
 ARG ov_contrib_org=openvinotoolkit
 ARG DLDT_PACKAGE_URL
@@ -129,6 +137,16 @@ ARG CMAKE_BUILD_TYPE=Release
 
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
 ENV TF_SYSTEM_LIBS="curl"
+
+# Set up Bazel
+ENV BAZEL_VERSION 6.1.1
+WORKDIR /bazel
+RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
+    chmod +x bazel-*.sh && \
+    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 ARG NVIDIA=0
 # hadolint ignore=DL3003
@@ -138,21 +156,19 @@ RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https:/
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; pip install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; pip install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
-RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
+RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/extras && \
     mkdir -p /opt/intel/openvino && \
-    ln -s /openvino/inference-engine/temp/opencv_*_ubuntu20/opencv /opt/intel/openvino/extras && \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
-    ln -s /opt/intel/openvino /opt/intel/openvino_2024
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/Release/python /opt/intel/openvino/
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
+    ln -s /opt/intel/openvino /opt/intel/openvino_2025
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/${CMAKE_BUILD_TYPE}/python /opt/intel/openvino/
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
 
 ################## END OF OPENVINO SOURCE BUILD ######################
 
@@ -167,7 +183,14 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     mkdir /opt/intel && \
     tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
-    ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2024
+    ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2025
+
+# update oneTBB
+RUN wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.13.0/oneapi-tbb-2021.13.0-lin.tgz && \
+    tar -zxf oneapi-tbb-2021.13.0-lin.tgz && \
+    rm /opt/intel/openvino/runtime/3rdparty/tbb/lib/*.so* && \
+    cp -vP oneapi-tbb-2021.13.0/lib/intel64/gcc4.8/*.so* /opt/intel/openvino/runtime/3rdparty/tbb/lib/ && \
+    rm -f /opt/intel/openvino/oneapi-tbb-2021.13.0-lin.tgz
 
 WORKDIR /
 # install sample apps including benchmark_app
@@ -179,9 +202,9 @@ ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
 
 ARG ov_tokenizers_branch=master
 # hadolint ignore=DL3003
-RUN if [[ "$tokenizers" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
+RUN  git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 WORKDIR /openvino_tokenizers/build
-RUN if [ "$tokenizers" == "1" ] ; then true ; else exit 0 ; fi ; cmake .. -DCMAKE_BUILD_TYPE=Release && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
+RUN cmake .. -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
 
 # NVIDIA
 ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
@@ -189,6 +212,9 @@ ENV OPENVINO_HOME=/openvino
 ENV OPENVINO_CONTRIB=/openvino_contrib
 
 # Add Nvidia dev tool if needed
+RUN apt-get update ; \
+    apt-get install -y --no-install-recommends opencl-clhpp-headers opencl-c-headers intel-opencl-icd && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;
 # hadolint ignore=DL3003
 RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     set -exuo pipefail ; \
@@ -230,18 +256,18 @@ RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
     cp /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /opt/intel/openvino/runtime/lib/intel64 && \
     echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /opt/intel/openvino/runtime/lib/intel64/plugins.xml
 
-# Set up Bazel
-ENV BAZEL_VERSION 6.0.0
-WORKDIR /bazel
-RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
-    chmod +x bazel-*.sh && \
-    ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
+
+WORKDIR /ovms
+# GPU testing in build img
+COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
+ARG INSTALL_DRIVER_VERSION="23.22.26516"
+RUN /tmp/install_gpu_drivers.sh && \
+    groupadd --gid 5000 ovms && \
+    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
+# GPU testing in build img
 
 # Build OpenVINO Model Server
-WORKDIR /ovms
-COPY .bazelrc WORKSPACE /ovms/
+COPY .bazelrc .user.bazelr[c] .bazelversion WORKSPACE /ovms/
 COPY external /ovms/external/
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
@@ -260,14 +286,10 @@ COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
-# prebuild dependencies before copying sources
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies
+# prebuild dependencies before copying sources & test dependencies for caching
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
 COPY src/ /ovms/src/
-
-# run python testes on a version from os not TFS
-ARG RUN_TESTS=1
-RUN if [ "$RUN_TESTS" == "1" ] ; then bazel test --jobs=$JOBS ${debug_bazel_flags} --test_timeout=1800 --test_summary=detailed --test_output=streamed --test_filter=* //src/python/binding:test_python_binding; fi ;
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
@@ -279,60 +301,44 @@ COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classi
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
-RUN make
+RUN make && cp libcustom_relu_cpu_extension.so /opt
 
-RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2024.2.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2024.2' > /opt/intel/openvino/python/openvino-2024.2.dist-info/METADATA
+RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
+    mkdir -p /opt/intel/openvino/python/openvino-2025.0.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.0' > /opt/intel/openvino/python/openvino-2025.0.dist-info/METADATA
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2024.2"
-ARG PROJECT_NAME="OpenVINO Model Server"
-LABEL description=${PROJECT_NAME}
+ARG PROJECT_VERSION="2025.0"
+LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 # Set OVMS version strings
-RUN bash -c "sed -i -e 's|REPLACE_PROJECT_NAME|${PROJECT_NAME}|g' /ovms/src/version.hpp" && \
-    bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" && \
-    if [ "$ov_use_binary" == "1" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[0-9]+.[^_]+')#g" /ovms/src/version.hpp ; fi && \
+RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" && \
+    if [ "$ov_use_binary" == "1" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[^_]+')#g" /ovms/src/version.hpp ; fi && \
     if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
 
+WORKDIR /usr/lib/x86_64-linux-gnu/
+RUN ln -s libOpenCL.so.1 libOpenCL.so
+WORKDIR /ovms
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
-COPY rununittest.sh /ovms/
-RUN ./rununittest.sh
-
-# C api shared library
-# hadolint ignore=DL3059
-ARG CAPI_FLAGS="--strip=always --define MEDIAPIPE_DISABLE=1 --define PYTHON_DISABLE=1 --//:distro=ubuntu"
-RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
-
+COPY run_unit_tests.sh prepare_llm_models.sh install_va.sh /ovms/
+ARG RUN_TESTS=0
+RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
 ARG FUZZER_BUILD=0
-# C api app with bazel
-# hadolint ignore=DL3059
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${CAPI_FLAGS} --jobs $JOBS //src:capi_cpp_example; fi;
-
-# C-API benchmark app
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;
-
 # Custom Nodes
+# hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes; fi;
 
 # OVMS
 # hadolint ignore=DL3059
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms; fi;
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms //src:ovms_test; fi;
 
 # hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so; fi;
-
-# C-api C/C++ app with gcc
-COPY MakefileCapi /ovms/
-RUN if [ "$FUZZER_BUILD" == "0" ]; then  CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi cpp && \
-                                         CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi c; fi ;
-
 
 RUN if [ "$FUZZER_BUILD" == "0" ]; then /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms; fi;
 
@@ -344,7 +350,32 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-FROM $BUILD_IMAGE as pkg
+
+FROM $BUILD_IMAGE as capi-build
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+# C api shared library
+# hadolint ignore=DL3059
+ARG CAPI_FLAGS="--strip=always --config mp_off_py_off --//:distro=ubuntu"
+ARG JOBS=40
+ARG FUZZER_BUILD=0
+RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
+
+# C-API benchmark app
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;
+
+ARG FUZZER_BUILD=0
+# C api app with bazel
+# hadolint ignore=DL3059
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${CAPI_FLAGS} --jobs $JOBS //src:capi_cpp_example; fi;
+
+# C-api C/C++ app with gcc
+COPY MakefileCapi /ovms/
+RUN if [ "$FUZZER_BUILD" == "0" ]; then  CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi cpp && \
+                                         CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi c; fi ;
+RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_shared.so' -exec cp -v {} /ovms_release/lib/ \;
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+FROM build as pkg
 
 RUN mkdir /patchelf
 WORKDIR /patchelf
@@ -358,12 +389,12 @@ ARG BASE_OS=ubuntu
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
 ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg
+COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
 COPY create_package.sh /
 RUN ./create_package.sh
 
-RUN groupadd --gid 5000 ovms && useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --shell /bin/bash --skel /dev/null ovms && \
-    chown -R ovms:ovms /ovms_release
-RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
+RUN chown -R ovms:ovms /ovms_release && \
+    mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
 # Remove capi library
 RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; fi ;
 
@@ -371,13 +402,14 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 
 FROM $BASE_IMAGE as release
 ARG INSTALL_RPMS_FROM_URL=
-ARG INSTALL_DRIVER_VERSION="23.22.26516"
+ARG INSTALL_DRIVER_VERSION="24.26.30049"
 ARG GPU=0
+ARG NPU=0
 ARG NVIDIA=0
 ENV DEBIAN_FRONTEND=noninteractive
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}
-LABEL supported-devices="CPU=1 GPU=${GPU} NVIDIA=${NVIDIA}"
+LABEL supported-devices="CPU=1 GPU=${GPU} NPU=${NPU} NVIDIA=${NVIDIA}"
 ARG BASE_IMAGE
 LABEL base-image=${BASE_IMAGE}
 ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
@@ -387,96 +419,28 @@ WORKDIR /
 
 COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ARG INSTALL_DRIVER_VERSION="24.39.31294"
+COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 # hadolint ignore=DL3003,SC2164
-RUN     apt-get update -y ; \
-    apt-get install -y curl ca-certificates libpugixml1v5 --no-install-recommends && \
-        if [ "$GPU" == "1" ] ; then \
-            apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
-                case $INSTALL_DRIVER_VERSION in \
-                "21.48.21782") \
-                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-gmmlib_21.3.3_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-core_1.0.9441_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.9441/intel-igc-opencl_1.0.9441_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-opencl-icd_21.48.21782_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/21.48.21782/intel-level-zero-gpu_1.2.21782_amd64.deb ; \
-                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
-                ;; \
-                "22.10.22597") \
-                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-gmmlib_22.0.2_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-core_1.0.10409_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.10409/intel-igc-opencl_1.0.10409_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-opencl-icd_22.10.22597_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/22.10.22597/intel-level-zero-gpu_1.3.22597_amd64.deb ; \
-                        dpkg -i intel*.deb && rm -Rf /tmp/gpu_deps ; \
-                ;; \
-                "22.35.24055") \
-                        apt-get update && apt-get install -y --no-install-recommends gpg gpg-agent && \
-                        curl https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
-                        echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-legacy main' | tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
-                        apt-get update && \
-                        apt-get install -y --no-install-recommends \
-                        intel-opencl-icd=22.35.24055+i815~u20.04 \
-                        intel-level-zero-gpu=1.3.24055+i815~u20.04 \
-                        level-zero=1.8.5+i815~u20.04 && \
-                        apt-get purge gpg gpg-agent --yes && apt-get --yes autoremove && \
-                        apt-get clean ; \
-                        rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
-                ;; \
-                "22.43.24595") \
-                        apt-get update && apt-get install -y --no-install-recommends gpg gpg-agent && \
-                        curl https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
-                        echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-legacy main' | tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
-                        apt-get update && \
-                        apt-get install -y --no-install-recommends \
-                        intel-opencl-icd=22.43.24595.35+i538~20.04 \
-                        intel-level-zero-gpu=1.3.24595.35+i538~20.04 \
-                        level-zero=1.8.8+i524~u20.04 && \
-                        apt-get purge gpg gpg-agent --yes && apt-get --yes autoremove && \
-                        apt-get clean ; \
-                        rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
-                ;; \
-                "23.13.26032") \
-                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.05.25593.11/libigdgmm12_22.3.0_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13700.14/intel-igc-core_1.0.13700.14_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.13700.14/intel-igc-opencl_1.0.13700.14_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.13.26032.30/intel-opencl-icd_23.13.26032.30_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.13.26032.30/libigdgmm12_22.3.0_amd64.deb ; \
-                        dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
-                ;; \
-                "23.22.26516") \
-                        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/intel-level-zero-gpu_1.3.26516.18_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.14062.11/intel-igc-core_1.0.14062.11_amd64.deb ; \
-                        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.14062.11/intel-igc-opencl_1.0.14062.11_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/intel-opencl-icd_23.22.26516.18_amd64.deb ; \
-                        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/libigdgmm12_22.3.0_amd64.deb ; \
-                        dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
-                ;; \
-
-                *) \
-                        dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
-                        apt-get update && apt-get -y --no-install-recommends install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
-                        cd /drivers/${INSTALL_DRIVER_VERSION} && \
-                            dpkg-scanpackages .  > Packages && \
-                            cd - ; \
-                        echo "deb [trusted=yes arch=amd64] file:/drivers/${INSTALL_DRIVER_VERSION} ./" > /etc/apt/sources.list.d/intel-graphics-${INSTALL_DRIVER_VERSION}.list ; \
-                        apt-get update && \
-                        apt-get install -y --no-install-recommends \
-                            intel-opencl-icd \
-                            intel-level-zero-gpu level-zero \
-                            intel-media-va-driver-non-free libmfx1 && \
-                            rm -rf /var/lib/apt/lists/* ; \
-                esac ; \
-        fi ; \
-        apt-get clean ; \
-        rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ; \
-        groupadd --gid 5000 ovms ; \
-        useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
-
-RUN apt-get update && apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+RUN apt-get update ; \
+    apt-get install -y --no-install-recommends curl ca-certificates libxml2 && \
+    if [ "$GPU" == "1" ] ; then \
+	/tmp/install_gpu_drivers.sh ; \
+    fi ; \
+    if [ "$NPU" == "1" ] ; then \
+        mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
+        apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
+        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-driver-compiler-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
+        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-fw-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
+        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-level-zero-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
+        curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.44/level-zero_1.17.44+u22.04_amd64.deb ; \
+        dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
+    fi ; \
+    apt-get clean ; \
+    rm -rf /tmp/install_gpu_drivers.sh && \
+    rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* && \
+    groupadd --gid 5000 ovms && \
+    useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 # for NVIDIA
 RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda apt package"; \
@@ -486,13 +450,13 @@ RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cud
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 COPY --from=pkg /ovms_release /ovms
-COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-2.1.5.dist-info /ovms/python_deps/MarkupSafe-2.1.5.dist-info
+COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_deps/jinja2
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.4.dist-info /ovms/python_deps/jinja2-3.1.4.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe
 
 # For image with Python enabled install Python library
-RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; \
+RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     apt-get update -y ; \
     if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then python_version=3.10; else python_version=3.8; fi; \
     apt-get install libpython$python_version --no-install-recommends -y && \
@@ -500,6 +464,6 @@ RUN if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit
 
 ENV LD_LIBRARY_PATH=/ovms/lib
 
-RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/ubuntu20/" > /ovms/thirdparty-licenses/GPL.txt
+RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]

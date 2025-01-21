@@ -188,12 +188,12 @@ void PipelineDefinition::retire(ModelManager& manager) {
     this->connections.clear();
 }
 
-Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
+Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds) {
     unloadGuard = std::make_unique<PipelineDefinitionUnloadGuard>(*this);
 
-    const uint waitLoadedTimestepMicroseconds = 1000;
-    const uint waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
-    uint waitCheckpointsCounter = waitCheckpoints;
+    const uint32_t waitLoadedTimestepMicroseconds = 1000;
+    const uint32_t waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
+    uint32_t waitCheckpointsCounter = waitCheckpoints;
     std::mutex cvMtx;
     std::unique_lock<std::mutex> cvLock(cvMtx);
     while (waitCheckpointsCounter-- != 0) {
@@ -230,7 +230,7 @@ Status PipelineDefinition::waitForLoaded(std::unique_ptr<PipelineDefinitionUnloa
             return StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE;
         }
     }
-    SPDLOG_DEBUG("Succesfully waited for pipeline definition: {}", getName());
+    SPDLOG_DEBUG("Successfully waited for pipeline definition: {}", getName());
     return StatusCode::OK;
 }
 
@@ -482,7 +482,7 @@ public:
     Status checkConnectionMappedToExistingDataSource(const NodeInfo& dependencyNodeInfo, const std::string& dataSource) {
         // Check whether dependency node is configured to have required output.
         if (dependencyNodeInfo.outputNameAliases.count(dataSource) == 0) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Missing dependency node: {} data item: {} for dependant node: {}",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Missing dependency node: {} data item: {} for dependent node: {}",
                 pipelineName,
                 dependencyNodeInfo.nodeName,
                 dataSource,
@@ -529,14 +529,14 @@ public:
                     return StatusCode::PIPELINE_DEMULTIPLY_COUNT_DOES_NOT_MATCH_TENSOR_SHARD_COUNT;
                 }
             } else {
-                SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is fixed while first dimenson value of node library is not: {}. This pipeline may fail at execution stage.",
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is fixed while first dimension value of node library is not: {}. This pipeline may fail at execution stage.",
                     this->pipelineName,
                     demultiplicatorNodeInfo.demultiplyCount.value(),
                     demultiplicatorNodeInfo.nodeName,
                     shape[0].toString());
             }
         } else if (!shape[0].isAny()) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is dynamic while first dimenson value of gather node is not: {}. This pipeline may fail at execution stage.",
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Pipeline: {}; Demultiply count: {} of node: {} is dynamic while first dimension value of gather node is not: {}. This pipeline may fail at execution stage.",
                 this->pipelineName,
                 demultiplicatorNodeInfo.demultiplyCount.value(),
                 demultiplicatorNodeInfo.nodeName,
@@ -589,7 +589,7 @@ public:
             }
             result = influenceShapeWithDemultiplexer(tensorInputShape, *demultiplicatorNode);
             if (!result.ok()) {
-                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of gather_from node: {} does not match tensor first dimenson value: {} of node: {}",
+                SPDLOG_LOGGER_ERROR(dag_executor_logger, "Validation of pipeline: {} definition failed. Demultiply count: {} of gather_from node: {} does not match tensor first dimension value: {} of node: {}",
                     this->pipelineName,
                     demultiplicatorNode->demultiplyCount.value(),
                     demultiplicatorNode->nodeName,
@@ -604,7 +604,7 @@ public:
             return StatusCode::PIPELINE_MANUAL_GATHERING_FROM_MULTIPLE_NODES_NOT_SUPPORTED;
         }
         if (!areShapesMatching(tensorInputShape, tensorOutputShape)) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Shape mismatch between: dependant node: {}; input: {}; shape: {} vs dependency node: {}; output: {}; shape: {}",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Shape mismatch between: dependent node: {}; input: {}; shape: {} vs dependency node: {}; output: {}; shape: {}",
                 pipelineName,
                 dependantNodeInfo.nodeName,
                 modelInputName,
@@ -615,7 +615,7 @@ public:
             return StatusCode::INVALID_SHAPE;
         }
         if (tensorInput->getPrecision() != tensorOutput->getPrecision()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Precision mismatch between: dependant node: {}; input: {}; precision: {} vs dependency node: {}; output: {}; precision: {}",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Precision mismatch between: dependent node: {}; input: {}; precision: {} vs dependency node: {}; output: {}; precision: {}",
                 pipelineName,
                 dependantNodeInfo.nodeName,
                 modelInputName,
@@ -626,7 +626,7 @@ public:
             return StatusCode::INVALID_PRECISION;
         }
         if (tensorInput->getPrecision() == Precision::STRING) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Connecting models with string precision is unsupported: dependant node: {}; input: {}; precision: {} vs dependency node: {}; output: {}; precision: {}",
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Validation of pipeline: {} definition failed. Connecting models with string precision is unsupported: dependent node: {}; input: {}; precision: {} vs dependency node: {}; output: {}; precision: {}",
                 pipelineName,
                 dependantNodeInfo.nodeName,
                 modelInputName,
@@ -1135,7 +1135,7 @@ static Status updateInputsInfoWithNodeConnection(tensor_map_t& inputsInfo, const
                     newTensorInfo->asString());
                 return status;
             }
-            inputsInfo[alias] = intersectionTensorInfo;
+            inputsInfo[alias] = std::move(intersectionTensorInfo);
             return StatusCode::OK;
         }
     }
@@ -1192,7 +1192,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
                 }
                 status = updateInputsInfoWithNodeConnections(inputsInfo,
                     specificDependencyMapping,
-                    [&instance](const std::string& realName) {
+                    [&instance](const std::string& realName) -> const TensorInfo& {
                         return *instance->getInputsInfo().at(realName);
                     });
                 if (!status.ok()) {
@@ -1214,7 +1214,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
 
                 status = updateInputsInfoWithNodeConnections(inputsInfo,
                     specificDependencyMapping,
-                    [&info](const std::string& realName) {
+                    [&info](const std::string& realName) -> const TensorInfo& {
                         return *info.at(realName);
                     });
                 if (!status.ok()) {
@@ -1224,7 +1224,7 @@ Status PipelineDefinition::updateInputsInfo(const ModelManager& manager) {
             }
             default: {
                 // Pipeline validation does not allow connections into entry node.
-                SPDLOG_ERROR("Unexpected dependant node kind (name: {})", this->getName());
+                SPDLOG_ERROR("Unexpected dependent node kind (name: {})", this->getName());
                 return StatusCode::UNKNOWN_ERROR;
             }
             }
@@ -1363,7 +1363,7 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
             return;
         }
         if (info.gatherFromNode.count(nodeName) > 0) {
-            auto someNodeInfo = this->findNodeByName(nodeName);
+            const auto& someNodeInfo = this->findNodeByName(nodeName);
             dimension_value_t demultiplyCount = static_cast<dimension_value_t>(someNodeInfo.demultiplyCount.value_or(0));
             Dimension dim = demultiplyCount == 0 ? Dimension::any() : Dimension(demultiplyCount);
             if (dim.isAny()) {

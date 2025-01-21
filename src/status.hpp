@@ -29,7 +29,7 @@ enum class StatusCode {
     PATH_INVALID,        /*!< The provided path is invalid or doesn't exists */
     FILE_INVALID,        /*!< File not found or cannot open */
     CONFIG_FILE_INVALID, /*!< Config file not found or cannot open */
-    FILESYSTEM_ERROR,    /*!< Underlaying filesystem error */
+    FILESYSTEM_ERROR,    /*!< Underlying filesystem error */
     MODEL_NOT_LOADED,
     JSON_INVALID,             /*!< The file/content is not valid json */
     JSON_SERIALIZATION_ERROR, /*!< Data serialization to json format failed */
@@ -60,6 +60,8 @@ enum class StatusCode {
     ALLOW_CACHE_WITH_CUSTOM_LOADER,
     LAYOUT_INCOMPATIBLE_WITH_SHAPE,
     MODEL_WITH_SCALAR_AUTO_UNSUPPORTED,
+    OV_NO_INPUTS,
+    OV_NO_OUTPUTS,
 
     // Model management
     MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */
@@ -107,10 +109,10 @@ enum class StatusCode {
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */
-    OV_INTERNAL_DESERIALIZATION_ERROR,        /*!< Error occured during deserialization */
+    OV_INTERNAL_DESERIALIZATION_ERROR,        /*!< Error occurred during deserialization */
 
     // Inference
-    OV_INTERNAL_INFERENCE_ERROR, /*!< Error occured during inference */
+    OV_INTERNAL_INFERENCE_ERROR, /*!< Error occurred during inference */
 
     // Serialization
     OV_UNSUPPORTED_SERIALIZATION_PRECISION, /*!< Unsupported serializaton precision */
@@ -172,29 +174,30 @@ enum class StatusCode {
     UNKNOWN_REQUEST_COMPONENTS_TYPE, /*!< Components type not recognized */
 
     // REST Parse
-    REST_BODY_IS_NOT_AN_OBJECT,                   /*!< REST body should be JSON object */
-    REST_PREDICT_UNKNOWN_ORDER,                   /*!< Could not detect order (row/column) */
-    REST_INSTANCES_NOT_AN_ARRAY,                  /*!< When parsing row order, instances must be an array */
-    REST_NAMED_INSTANCE_NOT_AN_OBJECT,            /*!< When parsing named instance it needs to be an object */
-    REST_INPUT_NOT_PREALLOCATED,                  /*!< When parsing no named instance, exactly one input need to be preallocated */
-    REST_NO_INSTANCES_FOUND,                      /*!< Missing instances in row order */
-    REST_INSTANCES_NOT_NAMED_OR_NONAMED,          /*!< Unknown instance format, neither named or nonamed */
-    REST_COULD_NOT_PARSE_INSTANCE,                /*!< Error while parsing instance content, not valid ndarray */
-    REST_INSTANCES_BATCH_SIZE_DIFFER,             /*!< In row order 0-th dimension (batch size) must be equal for all inputs */
-    REST_INPUTS_NOT_AN_OBJECT,                    /*!< When parsing column order, inputs must be an object */
-    REST_NO_INPUTS_FOUND,                         /*!< Missing inputs in column order */
-    REST_COULD_NOT_PARSE_INPUT,                   /*!< Error while parsing input content, not valid ndarray */
-    REST_COULD_NOT_PARSE_OUTPUT,                  /*!< Error while parsing output content */
-    REST_COULD_NOT_PARSE_PARAMETERS,              /*!< Error while parsing request parameters */
-    REST_PROTO_TO_STRING_ERROR,                   /*!< Error while parsing ResponseProto to JSON string */
-    REST_BASE64_DECODE_ERROR,                     /*!< Error while decoding base64 REST binary input */
-    REST_UNSUPPORTED_PRECISION,                   /*!< Unsupported conversion from tensor_content to _val container */
-    REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE,   /*!< Size of data in tensor_content does not match declared tensor shape */
-    REST_SERIALIZE_VAL_FIELD_INVALID_SIZE,        /*!< Number of elements in xxx_val field does not match declared tensor shape */
-    REST_BINARY_DATA_SIZE_PARAMETER_INVALID,      /*!< binary_data_size parameter is invalid and cannot be parsed*/
-    REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID, /*!< inferenceHeaderContentLength parameter is invalid and cannot be parsed*/
-    REST_BINARY_BUFFER_EXCEEDED,                  /*!< Received buffer size is smaller than binary_data_size parameter indicates*/
-    REST_CONTENTS_FIELD_NOT_EMPTY,                /*!< Request contains values both in binary data and in content value*/
+    REST_BODY_IS_NOT_AN_OBJECT,                    /*!< REST body should be JSON object */
+    REST_PREDICT_UNKNOWN_ORDER,                    /*!< Could not detect order (row/column) */
+    REST_INSTANCES_NOT_AN_ARRAY,                   /*!< When parsing row order, instances must be an array */
+    REST_NAMED_INSTANCE_NOT_AN_OBJECT,             /*!< When parsing named instance it needs to be an object */
+    REST_INPUT_NOT_PREALLOCATED,                   /*!< When parsing no named instance, exactly one input need to be preallocated */
+    REST_NO_INSTANCES_FOUND,                       /*!< Missing instances in row order */
+    REST_INSTANCES_NOT_NAMED_OR_NONAMED,           /*!< Unknown instance format, neither named or nonamed */
+    REST_COULD_NOT_PARSE_INSTANCE,                 /*!< Error while parsing instance content, not valid ndarray */
+    REST_INSTANCES_BATCH_SIZE_DIFFER,              /*!< In row order 0-th dimension (batch size) must be equal for all inputs */
+    REST_INPUTS_NOT_AN_OBJECT,                     /*!< When parsing column order, inputs must be an object */
+    REST_NO_INPUTS_FOUND,                          /*!< Missing inputs in column order */
+    REST_COULD_NOT_PARSE_INPUT,                    /*!< Error while parsing input content, not valid ndarray */
+    REST_COULD_NOT_PARSE_OUTPUT,                   /*!< Error while parsing output content */
+    REST_COULD_NOT_PARSE_PARAMETERS,               /*!< Error while parsing request parameters */
+    REST_PROTO_TO_STRING_ERROR,                    /*!< Error while parsing ResponseProto to JSON string */
+    REST_BASE64_DECODE_ERROR,                      /*!< Error while decoding base64 REST binary input */
+    REST_UNSUPPORTED_PRECISION,                    /*!< Unsupported conversion from tensor_content to _val container */
+    REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE,    /*!< Size of data in tensor_content does not match declared tensor shape */
+    REST_SERIALIZE_VAL_FIELD_INVALID_SIZE,         /*!< Number of elements in xxx_val field does not match declared tensor shape */
+    REST_INFERENCE_HEADER_CONTENT_LENGTH_EXCEEDED, /*!< Inference-Header-Content-Length header exceeds actual payload length */
+    REST_BINARY_DATA_SIZE_PARAMETER_INVALID,       /*!< binary_data_size parameter is invalid and cannot be parsed*/
+    REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID,  /*!< inferenceHeaderContentLength parameter is invalid and cannot be parsed*/
+    REST_BINARY_BUFFER_EXCEEDED,                   /*!< Received buffer size is smaller than binary_data_size parameter indicates*/
+    REST_CONTENTS_FIELD_NOT_EMPTY,                 /*!< Request contains values both in binary data and in content value*/
 
     // Pipeline validation errors
     PIPELINE_DEFINITION_ALREADY_EXIST,
@@ -261,6 +264,7 @@ enum class StatusCode {
     MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE,
     MEDIAPIPE_INCORRECT_SERVABLE_NAME,
     MEDIAPIPE_INCORRECT_SERVABLE_VERSION,
+    MEDIAPIPE_PRECONDITION_FAILED,
 
     // Python Nodes
     PYTHON_NODE_NAME_ALREADY_EXISTS,
@@ -321,6 +325,7 @@ enum class StatusCode {
     DOUBLE_BUFFER_SET,
     DOUBLE_TENSOR_INSERT,
     DOUBLE_PARAMETER_INSERT,
+    NONEXISTENT_BUFFER,
     NONEXISTENT_BUFFER_FOR_REMOVAL,
     NONEXISTENT_PARAMETER,
     NONEXISTENT_TENSOR,
@@ -348,7 +353,7 @@ class Status {
     StatusCode code;
     std::unique_ptr<std::string> message;
 
-    static const std::unordered_map<const StatusCode, const std::string> statusMessageMap;
+    static const std::unordered_map<StatusCode, std::string> statusMessageMap;
 
     void appendDetails(const std::string& details) {
         ensureMessageAllocated();

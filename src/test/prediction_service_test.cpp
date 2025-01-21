@@ -39,6 +39,7 @@
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelversion.hpp"
 #include "../prediction_service_utils.hpp"
+#include "../regularovtensorfactory.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../serialization.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
@@ -139,7 +140,7 @@ public:
         std::unique_ptr<std::future<void>> waitBeforeGettingModelInstance = nullptr,
         std::unique_ptr<std::future<void>> waitBeforePerformInference = nullptr);
 
-    void testConcurrentPredicts(const int initialBatchSize, const uint waitingBeforePerformInferenceCount, const uint waitingBeforeGettingModelCount) {
+    void testConcurrentPredicts(const int initialBatchSize, const uint32_t waitingBeforePerformInferenceCount, const uint32_t waitingBeforeGettingModelCount) {
         ASSERT_GE(20, waitingBeforePerformInferenceCount);
         config.setNireq(20);
         ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -202,7 +203,7 @@ public:
         }
     }
 
-    void testConcurrentBsChanges(const int initialBatchSize, const uint numberOfThreads) {
+    void testConcurrentBsChanges(const int initialBatchSize, const uint32_t numberOfThreads) {
         ASSERT_GE(20, numberOfThreads);
         config.setNireq(20);
         ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
@@ -334,7 +335,7 @@ public:
         KFSOutputTensorIteratorType it;
         size_t bufferId;
         auto status = getOutput(response, outputName, it, bufferId);
-        ASSERT_TRUE(status.ok()) << "Couln't find output:" << outputName;
+        ASSERT_TRUE(status.ok()) << "Couldn't find output:" << outputName;
         if (response.raw_output_contents().size() > 0) {
             float* buffer = reinterpret_cast<float*>(const_cast<char*>(response.raw_output_contents(bufferId).data()));
             ASSERT_EQ(0, std::memcmp(buffer, expectedValues.data(), expectedValues.size() * sizeof(float)))
@@ -354,7 +355,7 @@ public:
         KFSOutputTensorIteratorType it;
         size_t bufferId;
         auto status = getOutput(response, outputName, it, bufferId);
-        ASSERT_TRUE(status.ok()) << "Couln't find output:" << outputName;
+        ASSERT_TRUE(status.ok()) << "Couldn't find output:" << outputName;
         if (checkRaw) {
             ASSERT_GT(response.raw_output_contents().size(), 0);
             uint8_t* buffer = reinterpret_cast<uint8_t*>(const_cast<char*>(response.raw_output_contents(bufferId).data()));
@@ -548,7 +549,10 @@ static void performPrediction(const std::string modelName,
     ovms::InputSink<ov::InferRequest&> inputSink(inferRequest);
     bool isPipeline = false;
 
-    auto status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator>(request, modelInstance->getInputsInfo(), inputSink, isPipeline);
+    std::unordered_map<int, std::shared_ptr<ovms::IOVTensorFactory>> factories;
+    factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<ovms::RegularOVTensorFactory>());
+    auto status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator, ovms::InputSink<ov::InferRequest&>>(request, modelInstance->getInputsInfo(), modelInstance->getOutputsInfo(), inputSink, isPipeline, factories);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
     status = modelInstance->performInference(inferRequest);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     size_t outputSize = requestBatchSize * extractDummyOutputSize(request);
@@ -660,7 +664,7 @@ public:
         modelPath = directoryPath + "/dummy/";
         mappingConfigPath = modelPath + "1/mapping_config.json";
         SetUpConfig(configContent);
-        std::filesystem::copy("/ovms/src/test/dummy", modelPath, std::filesystem::copy_options::recursive);
+        std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), modelPath, std::filesystem::copy_options::recursive);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         createConfigFileWithContent(R"({
             "inputs": {"b":"input_tensor"},
@@ -691,7 +695,7 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnPassthrough_2D_U8ModelWithMapping
         GTEST_SKIP() << "String inputs not supported for C-API";
     this->modelPath = this->directoryPath + "/passthrough/";
     this->mappingConfigPath = this->modelPath + "1/mapping_config.json";
-    std::filesystem::copy("/ovms/src/test/passthrough", this->modelPath, std::filesystem::copy_options::recursive);
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/passthrough"), this->modelPath, std::filesystem::copy_options::recursive);
     this->ovmsConfig = R"(
 {
     "model_config_list": [
@@ -852,8 +856,8 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhenSeveralInferRequestJustBeforeGetting
     const int initialBatchSize = 1;
     this->config.setBatchingParams("auto");
 
-    const uint waitingBeforePerformInferenceCount = 0;
-    const uint waitingBeforeGettingModelCount = 9;
+    const uint32_t waitingBeforePerformInferenceCount = 0;
+    const uint32_t waitingBeforeGettingModelCount = 9;
     this->testConcurrentPredicts(initialBatchSize, waitingBeforePerformInferenceCount, waitingBeforeGettingModelCount);
 }
 
@@ -861,8 +865,8 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhenSeveralInferRequestJustBeforeInferen
     const int initialBatchSize = 1;
     this->config.setBatchingParams("auto");
 
-    const uint waitingBeforePerformInferenceCount = 9;
-    const uint waitingBeforeGettingModelCount = 0;
+    const uint32_t waitingBeforePerformInferenceCount = 9;
+    const uint32_t waitingBeforeGettingModelCount = 0;
     this->testConcurrentPredicts(initialBatchSize, waitingBeforePerformInferenceCount, waitingBeforeGettingModelCount);
 }
 
@@ -870,8 +874,8 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhenSeveralInferRequestAtDifferentStages
     const int initialBatchSize = 1;
     this->config.setBatchingParams("auto");
 
-    const uint waitingBeforePerformInferenceCount = 9;
-    const uint waitingBeforeGettingModelCount = 9;
+    const uint32_t waitingBeforePerformInferenceCount = 9;
+    const uint32_t waitingBeforeGettingModelCount = 9;
     this->testConcurrentPredicts(initialBatchSize, waitingBeforePerformInferenceCount, waitingBeforeGettingModelCount);
 }
 
@@ -879,7 +883,7 @@ TYPED_TEST(TestPredict, SuccesfullReloadForMultipleThreadsDifferentBS) {
     const int initialBatchSize = 2;
     this->config.setBatchingParams("auto");
 
-    const uint numberOfThreads = 5;
+    const uint32_t numberOfThreads = 5;
     this->testConcurrentBsChanges(initialBatchSize, numberOfThreads);
 }
 TYPED_TEST(TestPredict, SuccesfullReshapeViaRequestOnDummyModel) {
@@ -1107,7 +1111,7 @@ TYPED_TEST(TestPredict, ReshapeViaRequestAndConfigChange) {
     // Cannot do the inference with (1,12)
     ASSERT_EQ(this->performInferenceWithShape(response, {1, 12}), ovms::StatusCode::INVALID_SHAPE);
 
-    // Successfull inference with (1,11)
+    // Successful inference with (1,11)
     ASSERT_EQ(this->performInferenceWithShape(response, {1, 11}), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 11});
 
@@ -1151,7 +1155,7 @@ TYPED_TEST(TestPredict, ChangeBatchSizeViaRequestAndConfigChange) {
     // Cannot do the inference with (3,10)
     ASSERT_EQ(this->performInferenceWithBatchSize(response, 3), ovms::StatusCode::INVALID_BATCH_SIZE);
 
-    // Successfull inference with (4,10)
+    // Successful inference with (4,10)
     ASSERT_EQ(this->performInferenceWithBatchSize(response, 4), ovms::StatusCode::OK);
     this->checkOutputShape(response, {4, 10});
 
@@ -1464,10 +1468,10 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputChangeModelInputLayout) {
     this->checkOutputValues(response, {37.0, 37.0, 28.0, 28.0, 238.0, 238.0}, INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME);
 }
 
-/* Scenario - perform inference with binary input with witdth exceeding shape range when model shape is dynamic. Check results.
+/* Scenario - perform inference with binary input with width exceeding shape range when model shape is dynamic. Check results.
  *
  * 1. Load model with dynamic shape and input layout=nhwc, initial internal layout: nchw
- * 2. Do the inference with single binary image tensor with witdth exceeding shape range - expect status OK and reshaped output tensor
+ * 2. Do the inference with single binary image tensor with width exceeding shape range - expect status OK and reshaped output tensor
  */
 TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
@@ -1493,7 +1497,7 @@ TYPED_TEST(TestPredict, PerformInferenceWithBinaryInputAndShapeDynamic) {
 /* Scenario - perform inference with binary input of batch 0 when model shape is dynamic. Check results.
  *
  * 1. Load model with dynamic shape and input layout=nhwc, initial internal layout: nchw
- * 2. Do the inference with 0 binary image tensors with witdth exceeding shape range - expect status OK and reshaped output tensor
+ * 2. Do the inference with 0 binary image tensors with width exceeding shape range - expect status OK and reshaped output tensor
  */
 TYPED_TEST(TestPredict, PerformInferenceWithZeroBinaryInputsAndShapeDynamic) {
     if (typeid(typename TypeParam::first_type) == typeid(ovms::InferenceRequest))
@@ -1602,7 +1606,7 @@ TYPED_TEST(TestPredict, ChangeBatchSizeViaRequestAndConfigChangeArbitraryPositio
     // Cannot do the inference with (1,30)
     ASSERT_EQ(this->performInferenceWithBatchSize(response, 30, ovms::Precision::FP32, batchSizePosition), ovms::StatusCode::INVALID_BATCH_SIZE);
 
-    // Successfull inference with (1,4)
+    // Successful inference with (1,4)
     ASSERT_EQ(this->performInferenceWithBatchSize(response, 4, ovms::Precision::FP32, batchSizePosition), ovms::StatusCode::OK);
     this->checkOutputShape(response, {1, 4});
 
@@ -1660,7 +1664,7 @@ TYPED_TEST(TestPredict, PerformInferenceDummyBatchSizeAny) {
 
     typename TypeParam::second_type response;
 
-    for (size_t i : {1, 3, 5, 7, 11, 17, 21, 57, 99}) {
+    for (int32_t i : {1, 3, 5, 7, 11, 17, 21, 57, 99}) {
         ASSERT_EQ(this->performInferenceWithShape(response, {i, 10}), ovms::StatusCode::OK);
         this->checkOutputShape(response, {i, 10}, DUMMY_MODEL_OUTPUT_NAME);
     }

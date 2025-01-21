@@ -58,7 +58,37 @@ const OVMS_DataType DATATYPE{OVMS_DATATYPE_FP32};
 TEST(InferenceParameter, CreateParameter) {
     InferenceParameter parameter(PARAMETER_NAME.c_str(), PARAMETER_DATATYPE, reinterpret_cast<const void*>(&PARAMETER_VALUE));
 }
-
+TEST(Buffer, StringHandling) {
+    using std::string;
+    using vs_t = std::vector<string>;
+    const string* stringPtr{nullptr};
+    vs_t intelText{{"Intel"}, {"owns"}, {"OVMS"}};
+    vs_t nvidiaText{{"NVIDIA"}, {"owns"}, {"Triton"}};
+    std::unique_ptr<const Buffer> bufferWithCopy{nullptr};
+    {
+        vs_t text2BeDeleted = nvidiaText;
+        const Buffer bufferWithNoCopy(&intelText[0], intelText.size() * sizeof(string), OVMS_BUFFERTYPE_CPU);
+        auto text2BeMoved = std::make_unique<vs_t>(std::move(text2BeDeleted));
+        bufferWithCopy = std::make_unique<const Buffer>(std::move(text2BeMoved));
+        // check with nocopy
+        EXPECT_EQ(intelText.data(), &intelText[0]);
+        EXPECT_EQ(bufferWithNoCopy.data(), &intelText[0]);
+        stringPtr = reinterpret_cast<const string*>(bufferWithNoCopy.data());
+        EXPECT_EQ(intelText.size(), bufferWithNoCopy.getByteSize() / sizeof(string));
+        EXPECT_TRUE(std::equal(intelText.begin(), intelText.end(), stringPtr));
+        // now check with copy
+        stringPtr = reinterpret_cast<const string*>(bufferWithCopy->data());
+        EXPECT_EQ(nvidiaText.size(), bufferWithNoCopy.getByteSize() / sizeof(string));
+        EXPECT_TRUE(std::equal(nvidiaText.begin(), nvidiaText.end(), stringPtr));
+    }
+    // now text is deleted but for buffer with copy still expect to work
+    vs_t randomData{{"Akademia"}, {"Pana"}, {"Kleksa"}};
+    stringPtr = reinterpret_cast<const string*>(bufferWithCopy->data());
+    EXPECT_EQ(bufferWithCopy->getByteSize(), sizeof(string) * nvidiaText.size());
+    EXPECT_EQ(bufferWithCopy->getBufferType(), OVMS_BUFFERTYPE_CPU);
+    EXPECT_EQ(bufferWithCopy->getDeviceId(), std::nullopt);
+    EXPECT_TRUE(std::equal(nvidiaText.begin(), nvidiaText.end(), stringPtr));
+}
 TEST(InferenceRequest, CreateInferenceRequest) {
     InferenceRequest request(MODEL_NAME.c_str(), MODEL_VERSION);
     EXPECT_EQ(request.getServableName(), MODEL_NAME);
@@ -130,6 +160,15 @@ TEST(InferenceRequest, CreateInferenceRequest) {
     status = request.removeParameter(PARAMETER_NAME.c_str());
     ASSERT_EQ(status, StatusCode::OK) << status.string();
     ASSERT_EQ(nullptr, request.getParameter(PARAMETER_NAME.c_str()));
+
+    //////////////////////
+    std::vector<int64_t> stringShape{4};
+    std::vector<std::string> strings{"Intel", "OpenVINO", "Model", "Server"};
+    status = request.addInput(INPUT_NAME.c_str(), OVMS_DATATYPE_STRING, stringShape.data(), stringShape.size());
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    // set input buffer
+    status = request.setInputBuffer(INPUT_NAME.c_str(), strings.data(), strings.size() * sizeof(float), OVMS_BUFFERTYPE_CPU, std::nullopt);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
 }
 TEST(InferenceResponse, CreateAndReadData) {
     // create response

@@ -19,6 +19,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -60,15 +61,24 @@
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
-const std::string dummy_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy";
-const std::string dummy_fp64_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_fp64";
-const std::string sum_model_location = std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model";
-const std::string increment_1x3x4x5_model_location = std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5";
-const std::string passthrough_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough";
-const std::string passthrough_string_model_location = std::filesystem::current_path().u8string() + "/src/test/passthrough_string";
-const std::string dummy_saved_model_location = std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model";
-const std::string dummy_tflite_location = std::filesystem::current_path().u8string() + "/src/test/dummy_tflite";
-const std::string scalar_model_location = std::filesystem::current_path().u8string() + "/src/test/scalar";
+const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForBin(const std::string& linuxPath, bool logChange = true);
+
+void adjustConfigForTargetPlatform(std::string& input);
+const std::string& adjustConfigForTargetPlatformReturn(std::string& input);
+
+const std::string dummy_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy", false);
+const std::string dummy_fp64_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_fp64", false);
+const std::string sum_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model", false);
+const std::string increment_1x3x4x5_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5", false);
+const std::string passthrough_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough", false);
+const std::string passthrough_string_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough_string", false);
+const std::string dummy_saved_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model", false);
+const std::string dummy_tflite_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_tflite", false);
+const std::string scalar_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/scalar", false);
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
@@ -665,7 +675,7 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
 }
 
 // returns path to a file.
-std::string createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
+bool createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
 #pragma GCC diagnostic pop
 
 template <typename T>
@@ -711,6 +721,7 @@ public:
     MockedMetadataModelIns(ov::Core& ieCore) :
         ModelInstance("UNUSED_NAME", 42, ieCore) {}
     MOCK_METHOD(const ovms::tensor_map_t&, getInputsInfo, (), (const, override));
+    MOCK_METHOD(const ovms::tensor_map_t&, getOutputsInfo, (), (const, override));
     MOCK_METHOD(std::optional<ovms::Dimension>, getBatchSize, (), (const, override));
     MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
     const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
@@ -729,6 +740,10 @@ public:
     int getResourcesSize() {
         return resources.size();
     }
+
+    void setResourcesCleanupIntervalMillisec(uint32_t value) {
+        this->resourcesCleanupIntervalMillisec = value;
+    }
 };
 
 class TestWithTempDir : public ::testing::Test {
@@ -741,7 +756,7 @@ protected:
            << "/"
            << std::string(test_info->name());
         const std::string directoryName = ss.str();
-        directoryPath = "/tmp/" + directoryName;
+        directoryPath = getGenericFullPathForTmp("/tmp/" + directoryName);
         std::filesystem::remove_all(directoryPath);
         std::filesystem::create_directories(directoryPath);
     }
@@ -986,6 +1001,12 @@ public:
 
 std::shared_ptr<const ovms::TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const ovms::TensorInfo> src, ovms::Precision precision);
 
+template <typename T>
+void checkBuffers(const T* expected, const T* actual, size_t bufferSize) {
+    EXPECT_EQ(0, std::memcmp(actual, expected, bufferSize))
+        << readableError(expected, actual, bufferSize / sizeof(T));
+}
+
 #if (MEDIAPIPE_DISABLE == 0)
 class DummyMediapipeGraphDefinition : public ovms::MediapipeGraphDefinition {
 public:
@@ -1009,6 +1030,12 @@ public:
             return it->second.get();
         }
     }
+
+    ovms::Status validateForConfigLoadablenessPublic() {
+        return this->validateForConfigLoadableness();
+    }
+
+    ovms::LLMNodeResourcesMap& getLLMNodeResourcesMap() { return this->llmNodeResourcesMap; }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,

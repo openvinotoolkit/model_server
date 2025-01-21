@@ -16,12 +16,8 @@
 #include "http_graph_executor_impl.hpp"
 
 #include <string>
+#include <utility>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-#pragma GCC diagnostic pop
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -69,7 +65,7 @@ Status onPacketReadySerializeAndSendImpl(
             packetType,
             packet,
             out));
-    serverReaderWriter.PartialReply(out);  // TODO: Possibly avoid copy
+    serverReaderWriter.PartialReply(std::move(out));
     return StatusCode::OK;
 }
 

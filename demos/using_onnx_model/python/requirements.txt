@@ -1,2 +1,3 @@
-opencv-python>=4.6.0
+opencv-python>=4.8.1.78
 ovmsclient
+numpy<2.0.0

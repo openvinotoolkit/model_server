@@ -22,6 +22,7 @@
 #include <iostream>
 #include <limits>
 #include <locale>
+#include <optional>
 #include <sstream>
 #include <utility>
 
@@ -152,4 +153,33 @@ std::optional<int64_t> stoi64(const std::string& str) {
         return std::nullopt;
     }
 }
+
+bool isValidUtf8(const std::string& text) {
+    // inspect the chars from the end of the string to test if the utf8 sequence is complete
+    int byte_counter = 0;
+    for (int i = text.size() - 1; i >= 0 && byte_counter <= 3; i--) {
+        int x = static_cast<int>(static_cast<unsigned char>(text[i]));
+        if (((x >> 7) == 0b0) && (byte_counter == 0))
+            return true;  // last char is a single byte char
+        if ((x >> 6) == 0b10)
+            byte_counter++;  // octet belong to multibyte sequence
+        else if (((x >> 5) == 0b110) && (byte_counter + 1 == 2))
+            return true;  // first byte of 2 byte sequence
+        else if (((x >> 4) == 0b1110) && (byte_counter + 1 == 3))
+            return true;  // first byte of 3 byte sequence
+        else if (((x >> 3) == 0b11110) && (byte_counter + 1 == 4))
+            return true;  // first byte of 3 byte sequence
+        else
+            return false;  // invalid utf8 sequence
+    }
+    return false;
+}
+
+std::string toLower(const std::string& input) {
+    std::string result = input;
+    std::transform(result.begin(), result.end(), result.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+    return result;
+}
+
 }  // namespace ovms

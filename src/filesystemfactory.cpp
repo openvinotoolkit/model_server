@@ -18,14 +18,17 @@
 #include <memory>
 #include <utility>
 
-#include "azurefilesystem.hpp"
 #include "filesystem.hpp"
-#include "gcsfilesystem.hpp"
 #include "localfilesystem.hpp"
+#if (CLOUD_DISABLE == 0)
+#include "azurefilesystem.hpp"
+#include "gcsfilesystem.hpp"
 #include "s3filesystem.hpp"
+#endif
 
 namespace ovms {
 std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath) {
+#if (CLOUD_DISABLE == 0)
     if (basePath.rfind(FileSystem::S3_URL_PREFIX, 0) == 0) {
         Aws::SDKOptions options;
         Aws::InitAPI(options);
@@ -40,6 +43,7 @@ std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath) {
     if (basePath.rfind(FileSystem::AZURE_URL_BLOB_PREFIX, 0) == 0) {
         return std::make_shared<ovms::AzureFileSystem>();
     }
+#endif
     return std::make_shared<LocalFileSystem>();
 }
 }  // namespace ovms

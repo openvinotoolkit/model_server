@@ -1,7 +1,5 @@
 # Efficient LLM Serving {#ovms_docs_llm_reference}
 
-**THIS IS A PREVIEW FEATURE**
-
 ## Overview
 
 With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in it's [GenAI Library](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) like:
@@ -15,7 +13,7 @@ It is now integrated into OpenVINO Model Server providing efficient way to run g
 Check out the [quickstart guide](quickstart.md) for a simple example that shows how to use this feature.
 
 ## LLM Calculator
-As you can see in the quickstart above, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) solutions. The calculator is designed to run in cycles and return the chunks of reponses to the client.
+As you can see in the quickstart above, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/openvinotoolkit/openvino.genai/tree/master/src/cpp/include/openvino/genai) library. The calculator is designed to run in cycles and return the chunks of responses to the client.
 
 On the input it expects a HttpPayload struct passed by the Model Server frontend:
 ```cpp
@@ -26,7 +24,7 @@ struct HttpPayload {
     rapidjson::Document* parsedJson;  // pre-parsed body             = null
 };
 ```
-The input json content should be compatible with the [chat completions](./model_server_rest_api_chat.md) or [completions](./model_server_rest_api_completions.md) API.
+The input json content should be compatible with the [chat completions](../model_server_rest_api_chat.md) or [completions](../model_server_rest_api_completions.md) API.
 
 The input also includes a side packet with a reference to `LLM_NODE_RESOURCES` which is a shared object representing an LLM engine. It loads the model, runs the generation cycles and reports the generated results to the LLM calculator via a generation handler. 
 
@@ -79,14 +77,46 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `required string models_path` - location of the model directory (can be relative);
 -    `optional uint64 max_num_batched_tokens` - max number of tokens processed in a single iteration [default = 256];
 -    `optional uint64 cache_size` - memory size in GB for storing KV cache [default = 8];
--    `optional uint64 block_size` - number of tokens which KV is stored in a single block (Paged Attention related) [default = 32];
 -    `optional uint64 max_num_seqs` - max number of sequences actively processed by the engine [default = 256];
 -    `optional bool dynamic_split_fuse` - use Dynamic Split Fuse token scheduling [default = true];
--    `optional string device` - device to load models to. Supported values: "CPU" [default = "CPU"]
--    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](./parameters.md#model-configuration-options) [default = ""]
+-    `optional string device` - device to load models to. Supported values: "CPU", "GPU" [default = "CPU"]
+-    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = "{}"]
+-    `optional uint32 best_of_limit` - max value of best_of parameter accepted by endpoint [default = 20];
+-    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint [default = 4096];
+-    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];
 
 
-The value of `cache_size` might have performance  implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
+The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
+You can track the actual usage of the cache in the server logs. You can observe in the logs output like below:
+```
+[2024-07-30 14:28:02.536][624][llm_executor][info][llm_executor.hpp:65] All requests: 50; Scheduled requests: 25; Cache usage 23.9%;
+```
+Consider increasing the `cache_size` parameter in case the logs report the usage getting close to 100%. When the cache is consumed, some of the running requests might be preempted to free cache for other requests to finish their generations (preemption will likely have negative impact on performance since preempted request cache will need to be recomputed when it gets processed again). When preemption is not possible i.e. `cache size` is very small and there is a single, long running request that consumes it all, then the request gets terminated when no more cache can be assigned to it, even before reaching stopping criteria. 
+
+`enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case with chat applications which resend the history of the conversations. Thanks to prefix caching, there is no need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
+utilization of resource will be lower. Old cache will be cleared automatically but it is recommended to increase cache_size to take bigger performance advantage.
+
+`dynamic_split_fuse` [algorithm](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen#b-dynamic-splitfuse-) is enabled by default to boost the throughput by splitting the tokens to even chunks. In some conditions like with very low concurrency or with very short prompts, it might be beneficial to disable this algorithm. When it is disabled, there should be set also the parameter `max_num_batched_tokens` to match the model max context length.
+
+`plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size '{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}'.
+
+The LLM calculator config can also restrict the range of sampling parameters in the client requests. If needed change the default values for  `max_tokens_limit` and `best_of_limit`. It is meant to avoid the result of memory overconsumption by invalid requests.
+
+
+## Canceling the generation
+
+In order to optimize the usage of compute resources, it is important to stop the text generation when it becomes irrelevant for the client or when the client gets disconnected for any reason. Such capability is implemented via a tight integration between the LLM calculator and the model server frontend. The calculator gets notified about the client session disconnection. When the client application stops or deliberately breaks the session, the generation cycle gets broken and all resources are released. Below is an easy example how the client can initialize stopping the generation:
+```python
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
+stream = client.completions.create(model="model", prompt="Say this is a test", stream=True)
+for chunk in stream:
+    if chunk.choices[0].text is not None:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+    if some_condition:
+        stream.close()
+        break
+```
 
 ## Models Directory
 
@@ -105,35 +135,70 @@ In node configuration we set `models_path` indicating location of the directory 
 
 Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing.
 
-### Chat template
+This model directory can be created based on the models from Hugging Face Hub or from the PyTorch model stored on the local filesystem. Exporting the models to Intermediate Representation format is one time operation and can speed up the loading time and reduce the storage volume, if it's combined with quantization and compression.
 
-Chat template is used only on `/chat/completions` endpoint. Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`. 
+In your python environment install required dependencies:
+```
+pip3 install "optimum-intel[nncf,openvino]
+```
+
+Because there is very dynamic development in optimum-intel and openvino, it is recommended to use the latest versions of the dependencies:
+```
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/pre-release"
+pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git  openvino_tokenizers openvino
+```
+
+LLM model can be exported with a command:
+```
+optimum-cli export openvino --disable-convert-tokenizer --model {LLM model in HF hub or Pytorch model folder} --weight-format {fp32/fp16/int8/int4/int4_sym_g128/int4_asym_g128/int4_sym_g64/int4_asym_g64} {target folder name}
+```
+Precision parameter is important and can influence performance, accuracy and memory usage. It is recommended to start experiments with `fp16`. The precision `int8` can reduce the memory consumption and improve latency with low impact on accuracy. Try `int4` to minimize memory usage and check various algorithm to achieve optimal results. 
+
+Export the tokenizer model with a command:
+```
+convert_tokenizer -o {target folder name} --utf8_replace_mode replace --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens {tokenizer model in HF hub or Pytorch model folder}
+```
+
+Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models).
+
+## Input preprocessing
+
+### Completions
+
+When sending a request to `/completions` endpoint, model server adds `bos_token_id` during tokenization, so **there is not need to add `bos_token` to the prompt**.
+
+### Chat Completions
+
+When sending a request to `/chat/completions` endpoint, model server will try to apply chat template to request `messages` contents.
 
 Loading chat template proceeds as follows:
 1. If `tokenizer.jinja` is present, try to load template from it.
 2. If there is no `tokenizer.jinja` and `tokenizer_config.json` exists, try to read template from its `chat_template` field. If it's not present, use default template.
 3. If `tokenizer_config.json` exists try to read `eos_token` and `bos_token` fields. If they are not present, both values are set to empty string. 
 
-**Note**: If both `template.jinja` file and `chat_completion` field from `tokenizer_config.json` are successfully loaded `template.jinja` takes precedence over `tokenizer_config.json`.
-
-If there are errors in loading or reading files or fields (they exist but are wrong) no template is loaded and servable will not respond to `/chat/completions` calls. 
+**Note**: If both `template.jinja` file and `chat_completion` field from `tokenizer_config.json` are successfully loaded, `template.jinja` takes precedence over `tokenizer_config.json`.
 
 If no chat template has been specified, default template is applied. The template looks as follows:
 ```
-"{% if messages|length > 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
+"{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
 ```
 
 When default template is loaded, servable accepts `/chat/completions` calls when `messages` list contains only single element (otherwise returns error) and treats `content` value of that single message as an input prompt for the model.
 
+**Note:** Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`.
+
+Errors during configuration files processing (access issue, corrupted file, incorrect content) result in servable loading failure.
+
+
 
 ## Limitations
 
-As it's in preview, this feature has set of limitations:
+There are several known limitations which are expected to be addressed in the coming releases:
 
-- Limited support for [API parameters](../model_server_rest_api_chat.md#request),
-- Only one node with LLM calculator can be deployed at once,
-- Metrics related to text generation - they are planned to be added later,
-- Improvements in stability and recovery mechanisms are also expected
+- Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. It is possible to track in the metrics the number of active generation requests using metric called `ovms_current_graphs`. Also tracking statistics for request and responses is possible. [Learn more](../metrics.md) 
+- Multi modal models are not supported yet. Images can't be sent now as the context.
+- `logprobs` parameter is not supported currently in streaming mode. It includes only a single logprob and do not include values for input tokens.
+- Server logs might sporadically include a message "PCRE2 substitution failed with error code -55" - this message can be safely ignored. It will be removed in next version.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)

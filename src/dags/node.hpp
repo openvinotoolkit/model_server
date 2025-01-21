@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -91,7 +92,7 @@ public:
         return next;
     }
     virtual void release(session_key_t sessionId) {}
-    virtual bool tryDisarm(const session_key_t& sessionKey, const uint microseconds = 1) { return true; }
+    virtual bool tryDisarm(const session_key_t& sessionKey, const uint32_t microseconds = 1) { return true; }
 
     static void printNodeConnections(const std::string& nodeName, const std::string& sourceNode, const Aliases& pairs);
 

@@ -19,9 +19,8 @@
 
 #include <rapidjson/schema.h>
 
-#include "status.hpp"
-
 namespace ovms {
+class Status;
 extern const std::string MODELS_CONFIG_SCHEMA;
 extern const std::string MODEL_CONFIG_DEFINITION2;
 extern const char* MODELS_MAPPING_SCHEMA;

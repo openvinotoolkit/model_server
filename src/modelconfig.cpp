@@ -18,13 +18,14 @@
 #include <algorithm>
 #include <filesystem>
 #include <limits>
+#include <optional>
 #include <set>
 #include <sstream>
+#include <utility>
 
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include <spdlog/spdlog.h>
 
 #include "filesystem.hpp"
 #include "json_parser.hpp"
@@ -291,7 +292,7 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
 }
 
 Status ModelConfig::parsePluginConfig(std::string command, plugin_config_t& pluginConfig) {
-    return JsonParser::parsePluginConfig(command, pluginConfig);
+    return JsonParser::parsePluginConfig(std::move(command), pluginConfig);
 }
 
 Status ModelConfig::parsePluginConfig(const rapidjson::Value& node, plugin_config_t& pluginConfig) {
@@ -313,9 +314,9 @@ Status ModelConfig::parseShapeParameter(const rapidjson::Value& node) {
         if (!status.ok()) {
             return status;
         }
-        shapes[it->name.GetString()] = shapeInfo;
+        shapes[it->name.GetString()] = std::move(shapeInfo);
     }
-    this->shapes = shapes;
+    this->shapes = std::move(shapes);
 
     return StatusCode::OK;
 }
@@ -440,7 +441,7 @@ Status ModelConfig::parseModelMapping() {
     }
     auto itr = doc.FindMember("inputs");
     if (itr == doc.MemberEnd()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load inputs object from file {}", path.c_str());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load inputs object from file {}", path.string());
     } else {
         // Process inputs
         for (const auto& key : itr->value.GetObject()) {
@@ -451,7 +452,7 @@ Status ModelConfig::parseModelMapping() {
     }
     itr = doc.FindMember("outputs");
     if (itr == doc.MemberEnd()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load outputs object from file {}", path.c_str());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Couldn't load outputs object from file {}", path.string());
     } else {
         // Process outputs
         const auto it = doc.FindMember("outputs");

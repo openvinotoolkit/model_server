@@ -18,6 +18,25 @@
 
 #include <gtest/gtest.h>
 
+#include "../ovms.h"  // NOLINT
+#include "test_utils.hpp"
+
+#define THROW_ON_ERROR_CAPI(C_API_CALL)                                        \
+    {                                                                          \
+        auto* err = C_API_CALL;                                                \
+        if (err != nullptr) {                                                  \
+            uint32_t code = 0;                                                 \
+            const char* msg = nullptr;                                         \
+            OVMS_StatusCode(err, &code);                                       \
+            OVMS_StatusDetails(err, &msg);                                     \
+            std::string smsg(msg);                                             \
+            OVMS_StatusDelete(err);                                            \
+            EXPECT_EQ(0, code) << smsg;                                        \
+            EXPECT_EQ(err, nullptr) << smsg;                                   \
+            throw std::runtime_error("Error during C-API call: " #C_API_CALL); \
+        }                                                                      \
+    }
+
 #define ASSERT_CAPI_STATUS_NULL(C_API_CALL)  \
     {                                        \
         auto* err = C_API_CALL;              \
@@ -30,6 +49,21 @@
             OVMS_StatusDelete(err);          \
             EXPECT_EQ(0, code) << smsg;      \
             ASSERT_EQ(err, nullptr) << smsg; \
+        }                                    \
+    }
+
+#define EXPECT_CAPI_STATUS_NULL(C_API_CALL)  \
+    {                                        \
+        auto* err = C_API_CALL;              \
+        if (err != nullptr) {                \
+            uint32_t code = 0;               \
+            const char* msg = nullptr;       \
+            OVMS_StatusCode(err, &code);     \
+            OVMS_StatusDetails(err, &msg);   \
+            std::string smsg(msg);           \
+            OVMS_StatusDelete(err);          \
+            EXPECT_EQ(0, code) << smsg;      \
+            EXPECT_EQ(err, nullptr) << smsg; \
         }                                    \
     }
 
@@ -59,3 +93,48 @@
             ASSERT_NE(err, nullptr);                                                                           \
         }                                                                                                      \
     }
+
+struct ServerSettingsGuard {
+    ServerSettingsGuard(int port) {
+        THROW_ON_ERROR_CAPI(OVMS_ServerSettingsNew(&settings));
+        THROW_ON_ERROR_CAPI(OVMS_ServerSettingsSetGrpcPort(settings, port));
+    }
+    ~ServerSettingsGuard() {
+        if (settings)
+            OVMS_ServerSettingsDelete(settings);
+    }
+    OVMS_ServerSettings* settings{nullptr};
+};
+struct ModelsSettingsGuard {
+    ModelsSettingsGuard(const std::string& configPath) {
+        THROW_ON_ERROR_CAPI(OVMS_ModelsSettingsNew(&settings));
+        THROW_ON_ERROR_CAPI(OVMS_ModelsSettingsSetConfigPath(settings, configPath.c_str()));
+    }
+    ~ModelsSettingsGuard() {
+        if (settings)
+            OVMS_ModelsSettingsDelete(settings);
+    }
+    OVMS_ModelsSettings* settings{nullptr};
+};
+
+struct ServerGuard {
+    ServerGuard(const std::string configPath) {
+        std::string port = "9000";
+        randomizePort(port);
+        ServerSettingsGuard serverSettingsGuard(std::stoi(port));
+        ModelsSettingsGuard modelsSettingsGuard(configPath);
+        THROW_ON_ERROR_CAPI(OVMS_ServerNew(&server));
+        THROW_ON_ERROR_CAPI(OVMS_ServerStartFromConfigurationFile(server, serverSettingsGuard.settings, modelsSettingsGuard.settings));
+    }
+    ~ServerGuard() {
+        if (server)
+            OVMS_ServerDelete(server);
+    }
+    OVMS_Server* server{nullptr};
+};
+struct CallbackUnblockingStruct {
+    std::promise<uint32_t> signal;
+    void* bufferAddr = nullptr;
+};
+void callbackMarkingItWasUsedWith42(OVMS_InferenceResponse* response, uint32_t flag, void* userStruct);
+void checkDummyResponse(OVMS_InferenceResponse* response, double expectedValue, double tolerance);

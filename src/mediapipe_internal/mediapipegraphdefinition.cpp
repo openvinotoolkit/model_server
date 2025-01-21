@@ -29,9 +29,11 @@
 #include "../filesystem.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../metric.hpp"
+#include "../model_metric_reporter.hpp"
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
 #if (PYTHON_DISABLE == 0)
+#include "../llm/llm_executor.hpp"
 #include "../llm/llmnoderesources.hpp"
 #include "../python/pythonnoderesources.hpp"
 #endif
@@ -120,10 +122,13 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
+// TODO: Enable on windows
+#ifdef __linux__
     if (!this->llmNodeResourcesMap.empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
+#endif
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
     if (manager.modelExists(this->getName()) || manager.pipelineDefinitionExists(this->getName())) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph name: {} is already occupied by model or pipeline.", this->getName());
@@ -185,7 +190,8 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     PythonBackend* pythonBackend) :
     name(name),
     status(SCHEDULER_CLASS_NAME, this->name),
-    pythonBackend(pythonBackend) {
+    pythonBackend(pythonBackend),
+    reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
     mgconfig = config;
     passKfsRequestFlag = false;
 }
@@ -253,7 +259,8 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
-        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames, this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend);
+        this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
+        this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend, this->reporter.get());
     return status;
 }
 
@@ -346,12 +353,12 @@ bool MediapipeGraphDefinition::isReloadRequired(const MediapipeGraphConfig& conf
     return getMediapipeGraphConfig().isReloadRequired(config);
 }
 
-Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint waitForLoadedTimeoutMicroseconds) {
+Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds) {
     unloadGuard = std::make_unique<MediapipeGraphDefinitionUnloadGuard>(*this);
 
-    const uint waitLoadedTimestepMicroseconds = 1000;
-    const uint waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
-    uint waitCheckpointsCounter = waitCheckpoints;
+    const uint32_t waitLoadedTimestepMicroseconds = 1000;
+    const uint32_t waitCheckpoints = waitForLoadedTimeoutMicroseconds / waitLoadedTimestepMicroseconds;
+    uint32_t waitCheckpointsCounter = waitCheckpoints;
     std::mutex cvMtx;
     std::unique_lock<std::mutex> cvLock(cvMtx);
     while (waitCheckpointsCounter-- != 0) {
@@ -388,7 +395,7 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
             return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
         }
     }
-    SPDLOG_DEBUG("Succesfully waited for mediapipe definition: {}", getName());
+    SPDLOG_DEBUG("Successfully waited for mediapipe definition: {}", getName());
     return StatusCode::OK;
 }
 
@@ -457,21 +464,17 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
-
-            std::shared_ptr<LLMNodeResources> nodeResources = nullptr;
-            Status status = LLMNodeResources::createLLMNodeResources(nodeResources, config.node(i), mgconfig.getBasePath());
-            if (nodeResources == nullptr || !status.ok()) {
+            std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
+            Status status = LLMNodeResources::initializeLLMNodeResources(*nodeResources, config.node(i), mgconfig.getBasePath());
+            if (!status.ok()) {
                 SPDLOG_ERROR("Failed to process LLM node graph {}", this->name);
                 return status;
             }
-
             this->llmNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<LLMNodeResources>>(nodeName, std::move(nodeResources)));
             llmResourcesCleaningGuard.disableCleaning();
         }
 #endif
     }
-
     return StatusCode::OK;
 }
-
 }  // namespace ovms

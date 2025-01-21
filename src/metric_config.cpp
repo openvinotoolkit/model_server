@@ -16,6 +16,7 @@
 #include "metric_config.hpp"
 
 #include <regex>
+#include <sstream>
 #include <string>
 
 #include <rapidjson/istreamwrapper.h>
@@ -29,8 +30,14 @@
 #include "status.hpp"
 #include "stringutils.hpp"
 
+#ifndef __linux__
+// Workaround : https://github.com/Tencent/rapidjson/issues/1448
+#pragma push_macro("GetObject")
+#undef GetObject
+#endif
 namespace ovms {
 
+// Single Model / DAG
 const std::string METRIC_NAME_REQUESTS_SUCCESS = "ovms_requests_success";
 const std::string METRIC_NAME_REQUESTS_FAIL = "ovms_requests_fail";
 
@@ -43,6 +50,15 @@ const std::string METRIC_NAME_INFERENCE_TIME = "ovms_inference_time_us";
 const std::string METRIC_NAME_CURRENT_REQUESTS = "ovms_current_requests";
 const std::string METRIC_NAME_REQUEST_TIME = "ovms_request_time_us";
 const std::string METRIC_NAME_WAIT_FOR_INFER_REQ_TIME = "ovms_wait_for_infer_req_time_us";
+
+// MediaPipe
+const std::string METRIC_NAME_CURRENT_GRAPHS = "ovms_current_graphs";
+const std::string METRIC_NAME_RESPONSES = "ovms_responses";
+
+const std::string METRIC_NAME_REQUESTS_ACCEPTED = "ovms_requests_accepted";
+const std::string METRIC_NAME_REQUESTS_REJECTED = "ovms_requests_rejected";
+
+const std::string METRIC_NAME_GRAPH_ERROR = "ovms_graph_error";
 
 bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");
@@ -168,3 +184,8 @@ Status MetricConfig::loadFromCLIString(bool isEnabled, const std::string& metric
 }
 
 }  // namespace ovms
+
+#ifndef __linux__
+// Workaround : https://github.com/Tencent/rapidjson/issues/1448
+#pragma pop_macro("GetObject")
+#endif

@@ -1,4 +1,5 @@
 def image_build_needed = "false"
+def win_image_build_needed = "false"
 def client_test_needed = "false"
 def shortCommit = ""
 
@@ -9,6 +10,9 @@ pipeline {
     stages {
         stage('Configure') {
           steps {
+            script{
+              println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
+            }
             script {
               shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
               echo shortCommit
@@ -21,7 +25,7 @@ pipeline {
               } else {  // branches without PR - check changes in last commit
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
-              def matched = (git_diff =~ /src|third_party|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|(\n|^)rununittest\.sh/)
+              def matched = (git_diff =~ /src|export_models|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|WORKSPACE|(\n|^)run_unit_tests\.sh/)
                 if (matched){
                   image_build_needed = "true"
               }
@@ -29,48 +33,98 @@ pipeline {
                 if (matched){
                   client_test_needed = "true"
               }
+              def win_matched = (git_diff =~ /src|export_models|third_party|external|ci|\.c|\.h|\.bazel|\.bzl|BUILD|WORKSPACE|\.bat|\.groovy/)
+              if (win_matched){
+                  win_image_build_needed = "true"
+              }
+            }
+          }
+        }
+        stage('Style and clean') {
+          parallel {
+            stage('Style check') {
+                steps {
+                  sh 'make style'
+                }
+            }
+            stage('Cleanup node') {
+              agent {
+                label 'win_ovms'
+              }
+              steps {
+                script {
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        windows.cleanup_directories()
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
+                }
+              }
             }
           }
         }
 
-        stage('style check') {
-            steps {
-                sh 'make style'
-            }
-        }
-
-        stage('sdl check') {
+        stage('Sdl check') {
             steps {
                 sh 'make sdl-check'
             }
         }
-        
-        stage('client test') {
+
+        stage('Client test') {
           when { expression { client_test_needed == "true" } }
           steps {
                 sh "make test_client_lib"
               }
         }
 
-        stage("Build docker image") {
-          when { expression { image_build_needed == "true" } }
-          steps {
-                sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+        stage('Build') {
+          parallel {
+            stage("Build linux") {
+              when { expression { image_build_needed == "true" } }
+                steps {
+                      sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
+                      sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                    }
+            }
+            stage('Build and test windows') {
+              agent {
+                label 'win_ovms'
               }
+              when { expression { win_image_build_needed == "true" } }
+              steps {
+                  script {
+                      def windows = load 'ci/loadWin.groovy'
+                      if (windows != null) {
+                        try {
+                          windows.setup_bazel_remote_cache()
+                          windows.install_dependencies()
+                          windows.clean()
+                          windows.build_and_test()
+                          windows.check_tests()
+                        } finally {
+                          windows.archive_artifacts()
+                        }
+                      } else {
+                          error "Cannot load ci/loadWin.groovy file."
+                      }
+                  }
+              }
+            }
+          }
         }
-
-        stage("Run tests in parallel") {
+        stage("Release image and tests in parallel") {
           when { expression { image_build_needed == "true" } }
           parallel {
             stage("Run unit tests") {
               steps {
-                  sh "make run_unit_tests BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/INT8 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
             }
-
             stage("Internal tests") {
               steps {
+                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 script {
                   dir ('internal_tests'){ 
                     checkout scmGit(

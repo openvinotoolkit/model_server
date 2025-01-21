@@ -21,7 +21,7 @@
 
 #include <rapidjson/document.h>
 
-#include "../llm/http_payload.hpp"
+#include "../http_payload.hpp"
 #include "../mediapipe_internal/packettypes.hpp"
 #include "../status.hpp"
 #pragma GCC diagnostic push
@@ -35,15 +35,13 @@
 #include "../python/python_backend.hpp"
 #endif
 
-namespace tensorflow::serving::net_http {
-class ServerRequestInterface;
-}
+#include "../http_async_writer_interface.hpp"
 
 namespace ovms {
 
 class PythonBackend;
 
-using HttpReaderWriter = tensorflow::serving::net_http::ServerRequestInterface;
+using HttpReaderWriter = HttpAsyncWriter;
 
 // Deserialization of parameters inside KServe gRPC request
 // into mediapipe Packets.
@@ -60,7 +58,7 @@ const std::string& getRequestId(
 // Whenever MediaPipe graph produces some packet, this function is triggered.
 // Implementation should transform packet into KServe gRPC response and send it.
 // Data race safety:
-// MediaPipe packet available callbacks can be triggered simultanously, from different threads.
+// MediaPipe packet available callbacks can be triggered simultaneously, from different threads.
 // However, the graph executor synchronizes it with locking mechanism.
 Status onPacketReadySerializeAndSendImpl(
     const std::string& requestId,

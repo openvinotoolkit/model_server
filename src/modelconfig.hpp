@@ -18,6 +18,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -29,7 +30,7 @@
 #include "layout_configuration.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
-#include "status.hpp"
+#include "status.hpp"  // TODO fwd dec
 
 namespace ovms {
 class ModelVersionPolicy;
@@ -90,7 +91,7 @@ private:
     /**
          * @brief Nireq
          */
-    uint64_t nireq;
+    uint32_t nireq;
 
     /**
          * @brief Flag determining if model is stateful
@@ -178,7 +179,7 @@ private:
     static const char shapeRight = ')';
 
     /**
-         * @brief Shape delimeter in string format
+         * @brief Shape delimiter in string format
          */
     static const char shapeDelimeter = ',';
 
@@ -498,9 +499,9 @@ public:
     /**
          * @brief Get the nireq
          * 
-         * @return uint64_t 
+         * @return uint32_t 
          */
-    uint64_t getNireq() const {
+    uint32_t getNireq() const {
         return this->nireq;
     }
 
@@ -509,7 +510,7 @@ public:
          * 
          * @param nireq 
          */
-    void setNireq(const uint64_t nireq) {
+    void setNireq(const uint32_t nireq) {
         this->nireq = nireq;
     }
 

@@ -16,6 +16,9 @@
 
 #include "grpc_utils.hpp"
 
+#ifdef _WIN32
+#include <map>
+#endif
 #include <string>
 #include <unordered_map>
 
@@ -23,7 +26,11 @@
 
 namespace ovms {
 const grpc::Status grpc(const Status& status) {
+#ifdef __linux__
     static const std::unordered_map<const StatusCode, grpc::StatusCode> grpcStatusMap = {
+#elif _WIN32
+    static const std::map<const StatusCode, grpc::StatusCode> grpcStatusMap = {
+#endif
         {StatusCode::OK, grpc::StatusCode::OK},
         // INTERNAL_ERRORS
         // Should never occur - ModelInstance::validate takes care of that

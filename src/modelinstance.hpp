@@ -19,9 +19,11 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -37,15 +39,25 @@
 #include "tensorinfo.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 
+// TODO windows
+#ifdef __linux__
+#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#include <openvino/runtime/intel_gpu/ocl/va.hpp>
+#endif
+#include "openvino/runtime/remote_tensor.hpp"
+
 namespace ovms {
 class MetricRegistry;
 class ModelInstanceUnloadGuard;
 class InferenceRequest;
 class InferenceResponse;
+class IOVTensorFactory;
 class PipelineDefinition;
 class Status;
 template <typename T1, typename T2>
 struct RequestProcessor;
+
+extern void* globalVaDisplay;
 
 class DynamicModelParameter {
 public:
@@ -97,6 +109,21 @@ protected:
          */
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
+    // TODO windows
+#ifdef __linux__
+    cl_context oclContextC;
+
+public:
+    // TODO const correctness & ownership & thread safety
+    const cl_context* getOclCContext() const { return &oclContextC; }
+#endif
+
+protected:
+#ifdef __linux__
+    std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;
+    std::unique_ptr<ov::intel_gpu::ocl::VAContext> vaContext;
+#endif
+    std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> tensorFactories;
     /**
          * @brief Model name
          */
@@ -205,6 +232,7 @@ protected:
          * @return Status
          */
     virtual Status loadOVCompiledModel(const ModelConfig& config);
+    void loadTensorFactories();
 
     /**
          * @brief Prepares inferenceRequestsQueue
@@ -251,8 +279,10 @@ private:
     /**
          * @brief Holds the information about outputs and it's parameters
          */
+protected:
     tensor_map_t outputsInfo;
 
+private:
     /**
          * @brief OpenVINO inference execution stream pool
          */
@@ -278,14 +308,25 @@ private:
          * @param config
          */
     Status loadInputTensors(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
-
-    Status gatherReshapeInfo(bool isBatchingModeAuto, const DynamicModelParameter& parameter, bool& isReshapeRequired, std::map<std::string, ov::PartialShape>& modelShapes);
     /**
          * @brief Internal method for loading outputs
          *
          * @param config
          */
     Status loadOutputTensors(const ModelConfig& config);
+
+protected:
+    virtual Status loadOutputTensorsImpl(const ModelConfig& config);
+    virtual Status loadInputTensorsImpl(const ModelConfig& config, const DynamicModelParameter& parameter = DynamicModelParameter());
+
+private:
+    /**
+     * @brief Determines if during inference we are able to reset ov::InferRequest output tensor to original state, which is required for setting output functionality to be interoperable with both inferences with and without output set.
+     */
+    void checkForOutputTensorResetAbility();
+    bool supportOutputTensorsReset = true;
+    bool doesSupportOutputReset() const;
+    Status gatherReshapeInfo(bool isBatchingModeAuto, const DynamicModelParameter& parameter, bool& isReshapeRequired, std::map<std::string, ov::PartialShape>& modelShapes);
 
     /**
       * @brief Flag determining if cache is disabled
@@ -456,7 +497,19 @@ public:
         return inputsInfo;
     }
 
-    virtual ov::AnyMap getRTInfo() const;
+    /**
+           * @brief Get RTMap Info object
+           * @param path list of keys to get RTMap info
+           * @return const ov::AnyMap
+           */
+    ov::AnyMap getRTInfo(std::vector<std::string> path);
+
+    /**
+           * @brief Get RTMap Info object
+           *
+           * @return const ov::AnyMap
+         */
+    virtual ov::AnyMap getRTInfo();
 
     /**
          * @brief Get the Outputs Info object
@@ -558,7 +611,7 @@ public:
          *
          * @return Status
          */
-    Status waitForLoaded(const uint waitForModelLoadedTimeoutMilliseconds,
+    Status waitForLoaded(const uint32_t waitForModelLoadedTimeoutMilliseconds,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuard);
 
     void subscribe(PipelineDefinition& pd);
@@ -572,6 +625,9 @@ public:
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* requestProto,
         ResponseType* responseProto,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
+    template <typename RequestType, typename ResponseType>
+    Status inferAsync(const RequestType* requestProto,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr);
 
     ModelMetricReporter& getMetricReporter() const { return *this->reporter; }

@@ -1,0 +1,29 @@
+input_stream: "REQUEST_PAYLOAD:input"
+output_stream: "RESPONSE_PAYLOAD:output"
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:tokenizer"
+  node_options: {
+    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "tokenizer"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:rerank"
+  node_options: {
+    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "rerank_model"
+      servable_version: "1"
+    }
+  }
+}
+node {
+    input_side_packet: "TOKENIZER_SESSION:tokenizer"
+    input_side_packet: "RERANK_SESSION:rerank"
+    calculator: "RerankCalculator"
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
+}

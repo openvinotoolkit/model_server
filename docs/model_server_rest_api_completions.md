@@ -11,7 +11,7 @@ The endpoint is exposed via a path:
 
 ### Example request
 
-```bash
+```
 curl http://localhost/v3/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -35,7 +35,12 @@ curl http://localhost/v3/completions \
   ],
   "created": 1716825108,
   "model": "llama3",
-  "object": "text_completion"
+  "object": "text_completion",
+  "usage": {
+        "completion_tokens": 14,
+        "prompt_tokens": 17,
+        "total_tokens": 31
+  }
 }
 ```
 
@@ -47,10 +52,16 @@ curl http://localhost/v3/completions \
 | Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
 |-----|----------|----------|----------|---------|-----|
 | model | ✅ | ✅ | ✅ | string (required) | Name of the model to use. From administrator point of view it is the name assigned to a MediaPipe graph configured to schedule generation using desired model.  |
-| stream | ✅ | ✅ | ✅ | bool (optional, default: `false`) | If set to true, partial message deltas will be sent to the client. The generation chunks will be sent as data-only [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#event_stream_format) as they become available, with the stream terminated by a `data: [DONE]` message. [Example Python code](clients_openai.md) |
+| stop | ✅ | ✅ | ✅ | string/array of strings (optional) | Up to 4 sequences where the API will stop generating further tokens. If `stream` is set to `false` matched stop string **is not** included in the output by default. If `stream` is set to `true` matched stop string **is** included in the output by default. It can be changed with `include_stop_str_in_output` parameter, but for `stream=true` setting `include_stop_str_in_output=false` is invalid. |
+| stream | ✅ | ✅ | ✅ | bool (optional, default: `false`) | If set to true, partial message deltas will be sent to the client. The generation chunks will be sent as data-only [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#event_stream_format) as they become available, with the stream terminated by a `data: [DONE]` message. [Example Python code](clients_genai.md) |
+| stream_options | ✅ | ✅ | ✅ | object (optional) | Options for streaming response. Only set this when you set stream: true |
+| stream_options.include_usage | ✅ | ✅ | ✅ | bool (optional) | Streaming option. If set, an additional chunk will be streamed before the data: [DONE] message. The usage field in this chunk shows the token usage statistics for the entire request, and the choices field will always be an empty array. All other chunks will also include a usage field, but with a null value. |
 | prompt | ⚠️ | ✅ | ✅ | string or array (required) | The prompt(s) to generate completions for, encoded as a string, array of strings, array of tokens, or array of token arrays. **_Limitations: only single string prompt is currently supported._** |
 | max_tokens | ✅ | ✅ | ✅ | integer | The maximum number of tokens that can be generated. If not set, the generation will stop once `EOS` token is generated. |
 | ignore_eos | ✅ | ❌ | ✅ | bool (default: `false`) | Whether to ignore the `EOS` token and continue generating tokens after the `EOS` token is generated. If set to `true`, the maximum allowed `max_tokens` value is `4000`. |
+| include_stop_str_in_output | ✅ | ❌ | ✅ | bool (default: `false` if `stream=false`, `true` if `stream=true`) | Whether to include matched stop string in output. Setting it to false when `stream=true` is invalid configuration and will result in error. |
+| logprobs | ⚠️ | ✅ | ✅ | integer (optional) | Include the log probabilities on the logprob of the returned output token. **_ in stream mode logprobs are not returned. Only value 1 is accepted which returns logarithm or the chosen token _** |
+| echo | ✅ | ✅ | ✅ | boolean (optional) | Echo back the prompt in addition to the completion |
 
 #### Beam search sampling specific
 | Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
@@ -63,34 +74,25 @@ curl http://localhost/v3/completions \
 #### Multinomial sampling specific
 | Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
 |-------|----------|----------|----------|---------|-----|
-| temperature | ✅ | ✅ | ✅ | float (default: `0.0`) | The value is used to modulate token probabilities for multinomial sampling. It enables multinomial sampling when set to `> 0.0`. |
+| temperature | ✅ | ✅ | ✅ | float (default: `1.0`) | The value is used to modulate token probabilities for multinomial sampling. It enables multinomial sampling when set to `> 0.0`. |
 | top_p | ✅ | ✅ | ✅ | float (default: `1.0`) | Controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to 1 to consider all tokens. |
-| top_k | ✅ | ❌ | ✅ | int (default: `0`) | Controls the number of top tokens to consider. Set to 0 to consider all tokens. |
+| top_k | ✅ | ❌ | ✅ | int (default: all tokens) | Controls the number of top tokens to consider. Set to empty or -1 to consider all tokens. |
 | repetition_penalty | ✅ | ❌ | ✅ | float (default: `1.0`) | Penalizes new tokens based on whether they appear in the prompt and the generated text so far. Values > `1.0` encourage the model to use new tokens, while values < `1.0` encourage the model to repeat tokens. `1.0` means no penalty. |
+| frequency_penalty | ✅ | ✅ | ✅ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim. |
+| presence_penalty | ✅ | ✅ | ✅ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics. |
 | seed | ✅ | ✅ | ✅ | integer (default: `0`) | Random seed to use for the generation. |
 
 #### Unsupported params from OpenAI service:
-- echo
-- frequency_penalty
 - logit_bias
-- logprobs
-- presence_penalty
-- stop
-- stream_options
 - suffix
 
 
 #### Unsupported params from vLLM:
-- presence_penalty 
-- frequency_penalty
 - min_p
 - use_beam_search (**In OpenVINO Model Server just simply increase _best_of_ param to enable beam search**)
 - early_stopping
-- stop
 - stop_token_ids
-- include_stop_str_in_output
 - min_tokens
-- logprobs
 - prompt_logprobs
 - detokenize
 - skip_special_tokens
@@ -105,25 +107,37 @@ curl http://localhost/v3/completions \
 | choices | ✅ | ✅ | array | A list of chat completion choices. Can be more than one if `n` is greater than 1 (beam search or multinomial samplings). |
 | choices.index | ✅ | ✅ | integer | The index of the choice in the list of choices. |
 | choices.text | ✅ | ✅ | string | A chat completion text generated by the model. |
-| choices.finish_reason | ⚠️ | ✅ | string or null | The reason the model stopped generating tokens. This will be `stop` if the model hit a natural stop point or a provided stop sequence, `length` if the maximum number of tokens specified in the request was reached, or `null` when generation continues (streaming). **_However, in current version `length` is not supported_** |
-| choices.logprobs | ❌ | ✅ | object or null | Log probability information for the choice. **_In current version, the logprobs is always null._** |
+| choices.finish_reason | ✅ | ✅ | string or null | The reason the model stopped generating tokens. This will be `stop` if the model hit a natural stop point or a provided stop sequence, `length` if the maximum number of tokens specified in the request was reached, or `null` when generation continues (streaming). |
+| choices.logprobs | ⚠️ | ✅ | object or null | Log probability information for the choice. **_In current version, only one logprob per token can be returned _** |
 | created | ✅ | ✅ | string | The Unix timestamp (in seconds) of when the chat completion was created.  |
 | model | ✅ | ✅ | string | The model used for the chat completion. |
 | object | ✅ | ✅ | string | always `text_completion` |
+| usage | ✅ | ✅ | object | Usage statistics for the completion request. Consists of three integer fields: `completion_tokens`, `prompt_tokens` and `total_tokens` that inform how many tokens have been generated in a completion, number of tokens in a prompt and the sum of both |
 
 #### Unsupported params from OpenAI service:
 
 - id
 - system_fingerprint
-- usage
 
+> **NOTE**:
+OpenAI python client supports a limited list of parameters. Those native to OpenVINO Model Server, can be passed inside a generic container parameter `extra_body`. Below is an example how to encapsulated `top_k` value.
+```{code} python
+response = client.completions.create(
+    model=model,
+    prompt="hello",
+    max_tokens=100,
+    extra_body={"top_k" : 1},
+    stream=False
+)
+```
 
 ## References
 
+[LLM quick start guide](./llm/quickstart.md)
+
 [End to end demo with LLM model serving over OpenAI API](../demos/continuous_batching/README.md)
 
-[Code snippets](./clients_openai.md)
+[Code snippets](./clients_genai.md)
 
-[LLM calculator](./llm_calculator.md)
+[LLM calculator](./llm/reference.md#llm-calculator)
 
-[Developer guide for writing custom calculators with REST API extension](./mediapipe.md)

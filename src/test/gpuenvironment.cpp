@@ -1,0 +1,47 @@
+//*****************************************************************************
+// Copyright 2024 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#include "gpuenvironment.hpp"
+
+#include <string>
+
+#include "../logging.hpp"
+
+void GPUEnvironment::SetUp() {
+    const char* runGpuTestsEnv = std::getenv("RUN_GPU_TESTS");
+    if (runGpuTestsEnv) {
+        std::string runGpuTestsEnvContent(runGpuTestsEnv);
+        if (runGpuTestsEnvContent == "1") {
+            GPUEnvironment::gpuTestsEnabled = true;
+            SPDLOG_INFO("RUN_GPU_TESTS was set to 1. Will run tests requiring GPU");
+        } else {
+            SPDLOG_ERROR("Tests on GPU will be skipped since RUN_GPU_TESTS env variable was not set to 1. It was set to: {}", runGpuTestsEnvContent);
+        }
+    } else {
+        SPDLOG_INFO("Tests on GPU will be skipped since RUN_GPU_TESTS env variable was not set to 1. Remember to use bazel test parameter --test_env when triggering tests using bazel.");
+    }
+}
+
+bool GPUEnvironment::shouldSkipWithoutGPU() {
+    return !GPUEnvironment::gpuTestsEnabled;
+}
+
+void GPUEnvironment::skipWithoutGPU() {
+    if (shouldSkipWithoutGPU()) {
+        GTEST_SKIP() << "Skipping GPU tests because those tests were not enabled. Check gpuenvironment.[hc]pp";
+    }
+}
+
+bool GPUEnvironment::gpuTestsEnabled{false};

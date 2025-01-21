@@ -19,7 +19,9 @@
 #include <fstream>
 #include <regex>
 #include <set>
+#include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "logging.hpp"
@@ -122,6 +124,9 @@ public:
      */
 
     virtual StatusCode deleteFileFolder(const std::string& path) = 0;
+
+// TODO: Implement Windows version
+#ifdef __linux__
     /**
      * @brief Create a Temp Path
      *
@@ -129,6 +134,10 @@ public:
      * @return StatusCode
      */
     static StatusCode createTempPath(std::string* local_path) {
+        if (!local_path) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set.");
+            return StatusCode::FILESYSTEM_ERROR;
+        }
         std::string file_template = "/tmp/fileXXXXXX";
         char* tmp_folder = mkdtemp(const_cast<char*>(file_template.c_str()));
         if (tmp_folder == nullptr) {
@@ -143,6 +152,55 @@ public:
 
         return StatusCode::OK;
     }
+#elif _WIN32
+    static StatusCode createTempPath(std::string* local_path) {
+        if (!local_path) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set.");
+            return StatusCode::FILESYSTEM_ERROR;
+        }
+
+        wchar_t temp_path[MAX_PATH];
+        wchar_t temp_file[MAX_PATH];
+
+        DWORD path_len = GetTempPathW(MAX_PATH, temp_path);
+        if (path_len == 0 || path_len > MAX_PATH) {
+            DWORD error = GetLastError();
+            std::string message = std::system_category().message(error);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get temp path: {}", message);
+            return StatusCode::FILESYSTEM_ERROR;
+        }
+
+        UINT unique_num = GetTempFileNameW(temp_path, L"file", 0, temp_file);
+        if (unique_num == 0) {
+            DWORD error = GetLastError();
+            std::string message = std::system_category().message(error);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create temp file: {}", message);
+            return StatusCode::FILESYSTEM_ERROR;
+        }
+
+        if (!DeleteFileW(temp_file)) {
+            SetLastError(0);
+            DeleteFileW(temp_file);
+            DWORD error = GetLastError();
+            std::string message = std::system_category().message(error);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to delete temp file: {}", message);
+            return StatusCode::FILESYSTEM_ERROR;
+        }
+
+        if (!CreateDirectoryW(temp_file, NULL)) {
+            SetLastError(0);
+            DeleteFileW(temp_file);
+            DWORD error = GetLastError();
+            std::string message = std::system_category().message(error);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create temp directory: {}", message);
+            return StatusCode::FILESYSTEM_ERROR;
+        }
+
+        *local_path = fs::path(temp_file).generic_string();
+
+        return StatusCode::OK;
+    }
+#endif
 
     static bool isPathEscaped(const std::string& path) {
         std::size_t lhs = path.find("../");
@@ -180,7 +238,7 @@ public:
         } else if (!FileSystem::isLocalFilesystem(givenPath)) {
             // Cloud filesystem
             path = givenPath;
-        } else if (givenPath.size() > 0 && givenPath.at(0) == '/') {
+        } else if (givenPath.size() > 0 && isFullPath(givenPath)) {
             // Full path case
             path = givenPath;
         } else {
@@ -191,11 +249,25 @@ public:
         }
     }
 
+    static bool isFullPath(const std::string& inputPath) {
+        std::filesystem::path filePath(inputPath);
+        try {
+            std::filesystem::path absolutePath = std::filesystem::absolute(filePath);
+            return absolutePath == filePath;
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Exception during path absolute check for path:", inputPath, e.what());
+            return false;
+        } catch (...) {
+            SPDLOG_ERROR("Exception during path absolute check for path:", inputPath);
+            return false;
+        }
+    }
+
     static void setRootDirectoryPath(std::string& rootDirectoryPath, const std::string& givenPath) {
-        std::string currentWorkingDir = std::filesystem::current_path();
+        std::string currentWorkingDir = std::filesystem::current_path().string();
         if (givenPath.size() > 1 && givenPath.find_last_of("/\\") != std::string::npos) {
             auto configDirectory = givenPath.substr(0, givenPath.find_last_of("/\\") + 1);
-            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = configDirectory;
+            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = std::move(configDirectory);
         } else {
             rootDirectoryPath = currentWorkingDir + "/";
         }
@@ -248,20 +320,20 @@ public:
 
     static std::string getStringMD5(const std::string& str) {
         unsigned char result[MD5_DIGEST_LENGTH];
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         MD5((unsigned char*)str.c_str(), str.size(), result);
-#pragma GCC diagnostic pop
-
         std::string md5sum(reinterpret_cast<char*>(result), MD5_DIGEST_LENGTH);
+#pragma GCC diagnostic pop
         return (md5sum);
     }
 
     StatusCode CreateLocalDir(const std::string& path) {
-        int status =
-            mkdir(const_cast<char*>(path.c_str()), S_IRUSR | S_IWUSR | S_IXUSR);
-        if (status == -1) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create local folder: {} {} ", path, strerror(errno));
+        try {
+            fs::create_directory(path);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create local folder: {} {} ", path, e.what());
             return StatusCode::PATH_INVALID;
         }
         return StatusCode::OK;

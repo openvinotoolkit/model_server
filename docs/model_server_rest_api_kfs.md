@@ -155,7 +155,8 @@ If successful:
   "versions" : [ $string, ... ] #optional,
   "platform" : $string,
   "inputs" : [ $metadata_tensor, ... ],
-  "outputs" : [ $metadata_tensor, ... ]
+  "outputs" : [ $metadata_tensor, ... ],
+  "rt_info" : { $model_info}
 }
 ```
 
@@ -168,6 +169,26 @@ $metadata_tensor =
   "shape" : [ $number, ... ]
 }
 ```
+`rt_info` is an optional response returned for the models in IR format which got an auxiliary metadata added during the export commands. For example the following code can include info about classification model labels:
+```python
+import openvino as ov
+core = ov.Core()
+model = core.read_model(model="model.xml")
+
+model.set_rt_info(["cat", "dog"],["model_info","labels"])
+ov.save_model(model,"new_model.xml")
+```
+Such deployed models will report:
+```json
+{
+"rt_info": {
+    "model_info": {
+      "labels": "cat dog"
+    }
+  }
+}
+```
+
 
 Else:
 ```JSON
@@ -229,7 +250,7 @@ $request_output =
 
 Besides numerical values, it is possible to pass encoded images using Binary Data extension:
 
-As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. Input is treated as encoded image when datatype is `BYTES` and model or pipeline have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. Every batch the BYTES input needs to be preceded by 4 bytes, litte endian, that contains its size.
+As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. Input is treated as encoded image when datatype is `BYTES` and model or pipeline have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. Every batch the BYTES input needs to be preceded by 4 bytes, little endian, that contains its size.
 
 ```JSON
 Content-Type: application/octet-stream
@@ -249,7 +270,7 @@ Content-Length: <xx+9472>
 ```
 
 
-As a raw data - it means it wont be preprocessed by OVMS. To send raw data using Binary Data extension use other data types than `BYTES`.
+As a raw data - it means it won't be preprocessed by OVMS. To send raw data using Binary Data extension use other data types than `BYTES`.
 
 ```JSON
 Content-Type: application/octet-stream
@@ -269,9 +290,9 @@ Content-Length: <xx+(3 x 1080000)>
 <3240000 bytes of the whole data batch for model_input tensor>
 ```
 
-*sending strings inside binary extension also require preceding every batch by 4 bytes, litte endian, that contains its size.
+*sending strings inside binary extension also require preceding every batch by 4 bytes, little endian, that contains its size.
 
-Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) for more informations.
+Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) for more information.
 
 
 **Response Format**

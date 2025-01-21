@@ -18,9 +18,9 @@ FROM ${IMAGE_NAME}
 USER root
 ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PYTHONPATH=/ovms/lib/python
-RUN microdnf install python39-pip git
+RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
+	$DNF_TOOL install -y python39-pip git
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
-RUN python3 -c "import nltk; nltk.download('averaged_perceptron_tagger'); nltk.download('punkt')"
 USER ovms
 ENTRYPOINT [ "/ovms/bin/ovms" ]

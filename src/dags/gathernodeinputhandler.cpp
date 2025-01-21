@@ -23,19 +23,8 @@
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
-#include "nodesessionmetadata.hpp"
 
 namespace ovms {
-
-GatherNodeInputHandler::GatherNodeInputHandler(uint32_t inputsMissingCount, const CollapseDetails& collapsingDetails) :
-    NodeInputHandler(inputsMissingCount),
-    collapsingDetails(std::make_unique<CollapseDetails>(collapsingDetails)) {
-    remainingDependencies = std::accumulate(
-        collapsingDetails.collapsedSessionSizes.begin(),
-        collapsingDetails.collapsedSessionSizes.end(),
-        remainingDependencies,
-        std::multiplies<session_id_t>());
-}
 
 Status GatherNodeInputHandler::setInput(const std::string& inputName, TensorWithSource& tensor, session_id_t shardId) {
     auto inputsShardsIt = shardsStorage.find(inputName);
@@ -70,8 +59,8 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
         const auto shardsCount = shardMap.size();
         SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Consolidating: {} shards for input: {}", shardsCount, inputName);
         session_id_t firstShardId = 0;
-        auto firstShard = shardMap.at(firstShardId);
-        auto firstShardDims = firstShard.get_shape();
+        const auto& firstShard = shardMap.at(firstShardId);
+        const auto& firstShardDims = firstShard.get_shape();
         auto precision = firstShard.get_element_type();
         auto newDims = firstShardDims;
         newDims.insert(newDims.begin(),
@@ -88,7 +77,7 @@ Status GatherNodeInputHandler::notifyFinishedDependency() {
                 (tensor.get_shape() != firstShardDims)) {
                 std::stringstream firstShardShapeStream;
                 firstShardShapeStream << firstShardDims;
-                auto currentShardShape = tensor.get_shape();
+                const auto& currentShardShape = tensor.get_shape();
                 std::stringstream currentShardShapeStream;
                 currentShardShapeStream << currentShardShape;
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to consolidate tensor: {}; shards in gather node. First shard has different tensor precision: {}; or shape: {}; than current shard precision: {}; shape: {};",
