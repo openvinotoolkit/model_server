@@ -695,6 +695,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		./run_unit_tests.sh
 		exit_code=$$?
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz .
+		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 		exit $$exit_code
 else
 	docker run \
@@ -709,6 +710,7 @@ else
 		./run_unit_tests.sh ;\
 		exit_code=$$?
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz .
+		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 		exit $$exit_code
 endif
 
