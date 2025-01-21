@@ -25,12 +25,12 @@ IF "%~1"=="" (
     set "BAZEL_SHORT_PATH=C:\%1"
 )
 
-set "bazelStartupCmd=--output_user_root=%BAZEL_SHORT_PATH%"
+set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=C:/%1/openvino/runtime/cmake"
 
 set "bazelBuildArgs=--config=windows --action_env OpenVINO_DIR=%openvino_dir%"
 set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
-set "changeConfigsCmd=windows_change_test_configs.py"
+set "changeConfigsCmd=python windows_change_test_configs.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
@@ -63,13 +63,13 @@ set "BAZEL_VC_FULL_VERSION=14.29.30133"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
-
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH
-set "openvinoBatch=call %BAZEL_SHORT_PATH%\openvino\setupvars.bat"
+set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
 set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
+set PYTHONHOME=C:\opt\Python311
+set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Set required libraries paths
 %openvinoBatch%
@@ -84,9 +84,6 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 :: Change tests configs to windows paths
 %changeConfigsCmd%
 if !errorlevel! neq 0 exit /b !errorlevel!
-
-:: Install Jinja in Python for chat templates to work
-set PYTHONHOME=C:\opt\Python311
 
 :: Download LLMs
 call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing

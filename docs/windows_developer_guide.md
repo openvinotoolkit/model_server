@@ -1,24 +1,8 @@
-# OpenVINO&trade; Model Server Developer Guide for Windows (Experimental/Alpha) {#ovms_docs_windows_developer_guide}
-This document describes experimental/alpha windows development and compilation guide for ovms.exe binary.
-
-OpenVINO&trade; Model Server is in experimental/alpha stage of windows enabling with limited functionality and quality.
-It is recommended to use the top of main repository branch for more feature enabled code and better software quality for windows.
-
-## List of enabled features:
-### Limited model server basic functionality besides disabled features
-### GRPC API
-### Mediapipe graphs execution
-### Serving single models in all formats
+# OpenVINO&trade; Model Server Developer Guide for Windows {#ovms_docs_windows_developer_guide}
+This document describes windows development and compilation guide for ovms.exe binary.
 
 ## List of disabled features:
-### Ovms feature parity with Linux implementation
-### LLM support
-### PYTHON NODES support
-### REST API support
-### Custom nodes support
 ### Cloud storage support
-### Model cache support
-### DAG pipelines
 
 # Install prerequisites
 
@@ -110,42 +94,17 @@ windows_install_dependencies.bat
 
 ## COMPILE
 
-# Export BAZEL env variables:
-Set the variables to make sure bash is visible and add its directory in PATH - C:\opt\msys64\usr\bin:
-```
-set PATH=%PATH%;C:\opt\msys64\usr\bin;c:\opt
-set BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe
-```
-
-# MSVC compiler settings
-```
-set BAZEL_VS=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools
-set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC
-set BAZEL_VC_FULL_VERSION=14.29.30133
-```
-
-# Run bazel build command
-```
-bazel --output_user_root=C:/b_tmp build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --subcommands --verbose_failures //src:ovms 2>&1 | tee compilation.log
-```
-
-# Set python paths
-```
-set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
-set "PYTHONPATH=%setPythonPath%"
-```
-
-## You can setup environment variables for fresh start of Developer command line
 For building and running ovms.exe after the windows_install_dependencies.bat was successful run the batch script in new "Developer Command Prompt for VS 2022":
 ```
-windows_setupvars.bat
+windows_build.bat
 ```
 
-# Running unit tests
+# Running unit tests - optional
 ```
-bazel --output_user_root=C:/b_tmp build --config=windows --jobs=%NUMBER_OF_PROCESSORS% --subcommands --verbose_failures //src:ovms_test 2>&1 | tee compilation.log
-c:\opt\openvino\setupvars.bat
-C:\opt\opencv\setup_vars_opencv4.cmd
-windows_change_test_configs.py
-bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log
+windows_test.bat
+```
+
+# Creating deployment package
+```
+windows_create_package.bat
 ```
