@@ -329,7 +329,7 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 # OVMS
 ARG BUILD_TESTS=0
 # hadolint ignore=SC2046
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "$BUILD_TESTS" == "1" ] ; then echo -n //src/ovms_test; fi)
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "$BUILD_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
