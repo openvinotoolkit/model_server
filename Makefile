@@ -57,6 +57,7 @@ INSTALL_RPMS_FROM_URL ?=
 
 CHECK_COVERAGE ?=0
 RUN_TESTS ?= 0
+BUILD_TESTS ?= 0
 RUN_GPU_TESTS ?=
 NVIDIA ?=0
 GPU ?= 0
@@ -677,7 +678,7 @@ endif
 run_unit_tests: prepare_models
 ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
-		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--device=/dev/dri \
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \
 		-u 0 \
@@ -696,7 +697,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		exit $$exit_code
 else
 	docker run \
-		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		-e https_proxy=${https_proxy} \
