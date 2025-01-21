@@ -69,12 +69,12 @@ if [ "$RUN_TESTS" == "1" ] ; then
         ./bazel-bin/src/ovms_test --gtest_filter="$i.*" > tmp.log 2>&1 || ( failed=1 ; echo $i ; cat tmp.log ) 
         cat tmp.log >> ${TEST_LOG}
     done
-    for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep -v '^  '` ; do
+    for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep '^  '` ; do
         ./bazel-bin/src/ovms_test --gtest_filter="*.$i" > tmp.log 2>&1 || ( failed=1 ; echo "TEST NAME $i" ; cat tmp.log ) 
         cat tmp.log >> ${TEST_LOG}
     done    
     grep -a " ms \| ms)" ${TEST_LOG}
-    echo "Tests completed:" `grep -a " ms \| ms)" ${TEST_LOG} | grep "[       OK ]" | wc -l`
+    echo "Tests completed:" `grep -a " ms \| ms)" ${TEST_LOG} | grep " OK " | wc -l`
     compress_logs
     exit $failed
 fi
