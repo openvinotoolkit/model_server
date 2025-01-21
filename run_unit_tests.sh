@@ -20,8 +20,8 @@ JOBS=${JOBS:-"$(nproc)"}
 RUN_TESTS=${RUN_TESTS:-"1"}
 RUN_GPU_TESTS=${RUN_GPU_TESTS:-"0"}
 CHECK_COVERAGE=${CHECK_COVERAGE:-"0"}
-TEST_LOG="test.log"
-BAZEL_OPTIONS="--config=mp_on_py_on"
+TEST_LOG=${TEST_LOG:-"test.log"}
+BAZEL_OPTIONS=${BAZEL_OPTIONS:-"--config=mp_on_py_on"}
 
 TEST_FILTER="--test_filter=*"
 SHARED_OPTIONS=" \
@@ -63,6 +63,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
     fi
     bazel build ${SHARED_OPTIONS} "${TEST_FILTER}" //src:ovms_test ${BAZEL_OPTIONS}
     set +x
+    echo "Executing unit tests"
     failed=0
     for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
         ./bazel-bin/src/ovms_test --gtest_filter="$i.*" > tmp${TEST_LOG} 2>&1 || ( failed=1 ; echo $i ; cat tmp${TEST_LOG} ) 
@@ -73,7 +74,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
         cat tmp${TEST_LOG} >> ${TEST_LOG}
     done    
     grep -a " ms \| ms)" ${TEST_LOG}
-    echo "Tests completed:" `grep -a " ms \| ms)" ${TEST_LOG} | wc -l`
+    echo "Tests completed:" `grep -a " ms \| ms)" ${TEST_LOG} | grep "[       OK ]" | wc -l`
     compress_logs
     exit $failed
 fi
