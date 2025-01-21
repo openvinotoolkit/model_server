@@ -179,7 +179,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "06c5895d421ce344776be4cb127e1b651a561c2a", # Model api link openvino (#104) 20/01/2025
+    commit = "182ce7a5b17443785e174099f74d56cde259f061", # Model api link openvino (#104) 20/01/2025
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
