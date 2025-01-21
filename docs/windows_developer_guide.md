@@ -105,6 +105,42 @@ windows_test.bat
 ```
 
 # Creating deployment package
+This step prepares ovms.zip package in the dist\windows\ directory
 ```
 windows_create_package.bat
 ```
+
+# Deploying ovms
+Copy and unpack model server archive for Windows:
+
+```bat
+tar -xf ovms.zip
+```
+
+Run `setupvars` script to set required environment variables. 
+
+**Windows Command Line**
+```bat
+./ovms/setupvars.bat
+```
+
+**Windows PowerShell**
+```powershell
+./ovms/setupvars.ps1
+```
+
+# Test the Deployment
+Download ResNet50 model:
+```console
+mkdir models/resnet50/1
+
+curl -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet50/1/model.xml
+curl -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
+```
+
+Start the server:
+```console
+ovms --model_name resnet --model_path models/resnet50
+```
+
+## **Model Server deployment**: You can find more information on using ovms here: [baremetal deployment guide](deploying_server_baremetal.md)

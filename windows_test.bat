@@ -26,7 +26,7 @@ IF "%~1"=="" (
 )
 
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
-set "openvino_dir=C:/%1/openvino/runtime/cmake"
+set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 
 set "bazelBuildArgs=--config=windows --action_env OpenVINO_DIR=%openvino_dir%"
 set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
@@ -68,7 +68,7 @@ set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
 set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
-set PYTHONHOME=C:\opt\Python311
+set "PYTHONHOME=C:\opt\Python311"
 set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Set required libraries paths
