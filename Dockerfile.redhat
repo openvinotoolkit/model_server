@@ -136,7 +136,7 @@ RUN wget -q https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/o
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
-    python3 --version && python3 -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2" --no-cache-dir
+    python3 --version && python3 -m pip install "Jinja2==3.1.5" "MarkupSafe==3.0.2" --no-cache-dir
 
 # Set up Bazel
 ENV BAZEL_VERSION 6.1.1
@@ -276,13 +276,6 @@ ARG PROJECT_VERSION="2025.0"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 
-# Test Coverage
-COPY ci/check_coverage.bat /ovms/
-ARG CHECK_COVERAGE=0
-ARG RUN_TESTS=0
-COPY run_unit_tests.sh prepare_llm_models.sh prepare_gpu_models.sh /ovms/
-RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
-
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" && \
     if [ "$ov_use_binary" = "1" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[^_]+')#g" /ovms/src/version.hpp ; fi && \
@@ -293,8 +286,18 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/sr
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 
 # OVMS
-# hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms //src:ovms_test
+ARG OPTIMIZE_BUILDING_TESTS=0
+# Builds unit tests together with ovms server in one step
+# It speeds up CI when tests are executed outside of the image building
+# hadolint ignore=SC2046
+RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
+
+# Tests execution
+COPY ci/check_coverage.bat /ovms/
+ARG CHECK_COVERAGE=0
+ARG RUN_TESTS=0
+COPY run_unit_tests.sh prepare_llm_models.sh prepare_gpu_models.sh /ovms/
+RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
 
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so

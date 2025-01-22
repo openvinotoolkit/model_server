@@ -122,6 +122,11 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
         std::string deviceName;
 
         while (getline(ss, deviceName, deviceDelimiter)) {
+            char bracket = '(';
+            auto bracketPos = deviceName.find(bracket);
+            if (bracketPos != std::string::npos) {
+                deviceName = deviceName.substr(0, bracketPos);
+            }
             insertSupportedKeys(pluginSupportedConfigKeys, deviceName, ieCore);
         }
     } else {
