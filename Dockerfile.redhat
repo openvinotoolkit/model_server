@@ -106,7 +106,6 @@ ARG JOBS=40
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
             https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el9.noarch.rpm && \
             dnf update -d6 -y && dnf install -d6 -y \
-            ccache \
             gdb \
             java-11-openjdk-devel \
             tzdata-java \
@@ -120,10 +119,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
             xz \
             python3-devel \
             https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-2020.3-8.el9.x86_64.rpm \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-devel-2020.3-8.el9.x86_64.rpm \
-            https://mirror.stream.centos.org/9-stream/CRB/x86_64/os/Packages/libusb-devel-0.1.7-5.el9.x86_64.rpm \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/libusb-0.1.7-5.el9.x86_64.rpm \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/libusbx-devel-1.0.26-1.el9.x86_64.rpm && \
+            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-devel-2020.3-8.el9.x86_64.rpm && \
             dnf clean all
 
 RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
@@ -314,7 +310,6 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
     'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}}','BASE_IMAGE':'${BASE_IMAGE}' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
-RUN rm -Rf /etc/entitlement /etc/rhsm/ca
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
