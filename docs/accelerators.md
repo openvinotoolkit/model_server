@@ -84,7 +84,7 @@ ovms --model_path model --model_name resnet --port 9000 --target_device NPU --ba
 
 Check more info about the [NPU driver configuration](https://docs.openvino.ai/2024/get-started/configurations/configurations-intel-npu.html).
 
-> **NOTE**: NPU device execute models with static input and ouput shapes only. If your model has dynamic shape, it can be reset to static with parameters `--batch_size` or `--shape`.
+> **NOTE**: NPU device execute models with static input and output shapes only. If your model has dynamic shape, it can be reset to static with parameters `--batch_size` or `--shape`.
 
 ## Using Heterogeneous Plugin
 
