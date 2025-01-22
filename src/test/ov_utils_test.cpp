@@ -203,6 +203,17 @@ TEST(OVUtils, ValidatePluginConfigurationPositive) {
     EXPECT_TRUE(status.ok());
 }
 
+TEST(OVUtils, ValidatePluginConfigurationPositiveBatch) {
+    ov::Core ieCore;
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ovms::ModelConfig config;
+    config.setTargetDevice("BATCH:CPU(4)");
+    config.setPluginConfig({{"AUTO_BATCH_TIMEOUT", 10}});
+    ovms::plugin_config_t supportedPluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    auto status = ovms::validatePluginConfiguration(supportedPluginConfig, "BATCH:CPU(4)", ieCore);
+    EXPECT_TRUE(status.ok());
+}
+
 TEST(OVUtils, ValidatePluginConfigurationNegative) {
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
