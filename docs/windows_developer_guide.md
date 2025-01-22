@@ -105,7 +105,7 @@ windows_test.bat
 ```
 
 # Creating deployment package
-This step prepares ovms.zip package in the dist\windows\ directory
+This step prepares ovms.zip package in the dist\windows\ directory. Run this script after successful compilation.
 ```
 windows_create_package.bat
 ```
