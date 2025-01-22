@@ -27,16 +27,6 @@ if [ -z "$DNF_TOOL" ]; then
 fi
 
 case $INSTALL_DRIVER_VERSION in \
-"21.38.21026") \
-        mkdir /tmp/gpu_deps ; \
-        curl -L --output /tmp/gpu_deps/intel-igc-core-1.0.8708-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02870435-intel-igc/intel-igc-core-1.0.8708-1.el8.x86_64.rpm ; \
-        curl -L --output /tmp/gpu_deps/intel-opencl-21.38.21026-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02871549-intel-opencl/intel-opencl-21.38.21026-1.el8.x86_64.rpm ; \
-        curl -L --output /tmp/gpu_deps/intel-igc-opencl-devel-1.0.8708-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02870435-intel-igc/intel-igc-opencl-devel-1.0.8708-1.el8.x86_64.rpm ; \
-        curl -L --output /tmp/gpu_deps/intel-igc-opencl-1.0.8708-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02870435-intel-igc/intel-igc-opencl-1.0.8708-1.el8.x86_64.rpm ; \
-        curl -L --output /tmp/gpu_deps/intel-gmmlib-21.2.1-1.el7.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02320646-intel-gmmlib/intel-gmmlib-21.2.1-1.el8.x86_64.rpm ; \
-        curl -L --output /tmp/gpu_deps/intel-gmmlib-devel-21.2.1-1.el8.x86_64.rpm https://download.copr.fedorainfracloud.org/results/jdanecki/intel-opencl/centos-stream-8-x86_64/02320646-intel-gmmlib/intel-gmmlib-devel-21.2.1-1.el8.x86_64.rpm ; \
-        cd /tmp/gpu_deps && rpm -iv *.rpm && rm -Rf /tmp/gpu_deps ; \
-;; \
 "22.10.22597") \
         $DNF_TOOL install --nodocs -y libedit ; \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.0.3-i699.3.el8.x86_64.rpm ; \

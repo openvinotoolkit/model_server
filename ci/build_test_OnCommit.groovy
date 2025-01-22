@@ -84,7 +84,7 @@ pipeline {
               when { expression { image_build_needed == "true" } }
                 steps {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
-                      sh "make ovms_builder_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                      sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                     }
             }
             stage('Build and test windows') {
@@ -119,6 +119,7 @@ pipeline {
             stage("Run unit tests") {
               steps {
                   sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/INT8 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                  archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
               }
             }
             stage("Internal tests") {
