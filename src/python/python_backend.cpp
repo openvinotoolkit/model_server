@@ -27,7 +27,6 @@ using namespace ovms;
 bool PythonBackend::createPythonBackend(std::unique_ptr<PythonBackend>& pythonBackend) {
     py::gil_scoped_acquire acquire;
     try {
-        //*pythonBackend = new PythonBackend();
         pythonBackend = std::make_unique<PythonBackend>();
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_DEBUG("PythonBackend initialization failed: {}", e.what());
