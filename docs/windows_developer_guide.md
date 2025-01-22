@@ -39,7 +39,7 @@ Follow instructions in the link below:
 https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
 
 ## Run Developer Command Prompt for VS 2022
-Press Start and paste "Developer Command Prompt for VS 2022" to run cmd.exe for VS C++ developers
+Press Windows Start and paste in search bar "Developer Command Prompt for VS 2022" to open command interpreter windows for VS C++ developers
 Run commands in this prompt is not stated otherwise.
 
 # Building without proxy
