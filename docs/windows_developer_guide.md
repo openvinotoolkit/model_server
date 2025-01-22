@@ -1,17 +1,11 @@
-# OpenVINO&trade; Model Server Developer Guide for Windows {#ovms_docs_windows_developer_guide}
+# OpenVINO&trade; Model Server Developer Guide for Windows
 This document describes windows development and compilation guide for ovms.exe binary.
+This solution was tested on Windows 11.
 
 ## List of disabled features:
 ### Cloud storage support
 
 # Install prerequisites
-
-## Power shell settings
-Set Execution Policy to RemoteSigned
-Open PowerShell as an administrator: Right-click on the Start button and select “Windows PowerShell (Admin)”.
-Run the command:
-```Set-ExecutionPolicy RemoteSigned```
-Confirm the change by typing “A” and pressing Enter.
 
 ## VISUAL BUILD TOOLS
 Install build tools for VS:
@@ -40,7 +34,7 @@ Follow instructions in the link below:
 https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
 
 ## Run Developer Command Prompt for VS 2022
-Press Start and paste "Developer Command Prompt for VS 2022" to run cmd.exe for VS C++ developers
+Press Windows Start and paste in search bar "Developer Command Prompt for VS 2022" to open command interpreter windows for VS C++ developers
 Run commands in this prompt is not stated otherwise.
 
 ## GET CODE
@@ -53,57 +47,31 @@ cd model_server
 
 ## Install dependencies
 Run windows_install_dependencies.bat
+This will install around 3.3 GB dependencies in the c:\opt directory:
+- wet.exe, msys2 tools, Openvinotoolkit, OpenCL headers, BoringSSL, bazel, Python 3.11.9, OpenCV
 ```bat
 windows_install_dependencies.bat
 ```
 
 ## COMPILE
 
-For building and running ovms.exe after the windows_install_dependencies.bat was successful run the batch script in new "Developer Command Prompt for VS 2022":
+After installation of build dependencies, ovms compilation should be started in new shell "Developer Command Prompt for VS 2022":
+[WARNING] It can take up to 1h depending on host CPU and internet connection speed.
 ```
 windows_build.bat
 ```
 
 # Running unit tests - optional
+The script compiles ovms_test binary, downloads and converts test LLM models and installs Python torch and optimum.
 ```
 windows_test.bat
 ```
 
 # Creating deployment package
-This step prepares ovms.zip package in the dist\windows\ directory
+This step prepares ovms.zip deployment package from the build artifacts in the dist\windows\ directory. Run this script after successful compilation.
 ```
 windows_create_package.bat
 ```
 
-# Deploying ovms
-Copy and unpack model server archive for Windows:
-
-```bat
-tar -xf ovms.zip
-```
-
-Run `setupvars` script to set required environment variables. 
-
-**Windows Command Line**
-```bat
-./ovms/setupvars.bat
-```
-
-**Windows PowerShell**
-```powershell
-./ovms/setupvars.ps1
-```
-
 # Test the Deployment
-Download ResNet50 model:
-```console
-curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet50/1/model.xml
-curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
-```
-
-Start the server:
-```console
-ovms --model_name resnet --model_path models/resnet50
-```
-
-## **Model Server deployment**: You can find more information on using ovms here: [baremetal deployment guide](deploying_server_baremetal.md)
+You can follow the [baremetal deployment guide](deploying_server_baremetal.md) for information how to deploy and use the ovms.zip package.
