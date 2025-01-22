@@ -99,14 +99,14 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
     const char* https_proxy = std::getenv("https_proxy") != nullptr ? std::getenv("https_proxy") : std::getenv("HTTPS_PROXY");
     const std::string default_proxy = https_proxy != nullptr ? std::string(https_proxy) : http_proxy != nullptr ? std::string(http_proxy) : "";
 
-    if ((secret_key != NULL) && (key_id != NULL)) {
+    if ((secret_key != nullptr) && (key_id != nullptr)) {
         credentials.SetAWSAccessKeyId(key_id);
         credentials.SetAWSSecretKey(secret_key);
         config = Aws::Client::ClientConfiguration();
-        if (region != NULL) {
+        if (region != nullptr) {
             config.region = region;
         }
-        if (session_token != NULL) {
+        if (session_token != nullptr) {
             credentials.SetSessionToken(session_token);
         }
     } else if (profile_name) {
@@ -126,7 +126,7 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
         config.endpointOverride = Aws::String(host_name + ":" + host_port);
         config.scheme = Aws::Http::Scheme::HTTP;
     }
-    if (s3_endpoint != NULL) {
+    if (s3_endpoint != NnullptrULL) {
         std::string endpoint(s3_endpoint);
         if (endpoint.rfind("http://") != std::string::npos) {
             endpoint = endpoint.substr(7);
@@ -156,7 +156,7 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
             config,
             Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
             false);
-    } else if ((secret_key != NULL) && (key_id != NULL)) {
+    } else if ((secret_key != nullptr) && (key_id != nullptr)) {
         client_ = s3::S3Client(
             credentials,
             config,

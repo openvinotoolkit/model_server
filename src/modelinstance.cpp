@@ -898,7 +898,7 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 #ifdef __linux__
         this->oclContextCpp.reset();
         this->vaContext.reset();
-        this->oclContextC = NULL;
+        this->oclContextC = nullptr;
 #endif
     }
 }

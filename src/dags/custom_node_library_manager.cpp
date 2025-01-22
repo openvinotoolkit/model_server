@@ -50,7 +50,7 @@ Status CustomNodeLibraryManager::loadLibrary(const std::string& name, const std:
 #ifdef __linux__
     void* handle = dlopen(basePath.c_str(), RTLD_LAZY | RTLD_LOCAL);
     char* error = dlerror();
-    if (handle == NULL) {
+    if (handle == nullptr) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Library name: {} failed to open base_path: {} with error: {}", name, basePath, error);
         return StatusCode::NODE_LIBRARY_LOAD_FAILED_OPEN;
     }

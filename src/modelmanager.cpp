@@ -666,7 +666,7 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
         customloaders.add(loaderName, customLoaderIfPtr, handleCL);
 #elif _WIN32
         // TODO: implement LoadLibrary for windows
-        void* handleCL = NULL;
+        void* handleCL = nullptr;
         if (!handleCL) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), "e");
             return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
