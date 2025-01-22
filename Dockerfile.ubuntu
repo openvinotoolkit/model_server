@@ -343,7 +343,7 @@ RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_f
 # OVMS
 ARG OPTIMIZE_BUILDING_TESTS=0
 # Builds unit tests together with ovms server in one step
-
+# It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n //src:ovms_test; fi); fi;
 
