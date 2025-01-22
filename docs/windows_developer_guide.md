@@ -94,7 +94,7 @@ windows_install_dependencies.bat
 
 ## COMPILE
 
-For building and running ovms.exe after the windows_install_dependencies.bat was successful run the batch script in new "Developer Command Prompt for VS 2022":
+After installation of build dependencies, ovms compilation should be started in new shell "Developer Command Prompt for VS 2022":
 ```
 windows_build.bat
 ```
