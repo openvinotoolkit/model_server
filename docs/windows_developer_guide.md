@@ -1,11 +1,12 @@
 # OpenVINO&trade; Model Server Developer Guide for Windows
 This document describes windows development and compilation guide for ovms.exe binary.
-This solution was tested on Windows 11.
+This instruction was tested on Windows 11 and Windows 10 OS.
 
 ## List of disabled features:
 ### Cloud storage support
 
 # Install prerequisites
+Following the steps below requires 40GB of free disk space.
 
 ## VISUAL BUILD TOOLS
 Install build tools for VS:
@@ -34,7 +35,7 @@ Follow instructions in the link below:
 https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
 
 ## Run Developer Command Prompt for VS 2022
-Press Windows Start and paste in search bar "Developer Command Prompt for VS 2022" to open command interpreter windows for VS C++ developers
+Press Windows Start and run the cmd.exe terminal windows.
 Run commands in this prompt is not stated otherwise.
 
 ## GET CODE
@@ -49,20 +50,20 @@ cd model_server
 Run windows_install_dependencies.bat
 This will install around 3.3 GB dependencies in the c:\opt directory:
 - wet.exe, msys2 tools, Openvinotoolkit, OpenCL headers, BoringSSL, bazel, Python 3.11.9, OpenCV
+
+If error occurs during the script execution, please fix the error and rerun the script.
 ```bat
 windows_install_dependencies.bat
 ```
 
 ## COMPILE
-
-After installation of build dependencies, ovms compilation should be started in new shell "Developer Command Prompt for VS 2022":
-[WARNING] It can take up to 1h depending on host CPU and internet connection speed.
+[WARNING] This step consumes 11GB of disk space. It can take up to 1h depending on host CPU and internet connection speed.
 ```
 windows_build.bat
 ```
 
 # Running unit tests - optional
-The script compiles ovms_test binary, downloads and converts test LLM models and installs Python torch and optimum.
+The script compiles ovms_test binary, downloads and converts test LLM models (src\tests\llm_testing) and installs Python torch and optimum.
 ```
 windows_test.bat
 ```
