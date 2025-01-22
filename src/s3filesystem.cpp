@@ -126,7 +126,7 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
         config.endpointOverride = Aws::String(host_name + ":" + host_port);
         config.scheme = Aws::Http::Scheme::HTTP;
     }
-    if (s3_endpoint != NnullptrULL) {
+    if (s3_endpoint != nullptr) {
         std::string endpoint(s3_endpoint);
         if (endpoint.rfind("http://") != std::string::npos) {
             endpoint = endpoint.substr(7);

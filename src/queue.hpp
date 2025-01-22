@@ -65,7 +65,6 @@ public:
             value = streams[front_idx];
             streams[front_idx] = -1;  // negative value indicate consumed vector index
             front_idx = (front_idx + 1) % streams.size();
-            lk.unlock();
             return value;
         }
     }
