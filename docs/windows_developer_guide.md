@@ -82,7 +82,7 @@ cd model_server
 
 ## Install dependencies
 Run windows_install_dependencies.bat
-This will install the following dependencies in the c:\opt directory:
+This will install around 3.3 GB dependencies in the c:\opt directory:
 - wet.exe, msys2 tools, Openvinotoolkit, OpenCL headers, BoringSSL, bazel, Python 3.11.9, OpenCV
 ```bat
 windows_install_dependencies.bat
