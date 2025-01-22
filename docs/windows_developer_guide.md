@@ -20,10 +20,11 @@ https://aka.ms/vs/17/release/vs_BuildTools.exe
 
 Mark required options for installation:
 - C++ Desktop development with C++
-- Windows 11 SDK
+- Windows 11 SDK (10.0.26210.0)
 - MSVC v143 CPP - VS 2022 C++ platform toolset.
 - C++ CMake tools for Windows platform toolset.
 - MSVC v142 CPP - VS 2022 C++ platform toolset.
+- Optional Windows 11 SDK (10.0.26100.0) for Windows 10 compilation
 
 ![Build Tools options](build_tools.jpg)
 
@@ -41,42 +42,6 @@ https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-fo
 ## Run Developer Command Prompt for VS 2022
 Press Start and paste "Developer Command Prompt for VS 2022" to run cmd.exe for VS C++ developers
 Run commands in this prompt is not stated otherwise.
-
-# Building without proxy
-Please set the proxy setting for windows for in environment variables when building behind proxy
-```bat
-set HTTP_PROXY=
-set HTTPS_PROXY=
-```
-Also remove proxy from your .gitconfig
-
-## Building with proxy
-Please set the proxy setting for windows for in environment variables when building behind proxy
-```bat
-set HTTP_PROXY=my.proxy.com:123
-set HTTPS_PROXY=my.proxy.com:122
-```
-
-## NPM YARN
-Download and run the nvm installer.
-https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.exe
-After installation run below commands,
-Run in command line:
-```bat
-nvm install 22.9.0
-nvm use 22.9.0
-npm cache clean --force
-```
-
-If you want to compile without proxy, npm proxy needs to be reset:
-```bat
-set http_proxy=
-set https_proxy=
-npm config rm https-proxy
-npm config rm proxy
-npm i --global yarn
-yarn
-```
 
 ## GET CODE
 ```bat
@@ -132,10 +97,8 @@ Run `setupvars` script to set required environment variables.
 # Test the Deployment
 Download ResNet50 model:
 ```console
-mkdir models/resnet50/1
-
-curl -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet50/1/model.xml
-curl -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
+curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet50/1/model.xml
+curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
 ```
 
 Start the server:

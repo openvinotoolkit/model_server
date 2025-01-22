@@ -68,10 +68,13 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-copy  %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows\ovms
+copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-copy  %cd%\setupvars.* dist\windows\ovms
+copy %cd%\setupvars.* dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+call dist\windows\ovms\setupvars.bat
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 dist\windows\ovms\ovms.exe --version
@@ -85,3 +88,4 @@ C:\Windows\System32\tar.exe -a -c -f ovms.zip ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 cd ..\..
 dir dist\windows\ovms.zip
+echo [INFO] Package created
