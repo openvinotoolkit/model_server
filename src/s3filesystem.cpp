@@ -437,7 +437,7 @@ StatusCode S3FileSystem::downloadFileFolder(const std::string& path, const std::
             }
             if (is_subdir) {
                 // Create local mirror of sub-directories
-                int status = mkdir(const_cast<char*>(local_fpath.c_str()), S_IRUSR | S_IWUSR | S_IXUSR);
+                int status = mkdir(local_fpath.c_str(), S_IRUSR | S_IWUSR | S_IXUSR);
                 if (status == -1) {
                     SPDLOG_LOGGER_ERROR(s3_logger, "Failed to create local folder: {} {} ", local_fpath, strerror(errno));
                     return StatusCode::PATH_INVALID;
