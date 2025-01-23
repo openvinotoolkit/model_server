@@ -88,6 +88,13 @@ mkdir -p models
 python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8  --config_file_path models/config_all.json --num_streams 2
 ```
 
+By default, embeddings endpoint returns an error when the input exceed the maximum model context length.
+It is possible to change the behavior to truncate prompts automatically to fit the model. Add `--truncate` option in the export command.
+mkdir -p models
+python export_model.py embeddings --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json --truncate
+```
+Note, that truncating input will prevent errors but the accuracy might be impacted as only part of the input will be analyzed.
+
 Reranking:
 ```bash
 mkdir -p models

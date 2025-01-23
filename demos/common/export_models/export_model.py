@@ -47,6 +47,7 @@ parser_text.add_argument('--cache_size', default=10, type=int, help='cache size 
 parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
 add_common_arguments(parser_embeddings)
 parser_embeddings.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
+parser_embeddings.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_embeddings.add_argument('--version', default=1, type=int, help='version of the model', dest='version')
 
@@ -222,6 +223,15 @@ def set_rt_info(model_folder_path, model_filename, config_filename):
     shutil.move(os.path.join(model_folder_path, temp_model_name), os.path.join(model_folder_path, model_filename))
     shutil.move(os.path.join(model_folder_path, temp_model_name.replace('.xml','.bin')), os.path.join(model_folder_path, model_filename.replace('.xml','.bin')))
 
+def get_models_max_context(tmpdirname, config_filename):
+    with open(os.path.join(tmpdirname, config_filename), 'r') as config_file:
+        config_data = json.load(config_file)
+        if config_data['max_position_embeddings'] is not None:
+            return config_data['max_position_embeddings']
+        if config_data['n_positions'] is not None:
+            return config_data['n_positions']
+        return None
+
 def add_servable_to_config(config_path, mediapipe_name, base_path):
     print(config_path, mediapipe_name, base_path)
     if not os.path.isfile(config_path):
@@ -269,7 +279,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
     
     
-def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path):
+def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, truncate=True):
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
         print("OV model is source folder. Skipping conversion.")
         os.makedirs(os.path.join(model_repository_path, model_name, 'embeddings', version), exist_ok=True)
@@ -278,7 +288,8 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
         shutil.move(os.path.join(source_model, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
         shutil.move(os.path.join(source_model, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.xml'))
         shutil.move(os.path.join(source_model, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.bin'))
-    else: # assume HF model name
+    else: # assume HF model 
+        set_max_context_length = ""
         with tempfile.TemporaryDirectory() as tmpdirname:
             embeddings_path = os.path.join(model_repository_path, model_name,'embeddings', version)
             print("Exporting embeddings model to ",embeddings_path)
@@ -287,13 +298,17 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
                 if os.system(optimum_command):
                     raise ValueError("Failed to export embeddings model", source_model)
                 set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
+                if truncate:
+                    max_context_length = get_models_max_context(tmpdirname, 'config.json')
+                    if max_context_length is not None:
+                        set_max_context_length = "--max_length " + str(get_models_max_context(tmpdirname, 'config.json'))
                 os.makedirs(embeddings_path, exist_ok=True)
                 shutil.move(os.path.join(tmpdirname, 'openvino_model.xml'), os.path.join(embeddings_path, 'model.xml'))
                 shutil.move(os.path.join(tmpdirname, 'openvino_model.bin'), os.path.join(embeddings_path, 'model.bin'))
             tokenizer_path = os.path.join(model_repository_path, model_name,'tokenizer', version)
             print("Exporting tokenizer to ", tokenizer_path)
             if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
-                convert_tokenizer_command = "convert_tokenizer -o {} {}".format(tmpdirname, source_model) 
+                convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(tmpdirname, source_model, set_max_context_length) 
                 if (os.system(convert_tokenizer_command)):
                     raise ValueError("Failed to export tokenizer model", source_model)
                 set_rt_info(tmpdirname, 'openvino_tokenizer.xml', 'tokenizer_config.json')
@@ -371,7 +386,7 @@ if args['task'] == 'text_generation':
     export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'])
 
 elif args['task'] == 'embeddings':
-    export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, str(args['version']), args['config_file_path'])
+    export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['truncate'])
 
 elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
