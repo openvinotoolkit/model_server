@@ -4,34 +4,6 @@ It is possible to deploy Model Server outside of container.
 To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubuntu22, RHEL8 or Windows 11.
 
 ::::{tab-set}
-:::{tab-item} Ubuntu 20.04
-:sync: ubuntu-20-04
-Build the binary:
-
-```{code} sh
-# Clone the model server repository
-git clone https://github.com/openvinotoolkit/model_server
-cd model_server
-# Build docker images (the binary is one of the artifacts)
-make docker_build BASE_OS=ubuntu20 PYTHON_DISABLE=1 RUN_TESTS=0
-# Unpack the package
-tar -xzvf dist/ubuntu20/ovms.tar.gz
-```
-Install required libraries:
-```{code} sh
-sudo apt update -y && apt install -y liblibxml2 curl
-```
-Set path to the libraries and add binary to the `PATH`
-```{code} sh
-export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH;${PWD}/ovms/bin
-```
-In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
-```{code} sh
-export PYTHONPATH=${PWD}/ovms/lib/python
-sudo apt -y install libpython3.8
-```
-:::
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
 Download precompiled package:
@@ -45,7 +17,7 @@ or build it yourself:
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build PYTHON_DISABLE=1 RUN_TESTS=0
+make docker_build PYTHON_DISABLE=1
 # Unpack the package
 tar -xzvf dist/ubuntu22/ovms.tar.gz
 ```
@@ -65,7 +37,7 @@ sudo apt -y install libpython3.10
 ```
 Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
 ```
-pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} Ubuntu 24.04
@@ -102,7 +74,7 @@ sudo apt -y install libpython3.10
 
 Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
 ```
-pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} RHEL 8.10
@@ -135,7 +107,7 @@ sudo yum install -y python39-libs
 
 Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
 ```
-pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} RHEL 9.4
@@ -172,7 +144,7 @@ sudo yum install -y python39-libs
 
 Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
 ```
-pip3 install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} Windows
