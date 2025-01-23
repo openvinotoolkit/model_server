@@ -1,19 +1,19 @@
 <?xml version="1.0"?>
 <net name="no_name_output" version="11">
 	<layers>
-		<layer id="1" name="input1" type="Parameter" version="opset1">
+		<layer id="1" name="input_1" type="Parameter" version="opset1">
 			<data shape="1,10" element_type="i8" />
 			<output>
-				<port id="0" precision="I8" names="input1">
+				<port id="0" precision="I8" names="input_1">
 					<dim>1</dim>
 					<dim>10</dim>
 				</port>
 			</output>
 		</layer>
-		<layer id="0" name="input2" type="Parameter" version="opset1">
+		<layer id="0" name="input_2" type="Parameter" version="opset1">
 			<data shape="1,10" element_type="i8" />
 			<output>
-				<port id="0" precision="I8" names="input2">
+				<port id="0" precision="I8" names="input_2">
 					<dim>1</dim>
 					<dim>10</dim>
 				</port>

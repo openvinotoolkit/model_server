@@ -306,7 +306,7 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
     }
 
     OV_LOGGER("ov::Model: {}, model->outputs()", reinterpret_cast<void*>(model.get()));
-    for (ov::Output<ov::Node>& output : model->outputs()) {
+    for (const ov::Output<ov::Node>& output : model->outputs()) {
         try {
             OV_LOGGER("ov::Output<ov::Node> output: {}, output.get_any_name()", reinterpret_cast<const void*>(&output));
             std::string name = output.get_any_name();
@@ -408,13 +408,7 @@ ov::AnyMap ModelInstance::getRTInfo() {
     return anyMap;
 }
 
-Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
-    Status status = validateConfigurationAgainstNetwork(config, this->model);
-    if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during configuration validation against model");
-        return status;
-    }
-    // add output names if not present in the model
+void adjustForEmptyOutputNames(){
     size_t outputIndex = 0;
     for (ov::Output<ov::Node>& output : this->model->outputs()) {
         try {
@@ -437,6 +431,15 @@ Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLa
         }
         outputIndex++;
     }
+}
+
+Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
+    Status status = validateConfigurationAgainstNetwork(config, this->model);
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during configuration validation against model");
+        return status;
+    }
+    adjustForEmptyOutputNames();
     if (needsToApplyLayoutConfiguration) {
         status = applyLayoutConfiguration(config, this->model, getName(), getVersion());
         if (!status.ok()) {

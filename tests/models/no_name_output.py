@@ -24,8 +24,8 @@ dtype = np.int8
 model_name = "no_name_output"
 model_version_dir = model_name
 print(batch_dim + shape)
-in0 = ov.opset1.parameter(shape=batch_dim + shape, dtype=dtype, name="input1")
-in1 = ov.opset1.parameter(shape=batch_dim + shape, dtype=dtype, name="input2")
+in0 = ov.opset1.parameter(shape=batch_dim + shape, dtype=dtype, name="input_1")
+in1 = ov.opset1.parameter(shape=batch_dim + shape, dtype=dtype, name="input_2")
 op0 = ov.opset1.multiply(in1, in0, name="MULTIPLY")
 op1 = ov.opset1.add(in1, in0, name="ADD")
 
@@ -49,7 +49,7 @@ ov_model = ov.Core().read_model(model_version_dir + "/model.xml")
 compiled_model = ov.Core().compile_model(model, "CPU")
 
 input_data = np.ones((1, 10),dtype=np.int8)*10
-results = compiled_model({"input1": input_data, "input2": input_data})
+results = compiled_model({"input_1": input_data, "input_2": input_data})
 assert np.all(results[0] == 100), "for inputs np.ones((1, 10), the expected output is 100 in every element: 10*10"
 assert np.all(results[1] == 20), "for inputs np.ones((1, 10), the expected output is 20 in every element: 10+10"
 
