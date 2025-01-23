@@ -58,19 +58,19 @@ windows_install_dependencies.bat
 
 ## COMPILE
 [WARNING] This step consumes 11GB of disk space. It can take up to 1h depending on host CPU and internet connection speed.
-```
+```bat
 windows_build.bat
 ```
 
 # Running unit tests - optional
 The script compiles ovms_test binary, downloads and converts test LLM models (src\tests\llm_testing) and installs Python torch and optimum.
-```
+```bat
 windows_test.bat
 ```
 
 # Creating deployment package
 This step prepares ovms.zip deployment package from the build artifacts in the dist\windows\ directory. Run this script after successful compilation.
-```
+```bat
 windows_create_package.bat
 ```
 
