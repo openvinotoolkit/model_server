@@ -465,7 +465,8 @@ TEST_F(ConfigReload, removeModelFromDiskWhenLoaded) {
 #ifdef _WIN32
     EXPECT_THROW({
         std::filesystem::remove_all(getGenericFullPathForSrcTest("/tmp/dummy"));
-    }, std::filesystem::filesystem_error);
+    },
+        std::filesystem::filesystem_error);
 #else
     // On linux, removing the model should be possible even if ENABLE_MMAP=YES
     std::filesystem::remove_all(getGenericFullPathForSrcTest("/tmp/dummy"));
