@@ -277,7 +277,7 @@ IF /I EXIST %python_path% (
         %python_path%\python.exe -m ensurepip --upgrade
         if !errorlevel! neq 0 exit /b !errorlevel!
         :: setuptools<60.0 required for numpy1.23 on python311 to install
-        %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+        %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) ELSE (
         echo [INFO] ::::::::::::::::::::::: %python_path% already installed

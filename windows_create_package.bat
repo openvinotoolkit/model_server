@@ -56,7 +56,7 @@ if !errorlevel! neq 0 (
     echo Error occurred when creating Python environment for the distribution.
     exit /b !errorlevel!
 )
-.\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2"
+.\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 if !errorlevel! neq 0 (
     echo Error during Python dependencies for LLM installation. The package will not be fully functional.
 )
