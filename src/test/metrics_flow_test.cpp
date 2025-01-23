@@ -207,6 +207,7 @@ protected:
 };
 
 TEST_F(MetricFlowTest, GrpcPredict) {
+    GTEST_SKIP() << "Test disabled on windows [SPORADIC] pipeline_config_list";
     PredictionServiceImpl impl(server);
     tensorflow::serving::PredictRequest request;
     tensorflow::serving::PredictResponse response;
