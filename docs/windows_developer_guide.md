@@ -8,6 +8,13 @@ This instruction was tested on Windows 11 and Windows 10 OS.
 # Install prerequisites
 Following the steps below requires 40GB of free disk space.
 
+## Install git
+Download from https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.2/Git-2.47.1.2-64-bit.exe
+Or run command in windows cmd.exe terminal:
+```bat
+winget install --id Git.Git -e --source winget
+```
+
 ## VISUAL BUILD TOOLS
 Install build tools for VS:
 
@@ -28,7 +35,6 @@ Set Execution Policy to RemoteSigned
 Open PowerShell as an administrator: Right-click on the Start button and select “Windows PowerShell (Admin)”.
 Run the command:
 ```Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force```
-Confirm the change by typing “A” and pressing Enter.
 
 ## Enable Developer mode in windows system settings
 Follow instructions in the link below:
