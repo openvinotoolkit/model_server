@@ -33,7 +33,7 @@ struct KFSModelExtraMetadata {
 };
 
 namespace ovms {
-class ExecutionContext;
+struct ExecutionContext;
 class MediapipeGraphDefinition;
 class Model;
 class ModelInstance;

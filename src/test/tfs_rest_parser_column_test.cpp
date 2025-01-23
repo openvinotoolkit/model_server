@@ -16,11 +16,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#pragma warning(push)
+#pragma warning(disable : 4624)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #include "tensorflow/core/framework/tensor.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include "../rest_parser.hpp"
 #include "test_utils.hpp"

@@ -18,10 +18,12 @@
 
 #include <memory>
 #include <string>
-
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#pragma warning(pop)
 
 #include "../logging.hpp"
 namespace py = pybind11;

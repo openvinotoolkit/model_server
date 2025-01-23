@@ -33,7 +33,7 @@ namespace ovms {
 
 using shard_map_t = std::unordered_map<session_id_t, ov::Tensor>;
 
-class CollapseDetails;
+struct CollapseDetails;
 
 class GatherNodeInputHandler : public NodeInputHandler {
     std::unordered_map<std::string, shard_map_t> shardsStorage;

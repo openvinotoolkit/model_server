@@ -22,12 +22,15 @@
 
 #include <openvino/openvino.hpp>
 
+#pragma warning(push)
+#pragma warning(disable : 4624 6001 6385 6386 6326 6011)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include "capi_frontend/capi_utils.hpp"
 #include "capi_frontend/inferencerequest.hpp"
@@ -125,6 +128,8 @@ public:
         case ovms::Precision::I8: {
             return makeTensor(requestInput, tensorInfo);
         }
+#pragma warning(push)
+#pragma warning(disable : 4244 4267)
         case ovms::Precision::FP16: {
             OV_LOGGER("ov::Shape()");
             ov::Shape shape;
@@ -290,6 +295,7 @@ std::tuple<ovms::Status, const typename RequestTraits<::KFSRequest>::TensorType*
     return std::make_tuple(Status(StatusCode::OK), &*requestInputItr, bufferLocation);
 }
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 //////
 //

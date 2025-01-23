@@ -24,7 +24,8 @@ class OVInferRequestsQueue;
 class ModelMetricReporter;
 class OVInferRequestsQueue;
 
-struct NodeStreamIdGuard {
+class NodeStreamIdGuard {
+public:
     NodeStreamIdGuard(OVInferRequestsQueue& inferRequestsQueue, ModelMetricReporter& reporter);
     ~NodeStreamIdGuard();
 

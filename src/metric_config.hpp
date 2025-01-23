@@ -18,8 +18,10 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/document.h>
+#pragma warning(pop)
 
 namespace ovms {
 

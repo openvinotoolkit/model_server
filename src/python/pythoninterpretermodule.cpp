@@ -17,8 +17,10 @@
 
 #include <string>
 #include <utility>
-
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>  // everything needed for embedding
+#pragma warning(pop)
 
 #include "../config.hpp"
 #include "../logging.hpp"
@@ -30,7 +32,7 @@
 namespace py = pybind11;
 
 namespace ovms {
-Status PythonInterpreterModule::start(const ovms::Config& config) {
+Status PythonInterpreterModule::start(const ovms::Config&) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", PYTHON_INTERPRETER_MODULE_NAME);
     this->threadId = std::this_thread::get_id();

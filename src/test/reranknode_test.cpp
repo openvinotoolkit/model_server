@@ -19,8 +19,8 @@
 #include <gtest/gtest.h>
 
 #include "../http_rest_api_handler.hpp"
+#include "../ov_utils.hpp"
 #include "../server.hpp"
-#include "ov_utils.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"  // TODO: Move out together with rerank tests
 #include "rapidjson/writer.h"        // TODO: Move out together with rerank tests

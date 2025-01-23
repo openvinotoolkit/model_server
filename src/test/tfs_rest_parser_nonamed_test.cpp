@@ -17,7 +17,10 @@
 #include <gtest/gtest.h>
 
 #include "../rest_parser.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6001)
 #include "absl/strings/escaping.h"
+#pragma warning(pop)
 #include "test_utils.hpp"
 
 using namespace ovms;

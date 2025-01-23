@@ -26,9 +26,11 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#pragma warning(pop)
 
 #include "http_rest_api_handler.hpp"
 #include "http_status_code.hpp"

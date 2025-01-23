@@ -36,13 +36,13 @@
 #include "pipelineeventqueue.hpp"
 #include "tensormap.hpp"
 
-class CustomNodeTensor;
-class CustomNodeParam;
+struct CustomNodeTensor;
+struct CustomNodeParam;
 
 namespace ovms {
 
 class Node;
-class NodeLibrary;
+struct NodeLibrary;
 class Status;
 
 class CustomNodeSession : public NodeSession {

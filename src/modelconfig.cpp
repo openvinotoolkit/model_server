@@ -22,10 +22,12 @@
 #include <set>
 #include <sstream>
 #include <utility>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#pragma warning(pop)
 
 #include "filesystem.hpp"
 #include "json_parser.hpp"

@@ -26,13 +26,18 @@
 #include <openvino/genai/scheduler_config.hpp>
 #include <openvino/openvino.hpp>
 
+#pragma warning(push)
+#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
-
+#pragma warning(pop)
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
+#pragma warning(pop)
 
 #include "../logging.hpp"
 #include "../stringutils.hpp"

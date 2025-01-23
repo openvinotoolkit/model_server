@@ -28,9 +28,9 @@
 
 namespace ovms {
 
-class NodeLibrary;
+struct NodeLibrary;
 class Status;
-class CNLIMWrapper;
+struct CNLIMWrapper;
 
 class CustomNode : public Node {
     NodeLibrary library;

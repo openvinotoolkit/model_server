@@ -22,12 +22,14 @@
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
 #include "../serialization.hpp"
-
+#pragma warning(push)
+#pragma warning(disable : 4624 6001 6385 6386 6326 6011)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #include "tensorflow/core/framework/tensor.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include "exitnodesession.hpp"
 

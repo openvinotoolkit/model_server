@@ -24,8 +24,8 @@
 #include "spdlog/spdlog.h"
 
 #include "../config.hpp"
-#include "ovms_exit_codes.hpp"
-#include "systeminfo.hpp"
+#include "../ovms_exit_codes.hpp"
+#include "../systeminfo.hpp"
 #include "test_utils.hpp"
 
 using testing::_;
