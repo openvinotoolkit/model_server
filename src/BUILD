@@ -1871,11 +1871,11 @@ cc_test(
         "test/tfs_rest_parser_row_test.cpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
+        "test/localfilesystem_test.cpp",
         ] + select({
             "//:not_disable_cloud": [
                 "test/gcsfilesystem_test.cpp",
                 "test/azurefilesystem_test.cpp",
-                "test/localfilesystem_test.cpp",
             ],
             "//:disable_cloud": []
             })
@@ -1893,7 +1893,9 @@ cc_test(
                 "test/mediapipe_framework_test.cpp",
                 "test/http_openai_handler_test.cpp",
             ],
-            "//:disable_mediapipe" : [],
+            "//:disable_mediapipe" : [
+                "test/mediapipe_disabled_test.cpp",
+            ],
         }) + select({
             "//:not_disable_python": [
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.

@@ -32,7 +32,7 @@ if [ "$os" == "auto" ] ; then
       os="rhel8"
     fi
     case $os in
-        rhel8|ubuntu18.04|ubuntu20.04|ubuntu21.10|ubuntu22.04) [ -z "$print" ] && echo "Detected OS: ${os}" ;;
+        rhel8|ubuntu18.04|ubuntu20.04|ubuntu22.04|ubuntu24.04) [ -z "$print" ] && echo "Detected OS: ${os}" ;;
         *) echo "Unsupported OS: ${os:-detection failed}" >&2 ; exit 1 ;;
     esac
 fi
@@ -40,7 +40,7 @@ fi
 #===================================================================================================
 # OpenCV installation
 
-if [ "$os" == "ubuntu20.04" ] || [ "$os" == "ubuntu22.04" ] ; then
+if [ "$os" == "ubuntu24.04" ] || [ "$os" == "ubuntu22.04" ] ; then
     export DEBIAN_FRONTEND=noninteractive
     apt update && apt install -y build-essential git cmake \
         && rm -rf /var/lib/apt/lists/*

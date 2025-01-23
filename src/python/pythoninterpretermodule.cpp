@@ -39,8 +39,8 @@ Status PythonInterpreterModule::start(const ovms::Config& config) {
         import sys
         print("Python version:")
         print(sys.version)
-        print("Python executable:")
-        print(sys.executable)
+        print("Python sys.path output:")
+        print(sys.path)
     )");
     if (!PythonBackend::createPythonBackend(&pythonBackend))
         return StatusCode::INTERNAL_ERROR;

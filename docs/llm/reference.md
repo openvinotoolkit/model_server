@@ -118,8 +118,6 @@ for chunk in stream:
         break
 ```
 
-> NOTE: To leverage LLM graph cancellation upon client disconnection, use `stream=True` parameter.
-
 ## Models Directory
 
 In node configuration we set `models_path` indicating location of the directory with files loaded by LLM engine. It loads following files:
