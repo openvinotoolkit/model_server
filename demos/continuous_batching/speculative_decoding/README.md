@@ -137,7 +137,7 @@ curl http://localhost:8000/v1/config
 
 Models used in this demo - `meta-llama/CodeLlama-7b-hf` and `AMD-Llama-135m` are not chat models, so we will use `completions` endpoint to interact with the pipeline.
 
-Below you can see an examplary unary request (you can switch `stream` parameter to enable streamed response). Compared to calls to regular continuous batching model, this request has additional parameter `num_assistant_tokens` which specifies how many tokens should a draft model generate before main model validates them. 
+Below you can see an exemplary unary request (you can switch `stream` parameter to enable streamed response). Compared to calls to regular continuous batching model, this request has additional parameter `num_assistant_tokens` which specifies how many tokens should a draft model generate before main model validates them. 
 
 
 ```console

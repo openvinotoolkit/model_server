@@ -209,6 +209,56 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
 }
 
+TEST_F(LLMFlowHttpTest, unaryCompletionsJsonSpeculativeDecoding) {
+    config.max_new_tokens = 10;
+    config.temperature = 0;
+    ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
+    ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    // Static number of candidates
+    std::string requestBody = R"(
+        {
+            "model": "llmDummySpeculativePipeline",
+            "stream": false,
+            "temperature" : 0,
+            "max_tokens": 10,
+            "prompt": "What is OpenVINO?",
+            "num_assistant_tokens": 3
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    auto& choice = parsedResponse["choices"].GetArray()[0];
+    ASSERT_TRUE(choice["text"].IsString());
+    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+
+    // Dynamic number of candidates
+    requestBody = R"(
+        {
+            "model": "llmDummySpeculativePipeline",
+            "stream": false,
+            "temperature": 0,
+            "max_tokens": 10,
+            "prompt": "What is OpenVINO?",
+            "assistant_confidence_threshold": 0.4
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    choice = parsedResponse["choices"].GetArray()[0];
+    ASSERT_TRUE(choice["text"].IsString());
+    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+}
+
 TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoWithCompletion) {
     config.max_new_tokens = 5;
     config.rng_seed = 1;
@@ -648,6 +698,69 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
     EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+}
+
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
+    config.max_new_tokens = 10;
+    config.temperature = 0;
+    ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
+    ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+
+    // Static number of candidates
+    std::string requestBody = R"(
+        {
+            "model": "llmDummySpeculativePipeline",
+            "stream": false,
+            "temperature": 0,
+            "max_tokens": 10,
+            "num_assistant_tokens": 3,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    auto& choice = parsedResponse["choices"].GetArray()[0];
+    ASSERT_TRUE(choice["message"].IsObject());
+    ASSERT_TRUE(choice["message"]["content"].IsString());
+    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+
+    // Dynamic number of candidates
+    requestBody = R"(
+        {
+            "model": "llmDummySpeculativePipeline",
+            "stream": false,
+            "temperature": 0,
+            "max_tokens": 10,
+            "assistant_confidence_threshold": 0.4,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    choice = parsedResponse["choices"].GetArray()[0];
+    ASSERT_TRUE(choice["message"].IsObject());
+    ASSERT_TRUE(choice["message"]["content"].IsString());
+    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
 }
 
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonContentArray) {
@@ -2991,6 +3104,48 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(nodeResources.schedulerConfig.enable_prefix_caching, true);
     ASSERT_EQ(nodeResources.maxTokensLimit, 700);
     ASSERT_EQ(nodeResources.bestOfLimit, 3);
+}
+
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsSpeculativeDecodingSanityCheck) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                draft_models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    MockedLLMNodeResources nodeResources;
+    ASSERT_EQ(LLMNodeResources::initializeLLMNodeResources(nodeResources, config.node(0), ""), StatusCode::OK);
 }
 
 class GetPromptTokensString : public ::testing::Test {
