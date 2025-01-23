@@ -65,6 +65,7 @@ public:
             value = streams[front_idx];
             streams[front_idx] = -1;  // negative value indicate consumed vector index
             front_idx = (front_idx + 1) % streams.size();
+            lk.unlock();  // unlock before unique_lock destructor just in case to unlock asap
             return value;
         }
     }
