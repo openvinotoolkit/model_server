@@ -701,9 +701,9 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
 }
 
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
-    // Setting lower max new tokens for this test to pass. 
+    // Setting lower max new tokens for this test to pass.
     // For some reason in this test, during second request processing, BOS token is added to the input.
-    // It wasn't reproduced in real life scenario and shall be investigated. 
+    // It wasn't reproduced in real life scenario and shall be investigated.
     config.max_new_tokens = 8;
     config.temperature = 0;
     ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
