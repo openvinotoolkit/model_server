@@ -274,6 +274,8 @@ IF /I EXIST %python_path% (
         if !errorlevel! neq 0 exit /b !errorlevel!
         %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
+        %python_path%\python.exe -m ensurepip --upgrade
+        if !errorlevel! neq 0 exit /b !errorlevel!
         :: setuptools<60.0 required for numpy1.23 on python311 to install
         %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.4" "MarkupSafe==3.0.2"
         if !errorlevel! neq 0 exit /b !errorlevel!
@@ -293,6 +295,8 @@ IF /I EXIST %python_path% (
     %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
     if !errorlevel! neq 0 exit /b !errorlevel!
     %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    %python_path%\python.exe -m ensurepip --upgrade
     if !errorlevel! neq 0 exit /b !errorlevel!
     :: setuptools<60.0 required for numpy1.23 on python311 to install
     %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.4" "MarkupSafe==3.0.2"
