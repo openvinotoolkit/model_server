@@ -409,7 +409,7 @@ ov::AnyMap ModelInstance::getRTInfo() {
     return anyMap;
 }
 
-void adjustForEmptyOutputNames(){
+Status ModelInstance::adjustForEmptyOutputNames() {
     size_t outputIndex = 0;
     for (ov::Output<ov::Node>& output : this->model->outputs()) {
         try {
@@ -432,6 +432,7 @@ void adjustForEmptyOutputNames(){
         }
         outputIndex++;
     }
+    return StatusCode::OK;
 }
 
 Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
@@ -440,7 +441,11 @@ Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLa
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during configuration validation against model");
         return status;
     }
-    adjustForEmptyOutputNames();
+    status = adjustForEmptyOutputNames();
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during adjusting output names");
+        return status;
+    }
     if (needsToApplyLayoutConfiguration) {
         status = applyLayoutConfiguration(config, this->model, getName(), getVersion());
         if (!status.ok()) {
