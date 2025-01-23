@@ -79,7 +79,7 @@ const std::string passthrough_string_model_location = getGenericFullPathForSrcTe
 const std::string dummy_saved_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model", false);
 const std::string dummy_tflite_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_tflite", false);
 const std::string scalar_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/scalar", false);
-const std::string no_name_output_model_location = std::filesystem::current_path().u8string() + "/src/test/no_name_output";
+const std::string no_name_output_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/no_name_output", false);
 
 const ovms::ModelConfig DUMMY_MODEL_CONFIG{
     "dummy",
