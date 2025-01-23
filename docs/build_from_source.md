@@ -176,5 +176,5 @@ Read more detailed usage in [developer guide](https://github.com/openvinotoolkit
 
 ## Building ovms.exe on Windows
 
-[Developer Guide for Windows](windows_developer_guide.md) document describes experimental/alpha windows deployment for ovms.exe binary.
+[Developer Guide for Windows](windows_developer_guide.md) document describes building procedure for ovms.exe binary.
 Follow the instructions to start the ovms server as a standalone binary on a Windows 11 system.
