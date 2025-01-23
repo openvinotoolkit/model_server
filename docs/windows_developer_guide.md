@@ -34,11 +34,11 @@ Confirm the change by typing “A” and pressing Enter.
 Follow instructions in the link below:
 https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
 
-## Run Developer Command Prompt for VS 2022
-Press Windows Start and run the cmd.exe terminal windows.
+## Run Command Prompt
+Press Windows Start and run the cmd.exe terminal.
 Run commands in this prompt is not stated otherwise.
 
-## GET CODE
+## Get the code
 ```bat
 mkdir C:\git
 cd C:\git\
