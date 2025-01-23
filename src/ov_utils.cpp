@@ -133,6 +133,8 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
         insertSupportedKeys(pluginSupportedConfigKeys, targetDevice, ieCore);
     }
 
+    pluginSupportedConfigKeys.insert("ENABLE_MMAP");  // WA: always supported
+
     for (auto& config : pluginConfig) {
         if (std::find(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end(), config.first) == pluginSupportedConfigKeys.end()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config key: {} not found in supported config keys for device: {}.", config.first, targetDevice);

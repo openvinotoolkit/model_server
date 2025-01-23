@@ -272,13 +272,15 @@ TEST_F(ConfigReload, singleModel) {
     EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
 }
 
+// Plugin config set to be able to remove the model from disk when model is still loaded
 static const char* configWith1DummyInTmp = R"(
 {
     "model_config_list": [
         {
             "config": {
                 "name": "dummy",
-                "base_path": "/tmp/dummy"
+                "base_path": "/tmp/dummy",
+                "plugin_config": {"ENABLE_MMAP": "NO"}
             }
         }
     ]
@@ -345,11 +347,7 @@ TEST_F(ConfigReload, startWith1DummyThenAddVersion) {
     EXPECT_EQ(expectedJson2, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 
-    // Workaround to unload before removing the model,
-    // because on windows does not close the handle (uses mmap)
-#ifdef _WIN32
-    this->UnloadConfig(t.getManager());
-#endif
+    // Remove the model from disk when model is still loaded
     std::filesystem::remove_all(getGenericFullPathForTmp("/tmp/dummy"));
 }
 
@@ -391,11 +389,7 @@ TEST_F(ConfigReload, startWithMissingXmlThenAddAndReload) {
     EXPECT_EQ(expectedJson2, response);
     EXPECT_EQ(status, ovms::StatusCode::OK_RELOADED);
 
-    // Workaround to unload before removing the model,
-    // because on windows does not close the handle (uses mmap)
-#ifdef _WIN32
-    this->UnloadConfig(t.getManager());
-#endif
+    // Remove the model from disk when model is still loaded
     std::filesystem::remove_all(getGenericFullPathForTmp("/tmp/dummy"));
 }
 
@@ -418,12 +412,65 @@ TEST_F(ConfigReload, startWithEmptyModelDir) {
     ASSERT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
     EXPECT_EQ(expectedJson, response);
 
-    // Workaround to unload before removing the model,
-    // because on windows does not close the handle (uses mmap)
+    // Remove the model from disk when model is still loaded
+    std::filesystem::remove_all(getGenericFullPathForSrcTest("/tmp/dummy"));
+}
+
+// Config which restricts deleting model from disk when model is still loaded
+static const char* configWith1DummyInTmpEnableMmap = R"(
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "/tmp/dummy",
+                "plugin_config": {"ENABLE_MMAP": "YES"}
+            }
+        }
+    ]
+})";
+
+TEST_F(ConfigReload, removeModelFromDiskWhenLoaded) {
+    ovms::Server& ovmsServer = ovms::Server::instance();
+    std::filesystem::remove_all(getGenericFullPathForTmp("/tmp/dummy"));
+    std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy"), getGenericFullPathForTmp("/tmp/dummy"), std::filesystem::copy_options::recursive);
+    TestHelper1 t(*this, configWith1DummyInTmpEnableMmap);
+    auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
+
+    std::string response;
+
+    LoadConfig(t.getManager());
+
+    const char* expectedJson1 = R"({
+"dummy" : 
+{
+ "model_version_status": [
+  {
+   "version": "1",
+   "state": "AVAILABLE",
+   "status": {
+    "error_code": "OK",
+    "error_message": "OK"
+   }
+  }
+ ]
+}
+})";
+    auto status = handler.processConfigReloadRequest(response, t.getManager());
+
+    EXPECT_EQ(expectedJson1, response);
+    EXPECT_EQ(status, ovms::StatusCode::OK_NOT_RELOADED);
+
+    // On windows, the test expects inability to remove model
 #ifdef _WIN32
-    this->UnloadConfig(t.getManager());
+    EXPECT_THROW({
+        std::filesystem::remove_all(getGenericFullPathForSrcTest("/tmp/dummy"));
+    }, std::filesystem::filesystem_error);
+#else
+    // On linux, removing the model should be possible even if ENABLE_MMAP=YES
+    std::filesystem::remove_all(getGenericFullPathForSrcTest("/tmp/dummy"));
 #endif
-    std::filesystem::remove_all("/tmp/dummy");
+    this->UnloadConfig(t.getManager());
 }
 
 static const char* emptyConfig = R"(
