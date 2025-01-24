@@ -46,9 +46,7 @@ if [ "$os" == "ubuntu24.04" ] || [ "$os" == "ubuntu22.04" ] ; then
     export DEBIAN_FRONTEND=noninteractive
     apt update && apt install -y build-essential git cmake \
         && rm -rf /var/lib/apt/lists/*
-elif [ "$os" == "rhel8" ] ; then
-    yum install -d6 -y git cmake gcc-c++
-elif [ "$os" == "rhel9" ] ; then
+elif [ "$os" == "rhel8" ] || [ "$os" == "rhel9" ] ; then
     yum install -d6 -y git cmake gcc-c++
 else
     echo "Internal script error: unsupported OS" >&2
