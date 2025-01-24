@@ -114,7 +114,7 @@ Status DrogonHttpServer::startAcceptingRequests() {
 }
 
 void DrogonHttpServer::terminate() {
-    SPDLOG_DEBUG("DrogonHttpServer::terminate()");
+    SPDLOG_DEBUG("DrogonHttpServer::terminate() begin");
 
     // Should never happen
     if (!drogon::app().isRunning()) {
@@ -122,8 +122,11 @@ void DrogonHttpServer::terminate() {
         throw 42;
     }
 
+    SPDLOG_DEBUG("DrogonHttpServer::terminate() before quit");
     drogon::app().quit();
+    SPDLOG_DEBUG("DrogonHttpServer::terminate() after quit before pool reset");
     pool.reset();  // waits for all worker threads to finish
+    SPDLOG_DEBUG("DrogonHttpServer::terminate() end after pool reset");
 }
 
 void DrogonHttpServer::registerRequestDispatcher(
