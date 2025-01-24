@@ -39,6 +39,7 @@
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
 #include "packettypes.hpp"
+#include "graphqueue.hpp"
 
 namespace ovms {
 class PythonBackend;
@@ -87,6 +88,7 @@ class MediapipeGraphExecutor {
     ::mediapipe::Timestamp currentStreamTimestamp;
 
     MediapipeServableMetricReporter* mediapipeServableMetricReporter;
+    GraphIdGuard guard;
 
 public:
     static const std::string PYTHON_SESSION_SIDE_PACKET_TAG;
@@ -100,7 +102,7 @@ public:
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
         const GenAiServableMap& llmNodeResourcesMap,
         PythonBackend* pythonBackend,
-        MediapipeServableMetricReporter* mediapipeServableMetricReporter);
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&&guard);
 
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
@@ -108,15 +110,11 @@ public:
         SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", this->name);
         MetricCounterGuard failedRequestsGuard(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, false));
         MetricGaugeGuard currentGraphsGuard(this->mediapipeServableMetricReporter->currentGraphs.get());
-        ::mediapipe::CalculatorGraph graph;
-        MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
-        enum : unsigned int {
-            PROCESS,
-            TIMER_END2
-        };
-        Timer<TIMER_END2> timer;
-        timer.start(PROCESS);
-        SPDLOG_ERROR("Start unary KServe request mediapipe graph: {} initializationXXXend", this->name);
+        ::mediapipe::CalculatorGraph& graph = this->guard.graph;
+        SPDLOG_ERROR("SetExecutor XXX");
+        //std::ignore = graph.SetExecutor("", sharedThreadPool);  // TODO FIXME
+        SPDLOG_ERROR("Start unary KServe request mediapipe graph: {} initializationXXXbegin", this->name);
+        //MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
         std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
         for (auto& name : this->outputNames) {
             if (name.empty()) {

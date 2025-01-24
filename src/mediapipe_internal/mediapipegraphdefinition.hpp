@@ -42,6 +42,7 @@
 
 #include "mediapipegraphconfig.hpp"
 #include "packettypes.hpp"
+#include "graphqueue.hpp"
 
 namespace ovms {
 class MediapipeGraphDefinitionUnloadGuard;
@@ -135,7 +136,7 @@ protected:
     PipelineDefinitionStatus status;
 
     MediapipeGraphConfig mgconfig;
-    ::mediapipe::CalculatorGraphConfig config;
+    ::mediapipe::CalculatorGraphConfig config; // TODO rename configs
 
     Status createInputsInfo();
     Status createOutputsInfo();
@@ -165,6 +166,7 @@ private:
     PythonBackend* pythonBackend;
 
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
+    std::unique_ptr<GraphQueue> queue;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {
