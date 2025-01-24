@@ -156,6 +156,20 @@ cc_library(
     linkopts = [],
 )
 cc_library(
+    name = "mediapipe_internal_graphqueue",
+    hdrs = ["mediapipe_internal/graphqueue.hpp"],
+#    srcs = ["mediapipe_internal/graphqueue.cpp"],
+    deps = [
+        "libovms_queue",
+        "libovmslogging",
+        "//third_party:openvino",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+    ],
+    copts = [],
+    visibility = ["//visibility:public",],
+    linkopts = [],
+)
+cc_library(
     name = "libovms_ovinferrequestsqueue",
     hdrs = ["ovinferrequestsqueue.hpp"],
     srcs = ["ovinferrequestsqueue.cpp"],
@@ -714,6 +728,7 @@ cc_library(
                 })
             + select({
             "//conditions:default": [
+                "mediapipe_internal_graphqueue",
                 "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
                 "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
                 "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",

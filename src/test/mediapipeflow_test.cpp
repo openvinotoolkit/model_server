@@ -2631,13 +2631,14 @@ class MediapipeSerialization : public ::testing::Test {
             stream_types_mapping_t outputTypes,
             std::vector<std::string> inputNames, std::vector<std::string> outputNames,
             const PythonNodeResourcesMap& pythonNodeResourcesMap,
-            MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
-            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, nullptr, mediapipeServableMetricReporter) {}
+            MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard) :
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, nullptr, mediapipeServableMetricReporter, std::move(guard)) {}
     };
 
 protected:
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
     std::unique_ptr<MockedMediapipeGraphExecutor> executor;
+    std::unique_ptr<GraphQueue> queue;
     ::inference::ModelInferResponse mp_response;
     void SetUp() {
         ovms::stream_types_mapping_t mapping;
@@ -2651,7 +2652,9 @@ protected:
         const ::mediapipe::CalculatorGraphConfig config;
         PythonNodeResourcesMap pythonNodeResourcesMap;
         this->reporter = std::make_unique<MediapipeServableMetricReporter>(nullptr, nullptr, "");  // disabled reporter
-        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, this->reporter.get());
+        queue = std::make_unique<GraphQueue>(config, 1);
+        GraphIdGuard guard(*queue);
+        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, this->reporter.get(), std::move(guard));
     }
 };
 

@@ -1002,8 +1002,8 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
         PythonBackend* pythonBackend,
-        MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
-        MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, pythonBackend, mediapipeServableMetricReporter) {}
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard) :
+        MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, pythonBackend, mediapipeServableMetricReporter, std::move(guard)) {}
 };
 
 TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
@@ -1013,7 +1013,9 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
     const std::vector<std::string> outputNames;
     const ::mediapipe::CalculatorGraphConfig config;
     PythonNodeResourcesMap pythonNodeResourcesMap;
-    auto executor = MockedMediapipeGraphExecutorPy("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, getPythonBackend(), this->reporter.get());
+    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
+    GraphIdGuard guard(*queue);
+    auto executor = MockedMediapipeGraphExecutorPy("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, getPythonBackend(), this->reporter.get(), std::move(guard));
 
     std::string datatype = "FP32";
     std::string name = "python_result";
