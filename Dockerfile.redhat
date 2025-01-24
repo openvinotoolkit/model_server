@@ -163,6 +163,7 @@ ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
+# hadolint ignore=DL3041
 RUN dnf install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
     http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-2.2.2-1.el8.x86_64.rpm \
     https://dl.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/j/json-devel-3.6.1-2.el8.x86_64.rpm \
