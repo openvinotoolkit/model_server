@@ -188,7 +188,7 @@ TYPED_TEST(NativeFileInputConversionTest, positive_batch_size_2) {
     size_t batchsize = 2;
     this->prepareBinaryTensor(batchSize2RequestTensor, image_bytes, filesize, batchsize);
 
-    for (const auto layout : std::vector<Layout>{Layout("NHWC"), Layout::getDefaultLayout(4)}) {
+    for (const auto& layout : std::vector<Layout>{Layout("NHWC"), Layout::getDefaultLayout(4)}) {
         auto tensorInfo = std::make_shared<const TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, 3}, layout);
 
         ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(batchSize2RequestTensor, tensor, *tensorInfo, nullptr), ovms::StatusCode::OK);

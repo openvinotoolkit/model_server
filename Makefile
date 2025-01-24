@@ -51,7 +51,7 @@ BASE_OS ?= ubuntu22
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 22.04
-BASE_OS_TAG_REDHAT ?= 8.10
+BASE_OS_TAG_REDHAT ?= 9.4
 
 INSTALL_RPMS_FROM_URL ?=
 
@@ -59,7 +59,6 @@ CHECK_COVERAGE ?=0
 RUN_TESTS ?= 0
 BUILD_TESTS ?= 0
 RUN_GPU_TESTS ?=
-NVIDIA ?=0
 GPU ?= 0
 NPU ?= 0
 BUILD_NGINX ?= 0
@@ -157,13 +156,8 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS),ubuntu24)
 	BASE_OS_TAG=24.04
   endif
-  ifeq ($(NVIDIA),1)
-	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu$(BASE_OS_TAG)
-	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
-  else
-	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
-	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
-  endif
+  BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
+  BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "24.52.32224"
@@ -177,15 +171,10 @@ endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   OS=redhat
-  ifeq ($(NVIDIA),1)
-    BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubi8
-	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
-  else
-    BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
-	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
-  endif
+  BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
+  BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  INSTALL_DRIVER_VERSION ?= "23.22.26516"
+  INSTALL_DRIVER_VERSION ?= "24.45.31740"
   DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc1/l_openvino_toolkit_rhel8_2025.0.0.dev20250116_x86_64.tgz
 endif
 
@@ -195,9 +184,6 @@ ifeq ($(BAZEL_BUILD_TYPE),dbg)
 endif
 
 OVMS_CPP_IMAGE_TAG ?= latest
-ifeq ($(NVIDIA),1)
-  IMAGE_TAG_SUFFIX = -cuda
-endif
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
@@ -239,7 +225,6 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg PROJECT_VERSION=$(PROJECT_VERSION)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
 	--build-arg BASE_OS=$(BASE_OS)\
-	--build-arg NVIDIA=$(NVIDIA)\
 	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
 	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
@@ -354,20 +339,12 @@ ifeq ($(FUZZER_BUILD),1)
 	@echo "Cannot run fuzzer with redhat"; exit 1 ;
   endif
 endif
-ifeq ($(NVIDIA),1)
-  ifeq ($(OV_USE_BINARY),1)
-	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
-  endif
-endif
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
 	@docker pull $(BASE_IMAGE)
   ifeq ($(BASE_OS),redhat)
-	@docker pull registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
-    ifeq ($(NVIDIA),1)
-	@docker pull docker.io/nvidia/cuda:11.8.0-runtime-ubi8
-    endif
+	@docker pull registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   endif
 endif
 ifeq ($(USE_BUILDX),true)
@@ -435,7 +412,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 endif
 ifeq ($(BASE_OS),redhat)
 	touch base_packages.txt
-	docker run registry.access.redhat.com/ubi8-minimal:8.10 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
+	docker run registry.access.redhat.com/ubi9-minimal:9.4 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
 	docker run --entrypoint rpm $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -qa  --qf "%{NAME}\n" | sort > all_packages.txt
 	rm -rf ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
 	mkdir ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
