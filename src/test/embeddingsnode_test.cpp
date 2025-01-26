@@ -285,6 +285,9 @@ TEST_F(EmbeddingsHttpTest, simplePositiveMultipleStrings) {
 }
 
 TEST_F(EmbeddingsHttpTest, positiveLongInput) {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test because we have no custom extension built for Windows";
+#endif
     std::string words;
     for (int i = 0; i < 500; i++) {
         words += "hello ";
@@ -304,6 +307,9 @@ TEST_F(EmbeddingsHttpTest, positiveLongInput) {
 }
 
 TEST_F(EmbeddingsHttpTest, negativeTooLongInput) {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test because we have no custom extension built for Windows";
+#endif
     std::string words;
     for (int i = 0; i < 511; i++) {
         words += "hello ";
@@ -322,6 +328,9 @@ TEST_F(EmbeddingsHttpTest, negativeTooLongInput) {
 }
 
 TEST_F(EmbeddingsHttpTest, negativeTooLongInputPair) {
+#ifdef _WIN32
+        GTEST_SKIP() << "Skipping test because we have no custom extension built for Windows";
+#endif
     std::string words;
     for (int i = 0; i < 511; i++) {
         words += "hello ";
