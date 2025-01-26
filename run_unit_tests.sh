@@ -21,8 +21,8 @@ RUN_TESTS=${RUN_TESTS:-"1"}
 RUN_GPU_TESTS=${RUN_GPU_TESTS:-"0"}
 CHECK_COVERAGE=${CHECK_COVERAGE:-"0"}
 TEST_LOG=${TEST_LOG:-"test.log"}
-debug_bazel_flags=${debug_bazel_flags:-"--config=mp_on_py_on"}
-
+if [ -f /etc/redhat-release ] ; then dist="--//:distro=redhat" ; fi
+debug_bazel_flags=${debug_bazel_flags:-"--config=mp_on_py_on $dist"}
 TEST_FILTER="--test_filter=*"
 SHARED_OPTIONS=" \
 --jobs=$JOBS \
@@ -61,7 +61,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
             compress_logs && exit 1; } && \
             generate_coverage_report;
     fi
-    bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_test 
+    bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_test || exit 1
     set +x
     echo "Executing unit tests"
     failed=0
