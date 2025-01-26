@@ -76,7 +76,7 @@ FUZZER_BUILD ?= 0
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 OV_SOURCE_BRANCH ?= 513dcc5c7b7a0a4d85ec9e59e6f7e50040008fba # releases/2025/0 / 2025-01-16
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
-OV_TOKENIZERS_BRANCH ?= 2a595797be4a4615a953b47014cf98d8eb2d9ff9 # releases/2025/0 2025-01-17
+OV_TOKENIZERS_BRANCH ?= 22b2420220f9a97f03a7bb91e785df40735503c96 # releases/2025/0 2025-01-21
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
