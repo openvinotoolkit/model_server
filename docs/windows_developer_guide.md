@@ -10,7 +10,7 @@ Following the steps below requires 40GB of free disk space.
 
 ## Install git
 Download from https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.2/Git-2.47.1.2-64-bit.exe
-Or run command in windows cmd.exe terminal:
+Or run command in windows cmd.exe terminal as Administrator:
 ```bat
 winget install --id Git.Git -e --source winget
 ```
@@ -41,7 +41,7 @@ Follow instructions in the link below:
 https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
 
 ## Run Command Prompt
-Press Windows Start and run the cmd.exe terminal.
+Press Windows Start and run the cmd.exe terminal as Administrator.
 Run commands in this prompt is not stated otherwise.
 
 ## Get the code

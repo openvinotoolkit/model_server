@@ -102,10 +102,10 @@ IF /I EXIST %bash_path% (
     start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %msys_path%
     for /l %%i in (1,1,200) do (
         echo Timeout iteration: %%i
-        tasklist /NH | find /i "%msys_exe%" > nul
+        tasklist /NH | c:\Windows\SysWOW64\find.exe /i "%msys_exe%" > nul
         if !errorlevel! neq 0 (
-            Process "%msys_exe%" finished
-            goto install_finished
+            echo Process "%msys_exe%" finished
+            goto msys_install_finished
         ) else (
             echo Process "%msys_exe%" in progress ...
             ping 1.1.1.1 -n 3 > nul
@@ -114,7 +114,7 @@ IF /I EXIST %bash_path% (
 
     taskkill /f /t /im %msys_exe%
     if !errorlevel! neq 0 exit /b !errorlevel!
-    :install_finished
+    :msys_install_finished
     echo [INFO] Msys installed in: %msys_path%
 )
 
@@ -260,12 +260,13 @@ set "python_path=%opt_install_dir%\%python_dir%"
 set "python_full_name=python-%python_version%-amd64"
 ::https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe
 set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
+
 IF /I EXIST %python_path% (
     IF %expunge% EQU 1 (
         if !errorlevel! neq 0 exit /b !errorlevel!
         :: Uninstall Python
         IF /I EXIST "%opt_install_dir%\%python_full_name%.exe" (
-            %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+            call :UninstallPython
             rm %opt_install_dir%\%python_full_name%.exe
             if !errorlevel! neq 0 exit /b !errorlevel!
         )
@@ -275,52 +276,92 @@ IF /I EXIST %python_path% (
         :: Install python
         curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+        call :UninstallPython
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        %python_path%\python.exe -m ensurepip --upgrade
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        :: setuptools<60.0 required for numpy1.23 on python311 to install
-        %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
-        if !errorlevel! neq 0 exit /b !errorlevel!
+        call :InstallPython
+        IF /I not EXIST %python_path%\python.exe (
+            echo "Python installation failed. Errorlevel: !errorlevel!"
+            echo "Please review the installation log: python/install.log"
+            echo ""
+            echo "Rerun the windows_install_build_dependencies.bat, once the installation is fixed."
+            exit /b !errorlevel!
+        )
     ) ELSE (
         echo [INFO] ::::::::::::::::::::::: %python_path% already installed
     )
 ) ELSE (
     :: Uninstall Python
     IF /I EXIST "%opt_install_dir%\%python_full_name%.exe" (
-        %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+        call :UninstallPython
         rm %opt_install_dir%\%python_full_name%.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
     :: Install python
     curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
     if !errorlevel! neq 0 exit /b !errorlevel!
-    %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+    call :UninstallPython
     if !errorlevel! neq 0 exit /b !errorlevel!
-    %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
-    if !errorlevel! neq 0 (
+    call :InstallPython
+    IF /I not EXIST %python_path%\python.exe (
         echo "Python installation failed."
         echo "To fix the installation run %opt_install_dir%\%python_full_name%.exe in GUI and press repair."
-        echo "Then run those commands in cmd.exe:"
-        echo %python_path%\python.exe -m ensurepip --upgrade
-        echo %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
-        echo "If commands are successful, you can rerun the windows_install_build_dependencies.bat, otherwise python installation needs more fixes."
-        /b !errorlevel!
+        echo "Please review the installation log: python/install.log"
+        echo "Rerun the windows_install_build_dependencies.bat, once the installation is fixed."
+        exit /b !errorlevel!
     )
-    %python_path%\python.exe -m ensurepip --upgrade
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    :: setuptools<60.0 required for numpy1.23 on python311 to install
-    %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
-    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!
+%python_path%\python.exe -m ensurepip --upgrade
+if !errorlevel! neq 0 exit /b !errorlevel!
+:: setuptools<60.0 required for numpy1.23 on python311 to install
+%python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+if !errorlevel! neq 0 exit /b !errorlevel!
 echo [INFO] Python %python_version% installed: %python_path%
+goto install_opencv
+:::::::::::::::::::::: Uninstall function
+:UninstallPython
+start "Unstalling_python" %opt_install_dir%\%python_full_name%.exe /quiet /uninstall /log python/uninstall.log
+echo [INFO] Uninstalling python
+for /l %%i in (1,1,300) do (
+    echo Timeout iteration: %%i
+    tasklist /NH | c:\Windows\SysWOW64\find.exe /i "%python_full_name%.exe" > nul
+    if !errorlevel! neq 0 (
+        echo Process "%python_full_name%.exe" finished
+        goto python_uninstall_finished
+    ) else (
+        echo Process "%python_full_name%.exe" in progress ...
+        ping 1.1.1.1 -n 3 > nul
+    )
+)
+
+:python_uninstall_finished
+exit /b 0
+:::::::::::::::::::::: Uninstall python function end
+:::::::::::::::::::::: Install python function
+:InstallPython
+echo [INFO] Running python installer
+start "Installing_python" %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple /InstallAllUsers TargetDir=%python_path% /log python/install.log
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+for /l %%i in (1,1,300) do (
+    echo Timeout iteration: %%i
+    tasklist /NH | c:\Windows\SysWOW64\find.exe /i "%python_full_name%.exe" > nul
+    if !errorlevel! neq 0 (
+        echo Process "%python_full_name%.exe" finished
+        goto python_install_finished
+    ) else (
+        echo Process "%python_full_name%.exe" in progress ...
+        ping 1.1.1.1 -n 3 > nul
+    )
+)
+:python_install_finished
+exit /b 0
+:::::::::::::::::::::: Uninstall function end
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCV
+:install_opencv
 set "opencv_git=https://github.com/opencv/opencv.git"
 set "opencv_contrib=https://github.com/opencv/opencv_contrib.git"
 set "opencv_ver=4.10.0"
