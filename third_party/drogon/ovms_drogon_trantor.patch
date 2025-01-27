@@ -1,8 +1,24 @@
 diff --git a/lib/src/HttpAppFrameworkImpl.cc b/lib/src/HttpAppFrameworkImpl.cc
-index 4c49c259..058203c8 100644
+index 4c49c259..40bf944e 100644
 --- a/lib/src/HttpAppFrameworkImpl.cc
 +++ b/lib/src/HttpAppFrameworkImpl.cc
-@@ -525,15 +525,15 @@ void HttpAppFrameworkImpl::run()
+@@ -44,6 +44,7 @@
+ #include <unordered_map>
+ #include <utility>
+ #include <filesystem>
++#include <atomic>
+ 
+ #include <fcntl.h>
+ #include <sys/stat.h>
+@@ -519,21 +520,23 @@ HttpAppFramework &HttpAppFrameworkImpl::reloadSSLFiles()
+ 
+ void HttpAppFrameworkImpl::run()
+ {
++    static std::atomic<int> gg(0);
++    LOG_ERROR << "HttpAppFrameworkImpl::run() no [" << ++gg << "] (which only should be called once per process)";
+     if (!getLoop()->isInLoopThread())
+     {
+         getLoop()->moveToCurrentThread();
      }
      LOG_TRACE << "Start to run...";
      // Create dirs for cache files
@@ -27,6 +43,65 @@ index 4c49c259..058203c8 100644
      if (runAsDaemon_)
      {
          // go daemon!
+@@ -1033,26 +1036,45 @@ HttpAppFramework &HttpAppFrameworkImpl::createRedisClient(
+ 
+ void HttpAppFrameworkImpl::quit()
+ {
++    static std::atomic<int> ff(0);
++    LOG_ERROR << "HttpAppFrameworkImpl::quit() no [" << ++ff << "] (which only should be called once per process)";
++
++    LOG_ERROR << "Calling HttpAppFrameworkImpl::quit";
+     if (getLoop()->isRunning())
+     {
++        std::cout << "getLoop()->isRunning() yes";
+         getLoop()->queueInLoop([this]() {
++            std::cout << "before listenerManagerPtr_->stopListening";
+             // Release members in the reverse order of initialization
+             listenerManagerPtr_->stopListening();
++            std::cout << "before listenerManagerPtr_.reset";
+             listenerManagerPtr_.reset();
++            LOG_ERROR << "StaticFileRouter::instance().reset";
+             StaticFileRouter::instance().reset();
++            LOG_ERROR << "HttpControllersRouter::instance().reset";
+             HttpControllersRouter::instance().reset();
++            LOG_ERROR << "pluginsManagerPtr_.reset";
+             pluginsManagerPtr_.reset();
++            LOG_ERROR << "redisClientManagerPtr_.reset";
+             redisClientManagerPtr_.reset();
++            LOG_ERROR << "dbClientManagerPtr_.reset";
+             dbClientManagerPtr_.reset();
++            LOG_ERROR << "running_ = false";
+             running_ = false;
++            LOG_ERROR << "getLoop()->quit";
+             getLoop()->quit();
++            LOG_ERROR << "before for (trantor::EventLoop *loop";
+             for (trantor::EventLoop *loop : ioLoopThreadPool_->getLoops())
+             {
++                LOG_ERROR << "loop->quit()";
+                 loop->quit();
+             }
++            LOG_ERROR << "before ioLoopThreadPool_->wait";
+             ioLoopThreadPool_->wait();
++            LOG_ERROR << "after ioLoopThreadPool_->wait";
+         });
+     }
++    LOG_ERROR << "Finished HttpAppFrameworkImpl::quit";
+ }
+ 
+ const HttpResponsePtr &HttpAppFrameworkImpl::getCustom404Page()
+diff --git a/lib/src/HttpAppFrameworkImpl.h b/lib/src/HttpAppFrameworkImpl.h
+index d423cc0f..f31a8022 100644
+--- a/lib/src/HttpAppFrameworkImpl.h
++++ b/lib/src/HttpAppFrameworkImpl.h
+@@ -455,7 +455,7 @@ class HttpAppFrameworkImpl final : public HttpAppFramework
+ 
+     bool isRunning() override
+     {
+-        return running_;
++        return running_ && getLoop()->isRunning();
+     }
+ 
+     HttpAppFramework &setJsonParserStackLimit(size_t limit) noexcept override
 diff --git a/lib/src/Utilities.cc b/lib/src/Utilities.cc
 index c6601f61..60b2a358 100644
 --- a/lib/src/Utilities.cc
@@ -76,28 +151,71 @@ index 3335e6ff..7874f18b 100644
  {
 Submodule trantor contains modified content
 diff --git a/trantor/trantor/net/EventLoop.cc b/trantor/trantor/net/EventLoop.cc
-index 8db1090..1013972 100644
+index 8db1090..69d4a23 100644
 --- a/trantor/trantor/net/EventLoop.cc
 +++ b/trantor/trantor/net/EventLoop.cc
-@@ -35,6 +35,9 @@ using ssize_t = long long;
- #include <poll.h>
- #endif
- #include <iostream>
-+#include <cstdlib>
-+#include <cerrno>
-+#include <cstring>
- #ifdef __linux__
- #include <sys/eventfd.h>
- #endif
-@@ -54,7 +57,7 @@ int createEventfd()
+@@ -54,7 +54,9 @@ int createEventfd()
      int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
      if (evtfd < 0)
      {
 -        std::cout << "Failed in eventfd" << std::endl;
-+        std::cout << "Failed in eventfd" << strerror(errno) << " (errno: " << errno << ")" << std::endl;
++        std::cout << "Failed in eventfd: " << strerror(errno) << " (errno: " << errno << ")" << std::endl;
++        if (errno == EMFILE || errno == ENFILE)
++            std::cout << "try reducing the number of rest_workers or increase open files limit" << std::endl;
          abort();
      }
  
+@@ -164,6 +166,7 @@ void EventLoop::removeChannel(Channel *channel)
+ }
+ void EventLoop::quit()
+ {
++    LOG_ERROR << "NEWLOG Calling EventLoop::quit()";
+     quit_.store(true, std::memory_order_release);
+ 
+     if (!isInLoopThread())
+@@ -202,17 +205,20 @@ ScopeExit<F> makeScopeExit(F &&f)
+ 
+ void EventLoop::loop()
+ {
++    LOG_ERROR << "NEWLOG EventLoop::loop started";
+     assert(!looping_);
+     assertInLoopThread();
+     looping_.store(true, std::memory_order_release);
+     quit_.store(false, std::memory_order_release);
+ 
+     std::exception_ptr loopException;
++    LOG_ERROR << "NEWLOG EventLoop::loop before try catch";
+     try
+     {  // Scope where the loop flag is set
+ 
+         auto loopFlagCleaner = makeScopeExit(
+             [this]() { looping_.store(false, std::memory_order_release); });
++        LOG_ERROR << "NEWLOG EventLoop::loop starting while loop";
+         while (!quit_.load(std::memory_order_acquire))
+         {
+             activeChannels_.clear();
+@@ -237,16 +243,20 @@ void EventLoop::loop()
+             // std::cout << "looping" << endl;
+             doRunInLoopFuncs();
+         }
++        LOG_ERROR << "NEWLOG Loop ends because quit flag is set";
+         // loopFlagCleaner clears the loop flag here
+     }
+     catch (std::exception &e)
+     {
+-        LOG_WARN << "Exception thrown from event loop, rethrowing after "
++        LOG_ERROR << "NEWLOG Exception from trantor";
++        LOG_INFO << "Exception thrown from event loop, rethrowing after "
+                     "running functions on quit: "
+                  << e.what();
+         loopException = std::current_exception();
+     }
+ 
++    LOG_ERROR << "NEWLOG Loop is about to end";
++
+     // Run the quit functions even if exceptions were thrown
+     // TODO: if more exceptions are thrown in the quit functions, some are left
+     // un-run. Can this be made exception safe?
 diff --git a/trantor/trantor/net/inner/Socket.cc b/trantor/trantor/net/inner/Socket.cc
 index 2aff5a0..145f9eb 100755
 --- a/trantor/trantor/net/inner/Socket.cc

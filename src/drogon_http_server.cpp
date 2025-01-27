@@ -27,13 +27,14 @@
 
 namespace ovms {
 
-DrogonHttpServer::DrogonHttpServer(size_t num_workers, int port, const std::string& address) :
-    num_workers(num_workers),
-    pool(std::make_unique<mediapipe::ThreadPool>("DrogonThreadPool", num_workers)),
+DrogonHttpServer::DrogonHttpServer(size_t numWorkersForUnary, size_t numWorkersForStreaming, int port, const std::string& address) :
+    numWorkersForUnary(numWorkersForUnary),
+    numWorkersForStreaming(numWorkersForStreaming),
+    pool(std::make_unique<mediapipe::ThreadPool>("DrogonThreadPool", numWorkersForStreaming)),
     port(port),
     address(address) {
-    SPDLOG_DEBUG("Starting http thread pool ({} threads)", num_workers);
-    pool->StartWorkers();  // this is for actual workload which is scheduled to other threads than drogon's internal listener threads
+    SPDLOG_DEBUG("Starting http thread pool for streaming ({} threads)", numWorkersForStreaming);
+    pool->StartWorkers();  // this tp is for streaming workload which cannot use drogon's internal listener threads
     SPDLOG_DEBUG("Thread pool started");
     trantor::Logger::setLogLevel(trantor::Logger::kInfo);
 }
@@ -64,17 +65,18 @@ Status DrogonHttpServer::startAcceptingRequests() {
     }
 
     pool->Schedule(
-        [address = this->address, port = this->port, num_workers = this->num_workers] {
+        [this] {
             static int numberOfLaunchesInApplication = 0;
             numberOfLaunchesInApplication++;
             if (numberOfLaunchesInApplication > 1) {
                 SPDLOG_ERROR("Drogon was already started, cannot start it again");
                 return;
             }
-            SPDLOG_DEBUG("Starting to listen on port {}", port);
+            SPDLOG_DEBUG("Starting to listen on port {}", this->port);
+            SPDLOG_DEBUG("Thread pool size for unary ({} drogon threads)", this->numWorkersForUnary);
             try {
                 drogon::app()
-                    .setThreadNum(num_workers)  // threads for unary processing, streaming is done in separate pool of same size
+                    .setThreadNum(this->numWorkersForUnary)  // threads for unary processing, streaming is done in separate pool
                     .setIdleConnectionTimeout(0)
                     .setClientMaxBodySize(1024 * 1024 * 1024)  // 1GB
                     .setClientMaxMemoryBodySize(std::numeric_limits<size_t>::max())
@@ -83,7 +85,7 @@ Status DrogonHttpServer::startAcceptingRequests() {
                     // .setServerHeaderField("OpenVINO Model Server")
                     .enableServerHeader(false)
                     .enableDateHeader(false)
-                    .addListener(address, port)
+                    .addListener(this->address, this->port)
                     .run();
             } catch (...) {
                 SPDLOG_ERROR("Exception occurred during drogon::run()");
@@ -104,12 +106,15 @@ Status DrogonHttpServer::startAcceptingRequests() {
         maxChecks--;
         std::this_thread::sleep_for(std::chrono::milliseconds(runningCheckIntervalMillisec));
     }
-    SPDLOG_INFO("REST server listening on port {} with {} threads", port, num_workers);
+    SPDLOG_INFO("REST server listening on port {} with {} unary threads and {} streaming threads",
+        port,
+        numWorkersForUnary,
+        numWorkersForStreaming);
     return StatusCode::OK;
 }
 
 void DrogonHttpServer::terminate() {
-    SPDLOG_DEBUG("DrogonHttpServer::terminate()");
+    SPDLOG_DEBUG("DrogonHttpServer::terminate() begin");
 
     // Should never happen
     if (!drogon::app().isRunning()) {
@@ -117,8 +122,11 @@ void DrogonHttpServer::terminate() {
         throw 42;
     }
 
+    SPDLOG_DEBUG("DrogonHttpServer::terminate() before quit");
     drogon::app().quit();
+    SPDLOG_DEBUG("DrogonHttpServer::terminate() after quit before pool reset");
     pool.reset();  // waits for all worker threads to finish
+    SPDLOG_DEBUG("DrogonHttpServer::terminate() end after pool reset");
 }
 
 void DrogonHttpServer::registerRequestDispatcher(
