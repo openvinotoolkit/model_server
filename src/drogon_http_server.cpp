@@ -24,6 +24,7 @@
 
 #include "logging.hpp"
 #include "mediapipe/framework/port/threadpool.h"
+#include "timer.hpp"
 
 namespace ovms {
 
@@ -38,6 +39,13 @@ DrogonHttpServer::DrogonHttpServer(size_t numWorkersForUnary, size_t numWorkersF
     SPDLOG_DEBUG("Thread pool started");
     trantor::Logger::setLogLevel(trantor::Logger::kInfo);
 }
+
+namespace {
+enum : unsigned int {
+    WAIT_RUN,
+    TIMER_END
+};
+}  // namespace
 
 Status DrogonHttpServer::startAcceptingRequests() {
     SPDLOG_DEBUG("DrogonHttpServer::startAcceptingRequests()");
@@ -97,6 +105,8 @@ Status DrogonHttpServer::startAcceptingRequests() {
     size_t runningCheckIntervalMillisec = 50;
     size_t maxTotalRunningCheckTimeMillisec = 5000;
     size_t maxChecks = maxTotalRunningCheckTimeMillisec / runningCheckIntervalMillisec;
+    Timer<TIMER_END> timer;
+    timer.start(WAIT_RUN);
     while (!drogon::app().isRunning()) {
         SPDLOG_DEBUG("Waiting for drogon to become ready on port {}...", port);
         if (maxChecks == 0) {
@@ -106,6 +116,8 @@ Status DrogonHttpServer::startAcceptingRequests() {
         maxChecks--;
         std::this_thread::sleep_for(std::chrono::milliseconds(runningCheckIntervalMillisec));
     }
+    timer.stop(WAIT_RUN);
+    SPDLOG_DEBUG("Drogon run procedure took: {} ms", timer.elapsed<std::chrono::microseconds>(WAIT_RUN) / 1000);
     SPDLOG_INFO("REST server listening on port {} with {} unary threads and {} streaming threads",
         port,
         numWorkersForUnary,
@@ -114,21 +126,11 @@ Status DrogonHttpServer::startAcceptingRequests() {
 }
 
 void DrogonHttpServer::terminate() {
-    SPDLOG_DEBUG("DrogonHttpServer::terminate() begin");
-
-    // // Should never happen
-    // //if (!drogon::app().isRunning()) {
-    // if (!drogon::app().isFullyRunning()) {
-    //     SPDLOG_DEBUG("Drogon is not fully running");
-    //     throw 42;
-    // }
-
-    // wait until drogon becomes fully ready
     size_t runningCheckIntervalMillisec = 50;
     size_t maxTotalRunningCheckTimeMillisec = 5000;
     size_t maxChecks = maxTotalRunningCheckTimeMillisec / runningCheckIntervalMillisec;
-    while (!drogon::app().isFullyRunning()) {
-        SPDLOG_DEBUG("Waiting for drogon to become fully before termination...", port);
+    while (!(drogon::app().isRunning() && drogon::app().getLoop()->isRunning())) {
+        SPDLOG_DEBUG("Waiting for drogon fully initialize before termination...", port);
         if (maxChecks == 0) {
             SPDLOG_DEBUG("Waiting for drogon readiness timed out");
             throw 42;
@@ -137,11 +139,8 @@ void DrogonHttpServer::terminate() {
         std::this_thread::sleep_for(std::chrono::milliseconds(runningCheckIntervalMillisec));
     }
 
-    SPDLOG_DEBUG("DrogonHttpServer::terminate() before quit");
     drogon::app().quit();
-    SPDLOG_DEBUG("DrogonHttpServer::terminate() after quit before pool reset");
     pool.reset();  // waits for all worker threads to finish
-    SPDLOG_DEBUG("DrogonHttpServer::terminate() end after pool reset");
 }
 
 void DrogonHttpServer::registerRequestDispatcher(

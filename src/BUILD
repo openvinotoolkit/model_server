@@ -1688,6 +1688,7 @@ cc_library(
         "drogon_http_server.cpp",
         "drogon_http_async_writer_impl.hpp",
         "drogon_http_async_writer_impl.cpp",
+        "timer.hpp"
     ],
     deps = [
         "libhttp_async_writer_interface",
