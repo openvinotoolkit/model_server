@@ -23,7 +23,6 @@
 #include <set>
 #include <string>
 #include <thread>
-#include <unordered_set>
 #include <utility>
 
 // TODO windows
@@ -409,41 +408,10 @@ ov::AnyMap ModelInstance::getRTInfo() {
     return anyMap;
 }
 
-Status ModelInstance::adjustForEmptyOutputNames() {
-    size_t outputIndex = 0;
-    for (ov::Output<ov::Node>& output : this->model->outputs()) {
-        try {
-            OV_LOGGER("ov::Output<ov::Node> output: {}, output.get_any_name()", reinterpret_cast<const void*>(&output));
-            if (output.get_names().size() == 0) {
-                std::unordered_set<std::string> dummy_name{"out_" + std::to_string(outputIndex)};
-                output.add_names(dummy_name);
-            }
-        } catch (const ov::Exception& e) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to set the missing name in output for model:{}; version:{}; Error:{}",
-                getName(),
-                getVersion(),
-                e.what());
-            return StatusCode::UNKNOWN_ERROR;
-        } catch (...) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to set the missing name in output for model:{}; version:{};",
-                getName(),
-                getVersion());
-            return StatusCode::UNKNOWN_ERROR;
-        }
-        outputIndex++;
-    }
-    return StatusCode::OK;
-}
-
 Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLayoutConfiguration, const DynamicModelParameter& parameter) {
     Status status = validateConfigurationAgainstNetwork(config, this->model);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during configuration validation against model");
-        return status;
-    }
-    status = adjustForEmptyOutputNames();
-    if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during adjusting output names");
         return status;
     }
     if (needsToApplyLayoutConfiguration) {

@@ -324,7 +324,6 @@ private:
      * @brief Determines if during inference we are able to reset ov::InferRequest output tensor to original state, which is required for setting output functionality to be interoperable with both inferences with and without output set.
      */
     void checkForOutputTensorResetAbility();
-    Status adjustForEmptyOutputNames();
     bool supportOutputTensorsReset = true;
     bool doesSupportOutputReset() const;
     Status gatherReshapeInfo(bool isBatchingModeAuto, const DynamicModelParameter& parameter, bool& isReshapeRequired, std::map<std::string, ov::PartialShape>& modelShapes);
