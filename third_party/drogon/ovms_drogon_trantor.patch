@@ -1,5 +1,17 @@
+diff --git a/lib/inc/drogon/HttpAppFramework.h b/lib/inc/drogon/HttpAppFramework.h
+index 896917d9..6e4c4a3d 100644
+--- a/lib/inc/drogon/HttpAppFramework.h
++++ b/lib/inc/drogon/HttpAppFramework.h
+@@ -123,6 +123,7 @@ class DROGON_EXPORT HttpAppFramework : public trantor::NonCopyable
+ 
+     /// Return true if the framework is running
+     virtual bool isRunning() = 0;
++    virtual bool isFullyRunning() = 0;
+ 
+     /// Quit the event loop
+     /**
 diff --git a/lib/src/HttpAppFrameworkImpl.cc b/lib/src/HttpAppFrameworkImpl.cc
-index 4c49c259..40bf944e 100644
+index 4c49c259..6ad04dec 100644
 --- a/lib/src/HttpAppFrameworkImpl.cc
 +++ b/lib/src/HttpAppFrameworkImpl.cc
 @@ -44,6 +44,7 @@
@@ -77,7 +89,7 @@ index 4c49c259..40bf944e 100644
 +            LOG_ERROR << "before for (trantor::EventLoop *loop";
              for (trantor::EventLoop *loop : ioLoopThreadPool_->getLoops())
              {
-+                LOG_ERROR << "loop->quit()";
++                //LOG_ERROR << "loop->quit()";
                  loop->quit();
              }
 +            LOG_ERROR << "before ioLoopThreadPool_->wait";
@@ -90,18 +102,21 @@ index 4c49c259..40bf944e 100644
  
  const HttpResponsePtr &HttpAppFrameworkImpl::getCustom404Page()
 diff --git a/lib/src/HttpAppFrameworkImpl.h b/lib/src/HttpAppFrameworkImpl.h
-index d423cc0f..f31a8022 100644
+index d423cc0f..0de46e32 100644
 --- a/lib/src/HttpAppFrameworkImpl.h
 +++ b/lib/src/HttpAppFrameworkImpl.h
-@@ -455,7 +455,7 @@ class HttpAppFrameworkImpl final : public HttpAppFramework
- 
-     bool isRunning() override
-     {
--        return running_;
-+        return running_ && getLoop()->isRunning();
+@@ -458,6 +458,11 @@ class HttpAppFrameworkImpl final : public HttpAppFramework
+         return running_;
      }
  
++    bool isFullyRunning() override
++    {
++        return running_ && getLoop()->isRunning();
++    }
++
      HttpAppFramework &setJsonParserStackLimit(size_t limit) noexcept override
+     {
+         jsonStackLimit_ = limit;
 diff --git a/lib/src/Utilities.cc b/lib/src/Utilities.cc
 index c6601f61..60b2a358 100644
 --- a/lib/src/Utilities.cc
@@ -151,7 +166,7 @@ index 3335e6ff..7874f18b 100644
  {
 Submodule trantor contains modified content
 diff --git a/trantor/trantor/net/EventLoop.cc b/trantor/trantor/net/EventLoop.cc
-index 8db1090..69d4a23 100644
+index 8db1090..8d969de 100644
 --- a/trantor/trantor/net/EventLoop.cc
 +++ b/trantor/trantor/net/EventLoop.cc
 @@ -54,7 +54,9 @@ int createEventfd()
@@ -169,7 +184,7 @@ index 8db1090..69d4a23 100644
  }
  void EventLoop::quit()
  {
-+    LOG_ERROR << "NEWLOG Calling EventLoop::quit()";
++    //LOG_ERROR << "NEWLOG Calling EventLoop::quit()";
      quit_.store(true, std::memory_order_release);
  
      if (!isInLoopThread())
@@ -177,20 +192,20 @@ index 8db1090..69d4a23 100644
  
  void EventLoop::loop()
  {
-+    LOG_ERROR << "NEWLOG EventLoop::loop started";
++    //LOG_ERROR << "NEWLOG EventLoop::loop started";
      assert(!looping_);
      assertInLoopThread();
      looping_.store(true, std::memory_order_release);
      quit_.store(false, std::memory_order_release);
  
      std::exception_ptr loopException;
-+    LOG_ERROR << "NEWLOG EventLoop::loop before try catch";
++    //LOG_ERROR << "NEWLOG EventLoop::loop before try catch";
      try
      {  // Scope where the loop flag is set
  
          auto loopFlagCleaner = makeScopeExit(
              [this]() { looping_.store(false, std::memory_order_release); });
-+        LOG_ERROR << "NEWLOG EventLoop::loop starting while loop";
++        //LOG_ERROR << "NEWLOG EventLoop::loop starting while loop";
          while (!quit_.load(std::memory_order_acquire))
          {
              activeChannels_.clear();
@@ -198,20 +213,20 @@ index 8db1090..69d4a23 100644
              // std::cout << "looping" << endl;
              doRunInLoopFuncs();
          }
-+        LOG_ERROR << "NEWLOG Loop ends because quit flag is set";
++        //LOG_ERROR << "NEWLOG Loop ends because quit flag is set";
          // loopFlagCleaner clears the loop flag here
      }
      catch (std::exception &e)
      {
 -        LOG_WARN << "Exception thrown from event loop, rethrowing after "
-+        LOG_ERROR << "NEWLOG Exception from trantor";
++        //LOG_ERROR << "NEWLOG Exception from trantor";
 +        LOG_INFO << "Exception thrown from event loop, rethrowing after "
                      "running functions on quit: "
                   << e.what();
          loopException = std::current_exception();
      }
  
-+    LOG_ERROR << "NEWLOG Loop is about to end";
++    //LOG_ERROR << "NEWLOG Loop is about to end";
 +
      // Run the quit functions even if exceptions were thrown
      // TODO: if more exceptions are thrown in the quit functions, some are left

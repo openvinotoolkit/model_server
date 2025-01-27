@@ -95,7 +95,7 @@ Status DrogonHttpServer::startAcceptingRequests() {
 
     // wait until drogon becomes ready
     size_t runningCheckIntervalMillisec = 50;
-    size_t maxTotalRunningCheckTimeMillisec = 1000;
+    size_t maxTotalRunningCheckTimeMillisec = 5000;
     size_t maxChecks = maxTotalRunningCheckTimeMillisec / runningCheckIntervalMillisec;
     while (!drogon::app().isRunning()) {
         SPDLOG_DEBUG("Waiting for drogon to become ready on port {}...", port);
@@ -116,10 +116,25 @@ Status DrogonHttpServer::startAcceptingRequests() {
 void DrogonHttpServer::terminate() {
     SPDLOG_DEBUG("DrogonHttpServer::terminate() begin");
 
-    // Should never happen
-    if (!drogon::app().isRunning()) {
-        SPDLOG_DEBUG("Drogon is not running");
-        throw 42;
+    // // Should never happen
+    // //if (!drogon::app().isRunning()) {
+    // if (!drogon::app().isFullyRunning()) {
+    //     SPDLOG_DEBUG("Drogon is not fully running");
+    //     throw 42;
+    // }
+
+    // wait until drogon becomes fully ready
+    size_t runningCheckIntervalMillisec = 50;
+    size_t maxTotalRunningCheckTimeMillisec = 5000;
+    size_t maxChecks = maxTotalRunningCheckTimeMillisec / runningCheckIntervalMillisec;
+    while (!drogon::app().isFullyRunning()) {
+        SPDLOG_DEBUG("Waiting for drogon to become fully before termination...", port);
+        if (maxChecks == 0) {
+            SPDLOG_DEBUG("Waiting for drogon readiness timed out");
+            throw 42;
+        }
+        maxChecks--;
+        std::this_thread::sleep_for(std::chrono::milliseconds(runningCheckIntervalMillisec));
     }
 
     SPDLOG_DEBUG("DrogonHttpServer::terminate() before quit");
