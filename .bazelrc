@@ -39,59 +39,48 @@ build:nativeopt --copt=-march=native
 build:nativeopt --host_copt=-march=native
 build:nativeopt --copt=-O3
 
-# those below are required for XNNPACK build with gcc <12 (ubuntu 22 default is 11)
-build --define=xnn_enable_avxvnniint8=false
-build --define=xnn_enable_avx512fp16=false
-build --define=xnn_enable_avx512amx=false
-build --define xnn_enable_avxvnni=false
-# TODO to check
-build --define=no_cuda=1
+# For Tensorflow building only
+build --action_env PYTHON_BIN_PATH="/usr/bin/python3"
+build --define PYTHON_BIN_PATH=/usr/bin/python3
 
 build --spawn_strategy=standalone
 build --genrule_strategy=standalone
-build --define=grpc_no_ares=true
 
-# Default select settings
+build --define=grpc_no_ares=true
 build --define=MEDIAPIPE_DISABLE_GPU=1
+
 build --define=MEDIAPIPE_DISABLE=0
+
 build --define=CLOUD_DISABLE=0
+coverage --define=CLOUD_DISABLE=0
+test --define=CLOUD_DISABLE=0
+
 build --define=PYTHON_DISABLE=0
+
+# sometimes failed logs exceed this threshold
+test --experimental_ui_max_stdouterr_bytes=104857600
 
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos
 
 build -c opt
+build --copt=-DGRPC_BAZEL_BUILD
+
 # fixing debug builds with ignore warnings
 build --copt=-O2
-build --copt=-DGRPC_BAZEL_BUILD
-# Adding "--cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0" creates parity with TF
-# compilation options. It also addresses memory use due to
-# copy-on-write semantics of std::strings of the older ABI.
-build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 
-build --enable_platform_specific_config
-build --experimental_repo_remote_exec
-build --experimental_cc_shared_library
-build --check_visibility=true
-# Disable leaking LD_LIBRARY_PATH & PATH into build resulting in cache misses
-# and frequent rebuilds
-build --incompatible_strict_action_env
-build --cxxopt=-DOVMS_DUMP_TO_FILE=0
-build --remote_upload_local_results=true
-
-build:avx_win --copt=/arch=AVX
-build:avx2_win --copt=/arch=AVX2
-
-# Linux settings #######################################################################################################
 # LLVM, MLIR and TF require C++14, we use C++17 in project
 build:linux --cxxopt=-std=c++17
 build:linux --host_cxxopt=-std=c++17
 
-# For Tensorflow building only
-build:linux --action_env PYTHON_BIN_PATH="/usr/bin/python3"
-build:linux --define PYTHON_BIN_PATH=/usr/bin/python3
+build:windows --host_cxxopt=/std:c++17
+build:windows --cxxopt=/std:c++17
 
-# Security options ######################################################################################################
+# Fixing compiler errors:
+#build:windows --cxxopt=/translateInclude=no
+build:windows --enable_platform_specific_config
+
+# Security options
 # TODO: Add equivalent windows flag
 build:linux --cxxopt=-fno-strict-overflow
 build:linux --cxxopt=-fno-delete-null-pointer-checks
@@ -102,50 +91,50 @@ build:linux --cxxopt=-Wformat
 build:linux --cxxopt=-Wformat-security
 build:linux --cxxopt=-Werror=format-security
 
-# TODO: Add equivalent windows flag
-build:linux --force_pic
+# Adding "--cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0" creates parity with TF
+# compilation options. It also addresses memory use due to
+# copy-on-write semantics of std::strings of the older ABI.
+build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 
-build:mp_on_py_on --config=linux
-build:mp_on_py_on --define=MEDIAPIPE_DISABLE=0
-build:mp_on_py_on --define=PYTHON_DISABLE=0
-build:mp_on_py_on --disk_cache=/root/.cache/bazel_mp_on_py_on
-build:mp_on_py_off --config=linux
-build:mp_on_py_off --define=MEDIAPIPE_DISABLE=0
-build:mp_on_py_off --define=PYTHON_DISABLE=1
-build:mp_on_py_off --disk_cache=/root/.cache/bazel_mp_on_py_off
-build:mp_off_py_off --config=linux
-build:mp_off_py_off --define=MEDIAPIPE_DISABLE=1
-build:mp_off_py_off --define=PYTHON_DISABLE=1
-build:mp_off_py_off --disk_cache=/root/.cache/bazel_mp_off_py_off
-#build --remote_header=x-build-event-log=DEBUG
-
-# Coverity needs remote and disk cache disabled
-build:coverity --config=mp_on_py_on
-build:coverity --disk_cache=
-
-# Windows settings ######################################################################################################
-# Configure short or long logs
-build:short_logs --output_filter=DONT_MATCH_ANYTHING
-build:verbose_logs --output_filter=
-# Options to build TensorFlow 1.x or 2.x.
-build:v1 --define=tf_api_version=1 --action_env=TF2_BEHAVIOR=0
-build:v2 --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
-
-build:windows --host_cxxopt=/std:c++17
-build:windows --cxxopt=/std:c++17
 # TODO Windows: may impact python nodes execution
 build:windows --noenable_bzlmod
+build --experimental_repo_remote_exec
+# TODO: Add equivalent windows flag
+build:linux --force_pic
+build --experimental_cc_shared_library
+
+build --check_visibility=true
+# Disable leaking LD_LIBRARY_PATH & PATH into build resulting in cache misses
+# and frequent rebuilds
+build --incompatible_strict_action_env
+build --cxxopt=-DOVMS_DUMP_TO_FILE=0
+# envs below are required to succesfully run binaries in bazel as bazel is
+# very strict in sandboxing
+test:linux --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 # TF bazelrc settings
 # TensorFlow Bazel configuration file.
+
+build:windows --define framework_shared_object=true
+build:windows --define tsl_protobuf_header_only=true
+
 build:windows --define=use_fast_cpp_protos=true
 build:windows --define=allow_oversize_protos=true
+
+build:windows --spawn_strategy=standalone
 
 # Make Bazel print out all options from rc files.
 build:windows --announce_rc
 
+# TODO(mihaimaruseac): Document this option or remove if no longer needed
+build:windows --define=grpc_no_ares=true
+
+
 build:windows --noincompatible_remove_legacy_whole_archive
 build:windows --features=-force_no_whole_archive
+
+# TODO(mihaimaruseac): Document this option or remove if no longer needed
+build:windows --enable_platform_specific_config
 
 # Enable XLA support by default.
 build:windows --define=with_xla_support=true
@@ -173,8 +162,7 @@ build:windows --incompatible_enforce_config_setting_visibility
 # //tensorflow:libtensorflow_framework.so.
 build:monolithic --define framework_shared_object=false
 build:monolithic --define tsl_protobuf_header_only=false
-# On windows, we still link everything into a single DLL - required by TF
-build:windows --config=monolithic
+build:monolithic --experimental_link_static_libraries_once=false  # b/229868128
 
 build:windows --copt=/W0
 build:windows --host_copt=/W0
@@ -199,6 +187,12 @@ build:windows --features=archive_param_file
 build:windows --copt=/d2ReducedOptimizeHugeFunctions
 build:windows --host_copt=/d2ReducedOptimizeHugeFunctions
 
+build:windows --cxxopt=/std:c++17
+build:windows --host_cxxopt=/std:c++17
+
+# On windows, we still link everything into a single DLL.
+build:windows --config=monolithic
+
 # Make sure to include as little of windows.h as possible
 build:windows --copt=-DWIN32_LEAN_AND_MEAN
 build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
@@ -218,19 +212,75 @@ build:windows --host_linkopt=/OPT:REF
 build:windows --linkopt=/OPT:ICF
 build:windows --host_linkopt=/OPT:ICF
 
+# Verbose failure logs when something goes wrong
+build:windows --verbose_failures
+
+# Work around potential issues with large command lines on windows.
+# See: https://github.com/bazelbuild/bazel/issues/5163
+build:windows --features=compiler_param_file
+
+# Configure short or long logs
+build:short_logs --output_filter=DONT_MATCH_ANYTHING
+build:verbose_logs --output_filter=
+
+build:avx_win --copt=/arch=AVX
+build:avx2_win --copt=/arch=AVX2
+
+# Options to build TensorFlow 1.x or 2.x.
+build:v1 --define=tf_api_version=1 --action_env=TF2_BEHAVIOR=0
+build:v2 --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
+
+# Flag to enable remote config
+build:windows --experimental_repo_remote_exec
+
+# Config-specific options should come above this line.
+
+# Load rc file written by ./configure.
+# try-import %workspace%/.tf_configure.bazelrc
 build:windows --action_env PYTHON_BIN_PATH="C:/opt/Python311/python.exe"
 build:windows --action_env PYTHON_LIB_PATH="C:/opt/Python311/lib/site-packages"
-build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python311/python.exe
 build:windows --python_path="C:/opt/Python311/python.exe"
 build:windows:opt --copt=/arch:AVX
 build:windows:opt --host_copt=/arch:AVX
 build:windows --define=override_eigen_strong_inline=true
+
+# Load rc file with user-specific options.
+try-import %workspace%/.bazelrc.user
 
 # Disable TFRT integration for now unless --config=tfrt is specified.
 build:windows --deleted_packages=tensorflow/core/tfrt/stubs,tensorflow/compiler/mlir/tfrt,tensorflow/compiler/mlir/tfrt/benchmarks,tensorflow/compiler/mlir/tfrt/ir,tensorflow/compiler/mlir/tfrt/ir/mlrt,tensorflow/compiler/mlir/tfrt/jit/python_binding,tensorflow/compiler/mlir/tfrt/jit/transforms,tensorflow/compiler/mlir/tfrt/python_tests,tensorflow/compiler/mlir/tfrt/tests,tensorflow/compiler/mlir/tfrt/tests/mlrt,tensorflow/compiler/mlir/tfrt/tests/ir,tensorflow/compiler/mlir/tfrt/tests/analysis,tensorflow/compiler/mlir/tfrt/tests/jit,tensorflow/compiler/mlir/tfrt/tests/lhlo_to_tfrt,tensorflow/compiler/mlir/tfrt/tests/lhlo_to_jitrt,tensorflow/compiler/mlir/tfrt/tests/tf_to_corert,tensorflow/compiler/mlir/tfrt/tests/tf_to_tfrt_data,tensorflow/compiler/mlir/tfrt/tests/saved_model,tensorflow/compiler/mlir/tfrt/transforms/lhlo_gpu_to_tfrt_gpu,tensorflow/compiler/mlir/tfrt/transforms/mlrt,tensorflow/core/runtime_fallback,tensorflow/core/runtime_fallback/conversion,tensorflow/core/runtime_fallback/kernel,tensorflow/core/runtime_fallback/opdefs,tensorflow/core/runtime_fallback/runtime,tensorflow/core/runtime_fallback/util,tensorflow/core/tfrt/mlrt,tensorflow/core/tfrt/mlrt/attribute,tensorflow/core/tfrt/mlrt/kernel,tensorflow/core/tfrt/mlrt/bytecode,tensorflow/core/tfrt/mlrt/interpreter,tensorflow/compiler/mlir/tfrt/translate/mlrt,tensorflow/compiler/mlir/tfrt/translate/mlrt/testdata,tensorflow/core/tfrt/gpu,tensorflow/core/tfrt/run_handler_thread_pool,tensorflow/core/tfrt/runtime,tensorflow/core/tfrt/saved_model,tensorflow/core/tfrt/graph_executor,tensorflow/core/tfrt/saved_model/tests,tensorflow/core/tfrt/tpu,tensorflow/core/tfrt/utils,tensorflow/core/tfrt/utils/debug,tensorflow/core/tfrt/saved_model/python,tensorflow/core/tfrt/graph_executor/python
 
 # Windows build ssl headers for GRPC workaround
 build:windows --override_repository="boringssl=C:\\opt\\boringSSL-SwiftPM"
+
+build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python311/python.exe
+
+test:linux --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
+
+# genai hardcodes path during build time so without this so is not visible
+test:linux --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
+
+# file below should contain sth like
+# build --remote_cache=http://IP:PORT
+try-import %workspace%/.user.bazelrc
+build --remote_upload_local_results=true
+build:mp_on_py_on --config=linux
+build:mp_on_py_on --define=MEDIAPIPE_DISABLE=0
+build:mp_on_py_on --define=PYTHON_DISABLE=0
+build:mp_on_py_on --disk_cache=/root/.cache/bazel_mp_on_py_on
+build:mp_on_py_off --config=linux
+build:mp_on_py_off --define=MEDIAPIPE_DISABLE=0
+build:mp_on_py_off --define=PYTHON_DISABLE=1
+build:mp_on_py_off --disk_cache=/root/.cache/bazel_mp_on_py_off
+build:mp_off_py_off --config=linux
+build:mp_off_py_off --define=MEDIAPIPE_DISABLE=1
+build:mp_off_py_off --define=PYTHON_DISABLE=1
+build:mp_off_py_off --disk_cache=/root/.cache/bazel_mp_off_py_off
+#build --remote_header=x-build-event-log=DEBUG
+
+# Coverity needs remote and disk cache disabled
+build:coverity --config=mp_on_py_on
+build:coverity --disk_cache=
 
 #Add this parameter for windows local builds, its added on jenkins via windows_build.bat. Must be short path on C:\ for mediapipe to compile
 #startup --output_user_root=C:/b_tmp
@@ -243,20 +293,14 @@ build:windows --define=MEDIAPIPE_DISABLE=0
 build:windows --action_env OpenVINO_DIR="c:/opt/openvino/runtime/cmake"
 build:windows --action_env OpenCV_DIR="c:/opt/opencv"
 
-build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.11
+build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.9
+
 build:windows --define=USE_DROGON=1
-
-# Tests settings ############################################################################################################################
-# sometimes failed logs exceed this threshold
-test --experimental_ui_max_stdouterr_bytes=104857600
-
-# envs below are required to succesfully run binaries in bazel as bazel is very strict in sandboxing
-test:linux --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
-# genai hardcodes path during build time so without this so is not visible
-test:linux --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
-test:linux --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
-
-# Bazelrc imports ############################################################################################################################
-# file below should contain sth like
-# build --remote_cache=http://IP:PORT
-try-import %workspace%/.user.bazelrc
+build:linux --define=USE_DROGON=1  # 0=legacy net_http, available only on linux
+# those below are required for XNNPACK build with gcc <12 (ubuntu 22 default is 11)
+build --define=xnn_enable_avxvnniint8=false
+build --define=xnn_enable_avx512fp16=false
+build --define=xnn_enable_avx512amx=false
+build --define xnn_enable_avxvnni=false
+# TODO to check
+build --define=no_cuda=1
