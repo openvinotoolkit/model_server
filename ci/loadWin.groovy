@@ -77,18 +77,6 @@ def build_and_test(){
     } else {
         echo "Build successful."
     }
-    status = bat(returnStatus: true, script: 'windows_test.bat ' + env.JOB_BASE_NAME)
-    if (status != 0) {
-        error "Error: Windows build test failed ${status}. Check win_build_test.log for details."
-    } else {
-        echo "Build successful."
-    }
-    status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms_test.exe win_build_test.log | grep "Build completed successfully"')
-    if (status != 0) {
-        error "Error: Windows build test failed ${status}. Check win_build_test.log for details."
-    } else {
-        echo "Build successful."
-    }
     def status_pkg = bat(returnStatus: true, script: 'windows_create_package.bat ' + env.JOB_BASE_NAME)
     if (status_pkg != 0) {
         error "Error: Windows package failed ${status_pkg}."
@@ -98,7 +86,14 @@ def build_and_test(){
 }
 
 def check_tests(){
-    def status = bat(returnStatus: true, script: 'grep "       OK " win_test.log')
+    def status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms_test.exe win_build_test.log | grep "Build completed successfully"')
+    if (status != 0) {
+            error "Error: Windows build test failed ${status}. Check win_build_test.log for details."
+    } else {
+        echo "Build test successful."
+    }
+
+    status = bat(returnStatus: true, script: 'grep "       OK " win_test.log')
     if (status != 0) {
             error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test.log for details."
     } else {

@@ -162,12 +162,12 @@ Run `setupvars` script to set required environment variables.
 
 **Windows Command Line**
 ```bat
-.\ovms\setupvars.bat
+./ovms/setupvars.bat
 ```
 
 **Windows PowerShell**
 ```powershell
-.\ovms\setupvars.ps1
+./ovms/setupvars.ps1
 ```
 
 > **Note**: Running this script changes Python settings for the shell that runs it.Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
@@ -181,8 +181,10 @@ You can also build model server from source by following the [developer guide](w
 
 Download ResNet50 model:
 ```console
-curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet50/1/model.xml
-curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
+mkdir models/resnet50/1
+
+curl -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet50/1/model.xml
+curl -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
 ```
 
 Start the server:
