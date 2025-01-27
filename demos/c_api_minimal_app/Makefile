@@ -20,7 +20,7 @@ HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
-OVMS_CPP_IMAGE_TAG ?= 2024.4
+OVMS_CPP_IMAGE_TAG ?= latest
 BASE_OS ?= ubuntu22
 
 ifeq ($(BASE_OS),ubuntu22)
