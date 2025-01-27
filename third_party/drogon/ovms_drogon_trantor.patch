@@ -75,6 +75,21 @@ index 3335e6ff..7874f18b 100644
  namespace drogon
  {
 Submodule trantor contains modified content
+diff --git a/trantor/trantor/net/EventLoop.cc b/trantor/trantor/net/EventLoop.cc
+index 8db1090..5dfc636 100644
+--- a/trantor/trantor/net/EventLoop.cc
++++ b/trantor/trantor/net/EventLoop.cc
+@@ -54,7 +54,9 @@ int createEventfd()
+     int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+     if (evtfd < 0)
+     {
+-        std::cout << "Failed in eventfd" << std::endl;
++        std::cout << "Failed in eventfd: " << strerror(errno) << " (errno: " << errno << ")" << std::endl;
++        if (errno == EMFILE || errno == ENFILE)
+++            std::cout << "try reducing the number of rest_workers or increase open files limit" << std::endl;
+         abort();
+     }
+ 
 diff --git a/trantor/trantor/net/inner/Socket.cc b/trantor/trantor/net/inner/Socket.cc
 index 2aff5a0..145f9eb 100755
 --- a/trantor/trantor/net/inner/Socket.cc
