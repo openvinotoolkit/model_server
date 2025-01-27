@@ -5,7 +5,7 @@ This document gives information how to build docker images and the binary packag
 ## Prerequisites
 
 1. [Docker Engine](https://docs.docker.com/engine/)
-1. Ubuntu 20.04, Ubuntu 22.04 or RedHat 8.8 host
+1. Ubuntu 22.04, Ubuntu 24.04 or RedHat 8.10 host
 1. make
 1. bash
 
@@ -27,8 +27,8 @@ To build the image with non default configuration, add parameters described belo
 
 Select base OS:
 - `ubuntu22` for Ubuntu 22.04 (default)
-- `ubuntu20` for Ubuntu 20.04
-- `redhat` for Red Hat UBI 8.8
+- `ubuntu24` for Ubuntu 24.04
+- `redhat` for Red Hat UBI 8.10
 
 ```bash
 make release_image BASE_OS=redhat
@@ -43,9 +43,9 @@ Example:
 Parameter used to control which GPU driver version will be installed. Supported versions:
 | OS | Versions |
 |---|---|
-| Ubuntu22 | 23.13.26032 (default), <br />22.35.24055, <br />22.10.22597, <br />21.48.21782 |
-| Ubuntu20 | 22.43.24595 (default), <br />22.35.24055, <br />22.10.22597, <br />21.48.21782 |
-| RedHat | 22.43.24595 (default), <br />22.28.23726, <br />22.10.22597, <br />21.38.21026 |
+| Ubuntu22 | 24.39.31294 (default), <br /> 24.26.30049 (default), <br /> 23.22.26516|
+| Ubuntu24 | 24.52.32224 (default), <br /> 24.39.31294 |
+| RedHat | 23.22.26516 (default), <br /> 24.26.30049, <br />23.22.26516, <br /> 22.10.22597 |
 
 Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.
 Warning: _Maintained only for Ubuntu base OS._
@@ -176,5 +176,5 @@ Read more detailed usage in [developer guide](https://github.com/openvinotoolkit
 
 ## Building ovms.exe on Windows
 
-[Developer Guide for Windows](windows_developer_guide.md) document describes experimental/alpha windows deployment for ovms.exe binary.
+[Developer Guide for Windows](windows_developer_guide.md) document describes building procedure for ovms.exe binary.
 Follow the instructions to start the ovms server as a standalone binary on a Windows 11 system.

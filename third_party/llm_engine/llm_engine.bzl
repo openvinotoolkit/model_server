@@ -23,8 +23,8 @@ def llm_engine():
     llm_engine_repository(name="_llm_engine")
     new_git_repository(
         name = "llm_engine",
-        remote = "https://github.com/ilya-lavrenov/openvino.genai",
-        commit = "5d80b76830d3ed1c5dca4158562f873dc32ffe9b", # / Jan 17
+        remote = "https://github.com/openvinotoolkit/openvino.genai",
+        commit = "3ffd1313a3678f5f33a6d36c7700296e60d8df3f", # / Jan 22
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
@@ -50,7 +50,7 @@ def _impl(repository_ctx):
     OpenVINO_DIR = repository_ctx.os.environ.get("OpenVINO_DIR", "")
 
     if _is_windows(repository_ctx):
-        OpenVINO_DIR = OpenVINO_DIR.replace("/", "\\\\").replace("\\", "\\\\")
+        OpenVINO_DIR = OpenVINO_DIR.replace("\\", "\\\\").replace("/", "\\\\")
         out_lib_dir = "runtime/lib/Release"
         lib_name = "openvino_genai"
         out_libs = "out_static_libs = [\"{lib_name}.lib\"]".format(lib_name=lib_name)
@@ -104,8 +104,8 @@ cmake(
         "--verbose",
         "--",  # <- Pass remaining options to the native tool.
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
-        # there is no elegant parallel compilation support
-        "-j 32",
+        # there is no elegant parallel compilation support - lets go with default - CORES + 2 for ninja
+        #"-j 32",
     ],
     cache_entries = {{ 
         {cache_entries}
@@ -132,11 +132,15 @@ cmake(
     tags = ["requires-network"],
     visibility = ["//visibility:public"],
     lib_name = "{lib_name}",
+    deps = [
+        "@ovms//third_party:openvino",
+    ]
 )
 
 cc_library(
     name = "llm_engine",
     deps = [
+        "@ovms//third_party:openvino",
         ":llm_engine_cmake",
     ],
     visibility = ["//visibility:public"],

@@ -44,21 +44,21 @@ JOBS ?= $(CORES_TOTAL)
 
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
-# Currently supported BASE_OS values are: ubuntu20 ubuntu22 redhat
+# Currently supported BASE_OS values are: ubuntu24 ubuntu22 redhat
 BASE_OS ?= ubuntu22
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 22.04
-BASE_OS_TAG_REDHAT ?= 8.10
+BASE_OS_TAG_REDHAT ?= 9.4
 
 INSTALL_RPMS_FROM_URL ?=
 
 CHECK_COVERAGE ?=0
 RUN_TESTS ?= 0
+BUILD_TESTS ?= 0
 RUN_GPU_TESTS ?=
-NVIDIA ?=0
 GPU ?= 0
 NPU ?= 0
 BUILD_NGINX ?= 0
@@ -140,7 +140,7 @@ else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
 CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(REPO_ENV)
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
@@ -153,20 +153,15 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS),ubuntu22)
 	BASE_OS_TAG=22.04
   endif
-  ifeq ($(BASE_OS),ubuntu20)
-	BASE_OS_TAG=20.04
+  ifeq ($(BASE_OS),ubuntu24)
+	BASE_OS_TAG=24.04
   endif
-  ifeq ($(NVIDIA),1)
-	BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubuntu$(BASE_OS_TAG)
-	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
-  else
-	BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
-	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
-  endif
-  ifeq ($(BASE_OS_TAG),20.04)
-        OS=ubuntu20
-	INSTALL_DRIVER_VERSION ?= "22.43.24595"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.0.0-17449-2b7f48e8a8e/l_openvino_toolkit_ubuntu20_2025.0.0.dev20241126_x86_64.tgz
+  BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
+  BASE_IMAGE_RELEASE=$(BASE_IMAGE)
+  ifeq ($(BASE_OS_TAG),24.04)
+        OS=ubuntu24
+	INSTALL_DRIVER_VERSION ?= "24.52.32224"
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc1/l_openvino_toolkit_ubuntu24_2025.0.0.dev20250116_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
@@ -176,15 +171,10 @@ endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   OS=redhat
-  ifeq ($(NVIDIA),1)
-    BASE_IMAGE=docker.io/nvidia/cuda:11.8.0-runtime-ubi8
-	BASE_IMAGE_RELEASE=$(BASE_IMAGE)
-  else
-    BASE_IMAGE ?= registry.access.redhat.com/ubi8/ubi:$(BASE_OS_TAG_REDHAT)
-	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
-  endif
+  BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
+  BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  INSTALL_DRIVER_VERSION ?= "23.22.26516"
+  INSTALL_DRIVER_VERSION ?= "24.45.31740"
   DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc1/l_openvino_toolkit_rhel8_2025.0.0.dev20250116_x86_64.tgz
 endif
 
@@ -194,9 +184,6 @@ ifeq ($(BAZEL_BUILD_TYPE),dbg)
 endif
 
 OVMS_CPP_IMAGE_TAG ?= latest
-ifeq ($(NVIDIA),1)
-  IMAGE_TAG_SUFFIX = -cuda
-endif
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
@@ -229,6 +216,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
 	--build-arg RUN_TESTS=$(RUN_TESTS)\
+	--build-arg OPTIMIZE_BUILDING_TESTS=$(OPTIMIZE_BUILDING_TESTS)\
 	--build-arg RUN_GPU_TESTS=$(RUN_GPU_TESTS)\
 	--build-arg FUZZER_BUILD=$(FUZZER_BUILD)\
 	--build-arg debug_bazel_flags=$(BAZEL_DEBUG_FLAGS)\
@@ -237,7 +225,6 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg PROJECT_VERSION=$(PROJECT_VERSION)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
 	--build-arg BASE_OS=$(BASE_OS)\
-	--build-arg NVIDIA=$(NVIDIA)\
 	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
 	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
@@ -352,25 +339,12 @@ ifeq ($(FUZZER_BUILD),1)
 	@echo "Cannot run fuzzer with redhat"; exit 1 ;
   endif
 endif
-ifeq ($(BASE_OS_TAG),20.04)
-  ifeq ($(RUN_TESTS),1)
-	@echo "On ubuntu20 run tests via make run_unit_tests"; exit 1 ;
-  endif
-endif
-ifeq ($(NVIDIA),1)
-  ifeq ($(OV_USE_BINARY),1)
-	@echo "Building NVIDIA plugin requires OV built from source. To build NVIDIA plugin and OV from source make command should look like this 'NVIDIA=1 OV_USE_BINARY=0 make docker_build'"; exit 1 ;
-  endif
-endif
 ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
 	@docker pull $(BASE_IMAGE)
   ifeq ($(BASE_OS),redhat)
-	@docker pull registry.access.redhat.com/ubi8/ubi-minimal:$(BASE_OS_TAG_REDHAT)
-    ifeq ($(NVIDIA),1)
-	@docker pull docker.io/nvidia/cuda:11.8.0-runtime-ubi8
-    endif
+	@docker pull registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   endif
 endif
 ifeq ($(USE_BUILDX),true)
@@ -438,7 +412,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 endif
 ifeq ($(BASE_OS),redhat)
 	touch base_packages.txt
-	docker run registry.access.redhat.com/ubi8-minimal:8.10 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
+	docker run registry.access.redhat.com/ubi9-minimal:9.4 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
 	docker run --entrypoint rpm $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -qa  --qf "%{NAME}\n" | sort > all_packages.txt
 	rm -rf ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
 	mkdir ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
@@ -679,6 +653,7 @@ endif
 run_unit_tests: prepare_models
 ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
+		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--device=/dev/dri \
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \
 		-u 0 \
@@ -691,11 +666,14 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-e JOBS=$(JOBS) \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
-		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
-		tail -200 test.log ; \
-		exit $$exit_status
+		./run_unit_tests.sh
+		exit_code=$$?
+		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz .
+		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+		exit $$exit_code
 else
 	docker run \
+		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		-e https_proxy=${https_proxy} \
@@ -703,11 +681,12 @@ else
 		-e JOBS=$(JOBS) \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
-		./run_unit_tests.sh > test.log 2>&1 ; exit_status=$$? ; \
-		tail -200 test.log ; \
-		exit $$exit_status
+		./run_unit_tests.sh ;\
+		exit_code=$$?
+		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz .
+		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+		exit $$exit_code
 endif
-
 
 run_lib_files_test:
 	docker run --entrypoint bash -v $(realpath tests/file_lists):/test $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./test/test_release_files.sh ${BAZEL_DEBUG_FLAGS} > file_test.log 2>&1 ; exit_status=$$? ; tail -200 file_test.log ; exit $$exit_status

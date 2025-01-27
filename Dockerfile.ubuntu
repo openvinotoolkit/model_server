@@ -19,7 +19,6 @@ ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
 
 FROM $BASE_IMAGE as base_build
-LABEL version="1.0.0"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -92,11 +91,15 @@ RUN ./install_opencv.sh
 ################### BASE BUILD ##########################
 FROM base_build as build
 ARG BASE_IMAGE
+ARG BASE_OS
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=ubuntu"
-
+RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update && \
+    apt-get install -y software-properties-common --no-install-recommends; add-apt-repository 'ppa:deadsnakes/ppa' -y && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* ; fi
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 RUN apt-get update && apt-get install --no-install-recommends -y \
             libgflags-dev \
             bc \
@@ -106,26 +109,27 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             lcov \
             less \
             libpugixml1v5 \
-            libusb-dev \
-            libusb-1.0-0-dev \
             libtool \
             libnuma-dev \
             libtbb-dev \
             libssl-dev \
-            python2 \
-            python2-dev \
-            python3-dev \
-            python3-venv \
+            libxml2 \
+            python3.10-dev \
+            python3.10-venv \
             python3-pip \
             unzip \
             gdb \
             vim && \
             apt-get clean && \
-            rm -rf /var/lib/apt/lists/* && \
-    python3 -m pip install "numpy<2.0.0" --no-cache-dir  && \
-    python3 -m pip install "Jinja2==3.1.4" "MarkupSafe==3.0.2" --no-cache-dir
-
-RUN apt-get update; apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+            rm -rf /var/lib/apt/lists/*
+# on ubuntu 24.04 python3.12 is used as default python for ovms build and release
+# TF build needs python3.10 with numpy as it does not support python3.12
+RUN python3.10 -m pip install "numpy<2.0.0" --no-cache-dir
+RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update ; apt-get install python3.12-dev -y --no-install-recommends ; apt-get clean && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    python3.12 -m pip install "Jinja2==3.1.5" "MarkupSafe==3.0.2" --no-cache-dir ; fi
+RUN if [ "$BASE_OS" == "ubuntu22" ] ; then python3 -m pip install "Jinja2==3.1.5" "MarkupSafe==3.0.2" --no-cache-dir ; fi
 
 ARG JOBS=8
 ARG ov_use_binary=0
@@ -149,9 +153,6 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
-ARG NVIDIA=0
-# hadolint ignore=DL3003
-RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
@@ -207,56 +208,11 @@ RUN  git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openv
 WORKDIR /openvino_tokenizers/build
 RUN cmake .. -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
 
-# NVIDIA
-ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
-ENV OPENVINO_HOME=/openvino
-ENV OPENVINO_CONTRIB=/openvino_contrib
-
 # Add Nvidia dev tool if needed
 RUN apt-get update ; \
     apt-get install -y --no-install-recommends opencl-clhpp-headers opencl-c-headers intel-opencl-icd && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;
 # hadolint ignore=DL3003
-RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    set -exuo pipefail ; \
-    rm -f /etc/apt/apt.conf.d/docker-clean ; \
-    if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
-    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then libcutensor_version=1.7.0.1-1; else libcutensor_version=1.6.1.5-1; fi;\
-    apt-get update && apt-get install --no-install-recommends -y \
-      libzstd-dev \
-      libcudnn8=8.8.0.121-1+cuda11.8 \
-      libcudnn8-dev=8.8.0.121-1+cuda11.8 \
-      libcutensor1="$libcutensor_version" \
-      libcutensor-dev="$libcutensor_version" && \
-    apt-get install --no-install-recommends -y cuda-11-8 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    pip3 install --no-cache-dir cython && \
-    curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin ; \
-    curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' ; \
-    chmod a+x /usr/local/bin/sccache ;
-
-# hadolint ignore=DL3003
-RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
-    mkdir ${OPENVINO_BUILD_PATH} && \
-    cd "${OPENVINO_BUILD_PATH}" && \
-    cmake "${OPENVINO_HOME}" \
-      -DENABLE_NVIDIA=ON \
-      -DENABLE_TESTS=ON \
-      -DBUILD_arm_plugin=OFF \
-      -DBUILD_java_api=OFF \
-      -DBUILD_custom_operations=OFF \
-      -DBUILD_mo_pytorch=OFF \
-      -DBUILD_optimum=OFF \
-      -DBUILD_ovms_ai_extension=OFF \
-      -DOPENVINO_EXTRA_MODULES="${OPENVINO_CONTRIB}/modules" \
-      -DWHEEL_VERSION=2022.1.0 \
-      -DVERBOSE_BUILD=ON \
-      -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && \
-      cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j $JOBS && \
-    cp /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /opt/intel/openvino/runtime/lib/intel64 && \
-    echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /opt/intel/openvino/runtime/lib/intel64/plugins.xml
-
 
 WORKDIR /ovms
 # GPU testing in build img
@@ -295,6 +251,8 @@ COPY src/ /ovms/src/
 # hadolint ignore=DL3059
 RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
+# hadolint ignore=DL3059
+RUN if [ "$BASE_OS" == "ubuntu24" ] ; then update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 2; fi
 # Copy example clients into build image for static analysis
 WORKDIR /example_cpp_client
 COPY demos/common/cpp /example_cpp_client/cpp
@@ -327,16 +285,21 @@ WORKDIR /ovms
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
 COPY run_unit_tests.sh prepare_llm_models.sh install_va.sh /ovms/
-ARG RUN_TESTS=0
-RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
+
 ARG FUZZER_BUILD=0
 # Custom Nodes
 # hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes; fi;
 
 # OVMS
-# hadolint ignore=DL3059
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms //src:ovms_test; fi;
+ARG OPTIMIZE_BUILDING_TESTS=0
+# Builds unit tests together with ovms server in one step
+# It speeds up CI when tests are executed outside of the image building
+# hadolint ignore=SC2046
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n //src:ovms_test; fi); fi;
+
+ARG RUN_TESTS=0
+RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
 
 # hadolint ignore=DL3059
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${debug_bazel_flags} --jobs=$JOBS //src:libsampleloader.so; fi;
@@ -406,11 +369,10 @@ ARG INSTALL_RPMS_FROM_URL=
 ARG INSTALL_DRIVER_VERSION="24.26.30049"
 ARG GPU=0
 ARG NPU=0
-ARG NVIDIA=0
 ENV DEBIAN_FRONTEND=noninteractive
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}
-LABEL supported-devices="CPU=1 GPU=${GPU} NPU=${NPU} NVIDIA=${NVIDIA}"
+LABEL supported-devices="CPU=1 GPU=${GPU} NPU=${NPU}"
 ARG BASE_IMAGE
 LABEL base-image=${BASE_IMAGE}
 ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
@@ -431,10 +393,17 @@ RUN apt-get update ; \
     if [ "$NPU" == "1" ] ; then \
         mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
         apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
-        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-driver-compiler-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
-        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-fw-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
-        curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.0/intel-level-zero-npu_1.10.0.20241107-11729849322_ubuntu22.04_amd64.deb ; \
-        curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.44/level-zero_1.17.44+u22.04_amd64.deb ; \
+        if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-driver-compiler-npu_1.10.1.20241220-12430270326_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-fw-npu_1.10.1.20241220-12430270326_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-level-zero-npu_1.10.1.20241220-12430270326_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.44/level-zero_1.17.44+u22.04_amd64.deb ; \
+        else \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-driver-compiler-npu_1.10.1.20241220-12430270326_ubuntu24.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-fw-npu_1.10.1.20241220-12430270326_ubuntu24.04_amd64.deb    ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-level-zero-npu_1.10.1.20241220-12430270326_ubuntu24.04_amd64.deb ; \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.44/level-zero_1.17.44+u24.04_amd64.deb ; \ 
+        fi ; \      
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
     fi ; \
     apt-get clean ; \
@@ -443,23 +412,16 @@ RUN apt-get update ; \
     groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
-# for NVIDIA
-RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda apt package"; \
-    apt-get install -y --no-install-recommends curl && \
-    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then libcutensor_version=1.7.0.1-1; else libcutensor_version=1.6.1.5-1; fi; \
-    apt-get update && apt-get install -y --no-install-recommends libcudnn8=8.8.0.121-1+cuda11.8 libcutensor1="$libcutensor_version" libpng16-16 && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
-
 COPY --from=pkg /ovms_release /ovms
 COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_deps/jinja2
-COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.4.dist-info /ovms/python_deps/jinja2-3.1.4.dist-info
+COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.5.dist-info /ovms/python_deps/jinja2-3.1.5.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe
 
 # For image with Python enabled install Python library
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     apt-get update -y ; \
-    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then python_version=3.10; else python_version=3.8; fi; \
+    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then python_version=3.10; else python_version=3.12; fi; \
     apt-get install libpython$python_version --no-install-recommends -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 

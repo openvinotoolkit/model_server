@@ -26,7 +26,7 @@ def help():
     print("Usage:\n\
           Two arguments required: BAZEL_BUILD_FLAGS PATH_TO_OPENVINO_INSTALL\n\
           for example: \n\
-          python windows_set_ovms_version.py \"--config=windows\" c:\opt\ \n\
+          python windows_set_ovms_version.py \"--config=windows\" c:\\opt\\ \n\
           ")
     
 def replace_in_file(file_path, old_string, new_string):

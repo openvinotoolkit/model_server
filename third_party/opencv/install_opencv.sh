@@ -30,9 +30,11 @@ if [ "$os" == "auto" ] ; then
     os=$( . /etc/os-release ; echo "${ID}${VERSION_ID}" )
     if [[ "$os" =~ "rhel8".* ]] ; then
       os="rhel8"
+    elif [[ "$os" =~ "rhel9".* ]] ; then
+      os="rhel9"
     fi
     case $os in
-        rhel8|ubuntu18.04|ubuntu20.04|ubuntu21.10|ubuntu22.04) [ -z "$print" ] && echo "Detected OS: ${os}" ;;
+        rhel8|rhel9|ubuntu18.04|ubuntu20.04|ubuntu22.04|ubuntu24.04) [ -z "$print" ] && echo "Detected OS: ${os}" ;;
         *) echo "Unsupported OS: ${os:-detection failed}" >&2 ; exit 1 ;;
     esac
 fi
@@ -40,11 +42,11 @@ fi
 #===================================================================================================
 # OpenCV installation
 
-if [ "$os" == "ubuntu20.04" ] || [ "$os" == "ubuntu22.04" ] ; then
+if [ "$os" == "ubuntu24.04" ] || [ "$os" == "ubuntu22.04" ] ; then
     export DEBIAN_FRONTEND=noninteractive
     apt update && apt install -y build-essential git cmake \
         && rm -rf /var/lib/apt/lists/*
-elif [ "$os" == "rhel8" ] ; then
+elif [ "$os" == "rhel8" ] || [ "$os" == "rhel9" ] ; then
     yum install -d6 -y git cmake gcc-c++
 else
     echo "Internal script error: unsupported OS" >&2

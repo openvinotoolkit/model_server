@@ -39,7 +39,7 @@ set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
 :: Python 39 needs to be first in the windows path, as well as MSYS tools
-set "setPath=C:\opt;C:\opt\Python39\;C:\opt\Python39\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
@@ -67,11 +67,11 @@ IF /I EXIST %wget_path% (
     if %expunge% EQU 1 (
         rmdir /S /Q %wget_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        curl -vf --ca-native -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
+        curl -k -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] ::::::::::::::::::::::: wget installed already in %wget_path% )
 ) ELSE (
-    curl -vf --ca-native -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
+    curl -k -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
@@ -98,7 +98,7 @@ IF /I EXIST %bash_path% (
     )
 
     start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %msys_path%
-    for /l %%i in (1,1,90) do (
+    for /l %%i in (1,1,200) do (
         echo Timeout iteration: %%i
         tasklist /NH | find /i "%msys_exe%" > nul
         if !errorlevel! neq 0 (
@@ -106,7 +106,7 @@ IF /I EXIST %bash_path% (
             goto install_finished
         ) else (
             echo Process "%msys_exe%" in progress ...
-            ping 1.1.1.1 -n 1 > nul
+            ping 1.1.1.1 -n 3 > nul
         )
     )
 
@@ -152,7 +152,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
         if !errorlevel! neq 0 exit /b !errorlevel!
         C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
         if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%%openvino_dir% )
+    ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%\%openvino_dir% )
     
 ) ELSE (
     C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
@@ -161,14 +161,15 @@ IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
 :: Create OpenVINO link - always to make sure it points to latest version
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
-    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Replace path to openvino in ovms WORKSPACE file
-powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
-if !errorlevel! neq 0 exit /b !errorlevel!
+if "!output_user_root!" neq "opt" (
+    powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
@@ -226,50 +227,88 @@ IF /I EXIST %bazel_path% (
         if !errorlevel! neq 0 exit /b !errorlevel!
         %wget_path% -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
-        xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%
+        xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%*
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else (
         echo [INFO] ::::::::::::::::::::::: bazel already installed
     )
 ) ELSE (
-    %wget_path% -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
+	IF /I EXIST %bazel_file% (
+		echo %bazel_file% exists
+	) ELSE (
+		%wget_path% -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
+	)
     if !errorlevel! neq 0 exit /b !errorlevel!
-    xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%
+    xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%*
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Python39
-set "python39_path=%opt_install_dir%\Python39\"
-set "python39_system=C:\Program Files\Python39\"
-IF /I EXIST %python39_path% (
+::::::::::::::::::::::: Python
+set "python_version=3.11.9"
+for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
+        set MAJOR_VER=%%a
+        set MINOR_VER=%%b
+    )
+set "python_dir=python%MAJOR_VER%%MINOR_VER%"
+set "python_path=%opt_install_dir%\%python_dir%"
+set "python_full_name=python-%python_version%-amd64"
+::https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe
+set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
+IF /I EXIST %python_path% (
     IF %expunge% EQU 1 (
-        rmdir /S /Q %python39_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        IF /I EXIST "%python39_system%" (
-            :: Copy system Python
-            xcopy /s /e /q /y "%python39_system%" %python39_path%
+        :: Uninstall Python
+        IF /I EXIST "%opt_install_dir%\%python_full_name%.exe" (
+            %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+            rm %opt_install_dir%\%python_full_name%.exe
             if !errorlevel! neq 0 exit /b !errorlevel!
-            pip install numpy==1.23
-            if !errorlevel! neq 0 exit /b !errorlevel!
-        ) ELSE (
-            echo [ERROR] ::::::::::::::::::::::: Python39 not found
-            goto :exit_dependencies_error
         )
+        rmdir /S /Q %python_path%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+
+        :: Install python
+        curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %python_path%\python.exe -m ensurepip --upgrade
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        :: setuptools<60.0 required for numpy1.23 on python311 to install
+        %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+        if !errorlevel! neq 0 exit /b !errorlevel!
     ) ELSE (
-        echo [INFO] ::::::::::::::::::::::: Python39 already installed
+        echo [INFO] ::::::::::::::::::::::: %python_path% already installed
     )
 ) ELSE (
-    IF /I EXIST "%python39_system%" (
-        :: Copy system Python
-        xcopy /s /e /q /y "%python39_system%" %python39_path%
+    :: Uninstall Python
+    IF /I EXIST "%opt_install_dir%\%python_full_name%.exe" (
+        %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+        rm %opt_install_dir%\%python_full_name%.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %python39_path%python.exe -m pip install numpy==1.23
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) ELSE (
-        echo [ERROR] ::::::::::::::::::::::: Python39 not found
-        goto :exit_dependencies_error
     )
+    :: Install python
+    curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
+    if !errorlevel! neq 0 (
+        echo "Python installation failed."
+        echo "To fix the installation run %opt_install_dir%\%python_full_name%.exe in GUI and press repair."
+        echo "Then run those commands in cmd.exe:"
+        echo %python_path%\python.exe -m ensurepip --upgrade
+        echo %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+        echo "If commands are successful, you can rerun the windows_install_build_dependencies.bat, otherwise python installation needs more fixes."
+        /b !errorlevel!
+    )
+    %python_path%\python.exe -m ensurepip --upgrade
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    :: setuptools<60.0 required for numpy1.23 on python311 to install
+    %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!

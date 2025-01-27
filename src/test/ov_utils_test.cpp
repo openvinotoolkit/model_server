@@ -203,6 +203,17 @@ TEST(OVUtils, ValidatePluginConfigurationPositive) {
     EXPECT_TRUE(status.ok());
 }
 
+TEST(OVUtils, ValidatePluginConfigurationPositiveBatch) {
+    ov::Core ieCore;
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    ovms::ModelConfig config;
+    config.setTargetDevice("BATCH:CPU(4)");
+    config.setPluginConfig({{"AUTO_BATCH_TIMEOUT", 10}});
+    ovms::plugin_config_t supportedPluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    auto status = ovms::validatePluginConfiguration(supportedPluginConfig, "BATCH:CPU(4)", ieCore);
+    EXPECT_TRUE(status.ok());
+}
+
 TEST(OVUtils, ValidatePluginConfigurationNegative) {
     ov::Core ieCore;
     std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
@@ -212,4 +223,17 @@ TEST(OVUtils, ValidatePluginConfigurationNegative) {
     ovms::plugin_config_t unsupportedPluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     auto status = ovms::validatePluginConfiguration(unsupportedPluginConfig, "CPU", ieCore);
     EXPECT_FALSE(status.ok());
+}
+
+// Multi stage (read_model & compile_model time) plugin config
+TEST(OVUtils, ValidatePluginConfigurationAllowEnableMmap) {
+    ov::Core ieCore;
+    ovms::ModelConfig config;
+    config.setTargetDevice("CPU");
+    config.setPluginConfig({{"ENABLE_MMAP", "NO"}, {"NUM_STREAMS", "1"}});
+    ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
+    auto status = ovms::validatePluginConfiguration(pluginConfig, "CPU", ieCore);
+    EXPECT_TRUE(status.ok());
+    auto model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml", {}, pluginConfig);
+    auto compiledModel = ieCore.compile_model(model, "CPU", pluginConfig);
 }
