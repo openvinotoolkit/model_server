@@ -19,6 +19,7 @@ ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
 
 FROM $BASE_IMAGE as base_build
+LABEL version="1.0.0"
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -153,6 +154,9 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
+ARG NVIDIA=0
+# hadolint ignore=DL3003
+RUN if [[ "$NVIDIA" == "1" ]] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_contrib_org/openvino_contrib.git /openvino_contrib && cd /openvino_contrib && git checkout $ov_contrib_branch && git submodule update --init --recursive
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
@@ -208,11 +212,56 @@ RUN  git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openv
 WORKDIR /openvino_tokenizers/build
 RUN cmake .. -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
 
+# NVIDIA
+ENV OPENVINO_BUILD_PATH=/cuda_plugin_build
+ENV OPENVINO_HOME=/openvino
+ENV OPENVINO_CONTRIB=/openvino_contrib
+
 # Add Nvidia dev tool if needed
 RUN apt-get update ; \
     apt-get install -y --no-install-recommends opencl-clhpp-headers opencl-c-headers intel-opencl-icd && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* ;
 # hadolint ignore=DL3003
+RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
+    set -exuo pipefail ; \
+    rm -f /etc/apt/apt.conf.d/docker-clean ; \
+    if [[ ${enable_tensorrt-} == "1" ]] ; then dpkg -i /nv-tensorrt-repo-*.deb ; fi; \
+    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then libcutensor_version=1.7.0.1-1; else libcutensor_version=1.6.1.5-1; fi;\
+    apt-get update && apt-get install --no-install-recommends -y \
+      libzstd-dev \
+      libcudnn8=8.8.0.121-1+cuda11.8 \
+      libcudnn8-dev=8.8.0.121-1+cuda11.8 \
+      libcutensor1="$libcutensor_version" \
+      libcutensor-dev="$libcutensor_version" && \
+    apt-get install --no-install-recommends -y cuda-11-8 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip3 install --no-cache-dir cython && \
+    curl -L https://github.com/Kitware/ninja/releases/download/v1.10.0.gfb670.kitware.jobserver-1/ninja-1.10.0.gfb670.kitware.jobserver-1_x86_64-linux-gnu.tar.gz | tar xzv --strip-components=1 -C /usr/local/bin ; \
+    curl https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz -L | tar xvzC /usr/local/bin --strip-components=1 --wildcards '*/sccache' ; \
+    chmod a+x /usr/local/bin/sccache ;
+
+# hadolint ignore=DL3003
+RUN if [ "$NVIDIA" == "1" ] ; then true ; else exit 0 ; fi ; \
+    mkdir ${OPENVINO_BUILD_PATH} && \
+    cd "${OPENVINO_BUILD_PATH}" && \
+    cmake "${OPENVINO_HOME}" \
+      -DENABLE_NVIDIA=ON \
+      -DENABLE_TESTS=ON \
+      -DBUILD_arm_plugin=OFF \
+      -DBUILD_java_api=OFF \
+      -DBUILD_custom_operations=OFF \
+      -DBUILD_mo_pytorch=OFF \
+      -DBUILD_optimum=OFF \
+      -DBUILD_ovms_ai_extension=OFF \
+      -DOPENVINO_EXTRA_MODULES="${OPENVINO_CONTRIB}/modules" \
+      -DWHEEL_VERSION=2022.1.0 \
+      -DVERBOSE_BUILD=ON \
+      -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && \
+      cmake --build "${OPENVINO_BUILD_PATH}" --target openvino_nvidia_gpu_plugin -j $JOBS && \
+    cp /openvino/bin/intel64/Release/libopenvino_nvidia_gpu_plugin.so /opt/intel/openvino/runtime/lib/intel64 && \
+    echo '<ie><plugins><plugin location="libopenvino_nvidia_gpu_plugin.so" name="NVIDIA"></plugin></plugins></ie>' > /opt/intel/openvino/runtime/lib/intel64/plugins.xml
+
 
 WORKDIR /ovms
 # GPU testing in build img
@@ -369,10 +418,11 @@ ARG INSTALL_RPMS_FROM_URL=
 ARG INSTALL_DRIVER_VERSION="24.26.30049"
 ARG GPU=0
 ARG NPU=0
+ARG NVIDIA=0
 ENV DEBIAN_FRONTEND=noninteractive
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}
-LABEL supported-devices="CPU=1 GPU=${GPU} NPU=${NPU}"
+LABEL supported-devices="CPU=1 GPU=${GPU} NPU=${NPU} NVIDIA=${NVIDIA}"
 ARG BASE_IMAGE
 LABEL base-image=${BASE_IMAGE}
 ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
@@ -411,6 +461,13 @@ RUN apt-get update ; \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* && \
     groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
+
+# for NVIDIA
+RUN if [ "$NVIDIA" == "1" ]; then true ; else exit 0 ; fi ; echo "installing cuda apt package"; \
+    apt-get install -y --no-install-recommends curl && \
+    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then libcutensor_version=1.7.0.1-1; else libcutensor_version=1.6.1.5-1; fi; \
+    apt-get update && apt-get install -y --no-install-recommends libcudnn8=8.8.0.121-1+cuda11.8 libcutensor1="$libcutensor_version" libpng16-16 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 COPY --from=pkg /ovms_release /ovms
 COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info

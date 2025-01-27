@@ -919,7 +919,7 @@ TYPED_TEST(TestPredict, SuccesfullInferenceOnModelWithScalar) {
     typename TypeParam::first_type request;
     preparer.preparePredictRequest(request,
         {{SCALAR_MODEL_INPUT_NAME,
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{std::vector<int64_t>{}, ovms::Precision::FP32}}});
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{{}, ovms::Precision::FP32}}});
 
     typename TypeParam::second_type response;
 

@@ -63,21 +63,12 @@ case $INSTALL_DRIVER_VERSION in \
         rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-level-zero-gpu-1.3.26516.25-682.el8_6.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/l/level-zero-1.11.0-674.el8_6.x86_64.rpm ; \
 ;; \
-"24.45.31740") \
-        $DNF_TOOL install --nodocs -y libedit ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/9.4/pool/i/intel-gmmlib-22.5.3-i1057.el9_4.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/9.4/pool/i/intel-igc-core-2.1.14-1057.el9_4.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/9.4/pool/i/intel-igc-opencl-2.1.14-1057.el9_4.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/9.4/pool/i/intel-opencl-24.45.31740.15-1057.el9_4.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/9.4/pool/i/intel-level-zero-gpu-1.6.31740.15-1057.el9_4.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/9.4/pool/l/level-zero-1.18.5.0-1055.el9_4.x86_64.rpm ; \
-;; \
 
         *) \
         echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
         exit 1 ; \
 esac ; \
-rpm -ivh https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.13-4.el9.x86_64.rpm && \
+rpm -ivh http://vault.centos.org/centos/8-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.12-1.el8.x86_64.rpm && \
 echo "Installed opencl driver version:" ;\
 echo `rpm -qa | grep intel-opencl` ; \
 

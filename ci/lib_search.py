@@ -119,8 +119,6 @@ def check_dir(start_dir):
         'tf.patch',
         'tf_graph_info_multilinecomment.patch',
         'tftext.patch',
-        'upb_platform_fix.patch',
-        'upb_warning_turn_off.patch',
         'partial_2.18.patch',
         'tf_2.18_logging.patch',
         'vehicle_images.txt',

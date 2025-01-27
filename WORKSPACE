@@ -369,22 +369,6 @@ cc_library(
 """,
 )
 
-# We need to override upb due to false positive stringop-truncation warning
-# second patch is needed & copied from TF
-http_archive(
-    name = "upb",
-    sha256 = "61d0417abd60e65ed589c9deee7c124fe76a4106831f6ad39464e1525cef1454",
-    strip_prefix = "upb-9effcbcb27f0a665f9f345030188c0b291e32482",
-    patches = [
-            "upb_platform_fix.patch",
-            "upb_warning_turn_off.patch"
-    ],
-    patch_args = [
-        "-p1",
-    ],
-    urls = ["https://github.com/protocolbuffers/upb/archive/9effcbcb27f0a665f9f345030188c0b291e32482.tar.gz"],
-)
-
 # TensorFlow repo should always go after the other external dependencies.
 # TF on 2024-09-24 same as in Mediapipe
 _TENSORFLOW_GIT_COMMIT = "5329ec8dd396487982ef3e743f98c0195af39a6b"

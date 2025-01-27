@@ -188,7 +188,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
 
         std::vector<std::pair<std::string, std::string>> headers;
 
-        for (const auto& header : req->headers()) {
+        for (const std::pair<const std::string, const std::string>& header : req->headers()) {
             headers.emplace_back(header.first, header.second);
         }
 
