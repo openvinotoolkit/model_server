@@ -235,7 +235,7 @@ public:
 
     bool isAnyVersionSubscribed() const;
 
-    void setCustomLoaderName(const std::string name) {
+    void setCustomLoaderName(const std::string& name) {
         customLoaderName = name;
     }
 

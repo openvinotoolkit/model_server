@@ -198,7 +198,7 @@ void HttpRestApiHandler::registerAll() {
 
     registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         OVMS_PROFILE_FUNCTION();
-        return processV3(uri, request_components, response, request_body, serverReaderWriter);
+        return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter));
     });
     registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
         return processMetrics(request_components, response, request_body);
@@ -435,14 +435,14 @@ Status HttpRestApiHandler::dispatchToProcessor(
 
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
-        return handler->second(uri, request_components, *response, request_body, response_components, serverReaderWriter);
+        return handler->second(uri, request_components, *response, request_body, response_components, std::move(serverReaderWriter));
     } else {
         return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
     }
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
-Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter>& serverReaderWriter) {
+Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
     HttpPayload request;
@@ -503,7 +503,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
-        serverReaderWriter->PartialReplyBegin([executor, serverReaderWriter, request] {
+        serverReaderWriter->PartialReplyBegin([executor = std::move(executor), serverReaderWriter, request = std::move(request)] {
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
             auto status = executor->inferStream(request, *serverReaderWriter, executionContext);
             if (!status.ok()) {
@@ -832,7 +832,7 @@ Status HttpRestApiHandler::processRequest(
 
     if (!status.ok())
         return status;
-    return dispatchToProcessor(request_path, request_body, response, requestComponents, responseComponents, serverReaderWriter);
+    return dispatchToProcessor(request_path, request_body, response, requestComponents, responseComponents, std::move(serverReaderWriter));
 }
 
 Status HttpRestApiHandler::processPredictRequest(
