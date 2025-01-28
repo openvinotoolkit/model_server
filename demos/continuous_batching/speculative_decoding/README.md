@@ -5,7 +5,9 @@ Following [OpenVINO GenAI docs](https://docs.openvino.ai/2024/learn-openvino/llm
 > 
 > The draft model predicts the next K tokens one by one in an autoregressive manner. The main model validates these predictions and corrects them if necessary - in case of a discrepancy, the main model prediction is used. Then, the draft model acquires this token and runs prediction of the next K tokens, thus repeating the cycle.
 
-This demo shows how to use speculative decoding in the model serving scenario, by deploying main and draft models in a speculative decoding pipeline in a manner similar to regular deployments with continuous batching. 
+The goal of this sampling method is to reduce latency while keeping the main model accuracy. It gives the biggest gain in low concurrency scenario.
+
+This demo shows how to use speculative decoding in the model serving scenario, by deploying main and draft models in a speculative decoding pipeline in a manner similar to regular deployments with continuous batching.
 
 ## Prerequisites
 
