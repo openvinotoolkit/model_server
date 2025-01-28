@@ -281,8 +281,8 @@ IF /I EXIST %python_path%\python.exe (
         call :InstallPython
         IF /I not EXIST %python_path%\python.exe (
             echo "Python installation failed. Errorlevel: !errorlevel!"
-            echo "To fix the installation run %opt_install_dir%\%python_full_name%.exe in GUI and press repair."
             echo "Please review the installation log: python/install.log"
+            echo "To fix the installation run %opt_install_dir%\%python_full_name%.exe in GUI and press repair."
             echo "Rerun the windows_install_build_dependencies.bat, once the installation is fixed."
             exit /b !errorlevel!
         )
@@ -304,8 +304,8 @@ IF /I EXIST %python_path%\python.exe (
     call :InstallPython
     IF /I not EXIST %python_path%\python.exe (
         echo "Python installation failed."
-        echo "To fix the installation run %opt_install_dir%\%python_full_name%.exe in GUI and press repair."
         echo "Please review the installation log: python/install.log"
+        echo "To fix the installation run %opt_install_dir%\%python_full_name%.exe in GUI and press repair."
         echo "Rerun the windows_install_build_dependencies.bat, once the installation is fixed."
         exit /b !errorlevel!
     )
