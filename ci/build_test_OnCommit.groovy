@@ -5,7 +5,7 @@ def shortCommit = ""
 
 pipeline {
     agent {
-      label 'ovmsbuilder'
+      label 'builder11'
     }
     stages {
         stage('Configure') {
