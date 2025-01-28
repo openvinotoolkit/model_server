@@ -34,7 +34,7 @@ const std::string RESPONSE_SERVABLE_NAME_USED_ONLY_IN_PREDICTION_TESTS = "CONSTR
 InferenceResponse::InferenceResponse() :
     InferenceResponse(RESPONSE_SERVABLE_NAME_USED_ONLY_IN_PREDICTION_TESTS, 42) {}
 InferenceResponse::InferenceResponse(const std::string servableName, model_version_t servableVersion) :
-    servableName(servableName),
+    servableName(std::move(servableName)),
     servableVersion(servableVersion) {}
 const std::string& InferenceResponse::getServableName() const {
     return this->servableName;

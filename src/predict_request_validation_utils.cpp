@@ -108,8 +108,7 @@ Status validateCapiTensorContent(const InferenceTensor& tensor, ovms::Precision 
 Status validateCapiNumberOfShapeDimensions(const InferenceTensor& tensor, const ovms::TensorInfo& tensorInfo, const std::string& tensorName, const std::string& servableName, const model_version_t servableVersion, ValidationChoice choice) {
     // Network and request must have the same number of shape dimensions
     const auto& shape = tensorInfo.getShape();
-    if (tensor.getShape().size() < 0 ||
-        shape.size() != static_cast<size_t>(tensor.getShape().size())) {
+    if (shape.size() != static_cast<size_t>(tensor.getShape().size())) {
         std::stringstream ss;
         ss << "Expected: " << shape.toString()
            << "; Actual: " << tensorShapeToString(tensor.getShape()) << ";";

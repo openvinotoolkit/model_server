@@ -3,7 +3,7 @@
 ## Batch Processing in OpenVINO&trade; Model Server
 
 - `batch_size` parameter is optional. By default, the batch size is derived from the model. It is set by the model optimizer tool.
-- When that parameter is set to a numerical value, it is changing the model batch size at the service start. 
+- When that parameter is set to a numerical value, it is changing the model batch size at the service start.
 It accepts also a value `auto` - this command makes the served model set the batch size automatically based on the incoming data at run time.
 - Each time the input data change the batch size, the model is reloaded. It might have an extra response delay for the first request.
 This feature is useful for sequential inference requests of the same batch size.
@@ -24,7 +24,7 @@ Changing batch size in this models can be done with the network reshaping by set
 it ignores the batch_size value.
 
 - The shape argument can change the model enabled in the model server to fit the required parameters. It accepts 3 forms of the values:
-    - `"auto"` phrase - model server will be reloading the model with the shape matching the input data matrix. 
+    - `"auto"` phrase - model server will be reloading the model with the shape matching the input data matrix.
     - a tuple e.g. `"(1,3,224,224)"` - it defines the shape to be used for all incoming requests for models with a single input
     - JSON object e.g. `{"input1":"(1,3,224,224)","input2":"(1,3,50,50)"}` - it defines a shape of every included input in the model
 

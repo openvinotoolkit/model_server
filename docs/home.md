@@ -17,7 +17,7 @@ ovms_docs_demos
 ovms_docs_troubleshooting
 ```
 
-Model Server hosts models and makes them accessible to software components over standard network protocols: a client sends a request to the model server, which performs model inference and sends a response back to the client. Model Server offers many advantages for efficient model deployment: 
+Model Server hosts models and makes them accessible to software components over standard network protocols: a client sends a request to the model server, which performs model inference and sends a response back to the client. Model Server offers many advantages for efficient model deployment:
 - Remote inference enables using lightweight clients with only the necessary functions to perform API calls to edge or cloud deployments.
 - Applications are independent of the model framework, hardware device, and infrastructure.
 - Client applications in any programming language that supports REST or gRPC calls can be used to run inference remotely on the model server.
@@ -43,7 +43,7 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 - **[NEW]** [Efficient Text Generation with OpenAI API](../demos/continuous_batching/README.md)
 - [Python code execution](python_support/reference.md)
 - [gRPC streaming](streaming_endpoints.md)
-- [MediaPipe graphs serving](mediapipe.md) 
+- [MediaPipe graphs serving](mediapipe.md)
 - Model management - including [model versioning](model_version_policy.md) and [model updates in runtime](online_config_changes.md)
 - [Dynamic model inputs](shape_batch_size_and_layout.md)
 - [Directed Acyclic Graph Scheduler](dag_scheduler.md) along with [custom nodes in DAG pipelines](custom_node_development.md)
@@ -53,8 +53,8 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 
 ## Additional Resources
 
-* [Simplified Deployments with OpenVINO™ Model Server and TensorFlow Serving](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Simplified-Deployments-with-OpenVINO-Model-Server-and-TensorFlow/post/1353218) 
-* [Inference Scaling with OpenVINO™ Model Server in Kubernetes and OpenShift Clusters](https://www.intel.com/content/www/us/en/developer/articles/technical/deploy-openvino-in-openshift-and-kubernetes.html) 
+* [Simplified Deployments with OpenVINO™ Model Server and TensorFlow Serving](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Simplified-Deployments-with-OpenVINO-Model-Server-and-TensorFlow/post/1353218)
+* [Inference Scaling with OpenVINO™ Model Server in Kubernetes and OpenShift Clusters](https://www.intel.com/content/www/us/en/developer/articles/technical/deploy-openvino-in-openshift-and-kubernetes.html)
 * [Benchmarking results](https://docs.openvino.ai/2024/about-openvino/performance-benchmarks.html)
-* [Speed and Scale AI Inference Operations Across Multiple Architectures Demo Recording](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) 
-* [Release Notes](https://github.com/openvinotoolkit/model_server/releases) 
+* [Speed and Scale AI Inference Operations Across Multiple Architectures Demo Recording](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276)
+* [Release Notes](https://github.com/openvinotoolkit/model_server/releases)

@@ -10,13 +10,13 @@ ovms_docs_cloud_storage
 ```
 
 The AI models served by OpenVINO&trade; Model Server must be in either of the five formats:
-- [OpenVINO IR](https://docs.openvino.ai/2024/documentation/openvino-ir-format/operation-sets.html), where the graph is represented in .bin and .xml files 
+- [OpenVINO IR](https://docs.openvino.ai/2024/documentation/openvino-ir-format/operation-sets.html), where the graph is represented in .bin and .xml files
 - [ONNX](https://onnx.ai/), using the .onnx file
 - [PaddlePaddle](https://www.paddlepaddle.org.cn/en), using .pdiparams and .pdmodel files
 - [TensorFlow](https://www.tensorflow.org/), using SavedModel, MetaGraph or frozen Protobuf formats.
 - [TensorFlow Lite](https://www.tensorflow.org/lite), using the .tflite file
 
-To use models trained in other formats you need to convert them first. To do so, use 
+To use models trained in other formats you need to convert them first. To do so, use
 OpenVINO’s [conversion tool](https://docs.openvino.ai/2024/openvino-workflow/model-preparation/convert-model-to-ir.html) for IR, or different
 [converters](https://onnx.ai/supported-tools.html) for ONNX.
 
@@ -54,15 +54,15 @@ models/
          ├── variables
          └── saved_model.pb
 
-``` 
+```
 
-- Each model should be stored in a dedicated directory, e.g. model1 and model2. 
-- Each model directory should include a sub-folder for each of its versions (1,2, etc). The versions and their folder names should be positive integer values.  
-**Note:** In execution, the versions are enabled according to a pre-defined version policy. If the client does not specify 
+- Each model should be stored in a dedicated directory, e.g. model1 and model2.
+- Each model directory should include a sub-folder for each of its versions (1,2, etc). The versions and their folder names should be positive integer values.
+**Note:** In execution, the versions are enabled according to a pre-defined version policy. If the client does not specify
 the version number in parameters, by default, the latest version is served.
 - Every version folder _must_ include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for Paddlepaddle. The file name can be arbitrary.
 
-- Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request input map. 
+- Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request input map.
 - Prediction results can be read from the response output map. By default, OpenVINO™ Model Server uses model tensor names as input and output names in prediction requests and responses. The client passes the input values to the request and reads the results by referring to the corresponding output names.
 
 Here is an example of client code:
@@ -77,12 +77,12 @@ output_tensorname = 'resnet_v1_50/predictions/Reshape_1'
 predictions = make_ndarray(result.outputs[output_tensorname])
 ```
 
-- It is possible to adjust this behavior by adding an optional .json file named `mapping_config.json`. 
+- It is possible to adjust this behavior by adding an optional .json file named `mapping_config.json`.
 It can map the input and output keys to the appropriate tensors. This extra mapping can be used to enable user-friendly names for models with difficult tensor names. Here is an example of `mapping_config.json`:
 
 ```json
 {
-       "inputs":{ 
+       "inputs":{
           "tensor_name":"grpc_custom_input_name"
        },
        "outputs":{

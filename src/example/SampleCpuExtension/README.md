@@ -3,7 +3,7 @@
 Any CPU layer, unsupported by OpenVINO, can be implemented as a shared library. While loaded in OVMS as a cpu extension, it can help in executing the model. An example presented here is based on the code from in OpenVINO™ repository: [extension template](https://github.com/openvinotoolkit/openvino/tree/master/src/core/template_extension).
 
 It includes a demonstrative implementation of the Relu layer which can be applied on many existing
-public models. That implementation display in the model server logs information about the 
+public models. That implementation display in the model server logs information about the
 custom extension execution.
 
 ## Creating cpu_extension library
@@ -40,4 +40,4 @@ $ docker run -it --rm -p 9000:9000 -v `pwd`/lib/${BASE_OS}:/extension:ro -v `pwd
  --port 9000 --model_name resnet --model_path /resnet --cpu_extension /extension/libcustom_relu_cpu_extension.so
 ```
 
-> **NOTE**: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/2024/documentation/openvino-extensibility.html) 
+> **NOTE**: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/2024/documentation/openvino-extensibility.html)
