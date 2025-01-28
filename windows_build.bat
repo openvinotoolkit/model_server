@@ -34,10 +34,10 @@ set "setOvmsVersionCmd=python windows_set_ovms_version.py"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;%PATH%;"
 set "envPath=win_environment.log"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
-set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
+set "BAZEL_SH=C:\Program Files\Git\bin\bash.exe"
 
 :: Bazel compilation settings
 set VS_2019_PRO="C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"
@@ -63,7 +63,6 @@ set "BAZEL_VC_FULL_VERSION=14.29.30133"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
-set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
