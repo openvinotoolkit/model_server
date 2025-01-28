@@ -261,7 +261,7 @@ set "python_full_name=python-%python_version%-amd64"
 ::https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe
 set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
 
-IF /I EXIST %python_path% (
+IF /I EXIST %python_path%\python.exe (
     IF %expunge% EQU 1 (
         if !errorlevel! neq 0 exit /b !errorlevel!
         :: Uninstall Python
@@ -281,8 +281,8 @@ IF /I EXIST %python_path% (
         call :InstallPython
         IF /I not EXIST %python_path%\python.exe (
             echo "Python installation failed. Errorlevel: !errorlevel!"
+            echo "To fix the installation run %opt_install_dir%\%python_full_name%.exe in GUI and press repair."
             echo "Please review the installation log: python/install.log"
-            echo ""
             echo "Rerun the windows_install_build_dependencies.bat, once the installation is fixed."
             exit /b !errorlevel!
         )
