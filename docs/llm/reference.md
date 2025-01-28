@@ -20,8 +20,9 @@ On the input it expects a HttpPayload struct passed by the Model Server frontend
 struct HttpPayload {
     std::string uri;
     std::vector<std::pair<std::string, std::string>> headers;
-    std::string body;                 // always
-    rapidjson::Document* parsedJson;  // pre-parsed body             = null
+    std::string body;                                 // always
+    std::shared_ptr<rapidjson::Document> parsedJson;  // pre-parsed body             = null
+    std::shared_ptr<ClientConnection> client;
 };
 ```
 The input json content should be compatible with the [chat completions](../model_server_rest_api_chat.md) or [completions](../model_server_rest_api_completions.md) API.

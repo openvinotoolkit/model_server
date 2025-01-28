@@ -188,7 +188,7 @@ session_id_t NodeSessionMetadata::getShardId(const std::set<std::string>& collap
                 std::accumulate(collapsedNames.begin(),
                     collapsedNames.end(),
                     std::string(),
-                    [](const std::string& lhs, const std::string rhs) {
+                    [](const std::string& lhs, const std::string& rhs) {
                         if (lhs.empty()) {
                             return rhs;
                         }
@@ -197,7 +197,7 @@ session_id_t NodeSessionMetadata::getShardId(const std::set<std::string>& collap
                 std::accumulate(sessionsLevels.begin(),
                     sessionsLevels.end(),
                     std::string(),
-                    [](const std::string& lhs, const std::string rhs) {
+                    [](const std::string& lhs, const std::string& rhs) {
                         if (lhs.empty()) {
                             return rhs;
                         }

@@ -640,7 +640,7 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
             return StatusCode::PATH_INVALID;
         }
 #ifdef __linux__
-        void* handleCL = dlopen(const_cast<char*>(loaderConfig.getLibraryPath().c_str()), RTLD_LAZY | RTLD_LOCAL);
+        void* handleCL = dlopen(loaderConfig.getLibraryPath().c_str(), RTLD_LAZY | RTLD_LOCAL);
         if (!handleCL) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
             return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
@@ -666,7 +666,7 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
         customloaders.add(loaderName, customLoaderIfPtr, handleCL);
 #elif _WIN32
         // TODO: implement LoadLibrary for windows
-        void* handleCL = NULL;
+        void* handleCL = nullptr;
         if (!handleCL) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), "e");
             return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;

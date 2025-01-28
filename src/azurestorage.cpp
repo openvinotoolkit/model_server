@@ -39,7 +39,7 @@ const std::string AzureStorageAdapter::extractAzureStorageExceptionMessage(const
 
 StatusCode AzureStorageAdapter::CreateLocalDir(const std::string& path) {
     int status =
-        mkdir(const_cast<char*>(path.c_str()), S_IRUSR | S_IWUSR | S_IXUSR);
+        mkdir(path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR);
     if (status == -1) {
         SPDLOG_LOGGER_ERROR(azurestorage_logger, "Failed to create local folder: {} {} ", path,
             strerror(errno));
