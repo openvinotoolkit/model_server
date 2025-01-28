@@ -18,11 +18,11 @@ the entire parallel workload. If the docker container is run in the daemon mode 
 command. Results can also be exported to a Mongo database. In order to do this the appropriate identification metadata has to
 be specified in the command line.
 
-Since 2.7 update, these Benchmark Client measurement options were introduced: language models testing with in-built string data input and support for testing `MediaPipe` graphs in the OVMS. For each of them, there is a need to specify the input data method. Data method `-d string` creates sample text data. 
+Since 2.7 update, these Benchmark Client measurement options were introduced: language models testing with in-built string data input and support for testing `MediaPipe` graphs in the OVMS. For each of them, there is a need to specify the input data method. Data method `-d string` creates sample text data.
 
-Benchmarking of OVMS integrated with MediaPipe is possible for KServe API via gRPC protocol. In this case there is also a necessity to feed client with a pre-prepared `numpy` file consisting of a numpy array. 
+Benchmarking of OVMS integrated with MediaPipe is possible for KServe API via gRPC protocol. In this case there is also a necessity to feed client with a pre-prepared `numpy` file consisting of a numpy array.
 
-There is also an option to test dynamic models using `shape` parameter. 
+There is also an option to test dynamic models using `shape` parameter.
 
 Last two use cases are furthermore described in this document.
 
@@ -56,7 +56,7 @@ workspace
         └── resnet50-binary-0001.xml
 ```
 
-Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](https://docs.openvino.ai/2024/ovms_what_is_openvino_model_server.html)):
+Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](../../../docs/home.md)):
 ```bash
 docker run -u $(id -u) -p 9000:9000 -p 8000:8000 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path \
                      /workspace/resnet50-binary-0001 --model_name resnet50-binary-0001 --port 9000 --rest_port 8000
@@ -373,10 +373,10 @@ python -c 'import numpy as np ; \
 arr = np.ones((1,3,224,224),dtype=np.float32); \
 np.save("workspace/sample_data/resnet50-binary-0001.npy", arr)'
 ```
-Having MediaPipe graph file and servable specified in config.json, we call it by its name instead of the model name: `-m <mediapipe-servable-name>`. It is necessary to set `--api KFS` since the Mediapipe graphs are exposed only via KServe API. 
+Having MediaPipe graph file and servable specified in config.json, we call it by its name instead of the model name: `-m <mediapipe-servable-name>`. It is necessary to set `--api KFS` since the Mediapipe graphs are exposed only via KServe API.
 ```bash
 docker run -v ${PWD}/workspace:/workspace --network host benchmark_client -a localhost -r 8000 -m resnet50-binary-0001_mediapipe -p 9000 -n 8 --api KFS -d /workspace/sample_data/resnet50-binary-0001.npy --report_warmup --print_all
 ```
 
 Many other client options together with benchmarking examples are presented in
-[an additional PDF document](https://github.com/openvinotoolkit/model_server/blob/main/docs/python-benchmarking-client-16feb.pdf). 
+[an additional PDF document](https://github.com/openvinotoolkit/model_server/blob/main/docs/python-benchmarking-client-16feb.pdf).
