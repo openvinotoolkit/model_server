@@ -232,7 +232,7 @@ It means that each request to the DAG pipeline will update also the metrics for 
 
 ## Metrics implementation for MediaPipe Graphs
 
-For [MediaPipe Graphs](./mediapipe.md) execution there are 4 generic metrics which apply to all graphs:
+For [MediaPipe Graphs](./mediapipe.md) execution there are 6 generic metrics which apply to all graphs:
 
 | Type      | Name  | Description |
 | :---    |    :----   |    :----   |
