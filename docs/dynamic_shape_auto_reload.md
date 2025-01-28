@@ -1,6 +1,6 @@
 # Dynamic Shape with Automatic Model Reloading{#ovms_docs_dynamic_shape_auto_reload}
 
-*NOTE*: This feature is deprecated. Use [model dynamic shapes instead](https://docs.openvino.ai/2024/ovms_docs_dynamic_shape_dynamic_model.html#doxid-ovms-docs-dynamic-shape-dynamic-model).
+*NOTE*: This feature is deprecated. Use [model dynamic shapes instead](dynamic_shape_dynamic_model.md).
 
 ## Introduction
 This guide explains how to configure a model to accept input data in different shapes. In this example, it is done by reloading the model with a new shape each time it receives the request with a shape different than the one which is currently set.

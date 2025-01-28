@@ -29,7 +29,7 @@ Serve LLMs enhanced with state of the art optimization techniques for best perfo
 [Learn more](llm/reference.md)
 
 ## Python Code Execution
-Write Python code that will do your custom processing and serve it in the Model Server. 
+Write Python code that will do your custom processing and serve it in the Model Server.
 Take advantage of a rich environment of Python modules in domains like data processing and data science to create flexible solutions without the need to write C++ code.
 
 [Learn more](python_support/reference.md)
@@ -40,7 +40,7 @@ Create [MediaPipe](https://developers.google.com/mediapipe/framework/framework_c
 [Learn more](mediapipe.md)
 
 ## Serving Pipelines of Models
-Connect multiple models in a pipeline and reduce data transfer overhead with Directed Acyclic Graph (DAG) Scheduler. 
+Connect multiple models in a pipeline and reduce data transfer overhead with Directed Acyclic Graph (DAG) Scheduler.
 Implement model inference and data transformations using a custom node C/C++ dynamic library.
 
 [Learn more](dag_scheduler.md)
@@ -51,7 +51,7 @@ Send data in JPEG or PNG formats to reduce traffic and offload data pre-processi
 [Learn more](binary_input.md)
 
 ## Model Versioning Policies
-The model repository structure enables adding or deleting numerical version directories and the server will automatically adjust which models are served.  
+The model repository structure enables adding or deleting numerical version directories and the server will automatically adjust which models are served.
 Control which model versions are served by setting the model version policy to serve all models, a specific model or set of models or just the latest version of the model (default setting).
 
 [Learn more](model_version_policy.md)
@@ -62,7 +62,7 @@ Change the batch size, shape and layout of the model at runtime to achieve high 
 [Learn more](shape_batch_size_and_layout.md)
 
 ## Modify Model Configuration at Runtime
-OpenVINO Model Server regularly checks for changes to the configuration file and applies them during runtime. This means that you can change model configurations 
+OpenVINO Model Server regularly checks for changes to the configuration file and applies them during runtime. This means that you can change model configurations
 (for example, change the device where a model is served), add a new model or completely remove one that is no longer needed. These changes will be applied without any disruption to the service.
 
 [Learn more](online_config_changes.md)

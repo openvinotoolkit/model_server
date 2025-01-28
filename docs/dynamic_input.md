@@ -35,7 +35,7 @@ There are multiple ways of enabling dynamic inputs depending on the kind of serv
 
 **MediaPipe Graphs**:
 
-OpenVINO Model Server accepts several data types that can be handled on [MediaPipe graph](https://docs.openvino.ai/2024/ovms_docs_mediapipe.html#integration-with-mediapipe) input. Whether the input is dynamic or not depends on what happens next in the graph. There are 4 situations when input to the graph can be dynamic:
+OpenVINO Model Server accepts several data types that can be handled on [MediaPipe graph](mediapipe.md) input. Whether the input is dynamic or not depends on what happens next in the graph. There are 4 situations when input to the graph can be dynamic:
 
 - Next node in the graph uses `OpenVINOInferenceCalculator` that runs inference on a model that accepts dynamic inputs. Such node expects input stream with a tag starting with `OVTENSOR` prefix.
 

@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <string>
+#include <utility>
 #include <variant>
 
 #pragma GCC diagnostic push
@@ -66,7 +67,7 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
                         else
                             return "input must be homogeneous";
                     }
-                    input_tokens.push_back(ints);
+                    input_tokens.emplace_back(std::move(ints));
                 } else if (input.IsString()) {
                     if (input_type != InputType::NONE && input_type != InputType::STRING)
                         return "input must be homogeneous";

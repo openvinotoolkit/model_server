@@ -23,7 +23,7 @@ Leverage the OpenVINO [model caching](https://docs.openvino.ai/2024/openvino-wor
 [Learn more](model_cache.md)
 
 ## Custom Model Loader
-Write your own custom model loader based on a predefined interface and load it similar to a dynamic library.  
+Write your own custom model loader based on a predefined interface and load it similar to a dynamic library.
 
 [Learn more](custom_model_loader.md)
 

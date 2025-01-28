@@ -111,7 +111,7 @@ protected:
 
     // TODO windows
 #ifdef __linux__
-    cl_context oclContextC;
+    cl_context oclContextC{nullptr};
 
 public:
     // TODO const correctness & ownership & thread safety
