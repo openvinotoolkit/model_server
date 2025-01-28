@@ -331,6 +331,10 @@ Check this simple [text generation scaling demo](https://github.com/openvinotool
 Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
 
 
+## Using LoRA adapters with LLM models
+
+Check this guide [using lora adapter for text generation](./lora_adapters/README.md)
+
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)
 - [Completions API](../../docs/model_server_rest_api_completions.md)

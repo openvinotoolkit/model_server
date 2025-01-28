@@ -17,7 +17,10 @@
 import argparse
 import os
 from openvino_tokenizers import convert_tokenizer, connect_models
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoModelForCausalLM, LlamaForCausalLM
+from peft import PeftModel
+#from peft.utils import PeftConfig
+import torch
 import jinja2
 import json
 import shutil
@@ -38,12 +41,14 @@ parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS
 subparsers = parser.add_subparsers(help='subcommand help', required=True, dest='task')
 parser_text = subparsers.add_parser('text_generation', help='export model for chat and completion endpoints')
 add_common_arguments(parser_text)
-parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
+parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8", "fp32"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
 parser_text.add_argument('--enable_prefix_caching', action='store_true', help='This algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
 parser_text.add_argument('--max_num_seqs', default=None, help='256 by default. The maximum number of sequences that can be processed together.', dest='max_num_seqs')
 parser_text.add_argument('--cache_size', default=10, type=int, help='cache size in GB', dest='cache_size')
+parser_text.add_argument('--adapter',action='append', help='lora adapter in HF or a local folder with the adapter', dest='adapter')
+parser_text.add_argument('--tokenizer', default=None, help='alternative tokenizer for the adapter', dest='tokenizer')
 parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
 add_common_arguments(parser_embeddings)
 parser_embeddings.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
@@ -244,22 +249,43 @@ def add_servable_to_config(config_path, mediapipe_name, base_path):
         json.dump(config_data, config_file, indent=4)
     print("Added servable to config file", config_path)
 
-def export_text_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
+def export_text_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, adapter, adapter_tokenizer):
     model_path = "./"
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
             print("OV model is source folder. Skipping conversion.")
             model_path = source_model
     else: # assume HF model name or local pytorch model folder
         llm_model_path = os.path.join(model_repository_path, model_name)
-        print("Exporting LLM model to ", llm_model_path)
+        tmp_folder = None
         if not os.path.isdir(llm_model_path) or args['overwrite_models']:
-            optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, llm_model_path)
+            if adapter is not None:
+                if len(adapter) > 1 and adapter_tokenizer is not None:
+                    raise ValueError("Only one adapter can be used with a custom tokenizer")
+                if adapter_tokenizer is None:
+                    adapter_tokenizer = source_model
+                tmp_folder = tempfile.mkdtemp()
+                print("Loading model with adapter")
+                HFmodel = AutoModelForCausalLM.from_pretrained(source_model, trust_remote_code=True)  
+                for adapteri in adapter:
+                    print("Loading adapter", adapteri)
+                    HFmodel.resize_token_embeddings(len(AutoTokenizer.from_pretrained(adapter_tokenizer)), mean_resizing=False)
+                    HFmodel = PeftModel.from_pretrained(HFmodel, adapteri)
+                print("Merging model with adapters")
+                HFmodel = HFmodel.merge_and_unload()
+                HFmodel.save_pretrained(tmp_folder)
+                tokenizer = AutoTokenizer.from_pretrained(adapter_tokenizer, trust_remote_code=True)
+                tokenizer.save_pretrained(tmp_folder)
+                source_model = tmp_folder
+            print("Exporting LLM model to ", llm_model_path)
+            optimum_command = "optimum-cli export openvino --task text-generation-with-past --disable-convert-tokenizer --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, llm_model_path)
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)
             print("Exporting tokenizer to ", llm_model_path)
             convert_tokenizer_command = "convert_tokenizer --utf8_replace_mode replace --with-detokenizer --skip-special-tokens --streaming-detokenizer -o {} {}".format(llm_model_path, source_model) 
             if (os.system(convert_tokenizer_command)):
                 raise ValueError("Failed to export tokenizer model", source_model)
+            if adapter is not None:
+                shutil.rmtree(tmp_folder)
     os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
     graph_content = gtemplate.render(tokenizer_model="{}_tokenizer_model".format(model_name), embeddings_model="{}_embeddings_model".format(model_name), model_path=model_path, **task_parameters)
@@ -368,7 +394,7 @@ template_parameters = {k: v for k, v in args.items() if k not in ['model_reposit
 print("template params:",template_parameters)
 
 if args['task'] == 'text_generation':
-    export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'])
+    export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['adapter'], args['tokenizer'])
 
 elif args['task'] == 'embeddings':
     export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, str(args['version']), args['config_file_path'])
