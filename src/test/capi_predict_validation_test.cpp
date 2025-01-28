@@ -104,7 +104,7 @@ TEST_F(CAPIPredictValidation, AllowScalar) {
     requestData = std::vector<float>{2.5f};
     preparePredictRequest(request,
         {{"Input_FP32_Scalar",
-            std::tuple<ovms::signed_shape_t, ovms::Precision>{{}, ovms::Precision::FP32}}},
+            std::tuple<ovms::signed_shape_t, ovms::Precision>{std::vector<int64_t>{}, ovms::Precision::FP32}}},
         requestData);
     auto status = instance->mockValidate(&request);
     EXPECT_TRUE(status.ok()) << status.string();

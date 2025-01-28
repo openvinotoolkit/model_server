@@ -112,6 +112,18 @@ TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
     EXPECT_TRUE(modelInstance.canUnloadInstance());
 }
 
+TEST_F(TestUnloadModel, NoNameOutput) {
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ASSERT_EQ(modelInstance.loadModel(NO_NAME_MODEL_CONFIG), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
+    EXPECT_EQ(modelInstance.getInputsInfo().count("input_1"), 1);
+    EXPECT_EQ(modelInstance.getInputsInfo().count("input_2"), 1);
+    EXPECT_EQ(modelInstance.getOutputsInfo().count("out_0"), 1);
+    EXPECT_EQ(modelInstance.getOutputsInfo().count("out_1"), 1);
+    modelInstance.retireModel();
+    EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
+}
+
 TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
     static std::thread thread;
     static std::shared_ptr<ovms::ModelInstance> instance;
