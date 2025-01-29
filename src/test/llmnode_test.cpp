@@ -2514,6 +2514,62 @@ TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyRole) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingExclusiveParametersProvided) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummySpeculativePipeline",
+            "prompt": "hello",
+            "num_assistant_tokens": 5,
+            "assistant_confidence_threshold": 0.5
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingExclusiveParametersProvidedChat) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummySpeculativePipeline",
+            "messages": [{"content": "def"}],
+            "num_assistant_tokens": 5,
+            "assistant_confidence_threshold": 0.5
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParametersProvided) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummySpeculativePipeline",
+            "prompt": "hello"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParametersProvidedChat) {
+    std::string requestBody = R"(
+        {
+            "model": "llmDummySpeculativePipeline",
+            "messages": [{"content": "def"}]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyContent) {
     std::string requestBody = R"(
         {
