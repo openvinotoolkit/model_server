@@ -113,8 +113,11 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
     if (input_strings.size() > 0) {
         request.input = input_strings;
     }
-    if (input_tokens.size() > 0) {
+    else if (input_tokens.size() > 0) {
         request.input = input_tokens;
+    }
+    else {
+        return "no input provided in request";
     }
     return request;
 }
@@ -129,7 +132,7 @@ absl::Status EmbeddingsHandler::parseRequest() {
     return absl::OkStatus();
 }
 
-std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& EmbeddingsHandler::getInput() {
+std::variant<std::monostate, std::vector<std::string>, std::vector<std::vector<int64_t>>>& EmbeddingsHandler::getInput() {
     return request.input;
 }
 EmbeddingsRequest::EncodingFormat EmbeddingsHandler::getEncodingFormat() const {
