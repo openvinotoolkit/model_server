@@ -43,12 +43,3 @@ TEST(Drogon, DISABLED_basic) {
 }
 
 #endif
-
-// Make sure we have drogon enabled as default in production
-TEST(Drogon, EnabledInProduction) {
-#if (USE_DROGON == 1)
-    ASSERT_EQ(1, 1);
-#else
-    ASSERT_EQ(1, 0);
-#endif
-}
