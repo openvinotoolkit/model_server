@@ -74,6 +74,22 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy %cd%\setupvars.* dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Adding licenses
+md dist\windows\thirdparty-licenses\
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\%output_user_root%\opencv\etc\licenses\* dist\windows\thirdparty-licenses\
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\%output_user_root%\openvino\docs\licensing\EULA.txt dist\windows\thirdparty-licenses\openvino.LICENSE.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+copy release_files\LICENSE dist\windows\
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy release_files\thirdparty-licenses\* dist\windows\thirdparty-licenses\
+if !errorlevel! neq 0 exit /b !errorlevel!
+:: Add when CAPI enabled and tested
+::mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
+
+:: Testing package
 call dist\windows\ovms\setupvars.bat
 if !errorlevel! neq 0 exit /b !errorlevel!
 
