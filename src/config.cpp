@@ -38,7 +38,12 @@ namespace ovms {
 const uint32_t AVAILABLE_CORES = getCoreCount();
 const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint16_t>::max();
 
+// For drogon, we need to minimize the number of default workers since this value is set for both: unary and streaming (making it always double)
+#if (USE_DROGON == 0)
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
+#else
+const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES;
+#endif
 const uint32_t DEFAULT_GRPC_MAX_THREADS = AVAILABLE_CORES * 8.0;
 const size_t DEFAULT_GRPC_MEMORY_QUOTA = (size_t)2 * 1024 * 1024 * 1024;  // 2GB
 const uint64_t MAX_REST_WORKERS = 10'000;

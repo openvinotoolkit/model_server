@@ -99,7 +99,13 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "CUSTOM_NODE_RESOURCES_CLEANER_INTERVAL_SECONDS")
             ("cache_dir",
-                "Overrides model cache directory. By default cache files are saved into /opt/cache if the directory is present. When enabled, first model load will produce cache files.",
+                "Overrides model cache directory. By default cache files are saved into"
+#ifdef __linux__
+                 "/opt/cache"
+#elif _WIN32
+                 "c:\\Intel\\openvino_cache"
+#endif
+                 " if the directory is present. When enabled, first model load will produce cache files.",
                 cxxopts::value<std::string>(),
                 "CACHE_DIR")
             ("metrics_enable",

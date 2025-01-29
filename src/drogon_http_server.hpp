@@ -28,7 +28,8 @@
 namespace ovms {
 
 class DrogonHttpServer {
-    size_t num_workers;
+    size_t numWorkersForUnary;
+    size_t numWorkersForStreaming;
     std::unique_ptr<mediapipe::ThreadPool> pool;
     int port;
     std::string address;
@@ -38,7 +39,11 @@ class DrogonHttpServer {
         dispatcher;
 
 public:
-    DrogonHttpServer(size_t num_workers, int port, const std::string& address);
+    DrogonHttpServer(
+        size_t numWorkersForUnary,
+        size_t numWorkersForStreaming,
+        int port,
+        const std::string& address);
 
     Status startAcceptingRequests();
     void terminate();
