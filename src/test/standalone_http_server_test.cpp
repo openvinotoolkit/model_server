@@ -31,7 +31,7 @@ TEST(Drogon, DISABLED_basic) {
     for (int i = 0; i < 2; i++) {
         std::thread k([] {
             std::this_thread::sleep_for(std::chrono::seconds(2));
-            drogon::app().quit();
+            drogon::app().quit(); //
         });
         drogon::app()
             .setThreadNum(3)
