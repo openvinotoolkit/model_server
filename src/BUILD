@@ -1894,7 +1894,7 @@ cc_test(
                 "test/http_openai_handler_test.cpp",
             ],
             "//:disable_mediapipe" : [
-                "test/mediapipe_disabled_test.cpp",
+                "test/disabled_mediapipe_test.cpp",
             ],
         }) + select({
             "//:not_disable_python": [

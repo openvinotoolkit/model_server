@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ public:
 
     static void SetUpTestSuite() {
         std::string port = "9173";
+        randomizePort(port);
         ovms::Server& server = ovms::Server::instance();
         ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json").c_str());
         auto start = std::chrono::high_resolution_clock::now();
