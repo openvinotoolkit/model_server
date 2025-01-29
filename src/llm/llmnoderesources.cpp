@@ -167,7 +167,7 @@ Status LLMNodeResources::initializeLLMNodeResources(LLMNodeResources& nodeResour
         nodeResources.isSpeculativePipeline = true;
     } else if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
         // Consider moving draft parameters to separate structure in node options, so it's validated on the proto level
-        SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set. Ignoring draft scheduler options.");
+        SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set.");
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
