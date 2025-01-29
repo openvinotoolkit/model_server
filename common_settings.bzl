@@ -126,10 +126,14 @@ COMMON_STATIC_LIBS_COPTS = select({
                         "/WX",
                         "/external:anglebrackets",
                         "/external:W0",
+                        "/LTCG",
                         "/sdl",
                         "/analyze",
                         "/Gy",
                         "/DYNAMICBASE",
+                        "/NXCOMPAT",
+                        "/Qspectre",
+                        "/QConditional-branch:Retpoline",
                         "/wd4018", # level 3
                         "/wd4068", # level 1
                         "/wd4458", # level 4
