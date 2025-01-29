@@ -27,6 +27,7 @@
 #include "../model_metric_reporter.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
+#include "../timer.hpp"
 #pragma warning(push)
 #pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005)
 #pragma GCC diagnostic push
@@ -107,6 +108,12 @@ public:
         MetricGaugeGuard currentGraphsGuard(this->mediapipeServableMetricReporter->currentGraphs.get());
         ::mediapipe::CalculatorGraph graph;
         MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+        enum : unsigned int {
+            PROCESS,
+            TIMER_END2
+        };
+        Timer<TIMER_END2> timer;
+        timer.start(PROCESS);
         std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
         for (auto& name : this->outputNames) {
             if (name.empty()) {
@@ -203,6 +210,9 @@ public:
             SPDLOG_DEBUG("Mediapipe failed to execute. Failed to receive all output packets");
             return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Unknown error during mediapipe execution");
         }
+        timer.stop(PROCESS);
+        double processTime = timer.template elapsed<std::chrono::microseconds>(PROCESS);
+        OBSERVE_IF_ENABLED(this->mediapipeServableMetricReporter->getProcessingTimeMetric(executionContext), processTime);
         INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getResponsesMetric(executionContext));
         SPDLOG_DEBUG("Received all output stream packets for graph: {}", this->name);
         return StatusCode::OK;
@@ -221,6 +231,12 @@ public:
                 // Init
                 MP_RETURN_ON_FAIL(graph.Initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
             }
+            enum : unsigned int {
+                PROCESS,
+                TIMER_END2
+            };
+            Timer<TIMER_END2> timer;
+            timer.start(PROCESS);
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph installing packet observers");
                 // Installing observers
@@ -337,6 +353,9 @@ public:
                 MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
                 SPDLOG_DEBUG("Graph {}: Done execution", this->name);
             }
+            timer.stop(PROCESS);
+            double processTime = timer.template elapsed<std::chrono::microseconds>(PROCESS);
+            OBSERVE_IF_ENABLED(this->mediapipeServableMetricReporter->getProcessingTimeMetric(executionContext), processTime);
             return StatusCode::OK;
         } catch (...) {
             SPDLOG_DEBUG("Graph {}: Exception while processing MediaPipe graph", this->name);

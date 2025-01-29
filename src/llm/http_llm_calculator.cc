@@ -130,7 +130,7 @@ public:
                     nodeResources->cbPipe->get_tokenizer());
                 this->client = payload.client;
 
-                auto status = this->apiHandler->parseRequest(nodeResources->maxTokensLimit, nodeResources->bestOfLimit);
+                auto status = this->apiHandler->parseRequest(nodeResources->maxTokensLimit, nodeResources->bestOfLimit, nodeResources->isSpeculativePipeline);
                 if (status != absl::OkStatus())
                     return status;
 
@@ -165,7 +165,8 @@ public:
                     if (this->client->isDisconnected()) {
                         return absl::CancelledError();
                     }
-
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Final prompt: {}", finalPrompt);
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "encodeAddSpecialTokens: {}", encodeAddSpecialTokens);
                     ov::Tensor finalPromptIds = nodeResources->cbPipe->get_tokenizer().encode(finalPrompt, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
                     this->apiHandler->setPromptTokensUsage(finalPromptIds.get_size());
                     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(finalPromptIds));

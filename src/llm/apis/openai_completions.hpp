@@ -70,23 +70,29 @@ struct OpenAIChatCompletionsRequest {
     StreamOptions streamOptions;
     std::string model;
     std::optional<int> maxTokens{std::nullopt};
-    std::optional<float> frequencyPenalty{std::nullopt};
-    std::optional<float> presencePenalty{std::nullopt};
-    std::optional<float> diversityPenalty{std::nullopt};
-    std::optional<float> repetitionPenalty{std::nullopt};
-    std::optional<float> lengthPenalty{std::nullopt};
-    std::optional<int> numReturnSequences{std::nullopt};
+    bool logprobs{false};
+    int logprobschat{0};
+    bool echo{false};
+    std::optional<bool> ignoreEOS{std::nullopt};
+    std::optional<std::set<std::string>> stop{std::nullopt};
+    std::optional<bool> includeStopStrInOutput{std::nullopt};
+    std::optional<int> numReturnSequences{std::nullopt};  // effective for beam search and multinomial decoding
+    // Multinomial decoding specific
     std::optional<float> temperature{std::nullopt};
     std::optional<float> topP{std::nullopt};
     std::optional<int> topK{std::nullopt};
     std::optional<int> seed{std::nullopt};
-    std::optional<std::set<std::string>> stop{std::nullopt};
-    std::optional<bool> includeStopStrInOutput{std::nullopt};
+    std::optional<float> frequencyPenalty{std::nullopt};
+    std::optional<float> presencePenalty{std::nullopt};
+    std::optional<float> repetitionPenalty{std::nullopt};
+    // Beam search specific
     std::optional<int> bestOf{std::nullopt};
-    std::optional<bool> ignoreEOS{std::nullopt};
-    int logprobs = 0;
-    bool logprobschat = false;
-    bool echo{false};
+    std::optional<float> lengthPenalty{std::nullopt};
+    std::optional<float> diversityPenalty{std::nullopt};
+
+    // Speculative decoding specific (only with speculative decoding pipeline, see <docs> for reference)
+    std::optional<int> numAssistantTokens{std::nullopt};
+    std::optional<float> assistantConfidenceThreshold{std::nullopt};
 
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
@@ -124,7 +130,7 @@ struct OpenAIChatCompletionsRequest {
         // TODO: early_finish = ?
         // TODO use_beam_search is unused ?
 
-        // Multinomial specific
+        // Multinomial sampling specific
         if (temperature.has_value())
             config.temperature = temperature.value();
         if (topK.has_value())
@@ -145,6 +151,11 @@ struct OpenAIChatCompletionsRequest {
 
         if (logprobschat || logprobs > 0)
             config.logprobs = 1;
+        // Speculative decoding specific
+        if (numAssistantTokens.has_value())
+            config.num_assistant_tokens = numAssistantTokens.value();
+        if (assistantConfidenceThreshold.has_value())
+            config.assistant_confidence_threshold = assistantConfidenceThreshold.value();
 
         return config;
     }
@@ -163,7 +174,7 @@ class OpenAIChatCompletionsHandler {
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(uint32_t maxTokensLimit);
-    absl::Status parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit);
+    absl::Status parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline);
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -188,7 +199,7 @@ public:
 
     ov::genai::GenerationConfig createGenerationConfig() const;
 
-    absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit);
+    absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline);
     absl::Status parseMessages();
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);

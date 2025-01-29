@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document gives an overview of various parameters that can be configured to achieve maximum performance efficiency. 
+This document gives an overview of various parameters that can be configured to achieve maximum performance efficiency.
 
 ## Example model
 
@@ -58,7 +58,7 @@ docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 
 ```
 
 GPU
-   
+
 ```bash
 docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
       -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest-gpu \
@@ -76,8 +76,8 @@ execution streams. They split the available resources to perform parallel execut
 It is particularly efficient for models which cannot effectively consume all CPU cores or for CPUs with high number of cores.
 
 By default, number of streams is optimized for execution with minimal latency with low concurrency. The number of execution streams will be equal to the number of CPU sockets or GPU cards.
-If that default configuration is not suitable, adjust it with the `NUM_STREAMS` parameter defined as part 
-of the device plugin configuration or set the performance hint to `THROUGHPUT`. 
+If that default configuration is not suitable, adjust it with the `NUM_STREAMS` parameter defined as part
+of the device plugin configuration or set the performance hint to `THROUGHPUT`.
 
 In a scenario with a single connections/client, set the following parameter:
 
@@ -101,16 +101,16 @@ By default, OpenVINO Model Server will enable CPU threads pinning for better per
 
 While using REST API, you can adjust the data format to optimize the communication and deserialization from json format. Here are some tips to effectively use REST interface when working with OpenVINO Model Server:
 
-- use [binary data format](binary_input.md) when possible(for TFS API binary data format is support only for JPEG/PNG inputs, for KFS API there are no such limitations ) - binary data representation is smaller in terms of request size and easier to process on the server side. 
+- use [binary data format](binary_input.md) when possible(for TFS API binary data format is support only for JPEG/PNG inputs, for KFS API there are no such limitations ) - binary data representation is smaller in terms of request size and easier to process on the server side.
 - when working with images, consider sending JPEG/PNG directly - compressed data will greatly reduce the traffic and speed up the communication.
 - with JPEG/PNG it is the most efficient to send the images with the resolution of the configured model. It will avoid image resizing on the server to fit the model.
-- if you decide to send data inside JSON object, try to adjust the numerical data type to reduce the message size i.e. reduce the numbers precisions in the json message with a command similar to `np.round(imgs.astype(np.float),decimals=2)`. 
+- if you decide to send data inside JSON object, try to adjust the numerical data type to reduce the message size i.e. reduce the numbers precisions in the json message with a command similar to `np.round(imgs.astype(np.float),decimals=2)`.
 
 ## Scalability
 
-OpenVINO Model Server can be scaled vertically by adding more resources or horizontally by adding more instances of the service on multiple hosts. 
+OpenVINO Model Server can be scaled vertically by adding more resources or horizontally by adding more instances of the service on multiple hosts.
 
-While hosting multiple instances of OVMS with constrained CPU resources, it is optimal to ensure CPU affinity for the containers. 
+While hosting multiple instances of OVMS with constrained CPU resources, it is optimal to ensure CPU affinity for the containers.
 It can be arranged via [CPU manager for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/).
 
 An equivalent in the docker, would be starting the containers with the option `--cpuset-cpus` instead of `--cpus`.
@@ -145,7 +145,7 @@ To save power, the OS can decrease the CPU frequency and increase a volatility o
 $ cpupower frequency-set --min 3.1GHz
 ```
 
-## Tuning Model Server configuration parameters           
+## Tuning Model Server configuration parameters
 
 OpenVINO Model Server in C++ implementation is using scalable multithreaded gRPC and REST interface, however in some hardware configuration it might become a bottleneck for high performance backend with OpenVINO.
 
@@ -154,10 +154,10 @@ OpenVINO Model Server in C++ implementation is using scalable multithreaded gRPC
 
 - Another parameter impacting the performance is `nireq`. It defines the size of the model queue for inference execution.
 It should be at least as big as the number of assigned OpenVINO streams or expected parallel clients (grpc_workers >= nireq).
-  
-- Parameter `file_system_poll_wait_seconds` defines how often the model server will be checking if new model version gets created in the model repository. 
+
+- Parameter `file_system_poll_wait_seconds` defines how often the model server will be checking if new model version gets created in the model repository.
 The default value is 1 second which ensures prompt response to creating new model version. In some cases, it might be recommended to reduce the polling frequency
-  or even disable it. For example, with cloud storage, it could cause a cost for API calls to the storage cloud provider. Detecting new versions 
+  or even disable it. For example, with cloud storage, it could cause a cost for API calls to the storage cloud provider. Detecting new versions
   can be disabled with a value `0`.
 
 - Collecting metrics has negligible performance overhead when used with models of average size and complexity. However, when used with lightweight, fast models, the metric incrementation can consume noticeable proportion of CPU time compared to actual inference. Take it into account while enabled metrics for such models.
@@ -170,7 +170,7 @@ Depending on the device employed to run the inference operation, you can tune th
 
 > **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/2024/api/c_cpp_api/group__ov__runtime__cpp__prop__api.html).
 
-Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter. 
+Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter.
 
 Following docker command sets a parameter `NUM_STREAMS` to a value `32`, `AFFINITY` to `NUMA` and disables CPU pinning.
 
@@ -188,16 +188,16 @@ Recommended steps to investigate achievable performance and discover bottlenecks
       **Note:** It is useful to drop plugin configuration from benchmark app using `-dump_config` and then use the same plugin configuration in model loaded into OVMS
 
       **Note:** When launching benchmark app use `-inference_only=false`. Otherwise OV avoids setting input tensor of inference each time which is not comparable flow to OVMS.
-2. [Launch OVMS benchmark client](https://docs.openvino.ai/2024/ovms_demo_benchmark_client.html) on the same machine as OVMS
-3. [Launch OVMS benchmark client](https://docs.openvino.ai/2024/ovms_demo_benchmark_client.html) from remote machine
+2. [Launch OVMS benchmark client](../demos/benchmark/README.md) on the same machine as OVMS
+3. [Launch OVMS benchmark client](../demos/benchmark/README.md) from remote machine
 4. Measure achievable network bandwidth with tools such as [iperf](https://github.com/esnet/iperf)
 
 ## Analyzing accuracy issues
 
-Please note that the target devices GPU and NVIDIA usually change the default model execution precision from FP32 to FP16.  
+Please note that the target devices GPU and NVIDIA usually change the default model execution precision from FP32 to FP16.
 It is recommended to compare accuracy results versus OpenVINO benchmark app.
 
-It is possible to enforce a specific runtime precision by using a plugin config parameter `INFERENCE_PRECISION_HINT`. For example:  
+It is possible to enforce a specific runtime precision by using a plugin config parameter `INFERENCE_PRECISION_HINT`. For example:
  `--plugin_config "{\"INFERENCE_PRECISION_HINT\": \"f32\"}"`.
 
 
@@ -207,5 +207,5 @@ There are a few special consideration for tuning the serving of LLM models via O
  - choose the correct cache size to match the used model and expected level of concurrency. The recommendation is to start from a value like 10GB and observe the consumption in the server logs during normal load.
  - Text generation is done in a scope of a single NUMA node on the multi socket servers. To get the best performance it is recommended to turn off virtual NUMA nodes. In results there will be a single NUMA node per CPU socket and the text generation will consume all cores form one CPU socket.
  - set `enable_prefix_cache: true` configuration in the graph to reuse KV Cache for sequential requests with repeating prompt tokens like in chat history. It will avoid duplicated prompt evaluation.
- - Use lower precision via model quantization and in KV cache. It will improve performance and memory consumption. 
- - `--rest_workers` can limit the number of concurrent requests processed by the models server. By default it set to #vCPU * 4. In most cases this is correct value. You might increase it in case of running benchmarking with extreme number of clients or reduce it to prevent server overloading (some clients will wait for connection).
+ - Use lower precision via model quantization and in KV cache. It will improve performance and memory consumption.
+ - `--rest_workers` can limit the number of concurrent requests processed by the models server. By default it set to number of vCPU cores. In most cases this is correct value. You might increase it in case of running benchmarking with extreme number of clients or reduce it to prevent server overloading (some clients will wait for connection).

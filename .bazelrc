@@ -91,6 +91,7 @@ build:linux --host_cxxopt=-std=c++17
 build:linux --action_env PYTHON_BIN_PATH="/usr/bin/python3"
 build:linux --define PYTHON_BIN_PATH=/usr/bin/python3
 
+build:linux --define=USE_DROGON=1  # 0=legacy net_http, available only on linux
 # Security options ######################################################################################################
 # TODO: Add equivalent windows flag
 build:linux --cxxopt=-fno-strict-overflow

@@ -82,7 +82,7 @@ namespace ovms {
 
 static constexpr uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 3;
 #ifdef _WIN32
-const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "c:\\opt\\cache";
+const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "c:\\Intel\\openvino_cache";
 #elif __linux__
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 #endif

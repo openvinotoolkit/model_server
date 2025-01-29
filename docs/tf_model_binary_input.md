@@ -15,7 +15,7 @@ Download the model
 ```bash
 wget http://download.tensorflow.org/models/official/20181001_resnet/savedmodels/resnet_v2_fp32_savedmodel_NHWC.tar.gz
 
-tar -xvzf resnet_v2_fp32_savedmodel_NHWC.tar.gz 
+tar -xvzf resnet_v2_fp32_savedmodel_NHWC.tar.gz
 
 mv resnet_v2_fp32_savedmodel_NHWC/1538687283/ resnet_v2
 rmdir resnet_v2_fp32_savedmodel_NHWC/

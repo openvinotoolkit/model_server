@@ -93,6 +93,15 @@ curl http://localhost/v3/chat/completions \
 | presence_penalty | ✅ | ✅ | ✅ | float (default: `0.0`) | Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics. |
 | seed | ✅ | ✅ | ✅ | integer (default: `0`) | Random seed to use for the generation. |
 
+#### Speculative decoding specific
+
+Note that below parameters are valid only for speculative pipeline. See [speculative decoding demo](../demos/continuous_batching/speculative_decoding/README.md) for details on how to prepare and serve such pipeline. 
+
+| Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
+|-------|----------|----------|----------|---------|-----|
+| num_assistant_tokens | ✅ | ❌ | ⚠️ | int | This value defines how many tokens should a draft model generate before main model validates them. Equivalent of `num_speculative_tokens` in vLLM. Cannot be used with `assistant_confidence_threshold`. |
+| assistant_confidence_threshold | ✅ | ❌ | ❌ | float | This parameter determines confidence level for continuing generation. If draft model generates token with confidence below that threshold, it stops generation for the current cycle and main model starts validation. Cannot be used with `num_assistant_tokens`. |
+
 #### Unsupported params from OpenAI service:
 - logit_bias
 - top_logprobs

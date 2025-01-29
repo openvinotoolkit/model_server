@@ -3,7 +3,7 @@
 This script automates exporting models from Hugging Faces hub or fine-tuned in PyTorch format to the models repository for deployment for the model serving.
 In one step it prepares a complete set of resources in the models repository for a supported GenAI use case.
 
-```bash
+```console
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server/demos/common/export_models
 pip install -q -r requirements.txt
@@ -21,7 +21,7 @@ positional arguments:
 ```
 For every use case subcommand there is adjusted list of parameters:
 
-```bash
+```console
 python export_model.py text_generation --help 
 usage: export_model.py text_generation [-h] [--model_repository_path MODEL_REPOSITORY_PATH] --source_model SOURCE_MODEL [--model_name MODEL_NAME] [--weight-format PRECISION] [--config_file_path CONFIG_FILE_PATH]
                                        [--overwrite_models] [--target_device TARGET_DEVICE] [--kv_cache_precision {u8}] [--enable_prefix_caching] [--disable_dynamic_split_fuse]
@@ -59,37 +59,45 @@ options:
 ## Examples how models can be exported
 
 Text generation for CPU target device:
-```bash
+```console
 mkdir -p models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config_all.json --model_repository_path models 
 ```
 
 Text generation for GPU target device with limited memory without dynamic split fuse algorithm (recommended for usage in low concurrency):
-```bash
+```console
 mkdir -p models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192 --cache_size 2
 ```
 
 Text generation for GPU target device with limited memory with enabled dynamic split fuse algorithm (recommended for usage in high concurrency):
-```bash
+```console
 mkdir -p models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2
 ```
 
 Embeddings with deployment on a single CPU host:
-```bash
+```console
 mkdir -p models
 python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8  --config_file_path models/config_all.json
 ```
 
 Embeddings with deployment on a dual CPU host:
-```bash
+```console
 mkdir -p models
 python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8  --config_file_path models/config_all.json --num_streams 2
 ```
 
+By default, embeddings endpoint returns an error when the input exceed the maximum model context length.
+It is possible to change the behavior to truncate prompts automatically to fit the model. Add `--truncate` option in the export command.
+```console
+mkdir -p models
+python export_model.py embeddings --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json --truncate
+```
+Note, that truncating input will prevent errors but the accuracy might be impacted as only part of the input will be analyzed.
+
 Reranking:
-```bash
+```console
 mkdir -p models
 python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8  --config_file_path models/config_all.json --num_streams 2
 ```
@@ -105,4 +113,9 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_se
 In case GPU is the target device in any model, the following command can be applied:
 ```bash
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --port 9000 --rest_port 8000 --config_path /workspace/config_all.json
+```
+
+For baremetal deployment, the equivalent command would be:
+```console
+ovms --port 9000 --rest_port 8000 --config_path models/config_all.json
 ```
