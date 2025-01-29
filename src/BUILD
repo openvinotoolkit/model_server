@@ -223,7 +223,7 @@ cc_library(
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED + COPTS_DROGON,
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
@@ -1688,6 +1688,7 @@ cc_library(
         "drogon_http_server.cpp",
         "drogon_http_async_writer_impl.hpp",
         "drogon_http_async_writer_impl.cpp",
+        "timer.hpp"
     ],
     deps = [
         "libhttp_async_writer_interface",
