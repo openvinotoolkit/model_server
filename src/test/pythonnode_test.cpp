@@ -23,7 +23,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <openvino/openvino.hpp>
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
+#pragma warning(pop)
 
 #include "../config.hpp"
 #include "../dags/pipelinedefinition.hpp"
@@ -56,8 +59,8 @@
 #include "mediapipe/framework/calculator_runner.h"
 #pragma GCC diagnostic pop
 
+#include "../python/python_backend.hpp"
 #include "opencv2/opencv.hpp"
-#include "python/python_backend.hpp"
 #include "test_utils.hpp"
 
 namespace py = pybind11;

@@ -24,8 +24,10 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/document.h>
+#pragma warning(pop)
 
 #include "layout_configuration.hpp"
 #include "modelversion.hpp"

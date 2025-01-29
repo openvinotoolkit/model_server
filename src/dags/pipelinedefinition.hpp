@@ -38,7 +38,7 @@
 #include "pipelinedefinitionstatus.hpp"
 
 namespace ovms {
-class CNLIMWrapper;
+struct CNLIMWrapper;
 class MetricConfig;
 class MetricRegistry;
 class ModelManager;

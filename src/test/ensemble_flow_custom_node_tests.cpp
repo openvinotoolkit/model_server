@@ -21,12 +21,15 @@
 #include <string>
 #include <utility>
 
+#pragma warning(push)
+#pragma warning(disable : 4624)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

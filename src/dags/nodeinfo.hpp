@@ -64,7 +64,7 @@ struct NodeInfo {
     std::string modelName;
     std::optional<model_version_t> modelVersion;
     std::unordered_map<std::string, std::string> outputNameAliases;
-    std::optional<int32_t> demultiplyCount;
+    std::optional<size_t> demultiplyCount;
     std::set<std::string> gatherFromNode;
     NodeLibrary library;
     parameters_t parameters;

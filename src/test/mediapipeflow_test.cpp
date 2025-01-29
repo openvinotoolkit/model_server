@@ -30,6 +30,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
@@ -54,14 +55,16 @@
 #include "../stringutils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
-#include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/formats/tensor.h"
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
 #if (PYTHON_DISABLE == 0)
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
+#pragma warning(pop)
 
 #include "../python/pythonnoderesources.hpp"
 namespace py = pybind11;

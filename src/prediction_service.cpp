@@ -22,10 +22,13 @@
 
 #include <spdlog/spdlog.h>
 
+#pragma warning(push)
+#pragma warning(disable : 4624 6001 4324 6385 6386 6326 6011)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include "dags/pipeline.hpp"
 #include "execution_context.hpp"

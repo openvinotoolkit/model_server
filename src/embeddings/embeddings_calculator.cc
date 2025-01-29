@@ -16,15 +16,21 @@
 #include <string>
 #include <unordered_map>
 
+#pragma warning(push)
+#pragma warning(disable : 6001 6385 6386 6326 6011 4309 6246 4005)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "mediapipe/framework/port/ret_check.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include <adapters/inference_adapter.h>
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/writer.h>
+#pragma warning(pop)
 
 #include "../http_payload.hpp"
 #include "../logging.hpp"

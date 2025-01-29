@@ -547,7 +547,10 @@ node {
 // PYTHON CALCULATOR CASES
 
 #if (PYTHON_DISABLE == 0)
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>  // everything needed for embedding
+#pragma warning(pop)
 namespace py = pybind11;
 #include "../python/python_backend.hpp"
 // ------------------------- Regular mode

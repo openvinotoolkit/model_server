@@ -21,6 +21,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <opencv2/opencv.hpp>
 #include <openvino/openvino.hpp>
 
 #include "../config.hpp"
@@ -40,8 +41,6 @@
 #include "../stringutils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
-#include "mediapipe/calculators/ovms/modelapiovmsadapter.hpp"
-#include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

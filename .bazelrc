@@ -176,9 +176,13 @@ build:monolithic --define framework_shared_object=false
 build:monolithic --define tsl_protobuf_header_only=false
 # On windows, we still link everything into a single DLL - required by TF
 build:windows --config=monolithic
-
-build:windows --copt=/W0
+# Warnings are enabled in common_settings
+build:windows --copt=/W0 
 build:windows --host_copt=/W0
+build:windows --copt=/external:anglebrackets
+build:windows --host_copt=/external:anglebrackets
+build:windows --copt=/external:W0
+build:windows --host_copt=/external:W0
 
 # On Windows, `__cplusplus` is wrongly defined without this switch
 # See https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/

@@ -27,10 +27,15 @@
 #include <openvino/genai/generation_handle.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include <openvino/runtime/tensor.hpp>
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
-
+#pragma warning(pop)
+#pragma warning(push)
+#pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/status/status.h"
+#pragma warning(pop)
 
 using namespace rapidjson;
 
@@ -188,9 +193,9 @@ public:
     bool isStream() const;
     std::string getModel() const;
 
-    void setPromptTokensUsage(int promptTokens);
+    void setPromptTokensUsage(size_t promptTokens);
 
-    void incrementProcessedTokens(int numTokens = 1);
+    void incrementProcessedTokens(size_t numTokens = 1);
 
     ov::genai::GenerationConfig createGenerationConfig() const;
 

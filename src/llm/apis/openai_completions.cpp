@@ -17,15 +17,23 @@
 #include "openai_completions.hpp"
 
 #include <cmath>
-
+#pragma warning(push)
+#pragma warning(disable : 6269 6294 6201)
 #include <opencv2/opencv.hpp>
+#pragma warning(pop)
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#pragma warning(pop)
 
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
+#pragma warning(pop)
 
 using namespace rapidjson;
 
@@ -159,13 +167,13 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
                                 return absl::InvalidArgumentError("Invalid base64 string in request");
                             }
-                            size_t rows = 1;
-                            size_t cols = decoded.size();
+                            int rows = 1;
+                            int cols = decoded.size();
                             cv::Mat rawData(rows, cols, CV_8UC1, (void*)decoded.data());
                             cv::Mat image;
                             try {
                                 image = cv::imdecode(rawData, cv::IMREAD_UNCHANGED);
-                            } catch (const cv::Exception& e) {
+                            } catch (const cv::Exception&) {
                                 return absl::InvalidArgumentError("Error during string to mat conversion");
                             }
                             std::vector<size_t> shape;
@@ -269,7 +277,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
             return absl::InvalidArgumentError("stream_options is not an object");
         auto streamOptionsObj = it->value.GetObject();
 
-        int streamOptionsFound = 0;
+        size_t streamOptionsFound = 0;
         it = streamOptionsObj.FindMember("include_usage");
         if (it != streamOptionsObj.MemberEnd()) {
             if (!it->value.IsBool())
@@ -539,11 +547,11 @@ StreamOptions OpenAIChatCompletionsHandler::getStreamOptions() const { return re
 bool OpenAIChatCompletionsHandler::isStream() const { return request.stream; }
 std::string OpenAIChatCompletionsHandler::getModel() const { return request.model; }
 
-void OpenAIChatCompletionsHandler::setPromptTokensUsage(int promptTokens) {
+void OpenAIChatCompletionsHandler::setPromptTokensUsage(size_t promptTokens) {
     usage.promptTokens = promptTokens;
 }
 
-void OpenAIChatCompletionsHandler::incrementProcessedTokens(int numTokens) {
+void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
     processedTokens += numTokens;
     if (!request.echo || processedTokens > usage.promptTokens)
         usage.completionTokens += numTokens;
@@ -693,7 +701,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
                         writer.Int(0);
                     } else {
                         std::string text_before_token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids.begin(), generationOutput.generated_ids.begin() + i}));
-                        writer.Int(text_before_token.size());
+                        writer.Uint(text_before_token.size());
                     }
                 }
                 writer.EndArray();   // ]

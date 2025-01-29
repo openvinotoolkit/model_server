@@ -22,11 +22,16 @@
 #include <string>
 #include <vector>
 
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/pybind11.h>
+#pragma warning(pop)
 
 namespace py = pybind11;
 using namespace ovms;
 
+#pragma warning(push)
+#pragma warning(disable : 4244)
 OvmsPyTensor::OvmsPyTensor(const std::string& name, const py::buffer& buffer, const std::optional<std::vector<py::ssize_t>>& shape, const std::optional<std::string>& datatype) :
     name(name),
     refObj(buffer) {
@@ -49,6 +54,7 @@ OvmsPyTensor::OvmsPyTensor(const std::string& name, const py::buffer& buffer, co
         this->datatype = it != bufferFormatToDatatype.end() ? it->second : format;
     }
 }
+#pragma warning(pop)
 
 OvmsPyTensor::OvmsPyTensor(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype, py::ssize_t size, bool allocate) :
     name(name),

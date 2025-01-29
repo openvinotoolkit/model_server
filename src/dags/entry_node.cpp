@@ -35,11 +35,14 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "nodesession.hpp"
 
+#pragma warning(push)
+#pragma warning(disable : 4624 6001 6385 6386 6326 6011)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 namespace ovms {
 

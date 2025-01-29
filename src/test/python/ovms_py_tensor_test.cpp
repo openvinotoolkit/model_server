@@ -17,7 +17,10 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/pybind11.h>
+#pragma warning(pop)
 
 #include "bindings/python/ovms_py_tensor.hpp"
 

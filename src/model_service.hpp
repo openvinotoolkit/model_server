@@ -33,7 +33,7 @@
 #include "modelversion.hpp"
 
 namespace ovms {
-class ExecutionContext;
+struct ExecutionContext;
 class ModelManager;
 class ModelVersionStatus;
 class Server;

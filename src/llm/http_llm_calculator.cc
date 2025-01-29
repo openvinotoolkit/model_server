@@ -16,11 +16,14 @@
 #include <atomic>
 #include <string>
 
+#pragma warning(push)
+#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4005)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 

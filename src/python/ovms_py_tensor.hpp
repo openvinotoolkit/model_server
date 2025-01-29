@@ -22,7 +22,10 @@
 #include <unordered_map>
 #include <vector>
 
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/pybind11.h>
+#pragma warning(pop)
 
 namespace py = pybind11;
 
