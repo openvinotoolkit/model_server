@@ -65,8 +65,8 @@ struct OpenAIChatCompletionsRequest {
     StreamOptions streamOptions;
     std::string model;
     std::optional<int> maxTokens{std::nullopt};
-    bool logprobs = 0;
-    int logprobschat = false;
+    bool logprobs{false};
+    int logprobschat{0};
     bool echo{false};
     std::optional<bool> ignoreEOS{std::nullopt};
     std::optional<std::set<std::string>> stop{std::nullopt};
