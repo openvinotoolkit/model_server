@@ -249,7 +249,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(uint32_t max
     return absl::OkStatus();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit) {
+absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline) {
     OVMS_PROFILE_FUNCTION();
     // stream: bool; optional
     if (!doc.IsObject())
@@ -479,6 +479,38 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
         request.numReturnSequences = it->value.GetUint();
     }
 
+    // Speculative decoding specific parameters
+
+    auto numAssistantTokensIt = doc.FindMember("num_assistant_tokens");
+    auto assistantConfidenceThresholdIt = doc.FindMember("assistant_confidence_threshold");
+
+    if (isSpeculativePipeline) {
+        if (numAssistantTokensIt == doc.MemberEnd() && assistantConfidenceThresholdIt == doc.MemberEnd())
+            return absl::InvalidArgumentError("Speculative decoding requires either num_assistant_tokens or assistant_confidence_threshold to be set.");
+
+        if (numAssistantTokensIt != doc.MemberEnd() && assistantConfidenceThresholdIt != doc.MemberEnd())
+            return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are mutually exclusive and cannot both be set.");
+    } else if (numAssistantTokensIt != doc.MemberEnd() || assistantConfidenceThresholdIt != doc.MemberEnd()) {
+        return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are only supported when speculative decoding is enabled.");
+    }
+    // num_assistant_tokens: uint;
+    if (numAssistantTokensIt != doc.MemberEnd()) {
+        if (!numAssistantTokensIt->value.IsUint() || numAssistantTokensIt->value.GetUint() == 0) {
+            return absl::InvalidArgumentError("num_assistant_tokens must be an unsigned integer greater than 0");
+        }
+        request.numAssistantTokens = numAssistantTokensIt->value.GetUint();
+    }
+    // assistant_confidence_threshold: float;
+    if (assistantConfidenceThresholdIt != doc.MemberEnd()) {
+        if (!assistantConfidenceThresholdIt->value.IsDouble() && !assistantConfidenceThresholdIt->value.IsInt()) {
+            return absl::InvalidArgumentError("assistant_confidence_threshold must be a positive number");
+        }
+        request.assistantConfidenceThreshold = assistantConfidenceThresholdIt->value.GetDouble();
+        if (request.assistantConfidenceThreshold <= 0.0) {
+            return absl::InvalidArgumentError("assistant_confidence_threshold must be greater than 0");
+        }
+    }
+
     // use_beam_search: bool; optional - defaults to false
     // Extension from vLLM, unsupported by OpenAI API, not available directly in CB lib
     // Use best_of>1 to steer into beams search
@@ -521,8 +553,8 @@ ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig
     return request.createGenerationConfig();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit) {
-    absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit);
+absl::Status OpenAIChatCompletionsHandler::parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline) {
+    absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, isSpeculativePipeline);
 
     if (status != absl::OkStatus())
         return status;

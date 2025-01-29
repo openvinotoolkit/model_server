@@ -8,6 +8,7 @@ hidden:
 ovms_demos_continuous_batching_accuracy
 ovms_demos_continuous_batching_rag
 ovms_demos_continuous_batching_scaling
+ovms_demos_continuous_batching_speculative_decoding
 ```
 
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
@@ -329,6 +330,10 @@ Check this simple [text generation scaling demo](https://github.com/openvinotool
 ## Testing the model accuracy over serving API
 
 Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
+
+## Use Speculative Decoding
+
+Check the [guide for speculative decoding](./speculative_decoding/README.md)
 
 
 ## References

@@ -27,7 +27,7 @@ import openvino as ov
 def add_common_arguments(parser):
     parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
     parser.add_argument('--source_model', required=True, help='HF model name or path to the local folder with PyTorch or OpenVINO model', dest='source_model')
-    parser.add_argument('--model_name', required=False, default=None, help='Model name that should be used in the deployment. Equal to source_name if HF model name is used', dest='model_name')
+    parser.add_argument('--model_name', required=False, default=None, help='Model name that should be used in the deployment. Equal to source_model if HF model name is used', dest='model_name')
     parser.add_argument('--weight-format', default='int8', help='precision of the exported model', dest='precision')
     parser.add_argument('--config_file_path', default='config.json', help='path to the config file', dest='config_file_path')
     parser.add_argument('--overwrite_models', default=False, action='store_true', help='Overwrite the model if it already exists in the models repository', dest='overwrite_models')
@@ -44,6 +44,11 @@ parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', h
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
 parser_text.add_argument('--max_num_seqs', default=None, help='256 by default. The maximum number of sequences that can be processed together.', dest='max_num_seqs')
 parser_text.add_argument('--cache_size', default=10, type=int, help='cache size in GB', dest='cache_size')
+parser_text.add_argument('--draft_source_model', required=False, default=None, help='HF model name or path to the local folder with PyTorch or OpenVINO draft model. '
+                         'Using this option will create configuration for speculative decoding', dest='draft_source_model')
+parser_text.add_argument('--draft_model_name', required=False, default=None, help='Draft model name that should be used in the deployment. '
+                         'Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.', dest='draft_model_name')
+
 parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
 add_common_arguments(parser_embeddings)
 parser_embeddings.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
@@ -148,7 +153,9 @@ node: {
           dynamic_split_fuse: false, {% endif %}
           max_num_seqs: {{max_num_seqs|default("256", true)}},
           device: "{{target_device|default("CPU", true)}}",
-
+          {%- if draft_model_dir_name %}
+          # Speculative decoding configuration
+          draft_models_path: "./{{draft_model_dir_name}}",{% endif %}
       }
   }
   input_stream_handler {
@@ -265,10 +272,26 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         if not os.path.isdir(llm_model_path) or args['overwrite_models']:
             optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, llm_model_path)
             if os.system(optimum_command):
-                raise ValueError("Failed to export llm model", source_model)
+                raise ValueError("Failed to export llm model", source_model)    
+    ### Speculative decoding specific 
+    draft_source_model = task_parameters.get("draft_source_model", None)
+    draft_model_dir_name = None   
+    if draft_source_model:
+        draft_model_dir_name = draft_source_model.replace("/", "-") # flatten the name so we don't create nested directory structure
+        draft_llm_model_path = os.path.join(model_repository_path, model_name, draft_model_dir_name)
+        if os.path.isfile(os.path.join(draft_llm_model_path, 'openvino_model.xml')):
+                print("OV model is source folder. Skipping conversion.")
+        else: # assume HF model name or local pytorch model folder
+            print("Exporting LLM model to ", draft_llm_model_path)
+            if not os.path.isdir(draft_llm_model_path) or args['overwrite_models']:
+                optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(draft_source_model, precision, draft_llm_model_path)
+                if os.system(optimum_command):
+                    raise ValueError("Failed to export llm model", source_model)
+    ###
     os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
-    graph_content = gtemplate.render(tokenizer_model="{}_tokenizer_model".format(model_name), embeddings_model="{}_embeddings_model".format(model_name), model_path=model_path, **task_parameters)
+    graph_content = gtemplate.render(tokenizer_model="{}_tokenizer_model".format(model_name), embeddings_model="{}_embeddings_model".format(model_name), 
+                                     model_path=model_path, draft_model_dir_name=draft_model_dir_name, **task_parameters)
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
@@ -375,8 +398,15 @@ if args['model_name'] is None:
 if args['model_name'] is None and args['source_model'] is None:
     raise ValueError("Either model_name or source_model should be provided")
 
+### Speculative decoding specific
+if args['draft_source_model'] is None:
+    args['draft_source_model'] = args['draft_model_name']
+if args['draft_model_name'] is None:
+    args['draft_model_name'] = args['draft_source_model']
+###
+
 template_parameters = {k: v for k, v in args.items() if k not in ['model_repository_path', 'source_model', 'model_name', 'precision', 'version', 'config_file_path', 'overwrite_models']}
-print("template params:",template_parameters)
+print("template params:", template_parameters)
 
 if args['task'] == 'text_generation':
     export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'])
