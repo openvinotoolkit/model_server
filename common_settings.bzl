@@ -126,14 +126,11 @@ COMMON_STATIC_LIBS_COPTS = select({
                         "/WX",
                         "/external:anglebrackets",
                         "/external:W0",
-                        "/LTCG",
                         "/sdl",
                         "/analyze",
                         "/Gy",
                         "/DYNAMICBASE",
-                        "/NXCOMPAT",
                         "/Qspectre",
-                        "/QConditional-branch:Retpoline",
                         "/wd4018", # level 3
                         "/wd4068", # level 1
                         "/wd4458", # level 4
@@ -155,6 +152,7 @@ COMMON_STATIC_LIBS_COPTS = select({
                         "/wd6319", # level 3/4
                         "/wd4297", # level 3/4
                         "/wd4701",
+                        "/wd4804",
                     ],
                 })
 
@@ -197,7 +195,9 @@ COMMON_STATIC_LIBS_LINKOPTS = select({
                     # "-lovms_shared",  # Use for dynamic linking when necessary
                 ],
                 "//src:windows" : [
-                    "",
+                    "/NXCOMPAT",
+                    "/LTCG",
+                    "/QConditional-branch:Retpoline",
                 ],
                 })
 COPTS_PYTHON = select({
