@@ -100,7 +100,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
         fi
     else
         # For RH UBI and Ubuntu20
-        if ! bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=all --test_filter="*" //src:ovms_test > ${TEST_LOG} 2>&1 ; then
+        if ! bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=streamed --test_filter="*" //src:ovms_test > ${TEST_LOG} 2>&1 ; then
             failed=1
         fi
         cat ${TEST_LOG} | tail -500
