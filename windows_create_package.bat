@@ -77,9 +77,9 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Adding licenses
 set "license_dest=%cd%\dist\windows\ovms\thirdparty-licenses\"
-::md %license_dest%
+md %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\%output_user_root%\opencv\etc\licenses\* %license_dest%
+copy C:\opt\opencv\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
