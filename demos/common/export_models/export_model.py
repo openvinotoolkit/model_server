@@ -399,10 +399,11 @@ if args['model_name'] is None and args['source_model'] is None:
     raise ValueError("Either model_name or source_model should be provided")
 
 ### Speculative decoding specific
-if args['draft_source_model'] is None:
-    args['draft_source_model'] = args['draft_model_name']
-if args['draft_model_name'] is None:
-    args['draft_model_name'] = args['draft_source_model']
+if args['task'] == 'text_generation':
+    if args['draft_source_model'] is None:
+        args['draft_source_model'] = args['draft_model_name']
+    if args['draft_model_name'] is None:
+        args['draft_model_name'] = args['draft_source_model']
 ###
 
 template_parameters = {k: v for k, v in args.items() if k not in ['model_repository_path', 'source_model', 'model_name', 'precision', 'version', 'config_file_path', 'overwrite_models']}
