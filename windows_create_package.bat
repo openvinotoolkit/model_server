@@ -13,6 +13,7 @@
 :: See the License for the specific language governing permissions and
 :: limitations under the License.
 ::
+echo off
 setlocal EnableExtensions EnableDelayedExpansion
 set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
 set "PATH=%setPath%"
@@ -75,16 +76,17 @@ copy %cd%\setupvars.* dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Adding licenses
-md dist\windows\thirdparty-licenses\
+set "license_dest=%cd%\dist\windows\ovms\thirdparty-licenses\"
+::md %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\%output_user_root%\opencv\etc\licenses\* dist\windows\thirdparty-licenses\
+copy C:\%output_user_root%\opencv\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\%output_user_root%\openvino\docs\licensing\EULA.txt dist\windows\thirdparty-licenses\openvino.LICENSE.txt
+copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-copy release_files\LICENSE dist\windows\
+copy %cd%\release_files\LICENSE %cd%\dist\windows\ovms\
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy release_files\thirdparty-licenses\* dist\windows\thirdparty-licenses\
+copy %cd%\release_files\thirdparty-licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: Add when CAPI enabled and tested
 ::mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include

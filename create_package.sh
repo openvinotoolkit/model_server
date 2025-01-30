@@ -56,8 +56,6 @@ if [ -d /opt/intel/openvino/runtime/3rdparty ] ; then find /opt/intel/openvino/r
 if [[ $debug_bazel_flags == *"--copt=-g -c dbg"* ]]; then find /opt/intel/openvino/runtime/3rdparty/ -iname '*libtbb_debug*' -exec cp -vP {} /ovms_release/lib/ \;; fi
 find /opt/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 cp /opt/opencv/share/licenses/opencv4/* /ovms/release_files/thirdparty-licenses/
-if [ "$ov_use_binary" == "1" ] ; then cp /opt/intel/openvino/docs/licensing/EULA.txt /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
-if [ "$ov_use_binary" == "0" ] ; then cp /openvino/LICENSE /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
 if [ "$BASE_OS" == "redhat" ] ; then cp -P /usr/lib64/libpugixml.so* /ovms_release/lib/ ; fi
 if [ "$BASE_OS" == "redhat" ] ; then cp -P /usr/lib64/libOpenCL.so* /ovms_release/lib/ ; fi
 if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/x86_64-linux-gnu/libOpenCL.so* /ovms_release/lib/ ; fi
@@ -77,6 +75,8 @@ cd /ovms
 cp -v /ovms/release_files/LICENSE /ovms_release/
 cp -v /ovms/release_files/metadata.json /ovms_release/
 cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
+if [ "$ov_use_binary" == "1" ] ; then cp -rf /opt/intel/openvino/docs/licensing/EULA.txt /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
+if [ "$ov_use_binary" == "0" ] ; then cp -rf /openvino/LICENSE /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
 mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
 ls -lahR /ovms_release/
 
