@@ -69,36 +69,50 @@ if [ "$RUN_TESTS" == "1" ] ; then
     set +x
     echo "Executing unit tests"
     failed=0
-    # Tests starting python interpreter should be executed separately for Python 3.12 due to issues with multiple reinitialization of the interpreter
-    for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
-        if OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so  ./bazel-bin/src/ovms_test --gtest_filter="$i.*" > tmp.log 2>&1 ; then
+    # If python is != 3.12 we can run all test with bazel test
+    if [[ "$(python3 --version 2>&1)" != *"3.12"* ]] ; then
+    {
+        if bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" --test_filter="$i.*" //src:ovms_test  > tmp.log 2>&1 ; then
             echo -n .
         else
             failed=1
             echo -n F
-            cat tmp.log >> ${FAIL_LOG}
+            cat tmp.log | grep -B200 " FAILED \| exception\|egfault">> ${FAIL_LOG}
         fi
         cat tmp.log >> ${TEST_LOG}
-    done
-    for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep '^  '` ; do
-        if OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so  ./bazel-bin/src/ovms_test --gtest_filter="*.$i" > tmp.log 2>&1 ; then
-            echo -n .
-        else
-            failed=1
-            echo -n F
-            cat tmp.log >> ${FAIL_LOG}
-        fi
-        cat tmp.log >> ${TEST_LOG}
-        echo -n .
-    done
-    grep -a " ms \| ms)" ${TEST_LOG} > linux_tests.log
-    if [ $failed -eq 1 ]; then
-        echo "Tests failed:"
-        cat ${FAIL_LOG}
+    }
     else
-        rm -rf ${FAIL_LOG}
+        # Tests starting python interpreter should be executed separately for Python 3.12 due to issues with multiple reinitialization of the interpreter
+        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
+            if bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" --test_filter="$i.*" //src:ovms_test  > tmp.log 2>&1 ; then
+                echo -n .
+            else
+                failed=1
+                echo -n F
+                cat tmp.log >> ${FAIL_LOG}
+            fi
+            cat tmp.log >> ${TEST_LOG}
+        done
+        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep '^  '` ; do
+            if bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" --test_filter="$i.*" //src:ovms_test  > tmp.log 2>&1 ; then
+                echo -n .
+            else
+                failed=1
+                echo -n F
+                cat tmp.log >> ${FAIL_LOG}
+            fi
+            cat tmp.log >> ${TEST_LOG}
+            echo -n .
+        done
+        grep -a " ms \| ms)" ${TEST_LOG} > linux_tests.log
+        if [ $failed -eq 1 ]; then
+            echo "Tests failed:"
+            cat ${FAIL_LOG}
+        else
+            rm -rf ${FAIL_LOG}
+        fi
+        echo "Tests completed:" `grep -a " ms \| ms)" ${TEST_LOG} | grep " OK " | wc -l`
+        compress_logs
+        exit $failed
     fi
-     echo "Tests completed:" `grep -a " ms \| ms)" ${TEST_LOG} | grep " OK " | wc -l`
-    compress_logs
-    exit $failed
 fi
