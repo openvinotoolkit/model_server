@@ -49,19 +49,9 @@ compress_logs() {
     rm -rf tmp.log
 } 
 
-test_success_procedure() {
-    grep -a " ms \| ms)" ${TEST_LOG}
-    tail -50 ${TEST_LOG}
-}
-
 generate_coverage_report() {
     test_success_procedure
     genhtml --output genhtml "$(bazel info output_path)/_coverage/_coverage_report.dat"
-}
-
-test_fail_procedure() {
-    test_success_procedure
-    cat ${TEST_LOG} && rm -rf ${TEST_LOG} && exit 1
 }
 
 echo "Run test: ${RUN_TESTS}"
@@ -82,14 +72,14 @@ if [ "$RUN_TESTS" == "1" ] ; then
     # If python is != 3.12 we can run all test with bazel test
     if [[ "$(python3 --version 2>&1)" != *"3.12"* ]] ; then
     {
-        {
-            bazel test --jobs=$JOBS ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding && \
-            bazel test \
-            ${SHARED_OPTIONS} "${TEST_FILTER}" \
-            //src:ovms_test ${BAZEL_OPTIONS} > ${TEST_LOG} 2>&1 || \
-            test_fail_procedure; } && \
-          test_success_procedure && \
-          rm -rf ${TEST_LOG};
+        if bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" --test_filter="$i.*" //src:ovms_test  > tmp.log 2>&1 ; then
+            echo -n .
+        else
+            failed=1
+            echo -n F
+            cat tmp.log | grep -B200 " FAILED \| exception\|egfault">> ${FAIL_LOG}
+        fi
+        cat tmp.log >> ${TEST_LOG}
     }
     else
         # Tests starting python interpreter should be executed separately for Python 3.12 due to issues with multiple reinitialization of the interpreter
