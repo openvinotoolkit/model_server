@@ -22,9 +22,9 @@ RUN set -e ; \
     mkdir /certs ; \
     unset LD_LIBRARY_PATH ; \
     if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
-    $DNF_TOOL install -y systemd wget findutils; \
-    rpm -Uv http://nginx.org/packages/mainline/centos/8/x86_64/RPMS/nginx-1.21.6-1.el8.ngx.x86_64.rpm ; \
-    wget -O /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 ; \
+    $DNF_TOOL install -y systemd wget findutils procps-ng; \
+    rpm -Uv http://nginx.org/packages/mainline/centos/9/x86_64/RPMS/nginx-1.27.3-1.el9.ngx.x86_64.rpm ; \
+    wget -O /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_amd64.deb ; \
     chmod +x /usr/bin/dumb-init ; \
     touch /run/nginx.pid ; mkdir -p /var/lib/nginx/tmp/ ; mkdir -p /var/cache/nginx/; \
     chmod -R 777 /etc/nginx/conf.d/ /var/log/nginx/ /certs/ /var/lib/nginx/ /var/lib/nginx/tmp/ /var/cache/nginx/; \
