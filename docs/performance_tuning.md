@@ -120,7 +120,6 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 | Parameters      | Description |
 | :---        |    :----   |
 | INFERENCE_NUM_THREADS       | Specifies the number of threads that CPU plugin should use for inference.     |
-| AFFINITY   |   Binds inference threads to CPU cores.      |
 | NUM_STREAMS | Specifies number of execution streams for the throughput mode. |
 | ENABLE_CPU_PINNING | This property allows CPU threads pinning during inference. |
 
@@ -172,12 +171,12 @@ Depending on the device employed to run the inference operation, you can tune th
 
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter.
 
-Following docker command sets a parameter `NUM_STREAMS` to a value `32`, `AFFINITY` to `NUMA` and disables CPU pinning.
+Following docker command sets a parameter `NUM_STREAMS` to a value `32` and disables CPU pinning.
 
 ```bash
 docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 openvino/model_server:latest \
 --model_path /opt/model --model_name resnet --port 9001 --grpc_workers 8  --nireq 32 \
---plugin_config "{\"NUM_STREAMS\": 32, \"AFFINITY\": \"NUMA\", \"ENABLE_CPU_PINNING\": false}"
+--plugin_config "{\"NUM_STREAMS\": 32, \"ENABLE_CPU_PINNING\": false}"
 ```
 
 ## Analyzing performance issues
