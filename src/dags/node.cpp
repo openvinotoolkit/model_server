@@ -112,7 +112,7 @@ Status Node::setInputs(const Node& dependency, TensorWithSourceMap& inputs, Node
     try {
         static const std::set<std::string> emptySet;
         shardId = metadata.getShardId(gatherFrom.value_or(emptySet));
-    } catch (const std::exception& e) {
+    } catch (const std::exception&) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to get shardId for node: {}", getName());
         return StatusCode::INTERNAL_ERROR;
     }
@@ -158,7 +158,7 @@ NodeSession* Node::getNodeSession(const NodeSessionMetadata& metadata) {
     if (gatherFrom) {
         try {
             sessionKey = metadata.getSessionKey(gatherFrom.value());
-        } catch (const std::exception& e) {
+        } catch (const std::exception&) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to create collapsed metadata session key for node: {}, incoming session key: {}",
                 getName(), metadata.getSessionKey());
             return nullptr;
@@ -177,7 +177,7 @@ NodeSession* Node::getNodeSession(const NodeSessionMetadata& metadata) {
     if (gatherFrom) {
         try {
             std::tie(newSessionMetadata, collapsingDetails) = metadata.getCollapsedSessionMetadata(gatherFrom.value());
-        } catch (const std::exception& e) {
+        } catch (const std::exception&) {
             SPDLOG_LOGGER_ERROR(dag_executor_logger, "Failed to create collapsed metadata for node: {}", getName());
             return nullptr;
         }
@@ -210,7 +210,7 @@ Status Node::demultiplyOutputs(SessionResults& nodeSessionOutputs) {
     }
     auto& [metadata, tensorMap] = nodeSessionOutputs.begin()->second;
     auto firstTensorShape = tensorMap.begin()->second.getActualTensor().get_shape();
-    uint32_t resultsDemultiplyCount = firstTensorShape[0];
+    size_t resultsDemultiplyCount = firstTensorShape[0];
     if (firstTensorShape[0] > DEMULTIPLY_LIMIT) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node: {} - too large dim[0] size: {} of tensor: {}. Maximum allowed is: {}",
             getName(), firstTensorShape[0], tensorMap.begin()->first, DEMULTIPLY_LIMIT);

@@ -24,7 +24,7 @@
 #include "tensormap.hpp"
 
 namespace ovms {
-class CollapseDetails;
+struct CollapseDetails;
 class NodeSessionMetadata;
 
 template <typename ResponseType>

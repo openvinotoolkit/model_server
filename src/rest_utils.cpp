@@ -18,20 +18,24 @@
 #include <optional>
 #include <set>
 #include <sstream>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/prettywriter.h>
+#pragma warning(pop)
 #include <spdlog/spdlog.h>
 
+#pragma warning(push)
+#pragma warning(disable : 6001 4324 6385 6386 6011)
 #include "absl/strings/escaping.h"
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #include "tensorflow_serving/util/json_tensor.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 #include "kfs_frontend/kfs_utils.hpp"
 #include "precision.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"

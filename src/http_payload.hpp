@@ -19,8 +19,10 @@
 #include <string>
 #include <utility>
 #include <vector>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/document.h>
+#pragma warning(pop)
 
 #include "client_connection.hpp"
 

@@ -18,8 +18,10 @@
 #include <set>
 #include <string>
 #include <unordered_map>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/document.h>
+#pragma warning(pop)
 #include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push

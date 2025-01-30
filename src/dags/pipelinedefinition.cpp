@@ -298,7 +298,10 @@ Status PipelineDefinition::create(std::unique_ptr<Pipeline>& pipeline,
             Pipeline::connect(*dependencyNode, *dependantNode, pair.second);
         }
     }
+#pragma warning(push)
+#pragma warning(disable : 6011)
     pipeline = std::make_unique<Pipeline>(*entry, *exit, *this->reporter, pipelineName);
+#pragma warning(pop)
     for (auto& kv : nodes) {
         pipeline->push(std::move(kv.second));
     }

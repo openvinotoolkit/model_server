@@ -18,14 +18,20 @@
 #include <string>
 #include <utility>
 
+#pragma warning(push)
+#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4005)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 // Python execution for template processing
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
+#pragma warning(pop)
 
 namespace ovms {
 

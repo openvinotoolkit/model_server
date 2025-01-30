@@ -21,12 +21,15 @@
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
+#pragma warning(push)
+#pragma warning(disable : 4624 6001 6385 6386 6326 6011)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include "capi_frontend/buffer.hpp"
 #include "capi_frontend/capi_utils.hpp"

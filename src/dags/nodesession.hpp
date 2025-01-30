@@ -22,7 +22,7 @@
 #include "nodesessionmetadata.hpp"
 
 namespace ovms {
-struct NodeInputHandler;
+class NodeInputHandler;
 struct NodeOutputHandler;
 class Status;
 class TensorWithSource;

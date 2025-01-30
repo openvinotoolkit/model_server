@@ -16,8 +16,10 @@
 #pragma once
 
 #include <string>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/document.h>
+#pragma warning(pop)
 
 namespace ovms {
 

@@ -62,8 +62,6 @@ public:
         throw std::logic_error("This node cannot have dependency");
     }
 
-    Status isInputBinary(const std::string& name, bool& isBinary) const;
-
     const Status validate();
 };
 

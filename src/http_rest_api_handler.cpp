@@ -28,8 +28,14 @@
 #include <utility>
 #include <vector>
 
+#ifndef _WIN32
+#include <curl/curl.h>
+#endif
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#pragma warning(pop)
 #include <spdlog/spdlog.h>
 
 #include "config.hpp"
@@ -850,7 +856,8 @@ Status HttpRestApiHandler::processPredictRequest(
     std::string modelVersionLog = modelVersion.has_value() ? std::to_string(modelVersion.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}",
         modelName, modelVersionLog);
-
+#pragma warning(push)
+#pragma warning(disable : 6001 4701)
     Order requestOrder;
     tensorflow::serving::PredictResponse responseProto;
     Status status;
@@ -868,8 +875,8 @@ Status HttpRestApiHandler::processPredictRequest(
     }
     if (!status.ok())
         return status;
-
     status = makeJsonFromPredictResponse(responseProto, response, requestOrder);
+#pragma warning(pop)
     if (!status.ok())
         return status;
 

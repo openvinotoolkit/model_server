@@ -156,8 +156,11 @@ std::optional<int64_t> stoi64(const std::string& str) {
 
 bool isValidUtf8(const std::string& text) {
     // inspect the chars from the end of the string to test if the utf8 sequence is complete
-    int byte_counter = 0;
-    for (int i = text.size() - 1; i >= 0 && byte_counter <= 3; i--) {
+    size_t byte_counter = 0;
+    if (text.size() == 0) {
+        return false;
+    }
+    for (size_t i = text.size() - 1; i >= 0 && byte_counter <= 3; i--) {
         int x = static_cast<int>(static_cast<unsigned char>(text[i]));
         if (((x >> 7) == 0b0) && (byte_counter == 0))
             return true;  // last char is a single byte char

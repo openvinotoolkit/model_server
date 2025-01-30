@@ -25,11 +25,17 @@
 #include "../logging.hpp"
 #include "../status.hpp"
 
+#pragma warning(push)
+#pragma warning(disable : 4005 6011 6326 6385 6246 6386 6326 6011 4005)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>  // everything needed for embedding
+#pragma warning(pop)
 
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "src/python/python_executor_calculator.pb.h"

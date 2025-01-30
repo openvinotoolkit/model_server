@@ -20,15 +20,23 @@
 #include <utility>
 #include <variant>
 
+#pragma warning(push)
+#pragma warning(disable : 4005 4309 6001 6386 6011)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
 #include <rapidjson/writer.h>
-
+#pragma warning(pop)
+#pragma warning(push)
+#pragma warning(disable : 6001 6385 6386)
 #include "absl/strings/escaping.h"
-#include "rapidjson/document.h"
+#pragma warning(pop)
 
 using namespace rapidjson;
 
@@ -140,6 +148,8 @@ void EmbeddingsHandler::setPromptTokensUsage(int promptTokens) {
     this->promptTokens = promptTokens;
 }
 
+#pragma warning(push)
+#pragma warning(disable : 4267)
 absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings) {
     Writer<StringBuffer> writer(buffer);
     writer.StartObject();
@@ -184,7 +194,7 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
             writer.EndArray();
         }
         writer.String("index");
-        writer.Int(i);
+        writer.Uint(i);
         writer.EndObject();
     }
 
@@ -193,12 +203,13 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
     writer.String("usage");
     writer.StartObject();
     writer.String("prompt_tokens");
-    writer.Int(promptTokens);
+    writer.Uint(promptTokens);
     writer.String("total_tokens");
-    writer.Int(promptTokens);
+    writer.Uint(promptTokens);
     writer.EndObject();
 
     writer.EndObject();
     return absl::OkStatus();
 }
+#pragma warning(pop)
 }  // namespace ovms

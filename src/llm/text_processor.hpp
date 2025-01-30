@@ -21,9 +21,12 @@
 #include <string>
 
 #include <openvino/openvino.hpp>
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 // Python execution for template processing
 #include <pybind11/embed.h>  // everything needed for embedding
 #include <pybind11/stl.h>
+#pragma warning(pop)
 
 #include "src/python/utils.hpp"
 

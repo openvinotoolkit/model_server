@@ -19,12 +19,15 @@
 #include <memory>
 #include <string>
 
+#pragma warning(push)
+#pragma warning(disable : 4624 6001 6385 6386 6326 6011)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include "tensorinfo.hpp"
 
@@ -32,7 +35,7 @@ namespace ovms {
 
 using proto_signature_map_t = google::protobuf::Map<std::string, tensorflow::TensorInfo>;
 
-class ExecutionContext;
+struct ExecutionContext;
 class ModelInstance;
 class ModelManager;
 class PipelineDefinition;

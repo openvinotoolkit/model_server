@@ -19,15 +19,20 @@
 #include <variant>
 #include <vector>
 
+#pragma warning(push)
+#pragma warning(disable : 6001 6385 6386 6011)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include <openvino/runtime/tensor.hpp>
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
-
-#include "rapidjson/document.h"
+#pragma warning(pop)
 
 namespace ovms {
 

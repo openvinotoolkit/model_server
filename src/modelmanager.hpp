@@ -27,7 +27,10 @@
 #include <vector>
 
 #include <openvino/openvino.hpp>
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/document.h>
+#pragma warning(pop)
 #include <spdlog/spdlog.h>
 #include <sys/stat.h>
 
@@ -46,7 +49,7 @@ const uint32_t DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 extern const std::string DEFAULT_MODEL_CACHE_DIRECTORY;
 
 class Config;
-class CNLIMWrapper;
+struct CNLIMWrapper;
 class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricRegistry;

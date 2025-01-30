@@ -19,21 +19,27 @@
 #include <unordered_map>
 #include <utility>
 
+#pragma warning(push)
+#pragma warning(disable : 6001 6385 6386 6326 6011 4309 6246 4005)
+#include "absl/strings/escaping.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "mediapipe/framework/port/ret_check.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include <adapters/inference_adapter.h>
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#pragma warning(pop)
 
 #include "../http_payload.hpp"
 #include "../logging.hpp"
 #include "../profiler.hpp"
-#include "absl/strings/escaping.h"
 #include "src/rerank/rerank_calculator.pb.h"
 #include "src/rerank/rerank_utils.hpp"
 

@@ -3,19 +3,19 @@
         { "config": {
                 "name":"face_landmark",
                 "base_path":"face_landmark",
-                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY"}
             }
         },
         { "config": {
                 "name":"face_detection",
                 "base_path":"face_detection_short_range",
-                "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY"}
             }
         },
         { "config": {
             "name":"iris_landmark",
             "base_path":"iris_landmark",
-            "plugin_config": {"PERFORMANCE_HINT": "LATENCY", "AFFINITY": "NUMA"}
+            "plugin_config": {"PERFORMANCE_HINT": "LATENCY"}
           }
         }
     ],

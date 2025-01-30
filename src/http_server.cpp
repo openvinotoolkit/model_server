@@ -26,9 +26,11 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#pragma warning(pop)
 
 #include "http_rest_api_handler.hpp"
 #include "http_status_code.hpp"
@@ -180,7 +182,7 @@ static const ovms::HTTPStatusCode http(const ovms::Status& status) {
 
 #if (USE_DROGON == 1)
 std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
-    auto server = std::make_unique<DrogonHttpServer>(num_threads, port, address);
+    auto server = std::make_unique<DrogonHttpServer>(num_threads, num_threads, port, address);
     auto handler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
     auto& pool = server->getPool();
     server->registerRequestDispatcher([handler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {

@@ -29,23 +29,32 @@
 #include "../status.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 
+#pragma warning(push)
+#pragma warning(disable : 6385 6386 6326 6011 6294 6201 4309 4005)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/formats/image_frame_opencv.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "mediapipe/framework/formats/tensor.h"
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
+#pragma warning(push)
+#pragma warning(disable : 6269 6294 6201)
 #include "opencv2/opencv.hpp"
+#pragma warning(pop)
 
 #if (PYTHON_DISABLE == 0)
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020 6001)
 #include <pybind11/embed.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#pragma warning(pop)
 
 #include "../python/python_backend.hpp"
 #include "../python/pythonnoderesources.hpp"

@@ -18,11 +18,13 @@
 
 #include <string>
 #include <utility>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/error/en.h>
 #include <rapidjson/error/error.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
+#pragma warning(pop)
 
 #include "logging.hpp"
 #include "status.hpp"
@@ -474,14 +476,14 @@ Status validateJsonAgainstSchema(rapidjson::Document& json, const char* schema, 
     if (!json.Accept(validator)) {
         rapidjson::StringBuffer sb;
         validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
-        std::string schema = sb.GetString();
+        std::string invalidatingSchema = sb.GetString();
         std::string keyword = validator.GetInvalidSchemaKeyword();
         sb.Clear();
         validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
         std::string key = sb.GetString();
 
         std::string errorMsg = "JSON schema parse error:";
-        errorMsg += schema;
+        errorMsg += invalidatingSchema;
         errorMsg += ". Keyword:";
         errorMsg += keyword;
         errorMsg += " Key: ";
