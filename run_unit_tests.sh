@@ -71,7 +71,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
     if [[ "$(python3 --version)" =~ "Python 3.12" ]] ; then
         set +x
         # Tests starting python interpreter should be executed separately for Python 3.12 due to issues with multiple reinitialization of the interpreter
-        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*:Server.*" | grep -vE '^ ' | cut -d. -f1` ; do
+        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
             if bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=all --test_filter="$i.*" //src:ovms_test > tmp.log 2>&1 ; then
                 echo -n .
             else
