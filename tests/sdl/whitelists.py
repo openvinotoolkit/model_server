@@ -160,7 +160,6 @@ packages = {
     },
     OvmsBaseImageType.UBUNTU_PYTHON: {
         'libexpat1',
-        'libreadline8',
         'libsqlite3-0',
         'readline-common',
     },
@@ -179,6 +178,7 @@ packages = {
     OvmsBaseImageType.UBUNTU22: {'libicu70'},
     OvmsBaseImageType.UBUNTU22_PYTHON: {
         'libmpdec3',
+        'libreadline8',
         'libpython3.10',
         'libpython3.10-minimal',
         'libpython3.10-stdlib',
@@ -189,8 +189,6 @@ packages = {
         'netbase',
         'libreadline8t64'},
     OvmsBaseImageType.UBUNTU24_PYTHON: {
-        'libmpdec3',
-        'libpython3.12',
         'libpython3.12t64',
         'libpython3.12-minimal',
         'libpython3.12-stdlib',
