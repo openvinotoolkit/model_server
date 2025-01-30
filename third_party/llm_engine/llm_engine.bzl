@@ -105,7 +105,7 @@ cmake(
         "--",  # <- Pass remaining options to the native tool.
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
         # there is no elegant parallel compilation support - lets go with default - CORES + 2 for ninja
-        #"-j 32",
+        "-j",
     ],
     cache_entries = {{ 
         {cache_entries}
