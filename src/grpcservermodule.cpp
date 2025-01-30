@@ -16,10 +16,12 @@
 #include "grpcservermodule.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <map>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -224,6 +226,8 @@ Status GRPCServerModule::start(const ovms::Config& config) {
         }
         servers.push_back(std::move(server));
     }
+    // temporary WA for issues with gRPC responding with NOT_AVAILABLE even tough servers started
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", GRPC_SERVER_MODULE_NAME);
     SPDLOG_INFO("Started gRPC server on port {}", config.port());
