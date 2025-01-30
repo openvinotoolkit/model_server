@@ -132,6 +132,7 @@ COMMON_STATIC_LIBS_COPTS = select({
                         "/GS",
                         "/DYNAMICBASE",
                         "/Qspectre",
+                        "/guard:cf",
                         "/QConditional-branch:Guard",
                         "/wd4018", # level 3
                         "/wd4068", # level 1
