@@ -68,7 +68,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
     bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_test || exit 1
     echo "Executing unit tests"
     failed=0
-    if [[ "$(python3 --version)" =~ "Python 3.13" ]] ; then
+    if [[ "$(python3 --version)" =~ "Python 3.12" ]] ; then
         set +x
         # Tests starting python interpreter should be executed separately for Python 3.12 due to issues with multiple reinitialization of the interpreter
         for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*:Server.*" | grep -vE '^ ' | cut -d. -f1` ; do
