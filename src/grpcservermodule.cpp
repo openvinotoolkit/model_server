@@ -161,12 +161,12 @@ Status GRPCServerModule::start(const ovms::Config& config) {
     std::map<std::string, std::string> channel_arguments;
     auto status = setDefaultGrpcChannelArgs(channel_arguments);
     if (!status.ok()) {
-        SPDLOG_ERROR(status.string());
+        SPDLOG_ERROR("{}", status.string());
         return status;
     }
     status = parseGrpcChannelArgs(config.grpcChannelArguments(), channel_arguments);
     if (!status.ok()) {
-        SPDLOG_ERROR(status.string());
+        SPDLOG_ERROR("{}", status.string());
         return status;
     }
 
@@ -211,7 +211,7 @@ Status GRPCServerModule::start(const ovms::Config& config) {
         std::stringstream ss;
         ss << "at " << config.grpcBindAddress() << ":" << std::to_string(config.port()) << " - port is busy";
         auto status = Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
-        SPDLOG_ERROR(status.string());
+        SPDLOG_ERROR("{}", status.string());
         return status;
     }
     for (uint32_t i = 0; i < grpcServersCount; ++i) {
@@ -220,7 +220,7 @@ Status GRPCServerModule::start(const ovms::Config& config) {
             std::stringstream ss;
             ss << "at " << config.grpcBindAddress() << ":" << std::to_string(config.port());
             auto status = Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
-            SPDLOG_ERROR(status.string());
+            SPDLOG_ERROR("{}", status.string());
             return status;
         }
         servers.push_back(std::move(server));

@@ -228,7 +228,7 @@ Status serializePredictResponse(
         case ovms::Precision::STRING:
         default: {
             Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
-            SPDLOG_ERROR(status.string());
+            SPDLOG_ERROR("{}", status.string());
             return status;
         }
         }
@@ -326,7 +326,7 @@ Status serializePredictResponse(
         case ovms::Precision::BIN:
         default: {
             Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
-            SPDLOG_ERROR(status.string());
+            SPDLOG_ERROR("{}", status.string());
             return status;
         }
         }

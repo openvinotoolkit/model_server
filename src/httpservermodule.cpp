@@ -41,7 +41,7 @@ Status HTTPServerModule::start(const ovms::Config& config) {
         std::stringstream ss;
         ss << "at " << server_address;
         auto status = Status(StatusCode::FAILED_TO_START_REST_SERVER, ss.str());
-        SPDLOG_ERROR(status.string());
+        SPDLOG_ERROR("{}", status.string());
         return status;
     }
 #else
@@ -50,7 +50,7 @@ Status HTTPServerModule::start(const ovms::Config& config) {
         std::stringstream ss;
         ss << "at " << server_address;
         auto status = Status(StatusCode::FAILED_TO_START_REST_SERVER, ss.str());
-        SPDLOG_ERROR(status.string());
+        SPDLOG_ERROR("{}", status.string());
         return status;
     }
 #endif

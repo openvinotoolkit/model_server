@@ -342,7 +342,7 @@ Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* cont
     ::inference::ModelInferRequest firstRequest;
     if (!serverReaderWriter->Read(&firstRequest)) {
         Status status = StatusCode::MEDIAPIPE_UNINITIALIZED_STREAM_CLOSURE;
-        SPDLOG_DEBUG(status.string());
+        SPDLOG_DEBUG("{}", status.string());
         return status;
     }
     std::shared_ptr<MediapipeGraphExecutor> executor;
@@ -436,7 +436,7 @@ KFSInferenceServiceImpl::KFSInferenceServiceImpl(const Server& server) :
     modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
     if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME)) {
         const char* message = "Tried to create kserve inference service impl without servable manager module";
-        SPDLOG_ERROR(message);
+        SPDLOG_ERROR("{}", message);
         throw std::logic_error(message);
     }
 }

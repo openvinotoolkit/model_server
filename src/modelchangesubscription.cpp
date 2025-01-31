@@ -27,8 +27,9 @@ void ModelChangeSubscription::subscribe(PipelineDefinition& pd) {
         std::stringstream ss;
         ss << "Tried to subscribe pipeline:" << pd.getName() << " to:" << ownerName;
         ss << ", but this pipeline was already subscribed";
-        SPDLOG_ERROR(ss.str().c_str());
-        throw std::logic_error(ss.str());
+        const std::string details = ss.str();
+        SPDLOG_ERROR("{}", details.c_str());
+        throw std::logic_error(details);
     }
     subscriptions.insert({pd.getName(), pd});
 }
@@ -40,8 +41,9 @@ void ModelChangeSubscription::unsubscribe(PipelineDefinition& pd) {
         std::stringstream ss;
         ss << "Tried to unsubscribe pipeline:" << pd.getName() << " to:" << ownerName;
         ss << ", but this pipeline was never subscribed";
-        SPDLOG_ERROR(ss.str().c_str());
-        throw std::logic_error(ss.str());
+        const std::string details = ss.str();
+        SPDLOG_ERROR("{}", details.c_str());
+        throw std::logic_error(details);
     }
 }
 

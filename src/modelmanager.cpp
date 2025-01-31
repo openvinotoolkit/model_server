@@ -967,7 +967,7 @@ public:
         file.seekg(0);
     }
     void log() {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, ss.str());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "{}", ss.str());
     }
 };
 

@@ -123,7 +123,7 @@ static mediapipe::Tensor::ElementType KFSPrecisionToMPPrecision(const KFSDataTyp
            << " with exception: "                                     \
            << e.what();                                               \
         std::string details{ss.str()};                                \
-        SPDLOG_DEBUG(details);                                        \
+        SPDLOG_DEBUG("{}", details);                                  \
         return Status(StatusCode::UNKNOWN_ERROR, std::move(details)); \
     }                                                                 \
     catch (...) {                                                     \
@@ -132,7 +132,7 @@ static mediapipe::Tensor::ElementType KFSPrecisionToMPPrecision(const KFSDataTyp
            << outputStreamName                                        \
            << " with exception.";                                     \
         std::string details{ss.str()};                                \
-        SPDLOG_DEBUG(details);                                        \
+        SPDLOG_DEBUG("{}", details);                                  \
         return Status(StatusCode::UNKNOWN_ERROR, std::move(details)); \
     }
 
@@ -291,7 +291,7 @@ Status receiveAndSerializePacket<PyObjectWrapper<py::object>>(const ::mediapipe:
         std::stringstream ss;
         ss << "Failed to get packet " << outputStreamName << " due to Python object unpacking error: " << e.what();
         std::string details{ss.str()};
-        SPDLOG_DEBUG(details);
+        SPDLOG_DEBUG("{}", details);
         return Status(StatusCode::UNKNOWN_ERROR, std::move(details));
     }
     HANDLE_PACKET_RECEIVAL_EXCEPTIONS();
@@ -318,14 +318,14 @@ static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<co
            << e.what()                                                                                      \
            << "; caught during " TYPE_STRING " deserialization from KServe request tensor";                 \
         std::string details = ss.str();                                                                     \
-        SPDLOG_DEBUG(details);                                                                              \
+        SPDLOG_DEBUG("{}", details);                                                                        \
         return Status(StatusCode::UNKNOWN_ERROR, std::move(details));                                       \
     }                                                                                                       \
     catch (...) {                                                                                           \
         std::stringstream ss;                                                                               \
         ss << "Unknown exception caught during " TYPE_STRING " deserialization from KServe request tensor"; \
         std::string details = ss.str();                                                                     \
-        SPDLOG_DEBUG(details);                                                                              \
+        SPDLOG_DEBUG("{}", details);                                                                        \
         return Status(StatusCode::UNKNOWN_ERROR, std::move(details));                                       \
     }
 
@@ -378,7 +378,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             std::stringstream ss;
             ss << "Not supported precision for Mediapipe tensor deserialization: " << requestInputItr->datatype();
             const std::string details = ss.str();
-            SPDLOG_DEBUG(details);
+            SPDLOG_DEBUG("{}", details);
             return Status(StatusCode::INVALID_PRECISION, std::move(details));
         }
         std::vector<int> rawShape;
@@ -448,7 +448,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             std::stringstream ss;
             ss << "Not supported precision for Tensorflow tensor deserialization: " << requestInputItr->datatype();
             const std::string details = ss.str();
-            SPDLOG_DEBUG(details);
+            SPDLOG_DEBUG("{}", details);
             return Status(StatusCode::INVALID_PRECISION, std::move(details));
         }
         TensorShape tensorShape;
@@ -692,7 +692,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         std::stringstream ss;
         ss << "Invalid Mediapipe Image input shape size. Expected: 3; Actual: " << requestInputItr->shape().size();
         const std::string details = ss.str();
-        SPDLOG_DEBUG(details);
+        SPDLOG_DEBUG("{}", details);
         return Status(StatusCode::INVALID_SHAPE, details);
     }
     int64_t numberOfRows = requestInputItr->shape()[0];
@@ -700,7 +700,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         std::stringstream ss;
         ss << "Invalid Mediapipe Image input height. Expected greater than 0; Actual: " << numberOfRows << "; Expected layout - HWC.";
         const std::string details = ss.str();
-        SPDLOG_DEBUG(details);
+        SPDLOG_DEBUG("{}", details);
         return Status(StatusCode::INVALID_SHAPE, details);
     }
     int64_t numberOfCols = requestInputItr->shape()[1];
@@ -708,7 +708,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         std::stringstream ss;
         ss << "Invalid Mediapipe Image input width. Expected greater than 0; Actual: " << numberOfCols << "; Expected layout - HWC.";
         const std::string details = ss.str();
-        SPDLOG_DEBUG(details);
+        SPDLOG_DEBUG("{}", details);
         return Status(StatusCode::INVALID_SHAPE, details);
     }
     int64_t numberOfChannels = requestInputItr->shape()[2];
@@ -716,7 +716,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         std::stringstream ss;
         ss << "Invalid Mediapipe Image input number of channels. Expected greater than 0; Actual: " << numberOfChannels << "; Expected layout - HWC.";
         const std::string details = ss.str();
-        SPDLOG_DEBUG(details);
+        SPDLOG_DEBUG("{}", details);
         return Status(StatusCode::INVALID_SHAPE, details);
     }
     size_t elementSize = KFSDataTypeSize(requestInputItr->datatype());
@@ -725,7 +725,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         std::stringstream ss;
         ss << "Invalid Mediapipe Image input buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedSize;
         const std::string details = ss.str();
-        SPDLOG_DEBUG(details);
+        SPDLOG_DEBUG("{}", details);
         return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
     auto imageFormat = KFSDatatypeToImageFormat(requestInputItr->datatype(), numberOfChannels);
@@ -1037,7 +1037,7 @@ static Status deserializeTimestampIfAvailable(
             }
         } else {
             auto status = Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request parameter OVMS_MP_TIMESTAMP. Should be int64");
-            SPDLOG_DEBUG(status.string());
+            SPDLOG_DEBUG("{}", status.string());
             return status;
         }
     }

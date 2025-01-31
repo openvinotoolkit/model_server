@@ -60,7 +60,7 @@ void printNodeConnections(const std::string& nodeName, const std::string& source
     for (auto& pair : pairs) {
         ss << "\t" << nodeName << "[" << pair.second << "]=" << sourceNode << "[" << pair.first << "]\n";
     }
-    SPDLOG_LOGGER_DEBUG(dag_executor_logger, ss.str());
+    SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", ss.str());
 }
 
 inline static void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms::Status& newFailStatus) {

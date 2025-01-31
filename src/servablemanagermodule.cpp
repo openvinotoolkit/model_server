@@ -41,7 +41,7 @@ ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
         this->servableManager = std::make_unique<ModelManager>("", &metricsModule->getRegistry(), pythonBackend);
     } else {
         const char* message = "Tried to create servable manager module without metrics module";
-        SPDLOG_ERROR(message);
+        SPDLOG_ERROR("{}", message);
         throw std::logic_error(message);
     }
 }

@@ -76,7 +76,7 @@ Status validateCapiTensorContent(const InferenceTensor& tensor, ovms::Precision 
            << "; version: " << servableVersion
            << "; is missing buffer for tensor: " << tensorName;
         const std::string details = ss.str();
-        SPDLOG_DEBUG(details);
+        SPDLOG_DEBUG("{}", details);
         return Status(StatusCode::NONEXISTENT_BUFFER, details);
     }
 
@@ -413,7 +413,7 @@ static Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t
         std::stringstream ss;
         ss << "; actual " << expectedTensorSize / (1024 * 1024) << "MB (max 1GB)";
         const std::string details = ss.str();
-        SPDLOG_DEBUG(details);
+        SPDLOG_DEBUG("{}", details);
         return Status(StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED, details);
     }
     return StatusCode::OK;

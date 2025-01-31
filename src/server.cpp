@@ -85,7 +85,7 @@ Server& Server::instance() {
 static void logConfig(const Config& config) {
     std::string project_name(PROJECT_NAME);
     std::string project_version(PROJECT_VERSION);
-    SPDLOG_INFO(project_name + " " + project_version);
+    SPDLOG_INFO("{} {}", project_name, project_version);
     SPDLOG_INFO("OpenVINO backend {}", OPENVINO_NAME);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.configPath().empty()) {

@@ -208,7 +208,7 @@ Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::str
             (name == *outputNameFromCapiTensor)) {
             if (precision == ov::element::string) {
                 std::string msg{"String format is not supported in DAG in demultiplexing scenarios as of now"};
-                SPDLOG_LOGGER_DEBUG(dag_executor_logger, msg);
+                SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", msg);
                 return Status(StatusCode::NOT_IMPLEMENTED, std::move(msg));
             }
 

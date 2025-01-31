@@ -107,16 +107,16 @@ void LLMNodeResources::loadTextProcessor(LLMNodeResources& nodeResources, const 
         nodeResources.textProcessor.eosToken = locals["eos_token"].cast<std::string>();
         nodeResources.textProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
     } catch (const pybind11::error_already_set& e) {
-        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
+        SPDLOG_INFO("{}", CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
     } catch (const pybind11::cast_error& e) {
-        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
+        SPDLOG_INFO("{}", CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
     } catch (const pybind11::key_error& e) {
-        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
+        SPDLOG_INFO("{}", CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
     } catch (...) {
-        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
+        SPDLOG_INFO("{}", CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
     }
 }
