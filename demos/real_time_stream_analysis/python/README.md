@@ -111,6 +111,7 @@ curl -L "https://www.pexels.com/download/video/3044127/?fps=24.0&h=1080&w=1920" 
 python3 client.py --grpc_address localhost:9000 --input_stream 'video.mp4' --output_stream 'output.mp4'
 ```
 
+
 #### Inference using RTSP stream
 
 The rtsp client app needs to have access to RTSP stream to read from and write to. Below are the steps to simulate such stream with the video.mp4 and the content source.
@@ -121,9 +122,17 @@ Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx) using doc
 docker run --rm -d -p 8554:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
 ```
 
-or, download and extract a standalone binary from the [mediamtx release page](https://github.com/bluenviron/mediamtx/releases/) that corresponds to your operating system and architecture and start the server.
+or, download and extract a standalone binary from the [mediamtx release page](https://github.com/bluenviron/mediamtx/releases/) that corresponds to your operating system and architecture 
+alternatively you can install it for windows using `winget`.
 
-```console
+```bat
+winget install mediamtx
+```
+
+and start the server.
+
+
+```bat
 mediamtx 
 ```
 
