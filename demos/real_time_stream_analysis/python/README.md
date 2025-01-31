@@ -126,7 +126,7 @@ or, download and extract a standalone binary from the [mediamtx release page](ht
 alternatively you can install it for windows using `winget`.
 
 ```bat
-winget install mediamtx
+winget install mediamtx --silent --accept-source-agreements
 ```
 
 and start the server.
