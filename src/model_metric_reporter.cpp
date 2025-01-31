@@ -592,12 +592,12 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
 
         // KFS
         this->requestLatencyGrpcModelInferStream = family->addMetric({{"name", graphName},
-                                                                   {"method", "ModelInferStream"}},
+                                                                         {"method", "ModelInferStream"}},
             this->buckets);
         THROW_IF_NULL(this->requestLatencyGrpcModelInferStream, "cannot create metric");
         // V3
         this->requestLatencyRestV3Stream = family->addMetric({{"name", graphName},
-                                                                {"method", "Stream"}},
+                                                                 {"method", "Stream"}},
             this->buckets);
         THROW_IF_NULL(this->requestLatencyRestV3Stream, "cannot create metric");
     }

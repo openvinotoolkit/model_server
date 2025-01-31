@@ -1615,7 +1615,7 @@ node {
 }
 
 TEST_F(StreamingTest, AutomaticTimestampingExceedsMax) {
-    GTEST_SKIP() << "TODO"; 
+    GTEST_SKIP() << "TODO";
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
 #endif
