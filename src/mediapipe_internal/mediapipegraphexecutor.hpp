@@ -28,11 +28,8 @@
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
-<<<<<<< HEAD
 #pragma warning(push)
 #pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005)
-=======
->>>>>>> 8454ebcaa (process time)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
