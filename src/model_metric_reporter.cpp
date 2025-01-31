@@ -577,12 +577,6 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
         this->processingTimeRestV3Unary = family->addMetric({{"name", graphName},
                                                                 {"method", "Unary"}},
             this->buckets);
-        THROW_IF_NULL(this->processingTimeGrpcModelInfer, "cannot create metric");
-
-        // V3
-        this->processingTimeRestV3Unary = family->addMetric({{"name", graphName},
-                                                                {"method", "Unary"}},
-            this->buckets);
         THROW_IF_NULL(this->processingTimeRestV3Unary, "cannot create metric");
 
         this->processingTimeRestV3Stream = family->addMetric({{"name", graphName},
