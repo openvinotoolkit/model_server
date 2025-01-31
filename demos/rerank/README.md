@@ -148,10 +148,8 @@ index 1, relevance_score 0.09138210117816925
 ## Comparison with Hugging Faces
 
 ```bash
-popd
-pushd .
-cd demos/rerank/
-python demos/rerank/compare_results.py --query "hello" --document "welcome" --document "farewell" --base_url http://localhost:8000/v3/
+git clone https://github.com/openvinotoolkit/model_server
+python model_server/demos/rerank/compare_results.py --query "hello" --document "welcome" --document "farewell" --base_url http://localhost:8000/v3/
 query hello
 documents ['welcome', 'farewell']
 HF Duration: 145.731 ms
@@ -166,7 +164,7 @@ An asynchronous benchmarking client can be used to access the model server perfo
 ```bash
 popd
 pushd .
-cd demos/benchmark/embeddings/
+cd model_server/demos/benchmark/embeddings/
 pip install -r requirements.txt
 python benchmark_embeddings.py --api_url http://localhost:8000/v3/rerank --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large 
 Number of documents: 1000
