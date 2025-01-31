@@ -209,9 +209,6 @@ public:
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
         }
         MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
-        timer.stop(PROCESS);
-        double processTime = timer.template elapsed<std::chrono::microseconds>(PROCESS);
-        OBSERVE_IF_ENABLED(this->mediapipeServableMetricReporter->getProcessingTimeMetric(executionContext), processTime);
         if (outputPollers.size() != outputPollersWithReceivedPacket.size()) {
             SPDLOG_DEBUG("Mediapipe failed to execute. Failed to receive all output packets");
             return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Unknown error during mediapipe execution");
