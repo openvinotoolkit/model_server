@@ -24,7 +24,7 @@ In the demo will be used two gRPC communication patterns which might be advantag
 
 ## Requirements
 - on the client side it could be Windows, Mac or Linux. FFMPEG should be preinstalled in order to follow the scenario with RTSP client. Python3.7+ is needed.
-- the server can be deployed on Linux, MacOS (only with CPU execution on x86_64 arch) or inside WSL on Windows operating system.
+- the server can be deployed on Linux, MacOS (only with CPU execution on x86_64 arch) or on Windows operating system  (including inside WSL).
 - images sent over gRPC are not encoded, so there should be good network connectivity between the client and the server. At least 100Mb/s for real-time video analysis at high rate.
 
 ## gRPC streaming with MediaPipe graphs
@@ -106,7 +106,7 @@ The parameter `--input_stream 0 ` indicates the camera ID `0`.
 
 #### Reading from the encoded video file and saving results to a file
 
-```bash
+```console
 curl -L "https://www.pexels.com/download/video/3044127/?fps=24.0&h=1080&w=1920" -o video.mp4 
 python3 client.py --grpc_address localhost:9000 --input_stream 'video.mp4' --output_stream 'output.mp4'
 ```
@@ -115,16 +115,22 @@ python3 client.py --grpc_address localhost:9000 --input_stream 'video.mp4' --out
 
 The rtsp client app needs to have access to RTSP stream to read from and write to. Below are the steps to simulate such stream with the video.mp4 and the content source.
 
-Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
+Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx) using docker image.
 
 ```bash
-docker run --rm -d -p 8080:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
+docker run --rm -d -p 8554:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
+```
+
+or, download and extract a standalone binary from the [mediamtx release page](https://github.com/bluenviron/mediamtx/releases/) that corresponds to your operating system and architecture and start the server.
+
+```console
+mediamtx 
 ```
 
 Then write to the server using ffmpeg, example using video or camera
 
-```bash
-ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```console
+ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8554/channel1
 ```
 
 ```
@@ -132,14 +138,14 @@ ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://local
 ```
 
 While the RTSP stream is active, run the client to read it and send the output stream
-```bash
-python3 client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
+```console
+python3 client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8554/channel1' --output_stream 'rtsp://localhost:8554/channel2'
 ```
 
 The results can be examined with ffplay utility which reads and display the altered content.
 
-```bash
-ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
+```console
+ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8554/channel2
 ```
 
 
