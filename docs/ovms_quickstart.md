@@ -1,4 +1,4 @@
-# Quickstart Guide {#ovms_docs_quick_start_guide}
+# QuickStart - classic models {#ovms_docs_quick_start_guide}
 
 OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2024/documentation/openvino-ir-format/operation-sets.html)
 , [ONNX](https://onnx.ai/), [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) or [TensorFlow](https://www.tensorflow.org/) format. You can get them by:
@@ -132,3 +132,4 @@ In our case, it will be a modified input image with bounding boxes indicating de
 or [PaddlePaddle model demo](../demos/classification_using_paddlepaddle_model/python/README.md).
 
 Congratulations, you have completed the QuickStart guide. Try other Model Server [demos](../demos/README.md) or explore more [features](features.md) to create your application.
+Check also how to write the client code using [TFS API](./clients_tfs.md) and [KServe API](./clients_kfs.md)

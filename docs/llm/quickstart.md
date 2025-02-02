@@ -1,4 +1,4 @@
-# Efficient LLM Serving - quickstart {#ovms_docs_llm_quickstart}
+# QuickStart - LLM models {#ovms_docs_llm_quickstart}
 
 Let's deploy [TinyLlama/TinyLlama-1.1B-Chat-v1.0](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0) model and request generation.
 

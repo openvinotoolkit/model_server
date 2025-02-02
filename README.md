@@ -11,12 +11,14 @@ Model Server hosts models and makes them accessible to software components over 
 
 ![OVMS diagram](docs/ovms_diagram.png)
 
-OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures, the model server uses the same architecture and API as [TensorFlow Serving](https://github.com/tensorflow/serving) and [KServe](https://github.com/kserve/kserve) while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
+OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures. It uses the same API as [TensorFlow Serving](https://github.com/tensorflow/serving) and [KServe](https://github.com/kserve/kserve) while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
+
+In addition, there are included endpoints for generative use cases compatible with [OpenAI API and Cohere API](./clients_genai.md).
 
 ![OVMS picture](docs/ovms_high_level.png)
 
 The models used by the server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Repository](docs/models_repository.md) documentation. Model server works inside [Docker containers](docs/deploying_server.md#deploying-model-server-in-docker-container), on [Bare Metal](docs/deploying_server.md#deploying-model-server-on-baremetal-without-container), and in [Kubernetes environment](docs/deploying_server.md#deploying-model-server-in-kubernetes).
-Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](docs/ovms_quickstart.md) or explore [Model Server features](docs/features.md).
+Start using OpenVINO Model Server with a fast-forward serving example from the [QuickStart guide](docs/ovms_quickstart.md) or [LLM QuickStart guide](./llm/quickstart.md).
 
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
@@ -32,36 +34,27 @@ Read [release notes](https://github.com/openvinotoolkit/model_server/releases) t
 - [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) along with [custom nodes in DAG pipelines](docs/custom_node_development.md)
 - [Metrics](docs/metrics.md) - metrics compatible with Prometheus standard
 - Support for multiple frameworks, such as TensorFlow, PaddlePaddle and ONNX
-- Support for [AI accelerators](https://docs.openvino.ai/nightly/about-openvino/compatibility-and-support/supported-devices.html)
+- Support for [AI accelerators](./docs/accelerators.md)
 
-**Note:** OVMS has been tested on RedHat, and Ubuntu. The latest publicly released docker images are based on Ubuntu and UBI.
-They are stored in:
+**Note:** OVMS has been tested on RedHat, Ubuntu and Windows. 
+Public docker images are stored in:
 - [Dockerhub](https://hub.docker.com/r/openvino/model_server)
 - [RedHat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
-
+Binary packages for Linux and Windows are on [Github](https://github.com/openvinotoolkit/model_server/releases)
 
 ## Run OpenVINO Model Server
 
-A demonstration on how to use OpenVINO Model Server can be found in our quick-start guide [for vision use case](docs/ovms_quickstart.md) and [LLM text generation](docs/llm/quickstart.md).
-For more information on using Model Server in various scenarios you can check the following guides:
+A demonstration on how to use OpenVINO Model Server can be found in our [quick-start guide for vision use case](docs/ovms_quickstart.md) and [LLM text generation](docs/llm/quickstart.md).
 
-* [Model repository configuration](docs/models_repository.md)
+Check also other instructions:
 
-* [Deployment options](docs/deploying_server.md)
+[Preparing model repository](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_models_repository.html)
 
-* [Performance tuning](docs/performance_tuning.md)
+[Deployment](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_deploying_server.html)
 
-* [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md)
+[Writing client code](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_server_app.html)
 
-* [Custom nodes development](docs/custom_node_development.md)
-
-* [Serving stateful models](docs/stateful_models.md)
-
-* [Deploy using a Kubernetes Helm Chart](https://github.com/openvinotoolkit/operator/tree/main/helm-charts/ovms)
-
-* [Deployment using Kubernetes Operator](https://operatorhub.io/operator/ovms-operator)
-
-* [Using binary input data](docs/binary_input.md)
+[Demos](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_demos.html)
 
 
 
@@ -69,19 +62,14 @@ For more information on using Model Server in various scenarios you can check th
 
 * [OpenVINO&trade;](https://software.intel.com/en-us/openvino-toolkit)
 
-* [TensorFlow Serving](https://github.com/tensorflow/serving)
+* [RAG building blocks made easy and affordable with OpenVINO Model Server](https://medium.com/openvino-toolkit/rag-building-blocks-made-easy-and-affordable-with-openvino-model-server-e7b03da5012b)
 
-* [gRPC](https://grpc.io/)
+* [Simplified Deployments with OpenVINO™ Model Server and TensorFlow Serving](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Simplified-Deployments-with-OpenVINO-Model-Server-and-TensorFlow/post/1353218)
 
-* [RESTful API](https://restfulapi.net/)
+* [Inference Scaling with OpenVINO™ Model Server in Kubernetes and OpenShift Clusters](https://www.intel.com/content/www/us/en/developer/articles/technical/deploy-openvino-in-openshift-and-kubernetes.html)
 
 * [Benchmarking results](https://docs.openvino.ai/nightly/about-openvino/performance-benchmarks.html)
 
-* [Speed and Scale AI Inference Operations Across Multiple Architectures](https://techdecoded.intel.io/essentials/speed-and-scale-ai-inference-operations-across-multiple-architectures/?elq_cid=3646480_ts1607680426276&erpm_id=6470692_ts1607680426276) - webinar recording
-
-* [What is new in OpenVINO Model Server C++](https://www.intel.com/content/www/us/en/artificial-intelligence/posts/whats-new-openvino-model-server.html)
-
-* [Capital Health Improves Stroke Care with AI](https://www.intel.co.uk/content/www/uk/en/customer-spotlight/stories/capital-health-ai-customer-story.html) - use case example
 
 ## Contact
 

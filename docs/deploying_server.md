@@ -8,6 +8,10 @@ hidden:
 ovms_docs_deploying_server_docker
 ovms_docs_deploying_server_baremetal
 ovms_docs_deploying_server_kubernetes
+ovms_docs_serving_model
+ovms_docs_parameters
+ovms_docs_target_devices
+ovms_docs_security
 ```
 
 There are multiple options for deploying OpenVINO Model Server
