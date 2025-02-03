@@ -260,4 +260,16 @@ TEST(StringUtils, isValidUtf8) {
 
     result = ovms::isValidUtf8("\x7a\xaa\xaa");  // incorrect sequence without length information
     EXPECT_FALSE(result);
+
+    result = ovms::isValidUtf8("\xc3\xa9");
+    EXPECT_TRUE(result);
+
+    result = ovms::isValidUtf8("\xe2\x82\xac");
+    EXPECT_TRUE(result);
+
+    result = ovms::isValidUtf8("\xf0\x9d\x84\x9e");
+    EXPECT_TRUE(result);
+
+    result = ovms::isValidUtf8("\xaa\xaa");  // iterations would decrease i below 0
+    EXPECT_FALSE(result);
 }

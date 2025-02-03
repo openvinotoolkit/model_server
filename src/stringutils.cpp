@@ -160,7 +160,7 @@ bool isValidUtf8(const std::string& text) {
     if (text.size() == 0) {
         return false;
     }
-    for (size_t i = text.size() - 1; i >= 0 && byte_counter <= 3; i--) {
+    for (size_t i = text.size(); i-- > 0 && byte_counter <= 3;) {
         int x = static_cast<int>(static_cast<unsigned char>(text[i]));
         if (((x >> 7) == 0b0) && (byte_counter == 0))
             return true;  // last char is a single byte char
