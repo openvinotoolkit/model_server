@@ -284,6 +284,60 @@ TEST_F(EmbeddingsHttpTest, simplePositiveMultipleStrings) {
     ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
 }
 
+TEST_F(EmbeddingsHttpTest, positiveLongInput) {
+    std::string words;
+    for (int i = 0; i < 500; i++) {
+        words += "hello ";
+    }
+    std::string requestBody = "{ \"model\": \"embeddings\", \"input\": \"" + words + " \"}";
+
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    std::cout << response << std::endl;
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_EQ(d["usage"]["prompt_tokens"], 502);  // 500 words + 2 special tokens
+}
+
+TEST_F(EmbeddingsHttpTest, negativeTooLongInput) {
+    std::string words;
+    for (int i = 0; i < 511; i++) {
+        words += "hello ";
+    }
+    std::string requestBody = "{ \"model\": \"embeddings\", \"input\": \"" + words + " \"}";
+
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    ASSERT_EQ(status,
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    std::cout << response << std::endl;
+    ASSERT_EQ(ok.Code(), 1);
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
+}
+
+TEST_F(EmbeddingsHttpTest, negativeTooLongInputPair) {
+    std::string words;
+    for (int i = 0; i < 511; i++) {
+        words += "hello ";
+    }
+    std::string requestBody = "{ \"model\": \"embeddings\", \"input\": [\"" + words + " \", \"short prompt\"]}";
+
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    ASSERT_EQ(status,
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    std::cout << response << std::endl;
+    ASSERT_EQ(ok.Code(), 1);
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
+}
 class EmbeddingsExtensionTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;

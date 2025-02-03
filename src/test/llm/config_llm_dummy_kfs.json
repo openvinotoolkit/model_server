@@ -4,6 +4,10 @@
     {
         "name":"llmDummyKFS",
         "graph_path":"/ovms/src/test/llm/graphkfspass.pbtxt"
+    },
+    {
+        "name":"llmDummySpeculativePipeline",
+        "graph_path":"/ovms/src/test/llm/graphspeculative.pbtxt"
     }
     ]
 }

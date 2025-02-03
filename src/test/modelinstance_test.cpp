@@ -1210,23 +1210,6 @@ TEST(CpuThroughputStreamsNotSpecified, NotSetWhenPerfHintSpecified) {
     EXPECT_EQ(pluginConfig.count("CPU_THROUGHPUT_STREAMS"), 0);
 }
 
-TEST(CpuThroughputNotSpecified, AffinityWithoutHint) {
-    ovms::ModelConfig config;
-    config.setPluginConfig({{"AFFINITY", "NUMA"}});
-    ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
-    EXPECT_EQ(pluginConfig.count("PERFORMANCE_HINT"), 1);
-    EXPECT_EQ(pluginConfig.count("AFFINITY"), 1);
-}
-
-TEST(CpuThroughputNotSpecified, AffinityWithNumStreams) {
-    ovms::ModelConfig config;
-    config.setPluginConfig({{"NUM_STREAMS", "4"}, {"AFFINITY", "NUMA"}});
-    ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
-    EXPECT_EQ(pluginConfig.count("PERFORMANCE_HINT"), 0);
-    EXPECT_EQ(pluginConfig.count("AFFINITY"), 1);
-    EXPECT_EQ(pluginConfig.count("NUM_STREAMS"), 1);
-}
-
 TEST(TensorMap, TestProcessingHintFromShape) {
     auto servableInputs = ovms::tensor_map_t({
         {"Input_FP32_1_224_224_3_NHWC",

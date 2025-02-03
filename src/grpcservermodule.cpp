@@ -96,6 +96,7 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
     // Bind to port
     sockaddr_in addr;
     addr.sin_family = AF_INET;
+#pragma warning(disable : 4996)
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     addr.sin_port = htons(port);
     if (bind(this->sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
@@ -184,9 +185,9 @@ Status GRPCServerModule::start(const ovms::Config& config) {
         try {
             int i = std::stoi(value);
             builder.AddChannelArgument(name, i);
-        } catch (std::invalid_argument const& e) {
+        } catch (std::invalid_argument const&) {
             builder.AddChannelArgument(name, value);
-        } catch (std::out_of_range const& e) {
+        } catch (std::out_of_range const&) {
             SPDLOG_WARN("Out of range parameter {} : {}", name, value);
         }
     }

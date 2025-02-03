@@ -17,8 +17,10 @@
 
 #include <functional>
 #include <string>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/error/en.h>
+#pragma warning(pop)
 
 #include "precision.hpp"
 #include "rest_utils.hpp"

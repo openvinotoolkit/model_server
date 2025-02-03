@@ -25,7 +25,7 @@
 
 namespace ovms {
 
-class ExecutionContext;
+struct ExecutionContext;
 class ServableMetricReporter;
 class Node;
 

@@ -18,8 +18,10 @@
 #include <functional>
 #include <memory>
 #include <string>
-
+#pragma warning(push)
+#pragma warning(disable : 6326)
 #include <drogon/drogon.h>
+#pragma warning(pop)
 
 #include "http_async_writer_interface.hpp"
 #include "mediapipe/framework/port/threadpool.h"
@@ -28,7 +30,8 @@
 namespace ovms {
 
 class DrogonHttpServer {
-    size_t num_workers;
+    size_t numWorkersForUnary;
+    size_t numWorkersForStreaming;
     std::unique_ptr<mediapipe::ThreadPool> pool;
     int port;
     std::string address;
@@ -38,7 +41,11 @@ class DrogonHttpServer {
         dispatcher;
 
 public:
-    DrogonHttpServer(size_t num_workers, int port, const std::string& address);
+    DrogonHttpServer(
+        size_t numWorkersForUnary,
+        size_t numWorkersForStreaming,
+        int port,
+        const std::string& address);
 
     Status startAcceptingRequests();
     void terminate();

@@ -32,7 +32,6 @@ ovms_demo_real_time_stream_analysis
 ovms_demo_using_paddlepaddle_model
 ovms_demo_bert
 ovms_demo_universal-sentence-encoder
-ovms_demo_speech_recognition
 ovms_demo_benchmark_client
 ovms_demo_python_seq2seq
 ovms_demo_python_stable_diffusion
@@ -49,7 +48,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 
 Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
 
-## With Python Client 
+## With Python Client
 | Demo | Description |
 |---|---|
 |[Stable Diffusion](python_demos/stable_diffusion/README.md) | Generate image using Stable Diffusion model sending prompts via gRPC API unary or interactive streaming endpoint.|
@@ -70,7 +69,7 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 |[Real Time Stream Analysis](real_time_stream_analysis/python/README.md)| Analyze RTSP video stream in real time with generic application template for custom pre and post processing routines as well as simple results visualizer for displaying predictions in the browser. |
 |[Classification with PaddlePaddle](classification_using_paddlepaddle_model/python/README.md)| Perform classification on an image with a PaddlePaddle model. |
 |[Natural Language Processing with BERT](bert_question_answering/python/README.md)|Provide a knowledge source and a query and use BERT model for question answering use case via gRPC API. This demo uses dynamic shape feature. |
-|[Using inputs data in string format with universal-sentence-encoder model](universal-sentence-encoder/README.md)| Handling AI model with text as the model input. | 
+|[Using inputs data in string format with universal-sentence-encoder model](universal-sentence-encoder/README.md)| Handling AI model with text as the model input. |
 |[Benchmark App](benchmark/python/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
 |[Face Blur Pipeline](face_blur/python/README.md)|Detect faces and blur image using a pipeline of object detection models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [face_blur custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/face_blur). |
 

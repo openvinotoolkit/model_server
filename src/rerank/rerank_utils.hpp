@@ -21,10 +21,16 @@
 #include <vector>
 
 #include <openvino/openvino.hpp>
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
+#pragma warning(pop)
 
+#pragma warning(push)
+#pragma warning(disable : 6001 6385 6386)
 #include "absl/status/status.h"
+#pragma warning(pop)
 
 using namespace rapidjson;
 

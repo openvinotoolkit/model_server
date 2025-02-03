@@ -17,8 +17,10 @@
 
 #include <string>
 #include <utility>
-
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>  // everything needed for embedding
+#pragma warning(pop)
 
 #include "../config.hpp"
 #include "../logging.hpp"
@@ -30,7 +32,7 @@
 namespace py = pybind11;
 
 namespace ovms {
-Status PythonInterpreterModule::start(const ovms::Config& config) {
+Status PythonInterpreterModule::start(const ovms::Config&) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", PYTHON_INTERPRETER_MODULE_NAME);
     this->threadId = std::this_thread::get_id();
@@ -42,7 +44,7 @@ Status PythonInterpreterModule::start(const ovms::Config& config) {
         print("Python sys.path output:")
         print(sys.path)
     )");
-    if (!PythonBackend::createPythonBackend(&pythonBackend))
+    if (!PythonBackend::createPythonBackend(pythonBackend))
         return StatusCode::INTERNAL_ERROR;
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", PYTHON_INTERPRETER_MODULE_NAME);
@@ -58,8 +60,7 @@ void PythonInterpreterModule::shutdown() {
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", PYTHON_INTERPRETER_MODULE_NAME);
     reacquireGILForThisThread();
-    if (pythonBackend != nullptr)
-        delete pythonBackend;
+    pythonBackend.reset();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", PYTHON_INTERPRETER_MODULE_NAME);
     py::finalize_interpreter();
@@ -82,7 +83,7 @@ void PythonInterpreterModule::reacquireGILForThisThread() const {
 }
 
 PythonBackend* PythonInterpreterModule::getPythonBackend() const {
-    return pythonBackend;
+    return pythonBackend.get();
 }
 
 PythonInterpreterModule::PythonInterpreterModule() = default;

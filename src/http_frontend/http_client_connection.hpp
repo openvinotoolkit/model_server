@@ -28,7 +28,7 @@ class HttpClientConnection : public ClientConnection {
 
 public:
     HttpClientConnection(std::shared_ptr<HttpAsyncWriter> serverReaderWriter) :
-        serverReaderWriter(serverReaderWriter) {}
+        serverReaderWriter(std::move(serverReaderWriter)) {}
 
     bool isDisconnected() const override {
         return this->serverReaderWriter->IsDisconnected();

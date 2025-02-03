@@ -8,6 +8,7 @@ hidden:
 ovms_demos_continuous_batching_accuracy
 ovms_demos_continuous_batching_rag
 ovms_demos_continuous_batching_scaling
+ovms_demos_continuous_batching_speculative_decoding
 ```
 
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
@@ -34,7 +35,7 @@ Download export script, install it's dependencies and create directory for the m
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-mkdir models 
+mkdir models
 ```
 
 Run `export_model.py` script to download and quantize the model:
@@ -92,7 +93,7 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_se
 ```
 **GPU**
 
-In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` 
+In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
@@ -329,6 +330,10 @@ Check this simple [text generation scaling demo](https://github.com/openvinotool
 ## Testing the model accuracy over serving API
 
 Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
+
+## Use Speculative Decoding
+
+Check the [guide for speculative decoding](./speculative_decoding/README.md)
 
 
 ## References

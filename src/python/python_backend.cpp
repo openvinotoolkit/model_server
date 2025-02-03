@@ -16,18 +16,21 @@
 
 #include "python_backend.hpp"
 
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/stl.h>
+#pragma warning(pop)
 
 #include "../logging.hpp"
 
 namespace py = pybind11;
 using namespace py::literals;
 using namespace ovms;
-
-bool PythonBackend::createPythonBackend(PythonBackend** pythonBackend) {
+#pragma warning(disable : 4101)
+bool PythonBackend::createPythonBackend(std::unique_ptr<PythonBackend>& pythonBackend) {
     py::gil_scoped_acquire acquire;
     try {
-        *pythonBackend = new PythonBackend();
+        pythonBackend = std::make_unique<PythonBackend>();
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_DEBUG("PythonBackend initialization failed: {}", e.what());
         return false;

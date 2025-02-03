@@ -18,7 +18,6 @@
 #include <cstdint>
 
 namespace ovms {
-
 struct ExecutionContext {
     enum class Interface : uint8_t {
         GRPC,
@@ -52,5 +51,4 @@ struct ExecutionContext {
         interface(interface),
         method(method) {}
 };
-
 }  // namespace ovms

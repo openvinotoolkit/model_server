@@ -18,8 +18,10 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
-
+#pragma warning(push)
+#pragma warning(disable : 6326)
 #include <drogon/drogon.h>
+#pragma warning(pop)
 
 #include "http_async_writer_interface.hpp"
 #include "mediapipe/framework/port/threadpool.h"

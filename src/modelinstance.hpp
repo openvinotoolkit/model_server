@@ -55,7 +55,7 @@ class IOVTensorFactory;
 class PipelineDefinition;
 class Status;
 template <typename T1, typename T2>
-struct RequestProcessor;
+class RequestProcessor;
 
 extern void* globalVaDisplay;
 
@@ -111,7 +111,7 @@ protected:
 
     // TODO windows
 #ifdef __linux__
-    cl_context oclContextC;
+    cl_context oclContextC{nullptr};
 
 public:
     // TODO const correctness & ownership & thread safety
@@ -644,7 +644,8 @@ public:
     virtual const std::set<std::string>& getOptionalInputNames();
 };
 template <typename RequestType, typename ResponseType>
-struct RequestProcessor {
+class RequestProcessor {
+public:
     RequestProcessor();
     virtual ~RequestProcessor();
     virtual Status extractRequestParameters(const RequestType* request);

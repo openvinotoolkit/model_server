@@ -16,15 +16,21 @@
 #include <string>
 #include <unordered_map>
 
+#pragma warning(push)
+#pragma warning(disable : 6001 6385 6386 6326 6011 4309 6246 4005)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "mediapipe/framework/port/ret_check.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include <adapters/inference_adapter.h>
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/writer.h>
+#pragma warning(pop)
 
 #include "../http_payload.hpp"
 #include "../logging.hpp"
@@ -116,8 +122,20 @@ public:
         ::InferenceOutput embeddingsOutputMap;
         ::InferenceInput embeddingsInputMap;
         size_t received_batch_size = 1;
-        size_t max_context_length = 512;  // default allowed input length. Otherwise, it will be read from model rt_info>config>max_position_embeddings in the model.xml file
+        size_t max_context_length = 1024;  // default allowed input length. Otherwise, it will be read from model rt_info>config>max_position_embeddings in the model.xml file
         ov::AnyMap modelConfig = embeddings_session->getModelConfig();
+        try {
+            if (modelConfig.count("max_position_embeddings")) {
+                max_context_length = modelConfig["max_position_embeddings"].as<size_t>();
+            } else if (modelConfig.count("max_trained_positions")) {
+                max_context_length = modelConfig["max_trained_positions"].as<size_t>();
+            } else {
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "model_info->max_position_embeddings nor max_trained_positions included in model rt_info. Using default value {}", max_context_length);
+            }
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Detected model context size: {}", max_context_length);
+        } catch (...) {
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Can not read model context length from rt_info. Using default value {}", max_context_length);
+        }
         try {
             ::InferenceOutput tokenizerOutputMap;
             auto input = handler.getInput();
@@ -207,18 +225,7 @@ public:
                     std::fill(token_type_ids_start, token_type_ids_start + received_batch_size * token_count_of_longest_document, 1);
                 }
             }
-            try {
-                if (modelConfig.count("max_position_embeddings")) {
-                    max_context_length = modelConfig["max_position_embeddings"].as<size_t>();
-                } else if (modelConfig.count("max_trained_positions")) {
-                    max_context_length = modelConfig["max_trained_positions"].as<size_t>();
-                } else {
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "model_info->max_position_embeddings nor max_trained_positions included in model rt_info. Using default value {}", max_context_length);
-                }
-                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Detected model context size: ", max_context_length);
-            } catch (...) {
-                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Can not read model context length from rt_info. Using default value {}", max_context_length);
-            }
+
             // creating output to avoid copying big tensor
             ov::Shape outShape = embeddingsInputMap.at(EMBEDDINGS_MODEL_INPUT_IDS_NAME).get_shape();
             bool foundMatchinEmbeddingOutput{false};

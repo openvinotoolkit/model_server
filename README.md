@@ -1,6 +1,6 @@
 # OpenVINO&trade; Model Server
 
-Model Server hosts models and makes them accessible to software components over standard network protocols: a client sends a request to the model server, which performs model inference and sends a response back to the client. Model Server offers many advantages for efficient model deployment: 
+Model Server hosts models and makes them accessible to software components over standard network protocols: a client sends a request to the model server, which performs model inference and sends a response back to the client. Model Server offers many advantages for efficient model deployment:
 - Remote inference enables using lightweight clients with only the necessary functions to perform API calls to edge or cloud deployments.
 - Applications are independent of the model framework, hardware device, and infrastructure.
 - Client applications in any programming language that supports REST or gRPC calls can be used to run inference remotely on the model server.
@@ -15,22 +15,22 @@ OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving mod
 
 ![OVMS picture](docs/ovms_high_level.png)
 
-The models used by the server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Repository](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_models_repository.html) documentation. Model server works inside [Docker containers](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_deploying_server.html#deploying-model-server-in-docker-container), on [Bare Metal](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_deploying_server.html#deploying-model-server-on-baremetal-without-container), and in [Kubernetes environment](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_deploying_server.html#deploying-model-server-in-kubernetes).
-Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_quick_start_guide.html) or explore [Model Server features](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_features.html).
+The models used by the server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Repository](docs/models_repository.md) documentation. Model server works inside [Docker containers](docs/deploying_server.md#deploying-model-server-in-docker-container), on [Bare Metal](docs/deploying_server.md#deploying-model-server-on-baremetal-without-container), and in [Kubernetes environment](docs/deploying_server.md#deploying-model-server-in-kubernetes).
+Start using OpenVINO Model Server with a fast-forward serving example from the [Quickstart guide](docs/ovms_quickstart.md) or explore [Model Server features](docs/features.md).
 
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
 ### Key features:
-- **[NEW]** [Text Embeddings compatible with OpenAI API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demos_embeddings.html)
-- **[NEW]** [Reranking compatible with Cohere API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demos_rerank.html)
-- **[NEW]** [Efficient Text Generation via OpenAI API](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_demos_continuous_batching.html)
-- [Python code execution](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_python_support_reference.html)
-- [gRPC streaming](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_streaming_endpoints.html)
-- [MediaPipe graphs serving](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_mediapipe.html) 
-- Model management - including [model versioning](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_model_version_policy.html) and [model updates in runtime](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_online_config_changes.html)
-- [Dynamic model inputs](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_shape_batch_layout.html)
-- [Directed Acyclic Graph Scheduler](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_dag.html) along with [custom nodes in DAG pipelines](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_custom_node_development.html)
-- [Metrics](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_metrics.html) - metrics compatible with Prometheus standard
+- **[NEW]** [Text Embeddings compatible with OpenAI API](demos/embeddings/README.md)
+- **[NEW]** [Reranking compatible with Cohere API](demos/rerank/README.md)
+- **[NEW]** [Efficient Text Generation via OpenAI API](demos/continuous_batching/README.md)
+- [Python code execution](docs/python_support/reference.md)
+- [gRPC streaming](docs/streaming_endpoints.md)
+- [MediaPipe graphs serving](docs/mediapipe.md)
+- Model management - including [model versioning](docs/model_version_policy.md) and [model updates in runtime](docs/online_config_changes.md)
+- [Dynamic model inputs](docs/shape_batch_size_and_layout.md)
+- [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md) along with [custom nodes in DAG pipelines](docs/custom_node_development.md)
+- [Metrics](docs/metrics.md) - metrics compatible with Prometheus standard
 - Support for multiple frameworks, such as TensorFlow, PaddlePaddle and ONNX
 - Support for [AI accelerators](https://docs.openvino.ai/nightly/about-openvino/compatibility-and-support/supported-devices.html)
 
@@ -42,26 +42,26 @@ They are stored in:
 
 ## Run OpenVINO Model Server
 
-A demonstration on how to use OpenVINO Model Server can be found in our quick-start guide [for vision use case](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_quick_start_guide.html) and [LLM text generation](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_llm_quickstart.html). 
+A demonstration on how to use OpenVINO Model Server can be found in our quick-start guide [for vision use case](docs/ovms_quickstart.md) and [LLM text generation](docs/llm/quickstart.md).
 For more information on using Model Server in various scenarios you can check the following guides:
 
-* [Model repository configuration](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_models_repository.html)
+* [Model repository configuration](docs/models_repository.md)
 
-* [Deployment options](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_deploying_server.html)
+* [Deployment options](docs/deploying_server.md)
 
-* [Performance tuning](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_performance_tuning.html)
+* [Performance tuning](docs/performance_tuning.md)
 
-* [Directed Acyclic Graph Scheduler](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_dag.html)
+* [Directed Acyclic Graph Scheduler](docs/dag_scheduler.md)
 
-* [Custom nodes development](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_custom_node_development.html)
+* [Custom nodes development](docs/custom_node_development.md)
 
-* [Serving stateful models](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_stateful_models.html)
+* [Serving stateful models](docs/stateful_models.md)
 
 * [Deploy using a Kubernetes Helm Chart](https://github.com/openvinotoolkit/operator/tree/main/helm-charts/ovms)
 
 * [Deployment using Kubernetes Operator](https://operatorhub.io/operator/ovms-operator)
 
-* [Using binary input data](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_binary_input.html)
+* [Using binary input data](docs/binary_input.md)
 
 
 

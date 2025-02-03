@@ -8,13 +8,6 @@ This instruction was tested on Windows 11 and Windows 10 OS.
 # Install prerequisites
 Following the steps below requires 40GB of free disk space.
 
-## Install git
-Download from https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.2/Git-2.47.1.2-64-bit.exe
-Or run command in windows cmd.exe terminal:
-```bat
-winget install --id Git.Git -e --source winget
-```
-
 ## VISUAL BUILD TOOLS
 Install build tools for VS:
 
@@ -41,10 +34,12 @@ Follow instructions in the link below:
 https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
 
 ## Run Command Prompt
-Press Windows Start and run the cmd.exe terminal.
+Press Windows Start and run the cmd.exe terminal as Administrator.
 Run commands in this prompt is not stated otherwise.
 
-## Get the code
+## Pull OpenVINO Model Server source
+> `Git` is required to complete this step. If you don't have it on your system, download it from https://git-scm.com/downloads/win and install before you continue.
+Run below commands in terminal to clone model server repository:
 ```bat
 mkdir C:\git
 cd C:\git\

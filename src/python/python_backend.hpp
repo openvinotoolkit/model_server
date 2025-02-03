@@ -18,10 +18,12 @@
 #include <memory>
 #include <string>
 #include <vector>
-
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#pragma warning(pop)
 
 #include "utils.hpp"
 
@@ -37,7 +39,7 @@ class PythonBackend {
 public:
     PythonBackend();
     ~PythonBackend();
-    static bool createPythonBackend(PythonBackend** pythonBackend);
+    static bool createPythonBackend(std::unique_ptr<PythonBackend>& pythonBackend);
 
     bool createOvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype,
         py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor, bool copy = false);

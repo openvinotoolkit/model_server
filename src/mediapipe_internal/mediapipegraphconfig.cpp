@@ -16,10 +16,12 @@
 #include "mediapipegraphconfig.hpp"
 
 #include <string>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#pragma warning(pop)
 #include <spdlog/spdlog.h>
 
 #include "../filesystem.hpp"

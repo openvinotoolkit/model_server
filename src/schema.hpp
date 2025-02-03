@@ -16,8 +16,10 @@
 #pragma once
 
 #include <string>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/schema.h>
+#pragma warning(pop)
 
 namespace ovms {
 class Status;

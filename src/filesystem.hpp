@@ -320,7 +320,6 @@ public:
 
     static std::string getStringMD5(const std::string& str) {
         unsigned char result[MD5_DIGEST_LENGTH];
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         MD5((unsigned char*)str.c_str(), str.size(), result);

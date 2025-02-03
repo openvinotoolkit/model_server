@@ -18,12 +18,14 @@
 #include <iterator>
 #include <memory>
 #include <string>
-
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#pragma warning(pop)
 
 #include "../dags/pipeline.hpp"
 #include "../dags/pipelinedefinition.hpp"
@@ -75,7 +77,8 @@ using std::chrono::microseconds;
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#pragma warning(push)
+#pragma warning(disable : 4005)
 #ifdef __linux__
 #define DLL_PUBLIC __attribute__((visibility("default")))
 #define DLL_LOCAL __attribute__((visibility("hidden")))
@@ -84,6 +87,7 @@ extern "C" {
 // #define DLL_PUBLIC __declspec(dllexport)
 #define DLL_PUBLIC
 #endif
+#pragma warning(pop)
 
 DLL_PUBLIC OVMS_Status* OVMS_ApiVersion(uint32_t* major, uint32_t* minor) {
     if (major == nullptr)
@@ -208,7 +212,11 @@ DLL_PUBLIC OVMS_Status* OVMS_MetadataFieldByPointer(OVMS_Metadata* metadata, con
     if (!val) {
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::JSON_SERIALIZATION_ERROR, "value not found"));
     }
+#ifdef __linux__
     *value = strdup(val->GetString());
+#elif _WIN32
+    *value = _strdup(val->GetString());
+#endif
     *size = val->GetStringLength();
     return nullptr;
 }
@@ -229,7 +237,11 @@ DLL_PUBLIC OVMS_Status* OVMS_SerializeMetadataToString(OVMS_Metadata* metadata, 
 
     rapidjson::Writer<rapidjson::StringBuffer> writer(strbuf);
     doc->Accept(writer);
+#ifdef __linux__
     *json = strdup(strbuf.GetString());
+#elif _WIN32
+    *json = _strdup(strbuf.GetString());
+#endif
     *size = strbuf.GetSize();
 
     return nullptr;
@@ -878,7 +890,8 @@ enum : uint32_t {
     TIMER_CALLBACK,
     TIMER_END
 };
-
+#pragma warning(push)
+#pragma warning(disable : 4190)  // TODO verify
 static Status getModelManager(Server& server, ModelManager** modelManager) {
     if (!server.isLive()) {
         return ovms::Status(ovms::StatusCode::SERVER_NOT_READY, "not live");
@@ -926,7 +939,7 @@ static Status getPipelineDefinition(Server& server, const std::string& servableN
     }
     return (*pipelineDefinition)->waitForLoaded(unloadGuard, 0);
 }
-
+#pragma warning(pop)
 }  // namespace
 
 DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response) {

@@ -15,12 +15,15 @@
 //*****************************************************************************
 #include "tensor_conversion.hpp"
 
+#pragma warning(push)
+#pragma warning(disable : 4624 6001 6385 6386 6326 6011)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #include <algorithm>
 #include <memory>
@@ -33,7 +36,10 @@
 #include "capi_frontend/inferencetensor.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "logging.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6269 6294 6201)
 #include "opencv2/opencv.hpp"
+#pragma warning(pop)
 #include "profiler.hpp"
 #include "status.hpp"
 #include "tfs_frontend/tfs_utils.hpp"

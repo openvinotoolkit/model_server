@@ -89,7 +89,7 @@ std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap) {
         try {
             OV_LOGGER("v.as<ov::LayoutAttribute>().value");
             return v.as<ov::LayoutAttribute>().value;
-        } catch (ov::Exception& e) {
+        } catch (ov::Exception&) {
         }
     }
     return std::nullopt;

@@ -34,7 +34,7 @@
 namespace ovms {
 
 class ModelManager;
-class NodeInfo;
+struct NodeInfo;
 class Pipeline;
 class PipelineDefinition;
 class Status;
