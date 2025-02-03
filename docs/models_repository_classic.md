@@ -1,5 +1,14 @@
 # Classic Models {#ovms_docs_models_repository_classic}
 
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
+ovms_docs_cloud_storage
+
+```
+
 Traditional AI models perform data analysis in a single inference operation. They can be used over KServe API or TensorFlow API. 
 
 The AI models served by OpenVINO&trade; Model Server must be in either of the five formats:

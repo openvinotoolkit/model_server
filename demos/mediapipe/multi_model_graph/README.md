@@ -1,6 +1,73 @@
 # MediaPipe Multi Model Demo {#ovms_docs_demo_mediapipe_multi_model}
 
 This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph using OVMS.
+It is using a sequence of models:
+```protobuf
+input_stream: "in1"
+input_stream: "in2"
+output_stream: "out"
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:dummy"
+  node_options: {
+    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "dummy"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:add"
+  node_options: {
+    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "add"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:dummy"
+  input_stream: "DUMMY_IN:in1"
+  output_stream: "DUMMY_OUT:dummy_output"
+  node_options: {
+    [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
+        tag_to_input_tensor_names {
+          key: "DUMMY_IN"
+          value: "b"
+        }
+        tag_to_output_tensor_names {
+          key: "DUMMY_OUT"
+          value: "a"
+        }
+    }
+  }
+}
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:add"
+  input_stream: "ADD_INPUT1:dummy_output"
+  input_stream: "ADD_INPUT2:in2"
+  output_stream: "SUM:out"
+  node_options: {
+    [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
+        tag_to_input_tensor_names {
+          key: "ADD_INPUT1"
+          value: "input1"
+        }
+        tag_to_input_tensor_names {
+          key: "ADD_INPUT2"
+          value: "input2"
+        }
+        tag_to_output_tensor_names {
+          key: "SUM"
+          value: "sum"
+        }
+    }
+  }
+}
+```
 
 ## Prerequisites
 

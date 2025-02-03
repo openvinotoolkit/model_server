@@ -23,6 +23,7 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
 ### Key features:
+- **[NEW]** Native Windows support. Check updated [deployment guide](./deploying_server.md)
 - **[NEW]** [Text Embeddings compatible with OpenAI API](demos/embeddings/README.md)
 - **[NEW]** [Reranking compatible with Cohere API](demos/rerank/README.md)
 - **[NEW]** [Efficient Text Generation via OpenAI API](demos/continuous_batching/README.md)

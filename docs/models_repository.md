@@ -6,7 +6,6 @@ maxdepth: 1
 hidden:
 ---
 ovms_docs_models_repository_classic
-ovms_docs_cloud_storage
 ovms_docs_models_repository_graph
 ovms_demos_common_export
 

@@ -40,6 +40,7 @@ The models used by the server need to be stored locally or hosted remotely by ob
 Start using OpenVINO Model Server with a fast-forward serving example from the [QuickStart guide](ovms_quickstart.md) or [LLM QuickStart guide](./llm/quickstart.md).
 
 ### Key features:
+- **[NEW]** Native Windows support. Check updated [deployment guide](./deploying_server.md)
 - **[NEW]** [Embeddings endpoint compatible with OpenAI API](../demos/embeddings/README.md)
 - **[NEW]** [Reranking compatible with Cohere API](../demos/rerank/README.md)
 - **[NEW]** [Efficient Text Generation with OpenAI API](../demos/continuous_batching/README.md)
