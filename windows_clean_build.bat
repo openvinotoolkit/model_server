@@ -16,7 +16,7 @@
 
 :: %1 First parameter is the --output_user_root value on c:\ drive
 :: %2 Second parameter is the --expunge flag - bazel clean expunge when set to 1 - default 0
-@echo on
+@echo off
 setlocal EnableExtensions DisableDelayedExpansion
 set "BAZEL_SHORT_PATH=C:\%1"
 set "bazelStartupCmd=--output_user_root=%BAZEL_SHORT_PATH%"
