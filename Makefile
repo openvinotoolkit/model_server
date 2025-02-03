@@ -393,7 +393,7 @@ endif
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg GPU=1 \
-		--build-arg NPU=$$(if [ "$(BASE_OS_TAG)" = "22.04" ]; then echo 1; else echo 0 ; fi) \
+		--build-arg NPU=$$(if [[ "$(BASE_OS)" =~ "ubuntu" ]]; then echo 1; else echo 0 ; fi) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)
