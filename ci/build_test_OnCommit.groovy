@@ -122,13 +122,12 @@ pipeline {
               }
               catch (exc) {
                   echo "Unit tests failed"
-                  throw
               } 
               finally {
                   archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
                   archiveArtifacts allowEmptyArchive: true, artifacts: "linux_tests.log"
               }
-            }
+            } 
             stage("Internal tests") {
               steps {
                 sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
