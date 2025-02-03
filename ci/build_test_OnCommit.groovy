@@ -118,6 +118,7 @@ pipeline {
           parallel {
             stage("Run unit tests") {
               steps {
+              script {
               try {
                   sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/INT8 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
@@ -129,6 +130,7 @@ pipeline {
                   archiveArtifacts allowEmptyArchive: true, artifacts: "linux_tests.log"
               }
               } 
+              }
             } 
             stage("Internal tests") {
               steps {
