@@ -65,6 +65,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
             compress_logs && exit 1; } && \
             generate_coverage_report;
     fi
+    bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding || exit 1
     bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_test || exit 1
     echo "Executing unit tests"
     failed=0
