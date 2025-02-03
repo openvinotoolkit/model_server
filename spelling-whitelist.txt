@@ -20,3 +20,5 @@ third_party/aws-sdk-cpp/aws-sdk-cpp.bz
 third_party/llm_engine/llm_engine.bzl
 WORKSPACE:98: thirdparty
 demos/classification_using_paddlepaddle_model/python/utils/imagenet_class_index.json
+release_files/thirdparty-licenses/icu.LICENSE.txt:146: TaBE ==> table, tab
+release_files/thirdparty-licenses/icu.LICENSE.txt:160: TaBE ==> table, tab
