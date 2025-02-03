@@ -35,6 +35,6 @@ WORKDIR /app/build
 RUN go get google.golang.org/grpc@v1.62.0 
 RUN go get google.golang.org/grpc/internal/transport@v1.62.0
 RUN for I in ../*go; do go build $I; done
-# In case of dependencies version updates below might be useful, so we can substitude the go.mod and go.sum files
+# In case of dependencies version updates below might be useful, so we can substitute the go.mod and go.sum files
 # with versions that has been processed by go. 
 # RUN cp /app/go.mod /app/go.sum /app/build 
