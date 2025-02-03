@@ -50,7 +50,7 @@ docker pull openvino/model_server:latest
 Store components of the model in the `model/1` directory. Here are example commands pulling an object detection model from Kaggle:
 
 ```console
-curl --create-dir https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -o model/1/1.tar.gz
+curl -L --create-dirs https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -o model/1/1.tar.gz
 tar xzf model/1/1.tar.gz -C model/1
 ```
 
