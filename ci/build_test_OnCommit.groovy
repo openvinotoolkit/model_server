@@ -100,7 +100,7 @@ pipeline {
                           windows.setup_bazel_remote_cache()
                           windows.install_dependencies()
                           windows.clean()
-                          windows.build_and_test()
+                          windows.build()
                           windows.check_tests()
                         } finally {
                           windows.archive_artifacts()
@@ -118,9 +118,12 @@ pipeline {
           parallel {
             stage("Run unit tests") {
               steps {
+                try {
                   sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/INT8 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                } finally {
                   archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
                   archiveArtifacts allowEmptyArchive: true, artifacts: "linux_tests.log"
+                }
               }
             }
             stage("Internal tests") {
@@ -138,7 +141,29 @@ pipeline {
                   }
                 }
               }            
-            }            
+            }
+            stage('Test windows') {
+              agent {
+                label 'win_ovms'
+              }
+              when { expression { win_image_build_needed == "true" } }
+              steps {
+                  script {
+                      def windows = load 'ci/loadWin.groovy'
+                      if (windows != null) {
+                        try {
+                          windows.setup_bazel_remote_cache()
+                          windows.unit_test()
+                          windows.check_tests()
+                        } finally {
+                          windows.archive_artifacts()
+                        }
+                      } else {
+                          error "Cannot load ci/loadWin.groovy file."
+                      }
+                  }
+              }
+            }           
           }
         }
     }

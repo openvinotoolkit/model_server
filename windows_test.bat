@@ -95,7 +95,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 :: Cut tests log to results
 set regex="\[  .* ms"
 set sed_clean="s/ (.* ms)//g"
-grep -a %regex% win_full_test.log | sed %sed_clean% | tee win_test.log
+grep -a %regex% win_full_test.log | sed %sed_clean% | tee win_test_summary.log
 :exit_build
 echo [INFO] Build finished
 exit /b 0
