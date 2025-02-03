@@ -36,7 +36,6 @@ You can prepare the workspace that contains all the above by running
 	curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin -o workspace/age-gender-recognition-retail-0013/1/age-gender-recognition-retail-0013.bin
 	curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.xml -o workspace/emotions-recognition-retail-0003/1/emotions-recognition-retail-0003.xml
 	curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.bin -o workspace/emotions-recognition-retail-0003/1/emotions-recognition-retail-0003.bin
-	cp config.json workspace/.
 ```
 
 ### Final directory structure
@@ -48,7 +47,6 @@ workspace/
 │   └── 1
 │       ├── age-gender-recognition-retail-0013.bin
 │       └── age-gender-recognition-retail-0013.xml
-├── config.json
 └── emotions-recognition-retail-0003
     └── 1
         ├── emotions-recognition-retail-0003.bin
@@ -58,6 +56,8 @@ workspace/
 ## Server Deployment
 :::{dropdown} **Deploying with Docker**
 ```bash
+cp config.json workspace/.
+chmod -R 755 workspace
 docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server --config_path /workspace/config.json --port 9000
 ```
 :::
@@ -70,6 +70,7 @@ Assuming you have unpacked model server package, make sure to:
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 cd demos\single_face_analysis_pipeline\python
+copy config.json workspace
 ovms --config_path workspace/config.json --port 9001
 ```
 :::

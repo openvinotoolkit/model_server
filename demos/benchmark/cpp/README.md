@@ -20,6 +20,7 @@ The application can be used with any model or pipeline served in OVMS, by reques
 Start OVMS with resnet50-binary model:
 ```bash
 curl -L --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o resnet50-binary/1/model.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o resnet50-binary/1/model.xml
+chmod -R 755 resnet50-binary
 ```
 
 ### Prepare the server

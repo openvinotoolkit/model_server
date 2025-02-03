@@ -20,6 +20,7 @@ horizontal-text-detection-0001
 
 ### Start the OVMS container:
 ```bash
+chmod -R 755 horizontal-text-detection-0001
 docker run -d -u $(id -u):$(id -g) -v $(pwd)/horizontal-text-detection-0001:/model -p 9000:9000 openvino/model_server:latest \
 --model_path /model --model_name text --port 9000 --layout NHWC:NCHW
 ```

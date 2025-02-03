@@ -36,6 +36,7 @@ curl https://storage.googleapis.com/mediapipe-assets/pose_landmark_full.tflite -
 
 The models setup should look like this
 ```bash
+.
 ├── config_holistic.json
 ├── face_detection_short_range
 │   └── 1
@@ -50,17 +51,56 @@ The models setup should look like this
 │   └── 1
 │       └── hand_recrop.tflite
 ├── holistic_tracking.pbtxt
+├── iris_landmark
+│   └── 1
+│       └── iris_landmark.tflite
+├── mediapipe
+│   ├── mediapipe
+│   │   └── modules
+│   │       └── hand_landmark
+│   │           └── handedness.txt
+│   └── modules
+│       └── hand_landmark
+│           └── handedness.txt
+├── mediapipe_holistic_tracking.py
+├── ovms
+│   ├── config_holistic.json
+│   ├── face_detection_short_range
+│   │   └── 1
+│   │       └── face_detection_short_range.tflite
+│   ├── face_landmark
+│   │   └── 1
+│   │       └── face_landmark.tflite
+│   ├── hand_landmark_full
+│   │   └── 1
+│   │       └── hand_landmark_full.tflite
+│   ├── hand_recrop
+│   │   └── 1
+│   │       └── hand_recrop.tflite
+│   ├── holistic_tracking.pbtxt
+│   ├── iris_landmark
+│   │   └── 1
+│   │       └── iris_landmark.tflite
+│   ├── palm_detection_full
+│   │   └── 1
+│   │       └── palm_detection_full.tflite
+│   ├── pose_detection
+│   │   └── 1
+│   │       └── pose_detection.tflite
+│   └── pose_landmark_full
+│       └── 1
+│           └── pose_landmark_full.tflite
 ├── palm_detection_full
 │   └── 1
 │       └── palm_detection_full.tflite
 ├── pose_detection
 │   └── 1
 │       └── pose_detection.tflite
-└── pose_landmark_full
-    └── 1
-        └── pose_landmark_full.tflite
-
-
+├── pose_landmark_full
+│   └── 1
+│       └── pose_landmark_full.tflite
+├── README.md
+└── requirements.txt
 ```
 ## Server Deployment
 :::{dropdown} **Deploying with Docker**
@@ -71,6 +111,7 @@ docker pull openvino/model_server:latest
 
 ```
 ```bash
+chmod -R 755 .
 docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
 ```
 :::

@@ -30,6 +30,7 @@ The client also tests server responses for accuracy.
 
 ## Prepare the server
 ```bash
+chmod -R 755 resnet50-binary
 docker run -d -u $(id -u):$(id -g) -v $(pwd)/resnet50-binary:/model -p 9001:9001 openvino/model_server:latest \
 --model_path /model --model_name resnet --port 9001 --layout NHWC:NCHW
 ```

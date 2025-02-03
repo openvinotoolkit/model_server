@@ -28,6 +28,7 @@ curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_z
 ## Server Deployment
 :::{dropdown} **Deploying with Docker**
 ```bash
+chmod -R 755 resnetMediapipe
 docker run -d -v $PWD:/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
 ```
 :::

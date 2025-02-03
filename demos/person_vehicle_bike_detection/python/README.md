@@ -18,6 +18,7 @@ curl --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zo
 ## Server Deployment
 :::{dropdown} **Deploying with Docker**
 ```bash
+chmod -R 755 model
 docker run -d -v `pwd`/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name person-vehicle-detection --port 9000 --shape auto
 ```
 :::
