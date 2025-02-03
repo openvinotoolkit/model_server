@@ -186,7 +186,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
     auto handler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
     auto& pool = server->getPool();
     server->registerRequestDispatcher([handler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-        SPDLOG_DEBUG("REST request {}", req->getPath());
+        SPDLOG_DEBUG("REST request {}", req->getOriginalPath());
 
         std::vector<std::pair<std::string, std::string>> headers;
 
@@ -196,7 +196,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
 
         SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
             req->getMethodString(),
-            req->getPath(),
+            req->getOriginalPath(),
             req->getBody().size());
 
         auto body = std::string(req->getBody());
@@ -206,7 +206,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
 
         const auto status = handler->processRequest(
             drogon::to_string_view(req->getMethod()),
-            req->getPath(),
+            req->getOriginalPath(),
             body,
             &headers,
             &output,
@@ -243,7 +243,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         if (http_status != ovms::HTTPStatusCode::OK && http_status != ovms::HTTPStatusCode::CREATED) {
             SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
                 req->getMethodString(),
-                req->getPath(),
+                req->getOriginalPath(),
                 status.string());
         }
 
