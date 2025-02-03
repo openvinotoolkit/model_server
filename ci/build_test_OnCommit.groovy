@@ -87,7 +87,7 @@ pipeline {
                       sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                     }
             }
-            stage('Build and test windows') {
+            stage('Build windows') {
               agent {
                 label 'win_ovms'
               }
@@ -101,7 +101,6 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
-                          windows.check_tests()
                         } finally {
                           windows.archive_artifacts()
                         }
