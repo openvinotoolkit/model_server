@@ -66,39 +66,47 @@ if [ "$RUN_TESTS" == "1" ] ; then
             generate_coverage_report;
     fi
     bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_test || exit 1
-    set +x
     echo "Executing unit tests"
     failed=0
-    # Tests starting python interpreter should be executed separately for Python 3.12 due to issues with multiple reinitialization of the interpreter
-    for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
-        if OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so  ./bazel-bin/src/ovms_test --gtest_filter="$i.*" > tmp.log 2>&1 ; then
+    if [[ "$(python3 --version)" =~ "Python 3.12" ]] ; then
+        set +x
+        # Tests starting python interpreter should be executed separately for Python 3.12 due to issues with multiple reinitialization of the interpreter
+        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
+            if bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=all --test_filter="$i.*" //src:ovms_test > tmp.log 2>&1 ; then
+                echo -n .
+            else
+                failed=1
+                echo -n F
+                cat tmp.log >> ${FAIL_LOG}
+            fi
+            cat tmp.log >> ${TEST_LOG}
+        done
+        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep '^  '` ; do
+            if bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=all --test_filter="*.$i" //src:ovms_test > tmp.log 2>&1 ; then
+                echo -n .
+            else
+                failed=1
+                echo -n F
+                cat tmp.log >> ${FAIL_LOG}
+            fi
+            cat tmp.log >> ${TEST_LOG}
             echo -n .
+        done
+        if [ $failed -eq 1 ]; then
+          echo "Tests failed:"
+          cat ${FAIL_LOG}
         else
-            failed=1
-            echo -n F
-            cat tmp.log >> ${FAIL_LOG}
+          rm -rf ${FAIL_LOG}
         fi
-        cat tmp.log >> ${TEST_LOG}
-    done
-    for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="LLMChatTemplateTest.*:LLMOptionsHttpTest.*" | grep '^  '` ; do
-        if OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so  ./bazel-bin/src/ovms_test --gtest_filter="*.$i" > tmp.log 2>&1 ; then
-            echo -n .
-        else
-            failed=1
-            echo -n F
-            cat tmp.log >> ${FAIL_LOG}
-        fi
-        cat tmp.log >> ${TEST_LOG}
-        echo -n .
-    done
-    grep -a " ms \| ms)" ${TEST_LOG} > linux_tests.log
-    if [ $failed -eq 1 ]; then
-        echo "Tests failed:"
-        cat ${FAIL_LOG}
     else
-        rm -rf ${FAIL_LOG}
+        # For RH UBI and Ubuntu20
+        if ! bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=streamed --test_filter="*" //src:ovms_test > ${TEST_LOG} 2>&1 ; then
+            failed=1
+        fi
+        cat ${TEST_LOG} | tail -500
     fi
-     echo "Tests completed:" `grep -a " ms \| ms)" ${TEST_LOG} | grep " OK " | wc -l`
+    grep -a " ms \| ms)" ${TEST_LOG} > linux_tests.log
+    echo "Tests completed:" `grep -a " ms \| ms)" ${TEST_LOG} | grep " OK " | wc -l`
     compress_logs
     exit $failed
 fi
