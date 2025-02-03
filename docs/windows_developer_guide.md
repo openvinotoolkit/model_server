@@ -38,8 +38,8 @@ Press Windows Start and run the cmd.exe terminal as Administrator.
 Run commands in this prompt is not stated otherwise.
 
 ## Pull OpenVINO Model Server source
-Install git from https://git-scm.com/downloads/win
-After that run commands in terminal:
+> `Git` is required to complete this step. If you don't have it on your system, download it from https://git-scm.com/downloads/win and install before you continue.
+Run below commands in terminal to clone model server repository:
 ```bat
 mkdir C:\git
 cd C:\git\
