@@ -386,6 +386,11 @@ ifeq ($(USE_BUILDX),true)
 	$(eval BUILDX:=buildx)
 	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
 endif
+ifeq ($(BASE_OS),redhat)
+	$(eval NPU:=0)
+else
+	$(eval NPU:=1)
+endif
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
@@ -393,7 +398,7 @@ endif
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg GPU=1 \
-		--build-arg NPU=$$(if [[ "$(BASE_OS)" =~ "ubuntu" ]]; then echo 1; else echo 0 ; fi) \
+		--build-arg NPU=$(NPU) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)
@@ -428,11 +433,6 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 release_image:
-ifeq ($(BASE_OS_TAG),20.04)
-  ifeq ($(NPU),1)
-	@echo "NPU is not supported on Ubuntu 20.04" ; exit 1
-  endif
-endif
 ifeq ($(USE_BUILDX),true)
 	$(eval BUILDX:=buildx)
 	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
