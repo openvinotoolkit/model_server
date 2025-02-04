@@ -1367,6 +1367,7 @@ TEST_F(ModelManager, HandlingInvalidLastVersion) {
     ovms::ModelConfig config;
     config.setBasePath(getGenericFullPathForTmp("/tmp/" + modelDirectory.name));
     config.setName(modelDirectory.name);
+    config.setPluginConfig(plugin_config_t{{"ENABLE_MMAP": "NO"}})
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
     manager.setWaitForModelLoadedTimeoutMs(50);
@@ -1382,11 +1383,7 @@ TEST_F(ModelManager, HandlingInvalidLastVersion) {
     status = manager.getModelInstance(modelDirectory.name, 3, modelInstance3, modelInstanceUnloadGuard);
     modelInstanceUnloadGuard.reset();
     ASSERT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
-
-#ifdef _WIN32
-    // FIXME: TODO: Manual unload required because OVCORE keeps the file handle opened after modelLoad, preventing the test to remove the directory.
     modelInstance2->unloadModelComponents();
-#endif
     // dropped versions 2 and 3
     // expected version 1 as available, 2 as ended
     modelDirectory.removeVersion(3);
