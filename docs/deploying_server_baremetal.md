@@ -77,39 +77,6 @@ Additionally, to use text generation, for example, to run [text-generation demo]
 pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 ```
 :::
-:::{tab-item} RHEL 8.10
-:sync: rhel-8-10
-Download precompiled package:
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_redhat.tar.gz
-tar -xzvf ovms_redhat.tar.gz
-```
-or build it yourself:
-```{code} sh
-# Clone the model server repository
-git clone https://github.com/openvinotoolkit/model_server
-cd model_server
-# Build docker images (the binary is one of the artifacts)
-make docker_build BASE_OS=redhat PYTHON_DISABLE=1 RUN_TESTS=0
-# Unpack the package
-tar -xzvf dist/redhat/ovms.tar.gz
-```
-Set path to the libraries and add binary to the `PATH`
-```{code} sh
-export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH;${PWD}/ovms/bin
-```
-In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
-```{code} sh
-export PYTHONPATH=${PWD}/ovms/lib/python
-sudo yum install -y python39-libs
-```
-
-Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
-```
-pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
-```
-:::
 :::{tab-item} RHEL 9.4
 :sync: rhel-9.4
 Download precompiled package:

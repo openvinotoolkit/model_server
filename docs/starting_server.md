@@ -1,19 +1,10 @@
-# Setup Model Server {#ovms_docs_serving_model}
+# Starting the Server  {#ovms_docs_serving_model}
 
-```{toctree}
----
-maxdepth: 1
-hidden:
----
+There are two method for passing to the model server information about the models and their configuration:
+- via CLI parameters - for a single model 
+- via config file in json format - for any number of models and pipelines
 
-ovms_docs_models_repository
-ovms_docs_parameters
-ovms_docs_target_devices
-ovms_docs_security
-```
-
-Serving a single model is the simplest way to deploy OpenVINO™ Model Server. Only one model is served and the whole configuration is passed via CLI parameters.
-Note that changing configuration in runtime while serving a single model is not possible. Serving multiple models requires a configuration file that stores settings for all served models. 
+Note that changing configuration in runtime while serving is possible only with the config file.
 When deploying model(s) with a configuration file, you can add or delete models, as well as update their configurations in runtime, without needing to restart the server.
 
 ## Serving a Single Model
@@ -25,6 +16,10 @@ Start the model server by running the following command with your parameters:
 ```
 docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
+```
+or for binary package:
+```
+ovms --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 
 Example using a ResNet model:
@@ -66,7 +61,7 @@ Possible model locations (`--model_path`):
 
 ## Serving Multiple Models 
 
-To serve multiple models from the same container you will need an additional JSON configuration file that defines each model. To use a container with several models, you need an additional JSON configuration file defining each model. `model_config_list` array that includes a collection of config objects for each served model. The `name` and the `base_path` values of the model are required for each config object.
+To serve multiple models and pipelines from the same container you will need an additional JSON configuration file that defines each model. To use a container with several models, you need an additional JSON configuration file defining each model. `model_config_list` array that includes a collection of config objects for each served model. The `name` and the `base_path` values of the model are required for each config object.
 
 
 ```json
@@ -76,14 +71,7 @@ To serve multiple models from the same container you will need an additional JSO
          "config":{
             "name":"model_name1",
             "base_path":"/opt/ml/models/model1",
-            "batch_size": "16"
-         }
-      },
-      {
-         "config":{
-            "name":"model_name2",
-            "base_path":"/opt/ml/models/model2",
-            "batch_size": "auto",
+            "batch_size": "16",
             "model_version_policy": {"all": {}}
          }
       },
@@ -91,8 +79,7 @@ To serve multiple models from the same container you will need an additional JSO
          "config":{
             "name":"model_name3",
             "base_path":"gs://bucket/models/model3",
-            "model_version_policy": {"specific": { "versions":[1, 3] }},
-            "shape": "auto"
+            "model_version_policy": {"specific": { "versions":[1, 3] }}
          }
       },
       {
@@ -117,10 +104,33 @@ To serve multiple models from the same container you will need an additional JSO
    ]
 }
 ```
+In case of deploying a complete pipelines defined by a MediaPipe graph, each of them should be added to the configuration file as addition section:
 
-Once the Docker container has the path to your config file mounted, it can be started. This simplifies the `docker run` command, as arguments are now read from the config file. 
-When the `base_path` in the config.json is without cloud URI prefix or `/` character, the path will be relative to the config file location. 
-This is helpful when models are distributed together with the config file, the paths do not need to be adjusted.
+```json
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipe_graph_name"
+    },
+    {
+        "name":"mediapipe2",
+        "base_path":"non_default_path"
+    }
+    ]
+```
+Check more info about [MediaPipe graphs](./mediapipe.md)
+
+
+`base_path` in the config.json can be absolute or relative to the configuration file. This is helpful when models are distributed together with the config file, the paths do not need to be adjusted.
+
+Examples:
+```
+docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+--config_path /models/config.json --port 9000 --rest_port 8000
+```
+or for binary package:
+```
+ovms --config_path <path_to_config_file> --port 9000 --rest_port 8000
+```
 
 ## Next Steps
 

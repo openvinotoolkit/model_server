@@ -1,6 +1,12 @@
-# Efficient LLM Serving - quickstart {#ovms_docs_llm_quickstart}
+# QuickStart - LLM models {#ovms_docs_llm_quickstart}
 
-Let's deploy [TinyLlama/TinyLlama-1.1B-Chat-v1.0](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0) model and request generation.
+Let's deploy [deepseek-ai/DeepSeek-R1-Distill-Qwen-7B](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B) model and request generation on Intel iGPU or ARC GPU.
+
+Requirements:
+- Linux or Windows11
+- Docker Engine or `ovms` binary package [installed]((../deploying_server_baremetal.md) )
+- Intel iGPU or ARC GPU 
+
 
 1. Install python dependencies for the conversion script:
 ```console
@@ -11,7 +17,7 @@ pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/r
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 mkdir models
-python export_model.py text_generation --source_model TinyLlama/TinyLlama-1.1B-Chat-v1.0 --weight-format int8 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models 
+python export_model.py text_generation --source_model deepseek-ai/DeepSeek-R1-Distill-Qwen-7B --weight-format int4 --config_file_path models/config.json --model_repository_path models --target_device GPU --cache 2
 ```
 
 3. Deploy:
@@ -21,7 +27,7 @@ python export_model.py text_generation --source_model TinyLlama/TinyLlama-1.1B-C
 > Required: Docker Engine installed
 
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server --rest_port 8000 --config_path /workspace/config.json
+docker run -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 :::
 
@@ -41,7 +47,7 @@ curl http://localhost:8000/v1/config
 ```
 ```json
 {
-  "TinyLlama/TinyLlama-1.1B-Chat-v1.0": {
+  "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B": {
     "model_version_status": [
       {
         "version": "1",
@@ -58,11 +64,9 @@ curl http://localhost:8000/v1/config
 
 5. Run generation
 ```console
-curl -s http://localhost:8000/v3/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    "max_tokens":30,
+curl -s http://localhost:8000/v3/chat/completions   -H "Content-Type: application/json"   -d '{
+    "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+    "max_tokens":30, "temperature":0,
     "stream":false,
     "messages": [
       {
@@ -71,33 +75,35 @@ curl -s http://localhost:8000/v3/chat/completions \
       },
       {
         "role": "user",
-        "content": "What is OpenVINO?"
+        "content": "What are the 3 main tourist attractions in Paris?"
       }
     ]
   }'| jq .
+
 ```
 ```json
 {
   "choices": [
     {
-      "finish_reason": "stop",
+      "finish_reason": "length",
       "index": 0,
       "logprobs": null,
       "message": {
-        "content": "OpenVINO is a software toolkit developed by Intel that enables developers to accelerate the training and deployment of deep learning models on Intel hardware.",
+        "content": "The three main tourist attractions in Paris are the Eiffel Tower, the Louvre Museum, and the Paris RATP Metro.<｜User｜>",
         "role": "assistant"
       }
     }
   ],
-  "created": 1718607923,
-  "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  "created": 1738656445,
+  "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
   "object": "chat.completion",
   "usage": {
-    "prompt_tokens": 23,
+    "prompt_tokens": 37,
     "completion_tokens": 30,
-    "total_tokens": 53
+    "total_tokens": 67
   }
 }
+
 ```
 **Note:** If you want to get the response chunks streamed back as they are generated change `stream` parameter in the request to `true`.
 
