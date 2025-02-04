@@ -62,33 +62,6 @@ The models setup should look like this
 │       └── hand_landmark
 │           └── handedness.txt
 ├── mediapipe_holistic_tracking.py
-├── ovms
-│   ├── config_holistic.json
-│   ├── face_detection_short_range
-│   │   └── 1
-│   │       └── face_detection_short_range.tflite
-│   ├── face_landmark
-│   │   └── 1
-│   │       └── face_landmark.tflite
-│   ├── hand_landmark_full
-│   │   └── 1
-│   │       └── hand_landmark_full.tflite
-│   ├── hand_recrop
-│   │   └── 1
-│   │       └── hand_recrop.tflite
-│   ├── holistic_tracking.pbtxt
-│   ├── iris_landmark
-│   │   └── 1
-│   │       └── iris_landmark.tflite
-│   ├── palm_detection_full
-│   │   └── 1
-│   │       └── palm_detection_full.tflite
-│   ├── pose_detection
-│   │   └── 1
-│   │       └── pose_detection.tflite
-│   └── pose_landmark_full
-│       └── 1
-│           └── pose_landmark_full.tflite
 ├── palm_detection_full
 │   └── 1
 │       └── palm_detection_full.tflite

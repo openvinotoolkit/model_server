@@ -37,7 +37,7 @@ RUN apt update && apt install -y --no-install-recommends \
         openjdk-8-jdk\
         openjdk-8-jre-headless \
         pkg-config \
-        python-dev \
+        python3-dev \
         software-properties-common \
         swig \
         unzip \
