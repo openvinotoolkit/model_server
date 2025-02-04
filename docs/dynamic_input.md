@@ -43,5 +43,5 @@ OpenVINO Model Server accepts several data types that can be handled on [MediaPi
 
 - Next node in the graph uses a calculator that can decode raw KServe request. In such case dynamic input handling must be implemented as part of the calculator logic since model server passes the request to the calculator as-is. Such node expects input stream with a tag starting with `REQUEST` prefix.
 
-- Next node in the graph uses `PythonExecutorCalculator`. In such case data in the KServe request will be available to the user as input argument of their Python [execute function](https://github.com/openvinotoolkit/model_server/blob/main/docs/python_support/reference.md#ovmspythonmodel-class). Such node expects input stream with a tag starting with `OVMS_PY_TENSOR` prefix.
+- Next node in the graph uses `PythonExecutorCalculator`. In such case data in the KServe request will be available to the user as input argument of their Python [execute function](https://github.com/openvinotoolkit/model_server/blob/releases/2025/0/docs/python_support/reference.md#ovmspythonmodel-class). Such node expects input stream with a tag starting with `OVMS_PY_TENSOR` prefix.
 

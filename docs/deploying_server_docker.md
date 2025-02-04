@@ -41,8 +41,8 @@ docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_serv
 ##### 2.2 Download input files: an image and a label mapping file
 
 ```bash
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/zebra.jpeg
-wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/classes.py
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/0/demos/common/static/images/zebra.jpeg
+wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/0/demos/common/python/classes.py
 ```
 
 ##### 2.3 Install the Python-based ovmsclient package

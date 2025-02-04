@@ -18,7 +18,7 @@ It includes the following nodes:
 - Custom node east_ocr - it includes C++ implementation of east-resnet50 model results processing. It analyses the detected boxes coordinates, filters the results
 based on the configurable score level threshold and and applies non-max suppression algorithm to remove overlapping boxes. Finally the custom node east-ocr crops all detected boxes
 from the original image, resize them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
-boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/east_ocr)
+boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [east_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2025/0/src/custom_nodes/east_ocr)
 - demultiplexer - output from the Custom node east_ocr have variable batch size. In order to match it with the sequential text detection model, the data is split into individual images with batch size 1 each.
 Such smaller requests can be submitted for inference in parallel to the next Model Node. Learn more about the [demultiplexing](../../../docs/demultiplexing.md)
 - Model text-recognition - this model recognizes characters included in the input image.
@@ -103,11 +103,11 @@ text-recognition model will have the following interface:
 
 ## Building the Custom Node "east_ocr" Library
 
-Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_node_interface.h).
+Custom nodes are loaded into OVMS as dynamic library implementing OVMS API from [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/releases/2025/0/src/custom_node_interface.h).
 It can use OpenCV libraries included in OVMS or it could use other third party components.
 
 The custom node east_ocr can be built inside a docker container via the following procedure:
-- go to the directory with custom node examples [src/custom_node](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes)
+- go to the directory with custom node examples [src/custom_node](https://github.com/openvinotoolkit/model_server/blob/releases/2025/0/src/custom_nodes)
 - run `make` command:
 
 ```bash
@@ -131,7 +131,7 @@ cp -R EAST/IR/1 OCR/east_fp32/1
 
 ## OVMS Configuration File
 
-The configuration file for running the OCR demo is stored in [config.json](https://github.com/openvinotoolkit/model_server/blob/main/demos/optical_character_recognition/python/config.json)
+The configuration file for running the OCR demo is stored in [config.json](https://github.com/openvinotoolkit/model_server/blob/releases/2025/0/demos/optical_character_recognition/python/config.json)
 Copy this file along with the model files and the custom node library like presented below:
 ```bash
 cp model_server/demos/optical_character_recognition/python/config.json OCR

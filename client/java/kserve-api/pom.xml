@@ -84,7 +84,7 @@
             </goals>
             <configuration>
               <url>
-                https://raw.githubusercontent.com/openvinotoolkit/model_server/main/src/kfserving_api/grpc_predict_v2.proto</url>
+                https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/0/src/kfserving_api/grpc_predict_v2.proto</url>
               <outputFileName>grpc_predict_v2.proto</outputFileName>
               <outputDirectory>src/main/proto</outputDirectory>
             </configuration>

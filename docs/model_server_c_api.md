@@ -19,7 +19,7 @@ With OpenVINO Model Server 2023.1 release C-API is no longer in preview state an
 
 ## API Description
 
-Server functionalities are encapsulated in shared library built from OpenVINO Model Server source. To include OpenVINO Model Server you need to link this library with your application and use C API defined in [header file](https://github.com/openvinotoolkit/model_server/blob/main/src/ovms.h).
+Server functionalities are encapsulated in shared library built from OpenVINO Model Server source. To include OpenVINO Model Server you need to link this library with your application and use C API defined in [header file](https://github.com/openvinotoolkit/model_server/blob/releases/2025/0/src/ovms.h).
 
 
 Calling a method to start the model serving in your application initiates the OpenVINO Model Server as a separate thread. Then you can schedule inference both directly from app using C API and gRPC/HTTP endpoints.

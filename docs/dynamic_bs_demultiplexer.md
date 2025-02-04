@@ -9,7 +9,7 @@ More information about this feature can be found in [dynamic batch size in demul
 
 > **NOTE**: Only one dynamic demultiplexer (`demultiply_count` with value `-1`) can exist in the pipeline.
 
-- Example client in python [grpc_predict_resnet.py](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/grpc_predict_resnet.py) can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add an additional dimension to the input shape which is required for demultiplexing feature.
+- Example client in python [grpc_predict_resnet.py](https://github.com/openvinotoolkit/model_server/blob/releases/2025/0/client/python/tensorflow-serving-api/samples/grpc_predict_resnet.py) can be used to request the pipeline. Use `--dag-batch-size-auto` flag to add an additional dimension to the input shape which is required for demultiplexing feature.
 
 - The example uses model [resnet](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md).
 
