@@ -125,6 +125,7 @@ build:coverity --config=mp_on_py_on
 build:coverity --disk_cache=
 
 # Windows settings ######################################################################################################
+build:windows --experimental_shortened_obj_file_path
 # Configure short or long logs
 build:short_logs --output_filter=DONT_MATCH_ANYTHING
 build:verbose_logs --output_filter=
