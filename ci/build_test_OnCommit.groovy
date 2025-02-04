@@ -155,6 +155,7 @@ pipeline {
               steps {
                   script {
                       def windows = load 'ci/loadWin.groovy'
+                      println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
                       if (windows != null) {
                         try {
                           windows.setup_bazel_remote_cache()
