@@ -9,7 +9,7 @@ This document gives information how to build docker images and the binary packag
 1. make
 1. bash
 
- > **Note**: Building Windows server is covered in [Developer Guide for Windows](windows_developer_guide.md).
+ > **Note**: Building Windows Model Server is covered in [Developer Guide for Windows](windows_developer_guide.md).
 
 ## Makefile and building
 
@@ -175,5 +175,5 @@ dist/ubuntu22
 
 ---
 
-Read more detailed about building and testing changes in [developer guide](https://github.com/openvinotoolkit/model_server/blob/main/docs/developer_guide.md).
+Read more details about building and testing changes in [developer guide](https://github.com/openvinotoolkit/model_server/blob/main/docs/developer_guide.md).
 

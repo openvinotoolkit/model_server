@@ -18,7 +18,7 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 open
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 or for binary package:
-```c
+```
 ovms --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 

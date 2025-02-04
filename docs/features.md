@@ -22,10 +22,10 @@ ovms_docs_advanced
 ovms_docs_legacy
 ```
 
-## Efficient LLM Serving
+## Efficient LLM Serving, text embeddings and reranking
 Serve LLMs enhanced with state of the art optimization techniques for best performance and resource utilization on generative workloads
 
-[Learn more](llm/reference.md)
+[Learn more](./genai.md)
 
 ## Python Code Execution
 Write Python code that will do your custom processing and serve it in the Model Server.
