@@ -363,6 +363,7 @@ LABEL "version"="2025.0"
 LABEL "release"="2025"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
+LABEL "maintainer"="dariusz.trawinski@intel.com"
 ARG INSTALL_RPMS_FROM_URL=
 ARG INSTALL_DRIVER_VERSION="23.22.26516"
 ARG GPU=0
