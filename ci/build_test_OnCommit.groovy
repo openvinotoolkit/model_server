@@ -118,6 +118,7 @@ pipeline {
             stage("Run unit tests") {
               steps {
               script {
+              println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
               try {
                   sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/INT8 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
@@ -159,6 +160,7 @@ pipeline {
                       if (windows != null) {
                         try {
                           windows.setup_bazel_remote_cache()
+                          windows.install_dependencies()
                           windows.unit_test()
                           windows.check_tests()
                         } finally {
