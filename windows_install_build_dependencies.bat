@@ -16,7 +16,7 @@
 
 :: %1 First parameter is the --output_user_root value on c:\ drive - bazel uses this, we want to install dependencies per build there
 :: %2 Second parameter is the --expunge flag - when set to 1 we will force reinstall c:\opt dependencies - default 0
-@echo on
+@echo off
 setlocal EnableExtensions EnableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-XXXX" number passed here from jenkins so that a tmp directory will be created
@@ -61,7 +61,8 @@ IF /I EXIST %opt_install_dir% (
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Install wget
+::::::::::::::::::::::: Installing wget
+echo [INFO] Installing wget ...
 set "wget_path=%opt_install_dir%\wget.exe"
 IF /I EXIST %wget_path% (
     if %expunge% EQU 1 (
@@ -74,9 +75,10 @@ IF /I EXIST %wget_path% (
     curl -k -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-
+echo [INFO] Wget installed in %wget_path%
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Msys bash
+echo Installing msys ...
 set "bash_path=%opt_install_dir%\msys64\usr\bin\bash.exe"
 set "msys_path=%opt_install_dir%\msys64\"
 set "msys_url=https://github.com/msys2/msys2-installer/releases/download/2024-07-27/msys2-x86_64-20240727.exe"
@@ -84,7 +86,7 @@ set "msys_exe=msys2-x86_64-20240727.exe"
 set "msys_install=%opt_install_dir%\%msys_exe%"
 IF /I EXIST %bash_path% (
     if %expunge% EQU 1 (goto :install_msys) else (
-        echo [INFO] ::::::::::::::::::::::: Msys bash already installed in: %bash_path%
+        echo [INFO] Msys bash already installed in: %bash_path%
     )
 ) ELSE (
     :install_msys
@@ -100,10 +102,10 @@ IF /I EXIST %bash_path% (
     start "Installing_msys" %msys_install% in --confirm-command --accept-messages --root %msys_path%
     for /l %%i in (1,1,200) do (
         echo Timeout iteration: %%i
-        tasklist /NH | find /i "%msys_exe%" > nul
+        tasklist /NH | c:\Windows\SysWOW64\find.exe /i "%msys_exe%" > nul
         if !errorlevel! neq 0 (
-            Process "%msys_exe%" finished
-            goto install_finished
+            echo Process "%msys_exe%" finished
+            goto msys_install_finished
         ) else (
             echo Process "%msys_exe%" in progress ...
             ping 1.1.1.1 -n 3 > nul
@@ -112,8 +114,8 @@ IF /I EXIST %bash_path% (
 
     taskkill /f /t /im %msys_exe%
     if !errorlevel! neq 0 exit /b !errorlevel!
-    :install_finished
-    echo [INFO] ::::::::::::::::::::::: Msys installed in: %msys_path%
+    :msys_install_finished
+    echo [INFO] Msys installed in: %msys_path%
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -131,7 +133,7 @@ set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
 set "openvino_workspace=C:\\\\opt\\\\openvino\\\\runtime"
 set "openvino_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
 
-echo [INFO] ::::::::::::::::::::::: OpenVino: %openvino_dir%
+echo [INFO] Installing OpenVino: %openvino_dir% ...
 :: Download OpenVINO
 IF /I EXIST %openvino_zip% (
     if %expunge% EQU 1 (
@@ -170,9 +172,10 @@ if "!output_user_root!" neq "opt" (
     powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-
+echo [INFO] OpenVino installed: %BAZEL_SHORT_PATH%\%openvino_dir%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
+echo [INFO] Installing OpenCL headers ...
 set "opencl_git=https://github.com/KhronosGroup/OpenCL-SDK"
 set "opencl_ver=v2024.10.24"
 set "opencl_dir=%BAZEL_SHORT_PATH%\opencl"
@@ -191,7 +194,7 @@ IF /I EXIST %opencl_dir% (
     git clone --depth 1 --branch %opencl_ver% %opencl_git% %opencl_dir%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-
+echo [INFO] OpenCL headers installed: %opencl_dir%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\opt\ section started - ONE per system, not per BUILD, reinstalled only with expunge clean :::::::::::::::::::::::
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -202,7 +205,7 @@ IF /I EXIST %opencl_dir% (
 set "bringssl_git=https://github.com/firebase/boringSSL-SwiftPM/"
 set "bringssl_ver=0.32.1"
 set "boringssl_dir=%opt_install_dir%\boringSSL-SwiftPM"
-
+echo [INFO] Installing BoringSSL ...
 echo "[INFO] BoringSSL: "%bringssl_ver%
 :: Clone BoringSSL
 IF /I EXIST %boringssl_dir% (
@@ -216,9 +219,10 @@ IF /I EXIST %boringssl_dir% (
     git clone --depth 1 --branch %bringssl_ver% %bringssl_git% %boringssl_dir%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-
+echo [INFO] BoringSSL installed: %boringssl_dir%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install bazel
+echo [INFO] Installing bazel ...
 set "bazel_path=%opt_install_dir%\bazel.exe"
 set "bazel_file=bazel-6.4.0-windows-x86_64.exe"
 IF /I EXIST %bazel_path% (
@@ -242,10 +246,11 @@ IF /I EXIST %bazel_path% (
     xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%*
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-
+echo [INFO] Bazel installed: %bazel_file%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
 set "python_version=3.11.9"
+echo [INFO] Installing python %python_version% ...
 for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
         set MAJOR_VER=%%a
         set MINOR_VER=%%b
@@ -255,12 +260,13 @@ set "python_path=%opt_install_dir%\%python_dir%"
 set "python_full_name=python-%python_version%-amd64"
 ::https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe
 set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
-IF /I EXIST %python_path% (
+
+IF /I EXIST %python_path%\python.exe (
     IF %expunge% EQU 1 (
         if !errorlevel! neq 0 exit /b !errorlevel!
         :: Uninstall Python
         IF /I EXIST "%opt_install_dir%\%python_full_name%.exe" (
-            %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+            call :UninstallPython
             rm %opt_install_dir%\%python_full_name%.exe
             if !errorlevel! neq 0 exit /b !errorlevel!
         )
@@ -270,52 +276,92 @@ IF /I EXIST %python_path% (
         :: Install python
         curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+        call :UninstallPython
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        %python_path%\python.exe -m ensurepip --upgrade
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        :: setuptools<60.0 required for numpy1.23 on python311 to install
-        %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
-        if !errorlevel! neq 0 exit /b !errorlevel!
+        call :InstallPython
+        IF /I not EXIST %python_path%\python.exe (
+            echo "Python installation failed. Errorlevel: !errorlevel!"
+            echo "Please review the installation log: python/install.log"
+            echo "To fix the installation run %opt_install_dir%\%python_full_name%.exe in GUI and press repair."
+            echo "Rerun the windows_install_build_dependencies.bat, once the installation is fixed."
+            exit /b !errorlevel!
+        )
     ) ELSE (
         echo [INFO] ::::::::::::::::::::::: %python_path% already installed
     )
 ) ELSE (
     :: Uninstall Python
     IF /I EXIST "%opt_install_dir%\%python_full_name%.exe" (
-        %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+        call :UninstallPython
         rm %opt_install_dir%\%python_full_name%.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
     :: Install python
     curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
     if !errorlevel! neq 0 exit /b !errorlevel!
-    %opt_install_dir%\%python_full_name%.exe /quiet /uninstall
+    call :UninstallPython
     if !errorlevel! neq 0 exit /b !errorlevel!
-    %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple Include_symbols=1 TargetDir=%python_path%
-    if !errorlevel! neq 0 (
+    call :InstallPython
+    IF /I not EXIST %python_path%\python.exe (
         echo "Python installation failed."
+        echo "Please review the installation log: python/install.log"
         echo "To fix the installation run %opt_install_dir%\%python_full_name%.exe in GUI and press repair."
-        echo "Then run those commands in cmd.exe:"
-        echo %python_path%\python.exe -m ensurepip --upgrade
-        echo %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
-        echo "If commands are successful, you can rerun the windows_install_build_dependencies.bat, otherwise python installation needs more fixes."
-        /b !errorlevel!
+        echo "Rerun the windows_install_build_dependencies.bat, once the installation is fixed."
+        exit /b !errorlevel!
     )
-    %python_path%\python.exe -m ensurepip --upgrade
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    :: setuptools<60.0 required for numpy1.23 on python311 to install
-    %python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
-    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!
+%python_path%\python.exe -m ensurepip --upgrade
+if !errorlevel! neq 0 exit /b !errorlevel!
+:: setuptools<60.0 required for numpy1.23 on python311 to install
+%python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+if !errorlevel! neq 0 exit /b !errorlevel!
+echo [INFO] Python %python_version% installed: %python_path%
+goto install_opencv
+:::::::::::::::::::::: Uninstall function
+:UninstallPython
+start "Unstalling_python" %opt_install_dir%\%python_full_name%.exe /quiet /uninstall /log python/uninstall.log
+echo [INFO] Uninstalling python
+for /l %%i in (1,1,300) do (
+    echo Timeout iteration: %%i
+    tasklist /NH | c:\Windows\SysWOW64\find.exe /i "%python_full_name%.exe" > nul
+    if !errorlevel! neq 0 (
+        echo Process "%python_full_name%.exe" finished
+        goto python_uninstall_finished
+    ) else (
+        echo Process "%python_full_name%.exe" in progress ...
+        ping 1.1.1.1 -n 3 > nul
+    )
+)
+
+:python_uninstall_finished
+exit /b 0
+:::::::::::::::::::::: Uninstall python function end
+:::::::::::::::::::::: Install python function
+:InstallPython
+echo [INFO] Running python installer
+start "Installing_python" %opt_install_dir%\%python_full_name%.exe /passive /quiet /simple /InstallAllUsers TargetDir=%python_path% /log python/install.log
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+for /l %%i in (1,1,300) do (
+    echo Timeout iteration: %%i
+    tasklist /NH | c:\Windows\SysWOW64\find.exe /i "%python_full_name%.exe" > nul
+    if !errorlevel! neq 0 (
+        echo Process "%python_full_name%.exe" finished
+        goto python_install_finished
+    ) else (
+        echo Process "%python_full_name%.exe" in progress ...
+        ping 1.1.1.1 -n 3 > nul
+    )
+)
+:python_install_finished
+exit /b 0
+:::::::::::::::::::::: Uninstall function end
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCV
-
+:install_opencv
 set "opencv_git=https://github.com/opencv/opencv.git"
 set "opencv_contrib=https://github.com/opencv/opencv_contrib.git"
 set "opencv_ver=4.10.0"
@@ -324,6 +370,7 @@ set "opencv_contrib_dir=%opt_install_dir%\opencv_contrib_git"
 set "opencv_install=%opt_install_dir%\opencv"
 set "opencv_flags=-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_aruco=OFF -D BUILD_opencv_bgsegm=OFF -D BUILD_opencv_bioinspired=OFF -D BUILD_opencv_ccalib=OFF -D BUILD_opencv_datasets=OFF -D BUILD_opencv_dnn=OFF -D BUILD_opencv_dnn_objdetect=OFF -D BUILD_opencv_dpm=OFF -D BUILD_opencv_face=OFF -D BUILD_opencv_fuzzy=OFF -D BUILD_opencv_hfs=OFF -D BUILD_opencv_img_hash=OFF -D BUILD_opencv_js=OFF -D BUILD_opencv_line_descriptor=OFF -D BUILD_opencv_phase_unwrapping=OFF -D BUILD_opencv_plot=OFF -D BUILD_opencv_quality=OFF -D BUILD_opencv_reg=OFF -D BUILD_opencv_rgbd=OFF -D BUILD_opencv_saliency=OFF -D BUILD_opencv_shape=OFF -D BUILD_opencv_structured_light=OFF -D BUILD_opencv_surface_matching=OFF -D BUILD_opencv_world=ON -D BUILD_opencv_xobjdetect=OFF -D BUILD_opencv_xphoto=OFF -D CV_ENABLE_INTRINSICS=ON -D WITH_EIGEN=ON -D WITH_PTHREADS=ON -D WITH_PTHREADS_PF=ON -D WITH_JPEG=ON -D WITH_PNG=ON -D WITH_TIFF=ON "
 
+echo [INFO] Installing OpenCV %opencv_ver% ...
 IF /I EXIST %opencv_install% (
     if %expunge% EQU 1 (rmdir /S /Q %opencv_install%) else (
         echo "[INFO] OpenCV installed in: "%opencv_install%
@@ -331,7 +378,6 @@ IF /I EXIST %opencv_install% (
     )
 )
 
-echo [INFO] Installing OpenCV: %opencv_ver%
 :: Clone OpenCL
 IF /I EXIST %opencv_dir% (
     rmdir /S /Q %opencv_dir%
@@ -360,9 +406,9 @@ cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --install .
 if !errorlevel! neq 0 exit /b !errorlevel!
-
+echo [INFO] OpenCV %opencv_ver% installed: %opencv_install%
 :exit_dependencies
-echo [INFO] Dependencies installed
+echo [INFO] Dependencies installed 
 exit /b 0
 :exit_dependencies_error
 echo [ERROR] Some dependencies not installed
