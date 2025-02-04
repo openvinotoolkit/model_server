@@ -15,7 +15,7 @@
 #
 
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 RUN apt update && apt install -y python3-pip && apt-get clean && rm -rf /var/lib/apt/lists/*
 WORKDIR /bert
 COPY bert_question_answering.py tokens_bert.py html_reader.py requirements.txt ./
