@@ -71,7 +71,7 @@ def clean() {
 
 def build(){
     def status = bat(returnStatus: true, script: 'windows_build.bat ' + env.JOB_BASE_NAME + " //src:ovms_test")
-    status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms.exe win_build.log | grep "Build completed successfully"')
+    status = bat(returnStatus: true, script: 'grep -A 7 src/ovms.exe win_build.log | grep "Build completed successfully"')
     if (status != 0) {
         error "Error: Windows build failed ${status}. Check win_build.log for details."
     } else {
