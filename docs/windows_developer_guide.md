@@ -11,13 +11,6 @@ This instruction was tested on Windows 11 and Windows 10 OS.
 # Install prerequisites
 Following the steps below requires 40GB of free disk space.
 
-## Install git
-Download from https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.2/Git-2.47.1.2-64-bit.exe
-Or run command in windows cmd.exe terminal:
-```bat
-winget install --id Git.Git -e --source winget
-```
-
 ## VISUAL BUILD TOOLS
 Install build tools for VS:
 
@@ -44,10 +37,12 @@ Follow instructions in the link below:
 https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
 
 ## Run Command Prompt
-Press Windows Start and run the cmd.exe terminal.
+Press Windows Start and run the cmd.exe terminal as Administrator.
 Run commands in this prompt is not stated otherwise.
 
-## Get the code
+## Pull OpenVINO Model Server source
+> `Git` is required to complete this step. If you don't have it on your system, download it from https://git-scm.com/downloads/win and install before you continue.
+Run below commands in terminal to clone model server repository:
 ```bat
 mkdir C:\git
 cd C:\git\
@@ -85,3 +80,36 @@ windows_create_package.bat
 
 # Test the Deployment
 You can follow the [baremetal deployment guide](deploying_server_baremetal.md) for information how to deploy and use the ovms.zip package.
+
+# Developer Command Prompt
+For building ovms.exe and running ovms_test.exe with manual bazel commands you must setup proper environment variables.
+Run the batch script in new "Developer Command Prompt for VS 2022" terminal:
+```bat
+cd c:\git\model_server
+windows_setupvars.bat
+```
+
+Reuild unit tests:
+```bat
+bazel --output_user_root=c:\opt build --config=windows --action_env OpenVINO_DIR=c:\opt\openvino/runtime/cmake --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log
+```
+
+Download LLMs
+```bat
+%cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
+```
+
+Copy OpenVINO GenAI and tokenizers libs
+```bat
+copy %cd%\bazel-out\x64_windows-opt\bin\external\llm_engine\copy_openvino_genai\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
+```
+
+Change tests configs to windows:
+```bat
+python windows_change_test_configs.py
+```
+
+Run specific unit tests by setting gtest_filter:
+```bat
+%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log
+```

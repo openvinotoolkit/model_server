@@ -13,7 +13,7 @@
 :: See the License for the specific language governing permissions and
 :: limitations under the License.
 ::
-@echo on
+@echo off
 setlocal EnableExtensions EnableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-1234" number passed here from jenkins so that a tmp directory will be created
@@ -89,13 +89,20 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Copy OpenVINO GenAI and tokenizers libs
+:: TODO this is a hack to be improved after bazel llm windows integration
+copy %cd%\bazel-out\x64_windows-opt\bin\external\llm_engine\copy_openvino_genai\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
+if !errorlevel! neq 0 exit /b !errorlevel!
+
 :: Start unit test
+echo Running: %runTest%
 %runTest%
 
 :: Cut tests log to results
 set regex="\[  .* ms"
 set sed_clean="s/ (.* ms)//g"
 grep -a %regex% win_full_test.log | sed %sed_clean% | tee win_test.log
+if !errorlevel! neq 0 exit /b !errorlevel!
 :exit_build
 echo [INFO] Build finished
 exit /b 0
