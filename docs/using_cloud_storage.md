@@ -94,3 +94,5 @@ docker run --rm -d -p 9001:9001 \
 openvino/model_server:latest \
 --model_path s3://bucket/model_path --model_name s3_model --port 9001
 ```
+---
+> **Note**: Cloud storage is currently not supported on Windows server version

@@ -3,6 +3,38 @@
 This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph using OVMS.
 
 Example usage of graph that contains only one model - resnet:
+```protobuf
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:session"
+  node_options: {
+    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "resnet"
+      servable_version: "1"
+    }
+  }
+}
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "B:in"
+  output_stream: "A:out"
+  node_options: {
+    [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
+        tag_to_input_tensor_names {
+          key: "B"
+          value: "0"
+        }
+        tag_to_output_tensor_names {
+          key: "A"
+          value: "1463"
+        }
+    }
+  }
+}
+```
 
 ## Prerequisites
 
