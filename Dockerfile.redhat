@@ -43,7 +43,6 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
             patch \
             pkg-config \
             wget \
-            yum-utils \
             https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-2020.3-8.el9.x86_64.rpm \
             https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-devel-2020.3-8.el9.x86_64.rpm && \
             dnf clean all
@@ -103,8 +102,7 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 ARG JOBS=40
 
 # hadolint ignore=DL3041
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el9.noarch.rpm && \
+RUN dnf install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el9.noarch.rpm && \
             dnf update -d6 -y && dnf install -d6 -y \
             gdb \
             java-11-openjdk-devel \
@@ -131,7 +129,8 @@ RUN ln -s libOpenCL.so.1 libOpenCL.so
 WORKDIR /ovms
 COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
 # hadolint ignore=SC1091
-RUN wget -q https://rpmfind.net/linux/centos-stream/10-stream/AppStream/x86_64/os/Packages/libva-devel-2.22.0-1.el10.x86_64.rpm && rpm -ivh --nodeps ./libva-devel-2.22.0-1.el10.x86_64.rpm && \
+RUN wget -q https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/libva-devel-2.22.0-1.el9.x86_64.rpm && \
+    rpm -ivh --nodeps ./libva-devel-2.22.0-1.el9.x86_64.rpm && \
     if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; source ./install_gpu_drivers.sh && \
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
@@ -164,10 +163,7 @@ ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
 # hadolint ignore=DL3041
-RUN dnf install -y http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-devel-2.2.2-1.el8.x86_64.rpm \
-    http://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/gflags-2.2.2-1.el8.x86_64.rpm \
-    https://dl.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/j/json-devel-3.6.1-2.el8.x86_64.rpm \
-    fdupes && \
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf install -y gflags-devel gflags json-devel fdupes && \
     dnf clean all
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
@@ -207,8 +203,9 @@ rm -f /opt/intel/openvino/oneapi-tbb-2021.13.0-lin.tgz
 ENV TBB_DIR=/tmp/openvino_installer/oneapi-tbb-2021.13.0/lib/cmake/tbb
 
 # install sample apps including benchmark_app
-RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && yum install -y gflags-devel gflags json-devel && \
-    yum clean all
+# hadolint ignore=DL3041
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf install -y gflags-devel gflags json-devel && \
+    dnf clean all
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
 
@@ -366,6 +363,7 @@ LABEL "version"="2025.0"
 LABEL "release"="2025"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
+LABEL "maintainer"="dariusz.trawinski@intel.com"
 ARG INSTALL_RPMS_FROM_URL=
 ARG INSTALL_DRIVER_VERSION="23.22.26516"
 ARG GPU=0
@@ -375,7 +373,7 @@ LABEL supported-devices="CPU=1 GPU=${GPU}"
 ARG RELEASE_BASE_IMAGE
 LABEL base-image=${RELEASE_BASE_IMAGE}
 
-ENV PYTHONPATH=/ovms/lib/python
+ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
