@@ -127,7 +127,7 @@ pipeline {
               } 
               finally {
                   archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
-                  archiveArtifacts allowEmptyArchive: true, artifacts: "linux_tests.log"
+                  archiveArtifacts allowEmptyArchive: true, artifacts: "linux_tests_summary.log"
               }
               } 
               }
