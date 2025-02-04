@@ -372,7 +372,7 @@ LABEL supported-devices="CPU=1 GPU=${GPU}"
 ARG RELEASE_BASE_IMAGE
 LABEL base-image=${RELEASE_BASE_IMAGE}
 
-ENV PYTHONPATH=/ovms/lib/python
+ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
