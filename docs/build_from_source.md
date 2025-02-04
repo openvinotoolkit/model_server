@@ -175,5 +175,5 @@ dist/ubuntu22
 
 ---
 
-Read more details about building and testing changes in [developer guide](https://github.com/openvinotoolkit/model_server/blob/main/docs/developer_guide.md).
+Read more details about building and testing changes in [developer guide](./developer_guide.md).
 
