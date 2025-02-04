@@ -138,6 +138,7 @@ def archive_test_artifacts(){
     // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build_test.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_summary.log"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_log.zip"
 }
 
 def setup_bazel_remote_cache(){
