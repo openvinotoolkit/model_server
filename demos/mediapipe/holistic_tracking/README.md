@@ -36,7 +36,6 @@ curl https://storage.googleapis.com/mediapipe-assets/pose_landmark_full.tflite -
 
 The models setup should look like this
 ```bash
-.
 ├── config_holistic.json
 ├── face_detection_short_range
 │   └── 1
