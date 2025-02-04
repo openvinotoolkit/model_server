@@ -1,6 +1,6 @@
 # How to serve LLM Models in Speculative Decoding Pipeline{#ovms_demos_continuous_batching_speculative_decoding}
 
-Following [OpenVINO GenAI docs](https://docs.openvino.ai/2024/learn-openvino/llm_inference_guide/genai-guide.html#efficient-text-generation-via-speculative-decoding):
+Following [OpenVINO GenAI docs](https://docs.openvino.ai/2025/learn-openvino/llm_inference_guide/genai-guide.html#efficient-text-generation-via-speculative-decoding):
 > Speculative decoding (or assisted-generation) enables faster token generation when an additional smaller draft model is used alongside the main model. This reduces the number of infer requests to the main model, increasing performance.
 > 
 > The draft model predicts the next K tokens one by one in an autoregressive manner. The main model validates these predictions and corrects them if necessary - in case of a discrepancy, the main model prediction is used. Then, the draft model acquires this token and runs prediction of the next K tokens, thus repeating the cycle.

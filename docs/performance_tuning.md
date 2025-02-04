@@ -44,7 +44,7 @@ docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render*
 
 #### LATENCY
 This mode prioritizes low latency, providing short response time for each inference job. It performs best for tasks where inference is required for a single input image, like a medical analysis of an ultrasound scan image. It also fits the tasks of real-time or nearly real-time applications, such as an industrial robot's response to actions in its environment or obstacle avoidance for autonomous vehicles.
-Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/2024/openvino-workflow/running-inference/optimize-inference/high-level-performance-hints.html#performance-hints-how-it-works).
+Note that currently the `PERFORMANCE_HINT` property is supported by CPU and GPU devices only. [More information](https://docs.openvino.ai/2025/openvino-workflow/running-inference/optimize-inference/high-level-performance-hints.html#performance-hints-how-it-works).
 
 To enable Performance Hints for your application, use the following command:
 
@@ -124,7 +124,7 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 | ENABLE_CPU_PINNING | This property allows CPU threads pinning during inference. |
 
 
-> **NOTE:** For additional information about all parameters read about [OpenVINO device properties](https://docs.openvino.ai/2024/api/c_cpp_api/group__ov__runtime__cpp__prop__api.html).
+> **NOTE:** For additional information about all parameters read about [OpenVINO device properties](https://docs.openvino.ai/2025/api/c_cpp_api/group__ov__runtime__cpp__prop__api.html).
 
 - Example:
 Following docker command will set `NUM_STREAMS` parameter to a value `1`:
@@ -167,7 +167,7 @@ The default value is 1 second which ensures prompt response to creating new mode
 
 Depending on the device employed to run the inference operation, you can tune the execution behavior with a set of parameters. Each device is handled by its OpenVINO plugin.
 
-> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/2024/api/c_cpp_api/group__ov__runtime__cpp__prop__api.html).
+> **NOTE**: For additional information, read [supported configuration parameters for all plugins](https://docs.openvino.ai/2025/api/c_cpp_api/group__ov__runtime__cpp__prop__api.html).
 
 Model's plugin configuration is a dictionary of param:value pairs passed to OpenVINO Plugin on network load. It can be set with `plugin_config` parameter.
 
@@ -182,7 +182,7 @@ docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 
 ## Analyzing performance issues
 
 Recommended steps to investigate achievable performance and discover bottlenecks:
-1. [Launch OV benchmark app](https://docs.openvino.ai/2024/learn-openvino/openvino-samples/benchmark-tool.html)
+1. [Launch OV benchmark app](https://docs.openvino.ai/2025/learn-openvino/openvino-samples/benchmark-tool.html)
 
       **Note:** It is useful to drop plugin configuration from benchmark app using `-dump_config` and then use the same plugin configuration in model loaded into OVMS
 

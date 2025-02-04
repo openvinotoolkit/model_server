@@ -7,7 +7,7 @@ This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Li
 - [Docker Engine](https://docs.docker.com/engine/) installed
 - Intel® Core™ processor (6-13th gen.) or Intel® Xeon® processor (1st to 4th gen.)
 - Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/)
-- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Accelerators are tested only on bare-metal Linux hosts.
+- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes.html). Accelerators are tested only on bare-metal Linux hosts.
 
 ### Launch Model Server Container
 
