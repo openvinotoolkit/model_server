@@ -125,7 +125,6 @@ public:
 
     virtual StatusCode deleteFileFolder(const std::string& path) = 0;
 
-// TODO: Implement Windows version
 #ifdef __linux__
     /**
      * @brief Create a Temp Path
