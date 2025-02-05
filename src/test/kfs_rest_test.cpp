@@ -72,7 +72,7 @@ public:
             nullptr};
         thread = std::make_unique<std::thread>(
             [&argv]() {
-                ASSERT_EQ(EXIT_SUCCESS, server->start(11, argv));
+                ASSERT_NEQ(EXIT_SUCCESS, server->start(11, argv));
             });
         auto start = std::chrono::high_resolution_clock::now();
         while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&

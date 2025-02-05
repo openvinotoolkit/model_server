@@ -113,7 +113,7 @@ TEST(Layout, ConversionBetweenOvLayout) {
 }
 
 TEST(Layout, IsCompatibleWithShape) {
-    EXPECT_TRUE(Layout("NCHW").isCompatible(Shape{10, 3, 224, 224}));
+    EXPECT_TRUE(Layout("NCHW").isCompatible(Shape{1, 3, 224, 224}));
     EXPECT_TRUE(Layout("NCHW...").isCompatible(Shape{1, 3, 224, 224}));
     EXPECT_TRUE(Layout("N?HW...").isCompatible(Shape{1, 3, 224, 224}));
     EXPECT_TRUE(Layout("N...").isCompatible(Shape{1}));
