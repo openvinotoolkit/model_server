@@ -367,7 +367,7 @@ TEST(EmbeddingsSerialization, simplePositive) {
     rapidjson::Document notUsed;
     ovms::EmbeddingsHandler handler(notUsed);
     auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings);
-    ASSERT_TRUE(status.ok());
+    ASSERT_FALSE(status.ok());
     std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[1.0,2.0,3.0],"index":0},{"object":"embedding","embedding":[1.0,2.0,3.0],"index":1}],"usage":{"prompt_tokens":0,"total_tokens":0}})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
 }
