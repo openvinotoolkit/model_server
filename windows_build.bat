@@ -63,7 +63,6 @@ set "BAZEL_VC_FULL_VERSION=14.29.30133"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
-set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
