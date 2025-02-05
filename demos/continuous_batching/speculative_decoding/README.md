@@ -1,6 +1,6 @@
 # How to serve LLM Models in Speculative Decoding Pipeline{#ovms_demos_continuous_batching_speculative_decoding}
 
-Following [OpenVINO GenAI docs](https://docs.openvino.ai/2025/learn-openvino/llm_inference_guide/genai-guide.html#efficient-text-generation-via-speculative-decoding):
+Following [OpenVINO GenAI docs](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-genai.html#efficient-text-generation-via-speculative-decoding):
 > Speculative decoding (or assisted-generation) enables faster token generation when an additional smaller draft model is used alongside the main model. This reduces the number of infer requests to the main model, increasing performance.
 > 
 > The draft model predicts the next K tokens one by one in an autoregressive manner. The main model validates these predictions and corrects them if necessary - in case of a discrepancy, the main model prediction is used. Then, the draft model acquires this token and runs prediction of the next K tokens, thus repeating the cycle.
@@ -13,7 +13,7 @@ This demo shows how to use speculative decoding in the model serving scenario, b
 
 **Model preparation**: Python 3.9 or higher with pip and HuggingFace account
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
 ## Model considerations
 
@@ -103,7 +103,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 

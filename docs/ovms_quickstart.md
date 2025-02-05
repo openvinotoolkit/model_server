@@ -84,7 +84,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 ovms --model_name faster_rcnn --model_path model --port 9000
 ```

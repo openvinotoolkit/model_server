@@ -6,7 +6,7 @@ Docker engine installed (on Linux and WSL), or ovms binary package installed as 
 
 Supported HW is documented in [OpenVINO system requirements](https://docs.openvino.ai/2025/about-openvino/release-notes-openvino/system-requirements.html)
 
-Before staring the model server as a binary package, make sure there are installed GPU or/and NPU required drivers like described in [https://docs.openvino.ai/2025/get-started/configurations.html](https://docs.openvino.ai/2025/get-started/configurations.html)
+Before staring the model server as a binary package, make sure there are installed GPU or/and NPU required drivers like described in [https://docs.openvino.ai/2025/get-started/install-openvino/configurations.html](https://docs.openvino.ai/2025/get-started/install-openvino/configurations.html)
 
 Additional considerations when deploying with docker container:
 - make sure to use the image version including runtime drivers. The public image has a suffix -gpu like `openvino/model_server:latest-gpu`.
@@ -57,7 +57,7 @@ docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -u $(i
 
 ### Binary 
 
-Starting the server with GPU acceleration requires installation of runtime drivers and ocl-icd-libopencl1 package like described on [configuration guide](https://docs.openvino.ai/2025/get-started/configurations/configurations-intel-gpu.html)
+Starting the server with GPU acceleration requires installation of runtime drivers and ocl-icd-libopencl1 package like described on [configuration guide](https://docs.openvino.ai/2025/get-started/install-openvino/configurations/configurations-intel-gpu.html)
 
 Start the model server with GPU accelerations using a command:
 ```console
@@ -82,7 +82,7 @@ Start the model server with NPU accelerations using a command:
 ovms --model_path model --model_name resnet --port 9000 --target_device NPU --batch_size 1
 ```
 
-Check more info about the [NPU driver configuration](https://docs.openvino.ai/2025/get-started/configurations/configurations-intel-npu.html).
+Check more info about the [NPU driver configuration](https://docs.openvino.ai/2025/get-started/install-openvino/configurations/configurations-intel-npu.html).
 
 > **NOTE**: NPU device execute models with static input and output shapes only. If your model has dynamic shape, it can be reset to static with parameters `--batch_size` or `--shape`.
 

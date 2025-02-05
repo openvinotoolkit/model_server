@@ -182,7 +182,7 @@ docker run --rm -d -v ${PWD}/models/public/resnet-50-tf:/opt/model -p 9001:9001 
 ## Analyzing performance issues
 
 Recommended steps to investigate achievable performance and discover bottlenecks:
-1. [Launch OV benchmark app](https://docs.openvino.ai/2025/learn-openvino/openvino-samples/benchmark-tool.html)
+1. [Launch OV benchmark app](https://docs.openvino.ai/2025/get-started/learn-openvino/openvino-samples/benchmark-tool.html)
 
       **Note:** It is useful to drop plugin configuration from benchmark app using `-dump_config` and then use the same plugin configuration in model loaded into OVMS
 
