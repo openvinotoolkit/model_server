@@ -43,7 +43,7 @@ class OvmsBaseImageType(Enum):
     UBUNTU_GPU = "ubuntu_gpu"
     UBUNTU_NGINX = "ubuntu_nginx"
     REDHAT = "redhat"
-    REDHAT_PYTHON = "redhat_python"   
+    REDHAT_PYTHON = "redhat_python"
     REDHAT_GPU = "redhat_gpu"
 
 
@@ -64,8 +64,8 @@ dynamic_libraries = {
     OvmsBaseImageType.UBUNTU22_PYTHON: {'libpython3.10.so',},
     OvmsBaseImageType.UBUNTU24: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseImageType.UBUNTU24_PYTHON: {'libpython3.12.so',},
-    OvmsBaseImageType.REDHAT: set(),
-    OvmsBaseImageType.REDHAT_PYTHON:{'libpython3.9.so', 'libutil.so',},
+    OvmsBaseImageType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so','libcrypt.so',},
+    OvmsBaseImageType.REDHAT_PYTHON:{'libpython3.9.so'},
 }
 
 whitelisted_dynamic_libraries = {
