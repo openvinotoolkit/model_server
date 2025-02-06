@@ -13,17 +13,17 @@ Model Server hosts models and makes them accessible to software components over 
 
 OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures. It uses the same API as [TensorFlow Serving](https://github.com/tensorflow/serving) and [KServe](https://github.com/kserve/kserve) while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
 
-In addition, there are included endpoints for generative use cases compatible with [OpenAI API and Cohere API](./clients_genai.md).
+In addition, there are included endpoints for generative use cases compatible with [OpenAI API and Cohere API](./docs/clients_genai.md).
 
 ![OVMS picture](docs/ovms_high_level.png)
 
 The models used by the server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Repository](docs/models_repository.md) documentation. Model server works inside [Docker containers](docs/deploying_server.md#deploying-model-server-in-docker-container), on [Bare Metal](docs/deploying_server.md#deploying-model-server-on-baremetal-without-container), and in [Kubernetes environment](docs/deploying_server.md#deploying-model-server-in-kubernetes).
-Start using OpenVINO Model Server with a fast-forward serving example from the [QuickStart guide](docs/ovms_quickstart.md) or [LLM QuickStart guide](./llm/quickstart.md).
+Start using OpenVINO Model Server with a fast-forward serving example from the [QuickStart guide](docs/ovms_quickstart.md) or [LLM QuickStart guide](./docs/llm/quickstart.md).
 
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
 ### Key features:
-- **[NEW]** Native Windows support. Check updated [deployment guide](./deploying_server.md)
+- **[NEW]** Native Windows support. Check updated [deployment guide](./docs/deploying_server.md)
 - **[NEW]** [Text Embeddings compatible with OpenAI API](demos/embeddings/README.md)
 - **[NEW]** [Reranking compatible with Cohere API](demos/rerank/README.md)
 - **[NEW]** [Efficient Text Generation via OpenAI API](demos/continuous_batching/README.md)
