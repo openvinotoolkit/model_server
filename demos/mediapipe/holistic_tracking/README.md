@@ -50,17 +50,25 @@ The models setup should look like this
 │   └── 1
 │       └── hand_recrop.tflite
 ├── holistic_tracking.pbtxt
+├── iris_landmark
+│   └── 1
+│       └── iris_landmark.tflite
+├── mediapipe
+│   └── modules
+│       └── hand_landmark
+│           └── handedness.txt
+├── mediapipe_holistic_tracking.py
 ├── palm_detection_full
 │   └── 1
 │       └── palm_detection_full.tflite
 ├── pose_detection
 │   └── 1
 │       └── pose_detection.tflite
-└── pose_landmark_full
-    └── 1
-        └── pose_landmark_full.tflite
-
-
+├── pose_landmark_full
+│   └── 1
+│       └── pose_landmark_full.tflite
+├── README.md
+└── requirements.txt
 ```
 ## Server Deployment
 :::{dropdown} **Deploying with Docker**
@@ -71,6 +79,7 @@ docker pull openvino/model_server:latest
 
 ```
 ```bash
+chmod -R 755 .
 docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
 ```
 :::
