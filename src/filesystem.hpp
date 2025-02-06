@@ -207,6 +207,34 @@ public:
         return (std::string::npos != lhs && lhs == 0) || (std::string::npos != rhs && rhs == path.length() - 3) || std::string::npos != path.find("/../");
     }
 
+    static bool dirExists(const std::string& path) {
+        if (isPathEscaped(path)) {
+            SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+            return false;
+        }
+
+        return std::filesystem::is_directory(path);
+    }
+
+    static std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
+        if (isPathEscaped(path)) {
+            SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+            return std::string();
+        }
+
+        std::vector<std::string> files;
+        for (const auto& entry : std::filesystem::directory_iterator(path)) {
+            if (!std::filesystem::is_directory(entry.status())) {
+                auto name = entry.path().string();
+                if (endsWith(name, extension)) {
+                    return name;
+                }
+            }
+        }
+
+        return std::string();
+    }
+
     static const std::string S3_URL_PREFIX;
 
     static const std::string GCS_URL_PREFIX;

@@ -684,82 +684,8 @@ Status ModelInstance::loadOutputTensorsImpl(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-#ifdef __linux__
-// Temporary methods. To be replaces with proper storage class.
-static bool dirExists(const std::string& path) {
-    if (FileSystem::isPathEscaped(path)) {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
-        return false;
-    }
-    DIR* dir = opendir(path.c_str());
-    if (dir) {
-        closedir(dir);
-        return true;
-    }
-
-    return false;
-}
-
-static std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
-    struct dirent* entry;
-    if (FileSystem::isPathEscaped(path)) {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
-        return std::string();
-    }
-    DIR* dir = opendir(path.c_str());
-    if (!dir) {
-        SPDLOG_WARN("Failed to opendir: {}", path);
-        return std::string();
-    }
-
-    while ((entry = readdir(dir)) != nullptr) {
-        auto name = std::string(entry->d_name);
-        if (endsWith(name, extension)) {
-            closedir(dir);
-            if (endsWith(name, "/")) {
-                return path + name;
-            } else {
-                return path + '/' + name;
-            }
-        }
-    }
-    closedir(dir);
-
-    return std::string();
-}
-#else
-// TODO: Move this to filesystem and check if windows impl can be used on linux also
-static std::string findFilePathWithExtension(const std::string& path, const std::string& extension) {
-    if (FileSystem::isPathEscaped(path)) {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
-        return std::string();
-    }
-
-    std::vector<std::string> files;
-    for (const auto& entry : std::filesystem::directory_iterator(path)) {
-        if (!std::filesystem::is_directory(entry.status())) {
-            auto name = entry.path().string();
-            if (endsWith(name, extension)) {
-                return name;
-            }
-        }
-    }
-
-    return std::string();
-}
-static bool dirExists(const std::string& path) {
-    if (FileSystem::isPathEscaped(path)) {
-        SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
-        return false;
-    }
-
-    return std::filesystem::is_directory(path);
-}
-
-#endif
-
 std::string ModelInstance::findModelFilePathWithExtension(const std::string& extension) const {
-    return findFilePathWithExtension(path, extension);
+    return FileSystem::findFilePathWithExtension(path, extension);
 }
 
 uint32_t ModelInstance::getNumOfParallelInferRequestsUnbounded(const ModelConfig& modelConfig) {
@@ -979,7 +905,7 @@ Status ModelInstance::fetchModelFilepaths() {
     }
 
     SPDLOG_DEBUG("Getting model files from path: {}", path);
-    if (!dirExists(path)) {
+    if (!FileSystem::dirExists(path)) {
         SPDLOG_ERROR("Missing model directory {}", path);
         return StatusCode::PATH_INVALID;
     }
