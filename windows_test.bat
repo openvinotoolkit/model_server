@@ -103,11 +103,12 @@ set regex="\[  .* ms"
 set sed_clean="s/ (.* ms)//g"
 C:\Windows\System32\tar.exe -a -c -f win_test_log.zip win_full_test.log
 grep -a %regex% win_full_test.log | sed %sed_clean% > win_test_summary.log
-if !errorlevel! neq 0 exit /b !errorlevel!
+grep -a %regex% win_full_test.log | sed %sed_clean% | grep -q " FAILED "
+if !errorlevel! equ 0 goto :exit_build_error
 :exit_build
-echo [INFO] Build finished
+echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
 exit /b 0
 :exit_build_error
-echo [ERROR] Build finished with error
+echo [ERROR] Check tests summary in 'win_test_summary.log' and tests logs in 'win_full_test.log'. Rerun failed test with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*'
 exit /b 1
 endlocal
