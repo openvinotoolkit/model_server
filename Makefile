@@ -161,11 +161,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "24.52.32224"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc3/openvino_toolkit_ubuntu24_2025.0.0.dev20250130_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2025.0/linux/openvino_toolkit_ubuntu24_2025.0.0.17942.1f68be9f594_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc3/openvino_toolkit_ubuntu22_2025.0.0.dev20250130_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2025.0/linux/openvino_toolkit_ubuntu22_2025.0.0.17942.1f68be9f594_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -175,7 +175,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "24.45.31740"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc3/openvino_toolkit_rhel8_2025.0.0.dev20250130_x86_64.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2025.0/linux/openvino_toolkit_rhel8_2025.0.0.17942.1f68be9f594_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server

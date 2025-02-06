@@ -1,9 +1,7 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
---extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
---pre
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git  
-openvino-tokenizers[transformers]<=2025.0.0.dev20250115
-openvino<=2025.0.0.dev20250115
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git@f601b8b1fda4477ed9f9e4293cf3c9d5cec4ad1b
+openvino-tokenizers[transformers]<=2025.0.0
+openvino<=2025.0.0
 nncf>=2.11.0 
 sentence_transformers==3.1.1 
 openai 
