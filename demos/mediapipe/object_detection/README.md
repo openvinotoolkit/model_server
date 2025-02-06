@@ -28,6 +28,7 @@ python mediapipe_object_detection.py --download_models
 ## Server Deployment
 :::{dropdown} **Deploying with Docker**
 ```bash
+sed -i 's;ssdlite_object_detection_labelmap.txt;/demo/ssdlite_object_detection_labelmap.txt;g' graph.pbtxt
 docker run -d -v $PWD:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
 ```
 :::

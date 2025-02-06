@@ -50,8 +50,8 @@ docker pull openvino/model_server:latest
 Store components of the model in the `model/1` directory. Here are example commands pulling an object detection model from Kaggle:
 
 ```console
-curl --create-dir https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -o model/1/1.tar.gz
-tar xzf 1.tar.gz -C model/1
+curl -L --create-dirs https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -o model/1/1.tar.gz
+tar xzf model/1/1.tar.gz -C model/1
 ```
 
 OpenVINO Model Server expects a particular folder structure for models - in this case `model` directory has the following content:
@@ -73,6 +73,7 @@ For more information about the directory structure and how to deploy multiple mo
 ### Step 4: Start the Model Server
 :::{dropdown} **Deploying with Docker**
 ```bash
+chmod -R 755 model
 docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/model_server:latest --model_name faster_rcnn --model_path /model --port 9000
 ```
 
@@ -84,7 +85,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 ovms --model_name faster_rcnn --model_path model --port 9000
 ```
