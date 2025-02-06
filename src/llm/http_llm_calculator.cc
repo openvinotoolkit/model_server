@@ -59,7 +59,7 @@ class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<OpenAIChatCompletionsHandler> apiHandler;
     std::shared_ptr<ClientConnection> client;
 
-    std::shared_ptr<TextCallbackStreamer> streamer;
+    std::shared_ptr<ov::genai::TextCallbackStreamer> streamer;
     std::string lastTextChunk;
 
     static const std::string INPUT_TAG_NAME;
@@ -183,14 +183,12 @@ public:
                 nodeResources->notifyExecutorThread();
 
                 auto callback = [this](std::string text) {
-                    std::cout << "Streamer callback executed with text: [" << text << "]" << std::endl << std::flush;
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
                     this->lastTextChunk = text;
                     return false;
                 };
 
-                this->streamer = std::make_shared<TextCallbackStreamer>(nodeResources->cbPipe->get_tokenizer(), callback);
-                //this->streamer = std::make_shared<TextStreamer>(
-                //    std::make_shared<ov::genai::Tokenizer>(nodeResources->cbPipe->get_tokenizer()));
+                this->streamer = std::make_shared<ov::genai::TextCallbackStreamer>(nodeResources->cbPipe->get_tokenizer(), callback);
             }
 
             RET_CHECK(this->generationHandle != nullptr);
