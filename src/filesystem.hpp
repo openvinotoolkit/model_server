@@ -28,6 +28,7 @@
 #include "model_version_policy.hpp"
 #include "openssl/md5.h"
 #include "status.hpp"
+#include "stringutils.hpp"
 
 namespace ovms {
 
