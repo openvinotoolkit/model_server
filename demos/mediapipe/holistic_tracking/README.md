@@ -54,10 +54,6 @@ The models setup should look like this
 │   └── 1
 │       └── iris_landmark.tflite
 ├── mediapipe
-│   ├── mediapipe
-│   │   └── modules
-│   │       └── hand_landmark
-│   │           └── handedness.txt
 │   └── modules
 │       └── hand_landmark
 │           └── handedness.txt
