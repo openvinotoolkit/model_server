@@ -5,12 +5,20 @@
 
 In this experiment we are going to use a TensorFlow model from [Kaggle](https://www.kaggle.com/models/google/universal-sentence-encoder/tensorFlow2/multilingual/2).
 
-```bash
+```console
 mkdir -p universal-sentence-encoder-multilingual/1/
 curl -L -o universal-sentence-encoder-multilingual/1/3.tar.gz https://www.kaggle.com/api/v1/models/google/universal-sentence-encoder/tensorFlow2/multilingual/2/download
 tar -xzf universal-sentence-encoder-multilingual/1/3.tar.gz -C universal-sentence-encoder-multilingual/1/
 rm universal-sentence-encoder-multilingual/1/3.tar.gz
+```
+
+Make sure the downloaded model has right permissions
+```bash
 chmod -R 755 universal-sentence-encoder-multilingual
+```
+
+The model setup should look like this
+```console
 tree universal-sentence-encoder-multilingual/
 
 universal-sentence-encoder-multilingual/
@@ -39,6 +47,19 @@ Check the container logs to confirm successful start:
 docker logs ovms
 ```
 
+Alternatively see (instructions)[https://github.com/openvinotoolkit/model_server/blob/main/docs/deploying_server_baremetal.md] for deployment on bare metal.
+
+Make sure to:
+
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+on every shell that will start OpenVINO Model Server.
+
+And start Model Server using the following command:
+```bash
+ovms --model_name usem --model_path universal-sentence-encoder-multilingual/ --plugin_config "{\"NUM_STREAMS\": 1}" --port 9000 --rest_port 8000
+```
 
 ## Send string data as inference request
 
