@@ -8,7 +8,7 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubu
 :sync: ubuntu-22-04
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
 or build it yourself:
@@ -44,7 +44,7 @@ pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 :sync: ubuntu-24-04
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu24.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
 or build it yourself:
@@ -81,7 +81,7 @@ pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 :sync: rhel-9.4
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_redhat.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
 or build it yourself:
@@ -121,8 +121,8 @@ Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/r
 Download and unpack model server archive for Windows:
 
 ```bat
-curl <url_to_be_provided>
-tar -xf ovms.zip
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_windows.zip --output ovms_windows.zip
+tar -xf ovms_windows.zip
 ```
 
 Run `setupvars` script to set required environment variables. 
