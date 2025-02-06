@@ -20,13 +20,13 @@ default: client_preprocessing
 
 client_preprocessing:
 # Download ONNX ResNet50 model
-	curl --fail -L --create-dir https://github.com/onnx/models/raw/main/validated/vision/classification/resnet/model/resnet50-caffe2-v1-9.onnx -o workspace/resnet50-onnx/1/resnet50-caffe2-v1-9.onnx
+	curl --fail -L --create-dirs https://github.com/onnx/models/raw/main/validated/vision/classification/resnet/model/resnet50-caffe2-v1-9.onnx -o workspace/resnet50-onnx/1/resnet50-caffe2-v1-9.onnx
 
 BASE_OS?=ubuntu
 
 server_preprocessing:
 # Download ONNX ResNet50 model
-	curl --fail -L --create-dir https://github.com/onnx/models/raw/main/validated/vision/classification/resnet/model/resnet50-caffe2-v1-9.onnx -o workspace/resnet50-onnx/1/resnet50-caffe2-v1-9.onnx
+	curl --fail -L --create-dirs https://github.com/onnx/models/raw/main/validated/vision/classification/resnet/model/resnet50-caffe2-v1-9.onnx -o workspace/resnet50-onnx/1/resnet50-caffe2-v1-9.onnx
 # Build custom node
 	cd ../../../src/custom_nodes && \
 	make BASE_OS=${BASE_OS} NODES=image_transformation && \
