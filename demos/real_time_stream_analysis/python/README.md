@@ -24,7 +24,7 @@ In the demo will be used two gRPC communication patterns which might be advantag
 
 ## Requirements
 - on the client side it could be Windows, Mac or Linux. FFMPEG should be preinstalled in order to follow the scenario with RTSP client. Python3.7+ is needed.
-- the server can be deployed on Linux, MacOS (only with CPU execution on x86_64 arch) or inside WSL on Windows operating system.
+- the server can be deployed on Linux, MacOS (only with CPU execution on x86_64 arch) or on Windows operating system  (including inside WSL).
 - images sent over gRPC are not encoded, so there should be good network connectivity between the client and the server. At least 100Mb/s for real-time video analysis at high rate.
 
 ## gRPC streaming with MediaPipe graphs
@@ -42,13 +42,8 @@ Using the streaming API has the following advantages:
 The [holistic graph](https://github.com/openvinotoolkit/model_server/blob/releases/2025/0/demos/mediapipe/holistic_tracking/holistic_tracking.pbtxt) is expecting and IMAGE object on the input and returns an IMAGE on the output.
 As such it doesn't require any preprocessing and postprocessing. In this demo the returned stream will be just visualized or sent to the target sink.
 
-The model server with the holistic use case can be deployed with the following steps:
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/demos/mediapipe/holistic_tracking
-./prepare_server.sh
-docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
-```
+The model server with the holistic use case can be deployed using steps from [this](../../mediapipe/holistic_tracking/README.md#server-deployment) article.
+
 [Check more info about this use case](../../mediapipe/holistic_tracking/README.md)
 
 > **Note** All the graphs with an image on input and output can be applied here without any changes on the client application.
@@ -57,7 +52,7 @@ docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD/ovms:/models -p 9000:9000 ope
 ### Start the client with real time stream analysis
 
 Prepare the python environment by installing required dependencies:
-```bash
+```console
 cd ../../real_time_stream_analysis/python/
 pip install -r ../../common/stream_client/requirements.txt
 ```
@@ -69,7 +64,7 @@ docker build ../../common/stream_client/ -t rtsp_client
 ```
 
 Client parameters:
-```bash
+```console
 python3 client.py --help
 usage: client.py [-h] [--grpc_address GRPC_ADDRESS]
                       [--input_stream INPUT_STREAM]
@@ -111,25 +106,40 @@ The parameter `--input_stream 0 ` indicates the camera ID `0`.
 
 #### Reading from the encoded video file and saving results to a file
 
-```bash
-wget -O video.mp4 "https://www.pexels.com/download/video/3044127/?fps=24.0&h=1080&w=1920"
+```console
+curl -L "https://www.pexels.com/download/video/3044127/?fps=24.0&h=1080&w=1920" -o video.mp4 
 python3 client.py --grpc_address localhost:9000 --input_stream 'video.mp4' --output_stream 'output.mp4'
 ```
+
 
 #### Inference using RTSP stream
 
 The rtsp client app needs to have access to RTSP stream to read from and write to. Below are the steps to simulate such stream with the video.mp4 and the content source.
 
-Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx)
+Example rtsp server [mediamtx](https://github.com/bluenviron/mediamtx) using docker image.
 
 ```bash
-docker run --rm -d -p 8080:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
+docker run --rm -d -p 8554:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
+```
+
+or, download and extract a standalone binary from the [mediamtx release page](https://github.com/bluenviron/mediamtx/releases/) that corresponds to your operating system and architecture 
+alternatively you can install it for windows using `winget`.
+
+```bat
+winget install mediamtx --silent --accept-source-agreements
+```
+
+and start the server.
+
+
+```bat
+mediamtx 
 ```
 
 Then write to the server using ffmpeg, example using video or camera
 
-```bash
-ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
+```console
+ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8554/channel1
 ```
 
 ```
@@ -137,14 +147,14 @@ ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://local
 ```
 
 While the RTSP stream is active, run the client to read it and send the output stream
-```bash
-python3 client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8080/channel1' --output_stream 'rtsp://localhost:8080/channel2'
+```console
+python3 client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8554/channel1' --output_stream 'rtsp://localhost:8554/channel2'
 ```
 
 The results can be examined with ffplay utility which reads and display the altered content.
 
-```bash
-ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8080/channel2
+```console
+ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8554/channel2
 ```
 
 
