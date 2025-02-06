@@ -2,8 +2,11 @@
 This document describes windows development and compilation guide for ovms.exe binary.
 This instruction was tested on Windows 11 and Windows 10 OS.
 
-## List of disabled features:
-### Cloud storage support
+## List of disabled features on Windows model server:
+- cloud storage for the models - to be added in next releases
+- C-API interface - to be added in next releases
+- DAG pipelines - legacy feature
+
 
 # Install prerequisites
 Following the steps below requires 40GB of free disk space.

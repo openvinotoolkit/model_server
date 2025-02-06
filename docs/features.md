@@ -6,12 +6,10 @@ maxdepth: 1
 hidden:
 ---
 
-ovms_docs_llm_reference
-ovms_docs_dag
+ovms_docs_genai
 ovms_docs_mediapipe
 ovms_docs_streaming_endpoints
 ovms_docs_python_support_reference
-ovms_docs_stateful_models
 ovms_docs_binary_input
 ovms_docs_text
 ovms_docs_shape_batch_layout
@@ -21,12 +19,13 @@ ovms_docs_model_version_policy
 ovms_docs_metrics
 ovms_docs_c_api
 ovms_docs_advanced
+ovms_docs_legacy
 ```
 
-## Efficient LLM Serving
+## Efficient LLM Serving, text embeddings and reranking
 Serve LLMs enhanced with state of the art optimization techniques for best performance and resource utilization on generative workloads
 
-[Learn more](llm/reference.md)
+[Learn more](./genai.md)
 
 ## Python Code Execution
 Write Python code that will do your custom processing and serve it in the Model Server.

@@ -77,7 +77,6 @@ To check server metadata use `OVMS_ServerMetadata` call. It will create new obje
 * There is no metrics endpoint exposed through C API.
 * Inference scheduled through C API does not have metrics `ovms_requests_success`,`ovms_requests_fail` and `ovms_request_time_us` counted.
 * You cannot turn gRPC endpoint off, REST API endpoint is optional.
-* There is no API for asynchronous inference.
 * There is no support for stateful models.
 * There is no support for mediapipe graphs.
-
+* Currently this interface is not enabled on Windows server version
