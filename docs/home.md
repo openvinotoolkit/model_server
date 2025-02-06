@@ -58,5 +58,5 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 * [RAG building blocks made easy and affordable with OpenVINO Model Server](https://medium.com/openvino-toolkit/rag-building-blocks-made-easy-and-affordable-with-openvino-model-server-e7b03da5012b)
 * [Simplified Deployments with OpenVINO™ Model Server and TensorFlow Serving](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Simplified-Deployments-with-OpenVINO-Model-Server-and-TensorFlow/post/1353218)
 * [Inference Scaling with OpenVINO™ Model Server in Kubernetes and OpenShift Clusters](https://www.intel.com/content/www/us/en/developer/articles/technical/deploy-openvino-in-openshift-and-kubernetes.html)
-* [Benchmarking results](https://docs.openvino.ai/2024/about-openvino/performance-benchmarks.html)
+* [Benchmarking results](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
 * [Release Notes](https://github.com/openvinotoolkit/model_server/releases)

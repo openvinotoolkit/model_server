@@ -379,4 +379,4 @@ docker run -v ${PWD}/workspace:/workspace --network host benchmark_client -a loc
 ```
 
 Many other client options together with benchmarking examples are presented in
-[an additional PDF document](https://github.com/openvinotoolkit/model_server/blob/main/docs/python-benchmarking-client-16feb.pdf).
+[an additional PDF document](https://github.com/openvinotoolkit/model_server/blob/releases/2025/0/docs/python-benchmarking-client-16feb.pdf).

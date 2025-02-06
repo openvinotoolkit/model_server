@@ -25,7 +25,7 @@ RUN pip3 install numpy
 ENTRYPOINT [ `/ovms/bin/ovms` ]
 ```
 
-You can also modify `requirements.txt` from our [python demos](https://github.com/openvinotoolkit/model_server/tree/main/demos/python_demos) and from repository top level directory run `make python_image`
+You can also modify `requirements.txt` from our [python demos](https://github.com/openvinotoolkit/model_server/tree/releases/2025/0/demos/python_demos) and from repository top level directory run `make python_image`
 
 ## `OvmsPythonModel` class
 
@@ -936,7 +936,7 @@ class OvmsPythonModel:
 
 In such case, the client could implement different actions depending on which output it receives on the stream.
 
-Another example of such configuration is signaling that generation is finished when running in [generative mode](#generative-mode). This solution is used in [image generation demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/python_demos/stable_diffusion).
+Another example of such configuration is signaling that generation is finished when running in [generative mode](#generative-mode). This solution is used in [image generation demo](https://github.com/openvinotoolkit/model_server/tree/releases/2025/0/demos/python_demos/stable_diffusion).
 
 
 ### Calculator type conversions
@@ -947,7 +947,7 @@ That's why converter calculators exists. They work as adapters between nodes and
 
 #### PyTensorOvTensorConverterCalculator
 
-OpenVINO Model Server comes with a built-in `PyTensorOvTensorConverterCalculator` that provides conversion between [Python Tensor](#python-tensor) and [OV Tensor](https://docs.openvino.ai/2024/api/c_cpp_api/classov_1_1_tensor.html).
+OpenVINO Model Server comes with a built-in `PyTensorOvTensorConverterCalculator` that provides conversion between [Python Tensor](#python-tensor) and [OV Tensor](https://docs.openvino.ai/2025/api/c_cpp_api/classov_1_1_tensor.html).
 
 Currently `PyTensorOvTensorConverterCalculator` works with only one input and one output.
 - The stream that expects Python Tensor **must** have tag `OVMS_PY_TENSOR`
@@ -1017,4 +1017,4 @@ node {
 }
 ```
 
-See a [CLIP demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/python_demos/clip_image_classification) for a complete example of a graph that uses Python nodes, OV Inference nodes and converter nodes.
+See a [CLIP demo](https://github.com/openvinotoolkit/model_server/tree/releases/2025/0/demos/python_demos/clip_image_classification) for a complete example of a graph that uses Python nodes, OV Inference nodes and converter nodes.

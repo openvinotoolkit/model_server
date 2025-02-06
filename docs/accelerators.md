@@ -4,9 +4,9 @@
 
 Docker engine installed (on Linux and WSL), or ovms binary package installed as described in the [guide](./deploying_server_baremetal.md) (on Linux or Windows). 
 
-Supported HW is documented in [OpenVINO system requirements](https://docs.openvino.ai/2024/about-openvino/release-notes-openvino/system-requirements.html)
+Supported HW is documented in [OpenVINO system requirements](https://docs.openvino.ai/2025/about-openvino/release-notes-openvino/system-requirements.html)
 
-Before staring the model server as a binary package, make sure there are installed GPU or/and NPU required drivers like described in [https://docs.openvino.ai/2024/get-started/configurations.html](https://docs.openvino.ai/2024/get-started/configurations.html)
+Before staring the model server as a binary package, make sure there are installed GPU or/and NPU required drivers like described in [https://docs.openvino.ai/2025/get-started/install-openvino/configurations.html](https://docs.openvino.ai/2025/get-started/install-openvino/configurations.html)
 
 Additional considerations when deploying with docker container:
 - make sure to use the image version including runtime drivers. The public image has a suffix -gpu like `openvino/model_server:latest-gpu`.
@@ -27,7 +27,7 @@ rm model/1/model.tar.gz
 
 ## Starting Model Server with Intel GPU
 
-The [GPU plugin](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) uses the [oneDNN](https://github.com/oneapi-src/oneDNN) and [OpenCL](https://github.com/KhronosGroup/OpenCL-SDK) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including
+The [GPU plugin](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) uses the [oneDNN](https://github.com/oneapi-src/oneDNN) and [OpenCL](https://github.com/KhronosGroup/OpenCL-SDK) to infer deep neural networks. For inference execution, it employs Intel® Processor Graphics including
 Intel® Arc™ GPU Series, Intel® UHD Graphics, Intel® HD Graphics, Intel® Iris® Graphics, Intel® Iris® Xe Graphics, and Intel® Iris® Xe MAX graphics and Intel® Data Center GPU.
 
 ### Container
@@ -57,7 +57,7 @@ docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -u $(i
 
 ### Binary 
 
-Starting the server with GPU acceleration requires installation of runtime drivers and ocl-icd-libopencl1 package like described on [configuration guide](https://docs.openvino.ai/2024/get-started/configurations/configurations-intel-gpu.html)
+Starting the server with GPU acceleration requires installation of runtime drivers and ocl-icd-libopencl1 package like described on [configuration guide](https://docs.openvino.ai/2025/get-started/install-openvino/configurations/configurations-intel-gpu.html)
 
 Start the model server with GPU accelerations using a command:
 ```console
@@ -67,7 +67,7 @@ ovms --model_path model --model_name resnet --port 9000 --target_device GPU
 
 ## Using NPU device Plugin
 
-OpenVINO Model Server supports using [NPU device](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/npu-device.html)
+OpenVINO Model Server supports using [NPU device](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes/npu-device.html)
 
 ### Container
 Example command to run container with NPU:
@@ -82,13 +82,13 @@ Start the model server with NPU accelerations using a command:
 ovms --model_path model --model_name resnet --port 9000 --target_device NPU --batch_size 1
 ```
 
-Check more info about the [NPU driver configuration](https://docs.openvino.ai/2024/get-started/configurations/configurations-intel-npu.html).
+Check more info about the [NPU driver configuration](https://docs.openvino.ai/2025/get-started/install-openvino/configurations/configurations-intel-npu.html).
 
 > **NOTE**: NPU device execute models with static input and output shapes only. If your model has dynamic shape, it can be reset to static with parameters `--batch_size` or `--shape`.
 
 ## Using Heterogeneous Plugin
 
-The [HETERO plugin](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/hetero-execution.html) makes it possible to distribute inference load of one model
+The [HETERO plugin](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes/hetero-execution.html) makes it possible to distribute inference load of one model
 among several computing devices. That way different parts of the deep learning network can be executed by devices best suited to their type of calculations.
 OpenVINO automatically divides the network to optimize the process.
 
@@ -115,7 +115,7 @@ ovms --model_path model --model_name resnet --port 9000 --target_device "HETERO:
 
 ## Using AUTO Plugin
 
-[Auto Device](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/auto-device-selection.html) (or AUTO in short) is a new special “virtual” or “proxy” device in the OpenVINO toolkit, it doesn’t bind to a specific type of HW device.
+[Auto Device](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes/auto-device-selection.html) (or AUTO in short) is a new special “virtual” or “proxy” device in the OpenVINO toolkit, it doesn’t bind to a specific type of HW device.
 AUTO solves the complexity in application required to code a logic for the HW device selection (through HW devices) and then, on the deducing the best optimization settings on that device.
 AUTO always chooses the best device, if compiling model fails on this device, AUTO will try to compile it on next best device until one of them succeeds.
 
@@ -197,7 +197,7 @@ ovms --model_path model --model_name resnet --port 9000 --plugin_config "{\"PERF
 
 ## Using Automatic Batching Plugin
 
-[Auto Batching](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/automatic-batching.html) (or BATCH in short) is a new special “virtual” device 
+[Auto Batching](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes/automatic-batching.html) (or BATCH in short) is a new special “virtual” device 
 which explicitly defines the auto batching. 
 
 It performs automatic batching on-the-fly to improve device utilization by grouping inference requests together, without programming effort from the user. 

@@ -36,7 +36,7 @@ Date: Tue, 09 Aug 2022 09:20:24 GMT
 Content-Length: 2
 ```
 
-See also [code samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples) for getting server liveness with KServe API on HTTP Server Live endpoint.
+See also [code samples](https://github.com/openvinotoolkit/model_server/tree/releases/2025/0/client/python/kserve-api/samples) for getting server liveness with KServe API on HTTP Server Live endpoint.
 
 ## Server Ready API
 **Description**
@@ -63,7 +63,7 @@ Date: Tue, 09 Aug 2022 09:22:14 GMT
 Content-Length: 2
 ```
 
-See also [code samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples) for getting server readiness with KServe API on HTTP Server Ready endpoint.
+See also [code samples](https://github.com/openvinotoolkit/model_server/tree/releases/2025/0/client/python/kserve-api/samples) for getting server readiness with KServe API on HTTP Server Ready endpoint.
 
 ## Server Metadata API
 **Description**
@@ -103,7 +103,7 @@ $ curl http://localhost:5000/v2
 
 For detailed description of the response contents see [KServe API docs](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#server-metadata).
 
-See also [code samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples) for getting server metadata with KServe API on HTTP Server Metadata endpoint.
+See also [code samples](https://github.com/openvinotoolkit/model_server/tree/releases/2025/0/client/python/kserve-api/samples) for getting server metadata with KServe API on HTTP Server Metadata endpoint.
 
 ## Model Ready API
 **Description**
@@ -130,7 +130,7 @@ Date: Tue, 09 Aug 2022 09:25:31 GMT
 Content-Length: 2
 ```
 
-See also [code samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples) for getting model readiness with KServe API on HTTP Model Ready endpoint.
+See also [code samples](https://github.com/openvinotoolkit/model_server/tree/releases/2025/0/client/python/kserve-api/samples) for getting model readiness with KServe API on HTTP Model Ready endpoint.
 
 
 
@@ -206,7 +206,7 @@ $ curl http://localhost:8000/v2/models/resnet
 
 For detailed description of the response contents see [KServe API docs](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#model-metadata).
 
-See also [code samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples) for running getting model metadata with KServe API on HTTP Model Metadata endpoint.
+See also [code samples](https://github.com/openvinotoolkit/model_server/tree/releases/2025/0/client/python/kserve-api/samples) for running getting model metadata with KServe API on HTTP Model Metadata endpoint.
 
 ## Inference API
 **Description**
@@ -373,4 +373,4 @@ For detailed description of request and response contents see [KServe API docs](
 
 > Note: Using //.. at the end of request URI results in truncated path, which might result in different response than expected.
 
-See also [code samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples) for running inference with KServe API on HTTP Inference endpoint.
+See also [code samples](https://github.com/openvinotoolkit/model_server/tree/releases/2025/0/client/python/kserve-api/samples) for running inference with KServe API on HTTP Inference endpoint.

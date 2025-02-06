@@ -19,7 +19,7 @@ With OpenVINO Model Server 2023.1 release C-API is no longer in preview state an
 
 ## API Description
 
-Server functionalities are encapsulated in shared library built from OpenVINO Model Server source. To include OpenVINO Model Server you need to link this library with your application and use C API defined in [header file](https://github.com/openvinotoolkit/model_server/blob/main/src/ovms.h).
+Server functionalities are encapsulated in shared library built from OpenVINO Model Server source. To include OpenVINO Model Server you need to link this library with your application and use C API defined in [header file](https://github.com/openvinotoolkit/model_server/blob/releases/2025/0/src/ovms.h).
 
 
 Calling a method to start the model serving in your application initiates the OpenVINO Model Server as a separate thread. Then you can schedule inference both directly from app using C API and gRPC/HTTP endpoints.
@@ -47,7 +47,7 @@ To execute inference using C API you must follow steps described below.
 Create an inference request using `OVMS_InferenceRequestNew` specifying which servable name and optionally version to use. Then specify input tensors with `OVMS_InferenceRequestAddInput` and set the tensor data using `OVMS_InferenceRequestInputSetData`. Optionally you can also set one or all outputs with `OVMS_InferenceRequestAddOutput` and `OVMS_InferenceRequestOutputSetData`. For asynchronous inference you also have to set callback with `OVMS_InferenceRequestSetCompletionCallback`.
 
 #### Using OpenVINO Remote Tensor
-With OpenVINO Model Server C-API you could also leverage the OpenVINO remote tensors support. Check original documentation [here](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device/remote-tensor-api-gpu-plugin.html). In order to use OpenCL buffers you need to first create `cl::Buffer` and then use its pointer in setting input with `OVMS_InferenceRequestInputSetData` or output with `OVMS_InferenceRequestOutputSetData` and buffer type `OVMS_BUFFERTYPE_OPENCL`. In case of VA surfaces you need to create appropriate VA surfaces and then use the same calls with buffer type `OVMS_BUFFERTYPE_VASURFACE_Y` and `OVMS_BUFFERTYPE_VASURFACE_UV`.
+With OpenVINO Model Server C-API you could also leverage the OpenVINO remote tensors support. Check original documentation [here](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device/remote-tensor-api-gpu-plugin.html). In order to use OpenCL buffers you need to first create `cl::Buffer` and then use its pointer in setting input with `OVMS_InferenceRequestInputSetData` or output with `OVMS_InferenceRequestOutputSetData` and buffer type `OVMS_BUFFERTYPE_OPENCL`. In case of VA surfaces you need to create appropriate VA surfaces and then use the same calls with buffer type `OVMS_BUFFERTYPE_VASURFACE_Y` and `OVMS_BUFFERTYPE_VASURFACE_UV`.
 
 #### Invoke inference
 Execute inference with OpenVINO Model Server using `OVMS_Inference` synchronous call. During inference execution you must not modify `OVMS_InferenceRequest` and bound memory buffers.

@@ -78,9 +78,9 @@ RUN mkdir /bazel && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
 WORKDIR /input
-RUN wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_classification/input_images.txt && \
+RUN wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/0/demos/image_classification/input_images.txt && \
     mkdir images && \
-    for I in `cat input_images.txt  | cut -d"/" -f6 | cut -d" " -f1` ; do curl  https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/$I -o images/$I --create-dirs; done
+    for I in `cat input_images.txt  | cut -d"/" -f6 | cut -d" " -f1` ; do curl  https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/0/demos/common/static/images/$I -o images/$I --create-dirs; done
 
 WORKDIR /build
 COPY .bazelrc WORKSPACE /build/
