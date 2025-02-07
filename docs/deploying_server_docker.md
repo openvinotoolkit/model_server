@@ -7,7 +7,7 @@ This is a step-by-step guide on how to deploy OpenVINO&trade; Model Server on Li
 - [Docker Engine](https://docs.docker.com/engine/) installed
 - Intel® Core™ processor (6-13th gen.) or Intel® Xeon® processor (1st to 4th gen.)
 - Linux, macOS or Windows via [WSL](https://docs.microsoft.com/en-us/windows/wsl/)
-- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes.html). Accelerators are tested only on bare-metal Linux hosts.
+- (optional) AI accelerators [supported by OpenVINO](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes.html). Accelerators are tested only on bare-metal Linux hosts.
 
 ### Launch Model Server Container
 
@@ -85,4 +85,4 @@ make release_image GPU=1
 It will create an image called `openvino/model_server:latest`.
 > **Note:** This operation might take 40min or more depending on your build host.
 > **Note:** `GPU` parameter in image build command is needed to include dependencies for GPU device.
-> **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. Check the [demo version from the last release](https://github.com/openvinotoolkit/model_server/tree/releases/2024/4/demos/continuous_batching) to use the public docker image.
+> **Note:** The public image from the last release might be not compatible with models exported using the the latest export script. We recommend using export script and docker image from the same release to avoid compatibility issues.
