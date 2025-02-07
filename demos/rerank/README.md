@@ -162,8 +162,6 @@ OVMS reranking: [0.9968273 0.0913821]
 
 An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on dual Intel(R) Xeon(R) CPU Max 9480.
 ```bash
-popd
-pushd .
 cd model_server/demos/benchmark/embeddings/
 pip install -r requirements.txt
 python benchmark_embeddings.py --api_url http://localhost:8000/v3/rerank --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large 
