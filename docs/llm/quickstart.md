@@ -4,7 +4,7 @@ Let's deploy [deepseek-ai/DeepSeek-R1-Distill-Qwen-7B](https://huggingface.co/de
 
 Requirements:
 - Linux or Windows11
-- Docker Engine or `ovms` binary package [installed]((../deploying_server_baremetal.md) )
+- Docker Engine or `ovms` binary package [installed](../deploying_server_baremetal.md)
 - Intel iGPU or ARC GPU 
 
 
