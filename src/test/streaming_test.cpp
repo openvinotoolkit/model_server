@@ -313,6 +313,16 @@ static auto SendWithTimestampServableNameAndVersionAndNotifyEnd(std::vector<std:
     };
 }
 
+static auto SendWithAutomaticTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, std::shared_ptr<int64_t> timestamp, std::mutex& mtx) {
+    mtx.lock();
+    return [content, timestamp, &mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        assertResponse(msg, content, std::nullopt);
+        assertTimestamp(msg, timestamp);
+        mtx.unlock();
+        return true;
+    };
+}
+
 static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::mutex& mtx) {
     mtx.lock();
     return [content, timestamp, &mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
@@ -710,11 +720,12 @@ node {
         .WillOnce(Receive({{"input", 102.4f}}))  // no timestamp specified, server will assign one
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"output", 4.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"output", 8.2f}}, 1))
-        .WillOnce(SendWithTimestamp({{"output", 103.4f}}, 2));
+        .WillOnce(SendWithAutomaticTimestamp({{"output", 4.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"output", 8.2f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"output", 103.4f}}, timestamp));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -774,11 +785,12 @@ node {
         .WillOnce(Receive({{"in", 102.4f}}))  // no timestamp specified, server will assign one
         .WillOnce(Disconnect());
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0))
-        .WillOnce(SendWithTimestamp({{"out", 8.2f}}, 1))
-        .WillOnce(SendWithTimestamp({{"out", 103.4f}}, 2));
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 4.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 8.2f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestamp({{"out", 103.4f}}, timestamp));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -832,10 +844,11 @@ node {
         .WillOnce(Receive({{"input2", 7.2f}}))  // no timestamp specified, server will assign one
         .WillOnce(DisconnectWhenNotified(mtx));
 
+    auto timestamp = std::make_shared<int64_t>(-1);
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestamp({{"output1", 4.5f}}, 0))
-        .WillOnce(SendWithTimestampAndNotifyEnd({{"output2", 8.2f}}, 1, mtx));
+        .WillOnce(SendWithAutomaticTimestamp({{"output1", 4.5f}}, timestamp))
+        .WillOnce(SendWithAutomaticTimestampAndNotifyEnd({{"output2", 8.2f}}, timestamp, mtx));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
