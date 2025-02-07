@@ -31,7 +31,6 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
-cd demos\age_gender_recognition\python
 ovms --model_path model --model_name age_gender --port 9000 --rest_port 8000
 ```
 :::
